@@ -1,10 +1,10 @@
 <template>
   <div
-    class="notification-item-card"
+    class="notification-item-card stream-card sidebar-item"
     :class="{
       'notification-item-card--compact': compact,
-      'notification-item-card--unread': !notification.read_at,
-      'notification-item-card--active': active,
+      'notification-item-card--unread unread': !notification.read_at,
+      'notification-item-card--active selected': active,
     }"
     role="button"
     tabindex="0"
@@ -34,11 +34,14 @@
     <div class="card-content">
       <div class="card-header-row">
         <div class="card-title-group">
-          <span class="card-title">{{ title }}</span>
-          <span v-if="sourceLabel" class="card-source-label">· {{ sourceLabel }}</span>
+          <span class="card-title sidebar-item-title">{{ title }}</span>
+          <template v-if="sourceLabel">
+            <span class="card-separator">·</span>
+            <span class="card-source-label sidebar-item-source detail-source">{{ sourceLabel }}</span>
+          </template>
         </div>
         <div class="card-meta">
-          <time class="card-time">{{ timeAgo }}</time>
+          <time class="card-time sidebar-item-time detail-time">{{ timeAgo }}</time>
           <span
             v-if="!notification.read_at"
             class="card-unread-dot"
@@ -57,9 +60,46 @@
         class="card-quote"
       />
 
+      <!-- Reason text if distinct from quote -->
+      <p
+        v-if="!compact && notification.reason && notification.reason !== quoteText"
+        class="card-reason detail-reason"
+      >
+        {{ notification.reason }}
+      </p>
+
+      <!-- Body text if distinct from reason and quote -->
+      <p
+        v-if="!compact && notificationBody && notificationBody !== notification.reason && notificationBody !== quoteText"
+        class="sidebar-item-body a-muted"
+      >
+        {{ notificationBody }}
+      </p>
+
       <!-- Action Row (Non-compact only) -->
-      <div v-if="!compact" class="card-actions-row" @click.stop @keydown.stop>
-        <div class="card-actions-left" />
+      <div v-if="!compact" class="card-actions-row detail-actions" @click.stop @keydown.stop>
+        <div class="card-actions-left">
+          <PButton
+            v-if="targetPath"
+            variant="secondary"
+            size="sm"
+            class="card-action-btn"
+            data-test="action-jump"
+            @click="onJump"
+          >
+            前往来源内容
+          </PButton>
+          <PButton
+            v-else
+            variant="secondary"
+            size="sm"
+            disabled
+            class="card-action-unavailable-btn detail-source"
+          >
+            来源已不可用
+          </PButton>
+        </div>
+
         <div class="card-actions-right">
           <button
             v-if="!notification.read_at"
@@ -113,14 +153,17 @@ import {
   IconMessage2,
   IconShieldExclamation,
 } from '@tabler/icons-vue'
+import PButton from '@/components/ui/PButton.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import NotificationContextQuote from '@/components/notification/NotificationContextQuote.vue'
 import type { Notification } from '@/types'
 import {
+  formatNotificationBody,
   formatNotificationTime,
   formatNotificationTitle,
   notificationActionType,
   notificationSourceLabel,
+  notificationTargetPath,
 } from '@/utils/notificationHelpers'
 
 const props = withDefaults(
@@ -138,6 +181,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   'click': [id: string]
   'mark-read': [id: string]
+  'jump': [notification: Notification]
   'mute-type': [notification: Notification]
   'mute-source': [notification: Notification]
 }>()
@@ -158,6 +202,8 @@ const title = computed(() => formatNotificationTitle(props.notification))
 const sourceLabel = computed(() => notificationSourceLabel(props.notification))
 const timeAgo = computed(() => formatNotificationTime(props.notification.created_at))
 const actionType = computed(() => notificationActionType(props.notification))
+const targetPath = computed(() => notificationTargetPath(props.notification))
+const notificationBody = computed(() => formatNotificationBody(props.notification))
 
 const badgeIcon = computed(() => {
   switch (actionType.value) {
@@ -211,7 +257,7 @@ const quoteText = computed(() => {
   if (props.notification.meta?.body) {
     return props.notification.meta.body as string
   }
-  if (props.notification.reason && props.notification.category === 'collaboration') {
+  if (props.notification.reason) {
     return props.notification.reason
   }
   return ''
@@ -225,24 +271,28 @@ const onClickCard = () => {
   emit('click', props.notification.id)
 }
 
-const onMarkRead = (e: MouseEvent) => {
-  e.stopPropagation()
+const onJump = (e?: MouseEvent) => {
+  e?.stopPropagation?.()
+  emit('jump', props.notification)
+}
+
+const onMarkRead = (e?: MouseEvent) => {
+  e?.stopPropagation?.()
   emit('mark-read', props.notification.id)
 }
 
-const onMuteType = (e: MouseEvent) => {
-  e.stopPropagation()
-  // Close details menu if present
-  const target = e.target as HTMLElement
-  const details = target.closest('details')
+const onMuteType = (e?: MouseEvent) => {
+  e?.stopPropagation?.()
+  const target = e?.target as HTMLElement | undefined
+  const details = target?.closest?.('details')
   if (details) details.removeAttribute('open')
   emit('mute-type', props.notification)
 }
 
-const onMuteSource = (e: MouseEvent) => {
-  e.stopPropagation()
-  const target = e.target as HTMLElement
-  const details = target.closest('details')
+const onMuteSource = (e?: MouseEvent) => {
+  e?.stopPropagation?.()
+  const target = e?.target as HTMLElement | undefined
+  const details = target?.closest?.('details')
   if (details) details.removeAttribute('open')
   emit('mute-source', props.notification)
 }
@@ -384,12 +434,51 @@ const onMuteSource = (e: MouseEvent) => {
   margin-top: 0.125rem;
 }
 
+.card-separator {
+  color: var(--a-color-text-muted, #9ca3af);
+  font-size: 0.8125rem;
+}
+
+.card-reason {
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary, #4b5563);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.sidebar-item-body {
+  font-size: 0.8125rem;
+  color: var(--a-color-text-muted, #6b7280);
+  line-height: 1.4;
+  margin: 0;
+}
+
 /* Actions Row */
 .card-actions-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-top: 0.25rem;
+}
+
+.card-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-action-btn {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.625rem;
+  height: 28px;
+}
+
+.card-action-unavailable-btn {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.625rem;
+  height: 28px;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .card-actions-right {
@@ -411,7 +500,7 @@ const onMuteSource = (e: MouseEvent) => {
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .card-btn:hover {

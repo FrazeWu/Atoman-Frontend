@@ -100,7 +100,7 @@ const unreadCount = computed(() => {
 })
 
 const handleMarkAllRead = async () => {
-  await notificationStore.markAllRead()
+  await notificationStore.markAllRead('all')
 }
 
 const handleItemClick = async (id: string) => {
@@ -115,11 +115,7 @@ const handleItemClick = async (id: string) => {
 
   const target = notificationTargetPath(item)
   if (target) {
-    if (typeof target === 'string' && (target.startsWith('http://') || target.startsWith('https://'))) {
-      window.location.href = target
-    } else {
-      router.push(target)
-    }
+    router.push(target)
   } else {
     router.push('/inbox')
   }
@@ -164,7 +160,7 @@ onMounted(async () => {
 
   if (notificationStore.notifications.length === 0) {
     try {
-      await notificationStore.fetchNotifications()
+      await notificationStore.fetchNotifications('all')
     } catch {
       // ignore fetch errors on mount
     }

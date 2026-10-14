@@ -686,7 +686,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 0.35rem;
   padding: 0.4rem 0.5rem;
-  border: 1px dashed var(--a-color-border-soft);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
 }

@@ -73,132 +73,26 @@
 
             <!-- Notification Feed Stream Cards -->
             <div class="stream-list sidebar-list">
-              <article
+              <NotificationItemCard
                 v-for="item in filteredNotifications"
                 :key="item.id"
-                class="stream-card sidebar-item"
-                :class="{ unread: !item.read_at, selected: selectedNotificationId === item.id }"
-                role="button"
-                tabindex="0"
+                :notification="item"
+                :active="selectedNotificationId === item.id"
                 @click="openNotification(item.id)"
-                @keydown.enter="openNotification(item.id)"
-                @keydown.space.prevent="openNotification(item.id)"
-              >
-                <!-- Avatar & Action Badge -->
-                <div class="card-avatar-wrapper">
-                  <PAvatar
-                    :src="item.actor?.avatar_url || ''"
-                    :name="getActorName(item)"
-                    size="sm"
-                    class="card-avatar"
-                  />
-                  <div
-                    class="card-action-badge"
-                    :class="`card-action-badge--${getActionType(item)}`"
-                    :title="getActionBadgeTitle(item)"
-                  >
-                    <component :is="getActionBadgeIcon(item)" :size="12" stroke-width="2.5" />
-                  </div>
-                </div>
+                @jump="jumpToNotification"
+                @mark-read="notificationStore.markRead(item.id)"
+                @mute-type="handleMuteType(item)"
+                @mute-source="handleMuteSource(item)"
+              />
+              <p v-if="notificationActionMessage" class="action-message a-muted">
+                {{ notificationActionMessage }}
+              </p>
+            </div>
 
-                <!-- Card Content Body -->
-                <div class="card-content-body">
-                  <div class="card-header-row">
-                    <div class="card-title-group">
-                      <span class="card-title sidebar-item-title">{{ formatNotificationTitle(item) }}</span>
-                      <template v-if="notificationSourceLabel(item)">
-                        <span class="card-separator">·</span>
-                        <span class="card-source sidebar-item-source detail-source">{{ notificationSourceLabel(item) }}</span>
-                      </template>
-                    </div>
-                    <div class="card-meta">
-                      <time class="card-time sidebar-item-time detail-time">{{ formatTime(item.created_at) }}</time>
-                      <span v-if="!item.read_at" class="card-unread-dot" aria-label="未读" />
-                    </div>
-                  </div>
-
-                  <!-- Context Quote Block -->
-                  <NotificationContextQuote
-                    v-if="hasQuote(item)"
-                    :reply-excerpt="getReplyExcerpt(item)"
-                    :original-excerpt="getOriginalExcerpt(item)"
-                    :text="getQuoteText(item)"
-                    class="card-quote"
-                  />
-                  <p v-if="item.reason && item.reason !== getQuoteText(item)" class="card-reason detail-reason">{{ item.reason }}</p>
-
-                  <p v-if="formatNotificationBody(item) && formatNotificationBody(item) !== item.reason && formatNotificationBody(item) !== getQuoteText(item)" class="sidebar-item-body a-muted">
-                    {{ formatNotificationBody(item) }}
-                  </p>
-
-                  <!-- Card Actions Row -->
-                  <div class="card-actions-row detail-actions" @click.stop @keydown.stop>
-                    <div class="card-actions-left">
-                      <PButton
-                        v-if="notificationTargetPath(item)"
-                        variant="secondary"
-                        size="sm"
-                        class="card-action-btn"
-                        @click="jumpToNotification(item)"
-                      >
-                        前往来源内容
-                      </PButton>
-                      <PButton
-                        v-else
-                        variant="secondary"
-                        size="sm"
-                        disabled
-                        class="card-action-unavailable-btn detail-source"
-                      >
-                        来源已不可用
-                      </PButton>
-                    </div>
-
-                    <div class="card-actions-right">
-                      <PButton
-                        v-if="!item.read_at"
-                        variant="ghost"
-                        size="sm"
-                        class="card-action-btn"
-                        @click="notificationStore.markRead(item.id)"
-                      >
-                        标记已读
-                      </PButton>
-
-                      <details class="card-more-menu" @click.stop>
-                        <summary class="card-more-trigger" aria-label="更多操作">
-                          <IconDots :size="16" />
-                        </summary>
-                        <div class="card-menu-dropdown" role="menu">
-                          <button
-                            type="button"
-                            class="card-menu-item"
-                            @click="handleMuteType(item, $event)"
-                          >
-                            不再提醒此类
-                          </button>
-                          <button
-                            type="button"
-                            class="card-menu-item"
-                            @click="handleMuteSource(item, $event)"
-                          >
-                            不再提醒此内容
-                          </button>
-                        </div>
-                      </details>
-                    </div>
-                  </div>
-                  <p v-if="notificationActionMessage && selectedNotificationId === item.id" class="action-message a-muted">
-                    {{ notificationActionMessage }}
-                  </p>
-                </div>
-              </article>
-
-              <!-- Empty State -->
-              <div v-if="!notificationStore.loading && filteredNotifications.length === 0" class="inbox-empty-state">
-                <strong>暂无通知</strong>
-                <span>{{ filterMode === 'unread' ? '当前分类没有未读通知。' : '当前分类没有新内容。' }}</span>
-              </div>
+            <!-- Empty State -->
+            <div v-if="!notificationStore.loading && filteredNotifications.length === 0" class="inbox-empty-state">
+              <strong>暂无通知</strong>
+              <span>{{ filterMode === 'unread' ? '当前分类没有未读通知。' : '当前分类没有新内容。' }}</span>
             </div>
           </div>
 
@@ -253,18 +147,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  IconAt,
-  IconDots,
-  IconGitPullRequest,
-  IconHeart,
-  IconMessage2,
-  IconShieldExclamation,
-} from '@tabler/icons-vue'
-import PAvatar from '@/components/ui/PAvatar.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSheet from '@/components/ui/PSheet.vue'
-import NotificationContextQuote from '@/components/notification/NotificationContextQuote.vue'
+import NotificationItemCard from '@/components/notification/NotificationItemCard.vue'
 import DMMailboxSelector from '@/components/dm/DMMailboxSelector.vue'
 import DMConversationList from '@/components/dm/DMConversationList.vue'
 import DMConversationPane from '@/components/dm/DMConversationPane.vue'
@@ -276,13 +161,7 @@ import { useDMStore } from '@/stores/dm'
 import { useAuthStore } from '@/stores/auth'
 import type { InboxTab, Notification, NotificationCategory } from '@/types'
 import { dmErrorMessage, type DMImage } from '@/api/dm'
-import {
-  formatNotificationBody,
-  formatNotificationTitle,
-  notificationActionType,
-  notificationSourceLabel,
-  notificationTargetPath,
-} from '@/utils/notificationHelpers'
+import { notificationTargetPath } from '@/utils/notificationHelpers'
 
 type InboxPageTab = InboxTab | 'forum'
 
@@ -350,80 +229,6 @@ const filteredNotifications = computed(() => {
   return notificationStore.notifications
 })
 
-const getActorName = (notification: Notification) => {
-  return notification.actor?.display_name || notification.actor?.username || '系统'
-}
-
-const getActionType = (notification: Notification) => {
-  return notificationActionType(notification)
-}
-
-const getActionBadgeIcon = (notification: Notification) => {
-  switch (notificationActionType(notification)) {
-    case 'like':
-      return IconHeart
-    case 'reply':
-    case 'forum':
-      return IconMessage2
-    case 'mention':
-      return IconAt
-    case 'collaboration':
-      return IconGitPullRequest
-    case 'system':
-    default:
-      return IconShieldExclamation
-  }
-}
-
-const getActionBadgeTitle = (notification: Notification) => {
-  switch (notificationActionType(notification)) {
-    case 'like':
-      return '点赞'
-    case 'reply':
-      return '回复'
-    case 'mention':
-      return '提及'
-    case 'collaboration':
-      return '协作'
-    case 'forum':
-      return '论坛'
-    case 'system':
-    default:
-      return '通知'
-  }
-}
-
-const formatTime = (value?: string | null) => {
-  if (!value) return '刚刚'
-  return new Date(value).toLocaleString('zh-CN')
-}
-
-const getReplyExcerpt = (item: Notification) => {
-  return (item.meta?.reply_excerpt as string) || ''
-}
-
-const getOriginalExcerpt = (item: Notification) => {
-  return (
-    (item.meta?.original_excerpt as string) ||
-    (item.meta?.root_comment_body as string) ||
-    ''
-  )
-}
-
-const getQuoteText = (item: Notification) => {
-  if (getReplyExcerpt(item) || getOriginalExcerpt(item)) return ''
-  if (item.meta?.body) {
-    return item.meta.body as string
-  }
-  if (item.reason && item.category === 'collaboration') {
-    return item.reason
-  }
-  return ''
-}
-
-const hasQuote = (item: Notification) => {
-  return Boolean(getReplyExcerpt(item) || getOriginalExcerpt(item) || getQuoteText(item))
-}
 
 const switchTab = async (tab: InboxPageTab) => {
   filterMode.value = 'all'
@@ -739,7 +544,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .filter-toggle-btn:hover {

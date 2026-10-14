@@ -112,7 +112,14 @@ export function formatNotificationTime(dateStr?: string | null): string {
 
 export function notificationTargetPath(notification: Notification): RouteLocationRaw | string | null {
   if (notification.source_url) {
-    return notification.source_url
+    if (
+      typeof notification.source_url === 'string' &&
+      notification.source_url.startsWith('/') &&
+      !notification.source_url.startsWith('//')
+    ) {
+      return notification.source_url
+    }
+    return null
   }
   if (notification.type === 'site_announcement' || notification.type === 'feed_source_health') {
     const path = notification.meta?.path

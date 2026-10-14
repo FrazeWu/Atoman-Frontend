@@ -13,7 +13,7 @@ const notificationCategories: InboxTab[] = ['like', 'interaction', 'mention', 'r
 const commentNotificationTypes = new Set<Notification['type']>([
   'comment_reply', 'comment_mention', 'comment_marked', 'comment_like', 'forum_topic_comment',
 ])
-type NotificationSelection = NotificationCategory | readonly Notification['type'][]
+export type NotificationSelection = NotificationCategory | readonly Notification['type'][] | 'all'
 
 function isTypeSelection(selection: NotificationSelection): selection is readonly Notification['type'][] {
   return Array.isArray(selection)
@@ -132,6 +132,15 @@ export const useNotificationStore = defineStore('notification', () => {
         notifications.value = responses.flatMap((data) => data.data || [])
           .sort((left, right) => right.created_at.localeCompare(left.created_at))
         total.value = responses.reduce((sum, data) => sum + (data.meta?.total ?? data.total ?? 0), 0)
+      } else if (selection === 'all') {
+        currentTypes.value = []
+        const params = new URLSearchParams({ page: String(nextPage) })
+        const res = await apiRequestResult(`${api.notifications.list}?${params.toString()}`, { headers: authHeaders() })
+        if (!res.ok) throw new Error('获取通知失败')
+        const data = res.data
+        if (!isCurrentListRequest()) return
+        notifications.value = data.data || []
+        total.value = data.meta?.total ?? data.total ?? 0
       } else {
         currentTypes.value = []
         currentCategory.value = selection
@@ -152,15 +161,22 @@ export const useNotificationStore = defineStore('notification', () => {
     if (!authStore.token) return
     const generation = requestGeneration
     const token = authStore.token
+    const target = notifications.value.find((item) => item.id === id)
+    const prevReadAt = target?.read_at
+    if (target && !target.read_at) {
+      target.read_at = new Date().toISOString()
+      unreadCounts.value[target.category] = Math.max(0, (unreadCounts.value[target.category] || 0) - 1)
+    }
     const res = await apiRequestResult(api.notifications.markRead(id), {
       method: 'PUT',
       headers: authHeaders(),
     })
-    if (!res.ok || generation !== requestGeneration || token !== authStore.token) return
-    const target = notifications.value.find((item) => item.id === id)
-    if (target && !target.read_at) {
-      target.read_at = new Date().toISOString()
-      unreadCounts.value[target.category] = Math.max(0, (unreadCounts.value[target.category] || 0) - 1)
+    if (!res.ok || generation !== requestGeneration || token !== authStore.token) {
+      if (target && !prevReadAt) {
+        target.read_at = null
+        unreadCounts.value[target.category] = (unreadCounts.value[target.category] || 0) + 1
+      }
+      return
     }
   }
 
@@ -173,6 +189,12 @@ export const useNotificationStore = defineStore('notification', () => {
         method: 'PUT', headers: authHeaders(),
       })))
       if (responses.some((res) => !res.ok)) return
+    } else if (selection === 'all') {
+      const res = await apiRequestResult(api.notifications.markAllRead, {
+        method: 'PUT',
+        headers: authHeaders(),
+      })
+      if (!res.ok) return
     } else {
       const res = await apiRequestResult(`${api.notifications.markAllRead}?category=${encodeURIComponent(selection)}`, {
         method: 'PUT',
@@ -182,18 +204,27 @@ export const useNotificationStore = defineStore('notification', () => {
     }
     if (generation !== requestGeneration || token !== authStore.token) return
     const readAt = new Date().toISOString()
-    const matches = (item: Notification) => isTypeSelection(selection) ? selection.includes(item.type) : item.category === selection
+    const matches = (item: Notification) =>
+      selection === 'all'
+        ? true
+        : isTypeSelection(selection)
+          ? selection.includes(item.type)
+          : item.category === selection
     notifications.value = notifications.value.map((item) =>
       matches(item) ? { ...item, read_at: item.read_at || readAt } : item,
     )
-    if (isTypeSelection(selection)) {
+    if (selection === 'all') {
+      for (const category of notificationCategories) unreadCounts.value[category] = 0
+    } else if (isTypeSelection(selection)) {
       const categories = new Set(
         notifications.value
           .filter((item) => selection.includes(item.type))
           .map((item) => item.category),
       )
       for (const category of categories) unreadCounts.value[category] = 0
-    } else unreadCounts.value[selection] = 0
+    } else {
+      unreadCounts.value[selection] = 0
+    }
   }
 
   const receiveNotification = (notification: Notification) => {

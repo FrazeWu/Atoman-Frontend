@@ -408,7 +408,7 @@ function togglePanel(panel: 'tools' | 'settings') {
   background: var(--book-reader-surface, var(--a-color-bg));
   color: var(--book-reader-muted, var(--a-color-muted));
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .book-reader-shell__tool-btn:hover {
@@ -443,7 +443,7 @@ function togglePanel(panel: 'tools' | 'settings') {
   background: transparent;
   color: var(--book-reader-muted, var(--a-color-muted));
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .book-reader-shell__zoom-btn:hover:not(:disabled) {

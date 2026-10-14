@@ -102,8 +102,11 @@ describe('notificationHelpers', () => {
   })
 
   describe('notificationTargetPath', () => {
-    it('returns source_url if provided', () => {
+    it('returns source_url if provided and safe', () => {
       expect(notificationTargetPath({ ...baseNotification, source_url: '/direct/url' })).toBe('/direct/url')
+      expect(notificationTargetPath({ ...baseNotification, source_url: 'https://evil.com/phish' })).toBe(null)
+      expect(notificationTargetPath({ ...baseNotification, source_url: '//evil.com/phish' })).toBe(null)
+      expect(notificationTargetPath({ ...baseNotification, source_url: 'javascript:alert(1)' })).toBe(null)
     })
 
     it('resolves site announcement path', () => {

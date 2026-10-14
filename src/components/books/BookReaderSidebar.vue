@@ -203,7 +203,7 @@ watch(
   font-size: 0.76rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .book-reader-sidebar__tab:hover {

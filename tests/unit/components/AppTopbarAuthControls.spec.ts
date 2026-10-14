@@ -79,6 +79,11 @@ describe("AppTopbarAuthControls", () => {
 					status: 200,
 				});
 			}
+			if (url.includes("/notifications")) {
+				return new Response(JSON.stringify({ data: [], meta: { total: 0 } }), {
+					status: 200,
+				});
+			}
 			throw new Error(`未 mock fetch: ${url}`);
 		});
 	});
@@ -226,5 +231,19 @@ describe("AppTopbarAuthControls", () => {
 		expect(wrapper.find('[data-testid="notification-menu-dm"]').exists()).toBe(
 			false,
 		);
+	});
+
+	it("toggles notification popover on desktop click", async () => {
+		const wrapper = await mountTopbar("/posts");
+
+		expect(wrapper.find(".topbar-notification-popover").exists()).toBe(false);
+
+		await wrapper.find('[data-testid="notification-link"]').trigger("click");
+
+		expect(wrapper.find(".notif-dropdown-wrap").classes()).toContain("is-open");
+		expect(wrapper.find(".topbar-notification-popover").exists()).toBe(true);
+
+		await wrapper.find('[data-testid="notification-link"]').trigger("click");
+		expect(wrapper.find(".notif-dropdown-wrap").classes()).not.toContain("is-open");
 	});
 });

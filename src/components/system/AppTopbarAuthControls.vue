@@ -1,14 +1,29 @@
 <template>
-  <RouterLink
-    to="/inbox"
-    class="notif-btn"
-    data-testid="notification-link"
-    :title="notificationRoom.helper"
-    :aria-label="inboxStore.totalUnread > 0 ? `${notificationRoom.name}，${inboxStore.totalUnread} 条未读` : notificationRoom.name"
+  <div
+    class="notif-dropdown-wrap"
+    :class="{ 'is-open': activeDropdown === 'notification' }"
+    data-dropdown="notification"
   >
-    <Mail class="notif-btn__icon" :size="18" aria-hidden="true" />
-    <span v-if="inboxStore.totalUnread > 0" class="notif-count">{{ inboxStore.totalUnread }}</span>
-  </RouterLink>
+    <RouterLink
+      to="/inbox"
+      class="notif-btn"
+      data-testid="notification-link"
+      :title="notificationRoom.helper"
+      :aria-label="inboxStore.totalUnread > 0 ? `${notificationRoom.name}，${inboxStore.totalUnread} 条未读` : notificationRoom.name"
+      :aria-expanded="activeDropdown === 'notification'"
+      @click="handleNotificationClick"
+    >
+      <Mail class="notif-btn__icon" :size="18" aria-hidden="true" />
+      <span v-if="inboxStore.totalUnread > 0" class="notif-count">{{ inboxStore.totalUnread }}</span>
+    </RouterLink>
+    <Transition name="notification-menu">
+      <NotificationPopover
+        v-if="activeDropdown === 'notification'"
+        class="topbar-notification-popover"
+        @close="closeDropdown"
+      />
+    </Transition>
+  </div>
 
   <RouterLink
     to="/studio"
@@ -52,6 +67,7 @@ import { isAdminRole } from '@/utils/roles'
 import { resolveMediaURL } from '@/utils/mediaUrl'
 import { IconMail as Mail, IconPencil as PencilLine } from '@tabler/icons-vue'
 import NotificationToastStack from '@/components/system/NotificationToastStack.vue'
+import NotificationPopover from '@/components/system/NotificationPopover.vue'
 
 const authStore = useAuthStore()
 const inboxStore = useInboxStore()
@@ -62,10 +78,12 @@ const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).t
 const avatarSrc = computed(() => authStore.user?.avatar_url ? resolveMediaURL(authStore.user.avatar_url) : '')
 const userSettingsPath = computed(() => `/users/${authStore.user?.username || ''}/settings`)
 const showSiteSettings = computed(() => isAdminRole(authStore.user?.role))
+
 const toggleDropdown = (name: string) => {
   const willOpen = activeDropdown.value !== name
   if (willOpen) {
-    window.dispatchEvent(new CustomEvent('atoman:global-overlay-open', { detail: 'user-menu' }))
+    const detail = name === 'user' ? 'user-menu' : name
+    window.dispatchEvent(new CustomEvent('atoman:global-overlay-open', { detail }))
   }
   activeDropdown.value = willOpen ? name : null
 }
@@ -80,7 +98,18 @@ const handleClickOutside = (e: MouseEvent) => {
 }
 
 const handleGlobalOverlayOpen = (event: Event) => {
-  if ((event as CustomEvent<string>).detail !== 'user-menu') closeDropdown()
+  const detail = (event as CustomEvent<string>).detail
+  const currentDetail = activeDropdown.value === 'user' ? 'user-menu' : activeDropdown.value
+  if (detail !== currentDetail) closeDropdown()
+}
+
+const handleNotificationClick = (e: MouseEvent) => {
+  if (typeof window !== 'undefined' && window.innerWidth >= 720) {
+    e.preventDefault()
+    toggleDropdown('notification')
+  } else {
+    closeDropdown()
+  }
 }
 
 onMounted(() => {
@@ -174,10 +203,28 @@ const logout = async () => {
   }
 }
 
-.notif-btn:hover {
+.notif-btn:hover,
+.notif-dropdown-wrap.is-open .notif-btn {
   color: var(--a-color-fg);
   background: var(--a-color-surface-muted);
   text-decoration: none;
+}
+
+.notif-dropdown-wrap {
+  position: relative;
+}
+
+.topbar-notification-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: var(--a-z-global-menu);
+}
+
+@media (max-width: 720px) {
+  .topbar-notification-popover {
+    display: none;
+  }
 }
 
 .notif-count {
@@ -284,16 +331,20 @@ const logout = async () => {
   min-width: 0;
 }
 
-.user-menu-enter-active {
+.user-menu-enter-active,
+.notification-menu-enter-active {
   transition: transform var(--a-motion-state) var(--a-motion-ease-enter), opacity var(--a-motion-state) var(--a-motion-ease-enter);
 }
 
-.user-menu-leave-active {
+.user-menu-leave-active,
+.notification-menu-leave-active {
   transition: transform var(--a-motion-micro) var(--a-motion-ease-exit), opacity var(--a-motion-micro) var(--a-motion-ease-exit);
 }
 
 .user-menu-enter-from,
-.user-menu-leave-to {
+.user-menu-leave-to,
+.notification-menu-enter-from,
+.notification-menu-leave-to {
   transform: translateY(-8px);
   opacity: 0;
 }

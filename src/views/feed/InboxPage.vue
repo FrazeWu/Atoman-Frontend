@@ -173,14 +173,14 @@
                           <button
                             type="button"
                             class="card-menu-item"
-                            @click="muteNotificationType(item)"
+                            @click="handleMuteType(item, $event)"
                           >
                             不再提醒此类
                           </button>
                           <button
                             type="button"
                             class="card-menu-item"
-                            @click="muteNotificationSource(item)"
+                            @click="handleMuteSource(item, $event)"
                           >
                             不再提醒此内容
                           </button>
@@ -489,10 +489,20 @@ const muteNotificationType = async (notification: Notification) => {
     : '通知偏好暂不可用'
 }
 
+const handleMuteType = async (notification: Notification, event: Event) => {
+  (event.target as HTMLElement).closest('details')?.removeAttribute('open')
+  await muteNotificationType(notification)
+}
+
 const muteNotificationSource = async (notification: Notification) => {
   notificationActionMessage.value = (await notificationStore.createMute(notification.source_type, notification.source_id, notification.reason))
     ? ''
     : '内容静音暂不可用'
+}
+
+const handleMuteSource = async (notification: Notification, event: Event) => {
+  (event.target as HTMLElement).closest('details')?.removeAttribute('open')
+  await muteNotificationSource(notification)
 }
 
 const openConversation = async (conversationID: string) => {

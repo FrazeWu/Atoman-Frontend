@@ -58,7 +58,7 @@
       />
 
       <!-- Action Row (Non-compact only) -->
-      <div v-if="!compact" class="card-actions-row" @click.stop>
+      <div v-if="!compact" class="card-actions-row" @click.stop @keydown.stop>
         <div class="card-actions-left" />
         <div class="card-actions-right">
           <button
@@ -208,8 +208,11 @@ const originalExcerpt = computed(() => {
 
 const quoteText = computed(() => {
   if (replyExcerpt.value || originalExcerpt.value) return ''
-  if (props.notification.category === 'system' || props.notification.type === 'site_announcement') {
-    return (props.notification.meta?.body as string) || ''
+  if (props.notification.meta?.body) {
+    return props.notification.meta.body as string
+  }
+  if (props.notification.reason && props.notification.category === 'collaboration') {
+    return props.notification.reason
   }
   return ''
 })

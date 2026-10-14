@@ -16,7 +16,6 @@
           type="button"
           class="book-selection-toolbar__color-btn"
           :class="{ 'is-active': selectedColor === colorOption.color }"
-          :style="{ backgroundColor: colorOption.bg, borderColor: colorOption.border }"
           :aria-label="colorOption.label"
           :title="colorOption.label"
           :data-color="colorOption.color"
@@ -149,10 +148,10 @@ const emit = defineEmits<{
 }>()
 
 const colorOptions = [
-  { color: 'yellow' as const, bg: '#fef08a', border: '#fde047', label: '黄色高亮' },
-  { color: 'green' as const, bg: '#bbf7d0', border: '#86efac', label: '绿色高亮' },
-  { color: 'blue' as const, bg: '#bfdbfe', border: '#93c5fd', label: '蓝色高亮' },
-  { color: 'pink' as const, bg: '#fbcfe8', border: '#f472b6', label: '粉色高亮' },
+  { color: 'yellow' as const, label: '黄色高亮' },
+  { color: 'green' as const, label: '绿色高亮' },
+  { color: 'blue' as const, label: '蓝色高亮' },
+  { color: 'pink' as const, label: '粉色高亮' },
 ]
 
 const selectedColor = ref<BookHighlightColor>(props.existingAnnotation?.color || 'yellow')
@@ -272,10 +271,30 @@ onUnmounted(() => {
   width: 18px;
   height: 18px;
   border-radius: var(--a-radius-control);
-  border: 1px solid transparent;
+  border: 1px solid var(--a-color-border-soft);
   cursor: pointer;
   padding: 0;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.book-selection-toolbar__color-btn[data-color="yellow"] {
+  background-color: color-mix(in srgb, var(--a-color-warning) 35%, transparent);
+  border-color: color-mix(in srgb, var(--a-color-warning) 60%, transparent);
+}
+
+.book-selection-toolbar__color-btn[data-color="green"] {
+  background-color: color-mix(in srgb, var(--a-color-success) 35%, transparent);
+  border-color: color-mix(in srgb, var(--a-color-success) 60%, transparent);
+}
+
+.book-selection-toolbar__color-btn[data-color="blue"] {
+  background-color: color-mix(in srgb, var(--a-color-primary) 35%, transparent);
+  border-color: color-mix(in srgb, var(--a-color-primary) 60%, transparent);
+}
+
+.book-selection-toolbar__color-btn[data-color="pink"] {
+  background-color: color-mix(in srgb, var(--a-color-danger) 35%, transparent);
+  border-color: color-mix(in srgb, var(--a-color-danger) 60%, transparent);
 }
 
 .book-selection-toolbar__color-btn:hover {
@@ -338,7 +357,7 @@ onUnmounted(() => {
   box-sizing: border-box;
   padding: 0.375rem 0.5rem;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.4;
   color: var(--a-color-text);
   background: var(--a-color-bg);

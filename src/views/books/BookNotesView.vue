@@ -351,8 +351,12 @@ function setColorFilter(color: '' | BookHighlightColor) {
 async function copyCitation(item: BookAnnotation) {
   const bookName = item.book_title ? `《${item.book_title}》` : ''
   const citation = `“${item.text}”${bookName ? ` —— ${bookName}` : ''}`
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(citation)
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(citation)
+    }
+  } catch {
+    // Clipboard permission denied or insecure context fallback
   }
 }
 

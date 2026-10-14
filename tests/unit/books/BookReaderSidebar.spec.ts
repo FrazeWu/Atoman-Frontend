@@ -19,7 +19,7 @@ describe('BookReaderSidebar', () => {
     })
 
     const tabs = wrapper.findAll('.book-reader-sidebar__tab')
-    expect(tabs.length).toBe(3)
+    expect(tabs.length).toBe(4)
 
     // Initially thumbnails tab is active
     expect(wrapper.find('.book-reader-sidebar__pane--thumbnails').isVisible()).toBe(true)
@@ -42,6 +42,10 @@ describe('BookReaderSidebar', () => {
     await tabs[2].trigger('click')
     expect(wrapper.find('.book-reader-sidebar__pane--bookmarks').isVisible()).toBe(true)
     expect(wrapper.text()).toContain('第 2 页标记')
+
+    // Switch to Annotations tab
+    await tabs[3].trigger('click')
+    expect(wrapper.find('.book-reader-sidebar__pane--annotations').isVisible()).toBe(true)
 
     // Trigger bookmark jump and remove
     await wrapper.find('.book-reader-sidebar__bookmark-jump').trigger('click')

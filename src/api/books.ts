@@ -396,6 +396,65 @@ export interface BookUploadPartURL {
   upload_url: string
 }
 
+export type BookHighlightColor = 'yellow' | 'green' | 'blue' | 'pink'
+export type BookHighlightStyle = 'highlight' | 'underline'
+
+export interface BookAnnotation {
+  id: string
+  asset_id: string
+  work_id?: string
+  format: 'epub' | 'pdf' | 'txt' | string
+  epub_cfi?: string
+  pdf_page?: number
+  pdf_rects?: string
+  txt_offset_start?: number
+  txt_offset_end?: number
+  text: string
+  color: BookHighlightColor
+  style: BookHighlightStyle
+  note?: string
+  chapter_title?: string
+  book_title?: string
+  book_author?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface BookAnnotationListResult {
+  items: BookAnnotation[]
+  total: number
+}
+
+export interface CreateBookAnnotationInput {
+  format: 'epub' | 'pdf' | 'txt' | string
+  epub_cfi?: string
+  pdf_page?: number
+  pdf_rects?: string
+  txt_offset_start?: number
+  txt_offset_end?: number
+  text: string
+  color?: BookHighlightColor
+  style?: BookHighlightStyle
+  note?: string
+  chapter_title?: string
+}
+
+export interface UpdateBookAnnotationInput {
+  color?: BookHighlightColor
+  style?: BookHighlightStyle
+  note?: string
+}
+
+export interface ListBookNotesQuery {
+  q?: string
+  asset_id?: string
+  has_note?: boolean
+  color?: BookHighlightColor
+  limit?: number
+  offset?: number
+}
+
+
 const booksUrl = (suffix = '') => `${useApiUrl()}/books${suffix}`
 const importsUrl = (suffix = '') => booksUrl(`/imports${suffix}`)
 const assetsUrl = (suffix = '') => booksUrl(`/assets${suffix}`)
@@ -675,6 +734,41 @@ export const saveBookReadingState = (assetId: string, input: SaveBookReadingStat
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
+
+export const listBookNotes = (query?: ListBookNotesQuery) => {
+  const params = new URLSearchParams()
+  if (query?.q) params.set('q', query.q)
+  if (query?.asset_id) params.set('asset_id', query.asset_id)
+  if (query?.has_note !== undefined) params.set('has_note', String(query.has_note))
+  if (query?.color) params.set('color', query.color)
+  if (query?.limit !== undefined) params.set('limit', String(query.limit))
+  if (query?.offset !== undefined) params.set('offset', String(query.offset))
+  const qs = params.toString()
+  return apiGet<BookAnnotationListResult>(booksUrl(`/notes${qs ? `?${qs}` : ''}`))
+}
+
+export const listAssetAnnotations = (assetId: string) =>
+  apiGet<BookAnnotation[]>(assetsUrl(`/${encodeURIComponent(assetId)}/annotations`))
+
+export const createBookAnnotation = (assetId: string, input: CreateBookAnnotationInput) =>
+  requestEnvelope<BookAnnotation>(assetsUrl(`/${encodeURIComponent(assetId)}/annotations`), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+
+export const updateBookAnnotation = (annotationId: string, input: UpdateBookAnnotationInput) =>
+  requestEnvelope<BookAnnotation>(booksUrl(`/annotations/${encodeURIComponent(annotationId)}`), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+
+export const deleteBookAnnotation = (annotationId: string) =>
+  requestEnvelope<{ deleted: boolean }>(booksUrl(`/annotations/${encodeURIComponent(annotationId)}`), {
+    method: 'DELETE',
+  })
+
 
 export async function fetchBookAssetContent(assetId: string): Promise<Blob> {
   const response = await apiRequest(assetsUrl(`/${encodeURIComponent(assetId)}/content`), {

@@ -5,6 +5,9 @@
       'notification-item-card--compact': compact,
       'notification-item-card--unread unread': !notification.read_at,
       'notification-item-card--active selected': active,
+      'notification-item-card--expanded is-expanded': isExpanded,
+      'notification-item-card--system': isSystemNotification,
+      'notification-item-card--collaboration': isCollaborationNotification,
     }"
     role="button"
     tabindex="0"
@@ -14,7 +17,11 @@
   >
     <!-- Avatar and Action Badge -->
     <div class="card-avatar-wrapper">
+      <div v-if="isSystemNotification && !actorAvatar" class="card-system-avatar" title="系统通知">
+        <IconShieldExclamation :size="compact ? 14 : 18" stroke-width="2" />
+      </div>
       <PAvatar
+        v-else
         :src="actorAvatar"
         :name="actorName"
         :size="compact ? 'xs' : 'sm'"
@@ -39,6 +46,7 @@
             <span class="card-separator">·</span>
             <span class="card-source-label sidebar-item-source detail-source">{{ sourceLabel }}</span>
           </template>
+          <span v-if="isCollaborationNotification" class="card-badge-collab">待处理</span>
         </div>
         <div class="card-meta">
           <time class="card-time sidebar-item-time detail-time">{{ timeAgo }}</time>
@@ -48,6 +56,20 @@
             data-test="unread-dot"
             aria-label="未读"
           />
+          <button
+            v-if="!compact"
+            type="button"
+            class="card-expand-btn"
+            :aria-expanded="isExpanded"
+            aria-label="展开或收起详情"
+            @click.stop="toggleExpand"
+          >
+            <IconChevronDown
+              :size="15"
+              class="card-chevron-icon"
+              :class="{ 'card-chevron-icon--rotated': isExpanded }"
+            />
+          </button>
         </div>
       </div>
 
@@ -57,6 +79,7 @@
         :reply-excerpt="replyExcerpt"
         :original-excerpt="originalExcerpt"
         :text="quoteText"
+        :expanded="isExpanded"
         class="card-quote"
       />
 
@@ -75,6 +98,13 @@
       >
         {{ notificationBody }}
       </p>
+
+      <!-- Extended Meta Row (Non-compact expanded only) -->
+      <div v-if="!compact && isExpanded" class="card-meta-extended">
+        <span class="card-meta-full-time">{{ fullDateTime }}</span>
+        <span class="card-meta-separator">·</span>
+        <span class="card-meta-type">{{ sourceTypeLabel }}</span>
+      </div>
 
       <!-- Action Row (Non-compact only) -->
       <div v-if="!compact" class="card-actions-row detail-actions" @click.stop @keydown.stop>
@@ -143,10 +173,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   IconAt,
   IconCheck,
+  IconChevronDown,
   IconDots,
   IconGitPullRequest,
   IconHeart,
@@ -171,10 +202,12 @@ const props = withDefaults(
     notification: Notification
     compact?: boolean
     active?: boolean
+    expanded?: boolean
   }>(),
   {
     compact: false,
     active: false,
+    expanded: undefined,
   }
 )
 
@@ -184,7 +217,46 @@ const emit = defineEmits<{
   'jump': [notification: Notification]
   'mute-type': [notification: Notification]
   'mute-source': [notification: Notification]
+  'toggle-expand': [expanded: boolean]
 }>()
+
+const isExpandedInternal = ref(props.expanded ?? false)
+watch(() => props.expanded, (newVal) => {
+  if (newVal !== undefined) isExpandedInternal.value = newVal
+})
+
+const isExpanded = computed({
+  get: () => isExpandedInternal.value,
+  set: (val: boolean) => {
+    isExpandedInternal.value = val
+    emit('toggle-expand', val)
+  },
+})
+
+const toggleExpand = () => {
+  isExpanded.value = !isExpanded.value
+}
+
+const isSystemNotification = computed(() => actionType.value === 'system')
+const isCollaborationNotification = computed(() => actionType.value === 'collaboration')
+
+const fullDateTime = computed(() => {
+  if (!props.notification.created_at) return '刚刚'
+  const d = new Date(props.notification.created_at)
+  return isNaN(d.getTime()) ? props.notification.created_at : d.toLocaleString('zh-CN', { hour12: false })
+})
+
+const sourceTypeLabel = computed(() => {
+  switch (actionType.value) {
+    case 'like': return '点赞互动'
+    case 'reply': return '评论回复'
+    case 'mention': return '内容提及'
+    case 'forum': return '论坛动态'
+    case 'collaboration': return '协作任务'
+    case 'system': return '系统通知'
+    default: return '系统通知'
+  }
+})
 
 const actorName = computed(() => {
   return (
@@ -269,6 +341,9 @@ const hasQuote = computed(() => {
 
 const onClickCard = () => {
   emit('click', props.notification.id)
+  if (!props.compact) {
+    toggleExpand()
+  }
 }
 
 const onJump = (e?: MouseEvent) => {
@@ -562,5 +637,90 @@ const onMuteSource = (e?: MouseEvent) => {
 .card-menu-item:hover {
   background: var(--a-color-surface-muted);
   color: var(--a-color-text);
+}
+
+/* System Accent */
+.notification-item-card--system {
+  border-left: 3px solid var(--a-color-primary, #2563eb);
+}
+
+.card-system-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--a-radius-control, 4px);
+  background: color-mix(in srgb, var(--a-color-primary, #2563eb) 10%, transparent);
+  color: var(--a-color-primary, #2563eb);
+  flex-shrink: 0;
+}
+
+.notification-item-card--compact .card-system-avatar {
+  width: 24px;
+  height: 24px;
+}
+
+/* Collaboration Badge */
+.card-badge-collab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.2;
+  border-radius: var(--a-radius-control, 4px);
+  background: color-mix(in srgb, var(--a-color-warning, #f59e0b) 12%, transparent);
+  color: var(--a-color-warning, #d97706);
+  border: 1px solid color-mix(in srgb, var(--a-color-warning, #f59e0b) 25%, transparent);
+  vertical-align: middle;
+}
+
+/* Expand Button & Chevron */
+.card-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-text-muted, #9ca3af);
+  border-radius: var(--a-radius-control, 4px);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.card-expand-btn:hover {
+  color: var(--a-color-text);
+  background: var(--a-color-surface-muted);
+}
+
+.card-chevron-icon {
+  transition: transform 0.2s ease;
+}
+
+.card-chevron-icon--rotated {
+  transform: rotate(180deg);
+}
+
+/* Extended Meta */
+.card-meta-extended {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--a-color-text-muted, #9ca3af);
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
+.card-meta-separator {
+  color: var(--a-color-border-soft);
+}
+
+/* Expanded Card Shadow */
+.notification-item-card.is-expanded {
+  border-color: var(--a-color-border);
+  box-shadow: var(--a-shadow-sm);
 }
 </style>

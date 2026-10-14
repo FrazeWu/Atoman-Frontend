@@ -1,5 +1,10 @@
 <template>
-  <div v-if="hasContent" class="notification-context-quote" data-test="context-quote">
+  <div
+    v-if="hasContent"
+    class="notification-context-quote"
+    :class="{ 'notification-context-quote--expanded': expanded }"
+    data-test="context-quote"
+  >
     <div v-if="replyExcerpt" class="quote-line quote-line--reply">
       <span class="quote-prefix">回复：</span>
       <span class="quote-text">{{ replyExcerpt }}</span>
@@ -18,11 +23,17 @@
 <script setup lang="ts">
 import { computed, useSlots } from 'vue'
 
-const props = defineProps<{
-  replyExcerpt?: string
-  originalExcerpt?: string
-  text?: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    replyExcerpt?: string
+    originalExcerpt?: string
+    text?: string
+    expanded?: boolean
+  }>(),
+  {
+    expanded: false,
+  }
+)
 
 const slots = useSlots()
 
@@ -49,6 +60,12 @@ const hasContent = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   word-break: break-word;
+}
+
+.notification-context-quote--expanded .quote-line {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
 }
 
 .quote-line + .quote-line {

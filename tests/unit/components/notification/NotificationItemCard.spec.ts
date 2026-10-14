@@ -164,4 +164,54 @@ describe('NotificationItemCard', () => {
     expect(wrapper.find('[data-test="unread-dot"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('爱丽丝 回复了你')
   })
+
+  it('toggles expansion state and exposes extended metadata on click', async () => {
+    const notification = createMockNotification()
+    const wrapper = mount(NotificationItemCard, {
+      props: { notification },
+    })
+
+    expect(wrapper.classes()).not.toContain('is-expanded')
+    expect(wrapper.find('.card-meta-extended').exists()).toBe(false)
+
+    // Click card to expand
+    await wrapper.find('.notification-item-card').trigger('click')
+    expect(wrapper.classes()).toContain('is-expanded')
+    expect(wrapper.find('.card-meta-extended').exists()).toBe(true)
+    expect(wrapper.find('.card-chevron-icon--rotated').exists()).toBe(true)
+
+    // Click again to collapse
+    await wrapper.find('.notification-item-card').trigger('click')
+    expect(wrapper.classes()).not.toContain('is-expanded')
+    expect(wrapper.find('.card-meta-extended').exists()).toBe(false)
+  })
+
+  it('renders system notification with accent border and system avatar', () => {
+    const notification = createMockNotification({
+      type: 'site_announcement',
+      category: 'system',
+      actor: null,
+      meta: { title: '系统维护' },
+    })
+    const wrapper = mount(NotificationItemCard, {
+      props: { notification },
+    })
+
+    expect(wrapper.classes()).toContain('notification-item-card--system')
+    expect(wrapper.find('.card-system-avatar').exists()).toBe(true)
+  })
+
+  it('renders collaboration notification with pending badge', () => {
+    const notification = createMockNotification({
+      type: 'content_published',
+      category: 'collaboration',
+      meta: { title: '歌词审核' },
+    })
+    const wrapper = mount(NotificationItemCard, {
+      props: { notification },
+    })
+
+    expect(wrapper.classes()).toContain('notification-item-card--collaboration')
+    expect(wrapper.find('.card-badge-collab').text()).toBe('待处理')
+  })
 })

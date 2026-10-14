@@ -221,7 +221,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				},
 				{
 					path: "notes",
-					component: () => import("@/views/books/BooksHomeView.vue"),
+					component: () => import("@/views/books/BookNotesView.vue"),
 					meta: { requiresAuth: true },
 				},
 				{

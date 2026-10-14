@@ -379,22 +379,22 @@ function describedByForField(
 
 .lyric-grid-header {
   padding: 0 0.75rem 0.5rem;
-  color: var(--a-color-muted, #60646c);
+  color: var(--a-color-muted);
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.02em;
 }
 
 .lyric-row {
   padding: 0.75rem;
-  border-top: 1px solid var(--a-color-border-soft, #e4e4e7);
+  border-top: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
   transition: background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .lyric-row.is-selected {
-  background: color-mix(in srgb, var(--a-color-primary, #2563eb) 6%, var(--a-color-bg, #ffffff));
-  box-shadow: inset 3px 0 0 var(--a-color-primary, #2563eb);
+  background: color-mix(in srgb, var(--a-color-primary) 6%, var(--a-color-bg));
+  box-shadow: inset 3px 0 0 var(--a-color-primary);
 }
 
 .lyric-editor-tools {
@@ -421,11 +421,11 @@ function describedByForField(
 }
 
 .lyric-index {
-  color: var(--a-color-muted, #60646c);
+  color: var(--a-color-muted);
   font-variant-numeric: tabular-nums;
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 500;
   text-align: center;
 }
 
@@ -439,7 +439,7 @@ function describedByForField(
   display: none;
   color: var(--a-color-muted);
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .lyric-input {
@@ -451,7 +451,7 @@ function describedByForField(
   border: 1px solid var(--a-color-border);
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
-  color: var(--a-color-text, #18181b);
+  color: var(--a-color-text);
   font: inherit;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
@@ -520,7 +520,7 @@ function describedByForField(
 
 .lyric-time-error,
 .lyric-issue--error {
-  color: var(--a-color-danger, #b42318);
+  color: var(--a-color-danger);
 }
 
 .lyric-time-error,
@@ -576,7 +576,7 @@ function describedByForField(
 }
 
 .lyric-issue--warning {
-  color: var(--a-color-warning, #8a4b08);
+  color: var(--a-color-warning);
 }
 
 @media (max-width: 767px) {

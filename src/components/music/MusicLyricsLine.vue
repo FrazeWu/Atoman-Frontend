@@ -351,15 +351,15 @@ function formatTime(timeMs: number | null | undefined): string {
 }
 
 .music-lyrics-line.is-static .music-lyrics-line__highlight:hover {
-  background: color-mix(in srgb, var(--a-color-primary, #3b82f6) 14%, transparent);
-  border-bottom-color: color-mix(in srgb, var(--a-color-primary, #3b82f6) 65%, transparent);
+  background: color-mix(in srgb, var(--a-color-primary) 14%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--a-color-primary) 65%, transparent);
 }
 
 .music-lyrics-line.is-static .music-lyrics-line__highlight {
   padding: 0.08rem 0.16rem;
   border-radius: 2px;
-  background: color-mix(in srgb, var(--a-color-primary, #3b82f6) 14%, transparent);
-  border-bottom: 2px solid color-mix(in srgb, var(--a-color-primary, #3b82f6) 65%, transparent);
+  background: color-mix(in srgb, var(--a-color-primary) 14%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--a-color-primary) 65%, transparent);
   transition: none;
 }
 
@@ -502,9 +502,9 @@ function formatTime(timeMs: number | null | undefined): string {
   display: inline;
   border: 0;
   padding: 0.1rem 0.35rem;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--a-color-primary, #3b82f6) 20%, transparent);
-  border-bottom: 2px solid var(--a-color-primary, #3b82f6);
+  border-radius: var(--a-radius-control);
+  background: color-mix(in srgb, var(--a-color-primary) 20%, transparent);
+  border-bottom: 2px solid var(--a-color-primary);
   color: inherit;
   cursor: pointer;
   font: inherit;
@@ -513,8 +513,8 @@ function formatTime(timeMs: number | null | undefined): string {
 }
 
 .music-lyrics-line__highlight:hover {
-  background: color-mix(in srgb, var(--a-color-primary, #3b82f6) 36%, transparent);
-  border-bottom-color: #60a5fa;
+  background: color-mix(in srgb, var(--a-color-primary) 36%, transparent);
+  border-bottom-color: var(--a-color-primary);
 }
 
 .music-lyrics-line__actions {

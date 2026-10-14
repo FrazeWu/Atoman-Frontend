@@ -416,7 +416,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   right: 1rem;
   left: 1rem;
   height: 2px;
-  background: var(--a-color-primary, #2563eb);
+  background: var(--a-color-primary);
   content: '';
   opacity: 0;
   pointer-events: none;

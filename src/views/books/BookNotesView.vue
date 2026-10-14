@@ -54,6 +54,8 @@
             v-for="c in colorOptions"
             :key="c.value"
             type="button"
+            role="radio"
+            :aria-checked="selectedColor === c.value"
             class="books-notes-color-dot"
             :class="{ 'is-active': selectedColor === c.value }"
             :data-color="c.value"
@@ -78,16 +80,17 @@
       </div>
     </div>
 
-    <!-- 列表或状态 -->
+    <!-- 错误反馈横幅 -->
     <div v-if="errorMessage" class="books-feedback books-feedback--error" role="alert">
       {{ errorMessage }}
     </div>
 
-    <div v-else-if="isLoading" class="books-notes-stream" aria-busy="true" aria-label="正在加载笔记">
+    <!-- 列表或加载状态 -->
+    <div v-if="isLoading && notes.length === 0" class="books-notes-stream" aria-busy="true" aria-label="正在加载笔记">
       <PSkeleton v-for="index in 4" :key="index" height="8rem" />
     </div>
 
-    <p v-else-if="notes.length === 0" class="books-notes-empty">
+    <p v-else-if="!isLoading && notes.length === 0" class="books-notes-empty">
       暂无读书笔记，<RouterLink to="/books">前往书架或阅读器开始划线 →</RouterLink>
     </p>
 
@@ -289,6 +292,8 @@ function formatRelativeTime(dateStr?: string | null): string {
   return d.toLocaleDateString('zh-CN')
 }
 
+const knownBooks = new Map<string, string>()
+
 async function loadNotes() {
   isLoading.value = true
   errorMessage.value = ''
@@ -298,18 +303,18 @@ async function loadNotes() {
       asset_id: selectedAssetId.value || undefined,
       has_note: hasNoteOnly.value ? true : undefined,
       color: selectedColor.value || undefined,
+      limit: 100,
     })
     notes.value = res.items || []
     totalNotes.value = res.total || 0
 
-    // Populate book filter options dynamically from notes
-    const bookMap = new Map<string, string>()
+    // Accumulate seen books across fetches so selecting a book doesn't wipe others from dropdown
     for (const n of notes.value) {
       if (n.asset_id && n.book_title) {
-        bookMap.set(n.asset_id, n.book_title)
+        knownBooks.set(n.asset_id, n.book_title)
       }
     }
-    const dynamicOptions = Array.from(bookMap.entries()).map(([assetId, title]) => ({
+    const dynamicOptions = Array.from(knownBooks.entries()).map(([assetId, title]) => ({
       label: `《${title}》`,
       value: assetId,
     }))

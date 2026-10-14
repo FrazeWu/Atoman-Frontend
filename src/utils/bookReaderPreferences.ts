@@ -11,11 +11,13 @@ export type BookReaderBookmark = {
 
 export type BookReaderTheme = 'paper' | 'dim' | 'night'
 export type BookReaderPageLayout = 'single' | 'double'
+export type BookReaderScrollMode = 'continuous' | 'paginated'
 
 export type BookReaderDisplayPreferences = {
   font_scale: number
   theme: BookReaderTheme
   page_layout?: BookReaderPageLayout
+  scroll_mode?: BookReaderScrollMode
   zoom_level?: number
 }
 
@@ -23,6 +25,7 @@ export const defaultBookReaderDisplayPreferences: BookReaderDisplayPreferences =
   font_scale: 1,
   theme: 'paper',
   page_layout: 'single',
+  scroll_mode: 'paginated',
   zoom_level: 100,
 }
 
@@ -37,6 +40,9 @@ export function parseBookReaderDisplayPreferences(value: unknown): BookReaderDis
   }
   if (candidate.page_layout !== undefined) {
     res.page_layout = candidate.page_layout === 'double' ? 'double' : 'single'
+  }
+  if (candidate.scroll_mode !== undefined) {
+    res.scroll_mode = candidate.scroll_mode === 'continuous' ? 'continuous' : 'paginated'
   }
   if (candidate.zoom_level !== undefined) {
     const zoomLevel = Number(candidate.zoom_level)

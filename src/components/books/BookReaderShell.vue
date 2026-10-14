@@ -57,6 +57,20 @@
           </div>
 
           <div class="book-reader-shell__toolbar-right">
+            <!-- 翻页 / 连续滚动切换 (PDF Expert 风格) -->
+            <button
+              v-if="showScrollModeToggle"
+              type="button"
+              class="book-reader-shell__tool-btn"
+              :class="{ 'is-active': scrollMode === 'continuous' }"
+              :title="scrollMode === 'continuous' ? '当前：连续滚动（点击切换单页翻页）' : '当前：单页翻页（点击切换连续滚动）'"
+              :aria-label="scrollMode === 'continuous' ? '切换为单页翻页' : '切换为连续滚动'"
+              @click="toggleScrollMode"
+            >
+              <ArrowsDownUp v-if="scrollMode === 'continuous'" :size="16" aria-hidden="true" />
+              <FileDescription v-else :size="16" aria-hidden="true" />
+            </button>
+
             <!-- 缩放控制 (PDF Expert 风格) -->
             <div v-if="showZoom" class="book-reader-shell__zoom-controls tabular-nums" role="group" aria-label="页面缩放">
               <button
@@ -139,15 +153,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useSlots } from 'vue'
+import { computed, ref, useSlots, watch } from 'vue'
 import {
   IconArrowLeft as ArrowLeft,
+  IconArrowsDownUp as ArrowsDownUp,
   IconChevronLeft as ChevronLeft,
   IconChevronRight as ChevronRight,
+  IconFileDescription as FileDescription,
   IconLayoutSidebar as LayoutSidebar,
   IconZoomIn as ZoomIn,
   IconZoomOut as ZoomOut,
 } from '@tabler/icons-vue'
+import type { BookReaderScrollMode } from '@/utils/bookReaderPreferences'
 
 export type BookReaderTocItem = {
   id?: string
@@ -175,6 +192,8 @@ const props = withDefaults(defineProps<{
   initialZoom?: number
   minZoom?: number
   maxZoom?: number
+  showScrollModeToggle?: boolean
+  initialScrollMode?: BookReaderScrollMode
 }>(), {
   subtitle: '',
   format: '',
@@ -191,6 +210,8 @@ const props = withDefaults(defineProps<{
   initialZoom: 100,
   minZoom: 50,
   maxZoom: 200,
+  showScrollModeToggle: false,
+  initialScrollMode: 'paginated',
 })
 
 const emit = defineEmits<{
@@ -198,6 +219,7 @@ const emit = defineEmits<{
   next: []
   'toc-select': [href: string]
   'zoom-change': [zoom: number]
+  'scroll-mode-change': [mode: BookReaderScrollMode]
 }>()
 
 const progressPercent = computed(() => Math.round(Math.max(0, Math.min(1, props.progress)) * 100))
@@ -210,6 +232,17 @@ const hasTools = computed(() => Boolean(props.toc.length || slots.tools || slots
 
 const showSidebar = ref(desktopLayout)
 const zoom = ref(props.initialZoom)
+const scrollMode = ref<BookReaderScrollMode>(props.initialScrollMode)
+
+watch(() => props.initialScrollMode, (val) => {
+  if (val) scrollMode.value = val
+})
+
+function toggleScrollMode() {
+  const nextMode: BookReaderScrollMode = scrollMode.value === 'continuous' ? 'paginated' : 'continuous'
+  scrollMode.value = nextMode
+  emit('scroll-mode-change', nextMode)
+}
 
 function changeZoom(delta: number) {
   const newZoom = Math.max(props.minZoom, Math.min(props.maxZoom, zoom.value + delta))

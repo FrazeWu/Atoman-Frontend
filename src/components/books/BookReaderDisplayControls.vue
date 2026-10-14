@@ -18,6 +18,14 @@
       </select>
     </label>
 
+    <label v-if="showScrollMode">
+      <span>翻页</span>
+      <select :value="modelValue.scroll_mode || 'paginated'" aria-label="翻页方式" @change="setScrollMode">
+        <option value="paginated">单页翻页</option>
+        <option value="continuous">连续滚动</option>
+      </select>
+    </label>
+
     <div class="book-reader-display-controls__themes" role="group" aria-label="阅读主题">
       <button type="button" :class="{ 'is-active': modelValue.theme === 'paper' }" aria-label="纸张主题" @click="setTheme('paper')">纸</button>
       <button type="button" :class="{ 'is-active': modelValue.theme === 'dim' }" aria-label="柔和主题" @click="setTheme('dim')">柔</button>
@@ -27,13 +35,15 @@
 </template>
 
 <script setup lang="ts">
-import type { BookReaderDisplayPreferences, BookReaderPageLayout, BookReaderTheme } from '@/utils/bookReaderPreferences'
+import type { BookReaderDisplayPreferences, BookReaderPageLayout, BookReaderScrollMode, BookReaderTheme } from '@/utils/bookReaderPreferences'
 
 const props = withDefaults(defineProps<{
   modelValue: BookReaderDisplayPreferences
   showLayout?: boolean
+  showScrollMode?: boolean
 }>(), {
   showLayout: true,
+  showScrollMode: true,
 })
 
 const emit = defineEmits<{ 'update:modelValue': [value: BookReaderDisplayPreferences] }>()
@@ -46,6 +56,11 @@ function setFontScale(event: Event) {
 function setPageLayout(event: Event) {
   const value = (event.target as HTMLSelectElement).value as BookReaderPageLayout
   emit('update:modelValue', { ...props.modelValue, page_layout: value })
+}
+
+function setScrollMode(event: Event) {
+  const value = (event.target as HTMLSelectElement).value as BookReaderScrollMode
+  emit('update:modelValue', { ...props.modelValue, scroll_mode: value })
 }
 
 function setTheme(theme: BookReaderTheme) {

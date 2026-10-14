@@ -15,10 +15,13 @@
       :toc="epubTOC"
       :show-zoom="asset?.format === 'pdf'"
       :initial-zoom="displayPreferences.zoom_level || 100"
+      :show-scroll-mode-toggle="['pdf', 'txt', 'epub'].includes(asset?.format || '')"
+      :initial-scroll-mode="displayPreferences.scroll_mode || 'paginated'"
       @previous="movePrevious"
       @next="moveNext"
       @toc-select="jumpToEpubTOC"
       @zoom-change="handleZoomChange"
+      @scroll-mode-change="handleScrollModeChange"
     >
       <template #actions>
         <PButton type="button" variant="ghost" :disabled="!canRead" aria-label="添加书签" title="添加书签" @click="addBookmark">
@@ -147,7 +150,7 @@ import { useBookReaderStore } from '@/stores/bookReader'
 import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
 import { findBookTextMatches, type BookTextSearchMatch } from '@/utils/bookTextSearch'
 import { mergeBookReadingProgress } from '@/utils/mediaProgressConflict'
-import { parseBookReaderBookmarks, parseBookReaderDisplayPreferences, type BookReaderBookmark, type BookReaderDisplayPreferences } from '@/utils/bookReaderPreferences'
+import { parseBookReaderBookmarks, parseBookReaderDisplayPreferences, type BookReaderBookmark, type BookReaderDisplayPreferences, type BookReaderScrollMode } from '@/utils/bookReaderPreferences'
 import { paginateText, type TextPage } from '@/utils/textPagination'
 import {
   fetchBookAssetContent,
@@ -295,6 +298,11 @@ function handleZoomChange(newZoom: number) {
   if (asset.value?.format === 'pdf') {
     void renderPDFPage()
   }
+  scheduleSaveState()
+}
+
+function handleScrollModeChange(newMode: BookReaderScrollMode) {
+  displayPreferences.value = { ...displayPreferences.value, scroll_mode: newMode }
   scheduleSaveState()
 }
 

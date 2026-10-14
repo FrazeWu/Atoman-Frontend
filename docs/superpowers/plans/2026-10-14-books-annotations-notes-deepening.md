@@ -1,6 +1,6 @@
 # 图书模块划线批注与跨书笔记中心实现计划 (Books Annotations & Notes Deepening Implementation Plan)
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 构建端到端的图书阅读划线批注、随手笔记与跨书统一笔记中心系统，支持 EPUB/TXT/PDF 原文定位高亮、4色语义标注、选中文本浮动工具栏、侧栏划线管理与 `/books/notes` 独立工作台。
 
@@ -41,7 +41,7 @@
   - `PUT /api/v1/books/annotations/:annotationId`: returns `BookAnnotationDTO`
   - `DELETE /api/v1/books/annotations/:annotationId`: returns `{ deleted: bool }`
 
-- [ ] **Step 1: Write the failing backend test**
+- [x] **Step 1: Write the failing backend test**
   - Create `Atoman-Backend/internal/modules/books/annotations_http_test.go` testing CRUD flow:
     - Create an annotation for asset;
     - Query annotations for that asset;
@@ -49,23 +49,23 @@
     - Update note text & color;
     - Delete annotation.
 
-- [ ] **Step 2: Run test to confirm it fails**
+- [x] **Step 2: Run test to confirm it fails**
   - Run: `cd Atoman-Backend && go test -v ./internal/modules/books -run TestBookAnnotations`
 
-- [ ] **Step 3: Implement data model and migration**
+- [x] **Step 3: Implement data model and migration**
   - In `internal/model/book.go`: Add `UserBookAnnotation` struct and TableName `user_book_annotations`.
   - In `internal/migrations/`: Add migration function `MigrateUserBookAnnotations(db *gorm.DB) error` creating table and indexes.
 
-- [ ] **Step 4: Implement service & HTTP handlers**
+- [x] **Step 4: Implement service & HTTP handlers**
   - In `internal/modules/books/annotations.go`: Implement `CreateAnnotation`, `ListAssetAnnotations`, `ListGlobalNotes`, `UpdateAnnotation`, `DeleteAnnotation`.
   - In `internal/modules/books/annotations_http.go`: Implement Gin HTTP handlers and input binding validations.
   - In `internal/modules/books/http.go`: Register routes under `protected` group.
 
-- [ ] **Step 5: Run tests and verify**
+- [x] **Step 5: Run tests and verify**
   - Run: `cd Atoman-Backend && go test -v ./internal/modules/books -run TestBookAnnotations`
   - Run: `cd Atoman-Backend && go build ./...`
 
-- [ ] **Step 6: Commit backend changes**
+- [x] **Step 6: Commit backend changes**
   - Commit: `feat(books): implement user book annotations data model, service, and API`
 
 ---
@@ -86,7 +86,7 @@
   - `deleteBookAnnotation(annotationId)`: `Promise<{ deleted: boolean }>`
   - `<BookSelectionToolbar :position="pos" :selected-text="text" :existing="annotation" @highlight="onHighlight" @add-note="onAddNote" @delete="onDelete" @copy="onCopy" @close="onClose" />`
 
-- [ ] **Step 1: Write the failing unit test for BookSelectionToolbar**
+- [x] **Step 1: Write the failing unit test for BookSelectionToolbar**
   - Create `Atoman-Frontend/tests/unit/components/books/BookSelectionToolbar.spec.ts`:
     - Test renders 4 color options (yellow, green, blue, pink);
     - Test clicking color emits `'highlight'` with selected color;
@@ -95,24 +95,24 @@
     - Test copy quote button;
     - Test delete button when editing an existing annotation.
 
-- [ ] **Step 2: Run test to confirm it fails**
+- [x] **Step 2: Run test to confirm it fails**
   - Run: `cd Atoman-Frontend && bun test tests/unit/components/books/BookSelectionToolbar.spec.ts`
 
-- [ ] **Step 3: Implement API endpoints in src/api/books.ts**
+- [x] **Step 3: Implement API endpoints in src/api/books.ts**
   - Add TypeScript interfaces: `BookAnnotation`, `BookHighlightColor`, `BookHighlightStyle`, `CreateBookAnnotationInput`, `UpdateBookAnnotationInput`, `BookAnnotationListResult`.
   - Implement API client functions using `apiRequestEnvelope` / `apiGet`.
 
-- [ ] **Step 4: Implement BookSelectionToolbar.vue**
+- [x] **Step 4: Implement BookSelectionToolbar.vue**
   - Pure-white surface `var(--a-color-bg)`, 4px radius (`var(--a-radius-card)`), `var(--a-shadow-dropdown)`.
   - 4 color blocks using semantic color tokens.
   - Inline collapsible thought/note input box.
   - Copy and delete actions.
 
-- [ ] **Step 5: Run tests and verify**
+- [x] **Step 5: Run tests and verify**
   - Run: `cd Atoman-Frontend && bun test tests/unit/components/books/BookSelectionToolbar.spec.ts`
   - Run: `cd Atoman-Frontend && bun run type-check`
 
-- [ ] **Step 6: Commit frontend API and toolbar**
+- [x] **Step 6: Commit frontend API and toolbar**
   - Commit: `feat(books): add annotations API client and BookSelectionToolbar component`
 
 ---
@@ -134,7 +134,7 @@
     - Emits: `'annotation-jump'`, `'annotation-edit'`, `'annotation-delete'`, `'annotation-export'`
   - `BookReaderView.vue` with interactive text selection, highlight replay, and jump support.
 
-- [ ] **Step 1: Write the failing test for BookReaderSidebar annotations**
+- [x] **Step 1: Write the failing test for BookReaderSidebar annotations**
   - Create `Atoman-Frontend/tests/unit/components/books/BookReaderSidebar.annotations.spec.ts`:
     - Test 4th tab "批注" renders with annotation count badge;
     - Test clicking tab switches to annotations list;
@@ -142,27 +142,27 @@
     - Test inline edit and delete emits;
     - Test empty state when no annotations.
 
-- [ ] **Step 2: Run test to confirm it fails**
+- [x] **Step 2: Run test to confirm it fails**
   - Run: `cd Atoman-Frontend && bun test tests/unit/components/books/BookReaderSidebar.annotations.spec.ts`
 
-- [ ] **Step 3: Implement annotations tab in BookReaderSidebar.vue**
+- [x] **Step 3: Implement annotations tab in BookReaderSidebar.vue**
   - Add `BookSidebarMode = 'thumbnails' | 'outline' | 'bookmarks' | 'annotations'`.
   - Add Tab button with `Highlighter` or `MessageSquare` icon and count badge.
   - Render annotation cards with color indicator border, quoted text, user note, and actions.
   - Add "导出本书划线" action button.
 
-- [ ] **Step 4: Integrate selection and highlights in BookReaderView.vue**
+- [x] **Step 4: Integrate selection and highlights in BookReaderView.vue**
   - Load annotations on book open via `listAssetAnnotations(assetId)`.
   - On TXT: handle text selection mouseup, display `BookSelectionToolbar`, render `<mark>` elements on text pages.
   - On EPUB: handle `epubRendition.on('selected')`, render EPUB marks via `rendition.annotations.add`.
   - Handle jump to annotation location (scroll/display CFI or page) and transient pulse highlight.
   - Support query parameter `?annotationId=...` on mount to jump straight to note position.
 
-- [ ] **Step 5: Run tests and verify**
+- [x] **Step 5: Run tests and verify**
   - Run: `cd Atoman-Frontend && bun test tests/unit/components/books/BookReaderSidebar.annotations.spec.ts`
   - Run: `cd Atoman-Frontend && bun run type-check`
 
-- [ ] **Step 6: Commit reader and sidebar integration**
+- [x] **Step 6: Commit reader and sidebar integration**
   - Commit: `feat(books): integrate annotations into BookReaderSidebar and BookReaderView`
 
 ---
@@ -180,7 +180,7 @@
 - Produces:
   - Dedicated `/books/notes` view component with search, filter, card stream, jump to reader, and markdown exporter.
 
-- [ ] **Step 1: Write the failing test for BookNotesView**
+- [x] **Step 1: Write the failing test for BookNotesView**
   - Create `Atoman-Frontend/tests/unit/views/books/BookNotesView.spec.ts`:
     - Test renders note items with quote text, attached note, book title, and color badge;
     - Test search input triggers debounced fetch with `q`;
@@ -189,25 +189,25 @@
     - Test "导出 Markdown" downloads structured markdown file;
     - Test "阅读原文" link navigates to `/books/read/:assetId?annotationId=...`.
 
-- [ ] **Step 2: Run test to confirm it fails**
+- [x] **Step 2: Run test to confirm it fails**
   - Run: `cd Atoman-Frontend && bun test tests/unit/views/books/BookNotesView.spec.ts`
 
-- [ ] **Step 3: Implement BookNotesView.vue**
+- [x] **Step 3: Implement BookNotesView.vue**
   - Pure-white double-notch minimal cards layout.
   - Search toolbar with `SearchSurface`, book selector, has-note switch, and export button.
   - Card list with color indicator strip, quoted text, note block, book title, page/chapter metadata, and actions.
   - Responsive design and empty state.
 
-- [ ] **Step 4: Update route in src/router/routes/modules.ts**
+- [x] **Step 4: Update route in src/router/routes/modules.ts**
   - Change `/books/notes` component from placeholder `BooksHomeView.vue` to `() => import("@/views/books/BookNotesView.vue")`.
 
-- [ ] **Step 5: Run tests and verify full frontend integration**
+- [x] **Step 5: Run tests and verify full frontend integration**
   - Run: `cd Atoman-Frontend && bun test tests/unit/views/books/BookNotesView.spec.ts`
   - Run: `cd Atoman-Frontend && bun run test:unit tests/unit/components/books/BookSelectionToolbar.spec.ts tests/unit/components/books/BookReaderSidebar.annotations.spec.ts`
   - Run: `cd Atoman-Frontend && bun run type-check`
   - Run: `cd Atoman-Frontend && bun run build`
 
-- [ ] **Step 6: Commit BookNotesView and route update**
+- [x] **Step 6: Commit BookNotesView and route update**
   - Commit: `feat(books): implement BookNotesView for dedicated notes center`
 
 ---
@@ -217,13 +217,13 @@
 **Files:**
 - Modify: `Atoman-Frontend/tests/unit/ui/design-system-contract.spec.ts` (if needed)
 
-- [ ] **Step 1: Run design system contract and full unit tests**
+- [x] **Step 1: Run design system contract and full unit tests**
   - Run: `cd Atoman-Frontend && bun run test:unit tests/unit/ui/design-system-contract.spec.ts`
   - Run: `cd Atoman-Backend && go test ./...`
   - Run: `cd Atoman-Frontend && bun run type-check`
 
-- [ ] **Step 2: Run git diff --check for any whitespace or lint flaws**
+- [x] **Step 2: Run git diff --check for any whitespace or lint flaws**
   - Run: `git diff --check`
 
-- [ ] **Step 3: Final commit and summary report**
+- [x] **Step 3: Final commit and summary report**
   - Commit: `chore(books): complete end-to-end verification of annotations and note center`

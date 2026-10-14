@@ -177,7 +177,7 @@ const sourceType = (item: SubscriptionHubMembership) =>
 .subscription-hub-sidebar__header p {
   margin: 0;
   color: var(--a-color-muted);
-  font-weight: 650;
+  font-weight: 500;
 }
 .subscription-hub-sidebar__header button {
   display: grid;

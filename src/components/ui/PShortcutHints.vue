@@ -109,7 +109,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
 
 .shortcut-hints__label {
   font-size: 0.7rem;
-  font-weight: 650;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -135,7 +135,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   border-bottom: 1px solid var(--a-color-border-soft);
   color: var(--a-color-fg);
   font-size: 0.8rem;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .shortcut-hints__list {
@@ -165,7 +165,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   font: inherit;
-  font-weight: 650;
+  font-weight: 500;
   text-align: center;
   white-space: nowrap;
 }

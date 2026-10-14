@@ -614,14 +614,14 @@ onUnmounted(() => window.removeEventListener('click', handleClickOutside))
 }
 
 :global(.dark) .date-popover {
-  background: var(--a-color-bg, #0f172a);
-  border-color: var(--a-color-border-soft, #334155);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+  background: var(--a-color-bg);
+  border-color: var(--a-color-border-soft);
+  box-shadow: var(--a-shadow-dropdown, var(--a-shadow-lg));
 }
 
 :global(.dark) .popover-select {
-  background: var(--a-color-surface-muted, #1e293b);
-  border-color: var(--a-color-border-soft, #334155);
-  color: var(--a-color-text, #f8fafc);
+  background: var(--a-color-surface-muted);
+  border-color: var(--a-color-border-soft);
+  color: var(--a-color-text);
 }
 </style>

@@ -85,6 +85,6 @@ defineEmits(['click'])
   border-left-color: var(--a-color-text);
   border-radius: 2px;
   box-shadow: none;
-  font-weight: 650;
+  font-weight: var(--a-font-weight-strong, 600);
 }
 </style>

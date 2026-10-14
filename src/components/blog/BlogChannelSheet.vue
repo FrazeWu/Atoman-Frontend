@@ -220,7 +220,7 @@ watch(channelId, () => {
   place-items: center;
   color: var(--a-color-muted);
   font-size: 3rem;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .channel-sheet-visual img {

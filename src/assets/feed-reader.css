@@ -42,7 +42,7 @@
 	margin: 1.8em 0 0.65em;
 	color: var(--a-color-text);
 	font-family: var(--a-font-sans);
-	font-weight: 650;
+	font-weight: 500;
 	line-height: 1.25;
 	letter-spacing: 0;
 	text-wrap: balance;
@@ -84,7 +84,7 @@
 }
 
 .feed-reader-content dt {
-	font-weight: 650;
+	font-weight: 500;
 }
 
 .feed-reader-content dd {
@@ -254,7 +254,7 @@
 
 .feed-reader-content th {
 	background: var(--a-color-surface-muted);
-	font-weight: 650;
+	font-weight: 500;
 }
 
 .feed-reader-content sup,

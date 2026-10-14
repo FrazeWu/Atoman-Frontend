@@ -209,7 +209,7 @@ const compactCount = (value: number) => {
   display: grid;
   place-items: center;
   font-size: 0.9rem;
-  font-weight: 650;
+  font-weight: 500;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -287,9 +287,9 @@ const compactCount = (value: number) => {
 
 .feed-source-card__sub-btn.is-subscribed,
 .feed-source-card__sub-btn:disabled {
-  color: #10b981;
-  border-color: color-mix(in srgb, #10b981 40%, var(--a-color-border-soft));
-  background: color-mix(in srgb, #10b981 8%, transparent);
+  color: var(--a-color-success);
+  border-color: color-mix(in srgb, var(--a-color-success) 40%, var(--a-color-border-soft));
+  background: color-mix(in srgb, var(--a-color-success) 8%, transparent);
   cursor: default;
 }
 

@@ -88,9 +88,9 @@ function setTheme(theme: BookReaderTheme) {
 .book-reader-display-controls select,
 .book-reader-display-controls button {
   min-height: 2rem;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  background: var(--book-reader-surface, var(--a-color-surface, #ffffff));
+  background: var(--book-reader-surface, var(--a-color-bg));
   color: var(--book-reader-text, var(--a-color-fg));
 }
 

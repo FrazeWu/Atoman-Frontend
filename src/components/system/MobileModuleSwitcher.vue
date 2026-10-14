@@ -38,7 +38,7 @@ const emit = defineEmits<{
   color: var(--a-color-fg);
   font: inherit;
   font-size: 1.0625rem;
-  font-weight: 650;
+  font-weight: 500;
   text-decoration: none;
 }
 

@@ -1843,20 +1843,20 @@ watch(() => props.filterRules, (rules) => {
 .health-dot {
   width: 0.5rem;
   height: 0.5rem;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-muted);
 }
 
 .health-healthy .health-dot {
-  background: #15803d;
+  background: var(--a-color-success);
 }
 
 .health-warning .health-dot {
-  background: #b45309;
+  background: var(--a-color-warning);
 }
 
 .health-error .health-dot {
-  background: #b91c1c;
+  background: var(--a-color-danger);
 }
 
 .health-error,
@@ -1871,7 +1871,7 @@ watch(() => props.filterRules, (rules) => {
 }
 
 .health-error {
-  color: #b91c1c;
+  color: var(--a-color-danger);
 }
 
 .health-recovery {

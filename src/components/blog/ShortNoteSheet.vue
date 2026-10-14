@@ -378,7 +378,7 @@ watch(noteId, () => void loadNote(), { immediate: true })
 
 .short-note-sheet-author {
   font-size: 0.9rem;
-  font-weight: 650;
+  font-weight: 600;
   color: var(--a-color-fg);
   line-height: 1.2;
 }

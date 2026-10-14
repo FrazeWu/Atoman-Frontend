@@ -875,7 +875,7 @@ const emitPlayPodcast = () => {
   color: var(--a-color-text);
   font-family: var(--a-font-sans);
   font-size: 2rem;
-  font-weight: 650;
+  font-weight: 500;
   line-height: 1.22;
   letter-spacing: 0;
   text-wrap: balance;

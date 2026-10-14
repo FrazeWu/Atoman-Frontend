@@ -82,7 +82,7 @@ const { sidebarCollapsed } = useSidebar()
   color: var(--a-color-fg);
   border-left-color: var(--a-color-text);
   box-shadow: none;
-  font-weight: 650;
+  font-weight: var(--a-font-weight-strong, 600);
 }
 
 :deep(.p-sidebar-item-icon) {

@@ -149,7 +149,7 @@ const toggle = (id: string) => {
 
 .onboarding-recommendations__source:hover,
 .onboarding-recommendations__source.is-selected {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted);
 }
 
 .onboarding-recommendations__source.is-selected::before {
@@ -178,12 +178,12 @@ const toggle = (id: string) => {
 }
 
 .onboarding-recommendations__source-copy .onboarding-recommendations__failed {
-  color: var(--a-color-danger, #b42318);
+  color: var(--a-color-danger);
 }
 
 .onboarding-recommendations__error {
   margin: 0;
-  color: var(--a-color-danger, #b42318);
+  color: var(--a-color-danger);
 }
 
 .onboarding-recommendations__actions {

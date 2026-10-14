@@ -10,104 +10,242 @@
 
     <div class="inbox-shell">
       <div class="inbox-body">
+        <!-- Left Category Pane (220px fixed) -->
         <aside class="inbox-category-pane" aria-label="通知分类">
-          <button
-            v-for="tab in tabs"
-            :key="tab.key"
-            type="button"
-            class="inbox-category-item"
-            :class="{ active: activeTab === tab.key }"
-            :aria-pressed="activeTab === tab.key"
-            @click="switchTab(tab.key)"
-          >
-            <span>{{ tab.label }}</span>
-            <span v-if="tabUnreadCount(tab.key) > 0" class="tab-count">{{ tabUnreadCount(tab.key) }}</span>
-          </button>
+          <nav class="inbox-category-list">
+            <button
+              v-for="tab in tabs"
+              :key="tab.key"
+              type="button"
+              class="inbox-category-item"
+              :class="{ active: activeTab === tab.key }"
+              :aria-pressed="activeTab === tab.key"
+              @click="switchTab(tab.key)"
+            >
+              <span class="category-item-label">{{ tab.label }}</span>
+              <span v-if="tabUnreadCount(tab.key) > 0" class="tab-count">{{ tabUnreadCount(tab.key) }}</span>
+            </button>
+          </nav>
         </aside>
 
-        <div class="inbox-list-pane">
-          <div class="pane-heading">
-            <span>{{ activeTabLabel }}</span>
-            <PButton v-if="activeTab === 'dm'" variant="secondary" @click="dmStore.fetchConversations" label="刷新" />
-          </div>
-
-          <div v-if="activeTab !== 'dm'" class="sidebar-list">
-            <button
-              v-for="item in notificationStore.notifications"
-              :key="item.id"
-              class="sidebar-item"
-              :class="{ unread: !item.read_at, selected: selectedNotificationId === item.id }"
-              @click="openNotification(item.id)"
-            >
-              <div class="sidebar-item-title">{{ formatNotificationTitle(item) }}</div>
-              <div v-if="notificationSourceLabel(item)" class="sidebar-item-source">{{ notificationSourceLabel(item) }}</div>
-              <div class="sidebar-item-body a-muted">{{ formatNotificationBody(item) }}</div>
-              <div class="sidebar-item-time">{{ formatTime(item.created_at) }}</div>
-            </button>
-            <div v-if="!notificationStore.loading && notificationStore.notifications.length === 0" class="inbox-empty-state">
-              <strong>暂无通知</strong>
-              <span>当前分类没有新内容。</span>
-            </div>
-          </div>
-
-          <div v-else class="dm-list-workspace" :class="{ 'dm-list-workspace--hidden': mobileConversationOpen }">
-            <DMMailboxSelector :mailboxes="dmMailboxes" :active-mailbox-key="dmStore.activeMailboxKey" @select-mailbox="selectMailbox" />
-            <DMConversationList :conversations="dmConversations" :active-conversation-id="dmStore.activeConversationId" :loading="dmStore.loadingConversations" :has-more="hasMoreConversations" @open-conversation="openConversation" @load-more="dmStore.loadMoreConversations" />
-          </div>
-        </div>
-
-        <PSheet
-          v-if="mobileConversationOpen"
-          :show="mobileConversationOpen"
-          side="bottom"
-          :title="mobileConversationTitle"
-          close-type="header"
-          :height="'calc(100dvh - var(--a-content-bottom-offset))'"
-          panel-class="inbox-mobile-conversation-sheet"
-          @close="closeMobileConversation"
-        >
-          <DMConversationPane :conversation="dmStore.activeConversation" :messages="dmStore.activeMessages" :has-more="dmStore.canLoadOlderMessages" :loading="dmStore.loadingMessages" :mobile="isMobile" :target-label="dmStore.activeTarget?.display_name || '新会话'" @back="closeMobileConversation" @load-older="dmStore.loadOlderMessages" @block="blockActiveConversation" @unblock="unblockActiveConversation" @report="reportMessageId = $event">
-            <DMComposer v-model="dmContent" :disabled="dmStore.activeConversationBlocked" :sending="dmSending" :reply-as-label="dmStore.replyAsLabel" :error="dmError" :image="dmImage" @send="submitDM" @upload-image="uploadDMImage" @remove-image="dmImage = null" />
-          </DMConversationPane>
-        </PSheet>
-
-        <section class="inbox-detail">
-          <template v-if="activeTab !== 'dm'">
-            <div v-if="selectedNotification" class="detail-card">
-              <h2 class="a-subtitle">{{ formatNotificationTitle(selectedNotification) }}</h2>
-              <p class="detail-body a-muted">{{ formatNotificationBody(selectedNotification) }}</p>
-              <p class="detail-reason">{{ selectedNotification.reason }}</p>
-              <p class="detail-source">{{ notificationSourceLabel(selectedNotification) || '来源已不可用' }}</p>
-              <p class="detail-time">{{ formatTime(selectedNotification.created_at) }}</p>
-              <div class="detail-actions">
-                <PButton v-if="notificationTargetPath(selectedNotification)" @click="jumpToNotification(selectedNotification)">前往来源内容</PButton>
-                <PButton v-else variant="secondary" disabled>来源已不可用</PButton>
-                <PButton variant="secondary" @click="notificationStore.markRead(selectedNotification.id)">标记已读</PButton>
-                <PButton variant="secondary" @click="muteNotificationType(selectedNotification)">不再提醒此类</PButton>
-                <PButton variant="secondary" @click="muteNotificationSource(selectedNotification)">不再提醒此内容</PButton>
+        <!-- Right Main Pane -->
+        <main class="inbox-main-pane" aria-label="通知内容">
+          <!-- Notification Stream Mode -->
+          <div v-if="activeTab !== 'dm'" class="stream-workspace">
+            <!-- Stream Toolbar -->
+            <div class="stream-toolbar">
+              <div class="stream-toolbar-left">
+                <h2 class="stream-title">{{ activeTabLabel }}</h2>
+                <span v-if="activeCategoryUnreadCount > 0" class="stream-count-badge">
+                  {{ activeCategoryUnreadCount }}
+                </span>
               </div>
-              <p v-if="notificationActionMessage" class="a-muted">{{ notificationActionMessage }}</p>
+              <div class="stream-toolbar-right">
+                <div class="stream-filter-toggle" role="group" aria-label="通知过滤">
+                  <button
+                    type="button"
+                    class="filter-toggle-btn"
+                    :class="{ active: filterMode === 'all' }"
+                    @click="filterMode = 'all'"
+                  >
+                    所有
+                  </button>
+                  <button
+                    type="button"
+                    class="filter-toggle-btn"
+                    :class="{ active: filterMode === 'unread' }"
+                    @click="filterMode = 'unread'"
+                  >
+                    仅未读
+                  </button>
+                </div>
+                <PButton
+                  v-if="activeCategoryUnreadCount > 0"
+                  variant="ghost"
+                  size="sm"
+                  class="toolbar-mark-read-btn"
+                  @click="markCurrentNotificationsRead"
+                >
+                  标为已读
+                </PButton>
+              </div>
             </div>
-            <div v-else class="detail-empty">
-              <strong>选择一条通知</strong>
-              <span>点击左侧通知查看详情。</span>
-            </div>
-          </template>
 
-          <template v-else>
-            <div v-if="!mobileConversationOpen && (dmStore.activeConversation || dmStore.activeTarget)" class="detail-card detail-card-dm">
-              <DMConversationPane :conversation="dmStore.activeConversation" :messages="dmStore.activeMessages" :has-more="dmStore.canLoadOlderMessages" :loading="dmStore.loadingMessages" :mobile="isMobile" :target-label="dmStore.activeTarget?.display_name || '新会话'" @back="closeMobileConversation" @load-older="dmStore.loadOlderMessages" @block="blockActiveConversation" @unblock="unblockActiveConversation" @report="reportMessageId = $event">
-                <DMComposer v-model="dmContent" :disabled="dmStore.activeConversationBlocked" :sending="dmSending" :reply-as-label="dmStore.replyAsLabel" :error="dmError" :image="dmImage" @send="submitDM" @upload-image="uploadDMImage" @remove-image="dmImage = null" />
-              </DMConversationPane>
+            <!-- Notification Feed Stream Cards -->
+            <div class="stream-list sidebar-list">
+              <article
+                v-for="item in filteredNotifications"
+                :key="item.id"
+                class="stream-card sidebar-item"
+                :class="{ unread: !item.read_at, selected: selectedNotificationId === item.id }"
+                role="button"
+                tabindex="0"
+                @click="openNotification(item.id)"
+                @keydown.enter="openNotification(item.id)"
+                @keydown.space.prevent="openNotification(item.id)"
+              >
+                <!-- Avatar & Action Badge -->
+                <div class="card-avatar-wrapper">
+                  <PAvatar
+                    :src="item.actor?.avatar_url || ''"
+                    :name="getActorName(item)"
+                    size="sm"
+                    class="card-avatar"
+                  />
+                  <div
+                    class="card-action-badge"
+                    :class="`card-action-badge--${getActionType(item)}`"
+                    :title="getActionBadgeTitle(item)"
+                  >
+                    <component :is="getActionBadgeIcon(item)" :size="12" stroke-width="2.5" />
+                  </div>
+                </div>
+
+                <!-- Card Content Body -->
+                <div class="card-content-body">
+                  <div class="card-header-row">
+                    <div class="card-title-group">
+                      <span class="card-title sidebar-item-title">{{ formatNotificationTitle(item) }}</span>
+                      <template v-if="notificationSourceLabel(item)">
+                        <span class="card-separator">·</span>
+                        <span class="card-source sidebar-item-source detail-source">{{ notificationSourceLabel(item) }}</span>
+                      </template>
+                    </div>
+                    <div class="card-meta">
+                      <time class="card-time sidebar-item-time detail-time">{{ formatTime(item.created_at) }}</time>
+                      <span v-if="!item.read_at" class="card-unread-dot" aria-label="未读" />
+                    </div>
+                  </div>
+
+                  <!-- Context Quote Block -->
+                  <NotificationContextQuote
+                    v-if="hasQuote(item)"
+                    :reply-excerpt="getReplyExcerpt(item)"
+                    :original-excerpt="getOriginalExcerpt(item)"
+                    :text="getQuoteText(item)"
+                    class="card-quote"
+                  />
+                  <p v-if="item.reason && item.reason !== getQuoteText(item)" class="card-reason detail-reason">{{ item.reason }}</p>
+
+                  <p v-if="formatNotificationBody(item) && formatNotificationBody(item) !== item.reason && formatNotificationBody(item) !== getQuoteText(item)" class="sidebar-item-body a-muted">
+                    {{ formatNotificationBody(item) }}
+                  </p>
+
+                  <!-- Card Actions Row -->
+                  <div class="card-actions-row detail-actions" @click.stop @keydown.stop>
+                    <div class="card-actions-left">
+                      <PButton
+                        v-if="notificationTargetPath(item)"
+                        variant="secondary"
+                        size="sm"
+                        class="card-action-btn"
+                        @click="jumpToNotification(item)"
+                      >
+                        前往来源内容
+                      </PButton>
+                      <PButton
+                        v-else
+                        variant="secondary"
+                        size="sm"
+                        disabled
+                        class="card-action-unavailable-btn detail-source"
+                      >
+                        来源已不可用
+                      </PButton>
+                    </div>
+
+                    <div class="card-actions-right">
+                      <PButton
+                        v-if="!item.read_at"
+                        variant="ghost"
+                        size="sm"
+                        class="card-action-btn"
+                        @click="notificationStore.markRead(item.id)"
+                      >
+                        标记已读
+                      </PButton>
+
+                      <details class="card-more-menu" @click.stop>
+                        <summary class="card-more-trigger" aria-label="更多操作">
+                          <IconDots :size="16" />
+                        </summary>
+                        <div class="card-menu-dropdown" role="menu">
+                          <button
+                            type="button"
+                            class="card-menu-item"
+                            @click="muteNotificationType(item)"
+                          >
+                            不再提醒此类
+                          </button>
+                          <button
+                            type="button"
+                            class="card-menu-item"
+                            @click="muteNotificationSource(item)"
+                          >
+                            不再提醒此内容
+                          </button>
+                        </div>
+                      </details>
+                    </div>
+                  </div>
+                  <p v-if="notificationActionMessage && selectedNotificationId === item.id" class="action-message a-muted">
+                    {{ notificationActionMessage }}
+                  </p>
+                </div>
+              </article>
+
+              <!-- Empty State -->
+              <div v-if="!notificationStore.loading && filteredNotifications.length === 0" class="inbox-empty-state">
+                <strong>暂无通知</strong>
+                <span>{{ filterMode === 'unread' ? '当前分类没有未读通知。' : '当前分类没有新内容。' }}</span>
+              </div>
             </div>
-            <div v-else class="detail-empty">
-              <strong>{{ dmOpenError ? '无法打开会话' : '选择一个会话' }}</strong>
-              <span>{{ dmOpenError || '点击左侧私信会话开始聊天。' }}</span>
+          </div>
+
+          <!-- DM Mode -->
+          <div v-else class="dm-workspace">
+            <div class="dm-workspace-sidebar" :class="{ 'dm-workspace-sidebar--hidden': mobileConversationOpen }">
+              <div class="pane-heading">
+                <span>私信</span>
+                <PButton variant="secondary" @click="dmStore.fetchConversations" label="刷新" />
+              </div>
+              <DMMailboxSelector :mailboxes="dmMailboxes" :active-mailbox-key="dmStore.activeMailboxKey" @select-mailbox="selectMailbox" />
+              <DMConversationList :conversations="dmConversations" :active-conversation-id="dmStore.activeConversationId" :loading="dmStore.loadingConversations" :has-more="hasMoreConversations" @open-conversation="openConversation" @load-more="dmStore.loadMoreConversations" />
             </div>
-          </template>
-        </section>
+
+            <section class="dm-workspace-main inbox-detail">
+              <div v-if="!mobileConversationOpen && (dmStore.activeConversation || dmStore.activeTarget)" class="detail-card detail-card-dm">
+                <DMConversationPane :conversation="dmStore.activeConversation" :messages="dmStore.activeMessages" :has-more="dmStore.canLoadOlderMessages" :loading="dmStore.loadingMessages" :mobile="isMobile" :target-label="dmStore.activeTarget?.display_name || '新会话'" @back="closeMobileConversation" @load-older="dmStore.loadOlderMessages" @block="blockActiveConversation" @unblock="unblockActiveConversation" @report="reportMessageId = $event">
+                  <DMComposer v-model="dmContent" :disabled="dmStore.activeConversationBlocked" :sending="dmSending" :reply-as-label="dmStore.replyAsLabel" :error="dmError" :image="dmImage" @send="submitDM" @upload-image="uploadDMImage" @remove-image="dmImage = null" />
+                </DMConversationPane>
+              </div>
+              <div v-else class="detail-empty">
+                <strong>{{ dmOpenError ? '无法打开会话' : '选择一个会话' }}</strong>
+                <span>{{ dmOpenError || '点击左侧私信会话开始聊天。' }}</span>
+              </div>
+            </section>
+          </div>
+        </main>
       </div>
     </div>
+
+    <!-- Mobile Conversation Bottom Sheet -->
+    <PSheet
+      v-if="mobileConversationOpen"
+      :show="mobileConversationOpen"
+      side="bottom"
+      :title="mobileConversationTitle"
+      close-type="header"
+      :height="'calc(100dvh - var(--a-content-bottom-offset))'"
+      panel-class="inbox-mobile-conversation-sheet"
+      @close="closeMobileConversation"
+    >
+      <DMConversationPane :conversation="dmStore.activeConversation" :messages="dmStore.activeMessages" :has-more="dmStore.canLoadOlderMessages" :loading="dmStore.loadingMessages" :mobile="isMobile" :target-label="dmStore.activeTarget?.display_name || '新会话'" @back="closeMobileConversation" @load-older="dmStore.loadOlderMessages" @block="blockActiveConversation" @unblock="unblockActiveConversation" @report="reportMessageId = $event">
+        <DMComposer v-model="dmContent" :disabled="dmStore.activeConversationBlocked" :sending="dmSending" :reply-as-label="dmStore.replyAsLabel" :error="dmError" :image="dmImage" @send="submitDM" @upload-image="uploadDMImage" @remove-image="dmImage = null" />
+      </DMConversationPane>
+    </PSheet>
+
+    <!-- DM Report Modal -->
     <DMReportModal :open="Boolean(reportMessageId)" :message-id="reportMessageId" :submitting="reportSubmitting" :error="reportError" above-player @close="closeReportModal" @clear-error="reportError = ''" @report="reportMessage" />
   </div>
 </template>
@@ -115,21 +253,36 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import {
+  IconAt,
+  IconDots,
+  IconGitPullRequest,
+  IconHeart,
+  IconMessage2,
+  IconShieldExclamation,
+} from '@tabler/icons-vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSheet from '@/components/ui/PSheet.vue'
-import { useInboxStore } from '@/stores/inbox'
-import { commentNotificationLocation, contentPublishedLocation, forumNotificationLocation, isCommentNotification, useNotificationStore } from '@/stores/notification'
-import { useDMStore } from '@/stores/dm'
-import { useAuthStore } from '@/stores/auth'
-import { referenceHref } from '@/composables/useReferenceRendering'
-import type { InboxTab, Notification, NotificationCategory } from '@/types'
-import { dmErrorMessage, mailboxKey, type DMImage } from '@/api/dm'
+import NotificationContextQuote from '@/components/notification/NotificationContextQuote.vue'
 import DMMailboxSelector from '@/components/dm/DMMailboxSelector.vue'
 import DMConversationList from '@/components/dm/DMConversationList.vue'
 import DMConversationPane from '@/components/dm/DMConversationPane.vue'
 import DMComposer from '@/components/dm/DMComposer.vue'
 import DMReportModal from '@/components/dm/DMReportModal.vue'
-import type { RouteLocationRaw } from 'vue-router'
+import { useInboxStore } from '@/stores/inbox'
+import { useNotificationStore } from '@/stores/notification'
+import { useDMStore } from '@/stores/dm'
+import { useAuthStore } from '@/stores/auth'
+import type { InboxTab, Notification, NotificationCategory } from '@/types'
+import { dmErrorMessage, type DMImage } from '@/api/dm'
+import {
+  formatNotificationBody,
+  formatNotificationTitle,
+  notificationActionType,
+  notificationSourceLabel,
+  notificationTargetPath,
+} from '@/utils/notificationHelpers'
 
 type InboxPageTab = InboxTab | 'forum'
 
@@ -151,16 +304,21 @@ const tabs: Array<{ key: InboxPageTab; label: string }> = [
   { key: 'dm', label: '私信' },
 ]
 
+const forumNotificationTypes: Notification['type'][] = ['forum_topic_comment', 'forum_follow']
+
 const selectedNotificationId = ref<string | null>(null)
+const filterMode = ref<'all' | 'unread'>('all')
+const notificationActionMessage = ref('')
+
 const dmContent = ref('')
 const dmImage = ref<DMImage | null>(null)
 const dmSending = ref(false)
 const dmError = ref('')
 const dmOpenError = ref('')
-const notificationActionMessage = ref('')
 const reportMessageId = ref('')
 const reportSubmitting = ref(false)
 const reportError = ref('')
+
 const viewportMatchesMobile = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches
 const isMobile = ref(viewportMatchesMobile())
 const updateViewport = () => { isMobile.value = viewportMatchesMobile() }
@@ -169,6 +327,7 @@ const mobileConversationTitle = computed(() => {
   const name = dmStore.activeConversation?.other_party.display_name || dmStore.activeTarget?.display_name || '新会话'
   return `私信-${name}`
 })
+
 const dmMailboxes = computed(() => dmStore.mailboxOrder.map(key => dmStore.mailboxesByKey[key]).filter(Boolean))
 const dmConversations = computed(() => dmStore.conversationIdsByMailbox[dmStore.activeMailboxKey]?.map(id => dmStore.conversationsById[id]).filter(Boolean) || [])
 const hasMoreConversations = computed(() => Boolean(dmStore.conversationCursorByMailbox[dmStore.activeMailboxKey]))
@@ -180,12 +339,94 @@ const activeTab = computed<InboxPageTab>(() => {
   return firstUnread?.key || 'mention'
 })
 
-const selectedNotification = computed(() => notificationStore.notifications.find((item) => item.id === selectedNotificationId.value) || null)
 const activeTabLabel = computed(() => tabs.find((item) => item.key === activeTab.value)?.label || '通知')
 const tabUnreadCount = (tab: InboxPageTab) => tab === 'forum' ? 0 : notificationStore.unreadCounts[tab] || 0
-const forumNotificationTypes: Notification['type'][] = ['forum_topic_comment', 'forum_follow']
+const activeCategoryUnreadCount = computed(() => tabUnreadCount(activeTab.value))
+
+const filteredNotifications = computed(() => {
+  if (filterMode.value === 'unread') {
+    return notificationStore.notifications.filter((item) => !item.read_at)
+  }
+  return notificationStore.notifications
+})
+
+const getActorName = (notification: Notification) => {
+  return notification.actor?.display_name || notification.actor?.username || '系统'
+}
+
+const getActionType = (notification: Notification) => {
+  return notificationActionType(notification)
+}
+
+const getActionBadgeIcon = (notification: Notification) => {
+  switch (notificationActionType(notification)) {
+    case 'like':
+      return IconHeart
+    case 'reply':
+    case 'forum':
+      return IconMessage2
+    case 'mention':
+      return IconAt
+    case 'collaboration':
+      return IconGitPullRequest
+    case 'system':
+    default:
+      return IconShieldExclamation
+  }
+}
+
+const getActionBadgeTitle = (notification: Notification) => {
+  switch (notificationActionType(notification)) {
+    case 'like':
+      return '点赞'
+    case 'reply':
+      return '回复'
+    case 'mention':
+      return '提及'
+    case 'collaboration':
+      return '协作'
+    case 'forum':
+      return '论坛'
+    case 'system':
+    default:
+      return '通知'
+  }
+}
+
+const formatTime = (value?: string | null) => {
+  if (!value) return '刚刚'
+  return new Date(value).toLocaleString('zh-CN')
+}
+
+const getReplyExcerpt = (item: Notification) => {
+  return (item.meta?.reply_excerpt as string) || ''
+}
+
+const getOriginalExcerpt = (item: Notification) => {
+  return (
+    (item.meta?.original_excerpt as string) ||
+    (item.meta?.root_comment_body as string) ||
+    ''
+  )
+}
+
+const getQuoteText = (item: Notification) => {
+  if (getReplyExcerpt(item) || getOriginalExcerpt(item)) return ''
+  if (item.meta?.body) {
+    return item.meta.body as string
+  }
+  if (item.reason && item.category === 'collaboration') {
+    return item.reason
+  }
+  return ''
+}
+
+const hasQuote = (item: Notification) => {
+  return Boolean(getReplyExcerpt(item) || getOriginalExcerpt(item) || getQuoteText(item))
+}
 
 const switchTab = async (tab: InboxPageTab) => {
+  filterMode.value = 'all'
   await router.push({ path: '/inbox', query: { tab } })
 }
 
@@ -235,6 +476,25 @@ const markCurrentNotificationsRead = async () => {
   await notificationStore.markAllRead(activeTab.value === 'forum' ? forumNotificationTypes : activeTab.value as NotificationCategory)
 }
 
+const jumpToNotification = async (notification: Notification) => {
+  await notificationStore.markRead(notification.id)
+  const targetPath = notificationTargetPath(notification)
+  if (!targetPath) return
+  await router.push(targetPath)
+}
+
+const muteNotificationType = async (notification: Notification) => {
+  notificationActionMessage.value = (await notificationStore.savePreference(notification.category, notification.type, false))
+    ? ''
+    : '通知偏好暂不可用'
+}
+
+const muteNotificationSource = async (notification: Notification) => {
+  notificationActionMessage.value = (await notificationStore.createMute(notification.source_type, notification.source_id, notification.reason))
+    ? ''
+    : '内容静音暂不可用'
+}
+
 const openConversation = async (conversationID: string) => {
   dmOpenError.value = ''
   await router.replace({ path: '/inbox', query: { tab: 'dm', mailbox: dmStore.activeMailboxKey, conversation: conversationID } })
@@ -273,7 +533,7 @@ const uploadDMImage = async (file: File) => {
     dmImage.value = await dmStore.uploadImage(file)
   } catch (error) {
     dmError.value = dmErrorMessage(error)
-  } finally {}
+  }
 }
 
 const reportMessage = async ({ messageId, reason, detail }: { messageId: string; reason: string; detail: string }) => {
@@ -285,119 +545,12 @@ const reportMessage = async ({ messageId, reason, detail }: { messageId: string;
 
 const closeReportModal = () => { reportMessageId.value = ''; reportError.value = '' }
 
-const jumpToNotification = async (notification: Notification) => {
-  await notificationStore.markRead(notification.id)
-  const targetPath = notificationTargetPath(notification)
-  if (!targetPath) return
-  await router.push(targetPath)
-}
-
-const notificationTargetPath = (notification: Notification): RouteLocationRaw | string | null => {
-  if (notification.source_url) {
-    return notification.source_url
-  }
-  if (notification.type === 'site_announcement' || notification.type === 'feed_source_health') {
-    const path = notification.meta.path
-    if (typeof path === 'string' && path.startsWith('/') && !path.startsWith('//')) return path
-  }
-  if (notification.type === 'content_mention' && notification.meta.module && notification.meta.path) {
-    return referenceHref({ module: notification.meta.module, path: notification.meta.path })
-  }
-  if (isCommentNotification(notification)) return commentNotificationLocation(notification)
-  if (notification.type === 'content_published') return contentPublishedLocation(notification)
-  if (notification.type === 'forum_follow') return forumNotificationLocation(notification)
-  if (notification.source_type === 'music_lyrics') {
-    const { album_id: albumId, song_id: songId, annotation_id: annotationId } = notification.meta
-    if (typeof albumId === 'string' && typeof songId === 'string' && typeof annotationId === 'string') {
-      return {
-        path: `/music/song/${songId}`,
-        query: { annotation_id: annotationId, rebind: '1' },
-      }
-    }
-  }
-  if (notification.source_type === 'music_album_import') {
-    return '/music/imports'
-  }
-  const topicId = notification.meta.topic_id
-  if (notification.source_type === 'forum_reply' && topicId) {
-    return `/forum/topic/${topicId}#reply-${notification.source_id}`
-  }
-  if (notification.source_type === 'forum_topic' && notification.source_id) {
-    return `/forum/topic/${notification.source_id}`
-  }
-  return ''
-}
-
-const notificationSourceLabel = (notification: Notification) => {
-  return notification.meta.source_label || notification.meta.topic_title || ''
-}
-
-const muteNotificationType = async (notification: Notification) => {
-  notificationActionMessage.value = (await notificationStore.savePreference(notification.category, notification.type, false))
-    ? ''
-    : '通知偏好暂不可用'
-}
-
-const muteNotificationSource = async (notification: Notification) => {
-  notificationActionMessage.value = (await notificationStore.createMute(notification.source_type, notification.source_id, notification.reason))
-    ? ''
-    : '内容静音暂不可用'
-}
-
 const blockActiveConversation = async () => {
   await dmStore.blockActiveConversation()
 }
 
 const unblockActiveConversation = async () => {
   await dmStore.unblockActiveConversation()
-}
-
-const formatNotificationTitle = (notification: Notification) => {
-  const actor = notification.actor?.display_name || notification.actor?.username || '有人'
-  if (notification.type === 'forum_topic_comment') return '新评论'
-  if (notification.type === 'forum_follow') return '新帖子'
-  if (notification.meta.title) return notification.meta.title
-  switch (notification.type) {
-    case 'forum_reply':
-      return `${actor} 回复了你`
-    case 'forum_like':
-      return `${actor} 赞了你`
-    case 'forum_mention':
-      return `${actor} 提到了你`
-    case 'forum_solved':
-      return `${actor} 采纳了你的回复`
-    case 'comment_reply':
-      return `${actor} 回复了你`
-    case 'comment_mention':
-      return `${actor} 提到了你`
-    case 'content_mention':
-      return `${actor} 提到了你`
-    case 'comment_marked':
-      return `${actor} 标记了你的评论`
-    case 'comment_like':
-      return notification.meta.like_count && notification.meta.like_count > 1
-        ? `${actor} 等 ${notification.meta.like_count} 人赞了你`
-        : `${actor} 赞了你`
-    default:
-      return '新通知'
-  }
-}
-
-const formatNotificationBody = (notification: Notification) => {
-  if (notification.type === 'forum_topic_comment' || notification.type === 'forum_follow') {
-    return notification.meta.topic_title || notification.meta.title || '查看帖子'
-  }
-  if (notification.type === 'comment_reply') return '查看回复'
-  if (notification.type === 'comment_mention') return '查看提及'
-  if (notification.type === 'content_mention') return '查看提及'
-  if (notification.type === 'comment_marked') return '查看标记'
-  if (notification.type === 'comment_like') return '查看点赞'
-  return notification.reason || notification.meta.body || notification.meta.reply_excerpt || notification.meta.topic_title || '查看详情'
-}
-
-const formatTime = (value?: string | null) => {
-  if (!value) return '刚刚'
-  return new Date(value).toLocaleString('zh-CN')
 }
 
 watch(() => route.fullPath, () => {
@@ -415,7 +568,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 
 <style scoped>
 .inbox-header {
-  align-items: end;
+  align-items: flex-end;
   gap: 1rem;
 }
 
@@ -426,22 +579,37 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 .inbox-shell {
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
+  min-height: 38rem;
+}
+
+.inbox-body {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: 38rem;
 }
 
 .inbox-category-pane {
   min-width: 0;
+  width: 220px;
   border-right: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.inbox-category-list {
+  display: flex;
+  flex-direction: column;
 }
 
 .inbox-category-item {
   width: 100%;
-  min-height: 3.5rem;
+  min-height: 3.25rem;
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0 1rem;
+  padding: 0 1.25rem;
   border: 0;
   border-bottom: 1px solid var(--a-color-border-soft);
   border-left: 3px solid transparent;
@@ -449,22 +617,21 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
   color: var(--a-color-text-secondary);
   cursor: pointer;
   font-family: inherit;
-  font-size: 0.86rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
-  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .inbox-category-item:hover {
-  background: var(--a-color-bg);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-text);
 }
 
 .inbox-category-item.active {
   border-left-color: var(--a-color-text);
-  background: var(--a-color-bg);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-text);
+  font-weight: 600;
 }
 
 .inbox-category-item:focus-visible {
@@ -480,21 +647,374 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
   padding: 0 0.35rem;
   background: var(--a-color-text);
   color: var(--a-color-bg);
+  border-radius: var(--a-radius-control);
   font-size: 0.68rem;
   font-weight: 500;
   line-height: 1;
 }
 
-.inbox-body {
-  display: grid;
-  grid-template-columns: minmax(8.5rem, 11rem) minmax(17rem, 24rem) minmax(0, 1fr);
-  min-height: 32rem;
+.inbox-main-pane {
+  min-width: 0;
+  background: var(--a-color-bg);
+  display: flex;
+  flex-direction: column;
 }
 
-.inbox-list-pane {
+/* Notification Stream Workspace */
+.stream-workspace {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.stream-toolbar {
+  min-height: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+}
+
+.stream-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stream-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--a-color-text);
+}
+
+.stream-count-badge {
+  min-width: 1.25rem;
+  height: 1.25rem;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 0.35rem;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.stream-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.stream-filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  padding: 2px;
+}
+
+.filter-toggle-btn {
+  padding: 0.25rem 0.625rem;
+  border: 0;
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  color: var(--a-color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filter-toggle-btn:hover {
+  color: var(--a-color-text);
+}
+
+.filter-toggle-btn.active {
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+}
+
+.stream-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.stream-card {
+  display: flex;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border: 0;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  border-left: 3px solid transparent;
+  background: var(--a-color-bg);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.stream-card:hover {
+  background: var(--a-color-surface-muted);
+}
+
+.stream-card.selected {
+  border-left-color: var(--a-color-text);
+  background: var(--a-color-surface-muted);
+}
+
+.stream-card.unread .card-title {
+  font-weight: 600;
+  color: var(--a-color-text);
+}
+
+.card-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+}
+
+.card-action-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--a-color-bg, #ffffff);
+  border: 1.5px solid var(--a-color-bg, #ffffff);
+}
+
+.card-action-badge--like {
+  color: var(--a-color-danger, #ef4444);
+}
+
+.card-action-badge--reply,
+.card-action-badge--forum {
+  color: var(--a-color-primary, #2563eb);
+}
+
+.card-action-badge--mention {
+  color: var(--a-color-success, #10b981);
+}
+
+.card-action-badge--collaboration {
+  color: var(--a-color-warning, #f59e0b);
+}
+
+.card-action-badge--system {
+  color: var(--a-color-blog, #166534);
+}
+
+.card-content-body {
+  flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.card-header-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.card-title-group {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.card-title {
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--a-color-text);
+}
+
+.card-separator {
+  color: var(--a-color-text-muted);
+}
+
+.card-source {
+  font-size: 0.8rem;
+  color: var(--a-color-text-secondary);
+  font-weight: 500;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.card-time {
+  font-size: 0.75rem;
+  color: var(--a-color-muted-soft);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.card-unread-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--a-color-primary, #2563eb);
+  flex-shrink: 0;
+}
+
+.card-reason {
+  margin: 0;
+  color: var(--a-color-text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.card-quote {
+  margin-top: 0.125rem;
+}
+
+.sidebar-item-body {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--a-color-text-secondary);
+}
+
+.card-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.card-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.card-action-unavailable-btn {
+  font-size: 0.75rem;
+}
+
+.card-more-menu {
+  position: relative;
+}
+
+.card-more-trigger {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: var(--a-radius-control);
+  color: var(--a-color-text-muted);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.card-more-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.card-more-trigger:hover {
+  color: var(--a-color-text);
+  background: var(--a-color-surface-muted);
+}
+
+.card-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 140px;
+  padding: 0.25rem 0;
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  box-shadow: var(--a-shadow-lg);
+  z-index: 10;
+}
+
+.card-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: left;
+  color: var(--a-color-text-secondary);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.card-menu-item:hover {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
+}
+
+.action-message {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+}
+
+.inbox-empty-state {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 0.4rem;
+  min-height: 12rem;
+  padding: 2rem 1.5rem;
+  color: var(--a-color-text-secondary);
+}
+
+.inbox-empty-state strong {
+  color: var(--a-color-text);
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.inbox-empty-state span {
+  font-size: 0.9rem;
+}
+
+/* DM Workspace */
+.dm-workspace {
+  display: grid;
+  grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
+  min-height: 38rem;
+  height: 100%;
+}
+
+.dm-workspace-sidebar {
   border-right: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
+  display: flex;
+  flex-direction: column;
 }
 
 .pane-heading {
@@ -510,135 +1030,11 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
   font-weight: 500;
 }
 
-.sidebar-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.sidebar-item {
-  width: 100%;
-  min-height: 5rem;
-  border: none;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  border-left: 3px solid transparent;
-  background: transparent;
-  padding: 0.9rem 1rem;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-}
-
-.sidebar-item:hover {
-  background: var(--a-color-surface-muted);
-}
-
-.sidebar-item.selected {
-  border-left-color: var(--a-color-text);
-  background: var(--a-color-surface-muted);
-}
-
-.sidebar-item.unread .sidebar-item-title {
-  font-weight: 500;
-  color: var(--a-color-text);
-}
-
-.sidebar-item-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-size: 0.92rem;
-  font-weight: 500;
-}
-
-.sidebar-item-source {
-  margin-top: 0.25rem;
-  color: var(--a-color-text-secondary);
-  font-size: 0.74rem;
-  font-weight: 500;
-}
-
-.sidebar-item-body {
-  margin-top: 0.25rem;
-  font-size: 0.82rem;
-  line-height: 1.45;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.sidebar-item-time,
-.detail-time {
-  margin-top: 0.5rem;
-  font-size: 0.72rem;
-  color: var(--a-color-muted-soft);
-  font-weight: 500;
-}
-
-.inbox-empty-state,
-.detail-empty {
-  display: grid;
-  align-content: center;
-  justify-items: start;
-  gap: 0.4rem;
-  color: var(--a-color-text-secondary);
-}
-
-.inbox-empty-state {
-  min-height: 12rem;
-  padding: 1.25rem;
-}
-
-.detail-empty {
-  min-height: 100%;
-  padding: 2rem;
-  background: var(--a-color-bg);
-}
-
-.inbox-empty-state strong,
-.detail-empty strong {
-  color: var(--a-color-text);
-  font-size: 1.05rem;
-  font-weight: 500;
-}
-
-.inbox-empty-state span,
-.detail-empty span {
-  font-size: 0.9rem;
-}
-
-.inbox-detail {
+.dm-workspace-main {
   min-width: 0;
   background: var(--a-color-bg);
-}
-
-.detail-card {
-  min-height: 100%;
-  padding: 2rem;
-  background: var(--a-color-bg);
-}
-
-.detail-body {
-  white-space: pre-wrap;
-  max-width: 56rem;
-  font-size: 1.05rem;
-  line-height: 1.6;
-  margin: 1rem 0;
-}
-
-.detail-reason,
-.detail-source {
-  margin: 0.75rem 0;
-  color: var(--a-color-muted);
-  font-size: 0.9rem;
-}
-
-.detail-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 1.25rem;
+  flex-direction: column;
 }
 
 .detail-card-dm {
@@ -647,76 +1043,28 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
   display: flex;
   flex-direction: column;
   background: var(--a-color-bg);
+  height: 100%;
 }
 
-.dm-header {
-  min-height: 3.5rem;
-  padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+.detail-empty {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 0.4rem;
+  min-height: 100%;
+  padding: 2rem;
+  background: var(--a-color-bg);
+  color: var(--a-color-text-secondary);
 }
 
-.dm-messages {
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  flex: 1;
-  overflow-y: auto;
-}
-
-.dm-message {
-  display: flex;
-}
-
-.dm-message.self {
-  justify-content: flex-end;
-}
-
-.dm-bubble {
-  max-width: 70%;
-  padding: 0.75rem 1.25rem;
-  background: var(--a-color-surface-muted);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-none);
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-.dm-message.self .dm-bubble {
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
-  border-color: var(--a-color-text);
-}
-
-.dm-composer {
-  padding: 1.25rem;
-  border-top: 1px solid var(--a-color-border-soft);
-}
-
-.dm-blocked-state {
-  margin: 0 0 1rem;
-  color: var(--a-color-muted);
-  font-size: 0.9rem;
+.detail-empty strong {
+  color: var(--a-color-text);
+  font-size: 1.05rem;
   font-weight: 500;
 }
 
-.dm-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-  justify-content: flex-end;
-}
-
-.dm-file-input {
-  display: none;
-}
-
-.dm-upload-preview {
-  display: flex;
+.detail-empty span {
+  font-size: 0.9rem;
 }
 
 @media (max-width: 960px) {
@@ -725,10 +1073,14 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
   }
 
   .inbox-category-pane {
-    display: flex;
-    overflow-x: auto;
+    width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--a-color-border-soft);
+  }
+
+  .inbox-category-list {
+    display: flex;
+    overflow-x: auto;
   }
 
   .inbox-category-item {
@@ -742,33 +1094,15 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
     border-bottom-color: var(--a-color-text);
   }
 
-  .inbox-list-pane {
-    border-right: none;
-    border-bottom: 1px solid var(--a-color-border-soft);
-  }
-}
-
-@media (max-width: 640px) {
-  .inbox-header {
-    align-items: stretch;
-  }
-
-  .detail-card,
-  .detail-empty {
-    padding: 1.25rem;
-  }
-
-  .dm-bubble {
-    max-width: 100%;
-  }
-
-  .dm-actions {
-    flex-direction: column;
+  .dm-workspace {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 767px) {
-  .dm-list-workspace--hidden { display: none; }
+  .dm-workspace-sidebar--hidden {
+    display: none;
+  }
 }
 
 :global(.inbox-mobile-conversation-sheet .sheet-content) {
@@ -779,5 +1113,4 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 :global(.inbox-mobile-conversation-sheet .dm-conversation-pane) {
   height: 100%;
 }
-
 </style>

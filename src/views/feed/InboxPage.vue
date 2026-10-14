@@ -34,65 +34,70 @@
           <div v-if="activeTab !== 'dm'" class="stream-workspace">
             <!-- Stream Toolbar -->
             <div class="stream-toolbar">
-              <div class="stream-toolbar-left">
-                <h2 class="stream-title">{{ activeTabLabel }}</h2>
-                <span v-if="activeCategoryUnreadCount > 0" class="stream-count-badge">
-                  {{ activeCategoryUnreadCount }}
-                </span>
-              </div>
-              <div class="stream-toolbar-right">
-                <div class="stream-filter-toggle" role="group" aria-label="通知过滤">
-                  <button
-                    type="button"
-                    class="filter-toggle-btn"
-                    :class="{ active: filterMode === 'all' }"
-                    @click="filterMode = 'all'"
-                  >
-                    所有
-                  </button>
-                  <button
-                    type="button"
-                    class="filter-toggle-btn"
-                    :class="{ active: filterMode === 'unread' }"
-                    @click="filterMode = 'unread'"
-                  >
-                    仅未读
-                  </button>
+              <div class="stream-toolbar-inner">
+                <div class="stream-toolbar-left">
+                  <h2 class="stream-title">{{ activeTabLabel }}</h2>
+                  <span v-if="activeCategoryUnreadCount > 0" class="stream-count-badge">
+                    {{ activeCategoryUnreadCount }}
+                  </span>
                 </div>
-                <PButton
-                  v-if="activeCategoryUnreadCount > 0"
-                  variant="ghost"
-                  size="sm"
-                  class="toolbar-mark-read-btn"
-                  @click="markCurrentNotificationsRead"
-                >
-                  标为已读
-                </PButton>
+                <div class="stream-toolbar-right">
+                  <div class="stream-filter-toggle" role="group" aria-label="通知过滤">
+                    <button
+                      type="button"
+                      class="filter-toggle-btn"
+                      :class="{ active: filterMode === 'all' }"
+                      @click="filterMode = 'all'"
+                    >
+                      所有
+                    </button>
+                    <button
+                      type="button"
+                      class="filter-toggle-btn"
+                      :class="{ active: filterMode === 'unread' }"
+                      @click="filterMode = 'unread'"
+                    >
+                      仅未读
+                    </button>
+                  </div>
+                  <PButton
+                    v-if="activeCategoryUnreadCount > 0"
+                    variant="ghost"
+                    size="sm"
+                    class="toolbar-mark-read-btn"
+                    @click="markCurrentNotificationsRead"
+                  >
+                    标为已读
+                  </PButton>
+                </div>
               </div>
             </div>
 
-            <!-- Notification Feed Stream Cards -->
-            <div class="stream-list sidebar-list">
-              <NotificationItemCard
-                v-for="item in filteredNotifications"
-                :key="item.id"
-                :notification="item"
-                :active="selectedNotificationId === item.id"
-                @click="openNotification(item.id)"
-                @jump="jumpToNotification"
-                @mark-read="notificationStore.markRead(item.id)"
-                @mute-type="handleMuteType(item)"
-                @mute-source="handleMuteSource(item)"
-              />
-              <p v-if="notificationActionMessage" class="action-message a-muted">
-                {{ notificationActionMessage }}
-              </p>
-            </div>
+            <!-- Constrained Stream Container -->
+            <div class="stream-workspace-container">
+              <!-- Notification Feed Stream Cards -->
+              <div class="stream-list sidebar-list">
+                <NotificationItemCard
+                  v-for="item in filteredNotifications"
+                  :key="item.id"
+                  :notification="item"
+                  :active="selectedNotificationId === item.id"
+                  @click="openNotification(item.id)"
+                  @jump="jumpToNotification"
+                  @mark-read="notificationStore.markRead(item.id)"
+                  @mute-type="handleMuteType(item)"
+                  @mute-source="handleMuteSource(item)"
+                />
+                <p v-if="notificationActionMessage" class="action-message a-muted">
+                  {{ notificationActionMessage }}
+                </p>
+              </div>
 
-            <!-- Empty State -->
-            <div v-if="!notificationStore.loading && filteredNotifications.length === 0" class="inbox-empty-state">
-              <strong>暂无通知</strong>
-              <span>{{ filterMode === 'unread' ? '当前分类没有未读通知。' : '当前分类没有新内容。' }}</span>
+              <!-- Empty State -->
+              <div v-if="!notificationStore.loading && filteredNotifications.length === 0" class="inbox-empty-state">
+                <strong>暂无通知</strong>
+                <span>{{ filterMode === 'unread' ? '当前分类没有未读通知。' : '当前分类没有新内容。' }}</span>
+              </div>
             </div>
           </div>
 
@@ -486,11 +491,27 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
   min-height: 3.5rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
   padding: 0.75rem 1.5rem;
   border-bottom: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
+}
+
+.stream-toolbar-inner {
+  width: 100%;
+  max-width: 780px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.stream-workspace-container {
+  width: 100%;
+  max-width: 780px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .stream-toolbar-left {
@@ -502,7 +523,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 .stream-title {
   margin: 0;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--a-color-text);
 }
 
@@ -513,10 +534,10 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
   place-items: center;
   padding: 0 0.35rem;
   border-radius: var(--a-radius-control);
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
+  background: color-mix(in srgb, var(--a-color-primary) 12%, transparent);
+  color: var(--a-color-primary);
   font-size: 0.7rem;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1;
 }
 
@@ -549,6 +570,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 
 .filter-toggle-btn:hover {
   color: var(--a-color-text);
+  background: var(--a-color-surface-muted);
 }
 
 .filter-toggle-btn.active {
@@ -559,6 +581,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 .stream-list {
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;
 }
 
 .stream-card {

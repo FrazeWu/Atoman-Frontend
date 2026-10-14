@@ -27,21 +27,21 @@
 - Modify: `src/components/music/MusicLyricsLine.vue`
 - Modify: `src/components/music/MusicLyricsRowEditor.vue`
 
-- [ ] **Step 1: Check baseline tests for player and lyrics**
+- [x] **Step 1: Check baseline tests for player and lyrics**
   Run: `bun run test:unit tests/unit/components/music/AudioPlayer.spec.ts tests/unit/components/music/MusicLyricsPanel.spec.ts tests/unit/components/music/AudioPlayerQueue.spec.ts`
-- [ ] **Step 2: Refactor `AudioPlayer.vue`**
+- [x] **Step 2: Refactor `AudioPlayer.vue`**
   - Replace `var(--a-color-surface)` and `#fff` with `var(--a-color-bg)`.
   - Standardize `font-weight: bold / 800` to `500 / 600`.
   - Replace `#e05e5e` with `var(--a-color-danger)`.
-- [ ] **Step 3: Refactor `AudioPlayerQueue.vue`**
+- [x] **Step 3: Refactor `AudioPlayerQueue.vue`**
   - Standardize `font-weight: 700` to `500 / 600`.
   - Replace `#10b981` with `var(--a-color-success)`, `#ef4444` with `var(--a-color-danger)`.
-- [ ] **Step 4: Refactor `MusicLyricsPanel.vue`, `MusicLyricsLine.vue` & `MusicLyricsRowEditor.vue`**
+- [x] **Step 4: Refactor `MusicLyricsPanel.vue`, `MusicLyricsLine.vue` & `MusicLyricsRowEditor.vue`**
   - Lower font weights from `700 / 800` to `500 / 600`.
   - Standardize `12px` border-radius to `var(--a-radius-card)` (4px).
-- [ ] **Step 5: Verify Task 1 tests pass**
+- [x] **Step 5: Verify Task 1 tests pass**
   Run: `bun run test:unit tests/unit/components/music/AudioPlayer.spec.ts tests/unit/components/music/MusicLyricsPanel.spec.ts tests/unit/components/music/AudioPlayerQueue.spec.ts`
-- [ ] **Step 6: Commit Task 1**
+- [x] **Step 6: Commit Task 1**
   Commit: `refactor(music): standardize audio player, queue and lyrics components to pure-white minimal system`
 
 ---
@@ -57,23 +57,23 @@
 - Modify: `src/components/music/MusicCreationAlbumPreviewStep.vue`
 - Modify: `src/components/music/MusicCreationFlowDrawer.vue`
 
-- [ ] **Step 1: Check baseline creation flow tests**
+- [x] **Step 1: Check baseline creation flow tests**
   Run: `bun run test:unit tests/unit/components/music/MusicCreationFlowDrawer.spec.ts tests/unit/components/music/MusicCreationAlbumDetailsStep.spec.ts tests/unit/components/music/MusicCreationArtistStep.spec.ts`
-- [ ] **Step 2: Refactor `MusicCreationAlbumDetailsStep.vue`**
+- [x] **Step 2: Refactor `MusicCreationAlbumDetailsStep.vue`**
   - Standardize 11 heavy font weights (`700 / 800`) to `500 / 600`.
   - Replace `999px` pills with `var(--a-radius-control)` (4px).
   - Replace hardcoded hex colors (`#1e1e1e`, `#cfb26f`, `#b89a55`, `#866b2d`) with semantic tokens.
-- [ ] **Step 3: Refactor `MusicCreationAlbumUploadZone.vue`**
+- [x] **Step 3: Refactor `MusicCreationAlbumUploadZone.vue`**
   - Standardize 7 heavy font weights (`700 / 800`) to `500 / 600`.
-- [ ] **Step 4: Refactor `MusicCreationArtistStep.vue` & `MusicCreationContributorPicker.vue`**
+- [x] **Step 4: Refactor `MusicCreationArtistStep.vue` & `MusicCreationContributorPicker.vue`**
   - Standardize heavy font weights to `500 / 600`.
   - Replace `var(--a-color-surface)` with `var(--a-color-bg)` / `var(--a-color-surface-muted)`.
-- [ ] **Step 5: Refactor `MusicCreationAlbumSeedStep.vue`, `MusicCreationAlbumPreviewStep.vue` & `MusicCreationFlowDrawer.vue`**
+- [x] **Step 5: Refactor `MusicCreationAlbumSeedStep.vue`, `MusicCreationAlbumPreviewStep.vue` & `MusicCreationFlowDrawer.vue`**
   - Replace `var(--a-color-surface)` with `var(--a-color-bg)`.
   - Standardize font weights to `500 / 600`.
-- [ ] **Step 6: Verify Task 2 tests pass**
+- [x] **Step 6: Verify Task 2 tests pass**
   Run: `bun run test:unit tests/unit/components/music/MusicCreationFlowDrawer.spec.ts tests/unit/components/music/MusicCreationAlbumDetailsStep.spec.ts tests/unit/components/music/MusicCreationArtistStep.spec.ts`
-- [ ] **Step 7: Commit Task 2**
+- [x] **Step 7: Commit Task 2**
   Commit: `refactor(music): polish music creation wizard steps to pure-white minimal system`
 
 ---
@@ -94,37 +94,37 @@
 - Modify: `src/components/music/MusicAlbumCreditLinkDrawer.vue`
 - Modify: `src/components/music/ArtistSelect.vue`
 
-- [ ] **Step 1: Check baseline drawer and card tests**
+- [x] **Step 1: Check baseline drawer and card tests**
   Run: `bun run test:unit tests/unit/components/music/AlbumDrawer.spec.ts tests/unit/components/music/ArtistDrawer.spec.ts tests/unit/components/music/NestedActionDrawer.spec.ts tests/unit/components/music/MusicArtistCard.spec.ts tests/unit/components/music/MusicAlbumCard.spec.ts`
-- [ ] **Step 2: Refactor `AlbumDrawer.vue`, `ArtistDrawer.vue`, `NestedActionDrawer.vue`**
+- [x] **Step 2: Refactor `AlbumDrawer.vue`, `ArtistDrawer.vue`, `NestedActionDrawer.vue`**
   - Replace `var(--a-color-surface)` with `var(--a-color-bg)`.
   - Standardize `font-weight: bold / 700` to `500 / 600`.
   - Replace `#e05e5e` with `var(--a-color-danger)`.
-- [ ] **Step 3: Refactor `MusicArtistCard.vue`, `MusicPlaylistCard.vue`, `MusicAlbumCard.vue`**
+- [x] **Step 3: Refactor `MusicArtistCard.vue`, `MusicPlaylistCard.vue`, `MusicAlbumCard.vue`**
   - Replace `var(--a-color-surface)` with `var(--a-color-bg)`.
   - Replace `999px` pills with `var(--a-radius-control)` (4px).
   - Replace `font-weight: 700` with `500 / 600`.
   - Standardize gold/warning badges to semantic tokens.
-- [ ] **Step 4: Refactor remaining drawers (`MusicMergeDrawer.vue`, `MusicLyricEditorDrawer.vue`, `MusicSidebarPlaylists.vue`, etc.)**
+- [x] **Step 4: Refactor remaining drawers (`MusicMergeDrawer.vue`, `MusicLyricEditorDrawer.vue`, `MusicSidebarPlaylists.vue`, etc.)**
   - Standardize input backgrounds to `var(--a-color-bg)`.
   - Standardize `12px` border-radius to `var(--a-radius-card)` (4px).
   - Lower bold weights to `500 / 600`.
-- [ ] **Step 5: Verify Task 3 tests pass**
+- [x] **Step 5: Verify Task 3 tests pass**
   Run: `bun run test:unit tests/unit/components/music/AlbumDrawer.spec.ts tests/unit/components/music/ArtistDrawer.spec.ts tests/unit/components/music/NestedActionDrawer.spec.ts tests/unit/components/music/MusicArtistCard.spec.ts tests/unit/components/music/MusicAlbumCard.spec.ts`
-- [ ] **Step 6: Commit Task 3**
+- [x] **Step 6: Commit Task 3**
   Commit: `refactor(music): polish music drawers, cards, and editors to pure-white minimal system`
 
 ---
 
 ### Task 4: Whole-Module Integration & Final Verification
 
-- [ ] **Step 1: Run all music component tests**
+- [x] **Step 1: Run all music component tests**
   Run: `bun run test:unit tests/unit/components/music/`
-- [ ] **Step 2: Run design system contract tests**
+- [x] **Step 2: Run design system contract tests**
   Run: `bun run test:unit tests/unit/ui/design-system-contract.spec.ts`
-- [ ] **Step 3: Run TypeScript type check**
+- [x] **Step 3: Run TypeScript type check**
   Run: `bun run type-check`
-- [ ] **Step 4: Run production build check**
+- [x] **Step 4: Run production build check**
   Run: `bun run build`
-- [ ] **Step 5: Check git diff**
+- [x] **Step 5: Check git diff**
   Run: `git diff --check`

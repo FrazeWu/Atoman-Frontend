@@ -259,7 +259,7 @@ onBeforeUnmount(() => {
 <template>
   <section class="music-tags" aria-labelledby="music-tags-title">
     <div class="music-tags__header">
-      <div>
+      <div class="music-tags__title-wrap">
         <h2 id="music-tags-title">标签</h2>
         <span class="music-tags__count">{{ tags.length }}/12</span>
       </div>
@@ -317,7 +317,7 @@ onBeforeUnmount(() => {
               :title="`删除标签 ${tag.name}`"
               @click="requestDelete(tag)"
             >
-              <Trash :size="14" aria-hidden="true" />
+              <Trash :size="13" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -326,12 +326,12 @@ onBeforeUnmount(() => {
           <PInput
             :id="`music-tag-search-${group.kind}`"
             :model-value="searchStates[group.kind].query"
-            :label="`搜索${group.label}标签`"
-            placeholder="输入关键词搜索已有标签"
+            :placeholder="`添加或搜索${group.label}...`"
             type="search"
             maxlength="48"
             :disabled="actionTagID === `add:${group.kind}`"
             :data-testid="`music-tag-search-${group.kind}`"
+            :aria-label="`搜索${group.label}标签`"
             @update:model-value="searchTags(group.kind, $event)"
           />
           <p v-if="searchStates[group.kind].loading" class="music-tags__hint" role="status" aria-live="polite">正在搜索{{ group.label }}标签...</p>
@@ -351,26 +351,29 @@ onBeforeUnmount(() => {
             </button>
           </div>
           <template v-else-if="searchStates[group.kind].searched && searchStates[group.kind].query.trim()">
-            <p class="music-tags__hint" role="status" aria-live="polite">没有找到匹配的{{ group.label }}标签</p>
-            <PButton
-              size="sm"
-              variant="secondary"
-              :disabled="!isAuthenticated || tagLimitReached || Boolean(actionTagID)"
-              :loading="actionTagID === `add:${group.kind}`"
-              :data-testid="`music-tag-create-${group.kind}`"
-              @click="createTag(group.kind)"
-            >
-              创建“{{ searchStates[group.kind].query.trim() }}”
-            </PButton>
+            <div class="music-tags__create-row">
+              <p class="music-tags__hint" role="status" aria-live="polite">没有找到匹配的{{ group.label }}标签</p>
+              <PButton
+                size="sm"
+                variant="secondary"
+                :disabled="!isAuthenticated || tagLimitReached || Boolean(actionTagID)"
+                :loading="actionTagID === `add:${group.kind}`"
+                :data-testid="`music-tag-create-${group.kind}`"
+                @click="createTag(group.kind)"
+              >
+                创建“{{ searchStates[group.kind].query.trim() }}”
+              </PButton>
+            </div>
           </template>
-          <p v-else class="music-tags__hint">输入关键词搜索已有标签</p>
         </div>
       </div>
     </template>
 
     <p v-if="actionError" class="music-tags__error" role="alert">{{ actionError }}</p>
-    <p v-if="!isAuthenticated" class="music-tags__hint">登录后可绑定标签和投票</p>
-    <p v-else-if="tagLimitReached" class="music-tags__hint">标签数量已达上限</p>
+    <div v-if="!isAuthenticated || tagLimitReached" class="music-tags__footer">
+      <p v-if="!isAuthenticated" class="music-tags__hint">登录后可绑定标签和投票</p>
+      <p v-else-if="tagLimitReached" class="music-tags__hint">标签数量已达上限 (12)</p>
+    </div>
 
     <PConfirm
       :show="Boolean(pendingDelete)"
@@ -388,11 +391,11 @@ onBeforeUnmount(() => {
 <style scoped>
 .music-tags {
   display: grid;
-  gap: 0.9rem;
+  gap: 0.85rem;
 }
 
 .music-tags__header,
-.music-tags__header > div,
+.music-tags__title-wrap,
 .music-tags__group-header {
   display: flex;
   align-items: center;
@@ -402,6 +405,10 @@ onBeforeUnmount(() => {
 .music-tags__group-header {
   justify-content: space-between;
   gap: 0.75rem;
+}
+
+.music-tags__title-wrap {
+  gap: 0.5rem;
 }
 
 .music-tags__header h2,
@@ -414,26 +421,36 @@ onBeforeUnmount(() => {
 }
 
 .music-tags__header h2 {
-  font-size: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--a-color-text);
 }
 
-.music-tags__header > div {
-  gap: 0.5rem;
+.music-tags__count {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.375rem;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
 }
 
-.music-tags__count,
 .music-tags__status,
 .music-tags__hint,
 .music-tags__empty,
 .music-tags__group-empty {
   color: var(--a-color-muted);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
 
 .music-tags__group {
   display: grid;
-  gap: 0.65rem;
-  padding-top: 0.4rem;
+  gap: 0.45rem;
+  padding-top: 0.2rem;
 }
 
 .music-tags__group h3 {
@@ -445,7 +462,8 @@ onBeforeUnmount(() => {
 .music-tags__items {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.35rem;
+  align-items: center;
 }
 
 .music-tag {
@@ -454,10 +472,10 @@ onBeforeUnmount(() => {
   align-items: center;
   min-width: 0;
   max-width: 100%;
+  min-height: 26px;
   gap: 0.25rem;
-  padding: 0.1rem 0.25rem 0.1rem 0.45rem;
+  padding: 0.125rem 0.45rem;
   border: 1px solid var(--a-color-border-soft);
-  border-bottom-color: transparent;
   border-radius: var(--a-radius-card);
   background-color: var(--a-color-bg);
   background-image: linear-gradient(
@@ -467,14 +485,13 @@ onBeforeUnmount(() => {
   );
   background-position: left bottom;
   background-repeat: no-repeat;
-  background-size: 100% 1px;
+  background-size: 100% 2px;
   transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .music-tag:hover,
 .music-tag:focus-within {
   border-color: var(--a-color-border);
-  border-bottom-color: transparent;
   background-color: var(--a-color-surface-muted);
   background-image: linear-gradient(
     to right,
@@ -483,8 +500,8 @@ onBeforeUnmount(() => {
   );
   background-position: left bottom;
   background-repeat: no-repeat;
-  background-size: 100% 1px;
-  box-shadow: 0 1px 2px rgb(15 23 42 / 7%);
+  background-size: 100% 2px;
+  box-shadow: var(--a-shadow-sm);
 }
 
 .music-tag__name {
@@ -493,14 +510,16 @@ onBeforeUnmount(() => {
   flex: 0 1 auto;
   overflow-wrap: anywhere;
   color: var(--a-color-text);
-  padding: 0.35rem 0.1rem 0.4rem 0;
-  font-size: 0.78rem;
-  line-height: 1.1;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
   text-decoration: none;
+  padding: 0.1rem 0;
 }
 
 .music-tag__name:hover {
-  text-decoration: underline;
+  color: var(--a-color-primary);
+  text-decoration: none;
 }
 
 .music-tag .music-tag__actions {
@@ -509,7 +528,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
-  transition: max-width 0.15s ease, opacity 0.12s ease;
+  transition: max-width 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
 }
 
 .music-tag:hover .music-tag__actions,
@@ -519,33 +538,88 @@ onBeforeUnmount(() => {
   pointer-events: auto;
 }
 
+.music-tag :deep(.p-interaction-actions) {
+  gap: 0;
+}
+
+.music-tag :deep(.p-interaction-actions__group) {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.music-tag :deep(.p-like-button.is-size-sm),
+.music-tag :deep(.p-dislike-button.is-size-sm) {
+  min-height: 20px;
+  height: 20px;
+  padding: 0.1rem 0.25rem;
+  font-size: 0.6875rem;
+  line-height: 1;
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  border: 0;
+}
+
+.music-tag :deep(.p-like-button.is-size-sm:hover),
+.music-tag :deep(.p-dislike-button.is-size-sm:hover) {
+  background: var(--a-color-surface-muted);
+}
+
 .music-tag__delete {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  min-width: 2rem;
-  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
   border: 0;
   border-radius: var(--a-radius-control);
   background: transparent;
   color: var(--a-color-muted);
   cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .music-tag__delete:hover:not(:disabled) {
-  background: var(--a-color-surface-muted);
+  background: color-mix(in srgb, var(--a-color-danger) 12%, transparent);
   color: var(--a-color-danger);
 }
 
 .music-tag__delete:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
 .music-tags__add {
   display: grid;
-  gap: 0.45rem;
-  padding-top: 0.35rem;
+  gap: 0.35rem;
+  padding-top: 0.15rem;
+}
+
+.music-tags__add :deep(.p-field) {
+  gap: 0;
+}
+
+.music-tags__add :deep(.p-input) {
+  min-height: 30px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.music-tags__add :deep(.p-input:focus) {
+  border-color: var(--a-color-primary);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--a-color-primary);
+}
+
+.music-tags__add :deep(.p-input::placeholder) {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
 }
 
 .music-tags__search-results {
@@ -553,21 +627,27 @@ onBeforeUnmount(() => {
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
   overflow: hidden;
+  background: var(--a-color-bg);
+  box-shadow: var(--a-shadow-sm);
+  max-height: 160px;
+  overflow-y: auto;
 }
 
 .music-tags__search-option {
   display: flex;
-  min-height: 44px;
+  min-height: 32px;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.55rem 0.7rem;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
   border: 0;
   border-bottom: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-text);
+  font-size: 0.75rem;
   text-align: left;
   cursor: pointer;
+  transition: background-color 0.12s ease;
 }
 
 .music-tags__search-option:last-child {
@@ -582,23 +662,47 @@ onBeforeUnmount(() => {
 
 .music-tags__search-option:disabled {
   cursor: default;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .music-tags__search-option span {
   min-width: 0;
   overflow-wrap: anywhere;
+  font-weight: 500;
 }
 
 .music-tags__search-option small {
   flex-shrink: 0;
+  color: var(--a-color-primary);
+  font-size: 0.6875rem;
+}
+
+.music-tags__search-option:disabled small {
   color: var(--a-color-muted);
-  font-size: 0.75rem;
+}
+
+.music-tags__create-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px dashed var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+}
+
+.music-tags__create-row .music-tags__hint {
+  font-size: 0.72rem;
+  color: var(--a-color-muted);
+}
+
+.music-tags__footer {
+  padding-top: 0.25rem;
 }
 
 .music-tags__error {
   color: var(--a-color-danger);
-  font-size: 0.85rem;
+  font-size: 0.75rem;
 }
 
 @media (max-width: 640px) {
@@ -616,5 +720,4 @@ onBeforeUnmount(() => {
     pointer-events: auto;
   }
 }
-
 </style>

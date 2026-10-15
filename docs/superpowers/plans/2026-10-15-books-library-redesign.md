@@ -7,12 +7,29 @@
 
 ## 任务拆解与推进路线
 
-### Task 1: 书架卡片与在读直达卡片组件 (`BookLibraryCard.vue` & `BookLibraryContinueCard.vue`)
-- **目标**：实现承载作品与本地导入记录的通用卡片组件和顶部在读直达英雄卡片。
+### [x] Task 1: 书架卡片与在读直达卡片组件 (`BookLibraryCard.vue` & `BookLibraryContinueCard.vue`)
+- **状态**：已完成 (100% 单元测试通过，纯白微凹槽规范)
 - **文件路径**：
   - `src/components/books/BookLibraryCard.vue`
   - `src/components/books/BookLibraryContinueCard.vue`
   - `tests/unit/components/books/BookLibraryCard.spec.ts`
+  - `tests/unit/components/books/BookLibraryContinueCard.spec.ts`
+
+### [x] Task 2: 电子书导入弹层组件 (`BookImportUploadModal.vue`)
+- **状态**：已完成 (分片上传流程接通，格式与进度处理完备，测试通过)
+- **文件路径**：
+  - `src/components/books/BookImportUploadModal.vue`
+  - `tests/unit/components/books/BookImportUploadModal.spec.ts`
+
+### [x] Task 3: 个人书架全景工作台主页面 (`BookLibraryView.vue`) 与路由接入
+- **状态**：已完成 (指标面板、在读直达 Hero、分类过滤 Tabs、搜索过滤、网格/列表双视图、路由注册 `/books/library` 与 `/books/import/:importId`)
+- **文件路径**：
+  - `src/views/books/BookLibraryView.vue`
+  - `src/router/routes/modules.ts`
+  - `tests/unit/views/books/BookLibraryView.spec.ts`
+
+### [x] Task 4: 规范合规性与全站回归验证
+- **状态**：已完成 (TypeScript 0 错误，全量单元测试与设计规范契约测试通过，生产构建通过)
 - **详细内容**：
   1. `BookLibraryCard.vue`：
      - Props: `item: BookShelfItem | BookImportSession`, `viewMode: 'grid' | 'list'`, `readingPercent?: number`

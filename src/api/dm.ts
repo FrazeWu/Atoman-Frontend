@@ -10,6 +10,7 @@ export type DMMailbox = { type: DMPartyType; id: string; display_name: string; a
 export type DMConversation = {
   id: string; mailbox: DMMailbox; other_party: DMParty; last_message_at: string | null
   last_message_preview: string; unread_count: number; blocked: boolean; reply_as: DMParty
+  last_message_is_outgoing?: boolean
 }
 export type DMMessage = {
   id: string; conversation_id: string; client_message_id: string; sender: DMParty; content: string

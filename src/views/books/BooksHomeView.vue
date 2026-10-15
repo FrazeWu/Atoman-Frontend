@@ -9,24 +9,14 @@
         </div>
         <div class="books-library__actions">
           <PSelect v-model="shelfStatusFilter" :options="shelfOptions" placeholder="筛选书架状态" @update:model-value="loadLibraryData" />
-          <input
-            ref="fileInput"
-            class="books-file-input"
-            type="file"
-            accept=".epub,.pdf,.txt,.cbz,.cbr,.mobi,.azw3,application/epub+zip,application/pdf,text/plain,application/vnd.comicbook+zip,application/vnd.rar,application/x-mobipocket-ebook,application/vnd.amazon.mobi8-ebook"
-            aria-label="选择电子书文件"
-            @change="handleFileChange"
-          />
           <PButton
             type="button"
             variant="secondary"
             size="sm"
-            :loading="isUploading"
-            loading-text="上传中..."
-            @click="openFilePicker"
+            @click="openBookCreation"
           >
             <Upload :size="15" aria-hidden="true" />
-            <span>导入电子书</span>
+            <span>添加图书并公开</span>
           </PButton>
         </div>
       </header>
@@ -69,7 +59,6 @@
       <p v-else-if="shelfLoading" class="books-feedback" aria-live="polite">正在加载书架...</p>
       <p v-else-if="shelves.length === 0" class="books-empty">书架还没有书籍，<RouterLink to="/books">去发现书籍 →</RouterLink></p>
 
-      <p v-if="isUploading" class="books-feedback" aria-live="polite">正在上传 {{ uploadProgress }}%</p>
       <p v-if="errorMessage" class="books-feedback books-feedback--error" role="alert">{{ errorMessage }}</p>
       <p v-else-if="isLoading" class="books-feedback" aria-live="polite">正在加载书架...</p>
 
@@ -87,9 +76,9 @@
           </div>
           <div class="books-import-row__body">
             <RouterLink
-              v-if="item.asset_id && item.processing_status === 'private_available'"
+              v-if="item.published_asset_id"
               class="books-import-row__link"
-              :to="`/books/read/${item.asset_id}`"
+              :to="`/books/public-read/${item.published_asset_id}`"
             >
               <strong>{{ item.title || item.file_name }}</strong>
             </RouterLink>
@@ -189,6 +178,8 @@
       <p>公共书目暂未开放</p>
     </section>
 
+    <p v-if="creationNotice" class="books-feedback" role="status" aria-live="polite">{{ creationNotice }}</p>
+
     <BookCreationFlowDrawer
       :show="isCreationOpen"
       @close="isCreationOpen = false"
@@ -220,7 +211,6 @@ import {
   listPublicBookAssets,
   retryBookImport,
   searchPublicBooks,
-  uploadBookFile,
   type BookContinueReading,
   type BookImportSession,
   type BookPublicWork,
@@ -232,7 +222,6 @@ let refreshTimer: ReturnType<typeof setInterval> | undefined
 
 const route = useRoute()
 const router = useRouter()
-const fileInput = ref<HTMLInputElement | null>(null)
 const imports = ref<BookImportSession[]>([])
 let libraryRequestSequence = 0
 let importsRequestSequence = 0
@@ -260,24 +249,30 @@ const shelfOptions = [
   { value: 'on_hold', label: '搁置' }, { value: 'dropped', label: '弃读' },
 ]
 const isLoading = ref(false)
-const isUploading = ref(false)
-const uploadProgress = ref(0)
 const deletingId = ref('')
 const retryingId = ref('')
 const errorMessage = ref('')
 const isCreationOpen = ref(false)
+const creationNotice = ref('')
 
 function openBookCreation() {
   isCreationOpen.value = true
 }
 
-async function handleBookCreated(workID?: string) {
+async function handleBookCreated(workID?: string, publishedAssetID?: string, notice = '') {
   isCreationOpen.value = false
-  loadCatalog()
+  creationNotice.value = notice
+  void loadCatalog()
+  void loadPublicAssets()
   if (isLibrary.value) {
-    loadLibraryData()
+    void loadLibraryData()
+    void loadImports()
   }
-  if (workID) {
+  if (publishedAssetID) {
+    await router.push(`/books/public-read/${encodeURIComponent(publishedAssetID)}`)
+  } else if (workID && isLibrary.value) {
+    await router.push('/books')
+  } else if (workID) {
     await router.push(`/books/work/${encodeURIComponent(workID)}`)
   }
 }
@@ -313,11 +308,11 @@ function formatSize(size: number): string {
 }
 
 function statusLabel(item: BookImportSession): string {
-  if (item.status === 'scanning' || item.processing_status === 'scanning') return '等待扫描'
+  if (item.published_asset_id) return '已公开，可阅读'
+  if (item.status === 'scanning' || item.processing_status === 'scanning') return '自动安全检查中'
   if (item.processing_status === 'processing') return '正在解析'
-  if (item.processing_status === 'publication_requested' || item.processing_status === 'pending_review') return '等待公共发布审核'
   if (item.processing_status === 'quarantined') return '已隔离'
-  if (item.status === 'metadata_ready') return '可以阅读'
+  if (item.status === 'metadata_ready') return '等待正文公开'
   if (item.status === 'failed') return '处理失败'
   if (item.status === 'cancelled' || item.status === 'deleted') return '已删除'
   if (item.status === 'completing') return '正在整理'
@@ -422,40 +417,6 @@ async function loadImports() {
   }
 }
 
-function openFilePicker() {
-  fileInput.value?.click()
-}
-
-async function handleFileChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (!file) return
-  const extension = file.name.toLowerCase().split('.').pop()
-  if (!extension || !['epub', 'pdf', 'txt', 'cbz', 'cbr', 'mobi', 'azw3'].includes(extension)) {
-    errorMessage.value = '仅支持 EPUB、PDF、TXT、CBZ、CBR、MOBI 和 AZW3 文件'
-    return
-  }
-
-  isUploading.value = true
-  uploadProgress.value = 0
-  errorMessage.value = ''
-  try {
-    const session = await uploadBookFile(file, {
-      onProgress: ({ loaded, total }) => {
-        uploadProgress.value = total > 0 ? Math.round((loaded / total) * 100) : 0
-      },
-    })
-    imports.value = [session, ...imports.value.filter((item) => item.id !== session.id)]
-    void loadLibraryData()
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '电子书上传失败，请稍后重试'
-  } finally {
-    isUploading.value = false
-    uploadProgress.value = 0
-  }
-}
-
 async function linkImport(item: BookImportSession) {
   const workID = window.prompt('请输入公共作品 ID', item.work_id || '')?.trim()
   if (!workID) return
@@ -500,7 +461,8 @@ onMounted(() => {
   void loadCatalog()
   void loadPublicAssets()
   refreshTimer = setInterval(() => {
-    if (isLibrary.value && !isUploading.value && !isLoading.value) void loadImports()
+    if (isLibrary.value && !isLoading.value) void loadImports()
+    if (creationNotice.value && isCatalog.value && !publicAssetsLoading.value) void loadPublicAssets()
   }, 5000)
 })
 watch(isLibrary, () => {

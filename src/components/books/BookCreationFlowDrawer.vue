@@ -353,7 +353,7 @@
       <section v-else class="book-creation__panel">
         <header class="book-creation__panel-header">
           <h3>第 3 步：确认信息并提交</h3>
-          <p>核对图书档案与出版信息，确认无误后提交入库并对社区开放。</p>
+          <p>确认后直接创建公开书目；正文通过自动安全检查后立即开放阅读，无需等待人工审核。</p>
         </header>
 
         <!-- 豆瓣风格图书档案卡片 -->
@@ -428,6 +428,11 @@
           <p>{{ draftDescription }}</p>
         </div>
 
+        <label class="book-creation__rights-confirmation">
+          <input v-model="publicDistributionConfirmed" type="checkbox" />
+          <span>我确认有权公开分享这本电子书，并理解上传后所有人都可以阅读。</span>
+        </label>
+
         <p v-if="uploadError" class="book-creation__error" role="alert">{{ uploadError }}</p>
         <div v-if="isSubmitting" class="book-creation__progress">
           <p role="status" aria-live="polite" aria-atomic="true">{{ submitProgressLabel }}</p>
@@ -446,9 +451,10 @@
           <PButton
             variant="primary"
             :loading="isSubmitting"
+            :disabled="isSubmitting || !publicDistributionConfirmed"
             @click="submitCreation"
           >
-            确认提交并入库
+            创建并公开
           </PButton>
         </footer>
       </section>
@@ -464,7 +470,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { apiPostMultipart } from '@/api/client'
-import { uploadBookFile, createPublicBook } from '@/api/books'
+import { uploadBookFile, createPublicBook, getBookImport } from '@/api/books'
 import { useApi } from '@/composables/useApi'
 
 const props = defineProps<{
@@ -473,7 +479,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'created', workId: string, assetId: string): void
+  (e: 'created', workId: string, publishedAssetId: string, notice: string): void
 }>()
 
 const api = useApi()
@@ -518,12 +524,14 @@ const draftDescription = ref('')
 
 const isSubmitting = ref(false)
 const uploadError = ref('')
+const publicDistributionConfirmed = ref(false)
 const uploadPercent = ref(0)
-const submitStage = ref<'cover' | 'upload' | 'catalog'>('upload')
+const submitStage = ref<'cover' | 'upload' | 'catalog' | 'publish'>('upload')
 const submitProgressLabel = computed(() => {
   if (submitStage.value === 'cover') return '正在上传封面...'
   if (submitStage.value === 'upload') return '正在上传电子书...'
-  return '正在入库并同步公开书库档案...'
+  if (submitStage.value === 'catalog') return '正在创建公开书目...'
+  return '正在自动检查正文，检查通过后立即公开...'
 })
 
 const fileFormat = computed(() => {
@@ -569,6 +577,7 @@ function resetState() {
   draftCoverUrl.value = ''
   draftDescription.value = ''
   uploadError.value = ''
+  publicDistributionConfirmed.value = false
   isSubmitting.value = false
 }
 
@@ -677,7 +686,7 @@ async function uploadCoverImage(): Promise<string> {
 }
 
 async function submitCreation() {
-  if (!selectedFile.value) return
+  if (!selectedFile.value || !publicDistributionConfirmed.value || isSubmitting.value) return
   isSubmitting.value = true
   uploadError.value = ''
   uploadPercent.value = 0
@@ -725,9 +734,30 @@ async function submitCreation() {
         cover_url: coverUrl,
       },
       source_url: window.location.origin,
+      public_distribution_confirmed: true,
     })
 
-    emit('created', work.id, importSession.asset_id || '')
+    let publishedAssetId = importSession.published_asset_id || ''
+    let latestImport = importSession
+    if (!publishedAssetId) {
+      submitStage.value = 'publish'
+      for (let attempt = 0; attempt < 15; attempt += 1) {
+        try {
+          latestImport = await getBookImport(importSession.id)
+        } catch {
+          break
+        }
+        publishedAssetId = latestImport.published_asset_id || ''
+        if (publishedAssetId || latestImport.status === 'failed' || latestImport.processing_status === 'quarantined') break
+        if (attempt < 14) await new Promise(resolve => window.setTimeout(resolve, 1000))
+      }
+    }
+    const notice = publishedAssetId
+      ? ''
+      : latestImport.status === 'failed' || latestImport.processing_status === 'quarantined'
+        ? `书目已创建，但正文处理失败：${latestImport.error_message || '请到书架的上传记录中重试。'}`
+        : '书目已创建，正文正在自动安全检查；检查通过后会直接公开，可在“书籍 → 可以阅读”中打开。'
+    emit('created', work.id, publishedAssetId, notice)
     emit('close')
   } catch (err: unknown) {
     uploadError.value = err instanceof Error ? err.message : '上传入库失败，请重试'
@@ -1242,6 +1272,24 @@ async function submitCreation() {
   color: var(--a-color-fg);
   line-height: 1.5;
   white-space: pre-wrap;
+}
+
+.book-creation__rights-confirmation {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  color: var(--a-color-fg);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.book-creation__rights-confirmation input {
+  flex: 0 0 auto;
+  margin: 0.15rem 0 0;
+  accent-color: var(--a-color-primary);
 }
 
 .book-creation__actions {

@@ -38,9 +38,9 @@ describe('BooksHomeView', () => {
 
     expect(wrapper.text()).toContain('书架')
     expect(wrapper.text()).toContain('Private PDF')
-    expect(wrapper.text()).toContain('等待扫描')
+    expect(wrapper.text()).toContain('自动安全检查中')
     expect(wrapper.find('[aria-label="删除导入"]').exists()).toBe(true)
-    expect(wrapper.find('input[type="file"]').attributes('accept')).toBe('.epub,.pdf,.txt,.cbz,.cbr,.mobi,.azw3,application/epub+zip,application/pdf,text/plain,application/vnd.comicbook+zip,application/vnd.rar,application/x-mobipocket-ebook,application/vnd.amazon.mobi8-ebook')
+    expect(wrapper.text()).toContain('添加图书并公开')
     wrapper.unmount()
   })
 
@@ -102,6 +102,32 @@ describe('BooksHomeView', () => {
     wrapper.unmount()
   })
 
+  it('uses the same public creation flow from the library', async () => {
+    vi.spyOn(booksApi, 'listBookImports').mockResolvedValue([])
+    vi.spyOn(booksApi, 'listBookShelf').mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 })
+    vi.spyOn(booksApi, 'listContinueReading').mockResolvedValue([])
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push('/books/library')
+    await router.isReady()
+    const wrapper = mount(BooksHomeView, {
+      global: {
+        plugins: [router],
+        stubs: {
+          BookCreationFlowDrawer: {
+            props: ['show'],
+            template: '<div v-if="show" data-book-import-flow>公开创建流程</div>',
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('input[type="file"]').exists()).toBe(false)
+    await wrapper.findAll('button').find(button => button.text().includes('添加图书并公开'))!.trigger('click')
+    expect(wrapper.find('[data-book-import-flow]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
   it('does not navigate to an empty work route when a new contribution has no work ID yet', async () => {
     vi.spyOn(booksApi, 'listPublicBookAssets').mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 })
     vi.spyOn(booksApi, 'searchPublicBooks').mockResolvedValue({ items: [], total: 0, limit: 24, offset: 0 })
@@ -130,6 +156,36 @@ describe('BooksHomeView', () => {
 
     expect(router.currentRoute.value.path).toBe('/books')
     expect(wrapper.find('[data-testid="finish-book-creation"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('opens the public reader after a newly created book is published', async () => {
+    vi.spyOn(booksApi, 'listPublicBookAssets').mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 })
+    vi.spyOn(booksApi, 'searchPublicBooks').mockResolvedValue({ items: [], total: 0, limit: 24, offset: 0 })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [...routes, { path: '/books/public-read/:assetId', component: BooksHomeView }],
+    })
+    await router.push('/books')
+    await router.isReady()
+    const wrapper = mount(BooksHomeView, {
+      global: {
+        plugins: [router],
+        stubs: {
+          BookCreationFlowDrawer: {
+            props: ['show'],
+            emits: ['created'],
+            template: '<div v-if="show"><button data-testid="finish-book-creation" @click="$emit(\'created\', \'work-1\', \'asset-1\', \'\')">完成</button></div>',
+          },
+        },
+      },
+    })
+    await flushPromises()
+    await wrapper.findAll('button').find(button => button.text().includes('添加图书'))!.trigger('click')
+    await wrapper.get('[data-testid="finish-book-creation"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/books/public-read/asset-1')
     wrapper.unmount()
   })
 

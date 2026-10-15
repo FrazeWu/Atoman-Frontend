@@ -115,6 +115,7 @@ export interface BookPublicWork {
 export interface CreatePublicBookInput {
   import_id: string
   title: string
+  public_distribution_confirmed: boolean
   subtitle?: string
   original_title?: string
   description?: string

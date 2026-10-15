@@ -14,13 +14,16 @@ vi.mock('@/stores/auth', () => ({
 vi.mock('@/api/books', () => ({
   uploadBookFile: vi.fn(),
   createPublicBook: vi.fn(),
+  getBookImport: vi.fn(),
 }))
 
 describe('BookCreationFlowDrawer', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     vi.mocked(booksApi.uploadBookFile).mockResolvedValue({
       id: 'import-123',
       asset_id: 'asset-123',
+      published_asset_id: 'public-asset-123',
       status: 'scanning',
     } as any)
     vi.mocked(booksApi.createPublicBook).mockResolvedValue({ id: 'work-123' } as any)
@@ -136,10 +139,13 @@ describe('BookCreationFlowDrawer', () => {
 
     // 确认处于第 3 步：提交
     expect(wrapper.text()).toContain('第 3 步：确认信息并提交')
-    expect(wrapper.text()).toContain('确认提交并入库')
+    expect(wrapper.text()).toContain('我确认有权公开分享这本电子书')
+    expect(wrapper.text()).toContain('创建并公开')
+
+    await wrapper.get('.book-creation__rights-confirmation input').setValue(true)
 
     // 点击最终提交按钮
-    const submitBtn = wrapper.findAll('.p-btn').find(b => b.text().includes('确认提交并入库'))
+    const submitBtn = wrapper.findAll('.p-btn').find(b => b.text().includes('创建并公开'))
     expect(submitBtn).toBeTruthy()
     await submitBtn!.trigger('click')
     await flushPromises()
@@ -148,6 +154,7 @@ describe('BookCreationFlowDrawer', () => {
     expect(booksApi.createPublicBook).toHaveBeenCalledWith(expect.objectContaining({
       import_id: 'import-123',
       title: '地图上的中国通史',
+      public_distribution_confirmed: true,
     }))
     expect(vi.mocked(booksApi.uploadBookFile).mock.calls[0]?.[1]?.onProgress).toBeTypeOf('function')
     expect(wrapper.emitted('created')).toBeTruthy()
@@ -163,6 +170,7 @@ describe('BookCreationFlowDrawer', () => {
     const vm = wrapper.vm as any
     vm.selectedFile = new File(['epub'], 'book.epub', { type: 'application/epub+zip' })
     vm.draftTitle = '测试图书'
+    vm.publicDistributionConfirmed = true
     vm.step = 3
     await flushPromises()
     await vm.submitCreation()
@@ -170,5 +178,21 @@ describe('BookCreationFlowDrawer', () => {
     expect(wrapper.emitted('created')).toBeUndefined()
     expect(wrapper.emitted('close')).toBeUndefined()
     expect(vm.uploadError).toContain('书目创建失败')
+  })
+
+  it('does not upload until public distribution is confirmed', async () => {
+    const wrapper = mount(BookCreationFlowDrawer, {
+      props: { show: true },
+      global: { stubs: { PSheet: true, PButton: true, PInput: true, PTextarea: true } },
+    })
+    const vm = wrapper.vm as any
+    vm.selectedFile = new File(['epub'], 'book.epub', { type: 'application/epub+zip' })
+    vm.draftTitle = '测试图书'
+    vm.step = 3
+
+    await vm.submitCreation()
+
+    expect(booksApi.uploadBookFile).not.toHaveBeenCalled()
+    expect(booksApi.createPublicBook).not.toHaveBeenCalled()
   })
 })

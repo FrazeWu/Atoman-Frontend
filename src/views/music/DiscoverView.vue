@@ -21,6 +21,7 @@ import {
   listPlaylistBookmarks,
   listMusicAlbums,
   listMusicArtists,
+  searchMusic,
   listRecommendedArtists,
   listPublicMusicPlaylists,
   getMusicHome,
@@ -105,6 +106,7 @@ const discoverSectionLoading = reactive<Record<DiscoverSection, boolean>>({
 const searchQuery = ref('')
 const searchOpen = ref(false)
 const searchLoading = ref(false)
+const searchSongs = ref<MusicSongListItem[]>([])
 const searchAlbums = ref<MusicAlbumListItem[]>([])
 const searchArtists = ref<MusicArtistListItem[]>([])
 const albumItems = ref<MusicAlbumListItem[]>([])
@@ -615,6 +617,7 @@ async function fetchSearchResults() {
   const requestId = ++activeSearchRequestId
 
   if (!query) {
+    searchSongs.value = []
     searchAlbums.value = []
     searchArtists.value = []
     searchLoading.value = false
@@ -628,16 +631,19 @@ async function fetchSearchResults() {
 
   searchLoading.value = true
   try {
-    const [albumResponse, artistResponse] = await Promise.all([
+    const [songResponse, albumResponse, artistResponse] = await Promise.all([
+      searchMusic(query, { type: 'song', page: 1, page_size: 10 }),
       listMusicAlbums({ q: query, page: 1, page_size: 10, sort: 'hot' }),
       listMusicArtists({ q: query, page: 1, page_size: 10 }),
     ])
     if (requestId !== activeSearchRequestId) return
+    searchSongs.value = songResponse.songs
     searchAlbums.value = albumResponse.data
     searchArtists.value = artistResponse.data
   } catch (error) {
     if (requestId !== activeSearchRequestId) return
     reportError(error, 'Failed to search music explore entities:')
+    searchSongs.value = []
     searchAlbums.value = []
     searchArtists.value = []
   } finally {
@@ -717,6 +723,12 @@ function openArtistResult(artist: MusicArtistListItem) {
   router.push(`/music/artist/${artist.id}`)
 }
 
+function openSongResult(song: MusicSongListItem) {
+  searchOpen.value = false
+  searchQuery.value = ''
+  router.push(`/music/song/${song.id}`)
+}
+
 function startAlbumCreation() {
   if (!requireLogin()) return
   openMusicCreationFlow({ startStep: 'albumImport' })
@@ -773,7 +785,7 @@ watch(
 )
 
 const hasSearchQuery = computed(() => searchQuery.value.trim().length > 0)
-const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchArtists.value.length > 0)
+const hasSearchResults = computed(() => searchSongs.value.length > 0 || searchAlbums.value.length > 0 || searchArtists.value.length > 0)
 </script>
 
 <template>
@@ -805,6 +817,23 @@ const hasSearchResults = computed(() => searchAlbums.value.length > 0 || searchA
           >
             <template #results>
               <div class="search-dropdown__sections">
+                <section v-if="searchSongs.length" class="search-group">
+                  <p class="search-group__title">歌曲</p>
+                  <button
+                    v-for="song in searchSongs"
+                    :key="`song-${song.id}`"
+                    type="button"
+                    class="search-result"
+                    data-testid="music-explore-song-result"
+                    @mousedown.prevent="openSongResult(song)"
+                  >
+                    <span class="search-result__title">{{ song.title }}</span>
+                    <span class="search-result__meta">
+                      {{ song.artists?.map((artist) => artist.name).join(' / ') || '未知艺术家' }}
+                      <template v-if="song.album?.title"> · {{ song.album.title }}</template>
+                    </span>
+                  </button>
+                </section>
                 <section v-if="searchAlbums.length" class="search-group">
                   <p class="search-group__title">专辑</p>
                   <button

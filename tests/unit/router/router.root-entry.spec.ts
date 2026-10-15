@@ -3,6 +3,7 @@ import { createMemoryHistory, createRouter, type RouteRecordRaw } from 'vue-rout
 import type { ModuleRoomKey } from '@/config/moduleRooms'
 import { installRouteGuards } from '@/router/guards'
 import { moduleRoutes } from '@/router/routes/modules'
+import { useAuthStore } from '@/stores/auth'
 
 const RouteStub = { template: '<main data-test-route-stub />' }
 
@@ -73,5 +74,39 @@ describe('router root entry routing', () => {
     await router.replace('/')
 
     expect(router.currentRoute.value.path).toBe('/')
+  })
+
+  it('keeps anonymous portal root traffic on portal home', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/', component: RouteStub, meta: { portalHome: true } },
+        { path: '/feed', component: RouteStub },
+      ],
+    })
+    installRouteGuards(router)
+
+    await router.replace('/')
+
+    expect(router.currentRoute.value.path).toBe('/')
+  })
+
+  it('redirects authenticated portal root traffic to the feed home path', async () => {
+    const authStore = useAuthStore()
+    authStore.user = { username: 'demo', email: 'demo@example.com', role: 'user' } as never
+    authStore.isAuthenticated = true
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/', component: RouteStub, meta: { portalHome: true } },
+        { path: '/feed', component: RouteStub },
+      ],
+    })
+    installRouteGuards(router)
+
+    await router.replace('/')
+
+    expect(router.currentRoute.value.path).toBe('/feed')
   })
 })

@@ -72,12 +72,16 @@ export function installRouteGuards(router: Router) {
 		const isPortalHome = to.meta.portalHome === true;
 		const hasValidSession =
 			authStore.validateSession() ||
-			(requiresAuth || isGuestOnlyRoute ? await authStore.restoreSession() : false);
+			(requiresAuth || isGuestOnlyRoute || isPortalHome ? await authStore.restoreSession() : false);
 
 		if (hasValidSession) {
 			onboardingStore.initialize(authStore.user);
 		} else {
 			onboardingStore.reset();
+		}
+
+		if (isPortalHome && hasValidSession) {
+			return "/feed";
 		}
 
 		if (

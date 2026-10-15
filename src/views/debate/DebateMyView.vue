@@ -4,12 +4,17 @@ import { IconBook2 as BookOpen, IconMessage as MessageSquare, IconSettings as Se
 import { useAuthStore } from '@/stores/auth'
 import { useDebateStore } from '@/stores/debate'
 import PEmpty from '@/components/ui/PEmpty.vue'
-import PButton from '@/components/ui/PButton.vue'
-import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PModulePersonalHub, { type HubLink } from '@/components/ui/PModulePersonalHub.vue'
 
 const authStore = useAuthStore()
 const store = useDebateStore()
 const myDebates = computed(() => store.debates.filter((debate) => debate.user?.uuid === authStore.user?.uuid || debate.user?.id === authStore.user?.id))
+
+const links = computed<HubLink[]>(() => [
+  { label: '我发起的辩题', to: '/debate/me', icon: MessageSquare },
+  { label: '辩论规则', to: '/debate/rules', icon: BookOpen },
+  { label: '账号设置', to: `/users/${authStore.user?.username}/settings`, icon: Settings },
+])
 
 onMounted(() => {
   if (authStore.isAuthenticated) void store.fetchDebates({ page: 1, pageSize: 50 })
@@ -17,44 +22,46 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="a-page-md debate-my-view">
-    <PPageHeader title="我的" mb="1.25rem" />
-    <PEmpty v-if="!authStore.isAuthenticated" title="登录后查看我的辩题" description="登录账号以查看发起的辩题和参与记录。">
-      <template #action><PButton to="/login" variant="primary">登录</PButton></template>
-    </PEmpty>
-    <template v-else>
-      <nav class="debate-my__links" aria-label="辩题个人入口">
-        <RouterLink to="/debate/me"><MessageSquare :size="18" aria-hidden="true" /><span>我发起的辩题</span></RouterLink>
-        <RouterLink to="/debate/rules"><BookOpen :size="18" aria-hidden="true" /><span>辩论规则</span></RouterLink>
-        <RouterLink :to="`/users/${authStore.user?.username}/settings`"><Settings :size="18" aria-hidden="true" /><span>账号设置</span></RouterLink>
-      </nav>
-      <section class="debate-my__list">
-        <h2>我发起的辩题</h2>
-        <PEmpty v-if="!myDebates.length" title="暂无辩题" description="从辩题页发起一个新的讨论。" />
-        <RouterLink v-for="debate in myDebates" :key="debate.id" :to="`/debate/${debate.id}`">{{ debate.title }}</RouterLink>
-      </section>
-    </template>
-  </div>
+  <PModulePersonalHub
+    title="我的"
+    :authenticated="authStore.isAuthenticated"
+    unauth-title="登录后查看我的辩题"
+    unauth-description="登录账号以查看发起的辩题和参与记录。"
+    :links="links"
+  >
+    <section class="debate-my__list">
+      <h2 class="debate-my__section-title">我发起的辩题</h2>
+      <PEmpty v-if="!myDebates.length" title="暂无辩题" description="从辩题页发起一个新的讨论。" />
+      <div v-else class="debate-my__items">
+        <RouterLink v-for="debate in myDebates" :key="debate.id" :to="`/debate/${debate.id}`" class="debate-my__item">
+          {{ debate.title }}
+        </RouterLink>
+      </div>
+    </section>
+  </PModulePersonalHub>
 </template>
 
 <style scoped>
-.debate-my-view { min-height: 100%; padding-bottom: 3rem; }
-.debate-my__links { display: grid; gap: 0.5rem; margin-bottom: 2rem; }
-.debate-my__links a {
-  display: flex;
-  min-height: 48px;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.75rem;
-  border: 1px solid var(--a-color-border);
+.debate-my__section-title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 500;
+}
+.debate-my__items {
+  display: grid;
+  gap: 0.5rem;
+}
+.debate-my__item {
+  display: block;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   text-decoration: none;
+  font-size: 0.875rem;
 }
-.debate-my__links a:hover, .debate-my__links a:focus-visible { border-color: var(--a-color-fg); }
-.debate-my__list { display: grid; gap: 0.75rem; }
-.debate-my__list h2 { margin: 0; font-size: 1rem; font-weight: 500; }
-.debate-my__list > a { color: var(--a-color-fg); text-decoration: none; }
-.debate-my__list > a:hover { text-decoration: underline; }
+.debate-my__item:hover {
+  border-color: var(--a-color-fg);
+}
 </style>

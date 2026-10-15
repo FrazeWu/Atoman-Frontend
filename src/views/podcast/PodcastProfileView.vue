@@ -4,9 +4,7 @@ import { IconClock as Clock3, IconSettings as Settings, IconStar as Star } from 
 import { getPodcastBookmarks, getPodcastShowBookmarks } from '@/api/podcast'
 import { listPodcastProgress } from '@/composables/usePodcastProgress'
 import { useAuthStore } from '@/stores/auth'
-import PEmpty from '@/components/ui/PEmpty.vue'
-import PButton from '@/components/ui/PButton.vue'
-import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PModulePersonalHub, { type HubStat, type HubLink } from '@/components/ui/PModulePersonalHub.vue'
 
 const authStore = useAuthStore()
 const loading = ref(false)
@@ -17,6 +15,18 @@ const listeningCount = ref(0)
 let loadGeneration = 0
 const isAuthenticated = computed(() => authStore.isAuthenticated && Boolean(authStore.user))
 const accountIdentity = computed(() => authStore.user?.uuid || authStore.token || '')
+
+const stats = computed<HubStat[]>(() => [
+  { label: '订阅节目', value: subscribedCount.value },
+  { label: '已保存单集', value: savedCount.value },
+  { label: '待收听内容', value: listeningCount.value },
+])
+
+const links = computed<HubLink[]>(() => [
+  { label: '播放列表', to: '/podcasts/favorites', icon: Star },
+  { label: '继续收听', to: '/podcasts/subscriptions', icon: Clock3 },
+  { label: '播客设置', to: `/users/${authStore.user?.username}/settings`, icon: Settings },
+])
 
 async function loadOverview() {
   if (!isAuthenticated.value) return
@@ -52,44 +62,14 @@ watch(accountIdentity, (identity, previous) => {
 </script>
 
 <template>
-  <div class="a-page-md podcast-profile-view">
-    <PPageHeader title="我的" mb="1.25rem" />
-
-    <PEmpty
-      v-if="!isAuthenticated"
-      title="登录后查看播客收听中心"
-      description="登录账号以同步订阅、收藏和收听进度。"
-    >
-      <template #action><PButton to="/login" variant="primary">登录</PButton></template>
-    </PEmpty>
-
-    <template v-else>
-      <p v-if="error" class="podcast-profile__error" role="alert">{{ error }}</p>
-      <div v-if="loading" class="podcast-profile__state">加载中...</div>
-      <div v-else class="podcast-profile__stats" aria-label="播客统计">
-        <article><strong>{{ subscribedCount }}</strong><span>订阅节目</span></article>
-        <article><strong>{{ savedCount }}</strong><span>已保存单集</span></article>
-        <article><strong>{{ listeningCount }}</strong><span>待收听内容</span></article>
-      </div>
-
-      <nav class="podcast-profile__links" aria-label="播客个人入口">
-        <RouterLink to="/podcasts/favorites"><Star :size="18" aria-hidden="true" /><span>播放列表</span></RouterLink>
-        <RouterLink to="/podcasts/subscriptions"><Clock3 :size="18" aria-hidden="true" /><span>继续收听</span></RouterLink>
-        <RouterLink :to="`/users/${authStore.user?.username}/settings`"><Settings :size="18" aria-hidden="true" /><span>播客设置</span></RouterLink>
-      </nav>
-    </template>
-  </div>
+  <PModulePersonalHub
+    title="我的"
+    :authenticated="isAuthenticated"
+    :loading="loading"
+    :error="error"
+    unauth-title="登录后查看播客收听中心"
+    unauth-description="登录账号以同步订阅、收藏和收听进度。"
+    :stats="stats"
+    :links="links"
+  />
 </template>
-
-<style scoped>
-.podcast-profile-view { min-height: 100%; padding-bottom: 3rem; }
-.podcast-profile__stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; }
-.podcast-profile__stats article { display: grid; gap: 0.35rem; padding: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); }
-.podcast-profile__stats strong { font-size: 1.35rem; font-weight: 500; }
-.podcast-profile__stats span, .podcast-profile__state, .podcast-profile__error { color: var(--a-color-muted); font-size: 0.8rem; }
-.podcast-profile__error { color: var(--a-color-danger); margin-bottom: 1rem; }
-.podcast-profile__links { display: grid; gap: 0.5rem; }
-.podcast-profile__links a { display: flex; min-height: 48px; align-items: center; gap: 0.65rem; padding: 0.75rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); color: var(--a-color-fg); text-decoration: none; }
-.podcast-profile__links a:hover, .podcast-profile__links a:focus-visible { border-color: var(--a-color-fg); }
-@media (max-width: 520px) { .podcast-profile__stats { grid-template-columns: 1fr; } }
-</style>

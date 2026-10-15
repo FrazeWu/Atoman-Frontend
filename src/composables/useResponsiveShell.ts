@@ -56,7 +56,6 @@ const MOBILE_PRIMARY_TABS: Record<ModuleRoomKey, MobilePrimaryTab[]> = {
 		["search", "搜索", "/songs", Search],
 		["library", "歌单", "/playlists", ListMusic],
 		["me", "我的", "/me", UserRound],
-		["more", "更多", "/more", Ellipsis],
 	]),
 	forum: tabs("forum", [
 		["topics", "话题", "/", MessageSquare],
@@ -66,6 +65,7 @@ const MOBILE_PRIMARY_TABS: Record<ModuleRoomKey, MobilePrimaryTab[]> = {
 	]),
 	debate: tabs("debate", [
 		["topics", "辩题", "/", MessageSquare],
+		["rules", "规则", "/rules", BookOpen],
 		["search", "搜索", "/search", Search],
 		["me", "我的", "/me", UserRound],
 	]),

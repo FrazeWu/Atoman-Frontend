@@ -179,6 +179,19 @@ describe("player store", () => {
 		vi.useRealTimers();
 	});
 
+	it("attributes valid plays to their source playlist", async () => {
+		vi.useFakeTimers();
+		const player = usePlayerStore();
+		player.playAlbum([
+			{ id: "playlist-song", title: "Playlist Song", audio_url: "playlist.mp3", playlist_id: "playlist-1" } as Song,
+		]);
+		await audioInstances[0].play.mock.results[0]?.value;
+		await vi.advanceTimersByTimeAsync(5000);
+
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith("playlist-song", "playlist-1");
+		vi.useRealTimers();
+	});
+
 	it("records recommendation playback lifecycle for attributed songs", async () => {
 		vi.useFakeTimers();
 		const player = usePlayerStore();

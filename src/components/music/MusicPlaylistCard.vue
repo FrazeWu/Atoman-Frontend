@@ -48,6 +48,7 @@
         {{ playlist.description || '歌单' }}
       </p>
       <p class="playlist-count">
+        <span>播放 {{ formattedPlayCount }}</span>
         <span>收藏 {{ formattedBookmarkCount }}</span>
         <span>{{ playlist.song_count }} 首</span>
       </p>
@@ -70,6 +71,7 @@ export interface MusicPlaylistCardItem {
   song_count: number
   owner_username?: string
   bookmark_count?: number
+  play_count?: number
 }
 
 const props = withDefaults(defineProps<{
@@ -95,6 +97,7 @@ const displayTitle = computed(() => {
 })
 
 const formattedBookmarkCount = computed(() => String(props.playlist.bookmark_count ?? 0))
+const formattedPlayCount = computed(() => String(props.playlist.play_count ?? 0))
 </script>
 
 <style scoped>

@@ -676,6 +676,7 @@ function playlistCardItem(item: MusicPlaylistSummary) {
     song_count: item.song_count,
     owner_username: item.owner_username,
     bookmark_count: item.bookmark_count,
+    play_count: item.play_count,
     reason: item.reason,
   }
 }

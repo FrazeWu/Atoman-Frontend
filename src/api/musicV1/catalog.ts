@@ -707,9 +707,11 @@ export async function reorderMusicPlaylistSongs(
 
 export async function recordMusicSongPlay(
 	songId: string,
+	playlistId?: string,
 ): Promise<{ recorded: boolean }> {
 	return apiPostJson<{ recorded: boolean }>(musicV1Endpoints.plays(), {
 		song_id: songId,
+		...(playlistId ? { playlist_id: playlistId } : {}),
 	});
 }
 

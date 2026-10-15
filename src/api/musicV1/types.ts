@@ -917,6 +917,7 @@ export type MusicPlaylistSummary = {
 	is_public?: boolean;
 	kind?: "user" | "favorite" | "later";
 	bookmark_count?: number;
+	play_count?: number;
 	reason?: string;
 	section?: string;
 };

@@ -63,6 +63,7 @@ export interface Song {
 	id: number | string;
 	source_type?: "music" | "podcast_episode" | "feed_podcast";
 	source_id?: string;
+	playlist_id?: string;
 	title: string;
 	artist: string;
 	album: string;

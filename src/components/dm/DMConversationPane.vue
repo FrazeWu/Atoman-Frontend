@@ -34,7 +34,7 @@
           title="联系人详情"
           @click="emit('toggle-drawer')"
         >
-          <IconInfoCircle :size="18" />
+          <Info :size="18" />
         </button>
       </div>
     </header>
@@ -75,6 +75,7 @@
             class="dm-message"
             :class="{ self: message.sender.id === conversation?.reply_as.id }"
             :data-message-id="message.id"
+            tabindex="0"
           >
             <!-- 气泡 -->
             <div class="dm-bubble">
@@ -87,7 +88,7 @@
               />
               <span class="dm-bubble-meta">
                 <time class="dm-bubble-time">{{ formatMessageTime(message.created_at) }}</time>
-                <IconCheck
+                <Check
                   v-if="message.sender.id === conversation?.reply_as.id"
                   class="dm-bubble-check"
                   :size="12"
@@ -107,7 +108,7 @@
                 title="复制消息"
                 @click="copyMessage(message.content)"
               >
-                <IconCopy :size="13" />
+                <Copy :size="13" />
               </button>
               <button
                 v-if="message.sender.id !== conversation?.reply_as.id"
@@ -118,7 +119,7 @@
                 title="举报消息"
                 @click="emit('report', message.id)"
               >
-                <IconFlag :size="13" />
+                <Flag :size="13" />
                 <span class="sr-only">举报</span>
               </button>
             </div>
@@ -134,7 +135,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { IconCheck, IconCopy, IconFlag, IconInfoCircle } from '@tabler/icons-vue'
+import { Check, Copy, Flag, Info } from 'lucide-vue-next'
 import type { DMConversation, DMMessage, DMParty } from '@/api/dm'
 
 const props = withDefaults(
@@ -266,7 +267,7 @@ const groupedMessages = computed<MessageGroup[]>(() => {
 
     const isSameDay = dateKey === lastDateKey
     const isSameSender = currentGroup && currentGroup.senderId === senderId
-    const isWithin5Minutes = currentGroup && msgTime - lastMsgTime <= 5 * 60 * 1000
+    const isWithin5Minutes = currentGroup && Math.abs(msgTime - lastMsgTime) <= 5 * 60 * 1000
 
     if (currentGroup && isSameDay && isSameSender && isWithin5Minutes) {
       currentGroup.messages.push(message)
@@ -550,15 +551,10 @@ const copyMessage = async (content?: string) => {
 }
 
 .dm-message:hover .dm-message-toolbar,
+.dm-message:focus .dm-message-toolbar,
 .dm-message:focus-within .dm-message-toolbar {
   opacity: 1;
   visibility: visible;
-}
-
-@media (hover: none) {
-  .dm-message-toolbar {
-    display: none;
-  }
 }
 
 .dm-toolbar-btn {

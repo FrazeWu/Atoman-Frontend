@@ -68,6 +68,9 @@ describe("static page SEO", () => {
 		expect(
 			buildStaticPageHtml(shell, "/feed/starred", "www.atoman.org"),
 		).toContain('<meta name="robots" content="noindex, nofollow">');
+		expect(
+			buildStaticPageHtml(shell, "/messages", "www.atoman.org"),
+		).toContain('<meta name="robots" content="noindex, nofollow">');
 	});
 
 	it("leaves dynamic public content for its route-specific SEO handler", () => {

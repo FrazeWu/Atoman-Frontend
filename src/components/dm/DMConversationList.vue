@@ -3,7 +3,7 @@
     <!-- 顶部搜索栏 -->
     <div class="dm-conversation-list__search">
       <div class="dm-conversation-list__search-wrapper">
-        <IconSearch class="dm-conversation-list__search-icon" :size="15" aria-hidden="true" />
+        <Search class="dm-conversation-list__search-icon" :size="15" aria-hidden="true" />
         <input
           v-model="searchQuery"
           type="search"
@@ -58,7 +58,7 @@
           <!-- 次行：最后消息与未读微标 -->
           <div class="dm-conversation-list__row dm-conversation-list__row--bottom">
             <div class="dm-conversation-list__preview-wrap">
-              <IconCheck
+              <Check
                 v-if="conversation.last_message_is_outgoing"
                 data-testid="dm-outgoing-icon"
                 class="dm-conversation-list__outgoing-icon"
@@ -100,7 +100,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { IconCheck, IconSearch } from '@tabler/icons-vue'
+import { Check, Search } from 'lucide-vue-next'
 import type { DMConversation } from '@/api/dm'
 
 const props = defineProps<{

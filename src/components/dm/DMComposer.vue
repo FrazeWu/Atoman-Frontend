@@ -16,7 +16,7 @@
         data-testid="dm-remove-image"
         @click="emit('remove-image')"
       >
-        <IconX :size="14" />
+        <X :size="14" />
       </button>
     </div>
 
@@ -48,7 +48,7 @@
         title="添加图片"
         @click="fileInput?.click()"
       >
-        <IconPhoto :size="18" />
+        <ImageIcon :size="18" />
       </button>
       <button
         type="submit"
@@ -57,7 +57,7 @@
         aria-label="发送"
         title="发送"
       >
-        <IconSend :size="18" />
+        <Send :size="18" />
       </button>
     </div>
 
@@ -67,7 +67,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { IconPhoto, IconSend, IconX } from '@tabler/icons-vue'
+import { ImageIcon, Send, X } from 'lucide-vue-next'
 import type { DMImage } from '@/api/dm'
 
 const props = withDefaults(

@@ -10,7 +10,7 @@
         aria-label="关闭"
         @click="emit('close')"
       >
-        <IconX :size="18" />
+        <X :size="18" />
       </button>
     </header>
 
@@ -53,10 +53,10 @@
           class="dm-profile-drawer__action-item"
         >
           <span class="dm-profile-drawer__action-icon">
-            <IconUser :size="16" />
+            <User :size="16" />
           </span>
           <span class="dm-profile-drawer__action-label">{{ profileActionText }}</span>
-          <IconExternalLink :size="14" class="dm-profile-drawer__action-trailing" />
+          <ExternalLink :size="14" class="dm-profile-drawer__action-trailing" />
         </RouterLink>
 
         <!-- 拉黑 / 取消拉黑 -->
@@ -68,7 +68,7 @@
           @click="onToggleBlock"
         >
           <span class="dm-profile-drawer__action-icon">
-            <IconBan :size="16" />
+            <Ban :size="16" />
           </span>
           <span class="dm-profile-drawer__action-label">
             {{ isBlocked ? '取消拉黑' : '拉黑' }}
@@ -83,7 +83,7 @@
           @click="emit('report')"
         >
           <span class="dm-profile-drawer__action-icon">
-            <IconFlag :size="16" />
+            <Flag :size="16" />
           </span>
           <span class="dm-profile-drawer__action-label">举报</span>
         </button>
@@ -94,7 +94,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
-import { IconX, IconUser, IconExternalLink, IconBan, IconFlag } from '@tabler/icons-vue'
+import { X, User, ExternalLink, Ban, Flag } from 'lucide-vue-next'
 import type { DMParty, DMConversation } from '@/api/dm'
 
 const props = defineProps<{

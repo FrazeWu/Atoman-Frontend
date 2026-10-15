@@ -15,7 +15,7 @@
           {{ labelFor(mailbox) }}{{ mailbox.unread_count ? ` (${mailbox.unread_count})` : '' }}
         </option>
       </select>
-      <IconChevronDown
+      <ChevronDown
         class="dm-mailbox-selector__arrow"
         :size="16"
         aria-hidden="true"
@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { IconChevronDown } from '@tabler/icons-vue'
+import { ChevronDown } from 'lucide-vue-next'
 import type { DMMailbox } from '@/api/dm'
 import { mailboxKey } from '@/api/dm'
 

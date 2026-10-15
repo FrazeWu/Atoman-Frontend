@@ -171,7 +171,7 @@
             type="button"
             class="article-action-btn article-action-btn--comments"
             data-test="feed-article-comments-trigger"
-            aria-label="评论"
+            :aria-label="commentCount ? `评论 (${commentCount})` : '评论'"
             @click="openComments"
           >
             <MessageSquare :size="15" aria-hidden="true" />
@@ -796,6 +796,7 @@ const emitPlayPodcast = () => {
   display: block;
   min-width: 0;
   padding: 1rem 0 2rem;
+  background: #ffffff;
 }
 
 .article-comments-link {
@@ -863,7 +864,7 @@ const emitPlayPodcast = () => {
   padding: 0.15rem 0.5rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: 4px;
-  background: var(--a-color-surface-muted);
+  background: var(--a-color-bg, #ffffff);
   box-shadow: none !important;
   color: var(--a-color-text);
   font: inherit;
@@ -920,54 +921,27 @@ const emitPlayPodcast = () => {
   color: var(--a-color-muted);
 }
 
-.article-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem 0.8rem;
-  align-items: center;
-  margin-bottom: 1.15rem;
-  color: var(--a-color-muted);
-  font-family: var(--a-font-sans);
-  font-size: 0.78rem;
-  line-height: 1.5;
-}
-
-.article-source-trigger {
-  max-width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--a-color-muted);
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-}
-
-.article-source-trigger:hover {
-  color: var(--a-color-text);
-  text-decoration: underline;
-}
-
-.article-source-trigger:focus-visible {
-  outline: 2px solid var(--a-color-text);
-  outline-offset: 2px;
-}
-
 .article-title {
   max-width: 26ch;
-  margin: 0 0 1.35rem;
+  margin: 0.75rem 0 1rem 0;
   color: var(--a-color-text);
   font-family: var(--a-font-sans);
   font-size: 2rem;
-  font-weight: 500;
-  line-height: 1.22;
-  letter-spacing: 0;
+  font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: -0.015em;
   text-wrap: balance;
 }
 
 .article-headline {
-  margin-top: 0;
-  margin-bottom: 1.25rem;
+  margin: 0.75rem 0 1rem 0;
+  color: var(--a-color-text);
+  font-family: var(--a-font-sans);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
 }
 
 .article-action-strip {
@@ -1000,7 +974,7 @@ const emitPlayPodcast = () => {
   padding: 0.35rem 0.65rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: 4px;
-  background: #ffffff;
+  background: var(--a-color-bg, #ffffff);
   box-shadow: none !important;
   color: var(--a-color-text);
   cursor: pointer;
@@ -1075,12 +1049,6 @@ const emitPlayPodcast = () => {
   min-width: 0;
 }
 
-.article-reader-controls {
-  display: flex;
-  min-height: 36px;
-  align-items: center;
-}
-
 .article-content-switcher {
   width: fit-content;
 }
@@ -1123,12 +1091,19 @@ const emitPlayPodcast = () => {
   gap: 0.4rem;
   padding: 0.4rem 0.7rem;
   border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
+  border-radius: 4px;
+  box-shadow: none !important;
+  background: var(--a-color-bg, #ffffff);
   color: var(--a-color-text);
   cursor: pointer;
   font-family: var(--a-font-sans);
   font-size: 0.82rem;
   font-weight: 600;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.article-reader-star:hover {
+  border-color: var(--a-color-text);
 }
 
 .article-reader-star[aria-pressed='true'] {
@@ -1181,11 +1156,14 @@ const emitPlayPodcast = () => {
     max-height: 220px;
   }
 
-  .article-title {
-    font-size: 1.7rem;
+  .article-title,
+  .article-headline {
+    font-size: 1.65rem;
+    line-height: 1.32;
   }
 
   .article-action-strip {
+    gap: 0.5rem 0.75rem;
     margin-bottom: 1.25rem;
   }
 

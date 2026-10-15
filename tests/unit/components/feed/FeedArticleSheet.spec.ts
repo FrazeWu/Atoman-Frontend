@@ -1004,5 +1004,78 @@ describe("FeedArticleSheet", () => {
 		expect(actionStripIndex).toBeLessThan(coverIndex);
 		expect(coverIndex).toBeLessThan(bodyIndex);
 	});
+
+	it("guarantees zero-shadow and 4px radius on action elements", () => {
+		const wrapper = mountSheet({
+			props: {
+				show: true,
+				article: {
+					type: "feed_item",
+					published_at: "2026-06-20T00:00:00Z",
+					is_read: false,
+					feed_item: {
+						id: "style-test-1",
+						feed_source_id: "src-1",
+						title: "样式测试文章",
+						link: "https://example.com/style",
+						summary: "<p>正文</p>",
+						published_at: "2026-06-20T00:00:00Z",
+						fetched_at: "2026-06-20T00:00:00Z",
+					},
+				} as any,
+			},
+			global: {
+				stubs: { PSheet: { template: "<section><slot /></section>" } },
+			},
+		});
+
+		const buttons = wrapper.findAll(".article-action-btn, .article-source-link");
+		expect(buttons.length).toBeGreaterThan(0);
+		expect(wrapper.get(".article-headline").text()).toBe("样式测试文章");
+		expect(wrapper.get(".article-action-strip").exists()).toBe(true);
+		expect(wrapper.find(".article-toolbar").exists()).toBe(false);
+		expect(wrapper.find(".article-meta--reader").exists()).toBe(false);
+		expect(wrapper.find(".article-star-button").exists()).toBe(false);
+		expect(wrapper.find(".article-meta").exists()).toBe(false);
+	});
+
+	it("renders dynamic aria-label on comments trigger button", async () => {
+		const wrapper = mountSheet({
+			props: {
+				show: true,
+				article: {
+					type: "feed_item",
+					published_at: "2026-06-20T00:00:00Z",
+					is_read: false,
+					feed_item: {
+						id: "comments-aria-1",
+						feed_source_id: "src-1",
+						title: "测试评论无障碍标签",
+						link: "https://example.com/comments",
+						summary: "<p>正文</p>",
+						published_at: "2026-06-20T00:00:00Z",
+						fetched_at: "2026-06-20T00:00:00Z",
+					},
+				} as any,
+			},
+			global: {
+				stubs: {
+					PSheet: { template: "<section><slot /></section>" },
+					CommentSideSheet: {
+						name: "CommentSideSheet",
+						template: "<div></div>",
+						emits: ["count-change"],
+					},
+				},
+			},
+		});
+
+		const commentsTrigger = wrapper.get('[data-test="feed-article-comments-trigger"]');
+		expect(commentsTrigger.attributes("aria-label")).toBe("评论");
+
+		const commentSheet = wrapper.findComponent({ name: "CommentSideSheet" });
+		await commentSheet.vm.$emit("count-change", 5);
+		expect(commentsTrigger.attributes("aria-label")).toBe("评论 (5)");
+	});
 });
 

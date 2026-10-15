@@ -107,7 +107,7 @@ const chooseImage = (event: Event) => {
 
 const onKeydown = (event: KeyboardEvent) => {
   if (event.key === 'Enter') {
-    if (event.shiftKey) return
+    if (event.shiftKey || event.isComposing) return
     event.preventDefault()
     submit()
   }

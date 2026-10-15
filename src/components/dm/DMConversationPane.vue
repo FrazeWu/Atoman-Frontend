@@ -99,6 +99,7 @@
             <!-- 悬浮微操作工具条 -->
             <div class="dm-message-toolbar" role="toolbar" aria-label="消息快捷操作">
               <button
+                v-if="message.content"
                 type="button"
                 class="dm-toolbar-btn"
                 data-testid="dm-copy-message"
@@ -552,6 +553,12 @@ const copyMessage = async (content?: string) => {
 .dm-message:focus-within .dm-message-toolbar {
   opacity: 1;
   visibility: visible;
+}
+
+@media (hover: none) {
+  .dm-message-toolbar {
+    display: none;
+  }
 }
 
 .dm-toolbar-btn {

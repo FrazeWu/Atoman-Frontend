@@ -77,7 +77,9 @@ export default defineConfig(({ mode }) => {
 			chunkSizeWarningLimit: 1700,
 			rollupOptions: {
 				output: {
+					experimentalMinChunkSize: 15000,
 					manualChunks(id) {
+						if (id.includes("@tabler/icons-vue")) return "ui-icons";
 						if (id.includes("node_modules/highlight.js")) return "highlight";
 						if (id.includes("node_modules/marked/")) return "markdown-runtime";
 						if (

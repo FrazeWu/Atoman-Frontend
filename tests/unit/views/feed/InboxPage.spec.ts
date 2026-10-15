@@ -161,4 +161,21 @@ describe("InboxPage modern dual-pane stream", () => {
     expect(wrapper.find(".dm-workspace-sidebar").exists()).toBe(true);
     expect(wrapper.find(".dm-workspace-main").exists()).toBe(true);
   });
+
+  it("redirects cleanly to /messages preserving query params when tab is dm", async () => {
+    routeQuery = { tab: "dm", conversationId: "conv-99", mailbox: "user:me" };
+    const dm = useDMStore();
+    vi.spyOn(dm, "fetchConversations").mockResolvedValue();
+
+    mount(InboxPage, { global: { stubs } });
+    await flushPromises();
+
+    expect(routerReplace).toHaveBeenCalledWith({
+      path: "/messages",
+      query: {
+        conversationId: "conv-99",
+        mailbox: "user:me",
+      },
+    });
+  });
 });

@@ -242,6 +242,17 @@ const switchTab = async (tab: InboxPageTab) => {
 
 const loadTab = async () => {
   if (activeTab.value === 'dm') {
+    const q = route.query
+    await router.replace({
+      path: '/messages',
+      query: {
+        ...(q.conversation || q.conversationId ? { conversationId: (q.conversation || q.conversationId) as string } : {}),
+        ...(q.target_type || q.targetType ? { targetType: (q.target_type || q.targetType) as string } : {}),
+        ...(q.target_id || q.targetId ? { targetId: (q.target_id || q.targetId) as string } : {}),
+        ...(q.mailbox ? { mailbox: q.mailbox as string } : {}),
+        ...(q.user ? { user: q.user as string } : {}),
+      },
+    })
     dmOpenError.value = ''
     try { await dmStore.bootstrapDM() } catch { /* 会话直链仍可继续打开 */ }
     const mailbox = typeof route.query.mailbox === 'string' ? route.query.mailbox : ''

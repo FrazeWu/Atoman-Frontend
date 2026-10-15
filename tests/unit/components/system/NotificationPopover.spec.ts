@@ -140,7 +140,7 @@ describe('NotificationPopover', () => {
 
     const dmLink = wrapper.find('[data-test="footer-dm"]')
     await dmLink.trigger('click')
-    expect(mockPush).toHaveBeenCalledWith('/inbox?tab=dm')
+    expect(mockPush).toHaveBeenCalledWith('/messages')
   })
 
   it('renders clean empty state with icon when list is empty', () => {

@@ -56,6 +56,8 @@
             type="button"
             class="article-action-btn"
             data-test="feed-article-post-bookmark"
+            :aria-label="postBookmarked ? '取消收藏文章' : '收藏文章'"
+            :title="postBookmarked ? '取消收藏文章' : '收藏文章'"
             :aria-pressed="postBookmarked"
             @click="togglePostBookmark"
           >
@@ -67,6 +69,8 @@
             type="button"
             class="article-action-btn"
             data-test="feed-article-post-readlater"
+            :aria-label="postInReadingList ? '取消稍后阅读' : '稍后阅读'"
+            :title="postInReadingList ? '取消稍后阅读' : '稍后阅读'"
             :aria-pressed="postInReadingList"
             @click="togglePostReadingList"
           >
@@ -921,18 +925,7 @@ const emitPlayPodcast = () => {
   color: var(--a-color-muted);
 }
 
-.article-title {
-  max-width: 26ch;
-  margin: 0.75rem 0 1rem 0;
-  color: var(--a-color-text);
-  font-family: var(--a-font-sans);
-  font-size: 2rem;
-  font-weight: 600;
-  line-height: 1.28;
-  letter-spacing: -0.015em;
-  text-wrap: balance;
-}
-
+.article-title,
 .article-headline {
   margin: 0.75rem 0 1rem 0;
   color: var(--a-color-text);

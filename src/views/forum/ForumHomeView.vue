@@ -98,9 +98,11 @@
           <template #actions>
             <div class="topic-entry-actions">
               <div class="tr-avatars">
-                <div class="tr-avatar tr-avatar-op" :title="topic.user?.display_name || topic.user?.username">
-                  {{ avatarInitial(topic.user?.display_name || topic.user?.username) }}
-                </div>
+                <PAvatar
+                  :src="topic.user?.avatar_url"
+                  :name="topic.user?.display_name || topic.user?.username || '匿名'"
+                  size="xs"
+                />
               </div>
               <span class="topic-entry-stat">
                 回复 {{ topic.reply_count }} · 浏览 {{ formatCount(topic.view_count) }}
@@ -147,6 +149,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import ForumTopicFilters from '@/components/forum/ForumTopicFilters.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PAvatar from '@/components/ui/PAvatar.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -248,11 +251,6 @@ const formatCount = (n: number) => {
   if (!n) return '0'
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
   return String(n)
-}
-
-const avatarInitial = (name?: string) => {
-  if (!name) return '?'
-  return name.charAt(0).toUpperCase()
 }
 
 const topicState = (topic: ForumTopic) => topic.state ?? {
@@ -521,125 +519,6 @@ const submitCategoryRequest = async () => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1rem;
-}
-
-/* ── Sidebar ─────────────────────────────────────────────────────────────── */
-.forum-sidebar {
-  width: 220px;
-  flex-shrink: 0;
-  padding: 1.5rem 0 2rem;
-  border-right: none;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-}
-
-.sidebar-section {
-  padding: 0.5rem 0;
-}
-
-.sidebar-section-label {
-  font-size: 0.6rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  color: var(--a-color-muted-soft);
-  padding: 0.25rem 1.25rem 0.5rem;
-}
-
-.sidebar-divider {
-  border-bottom: none;
-  margin: 0.5rem 0;
-}
-
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.55rem 1.25rem;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  color: var(--a-color-muted);
-  transition: background 0.12s;
-  position: relative;
-}
-
-.sidebar-item:hover {
-  background: var(--a-color-disabled-bg);
-}
-
-.sidebar-item-active {
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
-}
-
-.sidebar-item-active:hover {
-  background: var(--a-color-fg);
-}
-
-.sidebar-sub {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--a-color-muted);
-  padding-left: 1.75rem;
-}
-
-.sidebar-item-icon {
-  font-size: 0.75rem;
-  width: 1rem;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.sidebar-item-text {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sidebar-item-count {
-  font-size: 0.65rem;
-  font-weight: 500;
-  color: var(--a-color-muted-soft);
-  background: var(--a-color-disabled-bg);
-  padding: 0.1rem 0.4rem;
-  border-radius: 0px;
-}
-
-.sidebar-item-active .sidebar-item-count {
-  background: color-mix(in srgb, var(--a-color-bg) 20%, transparent);
-  color: var(--a-color-bg);
-}
-
-.sidebar-cat-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-/* Tags in sidebar */
-.sidebar-tag {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: 500;
-  padding: 0.2rem 0.6rem;
-  margin: 0.15rem 0.25rem;
-  margin-left: 1.25rem;
-  border: var(--a-border);
-  border-color: var(--a-color-disabled-border);
-  color: var(--a-color-muted);
-  cursor: pointer;
-  transition: color 0.12s, background-color 0.12s, border-color 0.12s, opacity 0.12s, transform 0.12s, box-shadow 0.12s;
-}
-
-.sidebar-tag:hover,
-.sidebar-tag-active {
-  border-color: var(--a-color-fg);
-  color: var(--a-color-bg);
-  background: var(--a-color-fg);
 }
 
 /* ── Main content ────────────────────────────────────────────────────────── */
@@ -1039,20 +918,10 @@ const submitCategoryRequest = async () => {
 }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
-@media (max-width: 1024px) {
-  .forum-sidebar {
-    width: 180px;
-  }
-}
-
 @media (max-width: 768px) {
   .forum-page {
     display: block;
     padding: 0;
-  }
-
-  .forum-sidebar {
-    display: none;
   }
 
   .forum-main {

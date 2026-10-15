@@ -21,9 +21,15 @@
       <PButton class="tl-action-btn tl-action-btn-secondary" size="sm" variant="secondary" @click="emit('clear-batch-selection')">清空勾选</PButton>
     </div>
 
-    <div class="tl-mode-switch" style="margin-left:auto">
-      <PButton class="tl-mode-btn" :class="{ 'tl-mode-btn-active': viewMode === 'lanes' }" variant="ghost" @click="emit('update:viewMode', 'lanes')">泳道浏览</PButton>
-      <PButton class="tl-mode-btn" :class="{ 'tl-mode-btn-active': viewMode === 'map' }" variant="ghost" @click="emit('update:viewMode', 'map')">地图在线查看</PButton>
+    <div class="tl-toolbar-mode" style="margin-left:auto">
+      <PSegmentedControl
+        :model-value="viewMode"
+        :options="[
+          { label: '泳道浏览', value: 'lanes' },
+          { label: '地图在线查看', value: 'map' }
+        ]"
+        @update:model-value="emit('update:viewMode', $event as 'lanes' | 'map')"
+      />
     </div>
   </div>
 </template>
@@ -32,6 +38,7 @@
 import { computed } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 
 const props = defineProps<{
   yearStart: number | null
@@ -97,38 +104,6 @@ const updateCategory = (value: string) => emit('update:category', value)
   font-size: 0.72rem;
   font-weight: 500;
   color: var(--a-color-muted);
-}
-
-.tl-mode-switch {
-  display: inline-flex;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  padding: 2px;
-  overflow: hidden;
-}
-
-.tl-mode-btn {
-  border: none;
-  border-radius: var(--a-radius-control);
-  background: transparent;
-  color: var(--a-color-muted);
-  cursor: pointer;
-  padding: 0.4rem 0.85rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.tl-mode-btn:hover {
-  color: var(--a-color-fg);
-  background: var(--a-color-surface-muted);
-}
-
-.tl-mode-btn.tl-mode-btn-active {
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
-  font-weight: 600;
 }
 
 .tl-action-btn {

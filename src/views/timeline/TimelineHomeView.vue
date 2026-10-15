@@ -66,8 +66,8 @@
                 <div class="tl-compare-range">{{ formatEventRange(event) }}</div>
               </div>
               <div class="tl-compare-actions">
-                <button class="tl-mini-btn" @click.stop="openDetail(event)">详情</button>
-                <button class="tl-mini-btn danger" @click.stop="removeCompareId(event.id)">移出</button>
+                <PButton size="sm" variant="secondary" @click.stop="openDetail(event)">详情</PButton>
+                <PButton size="sm" variant="danger" @click.stop="removeCompareId(event.id)">移出</PButton>
               </div>
             </article>
           </div>
@@ -595,8 +595,8 @@ watch(
 
 .tl-shell {
   display: grid;
-  grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
-  gap: 1.25rem;
+  grid-template-columns: minmax(320px, var(--a-recommendation-width, 24rem)) minmax(0, 1fr);
+  gap: var(--a-content-column-gap, 2rem);
   align-items: start;
 }
 

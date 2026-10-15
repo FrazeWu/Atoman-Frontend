@@ -551,8 +551,8 @@ describe("useMusicDrawers music creation flow", () => {
 			day: "17",
 		});
 		expect(flow?.draft.albumDetails.tags).toEqual([
-			{ name: "Hip Hop", kind: "type" },
-			{ name: "Conscious", kind: "type", parentName: "Hip Hop" },
+			{ name: "Hip Hop", kind: "type", metadataCategory: "genre" },
+			{ name: "Conscious", kind: "type", parentName: "Hip Hop", metadataCategory: "style" },
 		]);
 	});
 
@@ -793,8 +793,8 @@ describe("useMusicDrawers music creation flow", () => {
 		expect(flow.draft.albumDetails.tags).toEqual([
 			{ kind: "type", name: "Dream Pop", parentName: "Rock" },
 			...(customized ? [] : [
-				{ kind: "type", name: "Electronic" },
-				{ kind: "type", name: "Ambient", parentName: "Electronic" },
+				{ kind: "type", name: "Electronic", metadataCategory: "genre" },
+				{ kind: "type", name: "Ambient", parentName: "Electronic", metadataCategory: "style" },
 			]),
 		]);
 	});

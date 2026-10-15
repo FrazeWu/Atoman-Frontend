@@ -169,8 +169,8 @@ describe("AudioPlayer", () => {
 			"utf8",
 		);
 		expect(source).toMatch(/<Transition name="player-display" appear>/);
-		expect(source).toContain('IconChevronRight as ChevronRight');
-		expect(source).toContain('IconChevronLeft as ChevronLeft');
+		expect(source).toContain('ChevronRight');
+		expect(source).toContain('ChevronLeft');
 		expect(source).toContain('<ChevronRight :size="16" aria-hidden="true" />');
 		expect(source).toContain('<ChevronLeft :size="15" aria-hidden="true" />');
 		expect(source).not.toContain('<Minimize2 :size="16" aria-hidden="true" />');

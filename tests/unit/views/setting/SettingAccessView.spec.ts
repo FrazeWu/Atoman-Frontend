@@ -13,6 +13,8 @@ const routerMocks = vi.hoisted(() => ({
 }))
 
 const siteAccessState = {
+  loaded: true,
+  loading: false,
   access: {
     version: 1,
     modules: {
@@ -132,7 +134,9 @@ describe('SettingAccessView section sync', () => {
 
     const podcastToggle = wrapper.get('[data-test="module-enabled-podcast"]')
     await podcastToggle.setValue(false)
-    await wrapper.get('.setting-access__actions button:last-child').trigger('click')
+    const saveButton = wrapper.findAll('.setting-access__actions button').find((b) => b.text().includes('保存设置'))
+    expect(saveButton).toBeDefined()
+    await saveButton!.trigger('click')
 
     expect(save).toHaveBeenCalledTimes(1)
     expect(save.mock.calls[0]?.[0]?.modules?.podcast?.enabled).toBe(false)

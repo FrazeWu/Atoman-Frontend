@@ -38,23 +38,20 @@ describe('MusicPlaylistCard', () => {
     expect(wrapper.emitted('click')).toHaveLength(1)
   })
 
-  it('renders play and bookmark stats on the cover', () => {
+  it('renders real bookmark and song counts without inventing a playlist play count', () => {
     const wrapper = mount(MusicPlaylistCard, {
       props: {
         playlist: {
           id: 'playlist-1',
           title: 'Late Night Mix',
           song_count: 18,
-          play_count: 42,
           bookmark_count: 7,
         },
       },
     })
 
-    const stats = wrapper.get('[aria-label="歌单统计"]')
-    expect(stats.text()).toContain('42')
-    expect(stats.text()).toContain('7')
-    expect(wrapper.text()).toContain('播放 42')
     expect(wrapper.text()).toContain('收藏 7')
+    expect(wrapper.text()).toContain('18 首')
+    expect(wrapper.text()).not.toContain('播放')
   })
 })

@@ -320,6 +320,7 @@
       @close="closeChannelArticleSheet"
       @toggle-star="selectedChannelArticle && toggleChannelArticleStar(selectedChannelArticle)"
       @toggle-reading-list="selectedChannelArticle && toggleChannelArticleReadingList(selectedChannelArticle)"
+      @require-auth="handleArticleRequireAuth"
     />
 
     <!-- 频道文章列表抽屉 -->
@@ -349,7 +350,7 @@ import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { IconBookmark as Bookmark, IconClock as Clock, IconEye as Eye, IconGauge as Gauge } from '@tabler/icons-vue'
+import { Bookmark, Clock, Eye, Gauge } from 'lucide-vue-next'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
@@ -380,7 +381,7 @@ import {
   recommendationLanguageOptions,
   type RecommendationLanguage,
 } from '@/utils/recommendationLanguage'
-import type { AutoAddSubscriptionPayload, FeedArticleSource, FeedExploreRecentItem, FeedExploreSource, FeedRecommendationTheme, FeedSourceCategory, Post, TimelineItem } from '@/types'
+import type { AutoAddSubscriptionPayload, FeedArticleSource, FeedExploreRecentItem, FeedExploreSource, FeedItem, FeedRecommendationTheme, FeedSourceCategory, Post, TimelineItem } from '@/types'
 
 type RecommendationMode = 'featured' | 'random'
 
@@ -967,6 +968,100 @@ function restorePendingSubscriptionSource() {
   void router.replace({ query })
 }
 
+const pendingArticleRestored = ref(false)
+
+function handleArticleRequireAuth(payload: { articleId: string; action: 'star' | 'read_later' }) {
+  if (authStore.isAuthenticated) return
+
+  const query = {
+    ...route.query,
+    read_article_id: payload.articleId,
+    article_action: payload.action,
+  } as Record<string, string | string[] | null | undefined>
+
+  if (selectedChannelSource.value) {
+    query.subscribe_source_id = selectedChannelSource.value.id
+    query.subscribe_source_type = selectedChannelSource.value.type
+    query.subscribe_source_title = selectedChannelSource.value.title
+    if (selectedChannelSource.value.rssUrl) {
+      query.subscribe_source_url = selectedChannelSource.value.rssUrl
+    }
+  }
+
+  const resolved = router.resolve?.({
+    path: route.path || '/feed',
+    query,
+    hash: route.hash,
+  })
+  const search = new URLSearchParams(query as Record<string, string>).toString()
+  const returnPath = resolved?.fullPath || `${route.path || '/feed'}${search ? `?${search}` : ''}`
+  void router.push({ path: '/login', query: { redirect: returnPath } })
+}
+
+async function restorePendingArticle() {
+  const articleId = typeof route.query.read_article_id === 'string'
+    ? route.query.read_article_id
+    : ''
+  if (pendingArticleRestored.value || !authStore.isAuthenticated || !articleId) return
+
+  pendingArticleRestored.value = true
+
+  const query = { ...route.query }
+  delete query.read_article_id
+  delete query.article_action
+  void router.replace({ query })
+
+  let article: TimelineItem | null = null
+  const fromChannel = channelArticles.value.find((candidate) => {
+    if (candidate.type === 'feed_item' && candidate.feed_item?.id === articleId) return true
+    if (candidate.type === 'post' && candidate.post?.id === articleId) return true
+    return false
+  })
+  if (fromChannel) {
+    article = fromChannel
+  } else {
+    try {
+      const res = await apiRequestResult(`${api.blog.posts}/${encodeURIComponent(articleId)}`)
+      const payload = res.data
+      const postData = payload?.data || payload
+      if (res.ok && postData && typeof postData === 'object' && 'id' in postData) {
+        const post = postData as Post
+        article = {
+          type: 'post',
+          post,
+          is_read: false,
+          published_at: post.published_at || post.created_at,
+        } as TimelineItem
+      }
+    } catch {
+      // fallback
+    }
+    if (!article) {
+      try {
+        const res = await apiRequestResult(`${api.url}/feed/items/${encodeURIComponent(articleId)}`)
+        const payload = res.data
+        const itemData = payload?.data || payload
+        if (res.ok && itemData && typeof itemData === 'object' && 'id' in itemData) {
+          const item = itemData as FeedItem
+          article = {
+            type: 'feed_item',
+            feed_item: item,
+            is_read: false,
+            published_at: item.published_at || item.created_at,
+          } as TimelineItem
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  if (article) {
+    selectedChannelArticle.value = article
+    showChannelArticleSheet.value = true
+  }
+}
+
 // ── 交互事件处理 ──
 function openArticle(item: RecommendationItem) {
   if (item.target_path?.startsWith('/posts/')) {
@@ -1252,11 +1347,18 @@ watch([() => authStore.isAuthenticated, () => route.query.subscribe_source_id], 
   }
 })
 
+watch([() => authStore.isAuthenticated, () => route.query.read_article_id], ([isAuth, articleId]) => {
+  if (isAuth && articleId) {
+    void restorePendingArticle()
+  }
+})
+
 onMounted(() => {
   void fetchThemes()
   void fetchRecommendations()
   if (authStore.isAuthenticated) {
     restorePendingSubscriptionSource()
+    void restorePendingArticle()
     void Promise.all([
       feedStore.fetchStarredIds(),
       feedStore.fetchBookmarkedPostIds(),

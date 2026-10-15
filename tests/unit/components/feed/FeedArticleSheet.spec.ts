@@ -406,6 +406,46 @@ describe("FeedArticleSheet", () => {
 		expect(toggleStar).toHaveBeenCalledWith("feed-item-reader-footer-1");
 	});
 
+	it("emits require-auth with article info when unauthenticated user clicks star", async () => {
+		const wrapper = mountSheet(
+			{
+				props: {
+					show: true,
+					article: {
+						type: "feed_item",
+						published_at: "2026-06-28T00:00:00Z",
+						is_read: false,
+						feed_item: {
+							id: "feed-item-guest-star-1",
+							feed_source_id: "source-1",
+							guid: "guid-guest-1",
+							title: "访客收藏测试文章",
+						},
+					},
+				},
+				global: {
+					stubs: {
+						PSheet: { template: "<section><slot /></section>" },
+					},
+				},
+			},
+			(authStore) => {
+				authStore.isAuthenticated = false;
+				authStore.token = null;
+				authStore.user = null;
+			},
+		);
+
+		const starButton = wrapper.get('[data-test="feed-article-quick-star"]');
+		expect(starButton.attributes("disabled")).toBeUndefined();
+		await starButton.trigger("click");
+
+		expect(wrapper.emitted("require-auth")).toBeTruthy();
+		expect(wrapper.emitted("require-auth")![0]).toEqual([
+			{ articleId: "feed-item-guest-star-1", action: "star" },
+		]);
+	});
+
 	it("marks external feed content as width constrained prose", () => {
 		const wrapper = mountSheet({
 			props: {

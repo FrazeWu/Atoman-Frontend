@@ -136,11 +136,9 @@ describe("FeedRecommendedView", () => {
 	beforeEach(() => {
 		routerPush.mockReset();
 		routerReplace.mockReset();
-		routeQuery.mode = undefined;
-		routeQuery.target = undefined;
-		routeQuery.category = undefined;
-		routeQuery.theme = undefined;
-		routeQuery.scope = undefined;
+		for (const key of Object.keys(routeQuery)) {
+			delete routeQuery[key];
+		}
 		setActivePinia(createPinia());
 	});
 
@@ -837,6 +835,116 @@ describe("FeedRecommendedView", () => {
 		// 5. 验证点击后完成订阅，且给出 Toast 反馈
 		expect(subscribeSpy).toHaveBeenCalledWith("chan-return-1");
 		expect(wrapper.text()).toContain("已订阅，可继续阅读");
+	});
+
+	it("redirects unauthenticated visitors to login with article intent and preserved filters", async () => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const url = String(input);
+			if (url.includes("/feed/recommend/themes") || url.includes("/feed/recommend/articles") || url.includes("/feed/recommend/channels")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			return new Response(JSON.stringify({ data: [] }), { status: 200 });
+		});
+
+		const authStore = useAuthStore();
+		authStore.token = null;
+		authStore.isAuthenticated = false;
+		routeQuery.category = "tech";
+		routeQuery.theme = "ai";
+
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: { template: "<header><slot /></header>" },
+					PSegmentedControl: segmentedControlStub,
+					PButton: buttonStub,
+					PEmpty: true,
+					FeedArticleSheet: {
+						props: ["show", "article"],
+						emits: ["require-auth"],
+						template: '<div data-test="article-sheet-stub"><button data-test="btn-require-auth" @click="$emit(\'require-auth\', { articleId: \'article-guest-1\', action: \'star\' })">收藏</button></div>',
+					},
+				},
+			},
+		});
+
+		await flushPromises();
+
+		const triggerBtn = wrapper.find('[data-test="btn-require-auth"]');
+		expect(triggerBtn.exists()).toBe(true);
+		await triggerBtn.trigger("click");
+		await flushPromises();
+
+		expect(routerPush).toHaveBeenCalledWith({
+			path: "/login",
+			query: {
+				redirect: expect.stringContaining("read_article_id=article-guest-1"),
+			},
+		});
+		const redirectArg = routerPush.mock.calls[0][0].query.redirect;
+		expect(redirectArg).toContain("article_action=star");
+		expect(redirectArg).toContain("category=tech");
+		expect(redirectArg).toContain("theme=ai");
+	});
+
+	it("restores article sheet on login return with read_article_id and cleans up one-time query params", async () => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const url = String(input);
+			if (url.includes("/feed/recommend/themes") || url.includes("/feed/recommend/articles") || url.includes("/feed/recommend/channels")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			if (url.includes("/blog/posts/post-return-1")) {
+				return new Response(
+					JSON.stringify({
+						data: {
+							id: "post-return-1",
+							title: "回跳恢复测试文章",
+							content: "正文内容",
+							published_at: "2026-06-28T00:00:00Z",
+						},
+					}),
+					{ status: 200 },
+				);
+			}
+			return new Response(JSON.stringify({ data: [] }), { status: 200 });
+		});
+
+		const authStore = useAuthStore();
+		authStore.token = "valid-token";
+		authStore.isAuthenticated = true;
+		routeQuery.read_article_id = "post-return-1";
+		routeQuery.article_action = "star";
+		routeQuery.category = "tech";
+
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: { template: "<header><slot /></header>" },
+					PSegmentedControl: segmentedControlStub,
+					PButton: buttonStub,
+					PEmpty: true,
+					FeedArticleSheet: {
+						props: ["show", "article"],
+						template: '<div v-if="show" data-test="restored-article-sheet"><span>{{ article?.post?.title }}</span></div>',
+					},
+				},
+			},
+		});
+
+		await flushPromises();
+
+		// 1. 验证文章抽屉已打开且载入了文章数据
+		const sheet = wrapper.find('[data-test="restored-article-sheet"]');
+		expect(sheet.exists()).toBe(true);
+		expect(sheet.text()).toContain("回跳恢复测试文章");
+
+		// 2. 验证 router.replace 清理了 read_article_id 和 article_action，但保留了 category
+		expect(routerReplace).toHaveBeenCalledWith({
+			query: expect.objectContaining({ category: "tech" }),
+		});
+		const lastReplaceQuery = routerReplace.mock.calls[0][0].query;
+		expect(lastReplaceQuery.read_article_id).toBeUndefined();
+		expect(lastReplaceQuery.article_action).toBeUndefined();
 	});
 
 	it("uses loaded subscriptions without requesting each channel status", async () => {

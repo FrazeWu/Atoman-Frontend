@@ -50,7 +50,6 @@
           v-if="article.post.id"
           variant="secondary"
           size="sm"
-          :disabled="!authStore.isAuthenticated"
           @click="togglePostBookmark"
         >
           <Bookmark :size="15" aria-hidden="true" />
@@ -60,7 +59,6 @@
           v-if="article.post.id"
           variant="secondary"
           size="sm"
-          :disabled="!authStore.isAuthenticated"
           @click="togglePostReadingList"
         >
           <Clock :size="15" aria-hidden="true" />
@@ -124,7 +122,6 @@
             :aria-label="feedItemStarred ? '取消收藏文章' : '收藏文章'"
             :title="feedItemStarred ? '取消收藏文章' : '收藏文章'"
             :aria-pressed="feedItemStarred"
-            :disabled="!authStore.isAuthenticated"
             @click="toggleFeedItemStar"
           >
             <Bookmark :size="16" aria-hidden="true" :fill="feedItemStarred ? 'currentColor' : 'none'" />
@@ -195,7 +192,6 @@
               class="article-reader-star"
               data-test="feed-article-footer-star"
               :aria-pressed="feedItemStarred"
-              :disabled="!authStore.isAuthenticated"
               @click="toggleFeedItemStar"
             >
               <Bookmark :size="16" aria-hidden="true" :fill="feedItemStarred ? 'currentColor' : 'none'" />
@@ -256,7 +252,7 @@
 import '@/assets/editor.css'
 import '@/assets/feed-reader.css'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { IconBookmark as Bookmark, IconClock as Clock, IconPlayerPlay as Play } from '@tabler/icons-vue'
+import { Bookmark, Clock, Play } from 'lucide-vue-next'
 import { apiRequestResult } from '@/api/client'
 import type { FeedArticleSource, FeedItem, FeedItemReader, FeedReaderVariant, Post, TimelineItem } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -412,6 +408,7 @@ const emit = defineEmits<{
   (e: 'play-podcast', feedItem: FeedItem): void
   (e: 'previous'): void
   (e: 'next'): void
+  (e: 'require-auth', payload: { articleId: string; action: 'star' | 'read_later' }): void
 }>()
 
 const sheetTitle = computed(() => {
@@ -603,19 +600,31 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleKeydown))
 
 async function togglePostBookmark() {
   const post = props.article?.type === 'post' ? props.article.post : null
-  if (!post || !authStore.isAuthenticated) return
+  if (!post) return
+  if (!authStore.isAuthenticated) {
+    emit('require-auth', { articleId: post.id, action: 'star' })
+    return
+  }
   await feedStore.togglePostBookmark(post.id)
 }
 
 async function togglePostReadingList() {
   const post = props.article?.type === 'post' ? props.article.post : null
-  if (!post || !authStore.isAuthenticated) return
+  if (!post) return
+  if (!authStore.isAuthenticated) {
+    emit('require-auth', { articleId: post.id, action: 'read_later' })
+    return
+  }
   await feedStore.toggleReadingListItem(post.id)
 }
 
 async function toggleFeedItemStar() {
   const item = isFeedItemTimeline(props.article) ? props.article.feed_item : null
-  if (!item || !authStore.isAuthenticated) return
+  if (!item) return
+  if (!authStore.isAuthenticated) {
+    emit('require-auth', { articleId: item.id, action: 'star' })
+    return
+  }
   await feedStore.toggleStar(item.id)
 }
 

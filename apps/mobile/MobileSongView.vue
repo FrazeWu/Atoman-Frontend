@@ -113,7 +113,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { IconHeart as Heart, IconPencil as Pencil, IconPlaylistAdd as ListPlus, IconPlayerPlay as Play } from '@tabler/icons-vue'
+import { Heart, Pencil, ListPlus, Play } from 'lucide-vue-next'
 import { getMusicSongDetail, type MusicSongDetail, type MusicSongListItem } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'

@@ -79,7 +79,7 @@ export default defineConfig(({ mode }) => {
 				output: {
 					experimentalMinChunkSize: 15000,
 					manualChunks(id) {
-						if (id.includes("@tabler/icons-vue")) return "ui-icons";
+						if (id.includes("lucide-vue-next")) return "ui-icons";
 						if (id.includes("node_modules/highlight.js")) return "highlight";
 						if (id.includes("node_modules/marked/")) return "markdown-runtime";
 						if (

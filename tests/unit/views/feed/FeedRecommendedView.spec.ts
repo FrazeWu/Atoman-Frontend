@@ -121,9 +121,15 @@ async function applyFilterValue(wrapper: any, field: string, value: string) {
 	await flushPromises();
 }
 
+const routerResolve = vi.fn((target: { path?: string; query?: Record<string, unknown> } | string) => {
+	if (typeof target === 'string') return { fullPath: target }
+	const search = target.query ? new URLSearchParams(target.query as any).toString() : ''
+	return { fullPath: `${target.path || '/feed'}${search ? `?${search}` : ''}` }
+})
+
 vi.mock("vue-router", () => ({
-	useRouter: () => ({ push: routerPush, replace: routerReplace }),
-	useRoute: () => ({ query: routeQuery }),
+	useRouter: () => ({ push: routerPush, replace: routerReplace, resolve: routerResolve }),
+	useRoute: () => ({ query: routeQuery, path: '/feed', hash: '' }),
 }));
 
 describe("FeedRecommendedView", () => {
@@ -665,6 +671,77 @@ describe("FeedRecommendedView", () => {
 		expect(wrapper.find('[data-test="feed-source-subscribe"]').text()).toContain(
 			"已订阅",
 		);
+	});
+
+	it("redirects unauthenticated visitors to login with source intent and preserved filters", async () => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const url = String(input);
+			if (url.includes("/feed/recommend/themes")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			if (url.includes("/feed/recommend/articles")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			if (url.includes("/feed/recommend/channels")) {
+				return new Response(
+					JSON.stringify({
+						data: [
+							{
+								id: "chan-unauth-1",
+								title: "Channel Unauth 1",
+								summary: "Summary Channel Unauth 1",
+								target_path: "/feed/channel/1",
+								source_type: "internal_channel",
+							},
+						],
+					}),
+					{ status: 200 },
+				);
+			}
+			return new Response(JSON.stringify({ error: "unexpected" }), {
+				status: 404,
+			});
+		});
+
+		const authStore = useAuthStore();
+		authStore.isAuthenticated = false;
+		authStore.user = null;
+		authStore.token = null;
+		routeQuery.category = "news";
+		routeQuery.theme = "tech";
+
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: {
+						template: '<header><slot /><slot name="action" /></header>',
+					},
+					PSegmentedControl: segmentedControlStub,
+					PButton: true,
+					PEmpty: true,
+				},
+			},
+		});
+
+		await flushPromises();
+
+		await applyFilterValue(wrapper, "target", "channels");
+
+		const subscribeButton = wrapper.find('[data-test="feed-source-subscribe"]');
+		expect(subscribeButton.exists()).toBe(true);
+		await subscribeButton.trigger("click");
+		await flushPromises();
+
+		expect(routerPush).toHaveBeenCalledWith({
+			path: "/login",
+			query: {
+				redirect: expect.stringContaining("subscribe_source_id=chan-unauth-1"),
+			},
+		});
+		const redirectArg = routerPush.mock.calls[0][0].query.redirect;
+		expect(redirectArg).toContain("category=news");
+		expect(redirectArg).toContain("theme=tech");
+		expect(redirectArg).toContain("subscribe_source_title=Channel+Unauth+1");
 	});
 
 	it("uses loaded subscriptions without requesting each channel status", async () => {

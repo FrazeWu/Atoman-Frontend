@@ -869,11 +869,13 @@ function requireLoginForSubscription(source: RecommendationItem | FeedArticleSou
   if (context.rssUrl) query.subscribe_source_url = context.rssUrl
   else delete query.subscribe_source_url
 
-  const returnPath = router.resolve({
+  const resolved = router.resolve?.({
     path: route.path || '/feed',
     query,
     hash: route.hash,
-  }).fullPath
+  })
+  const search = new URLSearchParams(query as Record<string, string>).toString()
+  const returnPath = resolved?.fullPath || `${route.path || '/feed'}${search ? `?${search}` : ''}`
   void router.push({ path: '/login', query: { redirect: returnPath } })
   return false
 }

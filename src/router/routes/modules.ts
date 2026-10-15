@@ -6,6 +6,10 @@ const videoHomeView = () => import("@/views/video/VideoHomeView.vue");
 const videoDetailRouteSheet = () => import("@/views/video/VideoDetailRouteSheet.vue");
 const feedRecommendedView = () => import("@/views/feed/FeedRecommendedView.vue");
 const booksHomeView = () => import("@/views/books/BooksHomeView.vue");
+const forumHomeView = () => import("@/views/forum/ForumHomeView.vue");
+const forumTopicRouteSheet = () => import("@/views/forum/ForumTopicRouteSheet.vue");
+const podcastHomeView = () => import("@/views/podcast/PodcastHomeView.vue");
+const podcastEpisodeRouteSheet = () => import("@/views/podcast/PodcastEpisodeRouteSheet.vue");
 
 function musicBookmarksPath(path: string) {
 	return path.startsWith("/music/") ? "/music/bookmarks" : "/bookmarks";
@@ -341,7 +345,11 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				},
 				{
 					path: "topic/:id",
-					component: () => import("@/views/forum/ForumTopicView.vue"),
+					components: {
+						default: forumHomeView,
+						overlay: forumTopicRouteSheet,
+					},
+					meta: { routeOverlay: true },
 				},
 				{
 					path: "topic/:id/edit",
@@ -442,7 +450,11 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				},
 				{
 					path: "episode/:id",
-					component: () => import("@/views/podcast/PodcastEpisodeView.vue"),
+					components: {
+						default: podcastHomeView,
+						overlay: podcastEpisodeRouteSheet,
+					},
+					meta: { routeOverlay: true },
 				},
 			],
 		},

@@ -137,6 +137,26 @@ describe('host-scoped route tables', () => {
     expect(lazyImportPath(detailRoute?.components?.overlay)).toContain('VideoDetailRouteSheet.vue')
   })
 
+  it('registers forum topic pages as route overlay sheet under the forum module root', () => {
+    const forumRoot = moduleRoutes.forum.find((route) => route.path === '/')
+    const children = forumRoot?.children || []
+    const topicRoute = children.find((route) => route.path === 'topic/:id')
+
+    expect(topicRoute).toBeTruthy()
+    expect(lazyImportPath(topicRoute?.components?.default)).toContain('ForumHomeView.vue')
+    expect(lazyImportPath(topicRoute?.components?.overlay)).toContain('ForumTopicRouteSheet.vue')
+  })
+
+  it('registers podcast episode pages as route overlay sheet under the podcast module root', () => {
+    const podcastRoot = moduleRoutes.podcast.find((route) => route.path === '/')
+    const children = podcastRoot?.children || []
+    const episodeRoute = children.find((route) => route.path === 'episode/:id')
+
+    expect(episodeRoute).toBeTruthy()
+    expect(lazyImportPath(episodeRoute?.components?.default)).toContain('PodcastHomeView.vue')
+    expect(lazyImportPath(episodeRoute?.components?.overlay)).toContain('PodcastEpisodeRouteSheet.vue')
+  })
+
   it('registers the approved video destinations', () => {
     const root = moduleRoutes.video.find(route => route.path === '/')
     const routePaths = root?.children?.map(route => route.path)

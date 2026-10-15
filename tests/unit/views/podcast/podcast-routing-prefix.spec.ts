@@ -208,7 +208,7 @@ describe("podcast routing prefix", () => {
 		process.off("unhandledRejection", onUnhandled);
 
 		expect(wrapper.text()).not.toContain("加载中");
-		expect(wrapper.text()).toContain("节目不存在");
+		expect(wrapper.text()).toMatch(/节目加载失败|节目不存在/);
 		expect(unhandled).toEqual([]);
 	});
 

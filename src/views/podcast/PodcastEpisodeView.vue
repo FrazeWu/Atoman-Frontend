@@ -18,6 +18,7 @@ const feedStore = useFeedStore()
 const player = usePlayerStore()
 const lifecycle = useContentLifecycle()
 const route = useRoute()
+const showRoute = (slug: string) => (route.path.startsWith('/podcasts') ? `/podcasts/show/${slug}` : `/show/${slug}`)
 const ep = ref<PodcastEpisode | null>(null)
 const loading = ref(true)
 const error = ref('')
@@ -170,7 +171,7 @@ function currentCommentTime() {
         <h1 class="pev-title">{{ ep.post?.title }}</h1>
         <RouterLink
           v-if="ep.channel"
-          :to="`/podcasts/show/${ep.channel.slug}`"
+          :to="showRoute(ep.channel.slug)"
           class="pev-show"
         >{{ ep.channel.name }}</RouterLink>
         <div class="pev-meta">
@@ -221,7 +222,7 @@ function currentCommentTime() {
 <style scoped>
 .pev-state { text-align: center; padding: 6rem 0; color: var(--a-color-muted); }
 .pev-error { color: var(--a-color-danger); }
-.pev-wrap { max-width: 40rem; margin: 0 auto; padding: 2rem 1rem; }
+.pev-wrap { padding: 1.5rem 1rem; }
 .pev-header { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; }
 .pev-cover { width: 7rem; height: 7rem; border-radius: var(--a-radius-card); object-fit: cover; flex-shrink: 0; }
 .pev-info { display: flex; flex-direction: column; gap: 0.25rem; }

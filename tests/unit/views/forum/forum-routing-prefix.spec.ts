@@ -143,6 +143,16 @@ describe("forum 路由前缀", () => {
   });
 
   it("论坛首页创建、点击话题和键盘 Enter 都跳转到 /forum 前缀下", async () => {
+    vi.stubGlobal("fetch", vi.fn((url: string) => {
+      if (String(url).includes("/forum/topics")) {
+        return Promise.resolve(new Response(JSON.stringify({
+          code: 0,
+          data: { topics: [makeTopic("topic-1")], total: 1 },
+        }), { status: 200, headers: { "Content-Type": "application/json" } }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ code: 0, data: {} }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    }));
+
     const { wrapper, pushSpy } = await mountWithRouter(
       ForumHomeView,
       "/forum",
@@ -155,7 +165,6 @@ describe("forum 路由前缀", () => {
         forumStore.topics = [makeTopic("topic-1")];
         forumStore.topicsTotal = 1;
         vi.spyOn(forumStore, "fetchCategories").mockResolvedValue(undefined);
-        vi.spyOn(forumStore, "fetchTopics").mockResolvedValue(undefined);
       },
     );
     await flushPromises();

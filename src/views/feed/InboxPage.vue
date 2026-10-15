@@ -236,6 +236,10 @@ const filteredNotifications = computed(() => {
 
 
 const switchTab = async (tab: InboxPageTab) => {
+  if (tab === 'dm') {
+    await router.push('/messages')
+    return
+  }
   filterMode.value = 'all'
   await router.push({ path: '/inbox', query: { tab } })
 }

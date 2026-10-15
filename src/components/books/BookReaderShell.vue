@@ -680,6 +680,7 @@ function togglePanel(panel: 'tools' | 'settings') {
 
 @media (max-width: 640px) {
   .book-reader-shell__workspace {
+    display: grid;
     grid-template-columns: minmax(0, 1fr);
   }
 

@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 	listMusicAlbumImports: vi.fn(),
 	listMusicAlbums: vi.fn(),
 	listMusicArtists: vi.fn(),
+	searchMusic: vi.fn(),
 	listRecommendedArtists: vi.fn(),
 	listPublicMusicPlaylists: vi.fn(),
 	listPlaylistBookmarks: vi.fn(),
@@ -40,6 +41,7 @@ vi.mock("@/api/musicV1", () => ({
 	listMusicAlbumImports: mocks.listMusicAlbumImports,
 	listMusicAlbums: mocks.listMusicAlbums,
 	listMusicArtists: mocks.listMusicArtists,
+	searchMusic: mocks.searchMusic,
 	listRecommendedArtists: mocks.listRecommendedArtists,
 	listPublicMusicPlaylists: mocks.listPublicMusicPlaylists,
 	listPlaylistBookmarks: mocks.listPlaylistBookmarks,
@@ -105,6 +107,19 @@ describe("Music DiscoverView.vue", () => {
 		mocks.listMusicAlbumImports.mockReset();
 		mocks.listMusicAlbums.mockReset();
 		mocks.listMusicArtists.mockReset();
+		mocks.searchMusic.mockReset();
+		mocks.searchMusic.mockResolvedValue({
+			songs: [],
+			albums: [],
+			artists: [],
+			playlists: [],
+			meta: {
+				page: 1,
+				page_size: 10,
+				totals: { song: 0, album: 0, artist: 0, playlist: 0 },
+				has_more: { song: false, album: false, artist: false, playlist: false },
+			},
+		});
 		mocks.listRecommendedArtists.mockReset();
 		mocks.listPublicMusicPlaylists.mockReset();
 		mocks.listPlaylistBookmarks.mockReset();
@@ -532,6 +547,54 @@ describe("Music DiscoverView.vue", () => {
 		const reopenedButtons = wrapper.findAll("button.search-result");
 		await reopenedButtons[1].trigger("mousedown");
 		expect(mocks.push).toHaveBeenCalledWith("/music/artist/artist-1");
+	});
+
+	it("shows matching songs in search dropdown and opens the song detail", async () => {
+		mocks.searchMusic.mockResolvedValue({
+			songs: [{
+				id: "song-determined",
+				title: "Determined",
+				artists: [{ id: "artist-kendrick", name: "Kendrick Lamar" }],
+				album: { id: "album-kendrick", title: "Kendrick Lamar" },
+			}],
+			albums: [],
+			artists: [],
+			playlists: [],
+			meta: {
+				page: 1,
+				page_size: 10,
+				totals: { song: 1, album: 0, artist: 0, playlist: 0 },
+				has_more: { song: false, album: false, artist: false, playlist: false },
+			},
+		});
+		const wrapper = mount(DiscoverView, {
+			global: {
+				stubs: {
+					PPageHeader: { props: ["title"], template: "<div><span>{{ title }}</span><slot /><slot name=\"action\" /></div>" },
+					PSegmentedControl: { props: ["options"], template: "<div />" },
+					RouterLink: { props: ["to"], template: "<a><slot /></a>" },
+				},
+			},
+		});
+		await flushPromises();
+
+		const input = wrapper.find('[data-testid="music-explore-search-input"]');
+		await input.trigger("focus");
+		await input.setValue("Determined");
+		await vi.waitFor(() => {
+			expect(mocks.searchMusic).toHaveBeenCalledWith("Determined", {
+				type: "song",
+				page: 1,
+				page_size: 10,
+			});
+		});
+		await flushPromises();
+
+		expect(wrapper.text()).toContain("歌曲");
+		expect(wrapper.text()).toContain("Determined");
+		expect(wrapper.text()).toContain("Kendrick Lamar");
+		await wrapper.get('[data-testid="music-explore-song-result"]').trigger("mousedown");
+		expect(mocks.push).toHaveBeenCalledWith("/music/song/song-determined");
 	});
 
 	it("loads discovery sections independently", async () => {

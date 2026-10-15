@@ -171,6 +171,8 @@ async function mockMobileApi(page: import("@playwright/test").Page) {
       return;
     } else if (pathname.endsWith('/books/assets/asset-1')) {
       body = { data: { id: 'asset-1', title: '移动阅读测试正文', file_name: 'mobile.txt', format: 'txt', processing_status: 'private_available' } };
+    } else if (pathname.endsWith('/books/assets/asset-1/annotations')) {
+      body = { data: [] };
     } else if (pathname.endsWith('/books/assets/asset-1/reading-state')) {
       body = { data: { asset_id: 'asset-1', pdf_page: 1, txt_offset: 0, reading_percent: 0, preferences: {} } };
     } else if (pathname.endsWith('/books/catalog/works/work-1')) {
@@ -408,6 +410,19 @@ test.describe("Mobile route screenshot matrix", () => {
         '/timeline/person/person-1': '移动时间线测试人物',
       };
       if (expectedContent[pathname]) await expect(page.getByText(expectedContent[pathname], { exact: true }).first()).toBeVisible();
+      if (pathname === '/books/read/asset-1') {
+        const layout = await page.locator('.book-reader-shell__workspace').evaluate((workspace) => {
+          const readingColumn = workspace.querySelector('.book-reader-shell__reading-column');
+          return {
+            display: getComputedStyle(workspace).display,
+            readingWidth: readingColumn?.getBoundingClientRect().width || 0,
+            viewportWidth: document.documentElement.clientWidth,
+          };
+        });
+        expect(layout.display).toBe('grid');
+        expect(layout.readingWidth).toBeGreaterThan(300);
+        expect(layout.readingWidth).toBeLessThanOrEqual(layout.viewportWidth);
+      }
       if (pathname === '/forum/new') await expect(page.locator('.cm-editor')).toBeVisible();
       if (pathname === '/posts/notes/note-1/edit') await expect(page.locator('.short-note-composer')).toBeVisible();
       if (pathname === '/feed/subscriptions') {

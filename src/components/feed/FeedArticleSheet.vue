@@ -35,36 +35,45 @@
         <span class="article-eyebrow__sep" aria-hidden="true">·</span>
         <span class="article-eyebrow__date">{{ formatDate(article.published_at || article.post.created_at) }}</span>
       </div>
-      <h1 class="article-title">{{ article.post.title }}</h1>
-      <div class="article-subtitle-meta">
-        <PButton
-          v-if="showSourceSubscribe && articleSource"
-          data-test="feed-article-subscribe-source"
-          :label="articleSource.subscribed ? '已订阅' : '订阅来源'"
-          :variant="articleSource.subscribed ? 'secondary' : 'primary'"
-          :disabled="articleSource.subscribed"
-          :loading="sourceSubscribeBusy"
-          loading-text="订阅中..."
-          @click="emit('subscribe-source')"
-        />
-        <PButton
-          v-if="article.post.id"
-          variant="secondary"
-          size="sm"
-          @click="togglePostBookmark"
-        >
-          <Bookmark :size="15" aria-hidden="true" />
-          {{ postBookmarked ? '取消收藏' : '收藏' }}
-        </PButton>
-        <PButton
-          v-if="article.post.id"
-          variant="secondary"
-          size="sm"
-          @click="togglePostReadingList"
-        >
-          <Clock :size="15" aria-hidden="true" />
-          {{ postInReadingList ? '取消稍后阅读' : '稍后阅读' }}
-        </PButton>
+      <h1 class="article-title article-headline">{{ article.post.title }}</h1>
+      <div class="article-action-strip">
+        <div class="article-action-strip__left">
+          <PButton
+            v-if="showSourceSubscribe && articleSource"
+            data-test="feed-article-subscribe-source"
+            :label="articleSource.subscribed ? '已订阅' : '订阅来源'"
+            :variant="articleSource.subscribed ? 'secondary' : 'primary'"
+            :disabled="articleSource.subscribed"
+            :loading="sourceSubscribeBusy"
+            size="sm"
+            loading-text="订阅中..."
+            @click="emit('subscribe-source')"
+          />
+        </div>
+        <div class="article-action-strip__right">
+          <button
+            v-if="article.post.id"
+            type="button"
+            class="article-action-btn"
+            data-test="feed-article-post-bookmark"
+            :aria-pressed="postBookmarked"
+            @click="togglePostBookmark"
+          >
+            <Bookmark :size="15" aria-hidden="true" :fill="postBookmarked ? 'currentColor' : 'none'" />
+            <span>{{ postBookmarked ? '已收藏' : '收藏' }}</span>
+          </button>
+          <button
+            v-if="article.post.id"
+            type="button"
+            class="article-action-btn"
+            data-test="feed-article-post-readlater"
+            :aria-pressed="postInReadingList"
+            @click="togglePostReadingList"
+          >
+            <Clock :size="15" aria-hidden="true" />
+            <span>{{ postInReadingList ? '已稍后读' : '稍后读' }}</span>
+          </button>
+        </div>
       </div>
       
       <p v-if="article.post.summary" class="article-summary">{{ article.post.summary }}</p>
@@ -113,53 +122,40 @@
           <span class="article-eyebrow__reading-time">{{ feedWordCountLabel }}</span>
         </template>
       </div>
-      <div class="article-source-actions">
-        <PButton
-          v-if="showSourceSubscribe && articleSource"
-          data-test="feed-article-subscribe-source"
-          :label="articleSource.subscribed ? '已订阅' : '订阅来源'"
-          :variant="articleSource.subscribed ? 'secondary' : 'primary'"
-          :disabled="articleSource.subscribed"
-          :loading="sourceSubscribeBusy"
-          loading-text="订阅中..."
-          @click="emit('subscribe-source')"
-        />
-        <button
-          type="button"
-          class="article-star-button"
-          data-test="feed-article-quick-star"
-          :aria-label="feedItemStarred ? '取消收藏文章' : '收藏文章'"
-          :title="feedItemStarred ? '取消收藏文章' : '收藏文章'"
-          :aria-pressed="feedItemStarred"
-          @click="toggleFeedItemStar"
-        >
-          <Bookmark :size="16" aria-hidden="true" :fill="feedItemStarred ? 'currentColor' : 'none'" />
-        </button>
-      </div>
-      <h1 class="article-title">{{ article.feed_item.title }}</h1>
-      <div class="article-toolbar">
-        <PLink
-          v-if="article.feed_item.link"
-          :href="article.feed_item.link"
-          class="article-source-link"
-          aria-label="在源站查看"
-          title="在源站查看"
-          label="前往源站"
-        />
-        <button
-          v-if="isPlayablePodcast"
-          type="button"
-          class="article-toolbar__button"
-          data-test="feed-article-play"
-          @click="emitPlayPodcast"
-        >
-          <Play :size="16" aria-hidden="true" />
-          {{ isPodcastPlaying ? '播放中，暂停' : '播放播客' }}
-        </button>
-      </div>
-
-      <div class="article-body-wrap">
-        <div class="article-reader-controls">
+      <h1 class="article-title article-headline">{{ article.feed_item.title }}</h1>
+      <div class="article-action-strip">
+        <div class="article-action-strip__left">
+          <PButton
+            v-if="showSourceSubscribe && articleSource"
+            data-test="feed-article-subscribe-source"
+            :label="articleSource.subscribed ? '已订阅' : '订阅来源'"
+            :variant="articleSource.subscribed ? 'secondary' : 'primary'"
+            :disabled="articleSource.subscribed"
+            :loading="sourceSubscribeBusy"
+            size="sm"
+            loading-text="订阅中..."
+            @click="emit('subscribe-source')"
+          />
+          <PLink
+            v-if="article.feed_item.link"
+            :href="article.feed_item.link"
+            class="article-source-link"
+            aria-label="在源站查看"
+            title="在源站查看"
+            label="前往源站"
+          />
+          <button
+            v-if="isPlayablePodcast"
+            type="button"
+            class="article-play-button"
+            data-test="feed-article-play"
+            @click="emitPlayPodcast"
+          >
+            <Play :size="15" aria-hidden="true" />
+            <span>{{ isPodcastPlaying ? '播放中' : '播放播客' }}</span>
+          </button>
+        </div>
+        <div class="article-action-strip__right">
           <PSegmentedControl
             v-if="showFeedContentModeSwitch"
             v-model="feedContentMode"
@@ -168,7 +164,33 @@
             :options="feedContentModeOptions"
           />
           <span v-else class="article-content-label">{{ feedContentStateLabel }}</span>
+          <button
+            type="button"
+            class="article-action-btn"
+            data-test="feed-article-quick-star"
+            :aria-label="feedItemStarred ? '取消收藏文章' : '收藏文章'"
+            :title="feedItemStarred ? '取消收藏文章' : '收藏文章'"
+            :aria-pressed="feedItemStarred"
+            @click="toggleFeedItemStar"
+          >
+            <Bookmark :size="15" aria-hidden="true" :fill="feedItemStarred ? 'currentColor' : 'none'" />
+            <span>{{ feedItemStarred ? '已收藏' : '收藏' }}</span>
+          </button>
+          <button
+            type="button"
+            class="article-action-btn article-action-btn--comments"
+            data-test="feed-article-comments-trigger"
+            aria-label="评论"
+            @click="openComments"
+          >
+            <MessageSquare :size="15" aria-hidden="true" />
+            <span>评论</span>
+            <span v-if="commentCount !== undefined && commentCount > 0" class="article-action-count">{{ commentCount }}</span>
+          </button>
         </div>
+      </div>
+
+      <div class="article-body-wrap">
         <BlogPostUpdateNotice
           class="article-content-validity"
           data-test="feed-article-validity-notice"
@@ -260,7 +282,7 @@
 import '@/assets/editor.css'
 import '@/assets/feed-reader.css'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Bookmark, Clock, Play } from 'lucide-vue-next'
+import { Bookmark, Clock, MessageSquare, Play } from 'lucide-vue-next'
 import { apiRequestResult } from '@/api/client'
 import type { FeedArticleSource, FeedItem, FeedItemReader, FeedReaderVariant, Post, TimelineItem } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -922,45 +944,6 @@ const emitPlayPodcast = () => {
   outline-offset: 2px;
 }
 
-.article-source-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.article-star-button,
-.article-source-link,
-.article-toolbar__button {
-  display: inline-flex;
-  min-width: 44px;
-  min-height: 44px;
-  align-items: center;
-  justify-content: center;
-  gap: 0.42rem;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  color: var(--a-color-text);
-  cursor: pointer;
-  font-family: var(--a-font-sans);
-  font-size: 0.78rem;
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.article-star-button {
-  padding: 0.4rem;
-}
-
-.article-star-button[aria-pressed='true'] {
-  border-color: var(--a-color-primary);
-  color: var(--a-color-primary);
-}
-
-.article-star-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
 .article-title {
   max-width: 26ch;
   margin: 0 0 1.35rem;
@@ -973,34 +956,87 @@ const emitPlayPodcast = () => {
   text-wrap: balance;
 }
 
-.article-toolbar {
+.article-headline {
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+}
+
+.article-action-strip {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0.65rem;
-  margin-bottom: 2rem;
+  gap: 0.5rem 1rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
-.article-source-link,
-.article-toolbar__button {
-  padding: 0.4rem 0.7rem;
+.article-action-strip__left,
+.article-action-strip__right {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
+.article-action-btn,
+.article-play-button,
 .article-source-link {
-  width: auto;
-  padding: 0.4rem 0.7rem;
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: none !important;
+  color: var(--a-color-text);
+  cursor: pointer;
+  font-family: var(--a-font-sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: border-color 0.15s ease, color 0.15s ease;
 }
 
-.article-source-link:hover,
-.article-toolbar__button:hover,
-.article-star-button:hover {
+.article-action-btn:hover,
+.article-play-button:hover,
+.article-source-link:hover {
   border-color: var(--a-color-text);
 }
 
-.article-source-link:focus-visible,
-.article-toolbar__button:focus-visible,
-.article-star-button:focus-visible {
+.article-action-btn:focus-visible,
+.article-play-button:focus-visible,
+.article-source-link:focus-visible {
   outline: 2px solid var(--a-color-text);
   outline-offset: 2px;
+}
+
+.article-action-btn[aria-pressed='true'] {
+  border-color: var(--a-color-primary);
+  color: var(--a-color-primary);
+}
+
+.article-action-btn:disabled,
+.article-play-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.article-action-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--a-color-surface-soft, rgba(0, 0, 0, 0.05));
+  border-radius: 4px;
 }
 
 .article-summary {
@@ -1136,8 +1172,8 @@ const emitPlayPodcast = () => {
     font-size: 1.7rem;
   }
 
-  .article-toolbar {
-    margin-bottom: 1.5rem;
+  .article-action-strip {
+    margin-bottom: 1.25rem;
   }
 
   .article-related-reading a {

@@ -925,4 +925,49 @@ describe("FeedArticleSheet", () => {
 		expect(eyebrow.text()).toContain("特约记者");
 		expect(eyebrow.text()).toContain("2026年6月20日");
 	});
+
+	it("renders integrated action strip with actions grouped left and right", async () => {
+		const wrapper = mountSheet({
+			props: {
+				show: true,
+				showSourceSubscribe: true,
+				source: {
+					type: "external_rss",
+					id: "src-action-1",
+					title: "科技早报",
+					subscribed: false,
+				},
+				article: {
+					type: "feed_item",
+					published_at: "2026-06-20T00:00:00Z",
+					is_read: false,
+					feed_item: {
+						id: "item-action-1",
+						feed_source_id: "src-action-1",
+						title: "动作条综合测试",
+						link: "https://example.com/tech-news",
+						enclosure_url: "https://cdn.example.com/audio.mp3",
+						enclosure_type: "audio/mpeg",
+						published_at: "2026-06-20T00:00:00Z",
+						fetched_at: "2026-06-20T00:00:00Z",
+					},
+				} as any,
+			},
+			global: {
+				stubs: { PSheet: { template: "<section><slot /></section>" } },
+			},
+		});
+
+		const actionStrip = wrapper.get(".article-action-strip");
+		expect(actionStrip.find('[data-test="feed-article-subscribe-source"]').exists()).toBe(true);
+		expect(actionStrip.find(".article-source-link").exists()).toBe(true);
+		expect(actionStrip.find('[data-test="feed-article-play"]').exists()).toBe(true);
+		expect(actionStrip.find('[data-test="feed-article-quick-star"]').exists()).toBe(true);
+		expect(actionStrip.find('[data-test="feed-article-comments-trigger"]').exists()).toBe(true);
+
+		// Click comments trigger emits / opens comments
+		await actionStrip.get('[data-test="feed-article-comments-trigger"]').trigger("click");
+		expect(wrapper.findComponent({ name: "CommentSideSheet" }).props("show")).toBe(true);
+	});
 });
+

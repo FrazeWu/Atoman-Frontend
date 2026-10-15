@@ -24,7 +24,11 @@
       />
     </header>
 
-    <p v-if="isUploading" class="book-private-upload__feedback" aria-live="polite">正在上传 {{ uploadProgress }}%</p>
+    <div v-if="isUploading" class="book-private-upload__progress">
+      <span role="status" aria-atomic="true">正在上传电子书</span>
+      <progress :value="uploadProgress" max="100" aria-label="电子书上传进度" />
+      <span aria-hidden="true">{{ uploadProgress }}%</span>
+    </div>
     <p v-if="errorMessage" class="book-private-upload__feedback book-private-upload__feedback--error" role="alert">{{ errorMessage }}</p>
     <p v-if="message" class="book-private-upload__feedback" aria-live="polite">{{ message }}</p>
 
@@ -48,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { IconUpload as Upload } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -76,6 +80,7 @@ const isUploading = ref(false)
 const uploadProgress = ref(0)
 const errorMessage = ref('')
 const message = ref('')
+let importsRequestGeneration = 0
 
 const relatedImports = computed(() => imports.value.filter((item) => (
   props.editionId ? item.edition_id === props.editionId : item.work_id === props.workId
@@ -97,15 +102,24 @@ function statusLabel(item: BookImportSession): string {
 }
 
 async function loadImports() {
-  if (!authStore.isAuthenticated) return
+  const generation = ++importsRequestGeneration
+  const userID = authStore.user?.uuid
+  if (!authStore.isAuthenticated) {
+    imports.value = []
+    isLoading.value = false
+    return
+  }
   isLoading.value = true
   try {
-    imports.value = await listBookImports()
+    const result = await listBookImports()
+    if (generation !== importsRequestGeneration || !authStore.isAuthenticated || userID !== authStore.user?.uuid) return
+    imports.value = result
   } catch (error) {
+    if (generation !== importsRequestGeneration || !authStore.isAuthenticated || userID !== authStore.user?.uuid) return
     if (error instanceof ApiErrorResponseError && error.status === 401) return
     errorMessage.value = '电子书列表加载失败，请稍后重试'
   } finally {
-    isLoading.value = false
+    if (generation === importsRequestGeneration) isLoading.value = false
   }
 }
 
@@ -151,10 +165,19 @@ async function handleFileChange(event: Event) {
 }
 
 onMounted(() => { void loadImports() })
-watch(() => authStore.isAuthenticated, (authenticated) => {
-  if (authenticated) void loadImports()
-  else imports.value = []
+watch(() => [authStore.isAuthenticated, authStore.user?.uuid] as const, ([authenticated, userID], [wasAuthenticated, previousUserID]) => {
+  if (authenticated) {
+    if (wasAuthenticated && userID !== previousUserID) imports.value = []
+    void loadImports()
+  } else {
+    importsRequestGeneration += 1
+    imports.value = []
+    isLoading.value = false
+    errorMessage.value = ''
+    message.value = ''
+  }
 })
+onBeforeUnmount(() => { importsRequestGeneration += 1 })
 </script>
 
 <style scoped>
@@ -170,6 +193,8 @@ watch(() => authStore.isAuthenticated, (authenticated) => {
 .book-private-upload__feedback,
 .book-private-upload__empty { margin: 0.35rem 0 0; color: var(--a-color-muted); font-size: 0.88rem; }
 .book-private-upload__feedback--error { color: var(--a-color-danger); }
+.book-private-upload__progress { display: grid; grid-template-columns: auto minmax(8rem, 1fr) auto; align-items: center; gap: 0.75rem; margin-top: 0.5rem; color: var(--a-color-muted); font-size: 0.88rem; }
+.book-private-upload__progress progress { width: 100%; accent-color: var(--a-color-primary); }
 .book-private-upload__input { display: none; }
 .book-private-upload__list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--a-color-border-soft); }
 .book-private-upload__list li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.7rem 0; border-bottom: 1px solid var(--a-color-border-soft); }

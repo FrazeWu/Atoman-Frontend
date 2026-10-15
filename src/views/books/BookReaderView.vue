@@ -220,6 +220,7 @@ const textPages = ref<TextPage[]>([])
 const textPage = ref(1)
 const privateNotes = ref('')
 const bookmarks = ref<BookReaderBookmark[]>([])
+const deletedBookmarkIDs = ref<string[]>([])
 const annotations = ref<BookAnnotation[]>([])
 interface SelectionToolbarState {
   x: number
@@ -300,6 +301,8 @@ function applyReadingState(state: BookReadingState) {
   readingPercent.value = clampPercent(state.reading_percent)
   pdfPage.value = Math.max(1, state.pdf_page || 1)
   bookmarks.value = parseBookReaderBookmarks(state.preferences?.bookmarks)
+  const deletedIDs = state.preferences?.deleted_bookmark_ids
+  deletedBookmarkIDs.value = Array.isArray(deletedIDs) ? deletedIDs.filter((id): id is string => typeof id === 'string') : []
   displayPreferences.value = parseBookReaderDisplayPreferences(state.preferences?.display)
 }
 
@@ -567,7 +570,12 @@ async function saveState() {
       txt_offset: readingState.value?.txt_offset || 0,
       reading_percent: readingPercent.value,
       private_notes: privateNotes.value,
-      preferences: { ...(readingState.value?.preferences || {}), bookmarks: bookmarks.value, display: displayPreferences.value },
+      preferences: {
+        ...(readingState.value?.preferences || {}),
+        bookmarks: bookmarks.value,
+        deleted_bookmark_ids: deletedBookmarkIDs.value,
+        display: displayPreferences.value,
+      },
     }
     const remote = await getBookReadingState(asset.value.id).catch(() => null)
     const saved = await saveBookReadingState(asset.value.id, mergeBookReadingProgress(localInput, remote))
@@ -600,6 +608,7 @@ function addBookmark() {
 
 function removeBookmark(id: string) {
   bookmarks.value = bookmarks.value.filter((bookmark) => bookmark.id !== id)
+  if (!deletedBookmarkIDs.value.includes(id)) deletedBookmarkIDs.value = [...deletedBookmarkIDs.value, id]
   void saveState()
 }
 

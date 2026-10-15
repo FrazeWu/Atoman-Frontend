@@ -34,4 +34,19 @@ describe('media progress conflict resolution', () => {
       { progress: 0.8 },
     )?.progress).toBe(0.8)
   })
+
+  it('preserves explicit empty notes and does not resurrect deleted bookmarks', () => {
+    const merged = mergeBookReadingProgress({
+      private_notes: '',
+      preferences: { bookmarks: [], deleted_bookmark_ids: ['removed'] },
+    }, {
+      asset_id: 'asset-1',
+      private_notes: '旧笔记',
+      preferences: { bookmarks: [{ id: 'removed', label: '已删除' }, { id: 'keep', label: '保留' }] },
+    })
+
+    expect(merged.private_notes).toBe('')
+    expect(merged.preferences?.bookmarks).toEqual([{ id: 'keep', label: '保留' }])
+    expect(merged.preferences?.deleted_bookmark_ids).toEqual(['removed'])
+  })
 })

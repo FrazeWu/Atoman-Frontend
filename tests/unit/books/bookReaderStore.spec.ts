@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useBookReaderStore, type ActiveReadingBook } from '@/stores/bookReader'
+import { clearSessionStores } from '@/stores/sessionReset'
 
 describe('useBookReaderStore', () => {
   beforeEach(() => {
@@ -35,6 +36,26 @@ describe('useBookReaderStore', () => {
     store.openBook(book)
     expect(store.activeBook).toEqual(book)
     expect(store.isOverlayOpen).toBe(true)
+  })
+
+  it('clears the active reading session when the store resets', () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useBookReaderStore()
+    store.openBook({
+      assetId: 'private-asset',
+      title: '私人书籍',
+      format: 'epub',
+      currentPage: 3,
+      totalPages: 20,
+      percent: 0.15,
+    })
+
+    clearSessionStores(pinia)
+
+    expect(store.activeBook).toBeNull()
+    expect(store.isOverlayOpen).toBe(false)
+    expect(localStorage.getItem('atoman_book_reader_active')).toBeNull()
   })
 
   it('updates progress accurately and clamps percent', () => {

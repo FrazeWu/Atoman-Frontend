@@ -3,7 +3,9 @@
     <AppSidebar module="books" />
     <main class="a-main-content books-main-content">
       <div class="a-content-frame">
-        <router-view />
+        <RouterView v-slot="{ Component }">
+          <component :is="Component" :key="route.path" />
+        </RouterView>
       </div>
     </main>
     <BookWorkDrawer

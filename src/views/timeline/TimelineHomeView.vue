@@ -1,5 +1,5 @@
 <template>
-  <div class="a-page-xl tl-page">
+  <div class="tl-page">
     <PPageHeader title="时间线" mb="1.25rem">
       <template #action>
         <div class="tl-page-actions">

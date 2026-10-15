@@ -79,6 +79,7 @@ function mountView() {
         },
         PEmpty: true,
         PModal: { template: "<div><slot /></div>" },
+        PSheet: { template: "<div><slot /></div>" },
       },
     },
   });

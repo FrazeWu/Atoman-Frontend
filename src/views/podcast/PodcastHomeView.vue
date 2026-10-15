@@ -119,7 +119,7 @@ function playEpisode(ep: PodcastEpisode) {
 </script>
 
 <template>
-  <div class="a-page-lg ph-page">
+  <div class="ph-page">
     <PPageHeader title="播客" mb="1.5rem">
       <template #action>
         <div class="ph-search">

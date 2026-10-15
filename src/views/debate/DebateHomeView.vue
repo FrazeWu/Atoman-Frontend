@@ -1,5 +1,5 @@
 <template>
-  <div class="a-page-xl" style="padding-bottom:6rem">
+  <div class="debate-home-view" style="padding-bottom:6rem">
     <PPageHeader title="辩论" mb="1.25rem">
       <template #action>
         <PButton to="/debate/rules" variant="secondary">规则</PButton>
@@ -108,11 +108,15 @@
       />
     </div>
 
-    <!-- Create Modal -->
-    <PModal v-if="showCreateModal" @close="showCreateModal = false">
-      <div class="p-6">
-        <h3 class="a-title-sm mb-6">新建辩题</h3>
-
+    <!-- Create Sheet (migrated from PModal) -->
+    <PSheet
+      :show="showCreateModal"
+      title="新建辩题"
+      mode="full"
+      close-type="header"
+      @close="showCreateModal = false"
+    >
+      <div class="debate-create-form-wrap" style="padding: 1.5rem;">
         <form @submit.prevent="handleCreate" class="space-y-4">
           <PInput v-model="createForm.title" label="标题" placeholder="长期吸烟会不会显著增加肺癌风险？" />
           <PReferenceField v-model="createForm.content" variant="textarea" label="正文" :rows="6" />
@@ -127,7 +131,7 @@
           </div>
         </form>
       </div>
-    </PModal>
+    </PSheet>
   </div>
 </template>
 
@@ -140,7 +144,7 @@ import { useAuthStore } from '@/stores/auth'
 import PButton from '@/components/ui/PButton.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
-import PModal from '@/components/ui/PModal.vue'
+import PSheet from '@/components/ui/PSheet.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PInteractionCard from '@/components/ui/PInteractionCard.vue'

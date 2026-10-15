@@ -630,6 +630,7 @@ export const usePlayerStore = defineStore("player", () => {
 			playbackError.value = "";
 		});
 		nextAudio.addEventListener("pause", () => {
+			if (!nextAudio.paused) return;
 			playRequested = false;
 			isPlaying.value = false;
 			isLoading.value = false;

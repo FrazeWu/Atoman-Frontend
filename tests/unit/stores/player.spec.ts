@@ -1057,6 +1057,23 @@ describe("player store", () => {
 		expect(audioInstances[0].play).toHaveBeenCalledOnce();
 		expect(player.isPlaying).toBe(false);
 	});
+
+	it("ignores a delayed pause event after playback has resumed", async () => {
+		const player = usePlayerStore();
+		player.playSong({
+			id: "resumed-after-pause-event",
+			title: "Resumed Song",
+			audio_url: "resumed-song.mp3",
+		} as any);
+		await audioInstances[0].play.mock.results[0]?.value;
+		audioInstances[0].paused = false;
+		audioInstances[0].emit("playing");
+
+		// pause() may have queued this event before the newer play() completed.
+		audioInstances[0].emit("pause");
+
+		expect(player.isPlaying).toBe(true);
+	});
 	it("keeps repeat-one next paused when audio play fails", async () => {
 		const player = usePlayerStore();
 		const song = {

@@ -33,4 +33,46 @@ describe('DMComposer', () => {
     await wrapper.setProps({ modelValue: '' })
     expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('')
   })
+
+  it('emits send on Enter keypress without Shift', async () => {
+    const wrapper = mount(DMComposer, {
+      props: { modelValue: '你好呀', disabled: false, sending: false },
+    })
+    const textarea = wrapper.find('textarea')
+    await textarea.trigger('keydown', { key: 'Enter', shiftKey: false })
+    expect(wrapper.emitted('send')?.[0]).toEqual([{ content: '你好呀', imageId: undefined }])
+  })
+
+  it('does not emit send on Shift+Enter', async () => {
+    const wrapper = mount(DMComposer, {
+      props: { modelValue: '第一行', disabled: false, sending: false },
+    })
+    const textarea = wrapper.find('textarea')
+    await textarea.trigger('keydown', { key: 'Enter', shiftKey: true })
+    expect(wrapper.emitted('send')).toBeUndefined()
+  })
+
+  it('detects image from paste event and emits upload-image', async () => {
+    const wrapper = mount(DMComposer, { props: { disabled: false } })
+    const file = new File(['dummy'], 'screenshot.png', { type: 'image/png' })
+    const pasteEvent = {
+      clipboardData: {
+        files: [file],
+      },
+      preventDefault: () => {},
+    }
+    await wrapper.find('textarea').trigger('paste', pasteEvent)
+    expect(wrapper.emitted('upload-image')?.[0]).toEqual([file])
+  })
+
+  it('allows removing image via remove button', async () => {
+    const wrapper = mount(DMComposer, {
+      props: { image: { id: 'img-1', url: 'https://example.com/test.png' } },
+    })
+    const removeBtn = wrapper.find('button[aria-label="移除图片"]')
+    expect(removeBtn.exists()).toBe(true)
+    await removeBtn.trigger('click')
+    expect(wrapper.emitted('remove-image')).toHaveLength(1)
+  })
 })
+

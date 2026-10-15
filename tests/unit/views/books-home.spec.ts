@@ -102,6 +102,37 @@ describe('BooksHomeView', () => {
     wrapper.unmount()
   })
 
+  it('does not navigate to an empty work route when a new contribution has no work ID yet', async () => {
+    vi.spyOn(booksApi, 'listPublicBookAssets').mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 })
+    vi.spyOn(booksApi, 'searchPublicBooks').mockResolvedValue({ items: [], total: 0, limit: 24, offset: 0 })
+    const router = createRouter({ history: createMemoryHistory(), routes })
+    await router.push('/books')
+    await router.isReady()
+    const wrapper = mount(BooksHomeView, {
+      global: {
+        plugins: [router],
+        stubs: {
+          BookCreationFlowDrawer: {
+            props: ['show'],
+            emits: ['created'],
+            template: '<div v-if="show"><button data-testid="finish-book-creation" @click="$emit(\'created\', \'\')">完成</button></div>',
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    const importButton = wrapper.findAll('button').find(button => button.text().includes('添加图书') || button.text().includes('导入电子书'))
+    expect(importButton).toBeTruthy()
+    await importButton!.trigger('click')
+    await wrapper.get('[data-testid="finish-book-creation"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/books')
+    expect(wrapper.find('[data-testid="finish-book-creation"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it('keeps catalog results visible when readable assets fail to load', async () => {
     vi.spyOn(booksApi, 'listPublicBookAssets').mockRejectedValue(new Error('Assets unavailable'))
     vi.spyOn(booksApi, 'searchPublicBooks').mockResolvedValue({

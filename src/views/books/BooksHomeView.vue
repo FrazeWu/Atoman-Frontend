@@ -192,7 +192,7 @@
     <BookCreationFlowDrawer
       :show="isCreationOpen"
       @close="isCreationOpen = false"
-      @created="onBookCreated"
+      @created="handleBookCreated"
     />
   </section>
 </template>
@@ -402,11 +402,6 @@ function changeCatalogPage(page: number) {
 async function submitCatalogSearch() {
   const query = searchInput.value.trim()
   await router.push({ path: '/books/search', query: query ? { q: query } : {} })
-}
-
-async function onBookCreated(workID: string) {
-  isCreationOpen.value = false
-  await router.push(`/books/work/${encodeURIComponent(workID)}`)
 }
 
 async function loadImports() {

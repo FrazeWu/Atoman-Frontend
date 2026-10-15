@@ -429,9 +429,17 @@
         </div>
 
         <p v-if="uploadError" class="book-creation__error" role="alert">{{ uploadError }}</p>
-        <p v-if="isSubmitting" class="book-creation__progress" aria-live="polite">
-          正在入库并同步公开书库档案...
-        </p>
+        <div v-if="isSubmitting" class="book-creation__progress">
+          <p role="status" aria-live="polite" aria-atomic="true">{{ submitProgressLabel }}</p>
+          <progress
+            v-if="submitStage === 'upload'"
+            class="book-creation__progress-bar"
+            :value="uploadPercent"
+            max="100"
+            aria-label="电子书上传进度"
+          />
+          <span v-if="submitStage === 'upload'" aria-hidden="true">{{ uploadPercent }}%</span>
+        </div>
 
         <footer class="book-creation__actions">
           <PButton variant="secondary" :disabled="isSubmitting" @click="step = 2">上一步</PButton>
@@ -455,10 +463,9 @@ import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
-import { uploadBookFile, submitBookEdit, submitPublicationRequest } from '@/api/books'
+import { apiPostMultipart } from '@/api/client'
+import { uploadBookFile, createPublicBook } from '@/api/books'
 import { useApi } from '@/composables/useApi'
-import { useAuthStore } from '@/stores/auth'
-import { getActivePinia } from 'pinia'
 
 const props = defineProps<{
   show: boolean
@@ -511,6 +518,13 @@ const draftDescription = ref('')
 
 const isSubmitting = ref(false)
 const uploadError = ref('')
+const uploadPercent = ref(0)
+const submitStage = ref<'cover' | 'upload' | 'catalog'>('upload')
+const submitProgressLabel = computed(() => {
+  if (submitStage.value === 'cover') return '正在上传封面...'
+  if (submitStage.value === 'upload') return '正在上传电子书...'
+  return '正在入库并同步公开书库档案...'
+})
 
 const fileFormat = computed(() => {
   if (!selectedFile.value) return 'EPUB'
@@ -655,94 +669,65 @@ function formatSize(size: number): string {
 
 async function uploadCoverImage(): Promise<string> {
   if (!coverFile.value) return draftCoverUrl.value.trim()
-  try {
-    const formData = new FormData()
-    formData.append('image', coverFile.value)
-    const token = getActivePinia() ? useAuthStore().token : (typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null)
-    const headers: Record<string, string> = {}
-    if (token) headers.Authorization = `Bearer ${token}`
-
-    const res = await fetch(api.blog.uploadImage, {
-      method: 'POST',
-      headers,
-      body: formData,
-    })
-    if (res.ok) {
-      const data = await res.json()
-      return data.url || ''
-    }
-  } catch {
-    // 容错处理
-  }
-  return draftCoverUrl.value.trim()
+  const formData = new FormData()
+  formData.append('image', coverFile.value)
+  const uploaded = await apiPostMultipart<{ url?: string }>(api.blog.uploadImage, formData)
+  if (!uploaded.url?.trim()) throw new Error('封面上传失败，请重试')
+  return uploaded.url
 }
 
 async function submitCreation() {
   if (!selectedFile.value) return
   isSubmitting.value = true
   uploadError.value = ''
+  uploadPercent.value = 0
 
   try {
     // 0. 上传封面（若有本地封面图）
     let coverUrl = draftCoverUrl.value.trim()
     if (coverFile.value) {
+      submitStage.value = 'cover'
       const uploaded = await uploadCoverImage()
       if (uploaded) coverUrl = uploaded
     }
 
     // 1. 上传电子书
+    submitStage.value = 'upload'
     const importSession = await uploadBookFile(selectedFile.value, {
       title: draftTitle.value.trim(),
       author: authorsSummary.value,
+      onProgress: ({ loaded, total }) => {
+        uploadPercent.value = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0
+      },
     })
 
-    // 2. 提交公共作品元数据
+    // 2. 原子创建公共作品并关联已上传正文；安全处理完成后由后端自动公开。
+    submitStage.value = 'catalog'
     const validAuthors = draftAuthors.value.filter(a => a.name.trim())
-    const editPayload = {
+    const isbn = draftIsbn.value.trim()
+    const work = await createPublicBook({
+      import_id: importSession.id,
       title: draftTitle.value.trim(),
       original_title: draftOriginalTitle.value.trim(),
       subtitle: draftSubtitle.value.trim(),
       description: draftDescription.value.trim(),
       language: 'zh',
-      author_name: authorsSummary.value,
-      authors: validAuthors.length > 0 ? validAuthors : undefined,
-      publisher: draftPublisher.value.trim(),
-      producer: draftProducer.value.trim(),
-      published_date: draftPublishedDate.value.trim(),
-      isbn: draftIsbn.value.trim(),
-      isbn13: draftIsbn.value.trim(),
-      page_count: draftPageCount.value ? Number(draftPageCount.value) : undefined,
-      binding: draftBinding.value.trim(),
-      price: draftPrice.value.trim(),
-      cover_url: coverUrl,
-    }
-
-    const editRes = await submitBookEdit({
-      type: 'create',
-      entity_type: 'work',
-      payload: editPayload,
-      sources: [{ url: window.location.origin, kind: 'direct_upload', title: '用户公开贡献' }],
+      authors: validAuthors.map(author => author.name.trim()),
+      edition: {
+        title: draftTitle.value.trim(),
+        publisher: draftPublisher.value.trim(),
+        producer: draftProducer.value.trim(),
+        isbn10: isbn.replace(/[-\s]/g, '').length === 10 ? isbn : undefined,
+        isbn13: isbn.replace(/[-\s]/g, '').length === 13 ? isbn : undefined,
+        published_date: draftPublishedDate.value.trim(),
+        page_count: draftPageCount.value ? Number(draftPageCount.value) : undefined,
+        binding: draftBinding.value.trim(),
+        cover_url: coverUrl,
+      },
+      source_url: window.location.origin,
     })
 
-    const workId = editRes?.entity_id || importSession?.work_id || ''
-    const assetId = importSession?.asset_id || importSession?.id || ''
-
-    // 3. 关联为公共阅读正文
-    try {
-      if (assetId) {
-        await submitPublicationRequest(assetId, {
-          work_id: workId,
-          license_type: 'public_domain',
-          rights_holder: authorsSummary.value || 'Public',
-          source_url: window.location.origin,
-          declaration: '我确认本书内容符合公开阅读分发规范',
-        })
-      }
-    } catch {
-      // 容错处理
-    }
-
-    emit('created', workId, assetId)
+    emit('created', work.id, importSession.asset_id || '')
     emit('close')
   } catch (err: unknown) {
     uploadError.value = err instanceof Error ? err.message : '上传入库失败，请重试'
@@ -1276,10 +1261,17 @@ async function submitCreation() {
 }
 
 .book-creation__progress {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
   margin: 0;
   color: var(--a-color-muted);
   font-size: 0.85rem;
 }
+
+.book-creation__progress p { grid-column: 1 / -1; margin: 0; }
+.book-creation__progress-bar { width: 100%; accent-color: var(--a-color-primary); }
 
 @media (max-width: 640px) {
   .book-creation__row {

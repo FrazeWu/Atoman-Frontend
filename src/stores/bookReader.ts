@@ -1,5 +1,7 @@
-import { defineStore } from 'pinia'
+import { defineStore, getActivePinia } from 'pinia'
+import { onScopeDispose } from 'vue'
 import { ref } from 'vue'
+import { registerSessionReset } from '@/stores/sessionReset'
 
 export interface ActiveReadingBook {
   assetId: string
@@ -94,6 +96,19 @@ export const useBookReaderStore = defineStore('bookReader', () => {
     searchQuery.value = query
   }
 
+  function resetStore() {
+    activeBook.value = null
+    isOverlayOpen.value = false
+    zoomLevel.value = 100
+    sidebarMode.value = 'none'
+    searchQuery.value = ''
+    isSearchOpen.value = false
+    persistBook()
+  }
+
+  const pinia = getActivePinia()
+  if (pinia) onScopeDispose(registerSessionReset(pinia, resetStore))
+
   return {
     activeBook,
     isOverlayOpen,
@@ -109,5 +124,6 @@ export const useBookReaderStore = defineStore('bookReader', () => {
     setSidebarMode,
     setSearchOpen,
     setSearchQuery,
+    resetStore,
   }
 })

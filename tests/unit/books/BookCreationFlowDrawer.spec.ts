@@ -13,29 +13,17 @@ vi.mock('@/stores/auth', () => ({
 
 vi.mock('@/api/books', () => ({
   uploadBookFile: vi.fn(),
-  submitBookEdit: vi.fn(),
-  submitPublicationRequest: vi.fn(),
+  createPublicBook: vi.fn(),
 }))
 
 describe('BookCreationFlowDrawer', () => {
   beforeEach(() => {
     vi.mocked(booksApi.uploadBookFile).mockResolvedValue({
       id: 'import-123',
-      work_id: 'work-123',
       asset_id: 'asset-123',
-      status: 'uploaded',
+      status: 'scanning',
     } as any)
-    vi.mocked(booksApi.submitBookEdit).mockResolvedValue({
-      id: 'edit-123',
-      entity_id: 'work-123',
-      type: 'create',
-      entity_type: 'work',
-      status: 'approved',
-    } as any)
-    vi.mocked(booksApi.submitPublicationRequest).mockResolvedValue({
-      id: 'pub-123',
-      status: 'pending_review',
-    } as any)
+    vi.mocked(booksApi.createPublicBook).mockResolvedValue({ id: 'work-123' } as any)
   })
   it('renders correctly when open with initial step 1', () => {
     const wrapper = mount(BookCreationFlowDrawer, {
@@ -157,8 +145,30 @@ describe('BookCreationFlowDrawer', () => {
     await flushPromises()
 
     expect(booksApi.uploadBookFile).toHaveBeenCalled()
-    expect(booksApi.submitBookEdit).toHaveBeenCalled()
-    expect(booksApi.submitPublicationRequest).toHaveBeenCalled()
+    expect(booksApi.createPublicBook).toHaveBeenCalledWith(expect.objectContaining({
+      import_id: 'import-123',
+      title: '地图上的中国通史',
+    }))
+    expect(vi.mocked(booksApi.uploadBookFile).mock.calls[0]?.[1]?.onProgress).toBeTypeOf('function')
     expect(wrapper.emitted('created')).toBeTruthy()
+  })
+
+  it('does not report success when public catalog creation fails', async () => {
+    vi.mocked(booksApi.createPublicBook).mockRejectedValue(new Error('书目创建失败'))
+    const wrapper = mount(BookCreationFlowDrawer, {
+      props: { show: true },
+      global: { stubs: { PSheet: true, PButton: true, PInput: true, PTextarea: true } },
+    })
+
+    const vm = wrapper.vm as any
+    vm.selectedFile = new File(['epub'], 'book.epub', { type: 'application/epub+zip' })
+    vm.draftTitle = '测试图书'
+    vm.step = 3
+    await flushPromises()
+    await vm.submitCreation()
+
+    expect(wrapper.emitted('created')).toBeUndefined()
+    expect(wrapper.emitted('close')).toBeUndefined()
+    expect(vm.uploadError).toContain('书目创建失败')
   })
 })

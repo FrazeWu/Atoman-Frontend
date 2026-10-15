@@ -5,6 +5,7 @@ import { flushPromises } from "@vue/test-utils";
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { usePlayerStore } from "../../../src/stores/player";
 import { useAuthStore } from "../../../src/stores/auth";
+import { writePodcastProgress } from "../../../src/composables/usePodcastProgress";
 import type { Song } from "../../../src/types";
 
 const mocks = vi.hoisted(() => ({
@@ -916,16 +917,13 @@ describe("player store", () => {
 	});
 
 	it("writes saved podcast progress to the audio element before playback", () => {
-		localStorage.setItem(
-			"atoman:podcast-progress:episode-1",
-			JSON.stringify({
-				episode_id: "episode-1",
-				position_sec: 37,
-				duration_sec: 120,
-				completed: false,
-				last_played_at: "",
-			}),
-		);
+		writePodcastProgress({
+			episode_id: "episode-1",
+			position_sec: 37,
+			duration_sec: 120,
+			completed: false,
+			last_played_at: "",
+		});
 		const player = usePlayerStore();
 
 		player.playSong({

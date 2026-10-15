@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
 
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 
@@ -16,6 +17,7 @@ vi.mock('@/composables/useMusicDrawers', () => ({
 
 describe('useMusicFavoritePlaylist', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     vi.clearAllMocks()
     musicApi.listMusicPlaylists.mockResolvedValue({ data: [{ id: 'favorite-1', name: '最爱', kind: 'favorite' }] })
     musicApi.getMusicPlaylistSongStatus.mockResolvedValue(['song-1'])

@@ -91,15 +91,6 @@
     </template>
     
     <template v-else-if="article && isFeedItemTimeline(article) && article.feed_item">
-      <div v-if="showFeedCover" class="article-cover" :class="{ 'article-cover--fallback': feedCoverFailed }">
-        <img
-          v-if="!feedCoverFailed"
-          :src="feedCoverUrl"
-          :alt="article.feed_item.title"
-          @error="handleFeedCoverError"
-        />
-        <span v-else>{{ feedSourceTitle || 'RSS' }}</span>
-      </div>
       <div class="article-eyebrow">
         <button
           v-if="source && articleSource"
@@ -188,6 +179,16 @@
             <span v-if="commentCount !== undefined && commentCount > 0" class="article-action-count">{{ commentCount }}</span>
           </button>
         </div>
+      </div>
+
+      <div v-if="showFeedCover" class="article-cover" :class="{ 'article-cover--fallback': feedCoverFailed }">
+        <img
+          v-if="!feedCoverFailed"
+          :src="feedCoverUrl"
+          :alt="article.feed_item.title"
+          @error="handleFeedCoverError"
+        />
+        <span v-else>{{ feedSourceTitle || 'RSS' }}</span>
       </div>
 
       <div class="article-body-wrap">
@@ -812,16 +813,19 @@ const emitPlayPodcast = () => {
 
 .article-cover {
   width: 100%;
-  height: 280px;
-  margin-bottom: 3rem;
+  max-height: 360px;
+  margin-bottom: 2rem;
   border: 1px solid var(--a-color-border-soft);
-  filter: grayscale(100%);
+  border-radius: 4px;
+  box-shadow: none !important;
+  background: #ffffff;
   overflow: hidden;
 }
 
 .article-cover img {
+  display: block;
   width: 100%;
-  height: 100%;
+  max-height: 360px;
   object-fit: cover;
 }
 
@@ -829,11 +833,16 @@ const emitPlayPodcast = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 120px;
   padding: 2rem;
-  color: var(--a-color-text-secondary);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  box-shadow: none !important;
   background: var(--a-color-surface-muted);
-  font-size: 1.1rem;
-  font-weight: 600;
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
+  font-size: 0.95rem;
+  font-weight: 500;
 }
 
 .article-eyebrow {
@@ -1040,13 +1049,13 @@ const emitPlayPodcast = () => {
 }
 
 .article-summary {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   color: var(--a-color-muted);
-  line-height: 1.8;
+  line-height: 1.6;
   font-style: italic;
-  margin-bottom: 3rem;
-  padding-left: 1.5rem;
-  border-left: 3px solid var(--a-color-fg);
+  margin-bottom: 2rem;
+  padding-left: 1.25rem;
+  border-left: 2px solid var(--a-color-fg);
 }
 
 .article-body:not(.feed-reader-content) {
@@ -1164,8 +1173,12 @@ const emitPlayPodcast = () => {
 
 @media (max-width: 767px) {
   .article-cover {
-    height: 220px;
-    margin-bottom: 2rem;
+    max-height: 220px;
+    margin-bottom: 1.25rem;
+  }
+
+  .article-cover img {
+    max-height: 220px;
   }
 
   .article-title {

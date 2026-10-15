@@ -969,5 +969,40 @@ describe("FeedArticleSheet", () => {
 		await actionStrip.get('[data-test="feed-article-comments-trigger"]').trigger("click");
 		expect(wrapper.findComponent({ name: "CommentSideSheet" }).props("show")).toBe(true);
 	});
+
+	it("places cover image below the action strip and above article body", () => {
+		const wrapper = mountSheet({
+			props: {
+				show: true,
+				article: {
+					type: "feed_item",
+					published_at: "2026-06-20T00:00:00Z",
+					is_read: false,
+					feed_item: {
+						id: "cover-order-1",
+						feed_source_id: "src-1",
+						title: "封面顺序测试文章",
+						image_url: "https://cdn.example.com/cover.jpg",
+						summary: "<p>文章正文内容</p>",
+						published_at: "2026-06-20T00:00:00Z",
+						fetched_at: "2026-06-20T00:00:00Z",
+					},
+				} as any,
+			},
+			global: {
+				stubs: { PSheet: { template: "<section><slot /></section>" } },
+			},
+		});
+
+		const rootHtml = wrapper.html();
+		const headlineIndex = rootHtml.indexOf("article-headline");
+		const actionStripIndex = rootHtml.indexOf("article-action-strip");
+		const coverIndex = rootHtml.indexOf("article-cover");
+		const bodyIndex = rootHtml.indexOf("article-body-wrap");
+
+		expect(headlineIndex).toBeLessThan(actionStripIndex);
+		expect(actionStripIndex).toBeLessThan(coverIndex);
+		expect(coverIndex).toBeLessThan(bodyIndex);
+	});
 });
 

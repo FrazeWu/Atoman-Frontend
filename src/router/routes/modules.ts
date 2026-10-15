@@ -208,7 +208,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				{ path: "edition/:editionId", components: { default: booksHomeView, overlay: () => import("@/views/books/BookEditionView.vue") } },
 				{
 					path: "library",
-					component: () => import("@/views/books/BooksHomeView.vue"),
+					component: () => import("@/views/books/BookLibraryView.vue"),
 					meta: { requiresAuth: true },
 				},
 				{
@@ -226,7 +226,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				},
 				{
 					path: "import/:importId",
-					component: () => import("@/views/books/BooksHomeView.vue"),
+					component: () => import("@/views/books/BookLibraryView.vue"),
 					meta: { requiresAuth: true },
 				},
 				{

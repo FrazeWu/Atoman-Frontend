@@ -863,4 +863,66 @@ describe("FeedArticleSheet", () => {
 		expect(wrapper.html()).toContain("这是清洗后的正文 HTML");
 		expect(wrapper.html()).not.toContain("只应作为最后回退的摘要");
 	});
+
+	it("renders editorial eyebrow meta for blog post with author and formatted date", () => {
+		const wrapper = mountSheet({
+			props: {
+				show: true,
+				article: {
+					type: "post",
+					published_at: "2026-06-20T00:00:00Z",
+					is_read: false,
+					post: {
+						id: "post-eyebrow-1",
+						title: "眉栏测试博文",
+						content: "正文内容",
+						created_at: "2026-06-20T00:00:00Z",
+						user: { username: "author1", display_name: "测试作家" },
+					},
+				} as any,
+			},
+			global: {
+				stubs: { PSheet: { template: "<section><slot /></section>" } },
+			},
+		});
+
+		const eyebrow = wrapper.get(".article-eyebrow");
+		expect(eyebrow.text()).toContain("测试作家");
+		expect(eyebrow.text()).toContain("2026年6月20日");
+	});
+
+	it("renders editorial eyebrow meta for RSS item with source badge, author, and reading time", () => {
+		const wrapper = mountSheet({
+			props: {
+				show: true,
+				reader: {
+					default_variant: "rss",
+					rss: { html: "<p>这是一段包含约一百字的内容测试正文...</p>" },
+					full_text: { status: "not_started" },
+				},
+				article: {
+					type: "feed_item",
+					published_at: "2026-06-20T00:00:00Z",
+					is_read: false,
+					feed_item: {
+						id: "feed-item-eyebrow-1",
+						feed_source_id: "src-1",
+						title: "RSS 眉栏测试",
+						author: "特约记者",
+						feed_source: { id: "src-1", title: "独立先锋报" },
+						published_at: "2026-06-20T00:00:00Z",
+						fetched_at: "2026-06-20T00:00:00Z",
+					},
+				} as any,
+			},
+			global: {
+				stubs: { PSheet: { template: "<section><slot /></section>" } },
+			},
+		});
+
+		const eyebrow = wrapper.get(".article-eyebrow");
+		expect(eyebrow.text()).toContain("独立先锋报");
+		expect(eyebrow.text()).toContain("特约记者");
+		expect(eyebrow.text()).toContain("2026年6月20日");
+	});
 });

@@ -18,21 +18,22 @@
     @navigate="navigateSheet"
   >
     <template v-if="article && article.type === 'post' && article.post">
-      <div class="article-meta">
+      <div class="article-eyebrow">
         <button
           v-if="source && articleSource"
           type="button"
-          class="article-source-trigger"
+          class="article-source-badge"
           data-test="feed-article-source-trigger"
           @click="emit('open-source')"
         >
           {{ articleSource.title }}
         </button>
-        <a :href="userUrl(article.post.user?.username || '')" class="a-label a-muted" @click.stop>
+        <span v-if="source && articleSource" class="article-eyebrow__sep" aria-hidden="true">·</span>
+        <a :href="userUrl(article.post.user?.username || '')" class="article-author-link" @click.stop>
           {{ article.post.user?.display_name || article.post.user?.username || '未知作者' }}
-          <span aria-hidden="true">→</span>
         </a>
-        <span style="color:var(--a-color-muted-soft)">{{ formatDate(article.published_at) }}</span>
+        <span class="article-eyebrow__sep" aria-hidden="true">·</span>
+        <span class="article-eyebrow__date">{{ formatDate(article.published_at || article.post.created_at) }}</span>
       </div>
       <h1 class="article-title">{{ article.post.title }}</h1>
       <div class="article-subtitle-meta">
@@ -90,43 +91,50 @@
         />
         <span v-else>{{ feedSourceTitle || 'RSS' }}</span>
       </div>
-      <div class="article-meta article-meta--reader">
+      <div class="article-eyebrow">
         <button
           v-if="source && articleSource"
           type="button"
-          class="article-source-trigger"
+          class="article-source-badge"
           data-test="feed-article-source-trigger"
           @click="emit('open-source')"
         >
           {{ articleSource.title }}
         </button>
-        <span v-else class="a-label a-muted">{{ feedSourceTitle || 'RSS' }}</span>
-        <span v-if="article.feed_item.author">{{ article.feed_item.author }}</span>
-        <span>{{ formatDate(article.feed_item.published_at) }}</span>
-        <span v-if="feedWordCountLabel">{{ feedWordCountLabel }}</span>
-        <div class="article-source-actions">
-          <PButton
-            v-if="showSourceSubscribe && articleSource"
-            data-test="feed-article-subscribe-source"
-            :label="articleSource.subscribed ? '已订阅' : '订阅来源'"
-            :variant="articleSource.subscribed ? 'secondary' : 'primary'"
-            :disabled="articleSource.subscribed"
-            :loading="sourceSubscribeBusy"
-            loading-text="订阅中..."
-            @click="emit('subscribe-source')"
-          />
-          <button
-            type="button"
-            class="article-star-button"
-            data-test="feed-article-quick-star"
-            :aria-label="feedItemStarred ? '取消收藏文章' : '收藏文章'"
-            :title="feedItemStarred ? '取消收藏文章' : '收藏文章'"
-            :aria-pressed="feedItemStarred"
-            @click="toggleFeedItemStar"
-          >
-            <Bookmark :size="16" aria-hidden="true" :fill="feedItemStarred ? 'currentColor' : 'none'" />
-          </button>
-        </div>
+        <span v-else class="article-source-badge article-source-badge--static">{{ feedSourceTitle || 'RSS' }}</span>
+        <template v-if="article.feed_item.author">
+          <span class="article-eyebrow__sep" aria-hidden="true">·</span>
+          <span class="article-author-name">{{ article.feed_item.author }}</span>
+        </template>
+        <span class="article-eyebrow__sep" aria-hidden="true">·</span>
+        <span class="article-eyebrow__date">{{ formatDate(article.feed_item.published_at || article.feed_item.fetched_at) }}</span>
+        <template v-if="feedWordCountLabel">
+          <span class="article-eyebrow__sep" aria-hidden="true">·</span>
+          <span class="article-eyebrow__reading-time">{{ feedWordCountLabel }}</span>
+        </template>
+      </div>
+      <div class="article-source-actions">
+        <PButton
+          v-if="showSourceSubscribe && articleSource"
+          data-test="feed-article-subscribe-source"
+          :label="articleSource.subscribed ? '已订阅' : '订阅来源'"
+          :variant="articleSource.subscribed ? 'secondary' : 'primary'"
+          :disabled="articleSource.subscribed"
+          :loading="sourceSubscribeBusy"
+          loading-text="订阅中..."
+          @click="emit('subscribe-source')"
+        />
+        <button
+          type="button"
+          class="article-star-button"
+          data-test="feed-article-quick-star"
+          :aria-label="feedItemStarred ? '取消收藏文章' : '收藏文章'"
+          :title="feedItemStarred ? '取消收藏文章' : '收藏文章'"
+          :aria-pressed="feedItemStarred"
+          @click="toggleFeedItemStar"
+        >
+          <Bookmark :size="16" aria-hidden="true" :fill="feedItemStarred ? 'currentColor' : 'none'" />
+        </button>
       </div>
       <h1 class="article-title">{{ article.feed_item.title }}</h1>
       <div class="article-toolbar">
@@ -804,6 +812,81 @@ const emitPlayPodcast = () => {
   background: var(--a-color-surface-muted);
   font-size: 1.1rem;
   font-weight: 600;
+}
+
+.article-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin-bottom: 0.75rem;
+  font-family: var(--a-font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--a-color-muted);
+}
+
+.article-source-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  background: var(--a-color-surface-muted);
+  box-shadow: none !important;
+  color: var(--a-color-text);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.25;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.article-source-badge:hover {
+  border-color: var(--a-color-text);
+}
+
+.article-source-badge:focus-visible {
+  outline: 2px solid var(--a-color-text);
+  outline-offset: 2px;
+}
+
+.article-source-badge--static {
+  cursor: default;
+}
+
+.article-source-badge--static:hover {
+  border-color: var(--a-color-border-soft);
+}
+
+.article-author-link {
+  font-weight: 500;
+  color: var(--a-color-text);
+  text-decoration: none;
+}
+
+.article-author-link:hover {
+  text-decoration: underline;
+}
+
+.article-author-name {
+  font-weight: 500;
+  color: var(--a-color-text);
+}
+
+.article-eyebrow__sep {
+  color: var(--a-color-muted);
+  user-select: none;
+}
+
+.article-eyebrow__date {
+  color: var(--a-color-muted);
+}
+
+.article-eyebrow__reading-time {
+  color: var(--a-color-muted);
 }
 
 .article-meta {

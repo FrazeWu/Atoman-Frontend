@@ -20,7 +20,7 @@
         v-for="conversation in filteredConversations"
         :key="conversation.id"
         type="button"
-        class="dm-conversation-list__item"
+        class="dm-conversation-list__item sidebar-item"
         :class="{
           'is-active': conversation.id === activeConversationId,
           active: conversation.id === activeConversationId,
@@ -136,7 +136,7 @@ const filteredConversations = computed(() => {
 const monogramFor = (name?: string): string => {
   const trimmed = name?.trim()
   if (!trimmed) return '?'
-  return trimmed.charAt(0).toUpperCase()
+  return (Array.from(trimmed)[0] || '?').toUpperCase()
 }
 
 const formatTime = (value: string | null): string => {
@@ -146,7 +146,7 @@ const formatTime = (value: string | null): string => {
 
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-  const yesterdayStart = todayStart - 86400000
+  const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).getTime()
   const dateTime = date.getTime()
 
   if (dateTime >= todayStart) {

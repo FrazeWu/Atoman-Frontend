@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { IconPlayerPause as Pause, IconPlayerPlay as Play } from '@tabler/icons-vue'
+import { Pause, Play } from 'lucide-vue-next'
 import { getMusicAppleSongPreview, type MusicAppleSongPreview } from '@/api/musicV1'
 import PButton from '@/components/ui/PButton.vue'
 

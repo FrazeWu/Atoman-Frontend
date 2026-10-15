@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { IconBook2 as Book, IconMessages as Messages, IconMicrophone2 as Microphone, IconMusic as Music, IconRss as Rss, IconVideo as Video } from '@tabler/icons-vue'
+import { BookOpen as Book, MessagesSquare as Messages, Mic as Microphone, Music, Rss, Video } from 'lucide-vue-next'
 import { toRef, type Component } from 'vue'
 
 import { moduleNavOrder, moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'

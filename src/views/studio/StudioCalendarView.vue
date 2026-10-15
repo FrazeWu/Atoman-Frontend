@@ -49,7 +49,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { IconAlertTriangle as AlertTriangle, IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight } from '@tabler/icons-vue'
+import { AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 
 import PButton from '@/components/ui/PButton.vue'

@@ -36,7 +36,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { IconCheck as Check, IconFlag as Flag } from '@tabler/icons-vue'
+import { Check, Flag } from 'lucide-vue-next'
 
 import { apiRequestResult } from '@/api/client'
 import PDropdown from '@/components/ui/PDropdown.vue'

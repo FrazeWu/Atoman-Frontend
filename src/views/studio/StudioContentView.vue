@@ -119,7 +119,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { IconCheck as Check, IconPlus as Plus, IconSearch as Search } from '@tabler/icons-vue'
+import { Check, Plus, Search } from 'lucide-vue-next'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 import StudioContentTable from '@/components/studio/StudioContentTable.vue'

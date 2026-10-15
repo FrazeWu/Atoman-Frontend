@@ -74,7 +74,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { IconMessage2 as MessageSquareText, IconPlayerPlay as Play, IconEdit as SquarePen } from '@tabler/icons-vue'
+import { MessageSquareText, Play, SquarePen } from 'lucide-vue-next'
 import type { MusicLyricsAnnotation, MusicSongLyricsLine } from '@/api/musicV1'
 import { resolveLyricsSelection } from '@/utils/musicLyricsAnnotation'
 

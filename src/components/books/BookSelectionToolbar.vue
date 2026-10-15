@@ -117,11 +117,11 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import {
-  IconCopy as Copy,
-  IconMessagePlus as MessageSquarePlus,
-  IconTrash as Trash2,
-  IconUnderline as Underline,
-} from '@tabler/icons-vue'
+  Copy,
+  MessageSquarePlus,
+  Trash2,
+  Underline,
+} from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import type { BookAnnotation, BookHighlightColor, BookHighlightStyle } from '@/api/books'
 

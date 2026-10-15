@@ -9,7 +9,7 @@
 </template>
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { IconBook2 as Book } from '@tabler/icons-vue'
+import { Book } from 'lucide-vue-next'
 import { resolveMediaImageURL, resolveMediaURL } from '@/utils/mediaUrl'
 
 const props = withDefaults(defineProps<{ src?: string; title: string; eager?: boolean; width?: number }>(), { eager: false, width: 320 })

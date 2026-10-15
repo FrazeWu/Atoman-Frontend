@@ -65,7 +65,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { IconBook2 as BookOpen, IconX as X } from '@tabler/icons-vue'
+import { BookOpen, X } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import { useBookReaderStore } from '@/stores/bookReader'
 

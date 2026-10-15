@@ -347,7 +347,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useAuthStore } from "@/stores/auth";
 import { useAudioPlayerChrome } from "@/composables/useAudioPlayerChrome";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
-import { IconRepeat as Repeat, IconArrowsShuffle as Shuffle, IconList as List, IconVolume2 as Volume2, IconVolume as Volume1, IconVolume as Volume, IconVolumeOff as VolumeX, IconHeart as Heart, IconPlus as Plus, IconClock as Clock, IconChevronRight as ChevronRight, IconChevronLeft as ChevronLeft, IconChevronUp as ChevronUp, IconPlayerPlay as Play, IconDownload as Download } from '@tabler/icons-vue';
+import { Repeat, Shuffle, List, Volume2, Volume1, Volume, VolumeX, Heart, Plus, Clock, ChevronRight, ChevronLeft, ChevronUp, Play, Download } from 'lucide-vue-next';
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
 import AudioWaveformProgress from "@/components/music/AudioWaveformProgress.vue";
 import AudioPlayerQueue from "@/components/music/AudioPlayerQueue.vue";

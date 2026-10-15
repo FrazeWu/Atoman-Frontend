@@ -153,7 +153,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { IconArrowLeft as ArrowLeft, IconChevronDown as ChevronDown, IconChevronUp as ChevronUp, IconFileText as FileText, IconGripVertical as GripVertical, IconMicrophone2 as Mic2, IconPlus as Plus, IconSearch as Search, IconTrash as Trash2, IconVideo as Video } from '@tabler/icons-vue'
+import { ArrowLeft, ChevronDown, ChevronUp, FileText, GripVertical, Mic2, Plus, Search, Trash2, Video } from 'lucide-vue-next'
 import { RouterLink, useRoute } from 'vue-router'
 
 import PButton from '@/components/ui/PButton.vue'

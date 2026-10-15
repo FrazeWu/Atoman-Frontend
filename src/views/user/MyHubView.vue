@@ -68,14 +68,14 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
-  IconBook2 as BookOpen,
-  IconBookmark as Bookmark,
-  IconClock as Clock,
-  IconHeadphones as Headphones,
-  IconMail as Mail,
-  IconPencil as Pencil,
-  IconPlayerPlay as Play,
-} from '@tabler/icons-vue'
+  BookOpen,
+  Bookmark,
+  Clock,
+  Headphones,
+  Mail,
+  Pencil,
+  Play,
+} from 'lucide-vue-next'
 
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
 import MyHubPreviewSection, { type MyHubPreviewItem } from '@/components/content/MyHubPreviewSection.vue'

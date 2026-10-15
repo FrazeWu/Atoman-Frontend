@@ -157,7 +157,7 @@
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { onMounted, ref, computed } from 'vue'
-import { IconCamera as Camera, IconArrowBackUp as Undo2 } from '@tabler/icons-vue'
+import { Camera, Undo2 } from 'lucide-vue-next'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import {
   getUserAvatarRestoreAvailability,

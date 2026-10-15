@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { IconArrowRight as ArrowRight, IconHash as Hash, IconSearch as Search } from '@tabler/icons-vue'
+import { ArrowRight, Hash, Search } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import {
   createMusicTag,

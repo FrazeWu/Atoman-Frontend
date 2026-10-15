@@ -65,7 +65,7 @@ import { useInboxStore } from '@/stores/inbox'
 import { notificationRoom } from '@/config/moduleRooms'
 import { isAdminRole } from '@/utils/roles'
 import { resolveMediaURL } from '@/utils/mediaUrl'
-import { IconMail as Mail, IconPencil as PencilLine } from '@tabler/icons-vue'
+import { Mail, PencilLine } from 'lucide-vue-next'
 import NotificationToastStack from '@/components/system/NotificationToastStack.vue'
 import NotificationPopover from '@/components/system/NotificationPopover.vue'
 

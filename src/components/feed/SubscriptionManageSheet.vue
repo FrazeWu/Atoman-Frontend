@@ -603,7 +603,7 @@ import type {
   SubscriptionHubType,
   SubscriptionSyncResult,
 } from '@/types'
-import { IconSettings as Settings, IconTrash as Trash } from '@tabler/icons-vue'
+import { Settings, Trash } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PField from '@/components/ui/PField.vue'

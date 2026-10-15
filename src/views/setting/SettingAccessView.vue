@@ -209,7 +209,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { IconBook2 as Book, IconMessages as Messages, IconMicrophone2 as Microphone, IconMusic as Music, IconRss as Rss, IconVideo as Video, IconX as X } from '@tabler/icons-vue'
+import { BookOpen as Book, MessagesSquare as Messages, Mic as Microphone, Music, Rss, Video, X } from 'lucide-vue-next'
 
 import SettingAnnouncementsView from '@/views/setting/SettingAnnouncementsView.vue'
 import SettingCommunityView from '@/views/setting/SettingCommunityView.vue'

@@ -17,7 +17,7 @@
           {{ statusBadge }}
         </span>
         <span v-if="ratingText" class="book-library-card__rating">
-          <IconStar :size="12" aria-hidden="true" />
+          <Star :size="12" aria-hidden="true" />
           <span>{{ ratingText }}</span>
         </span>
       </div>
@@ -54,7 +54,7 @@
           data-action="read"
           @click="$emit('read', readableAssetId)"
         >
-          <IconBook2 :size="14" aria-hidden="true" />
+          <BookOpen :size="14" aria-hidden="true" />
           <span>阅读</span>
         </PButton>
 
@@ -65,7 +65,7 @@
           data-action="retry"
           @click="$emit('retry', item.id)"
         >
-          <IconRotateClockwise :size="14" aria-hidden="true" />
+          <RotateCw :size="14" aria-hidden="true" />
           <span>重试</span>
         </PButton>
 
@@ -77,7 +77,7 @@
           title="关联公共作品"
           @click="$emit('link-work', item.id)"
         >
-          <IconLink :size="14" aria-hidden="true" />
+          <Link :size="14" aria-hidden="true" />
           <span>关联</span>
         </PButton>
 
@@ -89,7 +89,7 @@
           class="book-library-card__delete-btn"
           @click="$emit('delete', actionItemId)"
         >
-          <IconTrash :size="14" aria-hidden="true" />
+          <Trash2 :size="14" aria-hidden="true" />
           <span>{{ isImport ? '删除' : '移出' }}</span>
         </PButton>
       </div>
@@ -101,12 +101,12 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
-  IconBook2,
-  IconStar,
-  IconTrash,
-  IconLink,
-  IconRotateClockwise,
-} from '@tabler/icons-vue'
+  BookOpen,
+  Link,
+  RotateCw,
+  Star,
+  Trash2,
+} from 'lucide-vue-next'
 import type { BookShelfItem, BookImportSession } from '@/api/books'
 import PButton from '@/components/ui/PButton.vue'
 import BookCover from './BookCover.vue'

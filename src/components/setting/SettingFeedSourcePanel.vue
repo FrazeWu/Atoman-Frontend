@@ -352,7 +352,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { IconChevronDown as ChevronDown, IconChevronUp as ChevronUp, IconRefresh as RefreshCw } from '@tabler/icons-vue'
+import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-vue-next'
 
 import SettingFeedSourceItemsSheet from '@/components/setting/SettingFeedSourceItemsSheet.vue'
 import PButton from '@/components/ui/PButton.vue'

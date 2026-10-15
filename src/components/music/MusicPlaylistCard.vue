@@ -69,7 +69,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { IconBookmark as Bookmark, IconHeadphones as Headphones, IconMusic as Music2 } from '@tabler/icons-vue'
+import { Bookmark, Headphones, Music2 } from 'lucide-vue-next'
 
 import PMediaCard from '@/components/ui/PMediaCard.vue'
 import { resolveMediaImageURL } from '@/utils/mediaUrl'

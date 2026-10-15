@@ -99,7 +99,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { IconArrowLeft as ArrowLeft, IconDownload as Download, IconDots as Ellipsis, IconEye as Eye, IconEyeOff as EyeOff, IconFileText as FileText, IconHistory as History, IconUpload as Upload } from '@tabler/icons-vue'
+import { ArrowLeft, Download, Ellipsis, Eye, EyeOff, FileText, History, Upload } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'

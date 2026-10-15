@@ -196,7 +196,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { IconListTree as ListTree } from '@tabler/icons-vue'
+import { ListTree } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import SubscriptionManageSheet from '@/components/feed/SubscriptionManageSheet.vue'
 import OAuthIdentitySettingsPanel from '@/components/user/OAuthIdentitySettingsPanel.vue'

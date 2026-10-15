@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
-import { IconTrash as Trash } from '@tabler/icons-vue'
+import { Trash } from 'lucide-vue-next'
 import {
   addMusicTag,
   deleteMusicTag,

@@ -191,7 +191,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { IconBook2 as BookOpen, IconLink as Link2, IconRotate2 as RotateCcw, IconTrash as Trash2, IconUpload as Upload } from '@tabler/icons-vue'
+import { BookOpen, Link2, RotateCcw, Trash2, Upload } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PSelect from '@/components/ui/PSelect.vue'

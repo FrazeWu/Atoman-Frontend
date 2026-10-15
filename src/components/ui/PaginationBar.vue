@@ -56,7 +56,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { IconChevronLeft as ChevronLeft, IconChevronRight as ChevronRight } from '@tabler/icons-vue'
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 
 let paginationIDSequence = 0

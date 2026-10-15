@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IconArrowUpRight as ArrowUpRight, IconPhoto as Photo } from '@tabler/icons-vue'
+import { ArrowUpRight, ImageIcon as Photo } from 'lucide-vue-next'
 
 export interface MyHubPreviewItem {
   id: string

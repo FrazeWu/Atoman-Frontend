@@ -128,7 +128,7 @@
 <script setup lang="ts">
 import '@/assets/editor.css'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { IconAt as AtSign, IconQuote as Quote } from '@tabler/icons-vue'
+import { AtSign, Quote } from 'lucide-vue-next'
 import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate, WidgetType, highlightActiveLine, highlightActiveLineGutter, highlightWhitespace, keymap, lineNumbers, placeholder as cmPlaceholder, scrollPastEnd } from '@codemirror/view'
 import { Compartment, EditorState, RangeSetBuilder, StateField, type Text } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands'

@@ -119,7 +119,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { IconPencil as Pencil, IconPlus as Plus, IconTrash as Trash2 } from '@tabler/icons-vue'
+import { Pencil, Plus, Trash2 } from 'lucide-vue-next'
 
 import { apiRequestResult } from '@/api/client'
 import PostCoverField from '@/components/blog/PostCoverField.vue'

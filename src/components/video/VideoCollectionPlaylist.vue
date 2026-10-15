@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IconCheck as Check, IconPlayerPlay as Play } from '@tabler/icons-vue'
+import { Check, Play } from 'lucide-vue-next'
 import { computed } from 'vue'
 
 import type { Collection, Video } from '@/types'

@@ -148,7 +148,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { IconChecks as CheckCheck, IconFlag as Flag, IconNotebook as NotebookPen, IconPin as Pin, IconArrowBackUp as Reply, IconRotate2 as RotateCcw, IconSearch as Search, IconTrash as Trash2 } from '@tabler/icons-vue'
+import { CheckCheck, Flag, NotebookPen, Pin, Reply, RotateCcw, Search, Trash2 } from 'lucide-vue-next'
 import { RouterLink, useRoute } from 'vue-router'
 
 import { commentApi, type CommentTargetKind, type CommentTargetRef } from '@/api/comments'

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { IconKeyboard as Keyboard } from '@tabler/icons-vue'
+import { Keyboard } from 'lucide-vue-next'
 
 export interface ShortcutHint {
   key: string

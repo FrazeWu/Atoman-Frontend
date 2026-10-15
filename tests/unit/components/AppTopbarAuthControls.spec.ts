@@ -45,6 +45,7 @@ const createTestRouter = () =>
 			{ path: "/videos", component: { template: "<div />" } },
 			{ path: "/podcasts", component: { template: "<div />" } },
 			{ path: "/inbox", component: { template: "<div />" } },
+			{ path: "/messages", component: { template: "<div />" } },
 			{ path: "/posts/bookmarks", component: { template: "<div />" } },
 			{ path: "/site/setting", component: { template: "<div />" } },
 			{ path: "/users/:handle/settings", component: { template: "<div />" } },
@@ -124,7 +125,7 @@ describe("AppTopbarAuthControls", () => {
 		expect(
 			wrapper.find('[data-testid="notification-link"]').text(),
 		).not.toContain("◌");
-		expect(wrapper.find('[data-testid="notification-link"] .tabler-icon-mail').exists()).toBe(true);
+		expect(wrapper.find('[data-testid="notification-link"] .lucide-mail').exists()).toBe(true);
 		expect(wrapper.find('a[href="/me"]').exists()).toBe(true);
 		expect(wrapper.text()).toContain("我的");
 		expect(wrapper.text()).not.toContain("我的空间");

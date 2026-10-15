@@ -98,7 +98,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { IconBookmark as Bookmark, IconFlag as Flag, IconSearch as Search } from '@tabler/icons-vue'
+import { Bookmark, Flag, Search } from 'lucide-vue-next'
 import ePub from 'epubjs'
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'

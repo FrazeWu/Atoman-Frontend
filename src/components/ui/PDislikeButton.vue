@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { IconThumbDown as ThumbsDown } from '@tabler/icons-vue'
+import { ThumbsDown } from 'lucide-vue-next'
 
 const props = withDefaults(defineProps<{
   disliked?: boolean

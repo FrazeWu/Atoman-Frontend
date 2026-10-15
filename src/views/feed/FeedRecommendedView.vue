@@ -1047,7 +1047,7 @@ async function restorePendingArticle() {
             type: 'feed_item',
             feed_item: item,
             is_read: false,
-            published_at: item.published_at || item.created_at,
+            published_at: item.published_at || (item as { created_at?: string }).created_at || '',
           } as TimelineItem
         }
       } catch {

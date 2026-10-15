@@ -23,7 +23,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { IconChevronLeft as ChevronLeft } from '@tabler/icons-vue'
+import { ChevronLeft } from 'lucide-vue-next'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
 import PPageHeader from '@/components/ui/PPageHeader.vue'

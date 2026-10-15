@@ -41,7 +41,7 @@
           data-action="continue-read"
           @click="$emit('read', item.asset_id)"
         >
-          <IconBook2 :size="15" aria-hidden="true" />
+          <BookOpen :size="15" aria-hidden="true" />
           <span>继续阅读</span>
         </PButton>
       </div>
@@ -52,7 +52,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { IconBook2 } from '@tabler/icons-vue'
+import { BookOpen } from 'lucide-vue-next'
 import type { BookContinueReading } from '@/api/books'
 import PButton from '@/components/ui/PButton.vue'
 import BookCover from './BookCover.vue'

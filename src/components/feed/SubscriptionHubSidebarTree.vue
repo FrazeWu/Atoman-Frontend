@@ -75,7 +75,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { IconSettings2 as Settings2 } from "@tabler/icons-vue";
+import { Settings2 } from 'lucide-vue-next';
 import PAvatar from "@/components/ui/PAvatar.vue";
 import type {
   SubscriptionHubMembership,

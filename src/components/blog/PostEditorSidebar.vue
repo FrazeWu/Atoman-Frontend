@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { IconX as X } from '@tabler/icons-vue'
+import { X } from 'lucide-vue-next'
 
 type FlattenedOutlineNode = {
   id: string

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { IconClock as Clock3, IconSettings as Settings, IconStar as Star } from '@tabler/icons-vue'
+import { Clock3, ListMusic, Settings } from 'lucide-vue-next'
 import { getPodcastBookmarks, getPodcastShowBookmarks } from '@/api/podcast'
 import { listPodcastProgress } from '@/composables/usePodcastProgress'
 import { useAuthStore } from '@/stores/auth'
@@ -23,7 +23,7 @@ const stats = computed<HubStat[]>(() => [
 ])
 
 const links = computed<HubLink[]>(() => [
-  { label: '播放列表', to: '/podcasts/favorites', icon: Star },
+  { label: '播放列表', to: '/podcasts/favorites', icon: ListMusic },
   { label: '继续收听', to: '/podcasts/subscriptions', icon: Clock3 },
   { label: '播客设置', to: `/users/${authStore.user?.username}/settings`, icon: Settings },
 ])

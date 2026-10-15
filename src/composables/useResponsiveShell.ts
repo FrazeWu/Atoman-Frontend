@@ -1,5 +1,23 @@
 import type { Component } from "vue";
-import { IconBookmark as Bookmark, IconBook2 as BookOpen, IconCompass as Compass, IconDots as Ellipsis, IconFolder as Folder, IconHeart as Heart, IconPlaylist as ListMusic, IconMessage as MessageSquare, IconRadio as Radio, IconRss as Rss, IconSearch as Search, IconUser as UserRound } from '@tabler/icons-vue';
+import {
+	Bookmark,
+	BookOpen,
+	Clock,
+	Compass,
+	Ellipsis,
+	FileText,
+	Folder,
+	Heart,
+	ListMusic,
+	MessageSquare,
+	Music,
+	Podcast,
+	Rss,
+	Scale,
+	Search,
+	UserRound,
+	Video,
+} from 'lucide-vue-next';
 import { modulePathUrl, moduleUrl } from "@/router/siteUrls";
 import type { ModuleRoomKey } from "@/config/moduleRooms";
 
@@ -64,13 +82,13 @@ const MOBILE_PRIMARY_TABS: Record<ModuleRoomKey, MobilePrimaryTab[]> = {
 		["me", "我的", "/me", UserRound],
 	]),
 	debate: tabs("debate", [
-		["topics", "辩题", "/", MessageSquare],
+		["topics", "辩题", "/", Scale],
 		["rules", "规则", "/rules", BookOpen],
 		["search", "搜索", "/search", Search],
 		["me", "我的", "/me", UserRound],
 	]),
 	timeline: tabs("timeline", [
-		["timeline", "时间轴", "/", Radio],
+		["timeline", "时间轴", "/", Clock],
 		["persons", "人物", "/persons", UserRound],
 		["search", "搜索", "/search", Search],
 		["me", "我的", "/me", UserRound],
@@ -91,9 +109,9 @@ const MOBILE_PRIMARY_TABS: Record<ModuleRoomKey, MobilePrimaryTab[]> = {
 
 const MORE_ITEMS: MobileMoreItem[] = [
 	{ module: "feed", label: "订阅", href: moduleUrl("feed"), icon: Rss },
-	{ module: "blog", label: "博客", href: moduleUrl("blog"), icon: Compass },
+	{ module: "blog", label: "博客", href: moduleUrl("blog"), icon: FileText },
 	{ module: "books", label: "书籍", href: moduleUrl("books"), icon: BookOpen },
-	{ module: "music", label: "音乐", href: moduleUrl("music"), icon: Radio },
+	{ module: "music", label: "音乐", href: moduleUrl("music"), icon: Music },
 	{
 		module: "forum",
 		label: "论坛",
@@ -104,21 +122,21 @@ const MORE_ITEMS: MobileMoreItem[] = [
 		module: "debate",
 		label: "辩题",
 		href: moduleUrl("debate"),
-		icon: MessageSquare,
+		icon: Scale,
 	},
 	{
 		module: "timeline",
 		label: "时间线",
 		href: moduleUrl("timeline"),
-		icon: Radio,
+		icon: Clock,
 	},
 	{
 		module: "podcast",
 		label: "播客",
 		href: moduleUrl("podcast"),
-		icon: ListMusic,
+		icon: Podcast,
 	},
-	{ module: "video", label: "视频", href: moduleUrl("video"), icon: Compass },
+	{ module: "video", label: "视频", href: moduleUrl("video"), icon: Video },
 ];
 
 export const getMobilePrimaryTabs = (
@@ -128,8 +146,8 @@ export const getMobilePrimaryTabs = (
 
 const MOBILE_GLOBAL_TABS: MobilePrimaryTab[] = [
 	{ key: 'feed', label: 'Feed', module: 'feed', href: moduleUrl('feed'), icon: Rss },
-	{ key: 'blog', label: '博客', module: 'blog', href: moduleUrl('blog'), icon: Compass },
-	{ key: 'music', label: '音乐', module: 'music', href: moduleUrl('music'), icon: Radio },
+	{ key: 'blog', label: '博客', module: 'blog', href: moduleUrl('blog'), icon: FileText },
+	{ key: 'music', label: '音乐', module: 'music', href: moduleUrl('music'), icon: Music },
 	{ key: 'more', label: '更多', module: 'feed', href: '/modules', icon: Ellipsis },
 ];
 

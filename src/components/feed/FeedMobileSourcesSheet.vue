@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { IconChevronLeft as ChevronLeft } from '@tabler/icons-vue'
+import { ChevronLeft } from 'lucide-vue-next'
 import SubscriptionHubSidebarTree from '@/components/feed/SubscriptionHubSidebarTree.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import type { SubscriptionHubSelection, SubscriptionHubTree, SubscriptionHubType } from '@/types'

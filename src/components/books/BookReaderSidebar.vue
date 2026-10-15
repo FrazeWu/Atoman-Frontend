@@ -232,15 +232,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import {
-  IconLayoutGrid as LayoutGrid,
-  IconListTree as ListTree,
-  IconBookmark as Bookmark,
-  IconTrash as Trash,
-  IconHighlight as Highlight,
-  IconDownload as Download,
-  IconNotes as Notes,
-  IconArrowUpRight as ArrowUpRight,
-} from '@tabler/icons-vue'
+  LayoutGrid,
+  ListTree,
+  Bookmark,
+  Trash,
+  Highlighter as Highlight,
+  Download,
+  StickyNote as Notes,
+  ArrowUpRight,
+} from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import type { BookReaderTocItem } from '@/components/books/BookReaderShell.vue'
 import type { BookReaderBookmark } from '@/utils/bookReaderPreferences'

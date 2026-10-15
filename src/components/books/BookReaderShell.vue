@@ -155,15 +155,15 @@
 <script setup lang="ts">
 import { computed, ref, useSlots, watch } from 'vue'
 import {
-  IconArrowLeft as ArrowLeft,
-  IconArrowsDownUp as ArrowsDownUp,
-  IconChevronLeft as ChevronLeft,
-  IconChevronRight as ChevronRight,
-  IconFileDescription as FileDescription,
-  IconLayoutSidebar as LayoutSidebar,
-  IconZoomIn as ZoomIn,
-  IconZoomOut as ZoomOut,
-} from '@tabler/icons-vue'
+  ArrowLeft,
+  ArrowUpDown as ArrowsDownUp,
+  ChevronLeft,
+  ChevronRight,
+  FileText as FileDescription,
+  PanelLeft as LayoutSidebar,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-vue-next'
 import type { BookReaderScrollMode } from '@/utils/bookReaderPreferences'
 
 export type BookReaderTocItem = {

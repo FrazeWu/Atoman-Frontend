@@ -105,7 +105,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import { IconPencil as Pencil, IconPlus as Plus, IconTrash as Trash2 } from '@tabler/icons-vue'
+import { Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 
 import { apiDeleteJson, apiGetEnvelope, apiPatchJson, apiPostJson, apiRequestResult } from '@/api/client'

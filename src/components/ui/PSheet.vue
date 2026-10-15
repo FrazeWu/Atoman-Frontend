@@ -194,7 +194,7 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, provide, ref, useSlots, watch } from 'vue'
 import { getActivePinia } from 'pinia'
-import { IconX as X, IconChevronLeft as ChevronLeft, IconChevronUp as ChevronUp, IconChevronDown as ChevronDown } from '@tabler/icons-vue'
+import { X, ChevronLeft, ChevronUp, ChevronDown } from 'lucide-vue-next'
 import { isStandaloneMobileApp } from '@/utils/appRuntime'
 import { useDialogFocus } from '@/composables/useDialogFocus'
 import { useSheetStore } from '@/stores/sheet'

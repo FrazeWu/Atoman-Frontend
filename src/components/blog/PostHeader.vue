@@ -80,7 +80,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { IconBook2 as BookOpen, IconLayoutSidebarRight as PanelRight } from '@tabler/icons-vue'
+import { BookOpen, PanelRight } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import PLink from '@/components/ui/PLink.vue'
 import { userUrl } from '@/composables/useSubdomainNav'

@@ -72,7 +72,7 @@
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { IconAt as AtSign } from '@tabler/icons-vue'
+import { AtSign } from 'lucide-vue-next'
 
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'

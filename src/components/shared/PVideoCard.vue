@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IconClock as Clock3, IconPlayerPlay as Play } from '@tabler/icons-vue'
+import { Clock3, Play } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 

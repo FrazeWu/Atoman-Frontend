@@ -29,7 +29,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { IconListTree as ListTree } from '@tabler/icons-vue'
+import { ListTree } from 'lucide-vue-next'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 
 import PButton from '@/components/ui/PButton.vue'

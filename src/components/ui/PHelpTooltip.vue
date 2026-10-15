@@ -53,7 +53,7 @@
 
 <script setup lang="ts">
 import { computed, getCurrentInstance, onBeforeUnmount, onMounted, ref } from 'vue'
-import { IconHelpCircle as HelpCircle } from '@tabler/icons-vue'
+import { HelpCircle } from 'lucide-vue-next'
 
 const props = withDefaults(defineProps<{
   text?: string

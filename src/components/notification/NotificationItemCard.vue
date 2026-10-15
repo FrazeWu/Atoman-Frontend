@@ -18,7 +18,7 @@
     <!-- Avatar and Action Badge -->
     <div class="card-avatar-wrapper">
       <div v-if="isSystemNotification && !actorAvatar" class="card-system-avatar" title="系统通知">
-        <IconShieldExclamation :size="compact ? 14 : 18" stroke-width="2" />
+        <ShieldAlert :size="compact ? 14 : 18" stroke-width="2" />
       </div>
       <PAvatar
         v-else
@@ -64,7 +64,7 @@
             aria-label="展开或收起详情"
             @click.stop="toggleExpand"
           >
-            <IconChevronDown
+            <ChevronDown
               :size="15"
               class="card-chevron-icon"
               :class="{ 'card-chevron-icon--rotated': isExpanded }"
@@ -139,13 +139,13 @@
             title="标为已读"
             @click.stop="onMarkRead"
           >
-            <IconCheck :size="14" />
+            <Check :size="14" />
             <span>已读</span>
           </button>
 
           <details class="card-more-menu" data-test="action-more" @click.stop>
             <summary class="card-btn card-btn--icon" aria-label="更多操作">
-              <IconDots :size="16" />
+              <Ellipsis :size="16" />
             </summary>
             <div class="card-menu-dropdown" role="menu">
               <button
@@ -175,15 +175,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import {
-  IconAt,
-  IconCheck,
-  IconChevronDown,
-  IconDots,
-  IconGitPullRequest,
-  IconHeart,
-  IconMessage2,
-  IconShieldExclamation,
-} from '@tabler/icons-vue'
+  AtSign,
+  Check,
+  ChevronDown,
+  Ellipsis,
+  GitPullRequest,
+  Heart,
+  MessageSquare,
+  ShieldAlert,
+} from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import NotificationContextQuote from '@/components/notification/NotificationContextQuote.vue'
@@ -280,17 +280,17 @@ const notificationBody = computed(() => formatNotificationBody(props.notificatio
 const badgeIcon = computed(() => {
   switch (actionType.value) {
     case 'like':
-      return IconHeart
+      return Heart
     case 'reply':
     case 'forum':
-      return IconMessage2
+      return MessageSquare
     case 'mention':
-      return IconAt
+      return AtSign
     case 'collaboration':
-      return IconGitPullRequest
+      return GitPullRequest
     case 'system':
     default:
-      return IconShieldExclamation
+      return ShieldAlert
   }
 })
 

@@ -29,7 +29,7 @@
         <ChevronRight :size="18" aria-hidden="true" />
       </RouterLink>
       <RouterLink to="/music/playlists" class="music-more-view__link">
-        <Plus :size="20" aria-hidden="true" />
+        <ListMusic :size="20" aria-hidden="true" />
         <span>歌单</span>
         <ChevronRight :size="18" aria-hidden="true" />
       </RouterLink>
@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { IconArchive as Archive, IconBookmark as Bookmark, IconChevronRight as ChevronRight, IconDisc as Disc3, IconHistory as History, IconPlus as Plus, IconUsers as Users } from '@tabler/icons-vue'
+import { Archive, Bookmark, ChevronRight, Disc3, History, ListMusic, Users } from 'lucide-vue-next'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 </script>
 

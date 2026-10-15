@@ -96,7 +96,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { IconMessages as MessagesSquare } from '@tabler/icons-vue'
+import { MessagesSquare } from 'lucide-vue-next'
 
 import type { CommentDTO, CreateCommentInput } from '@/api/comments'
 import CommentComposer from './CommentComposer.vue'

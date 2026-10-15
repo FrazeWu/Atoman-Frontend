@@ -39,7 +39,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { IconChecks as CheckCheck, IconRefresh as RefreshCw } from '@tabler/icons-vue'
+import { CheckCheck, RefreshCw } from 'lucide-vue-next'
 
 import PButton from '@/components/ui/PButton.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'

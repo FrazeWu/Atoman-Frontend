@@ -4,7 +4,7 @@ import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { IconBookmark as Bookmark, IconClock as Clock, IconPencil as Pencil } from '@tabler/icons-vue'
+import { Bookmark, Clock, Pencil } from 'lucide-vue-next'
 
 import PButton from '@/components/ui/PButton.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'

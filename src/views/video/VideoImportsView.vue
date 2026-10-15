@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { IconExternalLink as ExternalLink, IconPencil as Pencil, IconRefresh as RefreshCw, IconTrash as Trash2, IconUpload as Upload, IconCircleX as XCircle } from '@tabler/icons-vue'
+import { ExternalLink, Pencil, RefreshCw, Trash2, Upload, XCircle } from 'lucide-vue-next'
 
 import {
   cancelVideoImport,

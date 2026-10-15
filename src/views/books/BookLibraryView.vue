@@ -9,7 +9,7 @@
         </div>
         <div class="book-library-header__actions">
           <PButton variant="primary" size="sm" @click="isUploadModalOpen = true">
-            <IconUpload :size="15" aria-hidden="true" />
+            <Upload :size="15" aria-hidden="true" />
             <span>导入电子书</span>
           </PButton>
         </div>
@@ -73,7 +73,7 @@
 
       <div class="book-library-toolbar__controls">
         <div class="book-library-search-box">
-          <IconSearch :size="15" class="book-library-search-icon" aria-hidden="true" />
+          <Search :size="15" class="book-library-search-icon" aria-hidden="true" />
           <input
             v-model="searchKeyword"
             type="search"
@@ -94,7 +94,7 @@
             aria-label="网格视图"
             @click="viewMode = 'grid'"
           >
-            <IconLayoutGrid :size="16" aria-hidden="true" />
+            <LayoutGrid :size="16" aria-hidden="true" />
           </button>
           <button
             type="button"
@@ -105,7 +105,7 @@
             aria-label="列表视图"
             @click="viewMode = 'list'"
           >
-            <IconList :size="16" aria-hidden="true" />
+            <List :size="16" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -122,7 +122,7 @@
     </div>
 
     <div v-else-if="displayItems.length === 0" class="book-library-empty">
-      <IconBookOff :size="36" class="book-library-empty__icon" aria-hidden="true" />
+      <BookX :size="36" class="book-library-empty__icon" aria-hidden="true" />
       <p class="book-library-empty__title">暂无相关书籍</p>
       <p class="book-library-empty__desc">
         {{ searchKeyword ? '没有找到符合搜索条件的书籍' : '你可以导入本地电子书，或去书库发现感兴趣的作品' }}
@@ -168,12 +168,12 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  IconUpload,
-  IconSearch,
-  IconLayoutGrid,
-  IconList,
-  IconBookOff,
-} from '@tabler/icons-vue'
+  Upload,
+  Search,
+  LayoutGrid,
+  List,
+  BookX,
+} from 'lucide-vue-next'
 import type {
   BookShelfItem,
   BookContinueReading,

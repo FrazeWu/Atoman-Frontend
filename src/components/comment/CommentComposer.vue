@@ -126,7 +126,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { IconAt as AtSign, IconClock as Clock3, IconPhoto as ImageIcon, IconPhotoPlus as ImagePlus, IconSend as Send, IconX as X } from '@tabler/icons-vue'
+import { AtSign, Clock3, ImageIcon, ImagePlus, Send, X } from 'lucide-vue-next'
 
 import PReferenceMenu from '@/components/shared/PReferenceMenu.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'

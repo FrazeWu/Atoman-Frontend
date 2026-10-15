@@ -38,7 +38,7 @@
 
 <script setup lang="ts">
 import PButton from '@/components/ui/PButton.vue'
-import { IconPhotoPlus as ImagePlus } from '@tabler/icons-vue'
+import { ImagePlus } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { resolveMediaURL } from '@/utils/mediaUrl'
 

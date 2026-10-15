@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { IconPlus as Plus, IconX as X } from '@tabler/icons-vue'
+import { Plus, X } from 'lucide-vue-next'
 import PInput from '@/components/ui/PInput.vue'
 import type { MusicAlbumArtistRole } from '@/api/musicV1'
 import { albumArtistRoleLabels } from '@/utils/musicAlbumCredits'

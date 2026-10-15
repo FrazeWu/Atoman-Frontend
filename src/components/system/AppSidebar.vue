@@ -115,7 +115,7 @@
       <PSidebarItem
         to="/debate"
         :index="1"
-        :icon="MessageSquare"
+        :icon="Scale"
         :active="Boolean(route && !$route.query.status)"
         exact
         :is-focused="isSidebarFocused(0)"
@@ -230,7 +230,28 @@
 import { computed, watch, type Component } from 'vue'
 import { useRoute, useRouter, type RouteLocationNormalizedLoaded, type Router } from 'vue-router'
 import { getActivePinia } from 'pinia'
-import { IconRss as Rss, IconCompass as Compass, IconBookmark as Bookmark, IconTags as Tags, IconUsers as Users, IconHistory as History, IconMessage as MessageSquare, IconFolder as Folder, IconArchive as Archive, IconBook2 as BookOpen, IconClock as Clock, IconMicrophone as Mic, IconLibrary as Library, IconSearch as Search, IconUpload as Upload, IconClipboardCheck as ClipboardCheck, IconLayoutDashboard as LayoutDashboard, IconFileText as FileText, IconMicrophone2 as Mic2, IconSettings2 as Settings2, IconVideo as Video } from '@tabler/icons-vue'
+import {
+  Archive,
+  BookOpen,
+  Bookmark,
+  Clock,
+  Compass,
+  FileText,
+  Folder,
+  History,
+  LayoutDashboard,
+  Library,
+  MessageSquare,
+  Mic,
+  Mic2,
+  Rss,
+  Scale,
+  Search,
+  Settings2,
+  Tags,
+  Users,
+  Video,
+} from 'lucide-vue-next'
 
 import PSidebar from '@/components/ui/PSidebar.vue'
 import PSidebarItem from '@/components/ui/PSidebarItem.vue'
@@ -473,7 +494,7 @@ const sidebarNavItems = computed<SidebarNavItem[]>(() => {
       ]
     case 'debate':
       return [
-        { to: '/debate', label: '全部辩题', icon: MessageSquare },
+        { to: '/debate', label: '全部辩题', icon: Scale },
         { to: '/debate?status=archived', label: '已归档', icon: Archive },
         { to: '/debate/rules', label: '规则', icon: BookOpen },
       ]

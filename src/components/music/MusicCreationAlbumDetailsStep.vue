@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { IconFileText as FileText, IconGripVertical as GripVertical, IconPhotoUp as ImageUp, IconLoader as LoaderCircle, IconPlus as Plus, IconRefresh as RefreshCw, IconX as X } from '@tabler/icons-vue'
+import { FileText, GripVertical, ImageUp, LoaderCircle, Plus, RefreshCw, X } from 'lucide-vue-next'
 import { SUPPORTED_AUDIO_ACCEPT, uploadMusicAssetWithProgress } from '@/api/musicV1'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useMusicCreationFlow } from './musicCreationFlowContext'

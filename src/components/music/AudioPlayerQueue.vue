@@ -156,7 +156,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { IconChevronDown as ChevronDown, IconChevronUp as ChevronUp, IconGripVertical as GripVertical } from '@tabler/icons-vue'
+import { ChevronDown, ChevronUp, GripVertical } from 'lucide-vue-next'
 import { useDialogFocus } from '@/composables/useDialogFocus'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'

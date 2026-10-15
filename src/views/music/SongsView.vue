@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from "vue";
-import { IconCirclePlus as CirclePlus, IconExternalLink as ExternalLink, IconInfoCircle as Info, IconPlaylistAdd as ListPlus, IconPlayerPlay as Play, IconSearch as Search } from '@tabler/icons-vue';
+import { CirclePlus, ExternalLink, Info, ListPlus, Play, Search } from 'lucide-vue-next';
 import { useRoute, useRouter } from 'vue-router';
 import { recordMusicSearchInteraction, searchMusic, listMusicAlbums, listMusicPlaylistSongs, listMusicSongs, getMusicArtist, type MusicSearchKind, type MusicSongListItem } from "@/api/musicV1";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";

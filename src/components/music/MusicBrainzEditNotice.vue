@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IconAlertTriangle as AlertTriangle } from '@tabler/icons-vue'
+import { AlertTriangle } from 'lucide-vue-next'
 
 const props = withDefaults(defineProps<{ provider?: string }>(), { provider: 'musicbrainz' })
 const providerLabel = () => props.provider?.toLowerCase() === 'discogs' ? 'Discogs' : 'MusicBrainz'

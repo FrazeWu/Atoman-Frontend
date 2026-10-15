@@ -54,7 +54,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { IconUpload as Upload } from '@tabler/icons-vue'
+import { Upload } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import {

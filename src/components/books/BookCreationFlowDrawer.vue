@@ -464,7 +464,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { IconUpload as Upload } from '@tabler/icons-vue'
+import { Upload } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'

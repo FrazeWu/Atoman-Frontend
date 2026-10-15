@@ -302,7 +302,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { IconBook as BookOpen, IconHistory as History, IconPencil as Pencil, IconX as X } from '@tabler/icons-vue'
+import { BookOpen, History, Pencil, X } from 'lucide-vue-next'
 import { ApiErrorResponseError } from '@/api/client'
 import {
   getMusicSongDetail,

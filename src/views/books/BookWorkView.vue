@@ -211,7 +211,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { IconBookmark as Bookmark, IconPencil as Pencil, IconSend as Send, IconTrash as Trash2 } from '@tabler/icons-vue'
+import { Bookmark, Pencil, Send, Trash2 } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import BookCover from '@/components/books/BookCover.vue'
 import BookPrivateUpload from '@/components/books/BookPrivateUpload.vue'

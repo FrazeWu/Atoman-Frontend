@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { IconRefresh as RefreshCw } from '@tabler/icons-vue'
+import { RefreshCw } from 'lucide-vue-next'
 import { reportError } from '@/utils/logger'
 import { useRoute, useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'

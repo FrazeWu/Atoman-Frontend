@@ -126,7 +126,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, watchEffect } from 'vue'
-import { IconHeart as Heart, IconMessage as MessageSquare, IconPencil as Pencil, IconTrash as Trash2 } from '@tabler/icons-vue'
+import { Heart, MessageSquare, Pencil, Trash2 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'

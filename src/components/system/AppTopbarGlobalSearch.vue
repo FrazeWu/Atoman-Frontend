@@ -156,7 +156,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { IconSearch as Search, IconX as X } from '@tabler/icons-vue'
+import { Search, X } from 'lucide-vue-next'
 const TopbarSearchSection = defineAsyncComponent(() => import('@/components/system/TopbarSearchSection.vue'))
 import { useDialogFocus } from '@/composables/useDialogFocus'
 import { useGlobalSearch } from '@/composables/useGlobalSearch'

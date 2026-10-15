@@ -127,7 +127,7 @@
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue'
-import { IconBookmark as Bookmark, IconEye as Eye, IconGauge as Gauge } from '@tabler/icons-vue'
+import { Bookmark, Eye, Gauge } from 'lucide-vue-next'
 import EntryActions from '@/components/shared/EntryActions.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'

@@ -141,7 +141,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { IconFileText as FileText, IconMicrophone2 as Mic2, IconPlus as Plus, IconSettings2 as Settings2, IconVideo as Video } from '@tabler/icons-vue'
+import { FileText, Mic2, Plus, Settings2, Video } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 
 import PButton from '@/components/ui/PButton.vue'

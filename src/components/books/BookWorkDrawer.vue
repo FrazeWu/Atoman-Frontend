@@ -101,7 +101,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { IconBook2 as BookOpen } from '@tabler/icons-vue'
+import { BookOpen } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'

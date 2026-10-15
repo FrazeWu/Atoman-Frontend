@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { IconInfoCircle as Info, IconPlayerPlay as Play } from '@tabler/icons-vue'
+import { Info, Play } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getMusicTag,

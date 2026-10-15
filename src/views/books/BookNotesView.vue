@@ -227,15 +227,15 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import {
-  IconSearch as Search,
-  IconDownload as Download,
-  IconCopy as Copy,
-  IconTrash as Trash,
-  IconNotes as Notes,
-  IconArrowUpRight as ArrowUpRight,
-  IconEdit as Edit2,
-  IconMessagePlus as MessageSquarePlus,
-} from '@tabler/icons-vue'
+  Search,
+  Download,
+  Copy,
+  Trash,
+  StickyNote as Notes,
+  ArrowUpRight,
+  Edit2,
+  MessageSquarePlus,
+} from 'lucide-vue-next'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'

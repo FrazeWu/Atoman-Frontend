@@ -18,7 +18,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { IconArrowRight as ArrowRight, IconStar as Star } from '@tabler/icons-vue'
+import { ArrowRight, Star } from 'lucide-vue-next'
 import type { BookPublicWork } from '@/api/books'
 import BookCover from './BookCover.vue'
 const props = defineProps<{ work: BookPublicWork; eager?: boolean }>()

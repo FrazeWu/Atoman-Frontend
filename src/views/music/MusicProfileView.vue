@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { IconChartBar as BarChart3, IconClock as Clock3, IconRefresh as RefreshCw, IconSettings as Settings, IconStar as Star } from '@tabler/icons-vue'
+import { BarChart3, Clock3, ListMusic, RefreshCw, Settings, Star } from 'lucide-vue-next'
 import {
   deleteAlbumBookmark,
   deleteArtistBookmark,
@@ -171,7 +171,7 @@ watch(
 
       <nav class="music-profile__links" aria-label="音乐个人入口">
         <RouterLink to="/music/history"><Clock3 :size="18" aria-hidden="true" /><span>播放历史</span></RouterLink>
-        <RouterLink to="/music/playlists"><Star :size="18" aria-hidden="true" /><span>歌单</span></RouterLink>
+        <RouterLink to="/music/playlists"><ListMusic :size="18" aria-hidden="true" /><span>歌单</span></RouterLink>
         <RouterLink :to="authStore.user ? `/users/${authStore.user.username}/settings` : '/login'"><Settings :size="18" aria-hidden="true" /><span>音乐设置</span></RouterLink>
       </nav>
     </template>

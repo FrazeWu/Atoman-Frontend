@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { IconBook2 as BookOpen, IconMessage as MessageSquare, IconSettings as Settings } from '@tabler/icons-vue'
+import { BookOpen, Scale, Settings } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { useDebateStore } from '@/stores/debate'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -11,7 +11,7 @@ const store = useDebateStore()
 const myDebates = computed(() => store.debates.filter((debate) => debate.user?.uuid === authStore.user?.uuid || debate.user?.id === authStore.user?.id))
 
 const links = computed<HubLink[]>(() => [
-  { label: '我发起的辩题', to: '/debate/me', icon: MessageSquare },
+  { label: '我发起的辩题', to: '/debate/me', icon: Scale },
   { label: '辩论规则', to: '/debate/rules', icon: BookOpen },
   { label: '账号设置', to: `/users/${authStore.user?.username}/settings`, icon: Settings },
 ])

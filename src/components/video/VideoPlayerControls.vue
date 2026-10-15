@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { IconVolume2 as Volume2, IconVolume as Volume1, IconVolumeOff as VolumeX, IconPlayerPlay as Play, IconPlayerPause as Pause, IconMaximize as Maximize, IconMinimize as Minimize, IconSettings as Settings, IconDeviceTv as Tv, IconSubtitles as Captions, IconPictureInPicture as PictureInPicture } from '@tabler/icons-vue'
+import { Volume2, Volume1, VolumeX, Play, Pause, Maximize, Minimize, Settings, Tv, Captions, PictureInPicture } from 'lucide-vue-next'
 import type { VideoPreviewThumbnail } from '@/types'
 import { formatTimestampLabel } from '@/composables/useMediaTimeAnchors'
 import { subscribeToMediaElement } from '@/utils/mediaElementState'

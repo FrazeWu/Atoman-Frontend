@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, watchEffect } from 'vue'
-import { IconMessage as MessageSquare, IconPencil as Pencil, IconTrash as Trash2 } from '@tabler/icons-vue'
+import { MessageSquare, Pencil, Trash2 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'

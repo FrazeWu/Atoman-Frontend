@@ -70,7 +70,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { IconPencil as Pencil } from '@tabler/icons-vue'
+import { Pencil } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import BookCover from '@/components/books/BookCover.vue'
 import BookPrivateUpload from '@/components/books/BookPrivateUpload.vue'

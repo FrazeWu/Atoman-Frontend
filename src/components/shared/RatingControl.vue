@@ -18,7 +18,7 @@
 
     <div class="rating-control__stars" role="group" aria-label="选择评分" @mouseleave="hoverScore = null">
       <span v-for="star in 5" :key="star" class="rating-control__star">
-        <StarFilled :size="iconSize" class="rating-control__star-base" aria-hidden="true" />
+        <StarFilled :size="iconSize" fill="currentColor" class="rating-control__star-base" aria-hidden="true" />
         <span
           class="rating-control__star-fill"
           :style="{
@@ -81,7 +81,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { IconStarFilled as StarFilled, IconX as X } from '@tabler/icons-vue'
+import { Star as StarFilled, X } from 'lucide-vue-next'
 
 import {
   PUBLIC_RATING_MIN_COUNT,

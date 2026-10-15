@@ -79,7 +79,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
-import { IconMenu as Menu, IconSun as Sun, IconMoon as Moon, IconArrowLeft as ArrowLeft } from '@tabler/icons-vue'
+import { Menu, Sun, Moon, ArrowLeft } from 'lucide-vue-next'
 import { useSidebar } from '@/composables/useSidebar'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'

@@ -12,7 +12,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { IconSearch as Search } from '@tabler/icons-vue'
+import { Search } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'

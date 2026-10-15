@@ -144,7 +144,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { IconExternalLink as ExternalLink, IconTrash as Trash2 } from '@tabler/icons-vue'
+import { ExternalLink, Trash2 } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 
 import StudioManagementSheet from '@/components/studio/StudioManagementSheet.vue'

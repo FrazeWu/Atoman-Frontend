@@ -32,7 +32,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { IconChevronRight as ChevronRight } from '@tabler/icons-vue'
+import { ChevronRight } from 'lucide-vue-next'
 import type { MusicContributor } from '@/api/musicV1'
 import PAvatar from '@/components/ui/PAvatar.vue'
 

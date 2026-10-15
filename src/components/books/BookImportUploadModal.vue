@@ -24,13 +24,13 @@
         />
 
         <div v-if="!isUploading" class="book-upload-prompt">
-          <IconUpload :size="28" class="book-upload-icon" aria-hidden="true" />
+          <Upload :size="28" class="book-upload-icon" aria-hidden="true" />
           <p class="book-upload-main-text">点击或拖拽电子书文件到此处</p>
           <span class="book-upload-sub-text">支持 EPUB、PDF、TXT、MOBI、AZW3 格式</span>
         </div>
 
         <div v-else class="book-upload-progress">
-          <IconLoader2 :size="24" class="book-upload-spinner" aria-hidden="true" />
+          <Loader2 :size="24" class="book-upload-spinner" aria-hidden="true" />
           <p class="book-upload-progress-text">正在上传中 {{ uploadPercent }}%</p>
           <div class="book-upload-bar-bg" role="progressbar" :aria-valuenow="uploadPercent" aria-valuemin="0" aria-valuemax="100">
             <div class="book-upload-bar-fill" :style="{ width: `${uploadPercent}%` }" />
@@ -55,7 +55,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { IconUpload, IconLoader2 } from '@tabler/icons-vue'
+import { Upload, Loader2 } from 'lucide-vue-next'
 import type { BookImportSession } from '@/api/books'
 import { uploadBookFile } from '@/api/books'
 import PModal from '@/components/ui/PModal.vue'

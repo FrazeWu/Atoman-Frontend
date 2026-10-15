@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { IconCalendarClock as CalendarClock } from '@tabler/icons-vue'
+import { CalendarClock } from 'lucide-vue-next'
 import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 
 import type { BlogScheduleStatus } from '@/composables/useContentLifecycle'

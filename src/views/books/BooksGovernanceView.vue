@@ -182,7 +182,7 @@
             </div>
             <div class="books-governance__actions">
               <PButton type="button" variant="secondary" size="sm" :loading="decisionID === report.id" @click="decideReport(report.id, 'removed')">
-                <Check :size="16" aria-hidden="true" />
+                <EyeOff :size="16" aria-hidden="true" />
                 <span>下架</span>
               </PButton>
               <PButton type="button" variant="ghost" size="sm" :loading="decisionID === report.id" @click="decideReport(report.id, 'rejected')">
@@ -201,12 +201,13 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
-  IconCheck as Check,
-  IconExternalLink as ExternalLink,
-  IconPlus as Plus,
-  IconRotate2 as RotateCcw,
-  IconX as X,
-} from '@tabler/icons-vue'
+  Check,
+  ExternalLink,
+  EyeOff,
+  Plus,
+  RotateCcw,
+  X,
+} from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'

@@ -1246,10 +1246,17 @@ watch([mode, language], () => {
   void fetchRecommendations()
 })
 
+watch([() => authStore.isAuthenticated, () => route.query.subscribe_source_id], ([isAuth, sourceId]) => {
+  if (isAuth && sourceId) {
+    restorePendingSubscriptionSource()
+  }
+})
+
 onMounted(() => {
   void fetchThemes()
   void fetchRecommendations()
   if (authStore.isAuthenticated) {
+    restorePendingSubscriptionSource()
     void Promise.all([
       feedStore.fetchStarredIds(),
       feedStore.fetchBookmarkedPostIds(),

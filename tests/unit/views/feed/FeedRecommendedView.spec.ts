@@ -744,6 +744,101 @@ describe("FeedRecommendedView", () => {
 		expect(redirectArg).toContain("subscribe_source_title=Channel+Unauth+1");
 	});
 
+	it("restores source articles sheet on login return without auto-submitting until explicit click", async () => {
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const url = String(input);
+			if (url.includes("/feed/recommend/themes")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			if (url.includes("/feed/recommend/articles")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			if (url.includes("/feed/recommend/channels")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			if (url.includes("/posts?")) {
+				return new Response(JSON.stringify({ data: [] }), { status: 200 });
+			}
+			return new Response(JSON.stringify({ error: "unexpected" }), {
+				status: 404,
+			});
+		});
+
+		const authStore = useAuthStore();
+		authStore.isAuthenticated = true;
+		authStore.user = { uuid: "user-1", username: "user1", email: "user1@example.com", role: "user" } as never;
+		authStore.token = "valid-token";
+		const feedStore = useFeedStore();
+		const subscribeSpy = vi.spyOn(feedStore, "subscribeToChannel").mockResolvedValue(true);
+		vi.spyOn(feedStore, "fetchSubscriptions").mockResolvedValue();
+		vi.spyOn(feedStore, "fetchGroups").mockResolvedValue();
+		vi.spyOn(feedStore, "fetchSubscriptionHubTree").mockResolvedValue();
+
+		routeQuery.subscribe_source_id = "chan-return-1";
+		routeQuery.subscribe_source_type = "internal_channel";
+		routeQuery.subscribe_source_title = "Return Channel";
+		routeQuery.category = "news";
+
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: true,
+					PSegmentedControl: segmentedControlStub,
+					PButton: true,
+					PEmpty: true,
+					FeedSourceArticlesSheet: {
+						props: ["show", "source", "subscribeBusy"],
+						template: `
+							<div v-if="show" class="feed-source-articles-sheet-stub" data-test="source-articles-sheet">
+								<span data-test="sheet-source-title">{{ source?.title }}</span>
+								<button
+									data-test="sheet-subscribe-button"
+									:disabled="source?.subscribed || subscribeBusy"
+									@click="$emit('subscribe')"
+								>
+									{{ source?.subscribed ? '已订阅' : '订阅' }}
+								</button>
+							</div>
+						`,
+					},
+					FeedArticleSheet: true,
+					PToast: {
+						props: ["modelValue", "message", "type"],
+						template: '<div v-if="modelValue" class="p-toast">{{ message }}</div>',
+					},
+				},
+			},
+		});
+
+		await flushPromises();
+
+		// 1. 验证抽屉自动展开，且来源标题正确
+		const sheet = wrapper.find('[data-test="source-articles-sheet"]');
+		expect(sheet.exists()).toBe(true);
+		expect(wrapper.find('[data-test="sheet-source-title"]').text()).toBe("Return Channel");
+
+		// 2. 验证 router.replace 清理了 subscribe_source_*，但保留了 category
+		expect(routerReplace).toHaveBeenCalledWith({
+			query: expect.objectContaining({ category: "news" }),
+		});
+		const lastReplaceQuery = routerReplace.mock.calls[0][0].query;
+		expect(lastReplaceQuery.subscribe_source_id).toBeUndefined();
+		expect(lastReplaceQuery.subscribe_source_type).toBeUndefined();
+
+		// 3. 验证未自动发出订阅请求
+		expect(subscribeSpy).not.toHaveBeenCalled();
+
+		// 4. 用户显式点击抽屉内的订阅按钮
+		const subscribeBtn = wrapper.find('[data-test="sheet-subscribe-button"]');
+		expect(subscribeBtn.text()).toBe("订阅");
+		await subscribeBtn.trigger("click");
+		await flushPromises();
+
+		// 5. 验证点击后完成订阅，且给出 Toast 反馈
+		expect(subscribeSpy).toHaveBeenCalledWith("chan-return-1");
+		expect(wrapper.text()).toContain("已订阅，可继续阅读");
+	});
+
 	it("uses loaded subscriptions without requesting each channel status", async () => {
 		const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
 			const url = String(input);

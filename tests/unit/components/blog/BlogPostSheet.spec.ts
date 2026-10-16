@@ -173,6 +173,34 @@ describe("BlogPostSheet", () => {
 		expect(wrapper.get('[role="note"]').classes()).toContain("post-update-notice--compact");
 	});
 
+	it("采用统一的 Editorial 架构布局（眉标、标题、集成操作栏与正文导语）", async () => {
+		const pinia = createPinia();
+		setActivePinia(pinia);
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/posts", component: { template: "<div />" } }],
+		});
+		await router.push("/posts");
+		await router.isReady();
+
+		const wrapper = mount(BlogPostSheet, {
+			props: { layer },
+			global: {
+				plugins: [pinia, router],
+				stubs: { PSheet: { template: "<section><slot /></section>" } },
+			},
+		});
+		mountedWrappers.push(wrapper);
+		await flushPromises();
+
+		expect(wrapper.find(".article-eyebrow").exists()).toBe(true);
+		expect(wrapper.find(".article-headline").exists()).toBe(true);
+		expect(wrapper.get(".article-headline").text()).toBe("文章一");
+		expect(wrapper.find(".article-action-strip").exists()).toBe(true);
+		expect(wrapper.find('[data-test="blog-post-quick-bookmark"]').exists()).toBe(true);
+		expect(wrapper.find('[data-test="blog-post-comments-trigger"]').exists()).toBe(true);
+	});
+
 	it("保留详情头部，并将学术正文限制在 A4 纸张内", async () => {
 		const source = readFileSync(
 			resolve(__dirname, "../../../../src/components/blog/BlogPostReader.vue"),

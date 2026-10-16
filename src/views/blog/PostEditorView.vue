@@ -256,12 +256,14 @@ import {
   type PostEditorDraftForm,
   type SaveTarget,
 } from '@/composables/blog/usePostEditorDraftSession'
+import { formatBookQuoteCitation, useDraftStagingStore } from '@/stores/draftStaging'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const api = useApi()
 const studio = useStudioStore()
+const draftStagingStore = useDraftStagingStore()
 const emit = defineEmits<{
   'title-change': [title: string]
 }>()
@@ -731,11 +733,36 @@ const initializeEditor = async () => {
     if (sequence !== initializeSequence) return
     applyEditorModeSetting()
     await startDraftSession()
+    await ingestPendingBookQuote()
   } catch {
     contentReady.value = false
     editorLoadFailed.value = true
     error.value = '编辑器加载失败，请刷新重试'
   }
+}
+
+const ingestPendingBookQuote = async () => {
+  const staged = draftStagingStore.consumePendingQuote('blog_post')
+  if (!staged) return
+  if (staged.mode === 'append' && pendingDraftCandidate.value) {
+    await restorePendingDraft()
+  } else if (staged.mode === 'replace') {
+    recoveryModalVisible.value = false
+    pendingDraftCandidate.value = null
+  }
+  const formattedQuote = formatBookQuoteCitation(staged)
+  if (staged.mode === 'append') {
+    form.value.content = form.value.content?.trim()
+      ? `${form.value.content.trim()}\n\n${formattedQuote}`
+      : formattedQuote
+  } else {
+    if (!form.value.title?.trim()) {
+      form.value.title = `《${staged.bookTitle}》读后感`
+    }
+    form.value.content = formattedQuote
+  }
+  replaceCollaborativeDocumentFromForm()
+  void syncDraftNow()
 }
 
 watch(() => route.params.id, () => { void initializeEditor() }, { immediate: true })

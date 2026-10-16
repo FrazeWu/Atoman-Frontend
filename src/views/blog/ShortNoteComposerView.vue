@@ -11,7 +11,7 @@
     <div v-if="loading" class="a-skeleton short-note-composer-view__skeleton" />
     <ShortNoteComposer
       v-else-if="!error"
-      :initial-content="note?.content"
+      :initial-content="note?.content || stagedInitialContent"
       :initial-media-urls="note?.media.map((item) => item.url)"
       :submitting="submitting"
       :submit-label="isEdit ? '保存' : '发布'"
@@ -30,12 +30,15 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import ShortNoteComposer from '@/components/shortnote/ShortNoteComposer.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import { formatBookQuoteCitation, useDraftStagingStore } from '@/stores/draftStaging'
 import type { ShortNote } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
 const authStore = useAuthStore()
+const draftStagingStore = useDraftStagingStore()
+const stagedInitialContent = ref('')
 const id = computed(() => String(route.params.id ?? ''))
 const isEdit = computed(() => Boolean(id.value))
 const note = ref<ShortNote | null>(null)
@@ -52,6 +55,10 @@ async function load() {
   note.value = null
   if (!isEdit.value) {
     loading.value = false
+    const staged = draftStagingStore.consumePendingQuote('short_note')
+    if (staged) {
+      stagedInitialContent.value = formatBookQuoteCitation(staged)
+    }
     return
   }
   try {

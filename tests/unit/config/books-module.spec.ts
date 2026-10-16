@@ -8,6 +8,7 @@ import { moduleFeatureRoutes } from "@/router/routes/modules";
 import { buildAppRoutes } from "@/router/buildAppRoutes";
 import { mergeSiteAccess, siteAccessFeatures } from "@/config/siteAccess";
 import { getMobileMoreItems, getMobilePrimaryTabs } from "@/composables/useResponsiveShell";
+import { mobileAdditionalRoutes } from "../../../apps/mobile/mobileAdditionalRoutes";
 
 describe("books module foundation", () => {
   it("exposes a compact books room in shared navigation config", () => {
@@ -57,6 +58,9 @@ describe("books module foundation", () => {
       "edition/:editionId",
       "library",
       "lists",
+      "lists/new",
+      "lists/:listId/edit",
+      "lists/:listId",
       "authors",
       "notes",
       "import/:importId",
@@ -90,6 +94,18 @@ describe("books module foundation", () => {
       const detail = children.find(route => route.path === path);
       expect(detail?.components?.default).toBe(home);
       expect(detail?.components?.overlay).toBeDefined();
+    }
+  });
+
+  it("shares booklist routes across desktop and mobile web with authenticated editing", () => {
+    const desktop = moduleFeatureRoutes.books[0].children ?? [];
+    const mobile = mobileAdditionalRoutes.find(route => route.path === '/books')?.children ?? [];
+    for (const routes of [desktop, mobile]) {
+      for (const path of ['lists/new', 'lists/:listId/edit']) {
+        expect(routes.find(route => route.path === path)?.meta?.requiresAuth).toBe(true);
+      }
+      expect(routes.find(route => route.path === 'lists/:listId')?.meta?.requiresAuth).toBeUndefined();
+      expect(String(routes.find(route => route.path === 'lists')?.component)).toContain('BookListsView.vue');
     }
   });
 });

@@ -217,8 +217,11 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				},
 				{
 					path: "lists",
-					component: () => import("@/views/books/BooksHomeView.vue"),
+					component: () => import("@/views/books/BookListsView.vue"),
 				},
+				{ path: "lists/new", component: () => import("@/views/books/BookListEditorView.vue"), meta: { requiresAuth: true } },
+				{ path: "lists/:listId/edit", component: () => import("@/views/books/BookListEditorView.vue"), meta: { requiresAuth: true } },
+				{ path: "lists/:listId", component: () => import("@/views/books/BookListDetailView.vue") },
 				{
 					path: "authors",
 					component: () => import("@/views/books/BooksHomeView.vue"),

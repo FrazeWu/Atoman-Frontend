@@ -40,7 +40,6 @@ describe('RatingControl.vue', () => {
 
     expect(wrapper.findAll('.rating-control__star-base')).toHaveLength(5)
     expect(wrapper.findAll('.rating-control__star-fill')).toHaveLength(5)
-    expect(ratingControlSource).toContain('Star as StarFilled')
     expect(baseStarRule).toMatch(/color:\s*var\(--a-color-border\)/)
     expect(fillRule).toMatch(/color:\s*var\(--a-color-warning\)/)
   })

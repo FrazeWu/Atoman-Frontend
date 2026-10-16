@@ -72,7 +72,8 @@ export function installRouteGuards(router: Router) {
 		const isPortalHome = to.meta.portalHome === true;
 		const hasValidSession =
 			authStore.validateSession() ||
-			(requiresAuth || isGuestOnlyRoute || isPortalHome ? await authStore.restoreSession() : false);
+			(requiresAuth || isGuestOnlyRoute || isPortalHome || to.meta.restoreSession === true
+				? await authStore.restoreSession() : false);
 
 		if (hasValidSession) {
 			onboardingStore.initialize(authStore.user);

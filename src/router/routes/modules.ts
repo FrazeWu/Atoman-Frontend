@@ -208,7 +208,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 			children: [
 				{ path: "", component: booksHomeView },
 				{ path: "search", component: booksHomeView },
-				{ path: "work/:workId", components: { default: booksHomeView, overlay: () => import("@/views/books/BookWorkView.vue") } },
+				{ path: "work/:workId", components: { default: booksHomeView, overlay: () => import("@/views/books/BookWorkView.vue") }, meta: { restoreSession: true } },
 				{ path: "edition/:editionId", components: { default: booksHomeView, overlay: () => import("@/views/books/BookEditionView.vue") } },
 				{
 					path: "library",

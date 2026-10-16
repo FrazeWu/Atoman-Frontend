@@ -21,6 +21,8 @@ declare module 'vue-router' {
     authLayout?: boolean;
     hasSidebar?: boolean;
     requiresAuth?: boolean;
+    // 公共互动页恢复 Cookie 会话，但不强制登录。
+    restoreSession?: boolean;
     requiresAdmin?: boolean;
     featureGate?: {
       module: import('@/config/moduleRooms').ModuleRoomKey;

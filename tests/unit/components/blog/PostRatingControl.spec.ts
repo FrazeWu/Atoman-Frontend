@@ -30,7 +30,7 @@ describe('PostRatingControl.vue', () => {
       props: { loading: true, errorMessage: '评分未保存，请重试' },
     })
 
-    expect(wrapper.get('button[data-score="10"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('button[data-score="10"]').attributes('aria-disabled')).toBe('true')
     expect(wrapper.get('.rating-control__error').attributes('role')).toBe('alert')
   })
 })

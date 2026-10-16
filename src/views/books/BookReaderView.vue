@@ -759,7 +759,7 @@ function renderTextPageHtml(page: TextPage): string {
     if (annEndRel > annStartRel) {
       const highlightedText = page.content.slice(Math.max(currentRelOffset, annStartRel), annEndRel)
       const underlineCls = ann.style === 'underline' ? ' is-underline' : ''
-      html += `<mark class="book-highlight book-highlight--${ann.color}${underlineCls}" data-annotation-id="${ann.id}">${escapeHtml(highlightedText)}</mark>`
+      html += `<mark class="book-highlight book-highlight--${escapeHtml(ann.color)}${underlineCls}" data-annotation-id="${escapeHtml(ann.id)}">${escapeHtml(highlightedText)}</mark>`
       currentRelOffset = Math.max(currentRelOffset, annEndRel)
     }
   }

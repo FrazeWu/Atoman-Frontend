@@ -89,6 +89,17 @@ describe("router auth guards", () => {
 		setActivePinia(createPinia());
 	});
 
+	it.each([true, false])("restores a public book detail session without requiring login (%s)", async (restored) => {
+		const router = await createGuardRouter("books");
+		const auth = useAuthStore();
+		const restore = vi.spyOn(auth, "restoreSession").mockResolvedValue(restored);
+
+		await router.push("/work/book-42");
+
+		expect(restore).toHaveBeenCalledOnce();
+		expect(router.currentRoute.value.path).toBe("/work/book-42");
+	});
+
 	it("registers Studio routes when the initial router enters the workspace", async () => {
 		const router = createRouter({
 			history: createMemoryHistory(),

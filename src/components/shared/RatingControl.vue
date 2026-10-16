@@ -32,6 +32,7 @@
         >
           <StarFilled :size="iconSize" fill="currentColor" />
         </span>
+        <!-- 保存中用 aria-disabled 拦截操作，避免原生 disabled 导致键盘焦点丢失。 -->
         <button
           v-for="score in [star * 2 - 1, star * 2]"
           :key="score"
@@ -41,9 +42,10 @@
           :data-score="score"
           :aria-label="scoreLabel(score)"
           :aria-pressed="viewerRating === score"
-          :disabled="disabled || loading"
-          @mouseenter="hoverScore = score"
-          @focus="hoverScore = score"
+          :disabled="disabled"
+          :aria-disabled="disabled || loading"
+          @mouseenter="!loading && (hoverScore = score)"
+          @focus="!loading && (hoverScore = score)"
           @blur="hoverScore = null"
           @click="rate(score)"
           @keydown="handleKeydown($event, score)"
@@ -269,7 +271,8 @@ function handleKeydown(event: KeyboardEvent, score: number) {
   right: 0;
 }
 
-.rating-control__score-target:disabled {
+.rating-control__score-target:disabled,
+.rating-control__score-target[aria-disabled="true"] {
   cursor: default;
 }
 

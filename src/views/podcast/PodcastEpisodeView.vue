@@ -263,7 +263,7 @@ function currentCommentTime() {
 .pev-wrap { padding: 1.5rem 1rem; }
 .pev-header { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; }
 .pev-cover { width: 7rem; height: 7rem; border-radius: var(--a-radius-card); object-fit: cover; flex-shrink: 0; }
-.pev-info { display: flex; flex-direction: column; gap: 0.25rem; }
+.pev-info { display: flex; min-width: 0; flex-direction: column; gap: 0.25rem; }
 .pev-title { font-size: 1.25rem; font-weight: 500; line-height: 1.3; }
 .pev-show { font-size: 0.875rem; color: var(--a-color-text-secondary); text-decoration: none; }
 .pev-show:hover { text-decoration: underline; }
@@ -272,4 +272,7 @@ function currentCommentTime() {
 .pev-action-message { margin: 0.5rem 0 0; color: var(--a-color-text-secondary); font-size: 0.8125rem; }
 .pev-notes { margin-top: 2rem; }
 .pev-notes-title { font-size: 1rem; font-weight: 500; margin-bottom: 0.5rem; }
+@media (max-width: 640px) {
+  .pev-header { flex-direction: column; }
+}
 </style>

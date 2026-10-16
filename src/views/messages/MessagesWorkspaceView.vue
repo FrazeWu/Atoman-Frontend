@@ -353,9 +353,10 @@ defineExpose({
 .messages-workspace {
   display: flex;
   width: 100%;
-  height: calc(100dvh - var(--a-topbar-height));
+  height: calc(100dvh - var(--a-topbar-height) - var(--a-content-bottom-offset, 0px));
   background: var(--a-color-bg, #ffffff);
   overflow: hidden;
+  transition: height var(--a-motion-state, 220ms) ease;
 }
 
 /* 左栏：会话列表 (320px) */

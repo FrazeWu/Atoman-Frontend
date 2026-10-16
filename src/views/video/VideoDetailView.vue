@@ -959,17 +959,22 @@ async function toggleChannelSubscription() {
 .vd-main {
   display: grid;
   min-width: 0;
+  width: 100%;
   gap: 1.25rem;
 }
 
-.vd-main--compact { width: 75%; }
+.vd-main--compact { width: 100%; }
 .vd-layout--theater .vd-main--compact { width: 100%; }
 
 .vd-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 22rem;
+  grid-template-columns: minmax(0, 1fr) var(--a-recommendation-width, 20rem);
   align-items: start;
-  gap: 1.25rem 1.5rem;
+  gap: var(--a-content-column-gap, 2rem);
+}
+
+.vd-layout--theater {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .vd-player-shell,
@@ -1366,12 +1371,15 @@ async function toggleChannelSubscription() {
 .vd-icon-action { width: 2rem; padding: 0; }
 .vd-comment-action { padding: 0 0.55rem; }
 
-@media (max-width: 1024px) {
-  .vd-layout { grid-template-columns: minmax(0, 1fr) 18rem; }
+@media (max-width: 1023px) {
+  .vd-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
 }
 
-@media (max-width: 768px) {
-  .vd-page { padding: 1rem 1rem 5rem; }
+@media (max-width: 767px) {
+  .vd-page { padding: 1rem 1rem calc(5rem + var(--a-content-bottom-offset, 0px)); }
   .vd-layout { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
   .vd-player-shell,
   .vd-title,
@@ -1385,7 +1393,6 @@ async function toggleChannelSubscription() {
     grid-row: auto;
   }
   .vd-action-row { width: 100%; margin-left: 0; }
-  .vd-main--compact { width: 100%; }
   .vd-comment-action { margin-left: auto; }
 }
 

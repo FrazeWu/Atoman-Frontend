@@ -199,4 +199,11 @@ describe('MessagesWorkspaceView', () => {
     // Active conversation is deselected or mobile state returns to list
     expect(vm.mobileShowingConversation).toBe(false)
   })
+
+  it('deducts --a-content-bottom-offset to avoid colliding with active audio player', () => {
+    const { readFileSync } = require('node:fs')
+    const { resolve } = require('node:path')
+    const source = readFileSync(resolve(process.cwd(), 'src/views/messages/MessagesWorkspaceView.vue'), 'utf8')
+    expect(source).toMatch(/\.messages-workspace\s*\{[\s\S]*?--a-content-bottom-offset/)
+  })
 })

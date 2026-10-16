@@ -1,5 +1,5 @@
 <template>
-  <div class="debate-home-view" style="padding-bottom:6rem">
+  <div class="debate-home-view">
     <PPageHeader title="辩论" mb="1.25rem">
       <template #action>
         <PButton to="/debate/rules" variant="secondary">规则</PButton>

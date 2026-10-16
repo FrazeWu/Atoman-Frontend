@@ -1,5 +1,5 @@
 <template>
-  <div class="a-page-xl" style="padding-bottom:6rem">
+  <div class="a-page-xl person-list-view">
     <PPageHeader title="历史人物" mb="1.25rem">
       <template #action>
         <PButton v-if="authStore.isAuthenticated" @click="showForm = true">新建人物</PButton>
@@ -7,8 +7,8 @@
     </PPageHeader>
 
     <!-- Search -->
-    <div style="display:flex;gap:1rem;margin-bottom:1.5rem">
-      <PInput v-model="searchText" :disabled="deleting || !!deletingPerson" placeholder="搜索人物姓名…" style="max-width:320px" @keyup.enter="doSearch" />
+    <div class="person-search-bar">
+      <PInput v-model="searchText" :disabled="deleting || !!deletingPerson" placeholder="搜索人物姓名…" class="person-search-input" @keyup.enter="doSearch" />
       <PButton variant="secondary" :disabled="deleting || !!deletingPerson" @click="doSearch">搜索</PButton>
     </div>
 
@@ -341,5 +341,15 @@ onMounted(() => {
   font-weight: 500;
   letter-spacing: 0;
   margin-bottom: 0.4rem;
+}
+
+.person-search-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.person-search-input {
+  max-width: 20rem;
 }
 </style>

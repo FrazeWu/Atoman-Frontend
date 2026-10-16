@@ -65,3 +65,17 @@ export const useDraftStagingStore = defineStore('draftStaging', () => {
     clearPendingQuote,
   }
 })
+
+export function hasExistingBlogPostDraft(): boolean {
+  try {
+    if (typeof localStorage === 'undefined') return false
+    const raw = localStorage.getItem('blog_editor_blog:new')
+    if (!raw) return false
+    const parsed = JSON.parse(raw)
+    const payload = parsed?.payload
+    return Boolean(payload && (payload.title?.trim() || payload.content?.trim()))
+  } catch {
+    return false
+  }
+}
+

@@ -212,6 +212,16 @@
                 </button>
                 <button
                   type="button"
+                  class="book-annotation-card__action-btn"
+                  data-testid="annotation-quote"
+                  title="引用写作"
+                  :aria-label="`引用写作 ${item.text.slice(0, 10)}`"
+                  @click="$emit('annotation-quote', item)"
+                >
+                  <PenTool :size="13" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
                   class="book-annotation-card__action-btn book-annotation-card__action-btn--delete"
                   data-testid="annotation-delete"
                   title="删除划线"
@@ -240,6 +250,7 @@ import {
   Download,
   StickyNote as Notes,
   ArrowUpRight,
+  PenTool,
 } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import type { BookReaderTocItem } from '@/components/books/BookReaderShell.vue'
@@ -275,6 +286,7 @@ defineEmits<{
   (e: 'annotation-edit', annotation: BookAnnotation): void
   (e: 'annotation-delete', annotationId: string): void
   (e: 'annotation-export'): void
+  (e: 'annotation-quote', annotation: BookAnnotation): void
 }>()
 
 const activeTab = ref<SidebarTab>(

@@ -69,6 +69,7 @@
           @annotation-jump="jumpToAnnotation"
           @annotation-delete="handleDeleteAnnotation"
           @annotation-export="exportAnnotationsToMarkdown"
+          @annotation-quote="handleQuoteAnnotation"
         />
       </template>
       <div
@@ -154,13 +155,24 @@
       @delete="onToolbarDelete"
       @close="closeSelectionToolbar"
     />
+
+    <BookQuoteActionModal
+      :open="quoteModalOpen"
+      :item="activeQuoteAnnotation"
+      :book-title="asset?.title || ''"
+      :book-author="asset?.author"
+      @close="quoteModalOpen = false"
+      @select="onQuoteModalSelect"
+    />
   </main>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Bookmark, Download, Save, Search } from 'lucide-vue-next'
+import BookQuoteActionModal from '@/components/books/BookQuoteActionModal.vue'
+import { useDraftStagingStore } from '@/stores/draftStaging'
 import ePub from 'epubjs'
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
@@ -211,6 +223,8 @@ type EpubTOCSource = {
 type EpubTOCItem = EpubTOCSource & { depth: number }
 
 const route = useRoute()
+const router = useRouter()
+const draftStagingStore = useDraftStagingStore()
 const readerStore = useBookReaderStore()
 const asset = ref<BookPrivateAsset | null>(null)
 const readingState = ref<BookReadingState | null>(null)
@@ -1032,6 +1046,35 @@ watch(
     }
   },
 )
+
+const quoteModalOpen = ref(false)
+const activeQuoteAnnotation = ref<BookAnnotation | null>(null)
+
+function handleQuoteAnnotation(annotation: BookAnnotation) {
+  activeQuoteAnnotation.value = annotation
+  quoteModalOpen.value = true
+}
+
+function onQuoteModalSelect(payload: { target: 'blog_post' | 'short_note'; mode: 'append' | 'replace' }) {
+  if (!activeQuoteAnnotation.value) return
+  draftStagingStore.setPendingQuote({
+    sourceType: 'book_annotation',
+    annotationId: activeQuoteAnnotation.value.id,
+    assetId: activeQuoteAnnotation.value.asset_id,
+    bookTitle: asset.value?.title || '书籍摘录',
+    bookAuthor: asset.value?.author,
+    quoteText: activeQuoteAnnotation.value.text,
+    personalNote: activeQuoteAnnotation.value.note || undefined,
+    target: payload.target,
+    mode: payload.mode,
+  })
+  quoteModalOpen.value = false
+  if (payload.target === 'blog_post') {
+    void router.push('/studio/blog/editor')
+  } else {
+    void router.push('/posts/notes/new')
+  }
+}
 
 async function handleDeleteAnnotation(annotationId: string) {
   try {

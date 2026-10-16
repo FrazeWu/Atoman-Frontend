@@ -199,6 +199,16 @@
               <PButton
                 variant="ghost"
                 size="sm"
+                :data-testid="'quote-action-' + item.id"
+                @click="openQuoteModal(item)"
+              >
+                <PenTool :size="13" aria-hidden="true" />
+                <span>引用写作</span>
+              </PButton>
+
+              <PButton
+                variant="ghost"
+                size="sm"
                 :data-testid="'copy-citation-' + item.id"
                 @click="copyCitation(item)"
               >
@@ -221,11 +231,21 @@
         </div>
       </article>
     </div>
+
+    <BookQuoteActionModal
+      :open="quoteModalOpen"
+      :item="activeQuoteItem"
+      :book-title="activeQuoteItem?.book_title || '书籍摘录'"
+      :book-author="activeQuoteItem?.book_author"
+      @close="quoteModalOpen = false"
+      @select="handleQuoteSelect"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   Search,
   Download,
@@ -235,11 +255,14 @@ import {
   ArrowUpRight,
   Edit2,
   MessageSquarePlus,
+  PenTool,
 } from 'lucide-vue-next'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
+import BookQuoteActionModal from '@/components/books/BookQuoteActionModal.vue'
+import { useDraftStagingStore } from '@/stores/draftStaging'
 import {
   listBookNotes,
   deleteBookAnnotation,
@@ -274,6 +297,37 @@ const bookOptions = ref<BookOption[]>([{ label: '全部书籍', value: '' }])
 const editingNoteId = ref<string | null>(null)
 const editingNoteText = ref('')
 const isSavingNote = ref(false)
+
+const router = useRouter()
+const draftStagingStore = useDraftStagingStore()
+const quoteModalOpen = ref(false)
+const activeQuoteItem = ref<BookAnnotation | null>(null)
+
+function openQuoteModal(item: BookAnnotation) {
+  activeQuoteItem.value = item
+  quoteModalOpen.value = true
+}
+
+function handleQuoteSelect(payload: { target: 'blog_post' | 'short_note'; mode: 'append' | 'replace' }) {
+  if (!activeQuoteItem.value) return
+  draftStagingStore.setPendingQuote({
+    sourceType: 'book_annotation',
+    annotationId: activeQuoteItem.value.id,
+    assetId: activeQuoteItem.value.asset_id,
+    bookTitle: activeQuoteItem.value.book_title || '书籍摘录',
+    bookAuthor: activeQuoteItem.value.book_author,
+    quoteText: activeQuoteItem.value.text,
+    personalNote: activeQuoteItem.value.note || undefined,
+    target: payload.target,
+    mode: payload.mode,
+  })
+  quoteModalOpen.value = false
+  if (payload.target === 'blog_post') {
+    void router.push('/studio/blog/editor')
+  } else {
+    void router.push('/posts/notes/new')
+  }
+}
 
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 

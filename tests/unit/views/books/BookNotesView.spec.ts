@@ -1,7 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
+import { createPinia, setActivePinia } from 'pinia'
 import * as booksApi from '@/api/books'
+import { useDraftStagingStore } from '@/stores/draftStaging'
 import BookNotesView from '@/views/books/BookNotesView.vue'
 import type { BookAnnotation } from '@/api/books'
 
@@ -42,14 +44,19 @@ const RouterLinkStub = {
 
 describe('BookNotesView', () => {
   let router: ReturnType<typeof createRouter>
+  let pinia: ReturnType<typeof createPinia>
 
   beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
     router = createRouter({
       history: createMemoryHistory(),
       routes: [
         { path: '/books/notes', component: BookNotesView },
         { path: '/books', component: { template: '<div>Books</div>' } },
         { path: '/books/read/:assetId', component: { template: '<div>Reader</div>' } },
+        { path: '/studio/blog/editor', component: { template: '<div>Editor</div>' } },
+        { path: '/posts/notes/new', component: { template: '<div>ShortNote</div>' } },
       ],
     })
   })
@@ -57,9 +64,10 @@ describe('BookNotesView', () => {
   const mountView = () => {
     return mount(BookNotesView, {
       global: {
-        plugins: [router],
+        plugins: [router, pinia],
         stubs: {
           RouterLink: RouterLinkStub,
+          Teleport: true,
         },
       },
     })
@@ -313,6 +321,37 @@ describe('BookNotesView', () => {
     const link = empty.find('a')
     expect(link.exists()).toBe(true)
     expect(link.attributes('href')).toBe('/books')
+
+    wrapper.unmount()
+  })
+
+  it('opens quote modal and stores pending quote in draftStagingStore upon selection', async () => {
+    vi.spyOn(booksApi, 'listBookNotes').mockResolvedValue({
+      items: mockNotes,
+      total: 2,
+    })
+
+    await router.push('/books/notes')
+    await router.isReady()
+    const wrapper = mountView()
+    await flushPromises()
+
+    const quoteBtn = wrapper.find('[data-testid="quote-action-ann-1"]')
+    expect(quoteBtn.exists()).toBe(true)
+    await quoteBtn.trigger('click')
+
+    const modal = wrapper.findComponent({ name: 'BookQuoteActionModal' })
+    expect(modal.exists()).toBe(true)
+    expect(modal.props('open')).toBe(true)
+    expect(modal.props('item')).toEqual(mockNotes[0])
+
+    modal.vm.$emit('select', { target: 'blog_post', mode: 'append' })
+    await flushPromises()
+
+    const draftStore = useDraftStagingStore()
+    expect(draftStore.pendingQuote?.quoteText).toBe(mockNotes[0].text)
+    expect(draftStore.pendingQuote?.target).toBe('blog_post')
+    expect(draftStore.pendingQuote?.mode).toBe('append')
 
     wrapper.unmount()
   })

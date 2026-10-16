@@ -127,6 +127,23 @@ describe('BookReaderSidebar - Annotations Tab', () => {
     expect(wrapper.emitted('annotation-delete')?.[0]).toEqual(['ann-1'])
   })
 
+  it('emits annotation-quote when clicking quote button', async () => {
+    const wrapper = mount(BookReaderSidebar, {
+      props: {
+        annotations: mockAnnotations,
+        defaultTab: 'annotations',
+      },
+    })
+
+    const quoteButton = wrapper.find('[data-testid="annotation-quote"]')
+    expect(quoteButton.exists()).toBe(true)
+
+    await quoteButton.trigger('click')
+
+    expect(wrapper.emitted('annotation-quote')).toBeTruthy()
+    expect(wrapper.emitted('annotation-quote')?.[0]).toEqual([mockAnnotations[0]])
+  })
+
   it('emits annotation-export when clicking export button via PButton', async () => {
     const wrapper = mount(BookReaderSidebar, {
       props: {

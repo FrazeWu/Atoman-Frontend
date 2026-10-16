@@ -10,8 +10,7 @@
     <small v-if="needsChineseTitle">中文书名待补充</small>
     <span class="book-card__rating">
       <Star :size="13" aria-hidden="true" />
-      {{ work.rating_count >= 5 ? work.rating_score.toFixed(1) : '暂无评分' }}
-      <small v-if="work.rating_count"> · {{ work.rating_count }} 人</small>
+      {{ formatRatingSummary(work.rating_score, work.rating_count) }}
     </span>
   </RouterLink>
 </template>
@@ -21,6 +20,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import { ArrowRight, Star } from 'lucide-vue-next'
 import type { BookPublicWork } from '@/api/books'
 import BookCover from './BookCover.vue'
+import { formatRatingSummary } from '@/utils/rating'
 const props = defineProps<{ work: BookPublicWork; eager?: boolean }>()
 const route = useRoute()
 const target = computed(() => ({

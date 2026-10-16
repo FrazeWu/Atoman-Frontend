@@ -89,13 +89,12 @@ describe('RatingControl.vue', () => {
     expect(wrapper.emitted('rate')).toEqual([[9]])
   })
 
-  it('hides the personal score text and allows clearing it', async () => {
+  it('shows the saved personal score below the public threshold and allows clearing it', async () => {
     const wrapper = mount(RatingControl, {
       props: { viewerRating: 9 },
     })
 
-    expect(wrapper.find('.rating-control__mine').exists()).toBe(false)
-    expect(wrapper.text()).not.toContain('我的评分')
+    expect(wrapper.get('.rating-control__mine').text()).toContain('我的评分：9/10 · 4.5 星（已保存）')
     await wrapper.get('.rating-control__clear').trigger('click')
 
     expect(wrapper.emitted('clear')).toEqual([[]])
@@ -151,5 +150,22 @@ describe('RatingControl.vue', () => {
     })
 
     expect(wrapper.get('.rating-control__error').attributes('role')).toBe('alert')
+  })
+
+  it('invites the first rating and hides the average again when five becomes four', async () => {
+    const wrapper = mount(RatingControl)
+    expect(wrapper.text()).toContain('暂无评分，成为第一个评分者')
+    await wrapper.setProps({ ratingScore: 8, ratingCount: 5, viewerRating: 7 })
+    expect(wrapper.find('.rating-control__public-score').exists()).toBe(true)
+    await wrapper.setProps({ ratingCount: 4 })
+    expect(wrapper.find('.rating-control__public-score').exists()).toBe(false)
+    expect(wrapper.get('.rating-control__mine').text()).toContain('7/10')
+  })
+
+  it('announces saving and rejects keyboard submissions while busy', async () => {
+    const wrapper = mount(RatingControl, { props: { loading: true } })
+    expect(wrapper.get('[role="status"]').text()).toContain('正在保存')
+    await wrapper.get('button[data-score="8"]').trigger('keydown', { key: 'ArrowRight' })
+    expect(wrapper.emitted('rate')).toBeUndefined()
   })
 })

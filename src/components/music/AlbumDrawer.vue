@@ -404,29 +404,37 @@ function applyAlbumRating(summary: { rating_score: number; rating_count: number;
 
 async function rateAlbum(score: number) {
   if (!album.value || !requireLogin() || ratingAlbumLoading.value) return
+  const target = album.value
   ratingAlbumLoading.value = true
   try {
-    applyAlbumRating(await setMusicAlbumRating(String(album.value.id), score))
+    const summary = await setMusicAlbumRating(String(target.id), score)
+    if (album.value !== target) return
+    applyAlbumRating(summary)
   } catch (err) {
+    if (album.value !== target) return
     reportError(err, 'Failed to rate album')
     toastMessage.value = '评分失败'
     toastVisible.value = true
   } finally {
-    ratingAlbumLoading.value = false
+    if (album.value === target) ratingAlbumLoading.value = false
   }
 }
 
 async function clearAlbumRating() {
   if (!album.value || !requireLogin() || ratingAlbumLoading.value) return
+  const target = album.value
   ratingAlbumLoading.value = true
   try {
-    applyAlbumRating(await deleteMusicAlbumRating(String(album.value.id)))
+    const summary = await deleteMusicAlbumRating(String(target.id))
+    if (album.value !== target) return
+    applyAlbumRating(summary)
   } catch (err) {
+    if (album.value !== target) return
     reportError(err, 'Failed to clear album rating')
     toastMessage.value = '清除评分失败'
     toastVisible.value = true
   } finally {
-    ratingAlbumLoading.value = false
+    if (album.value === target) ratingAlbumLoading.value = false
   }
 }
 
@@ -440,29 +448,37 @@ function applyTrackRating(songId: string, summary: { rating_score: number; ratin
 
 async function rateTrack(track: AlbumTrack, score: number) {
   if (!requireLogin() || ratingSongID.value) return
+  const target = album.value
   ratingSongID.value = String(track.id)
   try {
-    applyTrackRating(String(track.id), await setMusicSongRating(String(track.id), score))
+    const summary = await setMusicSongRating(String(track.id), score)
+    if (album.value !== target) return
+    applyTrackRating(String(track.id), summary)
   } catch (err) {
+    if (album.value !== target) return
     reportError(err, 'Failed to rate song')
     toastMessage.value = '评分失败'
     toastVisible.value = true
   } finally {
-    ratingSongID.value = null
+    if (album.value === target) ratingSongID.value = null
   }
 }
 
 async function clearTrackRating(track: AlbumTrack) {
   if (!requireLogin() || ratingSongID.value) return
+  const target = album.value
   ratingSongID.value = String(track.id)
   try {
-    applyTrackRating(String(track.id), await deleteMusicSongRating(String(track.id)))
+    const summary = await deleteMusicSongRating(String(track.id))
+    if (album.value !== target) return
+    applyTrackRating(String(track.id), summary)
   } catch (err) {
+    if (album.value !== target) return
     reportError(err, 'Failed to clear song rating')
     toastMessage.value = '清除评分失败'
     toastVisible.value = true
   } finally {
-    ratingSongID.value = null
+    if (album.value === target) ratingSongID.value = null
   }
 }
 
@@ -496,6 +512,8 @@ async function addTrackToPlaylist(playlistId: string, songId: string, close?: ()
 
 async function loadAlbum(albumId: string | null) {
   const { isCurrent: isCurrentLoad } = albumRequests.beginRequest()
+  ratingAlbumLoading.value = false
+  ratingSongID.value = null
   bookmarkLoading.value = false
   album.value = null
   commentsOpen.value = false
@@ -672,6 +690,7 @@ function guardPlaylistMenu(event: MouseEvent) {
 }
 
 watch(albumId, loadAlbum, { immediate: true })
+watch(isAuthenticated, () => void loadAlbum(albumId.value))
 watch(
   () => state.value.albumRefreshToken,
   () => {

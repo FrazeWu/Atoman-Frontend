@@ -281,6 +281,7 @@ async function load(id: string) {
   commentsOpen.value = false
   descriptionExpanded.value = false
   ratingError.value = ''
+  ratingLoading.value = false
   channelSubscribed.value = false
   currentPlaybackTime.value = 0
   lastProgressSave = 0
@@ -347,7 +348,7 @@ onBeforeUnmount(() => {
   stopProcessingRefresh()
   document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
-watch(() => route.params.id, (id) => { if (id) load(id as string) })
+watch(() => [route.params.id, authStore.token], ([id]) => { if (id) void load(id as string) })
 
 function syncCurrentPlaybackTime() {
   const current = Math.floor(videoElement.value?.currentTime || 0)
@@ -597,32 +598,34 @@ function applyRating(summary: VideoRatingSummary) {
 }
 
 async function rateVideo(score: number) {
-  if (!video.value || !authStore.token) return
+  if (!video.value || !authStore.token || ratingLoading.value) return
+  const target = video.value
   const videoID = video.value.id
   ratingLoading.value = true
   ratingError.value = ''
   try {
     const summary = await setVideoRating(videoID, score, authStore.token)
-    if (video.value?.id === videoID) applyRating(summary)
+    if (video.value === target) applyRating(summary)
   } catch {
-    ratingError.value = '评分失败，请稍后再试'
+    if (video.value === target) ratingError.value = '评分失败，请稍后再试'
   } finally {
-    ratingLoading.value = false
+    if (video.value === target) ratingLoading.value = false
   }
 }
 
 async function clearRating() {
-  if (!video.value || !authStore.token) return
+  if (!video.value || !authStore.token || ratingLoading.value) return
+  const target = video.value
   const videoID = video.value.id
   ratingLoading.value = true
   ratingError.value = ''
   try {
     const summary = await deleteVideoRating(videoID, authStore.token)
-    if (video.value?.id === videoID) applyRating(summary)
+    if (video.value === target) applyRating(summary)
   } catch {
-    ratingError.value = '清除评分失败，请稍后再试'
+    if (video.value === target) ratingError.value = '清除评分失败，请稍后再试'
   } finally {
-    ratingLoading.value = false
+    if (video.value === target) ratingLoading.value = false
   }
 }
 

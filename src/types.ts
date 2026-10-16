@@ -1528,6 +1528,9 @@ export interface TimelineRevision {
 }
 
 export interface PodcastEpisode {
+	rating_score?: number;
+	rating_count?: number;
+	viewer_rating?: number | null;
 	id: string;
 	post_id: string;
 	post?: Post;

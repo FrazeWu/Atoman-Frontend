@@ -209,27 +209,35 @@ function applyRating(summary: { rating_score: number; rating_count: number; view
 
 async function rateSong(score: number) {
   if (!detail.value || !requireLogin() || ratingLoading.value) return
+  const target = detail.value
   ratingLoading.value = true
   try {
-    applyRating(await setMusicSongRating(String(detail.value.song.id), score))
+    const summary = await setMusicSongRating(String(target.song.id), score)
+    if (detail.value !== target) return
+    applyRating(summary)
   } catch (cause) {
+    if (detail.value !== target) return
     reportError(cause, '更新歌曲评分失败')
     showToast('评分失败')
   } finally {
-    ratingLoading.value = false
+    if (detail.value === target) ratingLoading.value = false
   }
 }
 
 async function clearSongRating() {
   if (!detail.value || !requireLogin() || ratingLoading.value) return
+  const target = detail.value
   ratingLoading.value = true
   try {
-    applyRating(await deleteMusicSongRating(String(detail.value.song.id)))
+    const summary = await deleteMusicSongRating(String(target.song.id))
+    if (detail.value !== target) return
+    applyRating(summary)
   } catch (cause) {
+    if (detail.value !== target) return
     reportError(cause, '清除歌曲评分失败')
     showToast('清除评分失败')
   } finally {
-    ratingLoading.value = false
+    if (detail.value === target) ratingLoading.value = false
   }
 }
 
@@ -439,6 +447,8 @@ function clearRebindState() {
 async function loadDetail(targetSongId: unknown) {
   if (typeof targetSongId !== 'string' || !targetSongId) return
   const request = detailRequests.beginRequest()
+  detail.value = null
+  ratingLoading.value = false
   loading.value = true
   error.value = ''
   try {
@@ -474,7 +484,7 @@ function reloadLyrics() {
 }
 
 watch(
-  [songId, () => state.value.songRefreshToken],
+  [songId, () => state.value.songRefreshToken, () => authStore.isAuthenticated, () => authStore.user?.id],
   ([targetSongId]) => {
     lyricsDisplayMode.value = 'original'
     selectedTextDraft.value = null

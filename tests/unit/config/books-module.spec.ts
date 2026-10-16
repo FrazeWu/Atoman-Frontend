@@ -54,6 +54,7 @@ describe("books module foundation", () => {
     expect(children.map((route) => route.path)).toEqual([
       "",
       "search",
+      "new",
       "work/:workId",
       "edition/:editionId",
       "library",
@@ -90,11 +91,13 @@ describe("books module foundation", () => {
   it("keeps discovery mounted under route-driven detail sheets", () => {
     const children = moduleFeatureRoutes.books[0].children ?? [];
     const home = children.find(route => route.path === "")?.component;
-    for (const path of ["work/:workId", "edition/:editionId"]) {
+    for (const path of ["new", "work/:workId", "edition/:editionId"]) {
       const detail = children.find(route => route.path === path);
       expect(detail?.components?.default).toBe(home);
       expect(detail?.components?.overlay).toBeDefined();
+      expect(detail?.meta?.bookCatalog).toBe(true);
     }
+    expect(children.find(route => route.path === 'new')?.meta?.requiresAuth).toBe(true);
   });
 
   it("shares booklist routes across desktop and mobile web with authenticated editing", () => {

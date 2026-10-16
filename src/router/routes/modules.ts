@@ -5,7 +5,8 @@ import { settingRoutes } from "@/router/routes/settings";
 const videoHomeView = () => import("@/views/video/VideoHomeView.vue");
 const videoDetailRouteSheet = () => import("@/views/video/VideoDetailRouteSheet.vue");
 const feedRecommendedView = () => import("@/views/feed/FeedRecommendedView.vue");
-const booksHomeView = () => import("@/views/books/BooksHomeView.vue");
+const booksHomeView = () => import("@/views/books/BooksDiscoverView.vue");
+const bookCatalogSheet = () => import("@/views/books/BookCatalogRouteSheet.vue");
 const forumHomeView = () => import("@/views/forum/ForumHomeView.vue");
 const forumTopicRouteSheet = () => import("@/views/forum/ForumTopicRouteSheet.vue");
 const podcastHomeView = () => import("@/views/podcast/PodcastHomeView.vue");
@@ -206,10 +207,11 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 			component: () => import("@/views/books/BooksLayout.vue"),
 			meta: { hasSidebar: true },
 			children: [
-				{ path: "", component: booksHomeView },
-				{ path: "search", component: booksHomeView },
-				{ path: "work/:workId", components: { default: booksHomeView, overlay: () => import("@/views/books/BookWorkView.vue") } },
-				{ path: "edition/:editionId", components: { default: booksHomeView, overlay: () => import("@/views/books/BookEditionView.vue") } },
+				{ path: "", component: booksHomeView, meta: { bookCatalog: true } },
+				{ path: "search", component: booksHomeView, meta: { bookCatalog: true } },
+				{ path: "new", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'create' } }, meta: { bookCatalog: true, requiresAuth: true } },
+				{ path: "work/:workId", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'work' } }, meta: { bookCatalog: true } },
+				{ path: "edition/:editionId", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'edition' } }, meta: { bookCatalog: true } },
 				{
 					path: "library",
 					component: () => import("@/views/books/BookLibraryView.vue"),

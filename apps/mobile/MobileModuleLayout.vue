@@ -3,7 +3,7 @@
     <RouterView v-slot="{ Component, route: viewRoute }">
       <Transition :name="detailTransition">
         <KeepAlive include="MobileSavedView" :max="2">
-          <component :is="Component" :key="viewRoute.meta.routeOverlay ? viewRoute.matched[0]?.path : viewRoute.path" />
+          <component :is="Component" :key="viewRoute.meta.bookCatalog ? 'books-catalog' : viewRoute.meta.routeOverlay ? viewRoute.matched[0]?.path : viewRoute.path" />
         </KeepAlive>
       </Transition>
     </RouterView>

@@ -463,18 +463,22 @@ onMounted(async () => {
   font-weight: 600;
 }
 
+.user-blog-settings-panel__avatar-row,
+.user-blog-settings-panel__form--wide,
+.user-blog-settings-panel__preview-row {
+  grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
 .user-blog-settings-panel__form-fields {
   display: grid;
   gap: 1rem;
-}
-
-/* The profile form has enough room for a wider control column on desktop. */
-.user-blog-settings-panel__form--wide {
-  grid-template-columns: minmax(14rem, 0.8fr) minmax(0, 1.2fr);
-}
-
-.user-blog-settings-panel__form--wide .user-blog-settings-panel__form-fields {
   width: 100%;
+  max-width: 30rem;
+}
+
+.user-blog-settings-panel__preview-row .settings-block__control {
+  justify-content: flex-start;
 }
 
 .form-field-full {
@@ -521,7 +525,7 @@ onMounted(async () => {
 .form-submit-row {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
@@ -538,8 +542,11 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
-  .user-blog-settings-panel__form--wide {
+  .user-blog-settings-panel__avatar-row,
+  .user-blog-settings-panel__form--wide,
+  .user-blog-settings-panel__preview-row {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
   }
 }
 

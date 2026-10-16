@@ -16,6 +16,18 @@
     </PPageHeader>
 
     <div v-if="isOwnSettingsRoute()" class="settings-center__shell user-settings__shell">
+      <PDirectoryNav
+        v-model:collapsed="directoryCollapsed"
+        :items="directoryNavItems"
+        :active-id="activeSection"
+        :mobile-open="mobileDirectoryOpen"
+        mobile-side="right"
+        title="账号设置目录"
+        aria-label="设置导航"
+        @select="scrollToSection"
+        @close-mobile="mobileDirectoryOpen = false"
+      />
+
       <div class="settings-center__sections">
         <section
           v-for="item in settingSections"
@@ -99,18 +111,6 @@
           </PSurface>
         </section>
       </div>
-
-      <PDirectoryNav
-        v-model:collapsed="directoryCollapsed"
-        :items="directoryNavItems"
-        :active-id="activeSection"
-        :mobile-open="mobileDirectoryOpen"
-        mobile-side="right"
-        title="账号设置目录"
-        aria-label="设置导航"
-        @select="scrollToSection"
-        @close-mobile="mobileDirectoryOpen = false"
-      />
     </div>
 
     <SubscriptionManageSheet

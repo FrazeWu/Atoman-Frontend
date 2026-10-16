@@ -353,9 +353,9 @@ body:has(.app-shell.has-sidebar) {
 	align-items: start;
 }
 
-/* User settings: content left, directory nav right */
+/* User settings: directory nav left, content right */
 .user-settings__shell {
-	grid-template-columns: minmax(0, 1fr) auto;
+	grid-template-columns: auto minmax(0, 1fr);
 }
 
 .settings-center__sidebar {

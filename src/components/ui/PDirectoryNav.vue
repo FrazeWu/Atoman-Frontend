@@ -112,11 +112,13 @@ function selectItem(id: string, mobile: boolean) {
   z-index: var(--a-z-popover);
   align-self: start;
   width: 13.75rem;
-  min-width: 0;
+  min-width: 13.75rem;
+  flex-shrink: 0;
   transition: width 0.2s ease;
 }
 .p-directory-shell:has(.is-collapsed) {
   width: 3rem;
+  min-width: 3rem;
 }
 .p-directory-panel {
   width: 13.75rem;

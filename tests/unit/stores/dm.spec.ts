@@ -309,4 +309,29 @@ describe('dm store', () => {
 
     expect(useNotificationStore().unreadCounts.dm).toBe(3)
   })
+
+  it('updates message read_at when receiving dm.message.read event', () => {
+    const store = useDMStore()
+    const msg = makeMessage('message-1', 'conversation-1', '2026-07-23T00:00:00Z')
+    store.reconcile({
+      mailboxes: [userMailbox],
+      conversationsByMailbox: { 'user:me': [makeConversation('conversation-1')] },
+      activeConversationId: 'conversation-1',
+      activeMessages: [msg],
+    })
+    expect(store.activeMessages[0].read_at).toBeUndefined()
+
+    store.receiveEvent({
+      event: 'dm.message.read',
+      data: {
+        conversation_id: 'conversation-1',
+        read_at: '2026-07-23T00:05:00Z',
+        mailbox: { party: { type: 'user', id: 'me' }, unread: 0 },
+        dm_unread: 0,
+        total_unread: 0,
+      },
+    })
+
+    expect(store.activeMessages[0].read_at).toBe('2026-07-23T00:05:00Z')
+  })
 })

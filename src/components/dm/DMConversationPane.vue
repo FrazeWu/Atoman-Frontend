@@ -88,11 +88,17 @@
               <span v-if="message.content" class="dm-bubble-text">{{ message.content }}</span>
               <span class="dm-bubble-meta">
                 <time class="dm-bubble-time">{{ formatMessageTime(message.created_at) }}</time>
+                <CheckCheck
+                  v-if="message.sender.id === conversation?.reply_as.id && message.read_at"
+                  class="dm-bubble-check read"
+                  :size="11"
+                  aria-label="已读"
+                />
                 <Check
-                  v-if="message.sender.id === conversation?.reply_as.id"
-                  class="dm-bubble-check"
+                  v-else-if="message.sender.id === conversation?.reply_as.id"
+                  class="dm-bubble-check unread"
                   :size="10"
-                  aria-hidden="true"
+                  aria-label="已发送未读"
                 />
               </span>
             </div>
@@ -135,7 +141,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { Check, Copy, Flag, Info } from 'lucide-vue-next'
+import { Check, CheckCheck, Copy, Flag, Info } from 'lucide-vue-next'
 import type { DMConversation, DMMessage, DMParty } from '@/api/dm'
 
 const props = withDefaults(
@@ -545,6 +551,15 @@ const copyMessage = async (content?: string) => {
 
 .dm-bubble-check {
   color: var(--a-color-primary);
+  flex-shrink: 0;
+}
+
+.dm-bubble-check.unread {
+  opacity: 0.65;
+}
+
+.dm-bubble-check.read {
+  opacity: 1;
 }
 
 /* 悬停微工具条 */

@@ -27,7 +27,7 @@ export type DMReport = { id: string; message_id: string; reporter_user_id: strin
 export type DMRawParty = { type: DMPartyType; id: string; name?: string; display_name?: string; avatar_url?: string }
 export type DMRawMailbox = { party: DMRawParty; unread: number }
 export type DMRawConversation = { id: string; participant_a: DMRawParty; participant_b: DMRawParty; last_message_at?: string | null; last_message_preview: string; unread: number; blocked: boolean }
-export type DMRawMessage = { id: string; conversation_id: string; sender_type: DMPartyType; sender_id: string; client_message_id: string; content: string; image_id?: string; image_url?: string; created_at: string }
+export type DMRawMessage = { id: string; conversation_id: string; sender_type: DMPartyType; sender_id: string; client_message_id: string; content: string; image_id?: string; image_url?: string; read_at?: string | null; created_at: string }
 type RawPage<T> = { items: T[]; next_cursor?: string }
 
 export type DMRealtimeEvent =
@@ -73,7 +73,8 @@ const senderName = (value: DMRawMessage, conversation?: DMRawConversation) => {
 const normalizeMessage = (value: DMRawMessage, conversation?: DMRawConversation): DMMessage => ({
   id: value.id, conversation_id: value.conversation_id, client_message_id: value.client_message_id,
   sender: { type: value.sender_type, id: value.sender_id, display_name: senderName(value, conversation) }, content: value.content,
-  ...(value.image_id ? { image_id: value.image_id } : {}), ...(value.image_url ? { image_url: value.image_url } : {}), created_at: value.created_at,
+  ...(value.image_id ? { image_id: value.image_id } : {}), ...(value.image_url ? { image_url: value.image_url } : {}),
+  read_at: value.read_at ?? null, created_at: value.created_at,
 })
 
 export const mailboxKey = (value: Pick<DMMailbox, 'type' | 'id'>) => `${value.type}:${value.id}`

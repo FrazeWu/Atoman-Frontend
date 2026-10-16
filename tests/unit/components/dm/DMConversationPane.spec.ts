@@ -121,8 +121,18 @@ describe('DMConversationPane', () => {
         conversation_id: 'c1',
         client_message_id: 'cli-2',
         sender: { type: 'user', id: 'u1', display_name: '我' },
-        content: '我发出去的',
+        content: '我发出去的未读消息',
         created_at: '2026-04-17T14:32:00Z',
+        read_at: null,
+      },
+      {
+        id: 'm3',
+        conversation_id: 'c1',
+        client_message_id: 'cli-3',
+        sender: { type: 'user', id: 'u1', display_name: '我' },
+        content: '我发出去的已读消息',
+        created_at: '2026-04-17T14:33:00Z',
+        read_at: '2026-04-17T14:35:00Z',
       },
     ]
 
@@ -141,11 +151,15 @@ describe('DMConversationPane', () => {
     expect(incoming.find('.dm-bubble-meta').text()).toContain(expectedIncomingTime)
     expect(incoming.find('.dm-bubble-check').exists()).toBe(false)
 
-    const outgoing = wrapper.find('.dm-message.self')
-    expect(outgoing.exists()).toBe(true)
-    const expectedOutgoingTime = `${String(new Date(messages[1].created_at).getHours()).padStart(2, '0')}:${String(new Date(messages[1].created_at).getMinutes()).padStart(2, '0')}`
-    expect(outgoing.find('.dm-bubble-meta').text()).toContain(expectedOutgoingTime)
-    expect(outgoing.find('.dm-bubble-check').exists()).toBe(true)
+    const outgoingUnread = wrapper.findAll('.dm-message.self')[0]
+    expect(outgoingUnread.exists()).toBe(true)
+    expect(outgoingUnread.find('.dm-bubble-check.unread').exists()).toBe(true)
+    expect(outgoingUnread.find('.dm-bubble-check.read').exists()).toBe(false)
+
+    const outgoingRead = wrapper.findAll('.dm-message.self')[1]
+    expect(outgoingRead.exists()).toBe(true)
+    expect(outgoingRead.find('.dm-bubble-check.read').exists()).toBe(true)
+    expect(outgoingRead.find('.dm-bubble-check.unread').exists()).toBe(false)
   })
 
   it('renders hover action toolbar with copy and report buttons and emits report', async () => {

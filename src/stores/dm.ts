@@ -291,6 +291,12 @@ export const useDMStore = defineStore('dm', () => {
       const conversation = conversationsById.value[event.data.conversation_id]
       if (conversation) applyConversation({ ...conversation, unread_count: 0, mailbox: event.data.mailbox })
       dmUnread.value = event.data.dm_unread
+      const currentMessages = messagesByConversation.value[event.data.conversation_id]
+      if (currentMessages && currentMessages.length > 0) {
+        messagesByConversation.value[event.data.conversation_id] = currentMessages.map((msg) => (
+          msg.read_at ? msg : { ...msg, read_at: event.data.read_at }
+        ))
+      }
       return
     }
     mergeMailboxes([event.data.mailbox], false)

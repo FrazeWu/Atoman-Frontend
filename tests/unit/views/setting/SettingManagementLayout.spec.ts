@@ -49,4 +49,20 @@ describe('SettingManagementLayout', () => {
       hash: '#users',
     })
   })
+
+  it('exposes the standard page header and integrates the mobile directory trigger', async () => {
+    const wrapper = mount(SettingManagementLayout, {
+      global: {
+        stubs: {
+          PButton: defineComponent({ template: '<button class="p-button-stub"><slot /></button>' }),
+          PDirectoryNav: PDirectoryNavStub,
+        },
+      },
+    })
+
+    expect(wrapper.find('.p-page-header').exists()).toBe(true)
+    expect(wrapper.get('.p-page-header__title').text()).toBe('站点设置')
+    expect(wrapper.get('.p-page-header__sub').text()).toBe('管理平台访问权限、用户角色、社区与模块配置')
+    expect(wrapper.find('.setting-management-layout__directory-trigger').exists()).toBe(true)
+  })
 })

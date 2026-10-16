@@ -1,14 +1,18 @@
 <template>
-  <section class="setting-management-layout a-page-xl">
-    <PButton
-      class="setting-management-layout__directory-trigger"
-      variant="secondary"
-      size="sm"
-      @click="mobileDirectoryOpen = true"
-    >
-      <ListTree :size="16" aria-hidden="true" />
-      目录
-    </PButton>
+  <section class="setting-management-layout">
+    <PPageHeader title="站点设置" sub="管理平台访问权限、用户角色、社区与模块配置" mb="1.5rem">
+      <template #action>
+        <PButton
+          class="setting-management-layout__directory-trigger"
+          variant="secondary"
+          size="sm"
+          @click="mobileDirectoryOpen = true"
+        >
+          <ListTree :size="16" aria-hidden="true" />
+          <span>目录</span>
+        </PButton>
+      </template>
+    </PPageHeader>
 
     <div class="setting-management-layout__shell">
       <PDirectoryNav
@@ -33,6 +37,7 @@ import { ListTree } from 'lucide-vue-next'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 
 import PButton from '@/components/ui/PButton.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'
 
 const route = useRoute()

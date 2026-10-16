@@ -1,5 +1,5 @@
 <template>
-  <div class="a-page-xl" style="padding-bottom:12rem">
+  <div class="bookmark-view">
     <PPageHeader title="收藏" accent>
       <template #action>
         <div style="display:flex;align-items:center;gap:0.75rem">

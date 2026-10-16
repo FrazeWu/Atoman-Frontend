@@ -1,5 +1,5 @@
 <template>
-  <div class="a-page blog-home">
+  <div class="blog-home">
     <PPageHeader title="发现" accent>
       <template #action>
         <PButton v-if="!authStore.isAuthenticated" to="/login" variant="secondary">登录</PButton>

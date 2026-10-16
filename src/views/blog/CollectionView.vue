@@ -1,5 +1,5 @@
 <template>
-  <div class="a-page" style="padding-bottom:12rem">
+  <div class="collection-view">
     <PToast v-model="toastVisible" :message="toastMessage" />
     <div v-if="loading" style="display:flex;flex-direction:column;gap:1.5rem">
       <div class="a-skeleton" style="height:8rem" />

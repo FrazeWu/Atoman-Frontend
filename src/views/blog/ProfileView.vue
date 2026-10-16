@@ -1103,7 +1103,7 @@ onMounted(() => { void loadProfilePage() })
   .profile-content__list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .profile-header {
     grid-template-columns: 4rem minmax(0, 1fr);
     gap: 1rem;

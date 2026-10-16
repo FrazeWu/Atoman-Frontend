@@ -920,7 +920,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
   font-size: 0.9rem;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1023px) {
   .inbox-body {
     grid-template-columns: 1fr;
   }

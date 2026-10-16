@@ -884,7 +884,7 @@ onMounted(() => {
   border: 0;
 }
 
-@media (max-width: 920px) {
+@media (max-width: 1023px) {
   .setting-users__filters {
     grid-template-columns: minmax(0, 1fr) repeat(2, minmax(140px, 0.5fr));
   }

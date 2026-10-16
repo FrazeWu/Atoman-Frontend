@@ -515,10 +515,8 @@ const submitCategoryRequest = async () => {
 /* ── Page layout ─────────────────────────────────────────────────────────── */
 .forum-page {
   display: flex;
-  min-height: calc(100vh - 4rem);
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
+  width: 100%;
+  min-width: 0;
 }
 
 /* ── Main content ────────────────────────────────────────────────────────── */

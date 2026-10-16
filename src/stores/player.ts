@@ -445,7 +445,11 @@ export const usePlayerStore = defineStore("player", () => {
 		listeningStartedAt = null;
 		listeningTimer = null;
 		reportRecommendationEvent(currentSong.value, "play_start");
-		void recordMusicSongPlay(songId).catch((error) => {
+		const playlistId = currentSong.value?.playlist_id;
+		const report = playlistId
+			? recordMusicSongPlay(songId, playlistId)
+			: recordMusicSongPlay(songId);
+		void report.catch((error) => {
 			reportError(error, "Failed to record music play:");
 		});
 	};

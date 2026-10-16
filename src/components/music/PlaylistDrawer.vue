@@ -348,6 +348,7 @@ function musicSongToPlayerSong(song: MusicSongListItem, playlistName: string, pl
   const artistText = song.artists?.map((artist) => artist.name).join(' / ') || '未知艺术家'
   return {
     id: song.id,
+    playlist_id: playlistId,
     title: song.title,
     artist: artistText,
     album: albumTitle,

@@ -650,8 +650,9 @@ describe("Music DiscoverView.vue", () => {
 		expect(wrapper.text()).toContain("2049");
 		expect(wrapper.text()).toContain("Ye");
 		expect(wrapper.text()).toContain("alice/Late Night Mix");
-		expect(wrapper.text()).toContain("42");
-		expect(wrapper.text()).toContain("7");
+		expect(wrapper.text()).toContain("收藏 7");
+		expect(wrapper.text()).toContain("18 首");
+		expect(wrapper.text()).not.toContain("播放 42");
 		expect(
 			wrapper.get('[data-testid="discover-playlist-card"] img').attributes("src"),
 		).toBe("/uploads/late-night.jpg");

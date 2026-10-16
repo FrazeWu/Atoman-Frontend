@@ -26,17 +26,6 @@
         </span>
       </button>
 
-      <div class="cover-stats" aria-label="歌单统计">
-        <span class="cover-stat">
-          <Headphones class="cover-stat__icon" :size="13" aria-hidden="true" />
-          {{ formattedPlayCount }}
-        </span>
-        <span class="cover-stat">
-          <Bookmark class="cover-stat__icon" :size="13" :fill="isBookmarked ? 'currentColor' : 'none'" aria-hidden="true" />
-          {{ formattedBookmarkCount }}
-        </span>
-      </div>
-
       <button
         v-if="showBookmarkButton"
         type="button"
@@ -69,7 +58,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Bookmark, Headphones, Music2 } from 'lucide-vue-next'
+import { Bookmark, Music2 } from 'lucide-vue-next'
 
 import PMediaCard from '@/components/ui/PMediaCard.vue'
 import { resolveMediaImageURL } from '@/utils/mediaUrl'
@@ -81,8 +70,8 @@ export interface MusicPlaylistCardItem {
   cover_url?: string
   song_count: number
   owner_username?: string
-  play_count?: number
   bookmark_count?: number
+  play_count?: number
 }
 
 const props = withDefaults(defineProps<{
@@ -107,8 +96,8 @@ const displayTitle = computed(() => {
   return owner ? `${owner}/${props.playlist.title}` : props.playlist.title
 })
 
-const formattedPlayCount = computed(() => String(props.playlist.play_count ?? 0))
 const formattedBookmarkCount = computed(() => String(props.playlist.bookmark_count ?? 0))
+const formattedPlayCount = computed(() => String(props.playlist.play_count ?? 0))
 </script>
 
 <style scoped>
@@ -187,40 +176,6 @@ const formattedBookmarkCount = computed(() => String(props.playlist.bookmark_cou
   color: var(--a-color-warning);
   border-color: color-mix(in srgb, var(--a-color-warning) 30%, transparent);
   background: color-mix(in srgb, var(--a-color-warning) 10%, var(--a-color-bg));
-}
-
-.cover-stats {
-  position: absolute;
-  left: 0.6rem;
-  right: 0.6rem;
-  bottom: 0.6rem;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  pointer-events: none;
-}
-
-.cover-stat {
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.28rem;
-  padding: 0.28rem 0.46rem;
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
-  font-size: 0.78rem;
-  font-weight: 500;
-  line-height: 1;
-  text-shadow: none;
-}
-
-.cover-stat__icon {
-  width: 0.82rem;
-  height: 0.82rem;
-  flex: 0 0 auto;
 }
 
 .cover-image {

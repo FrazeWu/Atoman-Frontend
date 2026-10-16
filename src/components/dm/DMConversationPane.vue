@@ -79,19 +79,19 @@
           >
             <!-- 气泡 -->
             <div class="dm-bubble">
-              <p v-if="message.content" class="dm-bubble-text">{{ message.content }}</p>
               <img
                 v-if="message.image_url"
                 :src="message.image_url"
                 alt="私信图片"
                 class="dm-bubble-image"
               />
+              <span v-if="message.content" class="dm-bubble-text">{{ message.content }}</span>
               <span class="dm-bubble-meta">
                 <time class="dm-bubble-time">{{ formatMessageTime(message.created_at) }}</time>
                 <Check
                   v-if="message.sender.id === conversation?.reply_as.id"
                   class="dm-bubble-check"
-                  :size="12"
+                  :size="10"
                   aria-hidden="true"
                 />
               </span>
@@ -482,12 +482,13 @@ const copyMessage = async (content?: string) => {
 
 .dm-bubble {
   position: relative;
-  padding: 0.5rem 0.75rem;
+  padding: 0.45rem 0.65rem;
   border-radius: var(--a-radius-card);
   word-break: break-word;
   background: #ffffff;
   border: 1px solid var(--a-color-border-soft);
   color: var(--a-color-text);
+  line-height: 1.45;
 }
 
 .dm-message.self .dm-bubble {
@@ -500,14 +501,15 @@ const copyMessage = async (content?: string) => {
   margin: 0;
   white-space: pre-wrap;
   font-size: 0.925rem;
-  line-height: 1.5;
+  line-height: 1.45;
+  display: inline;
 }
 
 .dm-bubble-image {
   display: block;
   max-width: 16rem;
   max-height: 16rem;
-  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
   object-fit: contain;
   border-radius: var(--a-radius-control);
 }
@@ -517,14 +519,24 @@ const copyMessage = async (content?: string) => {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  float: right;
-  margin-top: 0.25rem;
-  margin-left: 0.5rem;
-  font-size: 0.7rem;
+  margin-left: 0.4rem;
+  font-size: 0.625rem;
   color: var(--a-color-muted);
   user-select: none;
   line-height: 1;
-  vertical-align: bottom;
+  white-space: nowrap;
+  vertical-align: -1px;
+}
+
+.dm-message.self .dm-bubble-meta {
+  color: color-mix(in srgb, var(--a-color-primary) 65%, var(--a-color-text-secondary));
+}
+
+.dm-bubble-image + .dm-bubble-meta:last-child {
+  display: flex;
+  justify-content: flex-end;
+  margin-left: 0;
+  margin-top: 0.25rem;
 }
 
 .dm-bubble-time {

@@ -1,19 +1,14 @@
 <template>
   <div class="book-library-view">
-    <!-- Header -->
-    <header class="book-library-header">
-      <div class="book-library-header__title-row">
-        <div class="book-library-header__heading">
-          <h1 class="book-library-header__title">我的书架</h1>
-          <p class="book-library-header__sub">管理个人藏书、阅读进度与本地电子书</p>
-        </div>
-        <div class="book-library-header__actions">
-          <PButton variant="primary" size="sm" @click="isUploadModalOpen = true">
-            <Upload :size="15" aria-hidden="true" />
-            <span>导入电子书</span>
-          </PButton>
-        </div>
-      </div>
+    <!-- Page Header -->
+    <PPageHeader title="我的书架" sub="管理个人藏书、阅读进度与本地电子书" mb="1.5rem">
+      <template #action>
+        <PButton variant="primary" size="sm" @click="isUploadModalOpen = true">
+          <Upload :size="15" aria-hidden="true" />
+          <span>导入电子书</span>
+        </PButton>
+      </template>
+    </PPageHeader>
 
       <!-- Quick Metrics Strip -->
       <div class="book-library-metrics">
@@ -34,7 +29,6 @@
           <span class="book-library-metric-value">{{ notesCount }}</span>
         </div>
       </div>
-    </header>
 
     <!-- Continue Reading Section (在读直达) -->
     <section v-if="continueItems.length > 0" class="book-library-continue" aria-labelledby="continue-reading-title">
@@ -191,6 +185,7 @@ import {
   linkBookImportToCatalog,
 } from '@/api/books'
 import PButton from '@/components/ui/PButton.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
 import BookLibraryCard from '@/components/books/BookLibraryCard.vue'
 import BookLibraryContinueCard from '@/components/books/BookLibraryContinueCard.vue'
 import BookImportUploadModal from '@/components/books/BookImportUploadModal.vue'
@@ -364,45 +359,12 @@ onMounted(() => {
   color: var(--a-color-fg);
 }
 
-.book-library-header {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-}
-
-.book-library-header__title-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.book-library-header__heading {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.book-library-header__title {
-  margin: 0;
-  font-size: 1.375rem;
-  font-weight: 500;
-  line-height: 1.3;
-  color: var(--a-color-fg);
-}
-
-.book-library-header__sub {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--a-color-text-muted);
-}
-
 .book-library-metrics {
   display: flex;
   gap: 1.5rem;
   flex-wrap: wrap;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .book-library-metric-item {

@@ -4,7 +4,7 @@ import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { Bookmark, Clock, Pencil } from 'lucide-vue-next'
+import { Bookmark, Clock, Pencil, MessageSquare } from 'lucide-vue-next'
 
 import PButton from '@/components/ui/PButton.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
@@ -727,24 +727,80 @@ defineExpose({
       <div class="post-reader-error__actions"><button type="button" class="a-btn a-btn--primary" @click="fetchPost">重试</button><RouterLink to="/posts" class="a-link">返回文章</RouterLink></div>
     </div>
     <article v-else-if="post" ref="postContentAnchor" class="post-reader-article" @click="handleRenderedContentClick">
-      <div v-if="isOwner" class="post-sheet-actions">
-        <RouterLink v-if="!isSheet" :to="`/studio/blog/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary">编辑</RouterLink>
-        <PButton v-else variant="secondary" size="sm" @click="editPost"><Pencil :size="15" aria-hidden="true" />编辑</PButton>
+      <div v-if="!isSheet || isOwner" class="post-reader-top-nav">
+        <RouterLink v-if="!isSheet" to="/posts" class="a-link post-reader-breadcrumb">← 文章</RouterLink>
+        <div v-if="isOwner" class="post-sheet-actions">
+          <RouterLink v-if="!isSheet" :to="`/studio/blog/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary">编辑</RouterLink>
+          <PButton v-else variant="secondary" size="sm" @click="editPost"><Pencil :size="15" aria-hidden="true" />编辑</PButton>
+        </div>
       </div>
-      <RouterLink v-if="!isSheet" to="/posts" class="a-link post-reader-breadcrumb">← 文章</RouterLink>
-      <img v-if="post.cover_url" :src="resolveMediaURL(post.cover_url)" :alt="post.title" class="post-sheet-cover" />
-      <div class="post-sheet-byline">
+      <div class="article-eyebrow post-sheet-byline">
         <PAvatar class="post-sheet-author-avatar" :src="post.user?.avatar_url" :name="authorName" :alt="`${authorName} 的头像`" size="sm" />
         <div class="post-sheet-author-info">
           <div class="post-sheet-author-row"><span class="post-sheet-author">{{ authorName }}</span><span v-if="authorHandle" class="post-sheet-author-handle">{{ authorHandle }}</span></div>
-          <div class="post-sheet-publishing-meta"><span>发布于 {{ new Date(publicationDate).toLocaleDateString('zh-CN') }}</span><span aria-hidden="true">·</span><span class="post-sheet-reading-time">{{ readingTime }}</span></div>
+          <div class="post-sheet-publishing-meta"><span>发布于 {{ new Date(publicationDate).toLocaleDateString('zh-CN') }}</span><span aria-hidden="true" class="article-eyebrow__sep">·</span><span class="post-sheet-reading-time">{{ readingTime }}</span></div>
         </div>
-        <button v-if="post.channel_id && authStore.isAuthenticated" type="button" class="post-sheet-subscribe" :class="{ 'is-subscribed': channelSubscribed }" :disabled="channelSubscriptionBusy" @click="toggleChannelSubscription">{{ channelSubscribed ? '已订阅频道' : '订阅频道' }}</button>
-        <RouterLink v-else-if="post.channel_id" to="/login" class="post-sheet-subscribe">登录后订阅频道</RouterLink>
       </div>
-      <h1>{{ post.title }}</h1>
-      <p v-if="post.summary" class="post-sheet-summary">{{ post.summary }}</p>
-      <div class="post-sheet-detail-toolbar">
+      <h1 class="article-title article-headline">{{ post.title }}</h1>
+      <div class="article-action-strip">
+        <div class="article-action-strip__left">
+          <button
+            v-if="post.channel_id && authStore.isAuthenticated"
+            type="button"
+            class="article-action-btn post-sheet-subscribe"
+            :class="{ 'is-subscribed': channelSubscribed }"
+            :disabled="channelSubscriptionBusy"
+            @click="toggleChannelSubscription"
+          >
+            {{ channelSubscribed ? '已订阅频道' : '订阅频道' }}
+          </button>
+          <RouterLink
+            v-else-if="post.channel_id"
+            to="/login"
+            class="article-action-btn post-sheet-subscribe"
+          >
+            登录后订阅频道
+          </RouterLink>
+          <a
+            v-if="!isSheet && post.user?.username"
+            :href="api.rss.user(post.user.username)"
+            target="_blank"
+            class="article-source-link"
+          >
+            RSS ↗
+          </a>
+        </div>
+        <div class="article-action-strip__right">
+          <PSegmentedControl v-model="readingMode" :options="readingModeOptions" />
+          <button
+            type="button"
+            class="article-action-btn"
+            data-test="blog-post-quick-bookmark"
+            :aria-pressed="bookmarked"
+            :aria-label="bookmarked ? '取消收藏' : '收藏'"
+            @click="toggleBookmark"
+          >
+            <Bookmark :size="15" aria-hidden="true" :fill="bookmarked ? 'currentColor' : 'none'" />
+            <span>{{ bookmarked ? '已收藏' : '收藏' }}</span>
+          </button>
+          <button
+            type="button"
+            class="article-action-btn article-action-btn--comments"
+            data-test="blog-post-comments-trigger"
+            :aria-label="activeCommentCount ? `评论 (${activeCommentCount})` : '评论'"
+            @click="openComments"
+          >
+            <MessageSquare :size="15" aria-hidden="true" />
+            <span>评论</span>
+            <span v-if="activeCommentCount !== undefined && activeCommentCount > 0" class="article-action-count">{{ activeCommentCount }}</span>
+          </button>
+        </div>
+      </div>
+      <div v-if="post.cover_url" class="article-cover">
+        <img :src="resolveMediaURL(post.cover_url)" :alt="post.title" class="post-sheet-cover" />
+      </div>
+      <p v-if="post.summary" class="post-sheet-summary article-summary">{{ post.summary }}</p>
+      <div v-if="post.tags?.length || post.public_tags?.length || authStore.isAuthenticated" class="post-sheet-detail-toolbar">
         <div v-if="post.tags?.length || post.public_tags?.length" class="post-sheet-tags" aria-label="文章标签">
           <button v-for="tag in post.tags" :key="`author-${tag}`" type="button" @click="openTag(tag)">{{ tag }}</button>
           <span v-for="tag in post.public_tags" :key="tag.id" class="post-public-tag">
@@ -756,7 +812,6 @@ defineExpose({
           <input v-model="publicTagInput" maxlength="48" placeholder="添加公共标签" aria-label="添加公共标签" :disabled="publicTagLoading" />
           <PButton type="submit" size="sm" variant="ghost" :loading="publicTagLoading">添加</PButton>
         </form>
-        <PSegmentedControl v-model="readingMode" :options="readingModeOptions" />
       </div>
       <p v-if="publicTagError" class="post-public-tag-error" role="alert">{{ publicTagError }}</p>
       <BlogPostUpdateNotice :variant="isSheet ? 'compact' : 'default'" :updated-at="post.updated_at" />
@@ -850,9 +905,10 @@ defineExpose({
 .post-reader-error { padding: 6rem 1.5rem; text-align: center; }
 .post-reader-error__code { margin-bottom: 1rem; color: var(--a-color-disabled-border); font-size: 3rem; font-weight: 500; }
 .post-reader-error__actions { display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.5rem; }
-.post-reader-breadcrumb { display: inline-block; margin-bottom: 1.5rem; }
-.post-sheet-actions, .post-sheet-byline { display: flex; align-items: center; gap: 1rem; width: 100%; }
-.post-sheet-actions { justify-content: flex-end; margin-bottom: 1rem; }
+.post-reader-top-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+.post-reader-top-nav .post-sheet-actions { margin-bottom: 0; }
+.post-reader-breadcrumb { display: inline-block; margin-bottom: 0; }
+.post-sheet-actions { display: flex; align-items: center; gap: 1rem; justify-content: flex-end; }
 .post-sheet-actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 1rem; }
 .post-bookmark-dropdown :deep(.p-dropdown-panel) {
   width: min(20rem, calc(100vw - 2rem));
@@ -934,21 +990,154 @@ defineExpose({
 }
 .post-bookmark-menu__state { color: var(--a-color-muted); }
 .post-bookmark-menu__error { color: var(--a-color-danger); }
-.post-detail-toolbar__rss { margin-left: auto; white-space: nowrap; }
-.post-sheet-detail-toolbar { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 1rem; margin: 0 0 1.5rem; }
-.post-sheet-cover { width: 100%; max-height: 22rem; margin-bottom: 2rem; object-fit: cover; }
-.post-sheet-byline { align-items: flex-start; margin-bottom: 1rem; }
+.article-eyebrow,
+.post-sheet-byline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin-bottom: 0.75rem;
+  font-family: var(--a-font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--a-color-muted);
+}
+.article-eyebrow__sep {
+  color: var(--a-color-muted);
+  user-select: none;
+}
 .post-sheet-author-info { min-width: 0; }
 .post-sheet-author-row, .post-sheet-publishing-meta { display: flex; align-items: baseline; gap: 0.45rem; min-width: 0; }
 .post-sheet-author { overflow: hidden; color: var(--a-color-fg); font-size: 0.9rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .post-sheet-author-handle, .post-sheet-publishing-meta { color: var(--a-color-muted); font-size: 0.78rem; }
 .post-sheet-author-handle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .post-sheet-publishing-meta { margin-top: 0.2rem; }
-.post-sheet-subscribe { margin-left: auto; padding: 0.35rem 0.65rem; border: 1px solid var(--a-color-border-soft); background: transparent; color: var(--a-color-fg); font-size: 0.78rem; cursor: pointer; text-decoration: none; }
-.post-sheet-subscribe.is-subscribed { color: var(--a-color-success); border-color: color-mix(in srgb, var(--a-color-success) 45%, var(--a-color-border-soft)); }
-.post-sheet-subscribe:disabled { cursor: wait; opacity: 0.6; }
-.post-reader-article h1 { margin: 1rem 0; font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.2; letter-spacing: 0; }
-.post-sheet-summary { margin: 0 0 2rem; color: var(--a-color-muted); font-size: 1.05rem; line-height: 1.7; }
+
+.article-title,
+.article-headline,
+.post-reader-article h1 {
+  margin: 0.75rem 0 1rem 0;
+  color: var(--a-color-text);
+  font-family: var(--a-font-sans);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.article-action-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.article-action-strip__left,
+.article-action-strip__right {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.article-action-btn,
+.article-source-link {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  background: var(--a-color-bg, #ffffff);
+  box-shadow: none !important;
+  color: var(--a-color-text);
+  cursor: pointer;
+  font-family: var(--a-font-sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.article-action-btn:hover,
+.article-source-link:hover {
+  border-color: var(--a-color-text);
+}
+
+.article-action-btn:focus-visible,
+.article-source-link:focus-visible {
+  outline: 2px solid var(--a-color-text);
+  outline-offset: 2px;
+}
+
+.article-action-btn[aria-pressed='true'] {
+  border-color: var(--a-color-primary);
+  color: var(--a-color-primary);
+}
+
+.article-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.article-action-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--a-color-surface-soft, rgba(0, 0, 0, 0.05));
+  border-radius: 4px;
+}
+
+.post-sheet-subscribe.is-subscribed {
+  color: var(--a-color-success);
+  border-color: color-mix(in srgb, var(--a-color-success) 45%, var(--a-color-border-soft));
+}
+
+.article-cover {
+  width: 100%;
+  max-height: 360px;
+  margin-bottom: 2rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  box-shadow: none !important;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.article-cover img,
+.post-sheet-cover {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  margin-bottom: 0;
+  object-fit: cover;
+}
+
+.article-summary,
+.post-sheet-summary {
+  font-size: 1.15rem;
+  color: var(--a-color-muted);
+  line-height: 1.6;
+  font-style: italic;
+  margin-bottom: 2rem;
+  padding-left: 1.25rem;
+  border-left: 2px solid var(--a-color-fg);
+}
+
+.post-detail-toolbar__rss { margin-left: auto; white-space: nowrap; }
+.post-sheet-detail-toolbar { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 1rem; margin: 0 0 1.5rem; }
 .post-sheet-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-right: auto; }
 .post-sheet-tags button { border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-surface-muted); color: var(--a-color-fg); cursor: pointer; font-size: 0.78rem; line-height: 1.2; padding: 0.35rem 0.6rem; }
 .post-sheet-tags button:hover { border-color: var(--a-color-primary); color: var(--a-color-primary); }
@@ -983,7 +1172,7 @@ defineExpose({
 .prose-blog :deep(th), .prose-blog :deep(td) { border: 1px solid var(--a-color-border-soft); padding: 0.7rem 1.1rem; }
 .prose-blog :deep(th) { background: var(--a-color-surface-muted); color: var(--a-color-fg); font-weight: 600; text-align: left; }
 .academic-reader { display: grid; gap: 1.5rem; margin-top: 1rem; }
-.academic-paper { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: min(100%, 42rem); aspect-ratio: 210 / 297; margin: 0 auto; padding: 1.25rem 1.5rem 1rem; background: var(--a-color-bg); color: var(--a-color-text); border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); box-shadow: var(--a-shadow-sm); }
+.academic-paper { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: min(100%, 42rem); aspect-ratio: 210 / 297; margin: 0 auto; padding: 1.25rem 1.5rem 1rem; background: var(--a-color-bg, #ffffff); color: var(--a-color-text); border: 1px solid var(--a-color-border-soft); border-radius: 4px; box-shadow: none !important; }
 .academic-paper__header, .academic-paper__footer { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 0.75rem; color: var(--a-color-muted); font-family: Georgia, 'Times New Roman', serif; font-size: 0.72rem; line-height: 1.25; }
 .academic-paper__header { min-height: 1.8rem; border-bottom: 1px solid var(--a-color-border-soft); }
 .academic-paper__header > :last-child { grid-column: 3; overflow: hidden; text-align: right; text-overflow: ellipsis; white-space: nowrap; }

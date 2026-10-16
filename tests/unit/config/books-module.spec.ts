@@ -65,6 +65,7 @@ describe("books module foundation", () => {
       "authors",
       "notes",
       "import/:importId",
+      "read/:workId/:assetId/:revisionId",
       "read/:assetId",
       "public-read/:assetId",
       "contributions",

@@ -1,12 +1,12 @@
 <template>
-  <main class="a-page-md public-reader" :class="`public-reader--theme-${displayPreferences.theme}`" :style="{ '--book-reader-font-scale': displayPreferences.font_scale }">
+  <main class="public-reader" :class="[`public-reader--theme-${displayPreferences.theme}`, { 'a-page-md': !source }]" :style="{ '--book-reader-font-scale': displayPreferences.font_scale }">
     <BookReaderShell
-      :title="asset?.file_name || '公共电子书'"
+      :title="source?.title || asset?.file_name || '公共电子书'"
       :format="formatLabel"
       :progress="readingPercent"
       :page-label="pageLabel"
-      toolbar-label="公共正文"
-      back-to="/books"
+      :toolbar-label="source ? '固定文件版本' : '公共正文'"
+      :back-to="source?.backTo || '/books'"
       back-label="返回书籍"
       :can-prev="canPrev"
       :can-next="canNext"
@@ -17,6 +17,7 @@
       :initial-zoom="displayPreferences.zoom_level || 100"
       :show-scroll-mode-toggle="['pdf', 'txt', 'epub'].includes(asset?.format || '')"
       :initial-scroll-mode="displayPreferences.scroll_mode || 'paginated'"
+      :initial-panel="source ? '' : undefined"
       @previous="movePrevious"
       @next="moveNext"
       @toc-select="jumpToEpubTOC"
@@ -24,7 +25,7 @@
       @scroll-mode-change="handleScrollModeChange"
     >
       <template #actions>
-        <PButton type="button" variant="ghost" :disabled="!asset" @click="reportAsset">
+        <PButton v-if="!source" type="button" variant="ghost" :disabled="!asset" @click="reportAsset">
           <Flag :size="16" aria-hidden="true" />
           <span>举报正文</span>
         </PButton>
@@ -100,7 +101,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { IconBookmark as Bookmark, IconFlag as Flag, IconSearch as Search } from '@tabler/icons-vue'
 import ePub from 'epubjs'
-import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist'
+import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy, type RenderTask } from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import PButton from '@/components/ui/PButton.vue'
 import BookReaderDisplayControls from '@/components/books/BookReaderDisplayControls.vue'
@@ -113,6 +114,7 @@ import { findBookTextMatches, type BookTextSearchMatch } from '@/utils/bookTextS
 import { getLocalBookReadingProgress, saveLocalBookReadingProgress, type LocalBookReadingProgress } from '@/utils/bookReadingProgress'
 import { parseBookReaderDisplayPreferences, type BookReaderBookmark, type BookReaderDisplayPreferences, type BookReaderScrollMode } from '@/utils/bookReaderPreferences'
 import { fetchPublishedBookAssetContent, getPublishedBookAsset, reportPublishedBookAsset, type BookPublishedAsset } from '@/api/books'
+import type { BookReaderSource } from '@/types/bookReaderSource'
 
 GlobalWorkerOptions.workerSrc = pdfWorker
 
@@ -122,6 +124,7 @@ type EpubTOCSource = { id?: string; href: string; label: string; subitems?: Epub
 type EpubTOCItem = EpubTOCSource & { depth: number }
 
 const route = useRoute()
+const props = defineProps<{ source?: BookReaderSource }>()
 const readerStore = useBookReaderStore()
 const asset = ref<BookPublishedAsset | null>(null)
 const textContent = ref('')
@@ -151,6 +154,10 @@ let pdfLoadingTask: ReturnType<typeof getDocument> | null = null
 let epubBook: EpubBook | null = null
 let epubRendition: EpubRendition | null = null
 let localProgress: LocalBookReadingProgress | null = null
+let disposed = false
+let pdfRenderTask: RenderTask | undefined
+let pdfRenderGeneration = 0
+function progressKey() { return props.source?.progressKey || asset.value?.id || '' }
 
 const formatLabel = computed(() => asset.value?.format.toUpperCase() || '')
 const pageLabel = computed(() => {
@@ -182,6 +189,7 @@ async function loadText() {
 async function loadPDF() {
   pdfLoadingTask = getDocument({ data: await contentBlob!.arrayBuffer() })
   pdfDocument = await pdfLoadingTask.promise
+  if (disposed) return
   pdfPageCount.value = pdfDocument.numPages
   if (localProgress) pdfPage.value = Math.min(pdfPageCount.value, Math.max(1, Math.round(localProgress.reading_percent * pdfPageCount.value)))
   await renderPDFPage()
@@ -189,19 +197,29 @@ async function loadPDF() {
 
 async function renderPDFPage() {
   if (!pdfDocument || !pdfCanvas.value) return
-  const page = await pdfDocument.getPage(pdfPage.value)
-  const zoomFactor = (displayPreferences.value.zoom_level || 100) / 100
-  const viewport = page.getViewport({ scale: 1.35 * zoomFactor })
-  const canvas = pdfCanvas.value
-  const context = canvas.getContext('2d')
-  if (!context) return
-  canvas.width = viewport.width
-  canvas.height = viewport.height
-  canvas.style.aspectRatio = `${viewport.width} / ${viewport.height}`
-  await page.render({ canvas, canvasContext: context, viewport }).promise
-  readingPercent.value = pdfPageCount.value > 0 ? pdfPage.value / pdfPageCount.value : 0
-  readerStore.updateProgress(pdfPage.value, pdfPageCount.value, `第 ${pdfPage.value} 页`)
-  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
+  const current = ++pdfRenderGeneration
+  const previous = pdfRenderTask
+  previous?.cancel()
+  try {
+    await previous?.promise.catch(() => undefined)
+    if (disposed || current !== pdfRenderGeneration) return
+    const page = await pdfDocument.getPage(pdfPage.value)
+    if (disposed || current !== pdfRenderGeneration) return
+    const zoomFactor = (displayPreferences.value.zoom_level || 100) / 100
+    const viewport = page.getViewport({ scale: 1.35 * zoomFactor })
+    const canvas = pdfCanvas.value
+    const context = canvas.getContext('2d')
+    if (!context) return
+    canvas.width = viewport.width
+    canvas.height = viewport.height
+    canvas.style.aspectRatio = `${viewport.width} / ${viewport.height}`
+    pdfRenderTask = page.render({ canvas, canvasContext: context, viewport })
+    await pdfRenderTask.promise
+    if (disposed || current !== pdfRenderGeneration) return
+    readingPercent.value = pdfPageCount.value > 0 ? pdfPage.value / pdfPageCount.value : 0
+    if (!props.source) readerStore.updateProgress(pdfPage.value, pdfPageCount.value, `第 ${pdfPage.value} 页`)
+    saveLocalBookReadingProgress(progressKey(), { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
+  } catch { if (!disposed && current === pdfRenderGeneration) errorMessage.value = 'PDF 页面显示失败，请重新载入文件。' }
 }
 
 function handleZoomChange(newZoom: number) {
@@ -210,7 +228,7 @@ function handleZoomChange(newZoom: number) {
     void renderPDFPage()
   }
   if (asset.value) {
-    saveLocalBookReadingProgress(asset.value.id, {
+    saveLocalBookReadingProgress(progressKey(), {
       reading_percent: readingPercent.value,
       epub_cfi: localProgress?.epub_cfi || '',
       bookmarks: bookmarks.value,
@@ -222,7 +240,7 @@ function handleZoomChange(newZoom: number) {
 function handleScrollModeChange(newMode: BookReaderScrollMode) {
   displayPreferences.value = { ...displayPreferences.value, scroll_mode: newMode }
   if (asset.value) {
-    saveLocalBookReadingProgress(asset.value.id, {
+    saveLocalBookReadingProgress(progressKey(), {
       reading_percent: readingPercent.value,
       epub_cfi: localProgress?.epub_cfi || '',
       bookmarks: bookmarks.value,
@@ -234,15 +252,17 @@ function handleScrollModeChange(newMode: BookReaderScrollMode) {
 async function loadEPUB() {
   epubBook = ePub(await contentBlob!.arrayBuffer())
   await epubBook.ready
+  if (disposed) return
   epubTOC.value = flattenEpubTOC(epubBook.navigation.toc as EpubTOCSource[])
   epubRendition = epubBook.renderTo(epubViewport.value!, { width: '100%', height: '100%', flow: 'paginated', manager: 'default', allowScriptedContent: false })
   epubRendition.on('relocated', (location: { start?: { cfi?: string; percentage?: number } }) => {
     readingPercent.value = Math.max(0, Math.min(1, location.start?.percentage || 0))
-    saveLocalBookReadingProgress(asset.value?.id || '', {
+    saveLocalBookReadingProgress(progressKey(), {
       reading_percent: readingPercent.value,
       epub_cfi: location.start?.cfi || '',
       bookmarks: bookmarks.value,
     })
+    localProgress = getLocalBookReadingProgress(progressKey())
   })
   await epubRendition.display(localProgress?.epub_cfi || undefined)
 }
@@ -251,6 +271,7 @@ async function loadComic() {
   const format = asset.value?.format
   if (format !== 'cbz' && format !== 'cbr') return
   const pages = await extractComicPages(contentBlob!, format)
+  if (disposed) return
   comicPages.value = pages.map((page) => ({ ...page, url: URL.createObjectURL(page.blob) }))
   comicPage.value = localProgress ? Math.min(comicPages.value.length, Math.max(1, Math.round(localProgress.reading_percent * Math.max(1, comicPages.value.length - 1)) + 1)) : 1
   await nextTick()
@@ -273,7 +294,7 @@ function handleTextScroll() {
   textPageCount.value = Math.max(1, Math.ceil(viewport.scrollHeight / pageHeight))
   textPage.value = Math.min(textPageCount.value, Math.floor(viewport.scrollTop / pageHeight) + 1)
   readingPercent.value = Math.max(0, Math.min(1, viewport.scrollTop / Math.max(1, viewport.scrollHeight - viewport.clientHeight)))
-  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
+  saveLocalBookReadingProgress(progressKey(), { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
 }
 
 function updateTextPageCount() {
@@ -313,7 +334,7 @@ function setComicPageRef(index: number, element: unknown) {
 function scrollToComicPage() {
   comicPageElements[comicPage.value - 1]?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
   readingPercent.value = comicPages.value.length > 1 ? (comicPage.value - 1) / (comicPages.value.length - 1) : 1
-  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
+  saveLocalBookReadingProgress(progressKey(), { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
 }
 
 function changeComicPage(delta: number) {
@@ -327,7 +348,7 @@ function changeTextPage(delta: number) {
   textPage.value = nextPage
   textViewport.value?.scrollTo?.({ top: (nextPage - 1) * Math.max(1, textViewport.value?.clientHeight || 0), behavior: 'smooth' })
   readingPercent.value = textPageCount.value > 1 ? (nextPage - 1) / (textPageCount.value - 1) : 1
-  saveLocalBookReadingProgress(asset.value?.id || '', { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
+  saveLocalBookReadingProgress(progressKey(), { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
 }
 
 function createBookmarkID() {
@@ -345,7 +366,7 @@ function addBookmark() {
     comic_page: asset.value.format === 'cbz' || asset.value.format === 'cbr' ? comicPage.value : undefined,
     created_at: new Date().toISOString(),
   }, ...bookmarks.value]
-  saveLocalBookReadingProgress(asset.value.id, {
+  saveLocalBookReadingProgress(progressKey(), {
     reading_percent: readingPercent.value,
     epub_cfi: localProgress?.epub_cfi || '',
     bookmarks: bookmarks.value,
@@ -355,7 +376,7 @@ function addBookmark() {
 function removeBookmark(id: string) {
   if (!asset.value) return
   bookmarks.value = bookmarks.value.filter((bookmark) => bookmark.id !== id)
-  saveLocalBookReadingProgress(asset.value.id, {
+  saveLocalBookReadingProgress(progressKey(), {
     reading_percent: readingPercent.value,
     epub_cfi: localProgress?.epub_cfi || '',
     bookmarks: bookmarks.value,
@@ -370,7 +391,7 @@ function searchText() {
 function updateDisplayPreferences(value: BookReaderDisplayPreferences) {
   displayPreferences.value = parseBookReaderDisplayPreferences(value)
   if (!asset.value) return
-  saveLocalBookReadingProgress(asset.value.id, {
+  saveLocalBookReadingProgress(progressKey(), {
     reading_percent: readingPercent.value,
     epub_cfi: localProgress?.epub_cfi || '',
     bookmarks: bookmarks.value,
@@ -383,7 +404,7 @@ function jumpToTextMatch(match: BookTextSearchMatch) {
   readingPercent.value = textContent.value.length ? match.index / textContent.value.length : 0
   const viewport = textViewport.value
   if (viewport) viewport.scrollTop = readingPercent.value * Math.max(0, viewport.scrollHeight - viewport.clientHeight)
-  saveLocalBookReadingProgress(asset.value.id, { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
+  saveLocalBookReadingProgress(progressKey(), { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
 }
 
 function jumpToBookmark(bookmark: BookReaderBookmark) {
@@ -414,12 +435,14 @@ function jumpToEpubTOC(href: string) {
 onMounted(async () => {
   try {
     const assetID = String(route.params.assetId || '')
-    asset.value = await getPublishedBookAsset(assetID)
-    localProgress = getLocalBookReadingProgress(assetID)
+    asset.value = props.source?.asset || await getPublishedBookAsset(assetID)
+    if (disposed) return
+    localProgress = getLocalBookReadingProgress(progressKey())
     readingPercent.value = localProgress?.reading_percent || 0
     bookmarks.value = localProgress?.bookmarks || []
     displayPreferences.value = localProgress?.display || parseBookReaderDisplayPreferences(null)
-    contentBlob = await fetchPublishedBookAssetContent(assetID)
+    contentBlob = props.source ? await props.source.loadContent() : await fetchPublishedBookAssetContent(assetID)
+    if (disposed) return
     await nextTick()
     if (asset.value.format === 'txt') await loadText()
     else if (asset.value.format === 'pdf') await loadPDF()
@@ -433,6 +456,9 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  disposed = true
+  pdfRenderGeneration++
+  pdfRenderTask?.cancel()
   if (epubRendition) epubRendition.destroy()
   if (epubBook) epubBook.destroy()
   if (pdfLoadingTask) void pdfLoadingTask.destroy()
@@ -488,6 +514,7 @@ onBeforeUnmount(() => {
 }
 
 .public-reader__text {
+  height: min(68vh, 720px);
   overflow: auto;
   padding: clamp(1.25rem, 4vw, 3rem);
   background: var(--book-reader-surface);
@@ -505,6 +532,7 @@ onBeforeUnmount(() => {
 }
 
 .public-reader__epub {
+  height: min(68vh, 720px);
   padding: 1rem;
   background: var(--book-reader-surface);
 }

@@ -27,8 +27,11 @@
         <ul v-else class="book-catalog__list">
           <li v-for="asset in resources" :key="asset.id" class="book-catalog__row">
             <strong>{{ asset.title || work.title }}</strong><span>{{ asset.format.toUpperCase() }} · {{ asset.language }}</span><span>文件已通过自动安全检查</span>
+            <PButton v-if="asset.current_revision_id" :to="resourceReaderPath(work.id, asset.id, asset.current_revision_id)">开始阅读</PButton>
           </li>
         </ul>
+        <BookResourceUpload v-if="auth.isAuthenticated" :key="auth.user?.uuid" :work-id="work.id" :title="work.title" @ready="loadResources" />
+        <PButton v-else variant="secondary" :to="{ path: '/login', query: { redirect: route.fullPath } }">登录后上传文件</PButton>
       </section>
     </template>
   </section>
@@ -37,6 +40,9 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { resourceReaderPath } from '@/api/bookResources'
+import BookResourceUpload from '@/components/books/BookResourceUpload.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { getCatalogWork, listCatalogResources, type CatalogResource, type CatalogWork } from '@/api/bookCatalog'
 import PButton from '@/components/ui/PButton.vue'
@@ -45,6 +51,7 @@ import './bookCatalog.css'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const work = ref<CatalogWork | null>(null)
 const resources = ref<CatalogResource[]>([])
 const loading = ref(true)
@@ -75,6 +82,6 @@ async function loadResources() {
   catch { if (alive) resourceError.value = '文件信息加载失败。图书本身仍已公开，请重试加载文件。' }
   finally { if (alive) resourcesLoading.value = false }
 }
-onMounted(load)
+onMounted(() => { void load(); if (!auth.isAuthenticated) void auth.restoreSession() })
 onBeforeUnmount(() => { alive = false })
 </script>

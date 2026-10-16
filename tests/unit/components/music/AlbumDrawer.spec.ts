@@ -41,6 +41,7 @@ const {
 	openMusicEditor,
 	openMusicCreationFlow,
 	openAlbum,
+	replaceSong,
 	openArtist,
 	refreshPlaylists,
 	getMusicAlbum,
@@ -65,6 +66,7 @@ const {
 	openMusicEditor: vi.fn(),
 	openMusicCreationFlow: vi.fn(),
 	openAlbum: vi.fn(),
+	replaceSong: vi.fn(),
 	openArtist: vi.fn(),
 	refreshPlaylists: vi.fn(),
 	getMusicAlbum: vi.fn(),
@@ -98,6 +100,7 @@ vi.mock("@/composables/useMusicDrawers", () => ({
 		openMusicEditor,
 		openMusicCreationFlow,
 		openAlbum,
+		replaceSong,
 		openArtist,
 		refreshPlaylists,
 	}),
@@ -512,6 +515,13 @@ describe("AlbumDrawer.vue", () => {
 		await flushPromises();
 
 		expect(openAlbum).toHaveBeenCalledWith("album-target");
+	});
+
+	it("replaces a converted album layer with its standalone song", async () => {
+		getMusicAlbum.mockResolvedValueOnce({ id: "1", title: "Converted", entry_status: "closed", redirect_song_id: "song-target", songs: [] });
+		mount(AlbumDrawer);
+		await flushPromises();
+		expect(replaceSong).toHaveBeenCalledWith("song-target");
 	});
 
 	it("plays album songs through the player when clicking play album", async () => {

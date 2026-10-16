@@ -172,10 +172,16 @@ describe("player store", () => {
 
 		await vi.advanceTimersByTimeAsync(1);
 		expect(mocks.recordMusicSongPlay).toHaveBeenCalledTimes(1);
-		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith("song-5s");
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith("song-5s", undefined, expect.any(String));
+		const firstEvent = mocks.recordMusicSongPlay.mock.calls[0][2];
+		expect(firstEvent).toMatch(/^[0-9a-f-]{36}$/i);
 
 		await vi.advanceTimersByTimeAsync(5000);
 		expect(mocks.recordMusicSongPlay).toHaveBeenCalledTimes(1);
+		player.playSong({ id: "next-song", title: "Next", audio_url: "next.mp3" } as Song);
+		await vi.advanceTimersByTimeAsync(5000);
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledTimes(2);
+		expect(mocks.recordMusicSongPlay.mock.calls[1][2]).not.toBe(firstEvent);
 		vi.useRealTimers();
 	});
 
@@ -188,7 +194,7 @@ describe("player store", () => {
 		await audioInstances[0].play.mock.results[0]?.value;
 		await vi.advanceTimersByTimeAsync(5000);
 
-		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith("playlist-song", "playlist-1");
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith("playlist-song", "playlist-1", expect.any(String));
 		vi.useRealTimers();
 	});
 
@@ -260,7 +266,7 @@ describe("player store", () => {
 		await vi.advanceTimersByTimeAsync(5000);
 
 		expect(mocks.recordMusicSongPlay).toHaveBeenCalledTimes(1);
-		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith("guest-song");
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith("guest-song", undefined, expect.any(String));
 		vi.useRealTimers();
 	});
 
@@ -392,7 +398,7 @@ describe("player store", () => {
 		await audioInstances[0].play.mock.results[0]?.value;
 		await vi.advanceTimersByTimeAsync(5000);
 
-		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith("restored-song");
+		expect(mocks.recordMusicSongPlay).toHaveBeenCalledWith("restored-song", undefined, expect.any(String));
 		vi.useRealTimers();
 	});
 

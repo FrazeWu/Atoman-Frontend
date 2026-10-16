@@ -225,6 +225,18 @@ describe("Music AlbumsView.vue (Album Landing)", () => {
 		);
 	});
 
+	it("opens a standalone song task without an album", async () => {
+		authStore.isAuthenticated = true;
+		authStore.token = "token";
+		authStore.user = { uuid: "user-1" };
+		mocks.listPendingMusicLyricsAnnotations.mockResolvedValue([{ annotation_id: "single-note", song_id: "single-song", album_id: null }]);
+		const wrapper = mountHome();
+		await flushPromises();
+		await wrapper.get('[data-testid="music-pending-rebind"]').trigger("click");
+		await flushPromises();
+		expect(mocks.routerPush).toHaveBeenCalledWith({ path: "/music/song/single-song", query: { annotation_id: "single-note", rebind: "1" } });
+	});
+
 	it("removes the pending rebind entry after the annotation is rebound", async () => {
 		authStore.isAuthenticated = true;
 		authStore.token = "token";

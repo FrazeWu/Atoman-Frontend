@@ -398,6 +398,7 @@ export const usePlayerStore = defineStore("player", () => {
 	let listenedMs = 0;
 	let listeningSongId: string | null = null;
 	let playReported = false;
+	let listeningEventId: string | null = null;
 	let podcastTracker: ReturnType<typeof createContentConsumptionTracker> | null =
 		null;
 
@@ -446,9 +447,7 @@ export const usePlayerStore = defineStore("player", () => {
 		listeningTimer = null;
 		reportRecommendationEvent(currentSong.value, "play_start");
 		const playlistId = currentSong.value?.playlist_id;
-		const report = playlistId
-			? recordMusicSongPlay(songId, playlistId)
-			: recordMusicSongPlay(songId);
+		const report = recordMusicSongPlay(songId, playlistId, listeningEventId ?? undefined);
 		void report.catch((error) => {
 			reportError(error, "Failed to record music play:");
 		});
@@ -468,6 +467,8 @@ export const usePlayerStore = defineStore("player", () => {
 		listenedMs = 0;
 		listeningSongId =
 			!song.source_type || song.source_type === "music" ? String(song.id) : null;
+		// 同一次播放暂停、恢复和网络重试复用 ID；切歌或重新播放才创建新事件。
+		listeningEventId = listeningSongId ? crypto.randomUUID() : null;
 		playReported = false;
 	};
 
@@ -493,6 +494,7 @@ export const usePlayerStore = defineStore("player", () => {
 		listeningStartedAt = null;
 		listenedMs = 0;
 		listeningSongId = null;
+		listeningEventId = null;
 		playReported = false;
 		podcastTracker = null;
 		currentSongStartCached = false;

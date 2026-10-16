@@ -41,6 +41,18 @@ describe("api v1 client", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("reuses an explicit playback event ID on retry and preserves playlist attribution", async () => {
+		const fetch = vi.fn(async () => new Response(JSON.stringify({ data: { recorded: true } }), { status: 200, headers: { "Content-Type": "application/json" } }));
+		vi.stubGlobal("fetch", fetch);
+		const eventId = "a5b7469b-07f3-42cf-a1c6-4a02bc1bab72";
+		await musicV1.recordMusicSongPlay("song-1", "playlist-1", eventId);
+		await musicV1.recordMusicSongPlay("song-1", "playlist-1", eventId);
+		for (const call of fetch.mock.calls) {
+			expect(call[0]).toBe("/api/v1/music/plays");
+			expect(JSON.parse(String((call[1] as RequestInit).body))).toEqual({ song_id: "song-1", playlist_id: "playlist-1", play_event_id: eventId });
+		}
+	});
+
 	it("loads artist revision history through the artist wiki namespace", async () => {
 		vi.stubGlobal(
 			"fetch",

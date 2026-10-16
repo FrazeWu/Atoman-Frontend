@@ -116,7 +116,7 @@
       close-type="header"
       @close="showCreateModal = false"
     >
-      <div class="debate-create-form-wrap" style="padding: 1.5rem;">
+      <div class="debate-create-form-wrap">
         <form @submit.prevent="handleCreate" class="space-y-4">
           <PInput v-model="createForm.title" label="标题" placeholder="长期吸烟会不会显著增加肺癌风险？" />
           <PReferenceField v-model="createForm.content" variant="textarea" label="正文" :rows="6" />
@@ -494,5 +494,9 @@ watch([routeStatus, routeTag], ([status, tag]) => {
   border: 1px solid var(--a-color-border);
   background: var(--a-color-surface-muted);
   color: var(--a-color-text-secondary);
+}
+
+.debate-create-form-wrap {
+  padding: 1.5rem;
 }
 </style>

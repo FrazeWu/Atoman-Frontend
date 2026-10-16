@@ -47,7 +47,7 @@ import { albumArtistRoleLabels, albumContributorsFromResponse } from '@/utils/mu
 
 type AlbumLayer = Extract<MusicSheetLayer, { kind: 'album' }>
 const props = withDefaults(defineProps<{ layer?: AlbumLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
-const { state, closeAlbum, returnToLayer, isAlbumShifted, isLayerActive, isLayerShifted, isTopLayer, openAlbum, replaceAlbum, openNestedAction, openArtist, openMusicCreationFlow } = useMusicDrawers()
+const { state, closeAlbum, returnToLayer, isAlbumShifted, isLayerActive, isLayerShifted, isTopLayer, openAlbum, replaceAlbum, replaceSong, openNestedAction, openArtist, openMusicCreationFlow } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
 const player = usePlayerStore()
 const albumId = computed(() => props.layer?.payload.albumId ?? state.value.albumId)
@@ -525,6 +525,10 @@ async function loadAlbum(albumId: string | null) {
     if (!isCurrentLoad()) return
 
     const albumResponse = resolved.entity
+    if (albumResponse.redirect_song_id) {
+      replaceSong(albumResponse.redirect_song_id)
+      return
+    }
     if (resolved.redirected) {
       redirectMessage.value = '已转到合并后的条目'
       openAlbum(albumResponse.id)

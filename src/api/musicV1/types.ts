@@ -605,6 +605,7 @@ export type MusicArtistListItem = {
 
 export type MusicAlbumListItem = {
 	id: string;
+	redirect_song_id?: string | null;
 	title: string;
 	musicbrainz_matched?: boolean;
 	match_status?: string;
@@ -1170,7 +1171,7 @@ export type MusicLyricsAnnotationStatus = "active" | "deleted" | "needs_rebind";
 export type PendingMusicLyricsAnnotation = {
 	annotation_id: string;
 	song_id: string;
-	album_id: string;
+	album_id?: string | null;
 };
 
 export type MusicSongLyricsLine = {

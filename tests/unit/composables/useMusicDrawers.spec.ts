@@ -73,6 +73,15 @@ describe("useMusicDrawers", () => {
 		});
 	});
 
+	it("replaces a merged song without adding history or dropping annotation focus", () => {
+		const drawers = useMusicDrawers();
+		drawers.openSong("old-song", { focusAnnotationId: "note-1", startRebind: true });
+		const key = drawers.layers.value[0]?.key;
+		drawers.replaceSong("canonical-song", { focusAnnotationId: "note-1", startRebind: true });
+		expect(drawers.layers.value).toHaveLength(1);
+		expect(drawers.layers.value[0]).toMatchObject({ key, route: "/music/song/canonical-song?annotation_id=note-1&rebind=1" });
+	});
+
 	it("replaces an entity for navigation without adding a new layer", () => {
 		const drawers = useMusicDrawers();
 		drawers.openAlbum("album-1");

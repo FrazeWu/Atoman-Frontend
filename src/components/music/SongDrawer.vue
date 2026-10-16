@@ -444,6 +444,10 @@ async function loadDetail(targetSongId: unknown) {
   try {
     const response = await getMusicSongDetail(targetSongId)
     if (!request.isCurrent()) return
+    if (String(response.song.id) !== targetSongId) {
+      replaceSong(String(response.song.id), { focusAnnotationId: focusAnnotationId.value, startRebind: startRebind.value })
+      return
+    }
     detail.value = response
     try {
       if (!authStore.isAuthenticated) {

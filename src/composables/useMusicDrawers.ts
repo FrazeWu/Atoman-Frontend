@@ -546,8 +546,8 @@ export function useMusicDrawers() {
 			.reverse()
 			.find((layer) => layer.kind === "song")?.key ?? "",
 	) => closeLayerAndAbove(key);
-	const replaceSong = (id: string) => {
-		const target = songLayer(id);
+	const replaceSong = (id: string, options: MusicSongLayerOptions = {}) => {
+		const target = songLayer(id, options);
 		if (mobile) void router.replace(target.route!);
 		else sheetStack.replaceTop(target, true);
 	};

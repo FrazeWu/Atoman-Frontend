@@ -9,6 +9,7 @@ import type { ResourceUpload } from '@/api/bookResources'
 import BookResourceUpload from '@/components/books/BookResourceUpload.vue'
 import BookRevisionReaderView from '@/views/books/BookRevisionReaderView.vue'
 import BookPublicReaderView from '@/views/books/BookPublicReaderView.vue'
+import BookCloudReader from '@/components/books/BookCloudReader.vue'
 import type { BookReaderSource } from '@/types/bookReaderSource'
 
 const asset = { id: 'asset-1', work_id: 'work-1', title: '历史', language: 'zh', format: 'txt' as const, status: 'active' as const, current_revision_id: 'revision-new' }
@@ -43,7 +44,7 @@ async function setupReader() {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/books/read/:workId/:assetId/:revisionId', component: BookRevisionReaderView }] })
   await router.push('/books/read/work-1/asset-1/revision-old')
   await router.isReady()
-  const wrapper = mount(BookRevisionReaderView, { global: { plugins: [router], stubs: { BookPublicReaderView: { props: ['source'], template: '<div data-reader />' } } } })
+  const wrapper = mount(BookRevisionReaderView, { global: { plugins: [router], stubs: { BookCloudReader: { props: ['source'], template: '<div data-reader />' }, BookPublicReaderView: { props: ['source'], template: '<div data-reader />' } } } })
   wrappers.push(wrapper)
   await flushPromises()
   return wrapper
@@ -118,11 +119,20 @@ describe('文件上传与公开反馈', () => {
 })
 
 describe('固定文件版本阅读入口', () => {
+  it('访客仍可直接阅读公开文件，不调用登录用户的同步组件', async () => {
+    mockReader()
+    useAuthStore().isAuthenticated = false
+    vi.spyOn(useAuthStore(), 'restoreSession').mockResolvedValue(false)
+    const wrapper = await setupReader()
+    expect(wrapper.findComponent(BookPublicReaderView).exists()).toBe(true)
+    expect(wrapper.findComponent(BookCloudReader).exists()).toBe(false)
+    expect(wrapper.text()).toContain('仅保存在本机')
+  })
   it('新版本发布后旧链接仍加载原修订，不切换到最新版', async () => {
     mockReader()
     const fetch = vi.spyOn(api, 'fetchResourceRevision').mockResolvedValue(new Blob(['旧正文']))
     const wrapper = await setupReader()
-    const source = wrapper.findComponent(BookPublicReaderView).props('source') as BookReaderSource
+    const source = wrapper.findComponent(BookCloudReader).props('source') as BookReaderSource
     expect(source.asset.file_name).toBe('old.txt')
     expect(source.progressKey).toBe('revision:user-1:revision-old')
     await source.loadContent()
@@ -146,11 +156,11 @@ describe('固定文件版本阅读入口', () => {
     mockReader()
     const fetch = vi.spyOn(api, 'fetchResourceRevision').mockResolvedValue(new Blob(['正文']))
     const wrapper = await setupReader()
-    const first = wrapper.findComponent(BookPublicReaderView).props('source') as BookReaderSource
+    const first = wrapper.findComponent(BookCloudReader).props('source') as BookReaderSource
     await first.loadContent()
     useAuthStore().user = { uuid: 'user-2' } as never
     await flushPromises()
-    expect(wrapper.findComponent(BookPublicReaderView).props('source').progressKey).toBe('revision:user-2:revision-old')
+    expect(wrapper.findComponent(BookCloudReader).props('source').progressKey).toBe('revision:user-2:revision-old')
     expect(fetch.mock.calls[0]![1]?.aborted).toBe(true)
   })
 })

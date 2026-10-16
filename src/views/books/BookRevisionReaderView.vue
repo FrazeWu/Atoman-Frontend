@@ -3,8 +3,9 @@
     <p v-if="loading" role="status">正在打开文件版本…</p>
     <div v-else-if="error" role="alert"><p>{{ error }}</p><PButton variant="secondary" @click="load">重试</PButton><PButton :to="`/books/work/${route.params.workId}`" variant="ghost">返回图书</PButton></div>
     <template v-else-if="source">
-      <div class="revision-reader__status"><span>文件版本 {{ version }} · 进度与书签暂保存在本机</span><PButton variant="ghost" @click="load">重新载入文件</PButton></div>
-      <BookPublicReaderView :key="source.progressKey" :source="source" />
+      <div class="revision-reader__status"><span>文件版本 {{ version }}<template v-if="owner === 'guest'"> · 进度与书签仅保存在本机，登录后可使用云端同步</template></span><PButton variant="ghost" @click="load">重新载入文件</PButton></div>
+      <BookCloudReader v-if="owner !== 'guest'" :key="source.progressKey" :source="source" :owner="owner" :revision-id="String(route.params.revisionId)" />
+      <BookPublicReaderView v-else :key="source.progressKey" :source="source" />
     </template>
   </section>
 </template>
@@ -17,6 +18,7 @@ import { getCatalogWork, listCatalogResources } from '@/api/bookCatalog'
 import { fetchResourceRevision, listResourceRevisions } from '@/api/bookResources'
 import type { BookReaderSource } from '@/types/bookReaderSource'
 import BookPublicReaderView from './BookPublicReaderView.vue'
+import BookCloudReader from '@/components/books/BookCloudReader.vue'
 import PButton from '@/components/ui/PButton.vue'
 
 const route = useRoute()

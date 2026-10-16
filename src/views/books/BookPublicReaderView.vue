@@ -29,7 +29,7 @@
           <Flag :size="16" aria-hidden="true" />
           <span>举报正文</span>
         </PButton>
-        <PButton type="button" variant="ghost" :disabled="!asset" aria-label="添加书签" title="添加书签" @click="addBookmark">
+        <PButton type="button" variant="ghost" :disabled="!asset || isLoading || bookmarkBusy" aria-label="添加书签" title="添加书签" @click="addBookmark">
           <Bookmark :size="16" aria-hidden="true" />
           <span>书签</span>
         </PButton>
@@ -97,7 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { IconBookmark as Bookmark, IconFlag as Flag, IconSearch as Search } from '@tabler/icons-vue'
 import ePub from 'epubjs'
@@ -140,6 +140,7 @@ const isLoading = ref(true)
 const errorMessage = ref('')
 const reportMessage = ref('')
 const bookmarks = ref<BookReaderBookmark[]>([])
+const bookmarkBusy = ref(false)
 const displayPreferences = ref<BookReaderDisplayPreferences>(parseBookReaderDisplayPreferences(null))
 const textSearchQuery = ref('')
 const textSearchMatches = ref<BookTextSearchMatch[]>([])
@@ -153,11 +154,52 @@ let pdfDocument: PDFDocumentProxy | null = null
 let pdfLoadingTask: ReturnType<typeof getDocument> | null = null
 let epubBook: EpubBook | null = null
 let epubRendition: EpubRendition | null = null
+let epubNavigating = false
 let localProgress: LocalBookReadingProgress | null = null
 let disposed = false
 let pdfRenderTask: RenderTask | undefined
 let pdfRenderGeneration = 0
+let lastTextScrollTop = 0
 function progressKey() { return props.source?.progressKey || asset.value?.id || '' }
+watch(() => props.source?.bookmarks, value => { if (value) bookmarks.value = value })
+
+function textOffset() {
+  const viewport = textViewport.value
+  const node = viewport?.querySelector('pre')?.firstChild
+  if (!viewport || !node || !textContent.value.length) return 0
+  const range = document.createRange()
+  if (typeof range.getBoundingClientRect !== 'function') return Math.round(readingPercent.value * textContent.value.length)
+  const top = viewport.getBoundingClientRect().top + parseFloat(getComputedStyle(viewport).paddingTop)
+  let low = 0
+  let high = textContent.value.length
+  // TXT 偏移按 UTF-16 文本位置记录，不用随窗口宽度变化的页码定位。
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2)
+    range.setStart(node, mid)
+    range.setEnd(node, Math.min(mid + 1, textContent.value.length))
+    if (range.getBoundingClientRect().bottom < top) low = mid + 1
+    else high = mid
+  }
+  return low
+}
+function scrollToTextOffset(offset: number) {
+  const viewport = textViewport.value
+  const node = viewport?.querySelector('pre')?.firstChild
+  if (!viewport || !node) return
+  const range = document.createRange()
+  if (typeof range.getBoundingClientRect !== 'function') {
+    viewport.scrollTop = offset / Math.max(1, textContent.value.length) * Math.max(0, viewport.scrollHeight - viewport.clientHeight)
+    return
+  }
+  range.setStart(node, Math.min(offset, textContent.value.length))
+  range.setEnd(node, Math.min(offset + 1, textContent.value.length))
+  viewport.scrollTop += range.getBoundingClientRect().top - viewport.getBoundingClientRect().top - parseFloat(getComputedStyle(viewport).paddingTop)
+}
+function notifyPosition() {
+  if (disposed || isLoading.value) return
+  const format = asset.value?.format
+  props.source?.onPosition?.({ current_percent: readingPercent.value, epub_cfi: format === 'epub' ? localProgress?.epub_cfi || '' : '', pdf_page: format === 'pdf' ? pdfPage.value : format === 'cbz' || format === 'cbr' ? comicPage.value : 0, txt_offset: format === 'txt' ? textOffset() : 0 })
+}
 
 const formatLabel = computed(() => asset.value?.format.toUpperCase() || '')
 const pageLabel = computed(() => {
@@ -181,7 +223,9 @@ async function loadText() {
   updateTextPageCount()
   if (localProgress) {
     const viewport = textViewport.value
-    if (viewport) viewport.scrollTop = localProgress.reading_percent * Math.max(0, viewport.scrollHeight - viewport.clientHeight)
+    if (props.source?.initialPosition) scrollToTextOffset(props.source.initialPosition.txt_offset)
+    else if (viewport) viewport.scrollTop = localProgress.reading_percent * Math.max(0, viewport.scrollHeight - viewport.clientHeight)
+    lastTextScrollTop = viewport?.scrollTop || 0
     handleTextScroll()
   }
 }
@@ -192,6 +236,7 @@ async function loadPDF() {
   if (disposed) return
   pdfPageCount.value = pdfDocument.numPages
   if (localProgress) pdfPage.value = Math.min(pdfPageCount.value, Math.max(1, Math.round(localProgress.reading_percent * pdfPageCount.value)))
+  if (props.source?.initialPosition?.pdf_page) pdfPage.value = Math.min(pdfPageCount.value, props.source.initialPosition.pdf_page)
   await renderPDFPage()
 }
 
@@ -219,6 +264,7 @@ async function renderPDFPage() {
     readingPercent.value = pdfPageCount.value > 0 ? pdfPage.value / pdfPageCount.value : 0
     if (!props.source) readerStore.updateProgress(pdfPage.value, pdfPageCount.value, `第 ${pdfPage.value} 页`)
     saveLocalBookReadingProgress(progressKey(), { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
+    notifyPosition()
   } catch { if (!disposed && current === pdfRenderGeneration) errorMessage.value = 'PDF 页面显示失败，请重新载入文件。' }
 }
 
@@ -255,14 +301,22 @@ async function loadEPUB() {
   if (disposed) return
   epubTOC.value = flattenEpubTOC(epubBook.navigation.toc as EpubTOCSource[])
   epubRendition = epubBook.renderTo(epubViewport.value!, { width: '100%', height: '100%', flow: 'paginated', manager: 'default', allowScriptedContent: false })
+  for (const event of ['click', 'keydown', 'touchstart']) epubRendition.on(event, () => { epubNavigating = true })
+  // 百分比依赖位置索引；在后台生成，避免阻塞正文首次显示。
+  if (props.source?.onPosition) void epubBook.locations.generate(1600).then(() => {
+    if (!disposed && localProgress?.epub_cfi && epubBook) readingPercent.value = epubBook.locations.percentageFromCfi(localProgress.epub_cfi)
+  }).catch(() => { /* 即使索引生成失败，仍用精确 CFI 恢复位置。 */ })
   epubRendition.on('relocated', (location: { start?: { cfi?: string; percentage?: number } }) => {
-    readingPercent.value = Math.max(0, Math.min(1, location.start?.percentage || 0))
+    const moved = localProgress?.epub_cfi !== location.start?.cfi
+    if (!props.source?.onPosition || epubBook?.locations.length()) readingPercent.value = Math.max(0, Math.min(1, location.start?.percentage || 0))
     saveLocalBookReadingProgress(progressKey(), {
       reading_percent: readingPercent.value,
       epub_cfi: location.start?.cfi || '',
       bookmarks: bookmarks.value,
     })
     localProgress = getLocalBookReadingProgress(progressKey())
+    if (epubNavigating && moved && localProgress?.epub_cfi) notifyPosition()
+    epubNavigating = false
   })
   await epubRendition.display(localProgress?.epub_cfi || undefined)
 }
@@ -274,6 +328,7 @@ async function loadComic() {
   if (disposed) return
   comicPages.value = pages.map((page) => ({ ...page, url: URL.createObjectURL(page.blob) }))
   comicPage.value = localProgress ? Math.min(comicPages.value.length, Math.max(1, Math.round(localProgress.reading_percent * Math.max(1, comicPages.value.length - 1)) + 1)) : 1
+  if (props.source?.initialPosition?.pdf_page) comicPage.value = Math.min(comicPages.value.length, props.source.initialPosition.pdf_page)
   await nextTick()
   scrollToComicPage()
 }
@@ -290,11 +345,14 @@ function reportAsset() {
 function handleTextScroll() {
   const viewport = textViewport.value
   if (!viewport) return
+  const moved = Math.abs(viewport.scrollTop - lastTextScrollTop) > .5
+  lastTextScrollTop = viewport.scrollTop
   const pageHeight = Math.max(1, viewport.clientHeight)
   textPageCount.value = Math.max(1, Math.ceil(viewport.scrollHeight / pageHeight))
   textPage.value = Math.min(textPageCount.value, Math.floor(viewport.scrollTop / pageHeight) + 1)
   readingPercent.value = Math.max(0, Math.min(1, viewport.scrollTop / Math.max(1, viewport.scrollHeight - viewport.clientHeight)))
   saveLocalBookReadingProgress(progressKey(), { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
+  if (moved) notifyPosition()
 }
 
 function updateTextPageCount() {
@@ -335,6 +393,7 @@ function scrollToComicPage() {
   comicPageElements[comicPage.value - 1]?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
   readingPercent.value = comicPages.value.length > 1 ? (comicPage.value - 1) / (comicPages.value.length - 1) : 1
   saveLocalBookReadingProgress(progressKey(), { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
+  notifyPosition()
 }
 
 function changeComicPage(delta: number) {
@@ -355,17 +414,26 @@ function createBookmarkID() {
   return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `bookmark-${Date.now()}`
 }
 
-function addBookmark() {
+async function addBookmark() {
   if (!asset.value) return
-  bookmarks.value = [{
+  const bookmark: BookReaderBookmark = {
     id: createBookmarkID(),
     label: pageLabel.value || `${Math.round(readingPercent.value * 100)}%`,
     reading_percent: readingPercent.value,
     epub_cfi: localProgress?.epub_cfi || '',
     pdf_page: asset.value.format === 'pdf' ? pdfPage.value : undefined,
     comic_page: asset.value.format === 'cbz' || asset.value.format === 'cbr' ? comicPage.value : undefined,
+    txt_offset: asset.value.format === 'txt' ? textOffset() : undefined,
     created_at: new Date().toISOString(),
-  }, ...bookmarks.value]
+  }
+  if (props.source?.addBookmark) {
+    bookmarkBusy.value = true
+    try { const result = await props.source.addBookmark(bookmark); if (!disposed) { bookmarks.value = result; reportMessage.value = '' } }
+    catch { reportMessage.value = '书签未保存到云端，请重试。' }
+    finally { bookmarkBusy.value = false }
+    return
+  }
+  bookmarks.value = [bookmark, ...bookmarks.value]
   saveLocalBookReadingProgress(progressKey(), {
     reading_percent: readingPercent.value,
     epub_cfi: localProgress?.epub_cfi || '',
@@ -373,8 +441,16 @@ function addBookmark() {
   })
 }
 
-function removeBookmark(id: string) {
+async function removeBookmark(id: string) {
   if (!asset.value) return
+  if (props.source?.removeBookmark) {
+    if (bookmarkBusy.value) return
+    bookmarkBusy.value = true
+    try { const result = await props.source.removeBookmark(id); if (!disposed) { bookmarks.value = result; reportMessage.value = '' } }
+    catch { reportMessage.value = '书签未从云端删除，请重试。' }
+    finally { bookmarkBusy.value = false }
+    return
+  }
   bookmarks.value = bookmarks.value.filter((bookmark) => bookmark.id !== id)
   saveLocalBookReadingProgress(progressKey(), {
     reading_percent: readingPercent.value,
@@ -402,21 +478,23 @@ function updateDisplayPreferences(value: BookReaderDisplayPreferences) {
 function jumpToTextMatch(match: BookTextSearchMatch) {
   if (asset.value?.format !== 'txt') return
   readingPercent.value = textContent.value.length ? match.index / textContent.value.length : 0
-  const viewport = textViewport.value
-  if (viewport) viewport.scrollTop = readingPercent.value * Math.max(0, viewport.scrollHeight - viewport.clientHeight)
+  scrollToTextOffset(match.index)
   saveLocalBookReadingProgress(progressKey(), { reading_percent: readingPercent.value, bookmarks: bookmarks.value })
+  handleTextScroll()
 }
 
 function jumpToBookmark(bookmark: BookReaderBookmark) {
   if (!asset.value) return
   readingPercent.value = bookmark.reading_percent
-  if (asset.value.format === 'epub' && bookmark.epub_cfi && epubRendition) void epubRendition.display(bookmark.epub_cfi)
+  if (asset.value.format === 'epub' && bookmark.epub_cfi && epubRendition) { epubNavigating = true; void epubRendition.display(bookmark.epub_cfi) }
   else if (asset.value.format === 'pdf' && bookmark.pdf_page) {
     pdfPage.value = Math.min(Math.max(1, bookmark.pdf_page), pdfPageCount.value)
     void renderPDFPage()
   } else if (asset.value.format === 'txt') {
     const viewport = textViewport.value
-    if (viewport) viewport.scrollTop = bookmark.reading_percent * Math.max(0, viewport.scrollHeight - viewport.clientHeight)
+    if (bookmark.txt_offset !== undefined) scrollToTextOffset(bookmark.txt_offset)
+    else if (viewport) viewport.scrollTop = bookmark.reading_percent * Math.max(0, viewport.scrollHeight - viewport.clientHeight)
+    handleTextScroll()
   } else if ((asset.value.format === 'cbz' || asset.value.format === 'cbr') && bookmark.comic_page) {
     comicPage.value = Math.min(Math.max(1, bookmark.comic_page), comicPages.value.length)
     scrollToComicPage()
@@ -425,11 +503,12 @@ function jumpToBookmark(bookmark: BookReaderBookmark) {
 
 function moveEpubPage(direction: 'prev' | 'next') {
   if (!epubRendition) return
+  epubNavigating = true
   void (direction === 'prev' ? epubRendition.prev() : epubRendition.next())
 }
 
 function jumpToEpubTOC(href: string) {
-  if (epubRendition) void epubRendition.display(href)
+  if (epubRendition) { epubNavigating = true; void epubRendition.display(href) }
 }
 
 onMounted(async () => {
@@ -438,8 +517,12 @@ onMounted(async () => {
     asset.value = props.source?.asset || await getPublishedBookAsset(assetID)
     if (disposed) return
     localProgress = getLocalBookReadingProgress(progressKey())
+    if (props.source?.initialPosition) {
+      const position = props.source.initialPosition
+      localProgress = { reading_percent: position.current_percent, epub_cfi: position.epub_cfi, bookmarks: [], display: localProgress?.display || parseBookReaderDisplayPreferences(null), updated_at: new Date().toISOString() }
+    }
     readingPercent.value = localProgress?.reading_percent || 0
-    bookmarks.value = localProgress?.bookmarks || []
+    bookmarks.value = props.source?.bookmarks ?? localProgress?.bookmarks ?? []
     displayPreferences.value = localProgress?.display || parseBookReaderDisplayPreferences(null)
     contentBlob = props.source ? await props.source.loadContent() : await fetchPublishedBookAssetContent(assetID)
     if (disposed) return
@@ -452,6 +535,7 @@ onMounted(async () => {
     errorMessage.value = error instanceof Error ? error.message : '公共正文打开失败，请稍后重试'
   } finally {
     isLoading.value = false
+    if (!disposed && !errorMessage.value) props.source?.onReady?.()
   }
 })
 

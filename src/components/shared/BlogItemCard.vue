@@ -70,8 +70,8 @@
         <span v-if="postItem" class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ formatCount(postItem.view_count) }}</span>
         <span v-else-if="feedItem" class="feed-meta-stat"><Eye :size="11" aria-hidden="true" />{{ formatCount(feedItem.read_count) }}</span>
 
-        <span v-if="postItem && hasPublicRating(postItem.rating_count)" class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ formatPublicRating(postItem.rating_score, postItem.rating_count) }}</span>
-        <span v-else-if="feedItem && hasPublicRating(feedItem.rating_count)" class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ formatPublicRating(feedItem.rating_score, feedItem.rating_count) }}</span>
+        <span v-if="postItem" class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ formatRatingSummary(postItem.rating_score, postItem.rating_count) }}</span>
+        <span v-else-if="feedItem" class="feed-meta-stat"><Gauge :size="11" aria-hidden="true" />{{ formatRatingSummary(feedItem.rating_score, feedItem.rating_count) }}</span>
 
         <span v-if="postItem" class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ formatCount(postItem.bookmarks_count) }}</span>
         <span v-else-if="feedItem" class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ formatCount(feedItem.bookmark_count) }}</span>
@@ -135,7 +135,7 @@ import PContentCard from '@/components/ui/PContentCard.vue'
 import PLink from '@/components/ui/PLink.vue'
 import type { Post, ShortNote, FeedItem } from '@/types'
 import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
-import { formatPublicRating, hasPublicRating } from '@/utils/rating'
+import { formatRatingSummary } from '@/utils/rating'
 import { channelUrl } from '@/router/siteUrls'
 
 const ShortNoteCard = defineAsyncComponent(() => import('@/components/shortnote/ShortNoteCard.vue'))

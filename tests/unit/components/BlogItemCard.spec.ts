@@ -145,6 +145,7 @@ describe("BlogItemCard", () => {
     });
 
     expect(insufficient.text()).not.toContain("10.0 / 10");
+    expect(insufficient.text()).toContain("4 人评分 · 暂无公开均分");
     expect(publicRating.text()).toContain("8.6 / 10 · 5 人");
   });
 });

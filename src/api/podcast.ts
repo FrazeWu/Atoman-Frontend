@@ -26,6 +26,27 @@ const queryString = (params: Record<string, string | number>) => new URLSearchPa
 export const getPodcastEpisode = (id: string, token?: string) => (
   apiRequestJson<PodcastEpisode>(podcastUrl(`/episodes/${pathSegment(id)}`), token ? { headers: authHeaders(token) } : undefined)
 )
+
+export interface PodcastRatingSummary {
+  rating_score: number
+  rating_count: number
+  viewer_rating: number | null
+}
+
+export const getPodcastRating = (id: string, token?: string) =>
+  apiRequestJson<PodcastRatingSummary>(podcastUrl(`/episodes/${pathSegment(id)}/rating`), { headers: authHeaders(token) })
+
+export const setPodcastRating = (id: string, score: number, token?: string) =>
+  apiRequestJson<PodcastRatingSummary>(podcastUrl(`/episodes/${pathSegment(id)}/rating`), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+    body: JSON.stringify({ score }),
+  })
+
+export const deletePodcastRating = (id: string, token?: string) =>
+  apiRequestJson<PodcastRatingSummary>(podcastUrl(`/episodes/${pathSegment(id)}/rating`), {
+    method: 'DELETE', headers: authHeaders(token),
+  })
 export const listPodcastEpisodes = () => apiRequestJson<PodcastEpisode[]>(podcastUrl('/episodes'))
 export const getPodcastRecommendations = <T>(mode: string) => (
   apiRequestJson<{ data?: T[] }>(podcastUrl(`/recommend/episodes?${queryString({ mode, page: 1, page_size: 8 })}`))

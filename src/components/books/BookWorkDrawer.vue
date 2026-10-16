@@ -24,7 +24,12 @@
               :aria-label="`${work.title} 评分`"
               :rating-score="work.rating_score"
               :rating-count="work.rating_count"
-              :disabled="true"
+              :viewer-rating="viewerRating"
+              :disabled="!authStore.isAuthenticated"
+              :loading="ratingSaving"
+              :error-message="ratingError"
+              @rate="saveRating($event)"
+              @clear="saveRating(null)"
             />
           </div>
         </div>
@@ -99,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { BookOpen } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -112,11 +117,15 @@ import {
   listPublishedBookAssets,
   getPublicBookReviews,
   saveBookShelf,
+  getBookRating,
+  setBookRating,
+  deleteBookRating,
   type BookPublicWork,
   type BookPublishedAsset,
   type BookReview,
 } from '@/api/books'
 import { useBookReaderStore } from '@/stores/bookReader'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps<{
   workId: string
@@ -130,12 +139,35 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const readerStore = useBookReaderStore()
+const authStore = useAuthStore()
 
 const work = ref<BookPublicWork | null>(null)
 const availableAssets = ref<BookPublishedAsset[]>([])
 const reviews = ref<BookReview[]>([])
 const loading = ref(false)
 const shelfStatus = ref('')
+const viewerRating = ref<number | null>(null)
+const ratingSaving = ref(false)
+const ratingError = ref('')
+let loadSequence = 0
+
+async function saveRating(score: number | null) {
+  if (!work.value || !authStore.isAuthenticated || ratingSaving.value) return
+  const id = work.value.id
+  const sequence = loadSequence
+  ratingSaving.value = true
+  ratingError.value = ''
+  try {
+    const summary = await (score === null ? deleteBookRating(id) : setBookRating(id, score))
+    if (sequence !== loadSequence) return
+    Object.assign(work.value!, { rating_score: summary.rating_score, rating_count: summary.rating_count })
+    viewerRating.value = summary.viewer_rating ?? null
+  } catch {
+    if (sequence === loadSequence) ratingError.value = '评分未保存，请重试'
+  } finally {
+    if (sequence === loadSequence) ratingSaving.value = false
+  }
+}
 
 const shelfOptions = [
   { value: 'want_to_read', label: '想读' },
@@ -146,43 +178,58 @@ const shelfOptions = [
 const primaryEdition = computed(() => work.value?.editions?.[0] || null)
 
 watch(
-  () => [props.workId, props.show],
+  () => [props.workId, props.show, authStore.isAuthenticated, authStore.user?.id],
   ([newId, newShow]) => {
+    ++loadSequence
+    work.value = null
+    viewerRating.value = null
+    ratingSaving.value = false
+    ratingError.value = ''
     if (newId && newShow) {
-      loadWorkDetails(newId as string)
+      void loadWorkDetails(newId as string)
     }
   },
+  { immediate: true },
 )
 
-onMounted(() => {
-  if (props.workId && props.show) {
-    loadWorkDetails(props.workId)
-  }
-})
-
 async function loadWorkDetails(id: string) {
+  const sequence = loadSequence
   loading.value = true
   try {
     const workRes = await getPublicBookWork(id)
+    if (sequence !== loadSequence) return
     work.value = workRes
+
+    if (authStore.isAuthenticated) {
+      try {
+        const summary = await getBookRating(id)
+        if (sequence !== loadSequence) return
+        Object.assign(work.value!, { rating_score: summary.rating_score, rating_count: summary.rating_count })
+        viewerRating.value = summary.viewer_rating ?? null
+      } catch {
+        // 个人评分暂不可用时仍显示公共作品。
+      }
+    }
 
     try {
       const assetsRes = await listPublishedBookAssets(id, 10, 0)
+      if (sequence !== loadSequence) return
       availableAssets.value = assetsRes?.items || []
     } catch {
-      availableAssets.value = []
+      if (sequence === loadSequence) availableAssets.value = []
     }
 
     try {
       const reviewsRes = await getPublicBookReviews(id, 5, 0)
+      if (sequence !== loadSequence) return
       reviews.value = reviewsRes?.items || []
     } catch {
-      reviews.value = []
+      if (sequence === loadSequence) reviews.value = []
     }
   } catch {
     // 错误处理由空状态兜底
   } finally {
-    loading.value = false
+    if (sequence === loadSequence) loading.value = false
   }
 }
 

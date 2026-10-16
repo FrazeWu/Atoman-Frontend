@@ -11,6 +11,9 @@
         <strong class="rating-control__public-score">{{ normalizedPublicScore.toFixed(1) }} / 10</strong>
         <span>· {{ normalizedRatingCount }} 人</span>
       </template>
+      <span v-else-if="normalizedRatingCount === 0" class="rating-control__insufficient">
+        暂无评分<span v-if="size !== 'compact'">，成为第一个评分者</span>
+      </span>
       <span v-else class="rating-control__insufficient">
         评分人数不足（{{ normalizedRatingCount }}/{{ PUBLIC_RATING_MIN_COUNT }}）
       </span>
@@ -37,6 +40,7 @@
           :class="score % 2 ? 'rating-control__score-target--left' : 'rating-control__score-target--right'"
           :data-score="score"
           :aria-label="scoreLabel(score)"
+          :aria-pressed="viewerRating === score"
           :disabled="disabled || loading"
           @mouseenter="hoverScore = score"
           @focus="hoverScore = score"
@@ -58,6 +62,11 @@
     >
       <X :size="15" aria-hidden="true" />
     </button>
+
+    <span v-if="loading" role="status">正在保存…</span>
+    <span v-else-if="viewerRating != null && size !== 'compact'" class="rating-control__mine" aria-live="polite">
+      我的评分：{{ formatViewerRating(viewerRating) }}（已保存）
+    </span>
 
     <div
       v-if="size !== 'compact' && (
@@ -136,11 +145,13 @@ function scoreLabel(score: number): string {
 }
 
 function rate(score: number) {
+  if (props.disabled || props.loading) return
   hoverScore.value = null
   emit('rate', score)
 }
 
 function handleKeydown(event: KeyboardEvent, score: number) {
+  if (props.disabled || props.loading) return
   if (event.key !== 'Home' && event.key !== 'End' && !event.key.startsWith('Arrow')) return
   event.preventDefault()
   const nextScore = event.key === 'Home'
@@ -150,6 +161,8 @@ function handleKeydown(event: KeyboardEvent, score: number) {
       : event.key === 'ArrowLeft' || event.key === 'ArrowDown'
         ? Math.max(1, score - 1)
         : Math.min(10, score + 1)
+  const group = (event.currentTarget as HTMLElement).closest('.rating-control__stars')
+  group?.querySelector<HTMLButtonElement>(`button[data-score="${nextScore}"]`)?.focus()
   rate(nextScore)
 }
 </script>

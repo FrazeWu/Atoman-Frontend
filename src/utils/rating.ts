@@ -13,6 +13,12 @@ export function formatPublicRating(score?: number | null, count?: number | null)
   return `${Number(score || 0).toFixed(1)} / 10 · ${Number(count)} 人`
 }
 
+export function formatRatingSummary(score?: number | null, count?: number | null): string {
+  const publicRating = formatPublicRating(score, count)
+  if (publicRating) return publicRating
+  return Number(count || 0) > 0 ? `${Number(count)} 人评分 · 暂无公开均分` : '暂无评分'
+}
+
 export function formatViewerRating(score: number): string {
   const normalized = Math.max(1, Math.min(10, Math.round(score)))
   return `${normalized}/10 · ${scoreToStars(normalized)} 星`

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { addPodcastEpisodeBookmark, addPodcastShowBookmark, getPodcastEpisode } from '@/api/podcast'
+import { addPodcastEpisodeBookmark, addPodcastShowBookmark, getPodcastEpisode, setPodcastRating, deletePodcastRating } from '@/api/podcast'
+import RatingControl from '@/components/shared/RatingControl.vue'
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { PodcastEpisode } from '@/types'
@@ -18,18 +19,21 @@ const feedStore = useFeedStore()
 const player = usePlayerStore()
 const lifecycle = useContentLifecycle()
 const route = useRoute()
+const ratingsEnabled = import.meta.env.VITE_PODCAST_RATINGS_ENABLED !== 'false'
 const showRoute = (slug: string) => (route.path.startsWith('/podcasts') ? `/podcasts/show/${slug}` : `/show/${slug}`)
 const ep = ref<PodcastEpisode | null>(null)
 const loading = ref(true)
 const error = ref('')
 const actionMessage = ref('')
+const ratingLoading = ref(false)
+const ratingError = ref('')
 const commentsOpen = ref(false)
 const commentCount = ref<number | undefined>(undefined)
 const episodeContentAnchor = ref<HTMLElement | null>(null)
 let latestRequest = 0
 
-watch(() => route.params.id as string | undefined, (id) => {
-  if (id) void loadEpisode(id)
+watch(() => [route.params.id, authStore.token, authStore.user?.id] as const, ([id]) => {
+  if (typeof id === 'string' && id) void loadEpisode(id)
 }, { immediate: true })
 
 async function loadEpisode(id: string) {
@@ -37,12 +41,14 @@ async function loadEpisode(id: string) {
   ep.value = null
   error.value = ''
   actionMessage.value = ''
+  ratingLoading.value = false
+  ratingError.value = ''
   commentsOpen.value = false
   commentCount.value = undefined
   loading.value = true
 
   try {
-    const episode = await getPodcastEpisode(id)
+    const episode = await getPodcastEpisode(id, authStore.token ?? undefined)
       if (request !== latestRequest) return
       ep.value = episode
       if (authStore.token) {
@@ -74,6 +80,26 @@ async function loadEpisode(id: string) {
     error.value = '加载失败，请重试'
   } finally {
     if (request === latestRequest) loading.value = false
+  }
+}
+
+async function saveRating(score: number | null) {
+  if (!ep.value || !authStore.token || ratingLoading.value) return
+  const id = ep.value.id
+  const request = latestRequest
+  ratingLoading.value = true
+  ratingError.value = ''
+  try {
+    const summary = await (score === null
+      ? deletePodcastRating(id, authStore.token)
+      : setPodcastRating(id, score, authStore.token))
+    if (request !== latestRequest) return
+    Object.assign(ep.value!, summary)
+    actionMessage.value = score === null ? '评分已清除' : '评分已保存'
+  } catch {
+    if (request === latestRequest) ratingError.value = '评分未保存，请重试'
+  } finally {
+    if (request === latestRequest) ratingLoading.value = false
   }
 }
 
@@ -191,7 +217,19 @@ function currentCommentTime() {
             @click="shareEpisode"
           />
         </div>
-        <p v-if="actionMessage" class="pev-action-message">{{ actionMessage }}</p>
+        <RatingControl
+          v-if="ratingsEnabled && ep.post?.status === 'published'"
+          aria-label="播客单集评分"
+          :rating-score="ep.rating_score"
+          :rating-count="ep.rating_count"
+          :viewer-rating="ep.viewer_rating"
+          :disabled="!authStore.token"
+          :loading="ratingLoading"
+          :error-message="ratingError"
+          @rate="saveRating($event)"
+          @clear="saveRating(null)"
+        />
+        <p v-if="actionMessage" class="pev-action-message" role="status">{{ actionMessage }}</p>
       </div>
     </div>
 

@@ -209,7 +209,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { Bookmark, Pencil, Send, Trash2 } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
@@ -276,6 +276,7 @@ const viewerRating = ref<number | null>(null)
 const ratingSaving = ref(false)
 const ratingError = ref('')
 const ratingMessage = ref('')
+let pageSequence = 0
 const reviewInput = ref('')
 const reviewSpoiler = ref(false)
 const reviewVisibility = ref<'public' | 'private'>('public')
@@ -329,48 +330,53 @@ function applyRating(summary: { rating_score: number; rating_count: number; view
 }
 
 async function submitRating(score: number) {
-  if (!work.value) return
+  if (!work.value || !authStore.isAuthenticated || ratingSaving.value) return
+  const sequence = pageSequence
   ratingSaving.value = true
   ratingError.value = ''
   ratingMessage.value = ''
   try {
-    applyRating(await setBookRating(work.value.id, score))
+    const summary = await setBookRating(work.value.id, score)
+    if (sequence !== pageSequence) return
+    applyRating(summary)
     ratingMessage.value = '评分已保存'
   } catch (error) {
+    if (sequence !== pageSequence) return
     ratingError.value = error instanceof ApiErrorResponseError && error.status === 401 ? '登录后才能评分' : '评分保存失败，请稍后重试'
   } finally {
-    ratingSaving.value = false
+    if (sequence === pageSequence) ratingSaving.value = false
   }
 }
 
 async function clearRating() {
-  if (!work.value) return
+  if (!work.value || !authStore.isAuthenticated || ratingSaving.value) return
+  const sequence = pageSequence
   ratingSaving.value = true
   ratingError.value = ''
   ratingMessage.value = ''
   try {
-    applyRating(await deleteBookRating(work.value.id))
+    const summary = await deleteBookRating(work.value.id)
+    if (sequence !== pageSequence) return
+    applyRating(summary)
     ratingMessage.value = '评分已清除'
   } catch {
+    if (sequence !== pageSequence) return
     ratingError.value = '评分清除失败，请稍后重试'
   } finally {
-    ratingSaving.value = false
+    if (sequence === pageSequence) ratingSaving.value = false
   }
 }
 
 async function loadViewerRating() {
   if (!work.value || !authStore.isAuthenticated) return
+  const sequence = pageSequence
   try {
-    applyRating(await getBookRating(work.value.id))
+    const summary = await getBookRating(work.value.id)
+    if (sequence === pageSequence) applyRating(summary)
   } catch {
     // 公共作品详情不依赖个人评分请求。
   }
 }
-
-watch(() => authStore.isAuthenticated, (authenticated) => {
-  if (authenticated) void loadViewerRating()
-  else viewerRating.value = null
-})
 
 async function submitReview() {
   if (!work.value || !reviewInput.value.trim()) return
@@ -410,48 +416,70 @@ async function deleteReview() {
 }
 
 async function loadWorkPage() {
+  const sequence = ++pageSequence
+  reviews.value = []
+  myReview.value = null
+  publishedAssets.value = []
+  viewerRating.value = null
+  ratingSaving.value = false
+  ratingError.value = ''
+  ratingMessage.value = ''
   isLoading.value = true
   errorMessage.value = ''
   work.value = null
   try {
-    work.value = await getPublicBookWork(String(route.params.workId || ''))
+    const loaded = await getPublicBookWork(String(route.params.workId || ''))
+    if (sequence !== pageSequence) return
+    work.value = loaded
   } catch {
+    if (sequence !== pageSequence) return
     errorMessage.value = '作品加载失败，请稍后重试'
   } finally {
-    isLoading.value = false
+    if (sequence === pageSequence) isLoading.value = false
   }
   if (!work.value) return
   await loadViewerRating()
+  if (sequence !== pageSequence) return
   reviewsLoading.value = true
   try {
-    reviews.value = (await getPublicBookReviews(work.value.id)).items
+    const loaded = await getPublicBookReviews(work.value.id)
+    if (sequence !== pageSequence) return
+    reviews.value = loaded.items
   } catch {
+    if (sequence !== pageSequence) return
     interactionError.value = '公开书评加载失败，请稍后重试'
   } finally {
-    reviewsLoading.value = false
+    if (sequence === pageSequence) reviewsLoading.value = false
   }
   if (authStore.isAuthenticated) {
     try {
-      myReview.value = await getMyBookReview(work.value.id)
+      const loaded = await getMyBookReview(work.value.id)
+      if (sequence !== pageSequence) return
+      myReview.value = loaded
     } catch {
       // Users without a review have no private review entry.
     }
   }
+  if (sequence !== pageSequence) return
   await loadPublishedAssets()
 }
 
 async function loadPublishedAssets() {
   if (!work.value) return
+  const sequence = pageSequence
   publishedAssetsError.value = ''
   try {
-    publishedAssets.value = (await listPublishedBookAssets(work.value.id)).items
+    const loaded = await listPublishedBookAssets(work.value.id)
+    if (sequence !== pageSequence) return
+    publishedAssets.value = loaded.items
   } catch {
+    if (sequence !== pageSequence) return
     publishedAssets.value = []
     publishedAssetsError.value = '公共正文加载失败，请稍后重试'
   }
 }
 
-onMounted(() => void loadWorkPage())
+watch(() => [route.params.workId, authStore.isAuthenticated, authStore.user?.id], () => void loadWorkPage(), { immediate: true })
 </script>
 
 <style scoped>

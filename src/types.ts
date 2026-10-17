@@ -462,46 +462,8 @@ export interface StudioSettings extends StudioSettingsInput {
 	module: StudioModule;
 }
 
-export interface Post {
-	id: string;
-	user_id: string;
-	user?: User;
-	channel_id?: string;
-	channel?: Channel;
-	collection_id?: string;
-	collection?: Collection;
-	collection_position?: number;
-	collection_conflict?: boolean;
-	title: string;
-	content: string;
-	summary?: string;
-	language_code?: string;
-	cover_url?: string;
-	status: "draft" | "published" | "scheduled";
-	visibility: "public" | "followers" | "private";
-	allow_comments?: boolean;
-	pinned: boolean;
-	collections?: Collection[];
-	published_at?: string;
-	scheduled_at?: string;
-	view_count?: number;
-	rating_score?: number;
-	rating_count?: number;
-	viewer_rating?: number;
-	weighted_rating_score?: number | null;
-	weighted_rating_count?: number;
-	weighted_rating_active?: boolean;
-	tags?: string[];
-	public_tags?: Array<{ id: string; name: string; count: number; viewer_added: boolean; created_at: string }>;
-	liked?: boolean;
-	bookmarks_count?: number;
-	channel_followers_count?: number;
-	likes_count?: number;
-	comments_count?: number;
-	references?: ResolvedReference[];
-	created_at: string;
-	updated_at: string;
-}
+import type { Post, PostCategory, PostTag, PostCitation, PostListFilter, PostSummary } from '@/entities/post/model/types';
+export type { Post, PostCategory, PostTag, PostCitation, PostListFilter, PostSummary };
 
 export interface ShortNoteMedia {
 	id: string;

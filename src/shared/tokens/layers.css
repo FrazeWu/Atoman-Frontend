@@ -1,0 +1,20 @@
+:root {
+  --a-layer-dropdown: 40;
+  --a-layer-popover: 45;
+  --a-layer-nav: 100;
+  --a-layer-normal-sheet-backdrop: 300;
+  --a-layer-normal-sheet-panel: 310;
+  --a-layer-global-overlay: 480;
+  --a-layer-normal-modal-backdrop: 500;
+  --a-layer-normal-modal-panel: 510;
+  --a-layer-player-lyrics: 700;
+  --a-layer-player-queue: 710;
+  --a-layer-player: 720;
+  --a-layer-above-player-sheet-backdrop: 730;
+  --a-layer-above-player-sheet-panel: 740;
+  --a-layer-above-player-modal-backdrop: 750;
+  --a-layer-above-player-modal-panel: 760;
+  --a-layer-lightbox: 800;
+  --a-layer-toast: 900;
+  --a-layer-global-menu: 950;
+}

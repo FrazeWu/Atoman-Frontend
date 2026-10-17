@@ -1,0 +1,17 @@
+:root {
+  --a-recommendation-width: 20rem;
+  --a-comment-sheet-width: 42rem;
+  --a-content-column-gap: 2rem;
+  --a-topbar-height: 56px;
+  --a-sidebar-width: 12rem;
+  --a-sidebar-collapsed-width: 4.5rem;
+  --a-color-bg: #ffffff;
+  --a-color-surface: #ffffff;
+  --a-color-border-soft: #f0f0f0;
+  --a-color-border: #e2e8f0;
+  --a-color-text: #1a1a1a;
+  --a-color-text-muted: #64748b;
+  --a-radius-sm: 4px;
+  --a-radius-md: 4px;
+  --a-radius-lg: 4px;
+}

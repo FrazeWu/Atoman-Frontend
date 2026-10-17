@@ -78,6 +78,53 @@
             </div>
           </div>
         </div>
+
+        <!-- Track actions: Favorite & Add to Playlist -->
+        <div class="player-actions" :class="{ 'player-actions--collapsed': isMetaCollapsed }">
+          <button
+            v-if="!isPodcast"
+            type="button"
+            class="player-fav-btn"
+            :class="{ 'is-active': favoriteSongIds.has(String(player.currentSong.id)) }"
+            :aria-label="favoriteSongIds.has(String(player.currentSong.id)) ? '移出最爱' : '添加到最爱'"
+            :title="favoriteSongIds.has(String(player.currentSong.id)) ? '移出最爱' : '添加到最爱'"
+            @click="toggleTrackFavorite(String(player.currentSong.id))"
+          >
+            <Heart :size="18" :fill="favoriteSongIds.has(String(player.currentSong.id)) ? 'currentColor' : 'none'" aria-hidden="true" />
+          </button>
+
+          <AudioPlayerPlaylistPopover
+            :current-song-id="player.currentSong?.id"
+            :is-podcast="isPodcast"
+            :playlists="playlists"
+            :playlist-load-error="playlistLoadError"
+            @trigger-click="guardPlaylistMenu"
+            @retry-load="loadPlaylists"
+            @add-to-playlist="addTrackToPlaylist"
+          />
+
+          <button
+            v-if="isPodcastEpisode"
+            type="button"
+            class="player-fav-btn"
+            title="收藏单集"
+            data-hint="收藏单集"
+            @click="addPodcastBookmark(player.currentSong?.source_id)"
+          >
+            <Heart :size="16" />
+          </button>
+
+          <button
+            v-if="isPodcastEpisode"
+            type="button"
+            class="player-add-btn"
+            title="稍后听"
+            data-hint="稍后听"
+            @click="addPodcastListenLater(player.currentSong?.source_id)"
+          >
+            <Clock :size="16" />
+          </button>
+        </div>
       </div>
 
       <div class="progress-container player-waveform">
@@ -96,17 +143,6 @@
       <div ref="playerControlsRef" class="player-controls-hub">
         <div class="ctrl-row">
           <button v-if="isPodcast" type="button" class="skip-btn" aria-label="后退 15 秒" title="后退 15 秒" data-hint="后退 15S (←)" @click="player.skip(-15)">-15S</button>
-          <button
-            v-else
-            type="button"
-            class="player-fav-btn"
-            :class="{ 'is-active': favoriteSongIds.has(String(player.currentSong.id)) }"
-            :aria-label="favoriteSongIds.has(String(player.currentSong.id)) ? '移出最爱' : '添加到最爱'"
-            :title="favoriteSongIds.has(String(player.currentSong.id)) ? '移出最爱' : '添加到最爱'"
-            @click="toggleTrackFavorite(String(player.currentSong.id))"
-          >
-            <Heart :size="18" :fill="favoriteSongIds.has(String(player.currentSong.id)) ? 'currentColor' : 'none'" aria-hidden="true" />
-          </button>
           <button type="button" class="nav-btn" aria-label="上一首" title="上一首" data-hint="上一首 (Alt+←)" @click="player.playPrevious()">上一首</button>
           <button
             type="button"
@@ -130,43 +166,11 @@
               <Shuffle v-else-if="player.playbackMode === 'random'" :size="20" />
             </span>
           </button>
-
-          <button
-            v-if="isPodcastEpisode"
-            type="button"
-            class="player-fav-btn"
-            title="收藏单集"
-            data-hint="收藏单集"
-          @click="addPodcastBookmark(player.currentSong?.source_id)"
-          >
-            <Heart :size="16" />
-          </button>
-
-          <button
-            v-if="isPodcastEpisode"
-            type="button"
-            class="player-add-btn"
-            title="稍后听"
-            data-hint="稍后听"
-          @click="addPodcastListenLater(player.currentSong?.source_id)"
-          >
-            <Clock :size="16" />
-          </button>
         </div>
       </div>
 
       <!-- Right: Feature Strip -->
       <div class="player-features">
-        <AudioPlayerPlaylistPopover
-          :current-song-id="player.currentSong?.id"
-          :is-podcast="isPodcast"
-          :playlists="playlists"
-          :playlist-load-error="playlistLoadError"
-          @trigger-click="guardPlaylistMenu"
-          @retry-load="loadPlaylists"
-          @add-to-playlist="addTrackToPlaylist"
-        />
-
         <button
           type="button"
           class="feature-link"
@@ -693,6 +697,19 @@ watch(
   pointer-events: none;
   transform: translateX(-6px);
 }
+.player-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: 2px;
+  transition:
+    opacity var(--a-motion-state) var(--a-motion-ease-enter),
+    transform var(--a-motion-state) var(--a-motion-ease-enter);
+}
+.player-actions--collapsed {
+  display: none;
+}
 .player-tooltip-wrap {
   position: relative;
   min-width: 0;
@@ -1160,15 +1177,17 @@ watch(
 
 .player-fav-btn,
 .player-add-btn {
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2rem;
+  height: 2rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 0;
+  border-radius: var(--a-radius-control, 4px);
   background: transparent;
   color: var(--a-color-muted);
   cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .player-fav-btn:hover,
@@ -1177,6 +1196,10 @@ watch(
 .player-add-btn:focus-visible {
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
+}
+
+.player-fav-btn.is-active {
+  color: var(--a-color-danger, #ef4444);
 }
 
 .player-mini-window {

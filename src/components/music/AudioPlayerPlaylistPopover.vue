@@ -1,8 +1,8 @@
 <template>
-  <PDropdown v-if="currentSongId && !isPodcast" class="player-add-dropdown" position="right">
+  <PDropdown v-if="currentSongId && !isPodcast" class="player-add-dropdown" position="left">
     <template #trigger>
       <button class="player-add-btn" type="button" aria-label="添加到歌单" title="添加到歌单" @click="$emit('trigger-click', $event)">
-        <Plus :size="18" aria-hidden="true" />
+        <ListPlus :size="18" aria-hidden="true" />
       </button>
     </template>
     <template #default="{ close }">
@@ -28,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { Plus } from 'lucide-vue-next'
+import { ListPlus } from 'lucide-vue-next'
 import PDropdown from '@/components/ui/PDropdown.vue'
 
 defineProps<{

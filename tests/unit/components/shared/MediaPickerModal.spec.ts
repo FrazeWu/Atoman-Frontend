@@ -145,4 +145,101 @@ describe('MediaPickerModal', () => {
 
     expect(wrapper.find('.media-picker-empty').exists()).toBe(true)
   })
+
+  it('applies above-player classes when abovePlayer prop is true', () => {
+    const wrapper = mount(MediaPickerModal, {
+      props: { open: true, abovePlayer: true },
+    })
+
+    const backdrop = wrapper.find('.media-picker-backdrop')
+    expect(backdrop.classes()).toContain('media-picker-backdrop--above-player')
+    expect(backdrop.classes()).toContain('p-modal-backdrop--above-player')
+  })
+
+  it('does not apply above-player classes by default', () => {
+    const wrapper = mount(MediaPickerModal, {
+      props: { open: true },
+    })
+
+    const backdrop = wrapper.find('.media-picker-backdrop')
+    expect(backdrop.classes()).not.toContain('media-picker-backdrop--above-player')
+    expect(backdrop.classes()).not.toContain('p-modal-backdrop--above-player')
+  })
+
+  it('cancels pending search and ignores in-flight results when query is cleared', async () => {
+    let resolveSearch!: (value: any) => void
+    const searchPromise = new Promise((resolve) => {
+      resolveSearch = resolve
+    })
+    vi.mocked(referenceApi.search).mockReturnValue(searchPromise as any)
+
+    const wrapper = mount(MediaPickerModal, {
+      props: { open: true },
+    })
+
+    const input = wrapper.find('input[type="text"]')
+    await input.setValue('周杰伦')
+
+    // Wait for debounce to fire executeSearch
+    await new Promise((r) => setTimeout(r, 350))
+    expect(referenceApi.search).toHaveBeenCalledWith('song', '周杰伦', expect.any(Number))
+
+    // Clear input while search is in-flight
+    await input.setValue('')
+    await wrapper.vm.$nextTick()
+
+    // Resolve the in-flight search promise
+    resolveSearch([
+      {
+        id: '1',
+        type: 'song',
+        label: '晴天',
+        subtitle: '周杰伦',
+      },
+    ])
+    await new Promise((r) => setTimeout(r, 50))
+    await wrapper.vm.$nextTick()
+
+    // Results should remain empty, not populated with outdated search results
+    expect(wrapper.findAll('.media-picker-item').length).toBe(0)
+    expect(wrapper.find('.media-picker-empty').exists()).toBe(false)
+  })
+
+  it('cancels pending search when modal is closed', async () => {
+    let resolveSearch!: (value: any) => void
+    const searchPromise = new Promise((resolve) => {
+      resolveSearch = resolve
+    })
+    vi.mocked(referenceApi.search).mockReturnValue(searchPromise as any)
+
+    const wrapper = mount(MediaPickerModal, {
+      props: { open: true },
+    })
+
+    const input = wrapper.find('input[type="text"]')
+    await input.setValue('周杰伦')
+
+    await new Promise((r) => setTimeout(r, 350))
+    expect(referenceApi.search).toHaveBeenCalledWith('song', '周杰伦', expect.any(Number))
+
+    // Close modal
+    await wrapper.setProps({ open: false })
+
+    // In-flight promise resolves
+    resolveSearch([
+      {
+        id: '1',
+        type: 'song',
+        label: '晴天',
+        subtitle: '周杰伦',
+      },
+    ])
+    await new Promise((r) => setTimeout(r, 50))
+
+    // Reopen modal
+    await wrapper.setProps({ open: true })
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findAll('.media-picker-item').length).toBe(0)
+  })
 })

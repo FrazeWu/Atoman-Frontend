@@ -4,10 +4,13 @@
       <div
         v-if="open"
         class="p-modal-backdrop media-picker-backdrop"
+        :class="{
+          'media-picker-backdrop--above-player': abovePlayer,
+          'p-modal-backdrop--above-player': abovePlayer,
+        }"
         @click.self="handleBackdropClick"
       >
         <div
-          ref="dialogRef"
           class="p-modal p-modal-md media-picker-modal"
           role="dialog"
           aria-modal="true"
@@ -138,10 +141,12 @@ const props = withDefaults(
     open: boolean
     initialType?: MediaPickerType
     teleportDisabled?: boolean
+    abovePlayer?: boolean
   }>(),
   {
     initialType: 'song',
     teleportDisabled: undefined,
+    abovePlayer: false,
   }
 )
 
@@ -171,27 +176,31 @@ const items = ref<MediaPickerItem[]>([])
 const loading = ref(false)
 const hasSearched = ref(false)
 
-const dialogRef = ref<HTMLElement | null>(null)
 const inputRef = ref<HTMLInputElement | null>(null)
 
-let debounceTimer: ReturnType<typeof setTimeout> | null = null
+let searchTimer: ReturnType<typeof setTimeout> | null = null
 let searchRequestId = 0
 
 const inputPlaceholder = computed(() => {
   return `搜索${typeLabelMap[activeTab.value]}或粘贴 ID...`
 })
 
-const cancelDebounce = () => {
-  if (debounceTimer) {
-    clearTimeout(debounceTimer)
-    debounceTimer = null
+const cancelSearch = () => {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+    searchTimer = null
   }
+  searchRequestId++
 }
 
 const executeSearch = async () => {
-  cancelDebounce()
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+    searchTimer = null
+  }
   const query = searchQuery.value.trim()
   if (!query) {
+    cancelSearch()
     items.value = []
     loading.value = false
     hasSearched.value = false
@@ -224,16 +233,20 @@ const executeSearch = async () => {
 }
 
 const scheduleSearch = () => {
-  cancelDebounce()
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+    searchTimer = null
+  }
   const query = searchQuery.value.trim()
   if (!query) {
+    cancelSearch()
     items.value = []
     loading.value = false
     hasSearched.value = false
     return
   }
 
-  debounceTimer = setTimeout(() => {
+  searchTimer = setTimeout(() => {
     void executeSearch()
   }, 300)
 }
@@ -248,6 +261,7 @@ const switchTab = (type: MediaPickerType) => {
   if (searchQuery.value.trim()) {
     void executeSearch()
   } else {
+    cancelSearch()
     items.value = []
     hasSearched.value = false
   }
@@ -289,7 +303,7 @@ watch(
         inputRef.value?.focus()
       })
     } else {
-      cancelDebounce()
+      cancelSearch()
     }
   }
 )
@@ -304,7 +318,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  cancelDebounce()
+  cancelSearch()
   window.removeEventListener('keydown', handleKeyDown)
 })
 </script>
@@ -319,6 +333,14 @@ onBeforeUnmount(() => {
   justify-content: center;
   padding: var(--a-space-4, 1rem);
   background: rgba(15, 23, 42, 0.2);
+}
+
+.media-picker-backdrop--above-player {
+  z-index: var(--a-z-player-modal-backdrop, 750);
+}
+
+.media-picker-backdrop--above-player .media-picker-modal {
+  z-index: var(--a-z-player-modal, 760);
 }
 
 .media-picker-modal {

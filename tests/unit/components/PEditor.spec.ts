@@ -95,6 +95,7 @@ vi.mock("y-websocket", () => {
 
 // @ts-expect-error Vitest resolves Vue SFC imports through Vite.
 import PEditor from "../../../src/components/shared/PEditor.vue";
+import MediaPickerModal from "@/components/shared/MediaPickerModal.vue";
 import {
 	resourceReferenceExtension,
 	updateResourceReferenceLabels,
@@ -339,12 +340,12 @@ describe("PEditor", () => {
 		const view = EditorView.findFromDOM(
 			wrapper.get(".cm-content").element as HTMLElement,
 		)!;
-		Object.defineProperty(window, "prompt", {
-			configurable: true,
-			value: vi.fn(() => ALBUM_ID),
-		});
-
 		wrapper.vm.executeCommand("musicEmbed");
+		await nextTick();
+
+		const picker = wrapper.findComponent(MediaPickerModal);
+		expect(picker.exists()).toBe(true);
+		picker.vm.$emit("select", { id: ALBUM_ID, type: "album", title: "Test Album" });
 		await nextTick();
 
 		expect(view.state.doc.toString()).toBe(`\n:::music{id="${ALBUM_ID}"}:::\n`);

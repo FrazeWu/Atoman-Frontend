@@ -23,6 +23,7 @@
           </div>
         </li>
       </ol>
+      <CommentSection v-if="detail.visibility === 'public'" :target="{ kind: 'book_list', resourceId: detail.id }" noun="讨论" />
     </template>
   </section>
 </template>
@@ -35,6 +36,7 @@ import { ApiErrorResponseError } from '@/api/client'
 import { getBookList, saveBookListBookmark, type BookListDetail } from '@/api/bookLists'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import './bookLists.css'
 
 const route = useRoute()

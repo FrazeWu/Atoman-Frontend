@@ -1,0 +1,9 @@
+.private-books { display: grid; gap: 1.5rem; }
+.private-books__toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: 1rem; }
+.private-books label { display: grid; gap: .5rem; min-width: 0; }
+.private-books input:not([type=checkbox]), .private-books select, .private-books textarea { min-height: 44px; padding: .6rem; max-width: 100%; border: 1px solid var(--a-color-border-soft); border-radius: .4rem; color: var(--a-color-fg); background: var(--a-color-bg); }
+.private-books textarea { width: 100%; resize: vertical; }
+.private-books__calendar { display: flex; flex-wrap: wrap; gap: 1rem; padding: 1rem; }
+.private-books__body { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 75ch; }
+.private-books__editor { display: grid; gap: 1.25rem; padding: 1.5rem; max-width: 48rem; margin-inline: auto; }
+@media(max-width: 600px) { .private-books__toolbar > label { width: 100%; } }

@@ -9,14 +9,12 @@
       </div>
     </main>
     <RouterView name="overlay" />
-    <BookMiniReaderBar />
   </div>
 </template>
 
 <script setup lang="ts">
 import { RouterView, useRoute } from 'vue-router'
 import AppSidebar from '@/components/system/AppSidebar.vue'
-import BookMiniReaderBar from '@/components/books/BookMiniReaderBar.vue'
 import { useSidebar } from '@/composables/useSidebar'
 
 const { sidebarCollapsed } = useSidebar()

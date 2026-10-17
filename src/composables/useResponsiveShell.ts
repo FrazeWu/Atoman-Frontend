@@ -47,9 +47,9 @@ const MOBILE_PRIMARY_TABS: Record<ModuleRoomKey, MobilePrimaryTab[]> = {
 	]),
 	books: tabs("books", [
 		["discover", "发现", "/", Compass],
-		["search", "搜索", "/search", Search],
-		["library", "书库", "/library", BookOpen],
-		["contributions", "贡献", "/contributions", UserRound],
+		["library", "书架", "/library", BookOpen],
+		["lists", "书单", "/lists", ListMusic],
+		["notes", "笔记", "/notes", Bookmark],
 	]),
 	music: tabs("music", [
 		["discover", "发现", "/discover", Compass],

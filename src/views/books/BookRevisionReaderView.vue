@@ -6,6 +6,7 @@
       <div class="revision-reader__status"><span>文件版本 {{ version }}<template v-if="owner === 'guest'"> · 进度与书签仅保存在本机，登录后可使用云端同步</template></span><PButton variant="ghost" @click="load">重新载入文件</PButton></div>
       <BookCloudReader v-if="owner !== 'guest'" :key="source.progressKey" :source="source" :owner="owner" :revision-id="String(route.params.revisionId)" />
       <BookPublicReaderView v-else :key="source.progressKey" :source="source" />
+      <BookPassageDiscussions v-if="owner === 'guest'" :revision-id="String(route.params.revisionId)" />
     </template>
   </section>
 </template>
@@ -16,9 +17,11 @@ import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { getCatalogWork, listCatalogResources } from '@/api/bookCatalog'
 import { fetchResourceRevision, listResourceRevisions } from '@/api/bookResources'
+import { selectReading } from '@/api/bookPrivate'
 import type { BookReaderSource } from '@/types/bookReaderSource'
 import BookPublicReaderView from './BookPublicReaderView.vue'
 import BookCloudReader from '@/components/books/BookCloudReader.vue'
+import BookPassageDiscussions from '@/components/books/BookPassageDiscussions.vue'
 import PButton from '@/components/ui/PButton.vue'
 
 const route = useRoute()
@@ -47,6 +50,8 @@ async function load() {
     const revisions = await listResourceRevisions(asset.id)
     const revision = revisions.items.find(item => item.id === String(route.params.revisionId) && item.asset_id === asset.id)
     if (!revision) throw new Error('指定文件版本不可读。不会自动切换到其他版本，请返回图书详情选择文件。')
+    if (current !== generation) return
+    if (owner.value !== 'guest') await selectReading(work.id, asset.id, revision.id)
     if (current !== generation) return
     version.value = revision.number
     source.value = {

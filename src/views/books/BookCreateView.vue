@@ -4,7 +4,8 @@
     <form class="book-catalog__form" @submit.prevent="submit">
       <fieldset :disabled="busy || !!createdId" class="book-catalog__fields">
         <PInput id="create-book-title" v-model="title" label="书名" required :maxlength="200" />
-        <PTextarea id="create-book-authors" v-model="authors" label="作者" hint="每行一位作者，请填写已确认的作者信息。" required :rows="3" />
+        <PTextarea id="create-book-authors" v-model="authors" label="作者" hint="每行一位新作者；也可以在下方选择已有作者。" :required="!selectedAuthors.length" :rows="3" />
+        <details><summary>选择已有作者</summary><PInput id="create-person-search" v-model="personQuery" label="作者姓名" /><PButton type="button" variant="secondary" @click="findPeople">搜索已有作者</PButton><label v-for="person in availablePeople" :key="person.id"><input v-model="selectedAuthors" type="checkbox" :value="person.id" />{{ person.name }}</label><p v-if="selectedAuthors.length">已选择 {{ selectedAuthors.length }} 位已有作者</p></details>
         <PInput id="create-book-subtitle" v-model="subtitle" label="副标题（选填）" />
         <PInput id="create-book-original" v-model="originalTitle" label="原作名（选填）" />
         <PInput id="create-book-language" v-model="language" label="语言代码（选填）" placeholder="例如 zh 或 en" />
@@ -33,6 +34,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { createCatalogEdition, createCatalogWork } from '@/api/bookCatalog'
+import { searchWikiPeople } from '@/api/bookWiki'
 import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -44,6 +46,8 @@ const router = useRouter()
 const route = useRoute()
 const title = ref('')
 const authors = ref('')
+const personQuery = ref(''), selectedAuthors = ref<string[]>([]), availablePeople = ref<{ id: string; name: string }[]>([])
+async function findPeople() { try { const page = await searchWikiPeople(personQuery.value); availablePeople.value = [...availablePeople.value.filter(person => selectedAuthors.value.includes(person.id)), ...page.items.filter(person => !selectedAuthors.value.includes(person.id))] } catch { error.value = '作者搜索失败，请重试。' } }
 const subtitle = ref('')
 const originalTitle = ref('')
 const language = ref('')
@@ -60,8 +64,8 @@ const finished = ref(false)
 const leaveOpen = ref(false)
 let leaveResolve: ((leave: boolean) => void) | undefined
 const authorNames = computed(() => [...new Set(authors.value.split('\n').map(name => name.trim()).filter(Boolean))])
-const canSubmit = computed(() => !!title.value.trim() && authorNames.value.length > 0)
-const dirty = computed(() => !finished.value && [title.value, authors.value, subtitle.value, originalTitle.value, language.value, description.value, publisher.value, isbn.value, pages.value, cover.value].some(value => !!value.trim()))
+const canSubmit = computed(() => !!title.value.trim() && (authorNames.value.length > 0 || selectedAuthors.value.length > 0))
+const dirty = computed(() => !finished.value && (selectedAuthors.value.length > 0 || [title.value, authors.value, subtitle.value, originalTitle.value, language.value, description.value, publisher.value, isbn.value, pages.value, cover.value].some(value => !!value.trim())))
 
 async function submit() {
   if (busy.value || !canSubmit.value) return
@@ -73,7 +77,7 @@ async function submit() {
   try {
     // 出版版本失败时保留作品 ID，重试不重复创建作品或作者。
     if (!createdId.value) {
-      const work = await createCatalogWork({ title: title.value.trim(), authors: authorNames.value, subtitle: subtitle.value.trim(), original_title: originalTitle.value.trim(), language: language.value.trim(), description: description.value.trim() })
+      const work = await createCatalogWork({ title: title.value.trim(), authors: authorNames.value, ...(selectedAuthors.value.length ? { author_ids: selectedAuthors.value } : {}), subtitle: subtitle.value.trim(), original_title: originalTitle.value.trim(), language: language.value.trim(), description: description.value.trim() })
       if (!work.id) throw new Error('创建响应缺少作品 ID')
       createdId.value = work.id
     }

@@ -25,17 +25,9 @@ describe("books module foundation", () => {
   it("keeps the books feature definitions and enables the module by default", () => {
     const access = mergeSiteAccess(null);
 
-    expect(siteAccessFeatures.books).toEqual([
-      { key: "books.submit", label: "提交书目" },
-      { key: "books.review", label: "书目审核" },
-      { key: "books.publish_asset", label: "发布公共正文" },
-    ]);
+    expect(siteAccessFeatures.books).toEqual([]);
     expect(access.modules.books.enabled).toBe(true);
-    expect(access.modules.books.features).toEqual({
-      "books.submit": true,
-      "books.review": true,
-      "books.publish_asset": true,
-    });
+    expect(access.modules.books.features).toEqual({});
   });
 
   it("keeps books enabled by default while retaining its routes and navigation", () => {
@@ -62,31 +54,13 @@ describe("books module foundation", () => {
       "lists/new",
       "lists/:listId/edit",
       "lists/:listId",
-      "authors",
       "notes",
-      "import/:importId",
       "read/:workId/:assetId/:revisionId",
-      "read/:assetId",
-      "public-read/:assetId",
-      "contributions",
-      "review",
     ]);
     expect(
       children.find((route) => route.path === "library")?.meta?.requiresAuth,
     ).toBe(true);
-    expect(
-      children.find((route) => route.path === "contributions")?.meta
-        ?.featureGate,
-    ).toEqual({
-      module: "books",
-      feature: "books.submit",
-    });
-    expect(
-      children.find((route) => route.path === "review")?.meta?.featureGate,
-    ).toEqual({
-      module: "books",
-      feature: "books.review",
-    });
+    expect(children.some(route => ['authors', 'contributions', 'review', 'read/:assetId'].includes(route.path))).toBe(false);
   });
 
   it("keeps discovery mounted under route-driven detail sheets", () => {

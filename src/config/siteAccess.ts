@@ -86,11 +86,7 @@ export const siteAccessFeatures: Partial<Record<ModuleRoomKey, { key: ModuleFeat
   blog: [
     { key: 'post.create', label: '写文章' },
   ],
-  books: [
-    { key: 'books.submit', label: '提交书目' },
-    { key: 'books.review', label: '书目审核' },
-    { key: 'books.publish_asset', label: '发布公共正文' },
-  ],
+  books: [],
   forum: [
     { key: 'topic.create', label: '发新话题' },
     { key: 'category.request', label: '申请分类' },

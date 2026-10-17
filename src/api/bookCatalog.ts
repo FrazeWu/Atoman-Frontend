@@ -7,6 +7,7 @@ export interface CatalogWork extends BookPublicWork { revision_id: string; redir
 export interface CreateCatalogWork {
   title: string
   authors: string[]
+  author_ids?: string[]
   subtitle?: string
   original_title?: string
   description?: string

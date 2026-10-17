@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import * as api from '@/api/bookResources'
 import * as catalog from '@/api/bookCatalog'
+import * as privateBooks from '@/api/bookPrivate'
 import type { ResourceUpload } from '@/api/bookResources'
 import BookResourceUpload from '@/components/books/BookResourceUpload.vue'
 import BookRevisionReaderView from '@/views/books/BookRevisionReaderView.vue'
@@ -50,6 +51,7 @@ async function setupReader() {
   return wrapper
 }
 function mockReader() {
+  vi.spyOn(privateBooks, 'selectReading').mockResolvedValue({})
   vi.spyOn(catalog, 'getCatalogWork').mockResolvedValue(work)
   vi.spyOn(catalog, 'listCatalogResources').mockResolvedValue({ items: [asset] })
   vi.spyOn(api, 'listResourceRevisions').mockResolvedValue({ items: [

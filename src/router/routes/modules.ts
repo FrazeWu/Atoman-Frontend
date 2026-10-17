@@ -214,7 +214,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				{ path: "edition/:editionId", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'edition' } }, meta: { bookCatalog: true } },
 				{
 					path: "library",
-					component: () => import("@/views/books/BookLibraryView.vue"),
+					component: () => import("@/views/books/BookPrivateLibraryView.vue"),
 					meta: { requiresAuth: true },
 				},
 				{
@@ -225,47 +225,13 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				{ path: "lists/:listId/edit", component: () => import("@/views/books/BookListEditorView.vue"), meta: { requiresAuth: true } },
 				{ path: "lists/:listId", component: () => import("@/views/books/BookListDetailView.vue") },
 				{
-					path: "authors",
-					component: () => import("@/views/books/BooksHomeView.vue"),
-				},
-				{
 					path: "notes",
-					component: () => import("@/views/books/BookNotesView.vue"),
-					meta: { requiresAuth: true },
-				},
-				{
-					path: "import/:importId",
-					component: () => import("@/views/books/BookLibraryView.vue"),
+					component: () => import("@/views/books/BookPrivateNotesView.vue"),
 					meta: { requiresAuth: true },
 				},
 				{
 					path: "read/:workId/:assetId/:revisionId",
 					component: () => import("@/views/books/BookRevisionReaderView.vue"),
-				},
-				{
-					path: "read/:assetId",
-					component: () => import("@/views/books/BookReaderView.vue"),
-					meta: { requiresAuth: true },
-				},
-				{
-					path: "public-read/:assetId",
-					component: () => import("@/views/books/BookPublicReaderView.vue"),
-				},
-				{
-					path: "contributions",
-					component: () => import("@/views/books/BooksGovernanceView.vue"),
-					meta: {
-						requiresAuth: true,
-						featureGate: { module: "books", feature: "books.submit" },
-					},
-				},
-				{
-					path: "review",
-					component: () => import("@/views/books/BooksGovernanceView.vue"),
-					meta: {
-						requiresAuth: true,
-						featureGate: { module: "books", feature: "books.review" },
-					},
 				},
 			],
 		},

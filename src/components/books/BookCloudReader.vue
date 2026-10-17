@@ -17,13 +17,14 @@
     </div>
     <BookPublicReaderView v-if="opened" :key="readerKey" :source="cloudSource" @annotate="openHighlight" @annotation-edit="editHighlight" @annotation-delete="deleteHighlight" />
     <BookPublicReaderView v-else-if="localOnly" :source="localSource" />
-    <BookHighlightEditor v-if="draft" :key="`${draft.id}:${draft.version}`" ref="editor" :draft="draft" :busy="markBusy" :frozen="Boolean(pendingMark)" :conflict="markConflict" :error="markError" @save="saveHighlight" @delete="deleteHighlight(draft)" @close="draft = undefined" />
+    <BookHighlightEditor v-if="draft" :key="`${draft.id}:${draft.version}`" ref="editor" :draft="draft" :busy="markBusy" :frozen="Boolean(pendingMark)" :conflict="markConflict" :error="markError" allow-discussion @discuss="passages?.discuss(draft.anchor)" @save="saveHighlight" @delete="deleteHighlight(draft)" @close="draft = undefined" />
+    <BookPassageDiscussions ref="passages" :revision-id="revisionId" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
-import { onBeforeRouteLeave } from 'vue-router'
+import { onBeforeRouteLeave, useRoute } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
 import { deleteReadingMark, listReadingMarks, saveReadingMark, type ReadingMark, type ReadingMarkInput } from '@/api/bookReading'
 import { useRevisionReading } from '@/composables/useRevisionReading'
@@ -33,9 +34,12 @@ import BookPublicReaderView from '@/views/books/BookPublicReaderView.vue'
 import PButton from '@/components/ui/PButton.vue'
 import BookHighlightEditor, { type HighlightDraft } from '@/components/books/BookHighlightEditor.vue'
 import type { HighlightSelection } from '@/utils/bookMarkAnchors'
+import BookPassageDiscussions from './BookPassageDiscussions.vue'
 
 const props = defineProps<{ source: BookReaderSource; owner: string; revisionId: string }>()
 const reading = useRevisionReading(props.owner, props.revisionId)
+const route = useRoute()
+const passages = ref<InstanceType<typeof BookPassageDiscussions>>()
 const opened = ref(false)
 const localOnly = ref(false)
 const readerKey = ref(0)
@@ -59,8 +63,13 @@ const bookmarks = computed<BookReaderBookmark[]>(() => marks.value.filter(mark =
   epub_cfi: mark.anchor.epub_start_cfi, pdf_page: mark.anchor.pdf_page, comic_page: mark.anchor.pdf_page, txt_offset: mark.anchor.txt_offset_start,
 })))
 const localSource = computed<BookReaderSource>(() => ({ ...props.source, onPosition: reading.observe }))
+const linkedPosition = computed(() => {
+  const mark = marks.value.find(item => item.id === route.query.mark)
+  if (!mark) return reading.initialPosition.value
+  return { current_percent: 0, epub_cfi: mark.anchor.epub_start_cfi || '', pdf_page: mark.anchor.pdf_page || 0, txt_offset: mark.anchor.txt_offset_start || 0 }
+})
 const cloudSource = computed<BookReaderSource>(() => ({
-  ...props.source, initialPosition: reading.initialPosition.value, bookmarks: bookmarks.value,
+  ...props.source, initialPosition: linkedPosition.value, bookmarks: bookmarks.value,
   annotations: marksLoaded.value ? marks.value.filter(mark => mark.kind === 'highlight') : undefined,
   onPosition: reading.observe, onReady: reading.ready,
   addBookmark: async bookmark => {

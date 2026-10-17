@@ -12,7 +12,7 @@ defineProps<{ view: 'create' | 'work' | 'edition' }>()
 const views = {
   create: defineAsyncComponent(() => import('./BookCreateView.vue')),
   work: defineAsyncComponent(() => import('./BookCatalogWorkView.vue')),
-  edition: defineAsyncComponent(() => import('./BookEditionView.vue')),
+  edition: defineAsyncComponent(() => import('./BookCatalogEditionView.vue')),
 }
 const route = useRoute()
 const router = useRouter()

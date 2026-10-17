@@ -3,6 +3,7 @@
     <form class="highlight-editor" @submit.prevent="$emit('save', { color, style, note })">
       <p>仅本人可见 · 绑定当前文件版本</p>
       <blockquote>{{ draft.quote }}</blockquote>
+      <PButton v-if="allowDiscussion" type="button" variant="secondary" :disabled="busy" @click="$emit('discuss')">公开讨论这段正文（不公开私人批注）</PButton>
       <fieldset :disabled="busy || frozen">
         <legend>高亮颜色</legend>
         <label v-for="option in colors" :key="option.value"><input v-model="color" type="radio" name="highlight-color" :value="option.value" />{{ option.label }}</label>
@@ -29,8 +30,8 @@ import PButton from '@/components/ui/PButton.vue'
 import type { ReadingAnchor } from '@/api/bookReading'
 
 export interface HighlightDraft { id: string; version: number; anchor: ReadingAnchor; quote: string; note: string; color: string; style: string }
-const props = defineProps<{ draft: HighlightDraft; busy: boolean; frozen: boolean; conflict: boolean; error: string }>()
-const emit = defineEmits<{ save: [value: { color: string; style: string; note: string }]; delete: []; close: [] }>()
+const props = defineProps<{ draft: HighlightDraft; busy: boolean; frozen: boolean; conflict: boolean; error: string; allowDiscussion?: boolean }>()
+const emit = defineEmits<{ save: [value: { color: string; style: string; note: string }]; delete: []; close: []; discuss: [] }>()
 const color = ref(props.draft.color)
 const style = ref(props.draft.style)
 const note = ref(props.draft.note)

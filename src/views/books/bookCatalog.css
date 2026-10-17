@@ -1,6 +1,8 @@
 .book-catalog { color: var(--a-color-text); padding-block: 1rem; }
 .book-catalog__toolbar, .book-catalog__actions { display: flex; align-items: end; flex-wrap: wrap; gap: .75rem; margin-block: 1.5rem; }
 .book-catalog__toolbar > .p-field { flex: 1; min-width: 12rem; }
+.book-catalog__toolbar > label { display: grid; gap: .5rem; }
+.book-catalog__toolbar select { min-height: 44px; padding: .5rem; border: 1px solid var(--a-color-border-soft); border-radius: .4rem; background: var(--a-color-bg); color: var(--a-color-fg); }
 .book-catalog__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 2rem 1.5rem; padding: 0; list-style: none; }
 .book-catalog__card { display: grid; align-content: start; gap: .5rem; color: var(--a-color-text); text-decoration: none; overflow-wrap: anywhere; }
 .book-catalog__card span, .book-catalog__card small { color: var(--a-color-text-secondary); }

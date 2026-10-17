@@ -23,6 +23,8 @@ export type CommentTargetKind =
   | 'timeline_event'
   | 'timeline_person'
   | 'book_work'
+  | 'book_passage'
+  | 'book_list'
 
 export interface CommentTargetRef { kind: CommentTargetKind; resourceId: string }
 export interface CommentUserSummary {

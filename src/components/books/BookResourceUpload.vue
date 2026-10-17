@@ -1,12 +1,12 @@
 <template>
-  <section class="resource-upload" aria-labelledby="resource-upload-title">
-    <h3 id="resource-upload-title">上传电子书</h3>
+  <section class="resource-upload" :aria-labelledby="`resource-upload-title${idSuffix}`">
+    <h3 :id="`resource-upload-title${idSuffix}`">{{ replaceAsset ? '上传替换文件' : '上传电子书' }}</h3>
     <p>支持 EPUB、PDF、TXT、CBZ、CBR。文件通过自动安全检查后直接公开，不需要人工审核。</p>
     <form @submit.prevent="upload">
       <fieldset :disabled="busy || pending" class="resource-upload__fields">
-        <label for="resource-file">电子书文件</label>
-        <input id="resource-file" ref="fileInput" type="file" accept=".epub,.pdf,.txt,.cbz,.cbr" @change="chooseFile">
-        <PInput id="resource-language" v-model="language" label="文件语言代码" placeholder="例如 zh、en；不确定时留空" />
+        <label :for="`resource-file${idSuffix}`">电子书文件</label>
+        <input :id="`resource-file${idSuffix}`" ref="fileInput" type="file" accept=".epub,.pdf,.txt,.cbz,.cbr" @change="chooseFile">
+        <PInput v-if="!replaceAsset" id="resource-language" v-model="language" label="文件语言代码" placeholder="例如 zh、en；不确定时留空" />
         <label><input v-model="confirmed" type="checkbox"> 我确认有权将这个文件公开分享</label>
         <PButton type="submit" :loading="busy" :disabled="!file || !confirmed || (!!session && session.status !== 'uploading')">{{ session?.status === 'uploading' ? '继续本次上传' : '上传并公开文件' }}</PButton>
       </fieldset>
@@ -32,10 +32,11 @@ import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PInput from '@/components/ui/PInput.vue'
 
-const props = defineProps<{ workId: string; title: string }>()
+const props = defineProps<{ workId: string; title: string; replaceAsset?: CatalogResource }>()
+const idSuffix = props.replaceAsset ? `-${props.replaceAsset.id}` : ''
 const emit = defineEmits<{ ready: [] }>()
 const auth = useAuthStore()
-const storageKey = `atoman:book-upload:${auth.user?.uuid}:${props.workId}`
+const storageKey = `atoman:book-upload:${auth.user?.uuid}:${props.workId}${props.replaceAsset ? ':' + props.replaceAsset.id : ''}`
 const file = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const language = ref('')
@@ -89,6 +90,10 @@ async function upload() {
   controller = new AbortController()
   try {
     phase.value = '准备上传'
+    if (props.replaceAsset) {
+      if (file.value.name.split('.').pop()?.toLowerCase() !== props.replaceAsset.format) throw new Error('替换文件必须与原文件格式相同。不同格式请创建独立电子书。')
+      resource.value = props.replaceAsset
+    }
     if (!resource.value) resource.value = await createCatalogResource(props.workId, { title: props.title, language: language.value.trim(), format: file.value.name.split('.').pop()!.toLowerCase() as CatalogResource['format'] })
     if (!alive) return
     if (!session.value) session.value = await createResourceUpload(resource.value.id, file.value, confirmed.value)

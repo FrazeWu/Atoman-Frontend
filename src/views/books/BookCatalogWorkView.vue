@@ -7,8 +7,12 @@
       <p v-if="work.subtitle">{{ work.subtitle }}</p>
       <p v-if="work.original_title">原作名：{{ work.original_title }}</p>
       <p class="book-catalog__description">{{ work.description || '暂无简介，书目信息可以后续补充。' }}</p>
+      <BookWikiPanel kind="work" :entity-id="work.id" :authenticated="auth.isAuthenticated" @changed="refreshWork" />
+      <div v-for="author in work.authors" :key="author.id"><span>{{ author.name }}</span><BookWikiPanel kind="person" :entity-id="author.id" :authenticated="auth.isAuthenticated" @changed="refreshWork" /></div>
+      <BookShelfAction v-if="auth.isAuthenticated" :key="auth.user?.uuid" :work-id="work.id" />
       <section aria-labelledby="catalog-editions-title">
         <h2 id="catalog-editions-title">出版版本</h2>
+        <BookAddEdition v-if="auth.isAuthenticated" :work-id="work.id" @saved="refreshWork" />
         <p v-if="!work.editions.length">暂无出版信息，不影响图书公开展示。</p>
         <ul v-else class="book-catalog__list">
           <li v-for="edition in work.editions" :key="edition.id" class="book-catalog__row">
@@ -16,6 +20,7 @@
             <span>{{ edition.publisher || '出版社待补充' }}</span>
             <span v-if="edition.isbn13 || edition.isbn10">ISBN {{ edition.isbn13 || edition.isbn10 }}</span>
             <span v-if="edition.page_count">{{ edition.page_count }} 页</span>
+            <BookWikiPanel kind="edition" :entity-id="edition.id" :work-id="work.id" :authenticated="auth.isAuthenticated" @changed="refreshWork" />
           </li>
         </ul>
       </section>
@@ -28,11 +33,13 @@
           <li v-for="asset in resources" :key="asset.id" class="book-catalog__row">
             <strong>{{ asset.title || work.title }}</strong><span>{{ asset.format.toUpperCase() }} · {{ asset.language }}</span><span>文件已通过自动安全检查</span>
             <PButton v-if="asset.current_revision_id" :to="resourceReaderPath(work.id, asset.id, asset.current_revision_id)">开始阅读</PButton>
+            <BookResourceVersions :asset="asset" :authenticated="auth.isAuthenticated" />
           </li>
         </ul>
         <BookResourceUpload v-if="auth.isAuthenticated" :key="auth.user?.uuid" :work-id="work.id" :title="work.title" @ready="loadResources" />
         <PButton v-else variant="secondary" :to="{ path: '/login', query: { redirect: route.fullPath } }">登录后上传文件</PButton>
       </section>
+      <BookWorkCommunity :key="`${work.id}:${auth.user?.uuid || 'guest'}`" :work-id="work.id" :authenticated="auth.isAuthenticated" />
     </template>
   </section>
 </template>
@@ -43,11 +50,17 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { resourceReaderPath } from '@/api/bookResources'
 import BookResourceUpload from '@/components/books/BookResourceUpload.vue'
+import BookResourceVersions from '@/components/books/BookResourceVersions.vue'
+import BookShelfAction from '@/components/books/BookShelfAction.vue'
+import BookWorkCommunity from '@/components/books/BookWorkCommunity.vue'
+import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
+import BookAddEdition from '@/components/books/BookAddEdition.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { getCatalogWork, listCatalogResources, type CatalogResource, type CatalogWork } from '@/api/bookCatalog'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import './bookCatalog.css'
+import './bookPrivate.css'
 
 const route = useRoute()
 const router = useRouter()
@@ -59,6 +72,7 @@ const resourcesLoading = ref(false)
 const error = ref('')
 const resourceError = ref('')
 let alive = true
+async function refreshWork() { if (!work.value) return; try { const result = await getCatalogWork(work.value.id); if (alive) work.value = result } catch { error.value = '资料已保存，但详情刷新失败，请重新加载。' } }
 async function load() {
   loading.value = true
   error.value = ''

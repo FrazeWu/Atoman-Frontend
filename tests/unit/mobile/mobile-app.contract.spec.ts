@@ -112,7 +112,7 @@ describe("mobile app route boundary", () => {
 
 	it("registers module home, list and detail routes without desktop layouts", () => {
 		expect(routePaths()).toEqual(expect.arrayContaining([
-			"/books", "/books/search", "/books/library", "/books/work/:workId", "/books/read/:assetId",
+			"/books", "/books/search", "/books/library", "/books/work/:workId", "/books/read/:workId/:assetId/:revisionId",
 			"/podcasts", "/podcasts/subscriptions", "/podcasts/show/:channelSlug", "/podcasts/episode/:id",
 			"/videos", "/videos/search", "/videos/subscriptions", "/videos/watch/:id",
 			"/forum", "/forum/categories", "/forum/new", "/forum/topic/:id",

@@ -17,6 +17,7 @@
       </PTextarea>
     </div>
 
+    <!-- 图片预览 -->
     <div v-if="mediaUrls.length" ref="mediaElement" data-testid="short-note-media" class="short-note-composer__media">
       <div v-for="(url, index) in mediaUrls" :key="url" class="short-note-composer__preview">
         <img :src="resolveMediaURL(url)" alt="上传的图片" />
@@ -41,53 +42,147 @@
       </div>
     </div>
 
+    <!-- 视听附件预览卡片 -->
+    <div
+      v-if="attachedMedia"
+      data-testid="short-note-media-attachment"
+      class="short-note-composer__attachment"
+    >
+      <div class="short-note-composer__attachment-cover">
+        <img
+          v-if="attachedMedia.cover_url"
+          :src="attachedMedia.cover_url"
+          :alt="attachedMedia.title"
+          class="short-note-composer__attachment-img"
+        />
+        <Music v-else-if="attachedMedia.type === 'song'" :size="18" aria-hidden="true" />
+        <Disc v-else-if="attachedMedia.type === 'album'" :size="18" aria-hidden="true" />
+        <Video v-else :size="18" aria-hidden="true" />
+      </div>
+
+      <div class="short-note-composer__attachment-info">
+        <div class="short-note-composer__attachment-title">{{ attachedMedia.title }}</div>
+        <div v-if="attachedMedia.subtitle" class="short-note-composer__attachment-subtitle">
+          {{ attachedMedia.subtitle }}
+        </div>
+      </div>
+
+      <span class="short-note-composer__attachment-badge">
+        {{ typeLabelMap[attachedMedia.type] }}
+      </span>
+
+      <button
+        type="button"
+        class="short-note-composer__attachment-remove"
+        aria-label="移除视听附件"
+        title="移除"
+        @click="removeAttachedMedia"
+      >
+        <X :size="14" aria-hidden="true" />
+      </button>
+    </div>
+
     <p v-if="uploadError" class="short-note-composer__error" role="alert">{{ uploadError }}</p>
 
     <div class="short-note-composer__actions">
-      <label class="short-note-composer__image-button" :class="{ 'is-disabled': uploading || mediaUrls.length >= 9 }">
-        <ImagePlus :size="16" aria-hidden="true" />
-        <span>{{ uploading ? '上传中...' : `图片 ${mediaUrls.length}/9` }}</span>
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/gif,image/webp"
-          multiple
-          :disabled="uploading || mediaUrls.length >= 9"
-          @change="uploadImages"
-        />
-      </label>
+      <div class="short-note-composer__tools">
+        <label class="short-note-composer__image-button" :class="{ 'is-disabled': uploading || mediaUrls.length >= 9 }">
+          <ImagePlus :size="16" aria-hidden="true" />
+          <span>{{ uploading ? '上传中...' : `图片 ${mediaUrls.length}/9` }}</span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            multiple
+            :disabled="uploading || mediaUrls.length >= 9"
+            @change="uploadImages"
+          />
+        </label>
+        <button
+          type="button"
+          class="short-note-composer__media-button"
+          :class="{ 'is-disabled': submitting || uploading }"
+          :disabled="submitting || uploading"
+          aria-label="视听"
+          @click="openMediaPicker"
+        >
+          <Music :size="16" aria-hidden="true" />
+          <span>视听</span>
+        </button>
+      </div>
       <PButton type="submit" :disabled="!content.trim() || charCount > 500" :loading="submitting">
         {{ submitLabel }}
       </PButton>
     </div>
+
+    <MediaPickerModal
+      :open="mediaPickerOpen"
+      @close="mediaPickerOpen = false"
+      @select="handleMediaSelect"
+    />
   </form>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { GripVertical, ImagePlus, X } from 'lucide-vue-next'
+import { Disc, GripVertical, ImagePlus, Music, Video, X } from 'lucide-vue-next'
 import Sortable from 'sortablejs'
 import { apiRequestResult } from '@/api/client'
+import MediaPickerModal from '@/components/shared/MediaPickerModal.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import type { MediaPickerItem, MediaPickerType } from '@/types/mediaPicker'
+import type { ShortNoteMediaAttachment } from '@/types'
 import { resolveMediaURL } from '@/utils/mediaUrl'
 
 const props = withDefaults(defineProps<{
   initialContent?: string
   initialMediaUrls?: string[]
+  initialMediaAttachment?: ShortNoteMediaAttachment | null
   submitting?: boolean
   submitLabel?: string
   compact?: boolean
 }>(), {
-  initialContent: '', initialMediaUrls: () => [], submitting: false, submitLabel: '发布', compact: false,
+  initialContent: '',
+  initialMediaUrls: () => [],
+  initialMediaAttachment: null,
+  submitting: false,
+  submitLabel: '发布',
+  compact: false,
 })
 
-const emit = defineEmits<{ submit: [payload: { content: string; media_urls: string[] }] }>()
+const emit = defineEmits<{
+  submit: [payload: {
+    content: string
+    media_urls: string[]
+    media_attachment_type?: string
+    media_attachment_id?: string
+  }]
+}>()
+
+const typeLabelMap: Record<MediaPickerType, string> = {
+  song: '单曲',
+  album: '专辑',
+  video: '视频',
+}
+
 const api = useApi()
 const authStore = useAuthStore()
 const content = ref(props.initialContent)
 const mediaUrls = ref([...props.initialMediaUrls])
+const attachedMedia = ref<MediaPickerItem | null>(
+  props.initialMediaAttachment
+    ? {
+        id: props.initialMediaAttachment.id,
+        type: props.initialMediaAttachment.type,
+        title: props.initialMediaAttachment.title,
+        subtitle: props.initialMediaAttachment.subtitle,
+        cover_url: props.initialMediaAttachment.cover_url,
+      }
+    : null
+)
+const mediaPickerOpen = ref(false)
 const mediaElement = ref<HTMLElement | null>(null)
 let sortable: Sortable | null = null
 const uploading = ref(false)
@@ -96,6 +191,21 @@ const charCount = computed(() => Array.from(content.value).length)
 
 watch(() => props.initialContent, value => { content.value = value })
 watch(() => props.initialMediaUrls, value => { mediaUrls.value = [...value] }, { deep: true })
+watch(
+  () => props.initialMediaAttachment,
+  attachment => {
+    attachedMedia.value = attachment
+      ? {
+          id: attachment.id,
+          type: attachment.type,
+          title: attachment.title,
+          subtitle: attachment.subtitle,
+          cover_url: attachment.cover_url,
+        }
+      : null
+  },
+  { deep: true }
+)
 watch(mediaUrls, () => void nextTick(syncSortable), { deep: true, flush: 'post' })
 
 function syncSortable() {
@@ -122,6 +232,19 @@ onMounted(() => void nextTick(syncSortable))
 onBeforeUnmount(() => sortable?.destroy())
 
 function removeImage(index: number) { mediaUrls.value.splice(index, 1) }
+
+function openMediaPicker() {
+  mediaPickerOpen.value = true
+}
+
+function handleMediaSelect(item: MediaPickerItem) {
+  attachedMedia.value = item
+  mediaPickerOpen.value = false
+}
+
+function removeAttachedMedia() {
+  attachedMedia.value = null
+}
 
 async function uploadImages(event: Event) {
   const input = event.target as HTMLInputElement
@@ -154,7 +277,20 @@ async function uploadImages(event: Event) {
 function submit() {
   const normalized = content.value.trim()
   if (!normalized || charCount.value > 500 || uploading.value) return
-  emit('submit', { content: normalized, media_urls: [...mediaUrls.value] })
+  const payload: {
+    content: string
+    media_urls: string[]
+    media_attachment_type?: string
+    media_attachment_id?: string
+  } = {
+    content: normalized,
+    media_urls: [...mediaUrls.value],
+  }
+  if (attachedMedia.value) {
+    payload.media_attachment_type = attachedMedia.value.type
+    payload.media_attachment_id = attachedMedia.value.id
+  }
+  emit('submit', payload)
 }
 </script>
 
@@ -256,6 +392,86 @@ function submit() {
   transform: scale(1.05);
 }
 
+.short-note-composer__attachment {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+}
+
+.short-note-composer__attachment-cover {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 4px;
+  background: var(--a-color-surface-soft, rgba(0, 0, 0, 0.05));
+  color: var(--a-color-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.short-note-composer__attachment-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.short-note-composer__attachment-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.short-note-composer__attachment-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--a-color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.short-note-composer__attachment-subtitle {
+  font-size: 0.75rem;
+  color: var(--a-color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 0.125rem;
+}
+
+.short-note-composer__attachment-badge {
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  background: var(--a-color-surface-soft, rgba(0, 0, 0, 0.05));
+  color: var(--a-color-muted);
+  flex-shrink: 0;
+}
+
+.short-note-composer__attachment-remove {
+  display: grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.short-note-composer__attachment-remove:hover {
+  background: var(--a-color-danger);
+  color: #ffffff;
+}
+
 .short-note-composer__actions {
   display: flex;
   align-items: center;
@@ -264,7 +480,14 @@ function submit() {
   padding-top: 0.25rem;
 }
 
-.short-note-composer__image-button {
+.short-note-composer__tools {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.short-note-composer__image-button,
+.short-note-composer__media-button {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -279,13 +502,15 @@ function submit() {
   transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.short-note-composer__image-button:hover:not(.is-disabled) {
+.short-note-composer__image-button:hover:not(.is-disabled),
+.short-note-composer__media-button:hover:not(.is-disabled) {
   background: var(--a-color-bg);
   border-color: var(--a-color-border);
   color: var(--a-color-primary);
 }
 
-.short-note-composer__image-button.is-disabled {
+.short-note-composer__image-button.is-disabled,
+.short-note-composer__media-button.is-disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -310,4 +535,3 @@ function submit() {
   }
 }
 </style>
-

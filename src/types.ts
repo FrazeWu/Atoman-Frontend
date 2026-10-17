@@ -471,12 +471,25 @@ export interface ShortNoteMedia {
 	position: number;
 }
 
+export interface ShortNoteMediaAttachment {
+	type: 'song' | 'album' | 'video';
+	id: string;
+	title: string;
+	subtitle?: string;
+	cover_url?: string;
+	audio_url?: string;
+	duration?: number;
+}
+
 export interface ShortNote {
 	id: string;
 	user_id: string;
 	user?: User;
 	content: string;
 	media: ShortNoteMedia[];
+	media_attachment?: ShortNoteMediaAttachment;
+	media_attachment_type?: string;
+	media_attachment_id?: string;
 	likes_count: number;
 	dislikes_count?: number;
 	vote_score?: number;

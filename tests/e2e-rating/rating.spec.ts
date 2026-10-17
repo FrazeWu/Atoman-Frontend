@@ -37,6 +37,8 @@ test('真实评分链路：冷启动、个人评分、五人门槛、权限、�
     }
     await page.goto(detailURL)
     const rating = page.getByRole('region', { name: '播客单集评分' })
+    // HTML 返回 200 不代表 Vite 首次模块加载完成；仅首次等待页面就绪。
+    await expect(rating).toBeVisible({ timeout: 15000 })
     await expect(rating).toContainText('暂无评分')
     await rating.locator('[data-score="9"]').click()
     await expect(rating).toContainText('我的评分：9/10')

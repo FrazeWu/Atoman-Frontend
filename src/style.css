@@ -1,3 +1,7 @@
+@import './shared/tokens/reset.css';
+@import './shared/tokens/variables.css';
+@import './shared/tokens/layers.css';
+
 :root {
 	--a-color-bg: #ffffff;
 	--a-color-fg: #0f172a;

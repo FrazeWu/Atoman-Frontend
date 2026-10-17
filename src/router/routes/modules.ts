@@ -210,7 +210,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				{ path: "", component: booksHomeView, meta: { bookCatalog: true } },
 				{ path: "search", component: booksHomeView, meta: { bookCatalog: true } },
 				{ path: "new", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'create' } }, meta: { bookCatalog: true, requiresAuth: true } },
-				{ path: "work/:workId", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'work' } }, meta: { bookCatalog: true } },
+				{ path: "work/:workId", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'work' } }, meta: { bookCatalog: true, restoreSession: true } },
 				{ path: "edition/:editionId", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'edition' } }, meta: { bookCatalog: true } },
 				{
 					path: "library",

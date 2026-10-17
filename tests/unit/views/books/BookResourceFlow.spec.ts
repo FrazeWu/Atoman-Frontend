@@ -9,7 +9,7 @@ import * as privateBooks from '@/api/bookPrivate'
 import type { ResourceUpload } from '@/api/bookResources'
 import BookResourceUpload from '@/components/books/BookResourceUpload.vue'
 import BookRevisionReaderView from '@/views/books/BookRevisionReaderView.vue'
-import BookPublicReaderView from '@/views/books/BookPublicReaderView.vue'
+import BookPublicReaderView from '@/components/books/BookPublicReaderView.vue'
 import BookCloudReader from '@/components/books/BookCloudReader.vue'
 import type { BookReaderSource } from '@/types/bookReaderSource'
 

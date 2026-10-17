@@ -1,3 +1,4 @@
+<!-- 固定修订阅读器与云同步容器共用的正文渲染组件。 -->
 <template>
   <main class="public-reader" :class="[`public-reader--theme-${displayPreferences.theme}`, { 'a-page-md': !source }]" :style="{ '--book-reader-font-scale': displayPreferences.font_scale }">
     <BookReaderShell

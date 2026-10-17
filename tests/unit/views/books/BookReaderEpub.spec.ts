@@ -3,7 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, expect, it, vi } from 'vitest'
 import ePub from 'epubjs'
-import BookPublicReaderView from '@/views/books/BookPublicReaderView.vue'
+import BookPublicReaderView from '@/components/books/BookPublicReaderView.vue'
 
 vi.mock('epubjs', () => ({ default: vi.fn() }))
 afterEach(() => { vi.restoreAllMocks(); localStorage.clear() })

@@ -30,7 +30,7 @@ import { deleteReadingMark, listReadingMarks, saveReadingMark, type ReadingMark,
 import { useRevisionReading } from '@/composables/useRevisionReading'
 import type { BookReaderSource } from '@/types/bookReaderSource'
 import type { BookReaderBookmark } from '@/utils/bookReaderPreferences'
-import BookPublicReaderView from '@/views/books/BookPublicReaderView.vue'
+import BookPublicReaderView from './BookPublicReader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import BookHighlightEditor, { type HighlightDraft } from '@/components/books/BookHighlightEditor.vue'
 import type { HighlightSelection } from '@/utils/bookMarkAnchors'

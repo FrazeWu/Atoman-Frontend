@@ -78,6 +78,14 @@
           <img :src="resolveMediaURL(item.url)" alt="短笺图片" loading="lazy" />
         </div>
       </div>
+
+      <!-- 视听附件挂载卡片 -->
+      <MediaAttachmentCard
+        v-if="note.media_attachment"
+        :attachment="note.media_attachment"
+        class="sticky-media-attachment"
+        @click.stop
+      />
     </div>
 
     <!-- 3. 极轻量互动操作栏 -->
@@ -134,6 +142,7 @@ import PInteractionActions from '@/components/ui/PInteractionActions.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PInteractionCard from '@/components/ui/PInteractionCard.vue'
 import PImageLightbox from '@/components/ui/PImageLightbox.vue'
+import MediaAttachmentCard from '@/components/shortnote/MediaAttachmentCard.vue'
 import { useApi } from '@/composables/useApi'
 import { useShortNoteSync } from '@/composables/blog/useShortNoteSync'
 import { useAuthStore } from '@/stores/auth'
@@ -517,6 +526,10 @@ function formatDate(value: string) {
 
 .sticky-media-thumb:hover img {
   transform: scale(1.04);
+}
+
+.sticky-media-attachment {
+  margin-top: 0.25rem;
 }
 
 /* 底部操作栏 */

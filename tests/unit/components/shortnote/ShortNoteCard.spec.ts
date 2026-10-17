@@ -9,6 +9,14 @@ import { useShortNoteSync } from '@/composables/blog/useShortNoteSync'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 
+vi.mock('vue-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('vue-router')>()
+  return {
+    ...actual,
+    useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  }
+})
+
 const CommentSideSheetStub = {
   name: 'CommentSideSheet',
   props: ['show', 'target', 'partialAnchor'],
@@ -219,5 +227,40 @@ describe('ShortNoteCard', () => {
     await flushPromises()
 
     expect(markItemsRead).toHaveBeenCalledWith([], ['note-legacy-mount'])
+  })
+
+  it('当存在视听附件时渲染 MediaAttachmentCard，点击附件不触发展开讨论', async () => {
+    const pinia = createPinia()
+    const noteWithMedia: ShortNote = {
+      ...mockNote,
+      id: 'note-with-media',
+      media_attachment: {
+        type: 'song',
+        id: 'song-123',
+        title: '测试音乐',
+        subtitle: '测试歌手',
+      },
+    }
+
+    const wrapper = mount(ShortNoteCard, {
+      props: { note: noteWithMedia },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true, CommentSideSheet: CommentSideSheetStub, PImageLightbox: true },
+      },
+    })
+
+    const attachmentCard = wrapper.find('.sticky-media-attachment')
+    expect(attachmentCard.exists()).toBe(true)
+    expect(attachmentCard.text()).toContain('测试音乐')
+
+    // 点击媒体附件
+    await attachmentCard.trigger('click')
+    await flushPromises()
+
+    // 验证未展开讨论侧边栏
+    const commentSheet = wrapper.findComponent(CommentSideSheetStub)
+    expect(commentSheet.props('show')).toBe(false)
+    expect(wrapper.find('[data-test="short-note-comment-sheet"]').exists()).toBe(false)
   })
 })

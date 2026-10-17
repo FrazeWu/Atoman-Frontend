@@ -72,7 +72,11 @@
       </div>
 
       <!-- 文字与元信息 -->
-      <div class="media-attachment-card__info">
+      <div
+        class="media-attachment-card__info"
+        :class="{ 'is-clickable': Boolean(targetHref) }"
+        @click.stop="handleNavigate"
+      >
         <div class="media-attachment-card__header">
           <span class="media-attachment-card__badge">{{ typeLabel }}</span>
           <span class="media-attachment-card__title" :title="attachment.title">
@@ -87,11 +91,12 @@
       <!-- 右侧操作区 -->
       <div class="media-attachment-card__actions" @click.stop>
         <RouterLink
-          v-if="attachment.type === 'video'"
-          :to="`/videos/watch/${attachment.id}`"
+          v-if="targetHref"
+          :to="targetHref"
           class="media-attachment-card__action-btn"
-          title="观看视频"
-          aria-label="观看视频"
+          :title="actionBtnTitle"
+          :aria-label="actionBtnTitle"
+          @click.stop
         >
           <ExternalLink :size="14" aria-hidden="true" />
         </RouterLink>
@@ -145,6 +150,31 @@ const typeLabel = computed(() => {
     case 'song':
     default:
       return '单曲'
+  }
+})
+
+const targetHref = computed(() => {
+  if (props.attachment.type === 'song') {
+    return `/music/?song_id=${props.attachment.id}`
+  }
+  if (props.attachment.type === 'album') {
+    return `/music/album/${props.attachment.id}`
+  }
+  if (props.attachment.type === 'video') {
+    return `/videos/watch/${props.attachment.id}`
+  }
+  return ''
+})
+
+const actionBtnTitle = computed(() => {
+  switch (props.attachment.type) {
+    case 'album':
+      return '查看专辑'
+    case 'video':
+      return '观看视频'
+    case 'song':
+    default:
+      return '查看单曲'
   }
 })
 
@@ -290,6 +320,12 @@ async function handlePlayVideo() {
     }
   } finally {
     loadingVideo.value = false
+  }
+}
+
+function handleNavigate() {
+  if (targetHref.value && router) {
+    void router.push(targetHref.value)
   }
 }
 
@@ -440,6 +476,15 @@ function handlePrimaryAction() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.media-attachment-card__info.is-clickable {
+  cursor: pointer;
+}
+
+.media-attachment-card__info.is-clickable:hover .media-attachment-card__title {
+  color: var(--a-color-primary, #3b82f6);
+  text-decoration: underline;
 }
 
 .media-attachment-card__subtitle {

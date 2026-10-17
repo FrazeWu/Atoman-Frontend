@@ -80,4 +80,49 @@ describe('ShortNoteComposerView', () => {
     expect(composer.attributes('data-initial')).toContain('「生命中真正重要的不是你遭遇了什么」——《百年孤独》')
     expect(draftStore.pendingQuote).toBeNull()
   })
+
+  it('编辑短笺时传递 initial-media-attachment', async () => {
+    const pinia = createPinia()
+    const authStore = useAuthStore(pinia)
+    authStore.user = { uuid: 'owner', username: 'owner', role: 'user' } as never
+    authStore.isAuthenticated = true
+    const mediaAttachment = {
+      type: 'song',
+      id: 'song-1',
+      title: '夜曲',
+      subtitle: '周杰伦',
+    }
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ data: {
+      id: 'note-1',
+      user_id: 'owner',
+      content: '我的短笺',
+      media: [],
+      media_attachment: mediaAttachment,
+      created_at: '2026-07-01T00:00:00Z',
+    } }), { status: 200 })))
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/posts/notes/:id/edit', component: ShortNoteComposerView }],
+    })
+    await router.push('/posts/notes/note-1/edit')
+    await router.isReady()
+
+    const wrapper = mount(ShortNoteComposerView, {
+      global: {
+        plugins: [router, pinia],
+        stubs: {
+          RouterLink: true,
+          PPageHeader: true,
+          ShortNoteComposer: {
+            props: ['initialContent', 'initialMediaAttachment'],
+            template: '<div data-test="composer" :data-attachment-id="initialMediaAttachment?.id" />',
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    const composer = wrapper.get('[data-test="composer"]')
+    expect(composer.attributes('data-attachment-id')).toBe('song-1')
+  })
 })

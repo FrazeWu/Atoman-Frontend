@@ -13,6 +13,7 @@
       v-else-if="!error"
       :initial-content="note?.content || stagedInitialContent"
       :initial-media-urls="note?.media.map((item) => item.url)"
+      :initial-media-attachment="note?.media_attachment"
       :submitting="submitting"
       :submit-label="isEdit ? '保存' : '发布'"
       @submit="save"
@@ -75,7 +76,12 @@ async function load() {
   }
 }
 
-async function save(payload: { content: string; media_urls: string[] }) {
+async function save(payload: {
+  content: string
+  media_urls: string[]
+  media_attachment_type?: string
+  media_attachment_id?: string
+}) {
   if (isEdit.value && note.value?.user_id !== authStore.user?.uuid) return
   submitting.value = true
   error.value = ''

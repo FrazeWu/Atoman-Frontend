@@ -91,7 +91,7 @@ describe('MediaAttachmentCard', () => {
     duration: 255,
   }
 
-  it('渲染单曲卡片：显示标题、艺术家、封面', () => {
+  it('渲染单曲卡片：显示标题、艺术家、封面与跳转链接', () => {
     const wrapper = mountCard(MediaAttachmentCard, {
       props: { attachment: songAttachment },
     })
@@ -102,6 +102,9 @@ describe('MediaAttachmentCard', () => {
     expect(img.exists()).toBe(true)
     expect(img.attributes('src')).toBe('https://example.com/cover.jpg')
     expect(img.attributes('alt')).toBe('夜曲')
+
+    const songLink = wrapper.find('a[href="/music/?song_id=song-test-1"]')
+    expect(songLink.exists()).toBe(true)
   })
 
   it('点击「播放」按钮：验证调用 usePlayerStore().playSong', async () => {
@@ -168,6 +171,9 @@ describe('MediaAttachmentCard', () => {
 
     expect(wrapper.text()).toContain('十一月的萧邦')
     expect(wrapper.text()).toContain('周杰伦 · 2005')
+
+    const albumLink = wrapper.find('a[href="/music/album/album-test-1"]')
+    expect(albumLink.exists()).toBe(true)
 
     const playBtn = wrapper.find('[data-test="media-play-btn"]')
     await playBtn.trigger('click')
@@ -237,5 +243,37 @@ describe('MediaAttachmentCard', () => {
     // 点击卡片内部播放按钮
     await wrapper.find('[data-test="media-play-btn"]').trigger('click')
     expect(parentClickHandler).not.toHaveBeenCalled()
+
+    // 点击卡片内部跳转链接
+    const songLink = wrapper.find('a[href="/music/?song_id=song-test-1"]')
+    expect(songLink.exists()).toBe(true)
+    await songLink.trigger('click')
+    expect(parentClickHandler).not.toHaveBeenCalled()
+  })
+
+  it('渲染单曲与专辑卡片的跳转链接', () => {
+    const songWrapper = mountCard(MediaAttachmentCard, {
+      props: { attachment: songAttachment },
+    })
+    expect(songWrapper.find('a[href="/music/?song_id=song-test-1"]').exists()).toBe(true)
+
+    const albumWrapper = mountCard(MediaAttachmentCard, {
+      props: { attachment: albumAttachment },
+    })
+    expect(albumWrapper.find('a[href="/music/album/album-test-1"]').exists()).toBe(true)
+  })
+
+  it('点击标题/信息区：调用 router.push 进行页面跳转', async () => {
+    const songWrapper = mountCard(MediaAttachmentCard, {
+      props: { attachment: songAttachment },
+    })
+    await songWrapper.find('.media-attachment-card__info').trigger('click')
+    expect(apiMocks.routerPush).toHaveBeenCalledWith('/music/?song_id=song-test-1')
+
+    const albumWrapper = mountCard(MediaAttachmentCard, {
+      props: { attachment: albumAttachment },
+    })
+    await albumWrapper.find('.media-attachment-card__info').trigger('click')
+    expect(apiMocks.routerPush).toHaveBeenCalledWith('/music/album/album-test-1')
   })
 })

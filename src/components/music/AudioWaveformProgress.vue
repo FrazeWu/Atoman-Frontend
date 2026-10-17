@@ -21,20 +21,20 @@
         <path
           class="waveform-shape__played"
           :d="waveformPath"
-          :style="{ clipPath: `inset(0 ${100 - progressRatio * 100}% 0 0)` }"
+          :style="{ clipPath: `inset(0 ${100 - displayRatio * 100}% 0 0)` }"
         />
       </svg>
       <div v-else class="waveform-fallback-line" aria-hidden="true">
-        <span :style="{ width: `${progressRatio * 100}%` }" />
+        <span :style="{ width: `${displayRatio * 100}%` }" />
       </div>
       <div class="waveform-mobile-line" aria-hidden="true">
-        <span :style="{ width: `${progressRatio * 100}%` }" />
+        <span :style="{ width: `${displayRatio * 100}%` }" />
       </div>
 
       <span
         class="waveform-playhead"
         aria-hidden="true"
-        :style="{ left: `${progressRatio * 100}%` }"
+        :style="{ left: `${displayRatio * 100}%` }"
       />
       <template v-if="hoverRatio !== null">
         <span class="waveform-hover-line" aria-hidden="true" :style="{ left: `${hoverRatio * 100}%` }" />
@@ -106,6 +106,13 @@ const progressRatio = computed(() => {
   return Math.min(1, Math.max(0, props.currentTime / props.duration))
 })
 
+const displayRatio = computed(() => {
+  if (dragging.value && hoverRatio.value !== null) {
+    return hoverRatio.value
+  }
+  return progressRatio.value
+})
+
 const waveformPath = computed(() => {
   if (!peaks.value.length) return ''
 
@@ -158,13 +165,15 @@ function startSeek(event: PointerEvent) {
 
 function movePointer(event: PointerEvent) {
   hoverRatio.value = pointerRatio(event)
-  if (dragging.value) seekFromPointer(event)
 }
 
 function stopSeek(event: PointerEvent) {
   if (!dragging.value) return
   dragging.value = false
   if (rootRef.value?.hasPointerCapture?.(event.pointerId)) rootRef.value.releasePointerCapture?.(event.pointerId)
+  if (props.duration && hoverRatio.value !== null) {
+    emit('seek', hoverRatio.value * props.duration)
+  }
 }
 
 function leavePointer() {

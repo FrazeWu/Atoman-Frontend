@@ -168,11 +168,15 @@ describe("AudioPlayer", () => {
 			resolve(process.cwd(), "src/components/music/AudioPlayer.vue"),
 			"utf8",
 		);
+		const miniSource = readFileSync(
+			resolve(process.cwd(), "src/components/music/AudioPlayerMini.vue"),
+			"utf8",
+		);
 		expect(source).toMatch(/<Transition name="player-display" appear>/);
 		expect(source).toContain('ChevronRight');
-		expect(source).toContain('ChevronLeft');
 		expect(source).toContain('<ChevronRight :size="16" aria-hidden="true" />');
-		expect(source).toContain('<ChevronLeft :size="15" aria-hidden="true" />');
+		expect(miniSource).toContain('ChevronLeft');
+		expect(miniSource).toContain('<ChevronLeft :size="15" aria-hidden="true" />');
 		expect(source).not.toContain('<Minimize2 :size="16" aria-hidden="true" />');
 		expect(source).not.toContain('IconMaximize as Maximize2');
 		expect(source).not.toContain('name="player-display" mode="out-in"');

@@ -3,7 +3,7 @@ import { clearSessionStores } from "@/stores/sessionReset";
 import { nextTick } from "vue";
 import { flushPromises } from "@vue/test-utils";
 import { beforeEach, describe, it, expect, vi } from "vitest";
-import { usePlayerStore } from "../../../src/stores/player";
+import { usePlayerStore, computeActualVolume, fadeOutAudio } from "../../../src/stores/player";
 import { useAuthStore } from "../../../src/stores/auth";
 import { writePodcastProgress } from "../../../src/composables/usePodcastProgress";
 import type { Song } from "../../../src/types";
@@ -1146,5 +1146,38 @@ describe("player store", () => {
 		expect(player.isPlaying).toBe(true);
 
 		Reflect.deleteProperty(navigator, "mediaSession");
+	});
+
+	it("computes actual volume using logarithmic perceptual mapping", () => {
+		expect(computeActualVolume(0)).toBe(0);
+		expect(computeActualVolume(1)).toBe(1);
+		expect(computeActualVolume(0.5)).toBeCloseTo(0.25);
+		expect(computeActualVolume(0.2)).toBeCloseTo(0.04);
+		expect(computeActualVolume(-0.5)).toBe(0);
+		expect(computeActualVolume(1.5)).toBe(1);
+	});
+
+	it("applies logarithmic volume to audio element when setVolume is called", () => {
+		const player = usePlayerStore();
+		player.playSong({ id: "vol-test", title: "Vol Test", audio_url: "vol.mp3" } as any);
+		const audio = audioInstances[0];
+
+		player.setVolume(0.6);
+		expect(player.volume).toBe(0.6);
+		expect(audio.volume).toBeCloseTo(0.36);
+
+		player.setVolume(0);
+		expect(player.volume).toBe(0);
+		expect(audio.volume).toBe(0);
+	});
+
+	it("fades out audio smoothly down to zero", async () => {
+		const mockAudio = {
+			volume: 1,
+			paused: false,
+		} as unknown as HTMLAudioElement;
+
+		await fadeOutAudio(mockAudio, 60);
+		expect(mockAudio.volume).toBe(0);
 	});
 });

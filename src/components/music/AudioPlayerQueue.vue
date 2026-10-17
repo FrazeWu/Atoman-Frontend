@@ -571,24 +571,34 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 .q-equalizer {
   display: flex;
   align-items: flex-end;
-  gap: 2px;
-  height: 12px;
+  gap: 2.5px;
+  height: 14px;
 }
 
 .eq-bar {
-  width: 2px;
-  background: var(--a-color-success);
+  width: 2.5px;
+  background: var(--a-color-primary, var(--a-color-success));
   border-radius: 1px;
-  animation: eq-bounce 1s ease-in-out infinite alternate;
 }
 
-.eq-bar:nth-child(1) { height: 40%; animation-delay: 0.1s; }
-.eq-bar:nth-child(2) { height: 100%; animation-delay: 0.3s; }
-.eq-bar:nth-child(3) { height: 60%; animation-delay: 0.2s; }
+.eq-bar:nth-child(1) { height: 40%; animation: eq-bounce-1 0.75s ease-in-out infinite alternate; }
+.eq-bar:nth-child(2) { height: 95%; animation: eq-bounce-2 1.05s ease-in-out infinite alternate; }
+.eq-bar:nth-child(3) { height: 60%; animation: eq-bounce-3 0.85s ease-in-out infinite alternate; }
 
-@keyframes eq-bounce {
-  0% { height: 20%; }
+@keyframes eq-bounce-1 {
+  0% { height: 25%; }
+  50% { height: 85%; }
+  100% { height: 45%; }
+}
+@keyframes eq-bounce-2 {
+  0% { height: 90%; }
+  45% { height: 35%; }
   100% { height: 100%; }
+}
+@keyframes eq-bounce-3 {
+  0% { height: 30%; }
+  55% { height: 90%; }
+  100% { height: 20%; }
 }
 
 .q-info {

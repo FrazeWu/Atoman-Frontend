@@ -60,4 +60,46 @@ describe('AudioWaveformProgress', () => {
     expect(path).not.toContain('Z')
     expect(fetch).not.toHaveBeenCalled()
   })
+
+  it('throttles seeks during dragging and emits final seek on pointerup', async () => {
+    const wrapper = mount(AudioWaveformProgress, {
+      props: {
+        songId: 'seek-drag-song',
+        audioUrl: '/seek.mp3',
+        currentTime: 10,
+        duration: 100,
+        generateWaveform: false,
+      },
+    })
+    const root = wrapper.get('.waveform-progress')
+    vi.spyOn(root.element, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      width: 100,
+      top: 0,
+      right: 100,
+      bottom: 34,
+      height: 34,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+
+    // Pointerdown starts seek at 20%
+    root.element.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 20 }))
+    await nextTick()
+    expect(wrapper.emitted('seek')).toHaveLength(1)
+    expect(wrapper.emitted('seek')?.[0]?.[0]).toBe(20)
+
+    // Moving pointer during drag updates visual without emitting new seeks
+    root.element.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 40 }))
+    root.element.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 60 }))
+    await nextTick()
+    expect(wrapper.emitted('seek')).toHaveLength(1)
+
+    // Pointerup commits final seek at 60%
+    root.element.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 60 }))
+    await nextTick()
+    expect(wrapper.emitted('seek')).toHaveLength(2)
+    expect(wrapper.emitted('seek')?.[1]?.[0]).toBe(60)
+  })
 })

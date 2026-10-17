@@ -54,6 +54,20 @@
         >
           <Pencil :size="16" aria-hidden="true" />
         </PButton>
+        <PButton
+          v-if="isPlayerMode && isPiPSupported"
+          class="music-lyrics-panel__action-btn"
+          type="button"
+          variant="secondary"
+          :aria-label="isPiPActive ? '退出画中画' : '画中画歌词'"
+          :title="isPiPActive ? '退出画中画' : '画中画歌词'"
+          :aria-pressed="isPiPActive"
+          data-testid="lyrics-pip-trigger"
+          @click="togglePictureInPicture"
+        >
+          <PictureInPicture :size="16" aria-hidden="true" />
+          <span>{{ isPiPActive ? '画中画开' : '画中画' }}</span>
+        </PButton>
         <button
           type="button"
           class="music-lyrics-panel__close"
@@ -302,7 +316,8 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { BookOpen, History, Pencil, X } from 'lucide-vue-next'
+import { BookOpen, History, Pencil, PictureInPicture, X } from 'lucide-vue-next'
+import { usePictureInPictureLyrics } from '@/composables/usePictureInPictureLyrics'
 import { ApiErrorResponseError } from '@/api/client'
 import {
   getMusicSongDetail,
@@ -377,6 +392,17 @@ const {
   currentLine,
 } = useMusicLyrics()
 
+const { isPiPActive, isPiPSupported, togglePictureInPicture } = usePictureInPictureLyrics({
+  songTitle: computed(() => props.songTitle),
+  artistText: computed(() => props.artistText),
+  currentTimeSeconds: computed(() => props.currentTimeSeconds),
+  lines: computed(() => (lyrics.value?.lines ?? []).map((l) => ({
+    text: l.text,
+    translation: l.translation || '',
+    time_ms: l.time_ms ?? undefined,
+  }))),
+})
+
 const selectedAnnotationIds = ref<string[]>([])
 const mobileAnnotationOpen = ref(false)
 const isMobileViewport = ref(false)
@@ -434,7 +460,7 @@ function handleUserScroll() {
   scrollLockTimer = setTimeout(() => {
     isUserScrolling.value = false
     scrollToActiveLine()
-  }, 4000)
+  }, 2500)
 }
 
 function scrollToActiveLine() {

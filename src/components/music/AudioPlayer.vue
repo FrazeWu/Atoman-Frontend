@@ -157,38 +157,15 @@
 
       <!-- Right: Feature Strip -->
       <div class="player-features">
-        <PDropdown v-if="player.currentSong && !isPodcast" class="player-add-dropdown" position="right">
-          <template #trigger>
-            <button class="player-add-btn" type="button" aria-label="添加到歌单" title="添加到歌单" @click="guardPlaylistMenu">
-              <Plus :size="18" aria-hidden="true" />
-            </button>
-          </template>
-          <template #default="{ close }">
-            <div class="track-add-menu">
-              <div class="track-add-menu-header">添加到歌单</div>
-              <div v-if="playlistLoadError" class="track-add-menu-empty">
-                {{ playlistLoadError }}
-                <button type="button" @click="loadPlaylists">重试</button>
-              </div>
-              <div v-else-if="!playlists.length" class="track-add-menu-empty">暂无歌单</div>
-              <button v-for="p in playlists" :key="p.id" type="button" class="track-add-menu-item" @click="addTrackToPlaylist(String(p.id), String(player.currentSong.id), close)">
-                {{ p.name }}
-              </button>
-            </div>
-          </template>
-        </PDropdown>
-
-        <button
-          type="button"
-          class="feature-link player-offline-btn"
-          :disabled="isCachingAudio"
-          :aria-label="isCachingAudio ? '正在保存音频' : player.isCurrentAudioCached ? '移除音频离线副本' : '保存音频供离线播放'"
-          :title="isCachingAudio ? '正在保存音频' : player.isCurrentAudioCached ? '移除音频离线副本' : '保存音频供离线播放'"
-          @click="player.isCurrentAudioCached ? removeCurrentAudio() : cacheCurrentAudio()"
-        >
-          <Download :size="16" aria-hidden="true" />
-          <span>{{ isCachingAudio ? '存' : player.isCurrentAudioCached ? '清除' : '离线' }}</span>
-        </button>
+        <AudioPlayerPlaylistPopover
+          :current-song-id="player.currentSong?.id"
+          :is-podcast="isPodcast"
+          :playlists="playlists"
+          :playlist-load-error="playlistLoadError"
+          @trigger-click="guardPlaylistMenu"
+          @retry-load="loadPlaylists"
+          @add-to-playlist="addTrackToPlaylist"
+        />
 
         <button
           type="button"
@@ -205,38 +182,11 @@
           <span>评</span>
         </button>
 
-        <div class="volume-container">
-          <div class="volume-control">
-            <span class="vol-percentage">{{ Math.round(player.volume * 100) }}%</span>
-            <div class="vol-slider-wrapper">
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                :value="player.volume"
-                :style="{ '--vol-percent': `${player.volume * 100}%` }"
-                class="vol-slider"
-                aria-label="音量"
-                @input="(e) => player.setVolume(parseFloat((e.target as HTMLInputElement).value))"
-              />
-            </div>
-          </div>
-          <div class="vol-trigger" data-hint="静音 / 解除静音 (M)">
-            <button
-              type="button"
-              class="vol-icon"
-              :aria-label="player.volume > 0 ? '静音' : '解除静音'"
-              :title="player.volume > 0 ? '静音' : '解除静音'"
-              @click="player.setVolume(player.volume > 0 ? 0 : 0.5)"
-            >
-              <Volume2 v-if="player.volume > 0.6" :size="20" />
-              <Volume1 v-else-if="player.volume > 0.2" :size="20" />
-              <Volume v-else-if="player.volume > 0" :size="20" />
-              <VolumeX v-else :size="20" />
-            </button>
-          </div>
-        </div>
+        <AudioPlayerVolume
+          :volume="player.volume"
+          @change="player.setVolume"
+          @toggle-mute="player.setVolume(player.volume > 0 ? 0 : 0.5)"
+        />
 
         <button
           class="queue-trigger"
@@ -249,48 +199,19 @@
           <List :size="20" aria-hidden="true" />
           <span class="queue-count">{{ player.queue.length || 0 }}</span>
         </button>
-
       </div>
     </div>
     </div>
 
-    <div
+    <AudioPlayerMini
       v-else
-      class="player-mini-window"
-      data-player-mode="cover"
-    >
-      <button
-        type="button"
-        class="player-mini-cover"
-        :aria-label="player.isPlaying ? '暂停播放' : '继续播放'"
-        :title="player.isPlaying ? '暂停播放' : '继续播放'"
-        @click="player.togglePlay()"
-      >
-        <img
-          v-if="player.currentSong.cover_url"
-          :src="player.currentSong.cover_url"
-          alt=""
-          class="player-cover"
-        />
-        <span v-else class="player-cover-fallback">{{ coverFallback }}</span>
-        <svg class="player-mini-progress-ring" :data-progress="miniProgressPercent" viewBox="0 0 100 100" aria-hidden="true">
-          <rect class="player-mini-progress-ring__track" x="3" y="3" width="94" height="94" pathLength="100" />
-          <rect class="player-mini-progress-ring__value" x="3" y="3" width="94" height="94" pathLength="100" :style="{ strokeDashoffset: String(100 - miniProgressPercent) }" />
-        </svg>
-        <span v-if="!player.isPlaying" class="player-mini-play-overlay" aria-hidden="true">
-          <Play :size="22" fill="currentColor" />
-        </span>
-      </button>
-      <button
-        type="button"
-        class="player-mini-expand"
-        aria-label="展开完整播放器"
-        title="展开完整播放器"
-        @click.stop="setPlayerDisplayMode('full')"
-      >
-        <ChevronLeft :size="15" aria-hidden="true" />
-      </button>
-    </div>
+      :cover-url="player.currentSong.cover_url"
+      :cover-fallback="coverFallback"
+      :is-playing="player.isPlaying"
+      :mini-progress-percent="miniProgressPercent"
+      @toggle-play="player.togglePlay()"
+      @expand="setPlayerDisplayMode('full')"
+    />
     </Transition>
   </div>
 
@@ -347,12 +268,14 @@ import { usePlayerStore } from "@/stores/player";
 import { useAuthStore } from "@/stores/auth";
 import { useAudioPlayerChrome } from "@/composables/useAudioPlayerChrome";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
-import { Repeat, Shuffle, List, Volume2, Volume1, Volume, VolumeX, Heart, Plus, Clock, ChevronRight, ChevronLeft, ChevronUp, Play, Download } from 'lucide-vue-next';
+import { Repeat, Shuffle, List, Heart, Clock, ChevronRight, ChevronUp } from 'lucide-vue-next';
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
 import AudioWaveformProgress from "@/components/music/AudioWaveformProgress.vue";
 import AudioPlayerQueue from "@/components/music/AudioPlayerQueue.vue";
+import AudioPlayerMini from "@/components/music/AudioPlayerMini.vue";
+import AudioPlayerVolume from "@/components/music/AudioPlayerVolume.vue";
+import AudioPlayerPlaylistPopover from "@/components/music/AudioPlayerPlaylistPopover.vue";
 import CommentSideSheet from "@/components/comment/CommentSideSheet.vue";
-import PDropdown from "@/components/ui/PDropdown.vue";
 import PToast from "@/components/ui/PToast.vue";
 import { useMusicFavoritePlaylist } from "@/composables/useMusicFavoritePlaylist";
 import { useLoginRedirect } from "@/composables/useLoginRedirect";
@@ -407,19 +330,21 @@ function openCurrentSongDetail() {
   openSong(String(songId))
 }
 
-function handleGlobalKeydown(e: KeyboardEvent) {
+function isInputActive(): boolean {
   const active = document.activeElement
-  if (active) {
-    const tagName = active.tagName.toLowerCase()
-    if (
-      tagName === 'input' ||
-      tagName === 'textarea' ||
-      tagName === 'select' ||
-      (active as HTMLElement).isContentEditable
-    ) {
-      return
-    }
-  }
+  if (!active) return false
+  const tagName = active.tagName.toLowerCase()
+  return (
+    tagName === 'input' ||
+    tagName === 'textarea' ||
+    tagName === 'select' ||
+    (active as HTMLElement).isContentEditable ||
+    Boolean(active.closest?.('.p-editor, .dm-composer, .cm-editor, [contenteditable="true"]'))
+  )
+}
+
+function handleGlobalKeydown(e: KeyboardEvent) {
+  if (isInputActive()) return
   if (!player.currentSong) return
 
   const shortcut = resolveMusicPlayerShortcut(e)
@@ -493,33 +418,11 @@ const playlistsLoaded = ref(false);
 const playlistLoadError = ref('');
 const toastVisible = ref(false);
 const toastMessage = ref("");
-const isCachingAudio = ref(false);
 const showToast = (message: string) => {
   toastMessage.value = message;
   toastVisible.value = true;
 };
 
-async function cacheCurrentAudio() {
-  if (isCachingAudio.value || !player.currentSong) return
-  isCachingAudio.value = true
-  try {
-    const cached = await player.cacheCurrentAudio()
-    showToast(cached ? '音频已保存，可离线播放' : '音频保存失败，请稍后重试')
-  } finally {
-    isCachingAudio.value = false
-  }
-}
-
-async function removeCurrentAudio() {
-  if (isCachingAudio.value || !player.currentSong) return
-  isCachingAudio.value = true
-  try {
-    const removed = await player.removeCurrentAudio()
-    showToast(removed ? '已移除音频离线副本' : '没有可移除的离线副本')
-  } finally {
-    isCachingAudio.value = false
-  }
-}
 const { addPodcastBookmark, addPodcastListenLater } = usePodcastPlayerActions(showToast);
 const {
   favoriteSongIds,
@@ -965,6 +868,11 @@ watch(
   visibility: visible;
   transform: translateX(-50%) translateY(0);
   transition-delay: 1.2s;
+}
+@media (hover: none) {
+  [data-hint]::before {
+    display: none !important;
+  }
 }
 .skip-btn:hover,
 .nav-btn:hover {

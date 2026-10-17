@@ -122,6 +122,14 @@
       @hover="mention.index = $event"
       @select="applyReference"
     />
+
+    <MediaPickerModal
+      :open="pickerState.open"
+      :initial-type="pickerState.type"
+      :above-player="true"
+      @close="pickerState.open = false"
+      @select="handleMediaPickerSelect"
+    />
   </div>
 </template>
 
@@ -141,6 +149,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useEditorCollaboration } from '@/composables/editor/useEditorCollaboration'
 import { useEditorImageUpload } from '@/composables/editor/useEditorImageUpload'
 import PReferenceMenu from '@/components/shared/PReferenceMenu.vue'
+import MediaPickerModal from '@/components/shared/MediaPickerModal.vue'
+import type { MediaPickerItem, MediaPickerType } from '@/types/mediaPicker'
 import {
   fitReferenceMenuPosition,
   insertReferenceTrigger,
@@ -985,12 +995,31 @@ function toggleLineNumbers() {
   })
 }
 
+const pickerState = ref<{ open: boolean; type: MediaPickerType }>({
+  open: false,
+  type: 'song',
+})
+
 function insertEmbed(kind: 'post' | 'music' | 'video') {
-  const labels = { post: '文章', music: '音乐/专辑', video: '视频' }
-  const id = window.prompt(`输入要引用的${labels[kind]} ID`)?.trim()
-  if (!id) return
+  if (kind === 'post') {
+    const id = window.prompt('输入文章 ID')?.trim()
+    if (id) {
+      const { from } = getCmSelection()
+      cmInsert(from, from, `\n:::post{id="${id}"}:::\n`)
+    }
+    return
+  }
+  pickerState.value = {
+    open: true,
+    type: kind === 'music' ? 'song' : 'video',
+  }
+}
+
+function handleMediaPickerSelect(item: MediaPickerItem) {
+  pickerState.value.open = false
   const { from } = getCmSelection()
-  const md = `\n:::${kind}{id="${id}"}:::\n`
+  const kind = item.type === 'video' ? 'video' : 'music'
+  const md = `\n:::${kind}{id="${item.id}"}:::\n`
   cmInsert(from, from, md)
 }
 

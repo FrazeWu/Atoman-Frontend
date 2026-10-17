@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { isStandaloneMobileApp } from '@/utils/appRuntime'
-import PostDetailView from '@/views/blog/PostDetailView.vue'
+import PostDetailPage from '@/pages/blog/PostDetailPage.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -31,5 +31,5 @@ watch(
 </script>
 
 <template>
-  <PostDetailView v-if="isMobile" :id="postId" />
+  <PostDetailPage v-if="isMobile" />
 </template>

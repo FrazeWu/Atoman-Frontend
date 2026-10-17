@@ -1,6 +1,8 @@
 import { createApp, type Component } from "vue";
 import { createPinia } from "pinia";
 import type { Router } from "vue-router";
+import { VueQueryPlugin } from "@tanstack/vue-query";
+import { createQueryClient } from "@/app/providers/queryClient";
 import "./style.css";
 import { reportError } from "./utils/logger";
 import { waitForInitialPaint } from "./utils/waitForInitialPaint";
@@ -66,6 +68,8 @@ const bootstrap = async () => {
     reportError(error, `${mobileRuntime ? "移动端" : ""}路由加载失败`);
   });
 
+  const queryClient = createQueryClient();
+  app.use(VueQueryPlugin, { queryClient });
   app.use(createPinia());
   app.use(appRouter);
   app.mount("#app");

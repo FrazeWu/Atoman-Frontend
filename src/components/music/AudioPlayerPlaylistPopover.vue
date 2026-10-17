@@ -53,17 +53,21 @@ defineEmits<{
   width: 32px;
   height: 32px;
   border-radius: var(--a-radius-control, 4px);
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
+  border: 0;
+  background: transparent;
   color: var(--a-color-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .player-add-btn:hover {
   color: var(--a-color-fg);
-  border-color: var(--a-color-border);
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted, rgba(0, 0, 0, 0.04));
+}
+
+.player-add-btn:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
 }
 
 .track-add-menu {

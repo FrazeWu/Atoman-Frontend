@@ -194,6 +194,7 @@ const props = withDefaults(defineProps<{
   maxZoom?: number
   showScrollModeToggle?: boolean
   initialScrollMode?: BookReaderScrollMode
+  initialPanel?: 'tools' | 'settings' | ''
 }>(), {
   subtitle: '',
   format: '',
@@ -226,7 +227,7 @@ const progressPercent = computed(() => Math.round(Math.max(0, Math.min(1, props.
 const slots = useSlots()
 const desktopLayout = typeof window === 'undefined' || window.innerWidth > 640
 const activePanel = ref<'tools' | 'settings' | ''>(
-  slots.settings && desktopLayout ? 'settings' : (props.toc.length || slots.tools ? 'tools' : ''),
+  props.initialPanel ?? (slots.settings && desktopLayout ? 'settings' : (props.toc.length || slots.tools ? 'tools' : '')),
 )
 const hasTools = computed(() => Boolean(props.toc.length || slots.tools || slots.settings))
 

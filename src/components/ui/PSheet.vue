@@ -1,4 +1,5 @@
 <template>
+  <Teleport v-if="isMobile" to="body" :disabled="isTest || !teleportMobile">
   <Transition name="fade" appear>
     <div
       v-if="isMobile && show && showBackdrop && isTopLayer"
@@ -38,6 +39,7 @@
     </section>
   </Transition>
 
+  </Teleport>
   <Teleport v-if="!isMobile" to="body" :disabled="isTest || !teleport">
     <div
       class="p-sheet-root"
@@ -228,6 +230,8 @@ const props = withDefaults(defineProps<{
   showBackdrop?: boolean
   abovePlayer?: boolean
   teleport?: boolean
+  // 阅读器等带滚动/变换容器的页面可显式脱离移动端父级定位上下文。
+  teleportMobile?: boolean
   focusOnOpen?: boolean
   navigation?: {
     previous?: { label: string } | null
@@ -254,6 +258,7 @@ const props = withDefaults(defineProps<{
   showBackdrop: true,
   abovePlayer: false,
   teleport: true,
+  teleportMobile: false,
   focusOnOpen: true,
   navigationLoading: false,
   navigationKey: '',

@@ -16,6 +16,31 @@ afterEach(() => {
 })
 
 describe('BookPublicReaderView', () => {
+  it('uses a revision source without legacy APIs and isolates local bookmarks by account and revision', async () => {
+    const legacy = vi.spyOn(booksApi, 'getPublishedBookAsset')
+    const legacyContent = vi.spyOn(booksApi, 'fetchPublishedBookAssetContent')
+    const loadContent = vi.fn().mockResolvedValue(new Blob(['固定版本的正文']))
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/books/read/:workId/:assetId/:revisionId', component: BookPublicReaderView }] })
+    await router.push('/books/read/work-1/asset-1/revision-old')
+    await router.isReady()
+    const wrapper = mount(BookPublicReaderView, { props: { source: {
+      title: '历史', backTo: '/books/work/work-1', progressKey: 'revision:user-1:revision-old', loadContent,
+      asset: { id: 'asset-1', work_id: 'work-1', format: 'txt', file_name: 'old.txt', content_type: 'text/plain', size: 9, status: 'published', created_at: '' },
+    } }, global: { plugins: [router] } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('固定版本的正文')
+    expect(wrapper.classes()).not.toContain('a-page-md')
+    expect(wrapper.find('.book-reader-shell__panel').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('举报正文')
+    expect(legacy).not.toHaveBeenCalled()
+    expect(legacyContent).not.toHaveBeenCalled()
+    await wrapper.get('button[aria-label="添加书签"]').trigger('click')
+    const cached = JSON.parse(localStorage.getItem('atoman:book-reading-progress:revision:user-1:revision-old') || '{}')
+    expect(cached.bookmarks).toHaveLength(1)
+    expect(localStorage.getItem('atoman:book-reading-progress:asset-1')).toBeNull()
+    wrapper.unmount()
+  })
+
   it('opens a published TXT asset without requesting private reading state', async () => {
     vi.spyOn(booksApi, 'getPublishedBookAsset').mockResolvedValue({
       id: 'public-asset-1',

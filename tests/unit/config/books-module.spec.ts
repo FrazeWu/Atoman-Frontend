@@ -8,6 +8,7 @@ import { moduleFeatureRoutes } from "@/router/routes/modules";
 import { buildAppRoutes } from "@/router/buildAppRoutes";
 import { mergeSiteAccess, siteAccessFeatures } from "@/config/siteAccess";
 import { getMobileMoreItems, getMobilePrimaryTabs } from "@/composables/useResponsiveShell";
+import { mobileAdditionalRoutes } from "../../../apps/mobile/mobileAdditionalRoutes";
 
 describe("books module foundation", () => {
   it("exposes a compact books room in shared navigation config", () => {
@@ -24,17 +25,9 @@ describe("books module foundation", () => {
   it("keeps the books feature definitions and enables the module by default", () => {
     const access = mergeSiteAccess(null);
 
-    expect(siteAccessFeatures.books).toEqual([
-      { key: "books.submit", label: "提交书目" },
-      { key: "books.review", label: "书目审核" },
-      { key: "books.publish_asset", label: "发布公共正文" },
-    ]);
+    expect(siteAccessFeatures.books).toEqual([]);
     expect(access.modules.books.enabled).toBe(true);
-    expect(access.modules.books.features).toEqual({
-      "books.submit": true,
-      "books.review": true,
-      "books.publish_asset": true,
-    });
+    expect(access.modules.books.features).toEqual({});
   });
 
   it("keeps books enabled by default while retaining its routes and navigation", () => {
@@ -53,43 +46,44 @@ describe("books module foundation", () => {
     expect(children.map((route) => route.path)).toEqual([
       "",
       "search",
+      "new",
       "work/:workId",
       "edition/:editionId",
       "library",
       "lists",
-      "authors",
+      "lists/new",
+      "lists/:listId/edit",
+      "lists/:listId",
       "notes",
-      "import/:importId",
-      "read/:assetId",
-      "public-read/:assetId",
-      "contributions",
-      "review",
+      "read/:workId/:assetId/:revisionId",
     ]);
     expect(
       children.find((route) => route.path === "library")?.meta?.requiresAuth,
     ).toBe(true);
-    expect(
-      children.find((route) => route.path === "contributions")?.meta
-        ?.featureGate,
-    ).toEqual({
-      module: "books",
-      feature: "books.submit",
-    });
-    expect(
-      children.find((route) => route.path === "review")?.meta?.featureGate,
-    ).toEqual({
-      module: "books",
-      feature: "books.review",
-    });
+    expect(children.some(route => ['authors', 'contributions', 'review', 'read/:assetId'].includes(route.path))).toBe(false);
   });
 
   it("keeps discovery mounted under route-driven detail sheets", () => {
     const children = moduleFeatureRoutes.books[0].children ?? [];
     const home = children.find(route => route.path === "")?.component;
-    for (const path of ["work/:workId", "edition/:editionId"]) {
+    for (const path of ["new", "work/:workId", "edition/:editionId"]) {
       const detail = children.find(route => route.path === path);
       expect(detail?.components?.default).toBe(home);
       expect(detail?.components?.overlay).toBeDefined();
+      expect(detail?.meta?.bookCatalog).toBe(true);
+    }
+    expect(children.find(route => route.path === 'new')?.meta?.requiresAuth).toBe(true);
+  });
+
+  it("shares booklist routes across desktop and mobile web with authenticated editing", () => {
+    const desktop = moduleFeatureRoutes.books[0].children ?? [];
+    const mobile = mobileAdditionalRoutes.find(route => route.path === '/books')?.children ?? [];
+    for (const routes of [desktop, mobile]) {
+      for (const path of ['lists/new', 'lists/:listId/edit']) {
+        expect(routes.find(route => route.path === path)?.meta?.requiresAuth).toBe(true);
+      }
+      expect(routes.find(route => route.path === 'lists/:listId')?.meta?.requiresAuth).toBeUndefined();
+      expect(String(routes.find(route => route.path === 'lists')?.component)).toContain('BookListsView.vue');
     }
   });
 });

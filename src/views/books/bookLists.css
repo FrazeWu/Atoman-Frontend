@@ -1,0 +1,18 @@
+.booklists { color: var(--a-color-text); padding-block: 1.5rem; }
+.booklists__toolbar { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-block: 1.5rem; }
+.booklists__toolbar > .p-field { flex: 1; min-width: 12rem; }
+.booklists__tabs, .booklists__actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.booklists__list { padding: 0; margin: 0; list-style: none; }
+.booklists__row { display: flex; align-items: start; gap: 1rem; padding-block: 1.5rem; border-bottom: 1px solid var(--a-color-border-soft); }
+.booklists__row-main { flex: 1; min-width: 0; }
+.booklists__title { font-size: 1.25rem; font-weight: 600; color: var(--a-color-text); overflow-wrap: anywhere; }
+.booklists__description { color: var(--a-color-text-secondary); max-width: 70ch; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.booklists small, .booklists__empty { color: var(--a-color-muted-soft); }
+.booklists__empty { padding-block: 3rem; }
+.booklists__update { color: var(--a-color-primary); }
+.booklists__error { color: var(--a-color-danger); }
+.booklists__form { max-width: 48rem; display: grid; gap: 1.5rem; }
+.booklists__item { padding: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); margin-block: 1rem; }
+.booklists__item textarea { width: 100%; }
+.booklists a:focus-visible, .booklists button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 3px; }
+@media (max-width: 600px) { .booklists__row { flex-wrap: wrap; } .booklists__row-main { flex-basis: 100%; } }

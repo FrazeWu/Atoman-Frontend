@@ -12,11 +12,12 @@
     </div>
     <div v-if="markError" role="alert">
       <p>{{ markError }}</p>
-      <PButton v-if="pendingMark && !markConflict" variant="secondary" :disabled="markBusy" @click="retryMark">重试书签操作</PButton>
-      <PButton variant="ghost" :disabled="markBusy" @click="reloadMarks">重新载入书签</PButton>
+      <PButton v-if="pendingMark && !markConflict" variant="secondary" :disabled="markBusy" @click="retryMark">重试标记操作</PButton>
+      <PButton variant="ghost" :disabled="markBusy" @click="reloadMarks">重新载入书签与批注</PButton>
     </div>
-    <BookPublicReaderView v-if="opened" :key="readerKey" :source="cloudSource" />
+    <BookPublicReaderView v-if="opened" :key="readerKey" :source="cloudSource" @annotate="openHighlight" @annotation-edit="editHighlight" @annotation-delete="deleteHighlight" />
     <BookPublicReaderView v-else-if="localOnly" :source="localSource" />
+    <BookHighlightEditor v-if="draft" :key="`${draft.id}:${draft.version}`" ref="editor" :draft="draft" :busy="markBusy" :frozen="Boolean(pendingMark)" :conflict="markConflict" :error="markError" @save="saveHighlight" @delete="deleteHighlight(draft)" @close="draft = undefined" />
   </div>
 </template>
 
@@ -30,6 +31,8 @@ import type { BookReaderSource } from '@/types/bookReaderSource'
 import type { BookReaderBookmark } from '@/utils/bookReaderPreferences'
 import BookPublicReaderView from '@/views/books/BookPublicReaderView.vue'
 import PButton from '@/components/ui/PButton.vue'
+import BookHighlightEditor, { type HighlightDraft } from '@/components/books/BookHighlightEditor.vue'
+import type { HighlightSelection } from '@/utils/bookMarkAnchors'
 
 const props = defineProps<{ source: BookReaderSource; owner: string; revisionId: string }>()
 const reading = useRevisionReading(props.owner, props.revisionId)
@@ -43,6 +46,8 @@ const markConflict = ref(false)
 const markBusy = ref(false)
 type MarkOperation = { id: string; input: ReadingMarkInput } | { id: string; version: number }
 const pendingMark = shallowRef<MarkOperation>()
+const draft = shallowRef<HighlightDraft>()
+const editor = ref<InstanceType<typeof BookHighlightEditor>>()
 let heartbeatTimer: ReturnType<typeof setInterval> | undefined
 let stopped = false
 const message = computed(() => {
@@ -56,6 +61,7 @@ const bookmarks = computed<BookReaderBookmark[]>(() => marks.value.filter(mark =
 const localSource = computed<BookReaderSource>(() => ({ ...props.source, onPosition: reading.observe }))
 const cloudSource = computed<BookReaderSource>(() => ({
   ...props.source, initialPosition: reading.initialPosition.value, bookmarks: bookmarks.value,
+  annotations: marksLoaded.value ? marks.value.filter(mark => mark.kind === 'highlight') : undefined,
   onPosition: reading.observe, onReady: reading.ready,
   addBookmark: async bookmark => {
     if (!marksLoaded.value) throw new Error('书签尚未载入')
@@ -86,7 +92,26 @@ async function reloadMarks() {
     pendingMark.value = undefined
     markError.value = ''
     markConflict.value = false
-  } catch { if (!stopped) markError.value = '云端书签载入失败，请重新载入；不会用本机旧数据覆盖。' }
+  } catch { if (!stopped) markError.value = '云端书签与批注载入失败，请重新载入；不会用本机旧数据覆盖。' }
+}
+function openHighlight(selection: HighlightSelection) {
+  if (pendingMark.value || draft.value) return
+  draft.value = { ...selection, id: crypto.randomUUID(), version: 0, note: '', color: 'yellow', style: 'highlight' }
+}
+function editHighlight(mark: ReadingMark) {
+  if (pendingMark.value || draft.value) return
+  draft.value = { id: mark.id, version: mark.version, anchor: { ...mark.anchor, pdf_rects: mark.anchor.pdf_rects?.map(rect => ({ ...rect })) }, quote: mark.quote, note: mark.note, color: mark.color, style: mark.style }
+}
+async function saveHighlight(value: { color: string; style: string; note: string }) {
+  const selected = draft.value
+  if (!selected || markConflict.value || (pendingMark.value && pendingMark.value.id !== selected.id)) return
+  pendingMark.value ||= { id: selected.id, input: { base_version: selected.version, kind: 'highlight', anchor: selected.anchor, quote: selected.quote, label: '', ...value } }
+  try { await performMark() } catch { /* 原选区和输入保留，原请求可幂等重试。 */ }
+}
+async function deleteHighlight(mark: { id: string; version: number }) {
+  if (pendingMark.value || markBusy.value) return
+  pendingMark.value = { id: mark.id, version: mark.version }
+  try { await performMark() } catch { /* 失败不提前移除划线。 */ }
 }
 async function performMark() {
   const operation = pendingMark.value
@@ -101,11 +126,11 @@ async function performMark() {
       await deleteReadingMark(props.revisionId, operation.id, operation.version, reading.signal)
       if (!stopped) marks.value = marks.value.filter(item => item.id !== operation.id)
     }
-    if (!stopped) pendingMark.value = undefined
+    if (!stopped) { pendingMark.value = undefined; if (draft.value?.id === operation.id) draft.value = undefined }
   } catch (err) {
     if (!stopped) {
       markConflict.value = err instanceof ApiErrorResponseError && err.status === 409
-      markError.value = markConflict.value ? '这条书签已在其他设备修改或删除，请重新载入书签，不会覆盖。' : '书签操作未确认成功，请重试原操作。'
+      markError.value = markConflict.value ? '这条阅读标记已在其他设备修改或删除，请重新载入，不会覆盖。' : '阅读标记操作未确认成功，请重试原操作；输入内容仍保留。'
     }
     throw err
   } finally { markBusy.value = false }
@@ -127,7 +152,7 @@ onMounted(() => {
   document.addEventListener('visibilitychange', visibility)
   window.addEventListener('pagehide', pagehide)
 })
-onBeforeRouteLeave(async () => { await reading.flush() })
+onBeforeRouteLeave(async () => { if (editor.value && !await editor.value.requestClose()) return false; await reading.flush() })
 onBeforeUnmount(() => {
   stopped = true
   clearInterval(heartbeatTimer)

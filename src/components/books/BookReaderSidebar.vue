@@ -1,5 +1,5 @@
 <template>
-  <aside class="book-reader-sidebar" :aria-label="ariaLabel">
+  <aside class="book-reader-sidebar" :class="{ 'book-reader-sidebar--editable': annotationEditable }" :aria-label="ariaLabel">
     <nav class="book-reader-sidebar__tabs" role="tablist" aria-label="导览视图选择">
       <button
         v-if="totalPages > 0"
@@ -200,6 +200,7 @@
                 {{ formatRelativeTime(item.created_at) }}
               </time>
               <div class="book-annotation-card__actions" @click.stop>
+                <button v-if="annotationEditable" type="button" class="book-annotation-card__action-btn" :aria-label="`编辑批注 ${item.text.slice(0, 10)}`" @click="$emit('annotation-edit', item)"><Pencil :size="13" aria-hidden="true" /></button>
                 <button
                   type="button"
                   class="book-annotation-card__action-btn"
@@ -240,6 +241,7 @@ import {
   IconDownload as Download,
   IconNotes as Notes,
   IconArrowUpRight as ArrowUpRight,
+  IconPencil as Pencil,
 } from '@tabler/icons-vue'
 import PButton from '@/components/ui/PButton.vue'
 import type { BookReaderTocItem } from '@/components/books/BookReaderShell.vue'
@@ -254,6 +256,7 @@ const props = withDefaults(defineProps<{
   toc?: BookReaderTocItem[]
   bookmarks?: BookReaderBookmark[]
   annotations?: BookAnnotation[]
+  annotationEditable?: boolean
   defaultTab?: SidebarTab
   ariaLabel?: string
 }>(), {
@@ -750,6 +753,9 @@ watch(
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
 }
+.book-reader-sidebar--editable .book-annotation-card__meta { flex-wrap: wrap; }
+.book-reader-sidebar--editable .book-annotation-card__actions { margin-left: auto; }
+.book-reader-sidebar--editable .book-annotation-card__action-btn { width: 44px; height: 44px; }
 
 .book-annotation-card__action-btn--delete:hover {
   background: color-mix(in srgb, var(--a-color-danger) 10%, transparent);

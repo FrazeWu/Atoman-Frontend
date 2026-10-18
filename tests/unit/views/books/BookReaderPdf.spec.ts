@@ -3,7 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, expect, it, vi } from 'vitest'
 import { getDocument } from 'pdfjs-dist'
-import BookPublicReaderView from '@/views/books/BookPublicReaderView.vue'
+import BookPublicReaderView from '@/components/books/BookPublicReaderView.vue'
 
 vi.mock('pdfjs-dist', () => ({ GlobalWorkerOptions: {}, getDocument: vi.fn() }))
 afterEach(() => vi.restoreAllMocks())

@@ -44,9 +44,22 @@ import { resolveMusicRedirect } from '@/utils/musicRedirect'
 import { getMusicRecommendationAlbumContext } from '@/utils/musicRecommendationAttribution'
 import type { MusicSheetLayer } from './musicSheetTypes'
 import { albumArtistRoleLabels, albumContributorsFromResponse } from '@/utils/musicAlbumCredits'
+import { useQueryClient } from '@tanstack/vue-query'
+import { musicKeys } from '@/entities/music'
+
+const moduleAlbumDetailCache = new Map<string, MusicAlbumListItem>()
+
+function resolveQueryClient() {
+  try {
+    return useQueryClient()
+  } catch {
+    return null
+  }
+}
 
 type AlbumLayer = Extract<MusicSheetLayer, { kind: 'album' }>
 const props = withDefaults(defineProps<{ layer?: AlbumLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
+const queryClient = resolveQueryClient()
 const { state, closeAlbum, returnToLayer, isAlbumShifted, isLayerActive, isLayerShifted, isTopLayer, openAlbum, replaceAlbum, replaceSong, openNestedAction, openArtist, openMusicCreationFlow } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
 const player = usePlayerStore()
@@ -400,6 +413,10 @@ function applyAlbumRating(summary: { rating_score: number; rating_count: number;
   album.value.rating_score = Number(summary.rating_score ?? 0)
   album.value.rating_count = Number(summary.rating_count ?? 0)
   album.value.viewer_rating = summary.viewer_rating ?? null
+  if (album.value.id) {
+    moduleAlbumDetailCache.set(String(album.value.id), album.value)
+    queryClient?.setQueryData(musicKeys.albumDetail(String(album.value.id)), album.value)
+  }
 }
 
 async function rateAlbum(score: number) {
@@ -444,6 +461,10 @@ function applyTrackRating(songId: string, summary: { rating_score: number; ratin
   track.rating_score = Number(summary.rating_score ?? 0)
   track.rating_count = Number(summary.rating_count ?? 0)
   track.viewer_rating = summary.viewer_rating ?? null
+  if (album.value?.id) {
+    moduleAlbumDetailCache.set(String(album.value.id), album.value)
+    queryClient?.setQueryData(musicKeys.albumDetail(String(album.value.id)), album.value)
+  }
 }
 
 async function rateTrack(track: AlbumTrack, score: number) {
@@ -536,9 +557,22 @@ async function loadAlbum(albumId: string | null) {
     return
   }
 
-  loading.value = true
+  const shouldForceRefresh = state.value.albumRefreshToken > 0
+  const cachedFromMemory = !shouldForceRefresh ? moduleAlbumDetailCache.get(albumId) : null
+  const cachedFromQuery = !shouldForceRefresh && !cachedFromMemory && queryClient
+    ? queryClient.getQueryData<MusicAlbumListItem>(musicKeys.albumDetail(albumId))
+    : null
+  const cachedAlbum = cachedFromMemory ?? cachedFromQuery
+
+  if (cachedAlbum) {
+    album.value = cachedAlbum
+    loading.value = false
+    void loadAlbumExtras(albumId, cachedAlbum, isCurrentLoad)
+  } else {
+    loading.value = true
+  }
+
   try {
-    const shouldForceRefresh = state.value.albumRefreshToken > 0
     const resolved = await resolveMusicRedirect(albumId, (id) => getMusicAlbum(id, { force: shouldForceRefresh }))
     if (!isCurrentLoad()) return
 
@@ -553,6 +587,8 @@ async function loadAlbum(albumId: string | null) {
       return
     }
     album.value = albumResponse
+    moduleAlbumDetailCache.set(albumId, albumResponse)
+    queryClient?.setQueryData(musicKeys.albumDetail(albumId), albumResponse)
     loading.value = false
     void loadAlbumExtras(albumId, albumResponse, isCurrentLoad)
   } catch (error) {
@@ -694,6 +730,8 @@ watch(isAuthenticated, () => void loadAlbum(albumId.value))
 watch(
   () => state.value.albumRefreshToken,
   () => {
+    moduleAlbumDetailCache.clear()
+    queryClient?.invalidateQueries({ queryKey: musicKeys.albums() })
     if (albumId.value) void loadAlbum(albumId.value)
   },
 )
@@ -703,6 +741,8 @@ watch(
   <PSheet
     :show="isOpen"
     :title="sheetTitle"
+    side="bottom"
+    height="88vh"
     mode="full"
     content-max-width="96rem"
     @close="closeCurrentAlbum"
@@ -1099,7 +1139,8 @@ watch(
 <style scoped>
 :global(.album-drawer) {
   background: var(--a-color-bg) !important;
-  border-left: 1px solid var(--a-color-border-soft) !important;
+  border-left: none !important;
+  border-top: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }
 
@@ -1143,7 +1184,7 @@ watch(
   border-radius: var(--a-radius-card);
   overflow: hidden;
   z-index: 2;
-  box-shadow: var(--a-shadow-md);
+  box-shadow: none !important;
   display: flex;
   align-items: center;
   justify-content: center;

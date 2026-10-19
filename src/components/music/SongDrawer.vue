@@ -30,6 +30,7 @@ import { formatAlbumTypeLabel } from '@/utils/musicMedia'
 import { formatStoredPartialDate } from '@/components/music/birthDateMask'
 import { getMountedPinia } from '@/utils/pinia'
 import { useAuthStore } from '@/stores/auth'
+import { useSongQuery } from '@/entities/music'
 import type { MusicSheetLayer } from './musicSheetTypes'
 
 type SongLayer = Extract<MusicSheetLayer, { kind: 'song' }>
@@ -62,6 +63,13 @@ const { navigation, loading: navigationLoading, direction: navigationDirection, 
 const closeCurrentSong = () => closeSong(props.layer?.key)
 const returnCurrentSong = () => props.layer && returnToLayer(props.layer.key)
 const detail = ref<MusicSongDetail | null>(null)
+const songDetailCache = new Map<string, MusicSongDetail>()
+let songQuery: ReturnType<typeof useSongQuery> | null = null
+try {
+  songQuery = useSongQuery(computed(() => songId.value ?? ''))
+} catch {
+  // graceful fallback when QueryClient is not provided
+}
 const loading = ref(false)
 const error = ref('')
 const actionBusy = ref('')
@@ -205,6 +213,9 @@ function applyRating(summary: { rating_score: number; rating_count: number; view
   detail.value.song.rating_score = Number(summary.rating_score ?? 0)
   detail.value.song.rating_count = Number(summary.rating_count ?? 0)
   detail.value.song.viewer_rating = summary.viewer_rating ?? null
+  if (detail.value.song.id) {
+    songDetailCache.set(String(detail.value.song.id), detail.value)
+  }
 }
 
 async function rateSong(score: number) {
@@ -447,10 +458,17 @@ function clearRebindState() {
 async function loadDetail(targetSongId: unknown) {
   if (typeof targetSongId !== 'string' || !targetSongId) return
   const request = detailRequests.beginRequest()
-  detail.value = null
+  const cached = songDetailCache.get(targetSongId)
+  if (cached) {
+    detail.value = cached
+    loading.value = false
+    error.value = ''
+  } else {
+    detail.value = null
+    loading.value = true
+    error.value = ''
+  }
   ratingLoading.value = false
-  loading.value = true
-  error.value = ''
   try {
     const response = await getMusicSongDetail(targetSongId)
     if (!request.isCurrent()) return
@@ -458,6 +476,7 @@ async function loadDetail(targetSongId: unknown) {
       replaceSong(String(response.song.id), { focusAnnotationId: focusAnnotationId.value, startRebind: startRebind.value })
       return
     }
+    songDetailCache.set(targetSongId, response)
     detail.value = response
     try {
       if (!authStore.isAuthenticated) {
@@ -472,8 +491,10 @@ async function loadDetail(targetSongId: unknown) {
     }
   } catch {
     if (!request.isCurrent()) return
-    detail.value = null
-    error.value = '歌曲无法加载'
+    if (!cached) {
+      detail.value = null
+      error.value = '歌曲无法加载'
+    }
   } finally {
     if (request.isCurrent()) loading.value = false
   }
@@ -485,12 +506,15 @@ function reloadLyrics() {
 
 watch(
   [songId, () => state.value.songRefreshToken, () => authStore.isAuthenticated, () => authStore.user?.id],
-  ([targetSongId]) => {
+  ([targetSongId], [, oldRefreshToken]) => {
     lyricsDisplayMode.value = 'original'
     selectedTextDraft.value = null
     selectedAnnotationIds.value = []
     editingAnnotation.value = null
     clearRebindState()
+    if (oldRefreshToken !== undefined && state.value.songRefreshToken !== oldRefreshToken && typeof targetSongId === 'string' && targetSongId) {
+      songDetailCache.delete(targetSongId)
+    }
     void loadDetail(targetSongId)
     if (typeof targetSongId === 'string' && targetSongId) void loadLyrics(targetSongId)
   },

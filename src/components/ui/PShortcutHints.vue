@@ -278,8 +278,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   position: fixed;
   inset: 0;
   background-color: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
   z-index: var(--a-layer-above-player-sheet-panel, 740);
   display: flex;
   align-items: center;

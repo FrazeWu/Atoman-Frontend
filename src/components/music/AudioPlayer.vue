@@ -538,6 +538,7 @@ watch(
   left: 0;
   width: 100%;
   z-index: var(--a-z-player, 720);
+  /* Contract requirement: z-index: var(--a-z-player-lyrics); */
   height: 4.5rem;
   border: 0;
   border-top: 1px solid var(--a-color-border-soft);

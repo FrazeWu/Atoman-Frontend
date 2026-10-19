@@ -344,9 +344,17 @@ export const useDMStore = defineStore('dm', () => {
       dmUnread.value = event.data.dm_unread
       const currentMessages = messagesByConversation.value[event.data.conversation_id]
       if (currentMessages && currentMessages.length > 0) {
-        messagesByConversation.value[event.data.conversation_id] = currentMessages.map((msg) => (
-          msg.read_at ? msg : { ...msg, read_at: event.data.read_at }
-        ))
+        const myReplyAsId = conversation?.reply_as.id || activeMailbox.value?.id
+        const readerId = event.data.reader_id
+        const isOtherReader = Boolean(readerId && myReplyAsId && readerId !== myReplyAsId)
+
+        messagesByConversation.value[event.data.conversation_id] = currentMessages.map((msg) => {
+          if (msg.read_at) return msg
+          if (isOtherReader) {
+            return msg.sender.id === myReplyAsId ? { ...msg, read_at: event.data.read_at } : msg
+          }
+          return msg.sender.id !== myReplyAsId ? { ...msg, read_at: event.data.read_at } : msg
+        })
       }
       return
     }

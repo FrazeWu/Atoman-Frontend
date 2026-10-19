@@ -32,7 +32,7 @@ type RawPage<T> = { items: T[]; next_cursor?: string }
 
 export type DMRealtimeEvent =
   | { event: 'dm.message.created'; data: { message: DMMessage; conversation: DMConversation; mailbox: DMMailbox; dm_unread: number; total_unread: number } }
-  | { event: 'dm.message.read'; data: { conversation_id: string; read_at: string; mailbox: DMMailbox; dm_unread: number; total_unread: number } }
+  | { event: 'dm.message.read'; data: { conversation_id: string; reader_id?: string; read_at: string; mailbox: DMMailbox; dm_unread: number; total_unread: number } }
   | { event: 'dm.mailbox.updated'; data: { mailbox: DMMailbox; dm_unread: number; total_unread: number } }
 
 export const dmErrorMessage = (error: unknown): string => {
@@ -113,7 +113,17 @@ export const normalizeDMRealtimeEvent = (value: unknown): DMRealtimeEvent | null
     }
   }
   if (value.event === 'dm.message.read' && typeof data.conversation_id === 'string' && typeof data.read_at === 'string' && (rawMailbox || normalizedMailbox)) {
-    return { event: value.event, data: { conversation_id: data.conversation_id, read_at: data.read_at, mailbox: asMailbox(), dm_unread: Number(data.dm_unread ?? 0), total_unread: Number(data.total_unread ?? 0) } }
+    return {
+      event: value.event,
+      data: {
+        conversation_id: data.conversation_id,
+        reader_id: typeof data.reader_id === 'string' ? data.reader_id : undefined,
+        read_at: data.read_at,
+        mailbox: asMailbox(),
+        dm_unread: Number(data.dm_unread ?? 0),
+        total_unread: Number(data.total_unread ?? 0),
+      },
+    }
   }
   if (value.event === 'dm.mailbox.updated' && (rawMailbox || normalizedMailbox)) {
     return { event: value.event, data: { mailbox: asMailbox(), dm_unread: Number(data.dm_unread ?? 0), total_unread: Number(data.total_unread ?? 0) } }

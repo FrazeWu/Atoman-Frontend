@@ -205,14 +205,19 @@ export const useInboxStore = defineStore('inbox', () => {
       if (dmEvent) {
         if (generation !== lifecycleGeneration || socket !== activeSocket || disconnecting) return
         const dmStore = useDMStore()
-        const isActiveConversation = dmEvent.event === 'dm.message.created'
+        const isCreated = dmEvent.event === 'dm.message.created'
+        const isActiveConversation = isCreated
           && dmStore.activeConversationId === dmEvent.data.message.conversation_id
+        const isSelf = isCreated && (
+          dmEvent.data.message.sender.id === authStore.user?.uuid
+          || dmEvent.data.message.sender.id === dmStore.activeConversation?.reply_as.id
+        )
         dmStore.receiveEvent(dmEvent)
         notificationStore.setDMUnread(dmEvent.data.dm_unread)
-        if (dmEvent.event === 'dm.message.created' && !isActiveConversation && dmEvent.data.message.sender.id !== authStore.user?.uuid) {
+        if (isCreated && !isActiveConversation && !isSelf) {
           queueDMToast(dmEvent)
         }
-        if (dmEvent.event === 'dm.message.created' && isActiveConversation) {
+        if (isCreated && isActiveConversation && !isSelf) {
           await dmStore.markRead()
         }
       }

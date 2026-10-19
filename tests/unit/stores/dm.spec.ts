@@ -362,4 +362,81 @@ describe('dm store', () => {
 
     expect(store.messagesByConversation['conversation-1'][0].sender.display_name).toBe('cols/wys')
   })
+
+  it('does not mark own sent messages as read when self reads conversation', () => {
+    const store = useDMStore()
+    const myMsg: DMMessage = {
+      id: 'my-msg-1',
+      conversation_id: 'conversation-1',
+      client_message_id: 'cli-my-1',
+      sender: { type: 'user', id: 'me', display_name: 'Me' },
+      content: 'hello from me',
+      created_at: '2026-07-23T00:00:00Z',
+    }
+    const incomingMsg = makeMessage('incoming-1', 'conversation-1', '2026-07-23T00:01:00Z')
+    store.reconcile({
+      mailboxes: [userMailbox],
+      conversationsByMailbox: { 'user:me': [makeConversation('conversation-1')] },
+      activeConversationId: 'conversation-1',
+      activeMessages: [myMsg, incomingMsg],
+    })
+
+    // Self marks conversation as read (reader_id = 'me')
+    store.receiveEvent({
+      event: 'dm.message.read',
+      data: {
+        conversation_id: 'conversation-1',
+        reader_id: 'me',
+        read_at: '2026-07-23T00:05:00Z',
+        mailbox: { party: { type: 'user', id: 'me' }, unread: 0 },
+        dm_unread: 0,
+        total_unread: 0,
+      },
+    })
+
+    const messages = store.messagesByConversation['conversation-1']
+    const selfMessage = messages.find((m) => m.id === 'my-msg-1')
+    const otherMessage = messages.find((m) => m.id === 'incoming-1')
+
+    // My sent message must NOT be marked read!
+    expect(selfMessage?.read_at).toBeFalsy()
+    // The incoming message that I read is marked read
+    expect(otherMessage?.read_at).toBe('2026-07-23T00:05:00Z')
+  })
+
+  it('marks own sent messages as read when other party reads conversation', () => {
+    const store = useDMStore()
+    const myMsg: DMMessage = {
+      id: 'my-msg-1',
+      conversation_id: 'conversation-1',
+      client_message_id: 'cli-my-1',
+      sender: { type: 'user', id: 'me', display_name: 'Me' },
+      content: 'hello from me',
+      created_at: '2026-07-23T00:00:00Z',
+    }
+    store.reconcile({
+      mailboxes: [userMailbox],
+      conversationsByMailbox: { 'user:me': [makeConversation('conversation-1')] },
+      activeConversationId: 'conversation-1',
+      activeMessages: [myMsg],
+    })
+
+    expect(store.activeMessages[0].read_at).toBeFalsy()
+
+    // Alice marks conversation as read (reader_id = 'alice')
+    store.receiveEvent({
+      event: 'dm.message.read',
+      data: {
+        conversation_id: 'conversation-1',
+        reader_id: 'alice',
+        read_at: '2026-07-23T00:05:00Z',
+        mailbox: { party: { type: 'user', id: 'me' }, unread: 0 },
+        dm_unread: 0,
+        total_unread: 0,
+      },
+    })
+
+    // Now my sent message is marked read by Alice!
+    expect(store.activeMessages[0].read_at).toBe('2026-07-23T00:05:00Z')
+  })
 })

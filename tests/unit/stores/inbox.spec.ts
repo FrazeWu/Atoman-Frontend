@@ -90,6 +90,33 @@ describe('inbox store', () => {
     expect(notifications.unreadCounts.dm).toBe(0)
   })
 
+  it('does not trigger markRead when created dm message is sent by current user', async () => {
+    const auth = useAuthStore()
+    auth.token = 'cookie-session'
+    auth.isAuthenticated = true
+    auth.user = { id: 1, uuid: 'my-user-uuid', username: 'me', role: 'user' }
+    const inbox = useInboxStore()
+    await inbox.connect()
+    const dm = useDMStore()
+    const markRead = vi.spyOn(dm, 'markRead').mockResolvedValue()
+    dm.activeConversationId = 'conversation-1'
+    const mailbox = { party: { type: 'user', id: 'my-user-uuid', name: '', avatar_url: '' }, unread: 0 }
+
+    const payload = {
+      event: 'dm.message.created',
+      data: {
+        message: { id: 'msg-own', conversation_id: 'conversation-1', sender_type: 'user', sender_id: 'my-user-uuid', client_message_id: 'c-1', content: 'just sent', created_at: '2026-07-23T00:00:00Z' },
+        conversation: { id: 'conversation-1', participant_a: mailbox.party, participant_b: { type: 'user', id: 'alice', name: 'Alice', avatar_url: '' }, last_message_preview: 'just sent', unread: 0, blocked: false },
+        mailbox,
+        dm_unread: 0,
+        total_unread: 0,
+      },
+    }
+
+    await FakeWebSocket.instances.at(-1)?.onmessage?.({ data: JSON.stringify(payload) } as MessageEvent)
+    expect(markRead).not.toHaveBeenCalled()
+  })
+
   it('reconnects with exponential backoff and refreshes state after opening', async () => {
     vi.useFakeTimers()
     const auth = useAuthStore()

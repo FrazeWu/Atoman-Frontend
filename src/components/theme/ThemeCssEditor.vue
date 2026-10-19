@@ -3,6 +3,7 @@
     <div class="flex-1 flex flex-col min-h-[300px]">
       <textarea
         :value="modelValue"
+        aria-label="自定义 CSS 代码"
         class="w-full flex-1 p-3 font-mono text-xs bg-surface-muted text-text border border-border-soft rounded resize-none focus:outline-none focus:border-primary"
         placeholder="/* 编写自定义样式规则，例如：
 h1 { color: var(--creator-primary); }

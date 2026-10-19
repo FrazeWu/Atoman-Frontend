@@ -10,7 +10,8 @@
           type="button"
           :data-color="color"
           :aria-label="`选择主色调 ${color}`"
-          class="w-8 h-8 rounded-full border-2 transition-transform hover:scale-105 flex items-center justify-center cursor-pointer"
+          :aria-pressed="internalConfig.primary_color === color"
+          class="w-8 h-8 rounded-full border-2 transition-transform hover:scale-105 flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-primary"
           :style="{
             backgroundColor: color,
             borderColor: internalConfig.primary_color === color ? 'var(--a-color-text)' : 'transparent',
@@ -33,7 +34,8 @@
           v-for="r in radiusOptions"
           :key="r.value"
           type="button"
-          class="py-1.5 px-2 text-xs font-medium border rounded transition-colors cursor-pointer text-center"
+          :aria-pressed="internalConfig.corner_radius === r.value"
+          class="py-1.5 px-2 text-xs font-medium border rounded transition-colors cursor-pointer text-center focus-visible:ring-2 focus-visible:ring-primary"
           :class="internalConfig.corner_radius === r.value ? 'border-primary bg-primary/10 text-primary' : 'border-border-soft hover:border-border text-text'"
           @click="selectRadius(r.value)"
         >
@@ -50,7 +52,8 @@
           v-for="f in fontOptions"
           :key="f.value"
           type="button"
-          class="py-2 px-2 text-xs font-medium border rounded transition-colors cursor-pointer text-center"
+          :aria-pressed="internalConfig.font_family === f.value"
+          class="py-2 px-2 text-xs font-medium border rounded transition-colors cursor-pointer text-center focus-visible:ring-2 focus-visible:ring-primary"
           :class="internalConfig.font_family === f.value ? 'border-primary bg-primary/10 text-primary' : 'border-border-soft hover:border-border text-text'"
           @click="selectFont(f.value)"
         >

@@ -57,14 +57,27 @@ import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
 import BookAddEdition from '@/components/books/BookAddEdition.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { getCatalogWork, listCatalogResources, type CatalogResource, type CatalogWork } from '@/api/bookCatalog'
+import { useQueryClient } from '@tanstack/vue-query'
+import { bookKeys } from '@/entities/book'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import './bookCatalog.css'
 import './bookPrivate.css'
 
+const moduleCatalogWorkCache = new Map<string, CatalogWork>()
+const moduleCatalogResourcesCache = new Map<string, CatalogResource[]>()
+
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+
+let queryClient: ReturnType<typeof useQueryClient> | null = null
+try {
+  queryClient = useQueryClient()
+} catch {
+  // Graceful fallback for environments without VueQueryPlugin
+}
+
 const work = ref<CatalogWork | null>(null)
 const resources = ref<CatalogResource[]>([])
 const loading = ref(true)
@@ -72,30 +85,90 @@ const resourcesLoading = ref(false)
 const error = ref('')
 const resourceError = ref('')
 let alive = true
-async function refreshWork() { if (!work.value) return; try { const result = await getCatalogWork(work.value.id); if (alive) work.value = result } catch { error.value = '资料已保存，但详情刷新失败，请重新加载。' } }
-async function load() {
-  loading.value = true
-  error.value = ''
+
+async function refreshWork() {
+  if (!work.value) return
+  const targetId = work.value.id
   try {
-    const result = await getCatalogWork(String(route.params.workId))
+    const result = await getCatalogWork(targetId)
+    if (alive) {
+      work.value = result
+      moduleCatalogWorkCache.set(targetId, result)
+      queryClient?.setQueryData(bookKeys.catalogWork(targetId), result)
+      void queryClient?.invalidateQueries({ queryKey: bookKeys.catalogWork(targetId) })
+    }
+  } catch {
+    error.value = '资料已保存，但详情刷新失败，请重新加载。'
+  }
+}
+
+async function load() {
+  const targetId = String(route.params.workId || '')
+  if (!targetId) return
+  error.value = ''
+
+  const cachedWork = moduleCatalogWorkCache.get(targetId) || queryClient?.getQueryData<CatalogWork>(bookKeys.catalogWork(targetId))
+  if (cachedWork) {
+    work.value = cachedWork
+    loading.value = false
+  } else {
+    loading.value = true
+  }
+
+  try {
+    const result = await getCatalogWork(targetId)
     if (!alive) return
     work.value = result
-    if (result.id !== String(route.params.workId)) {
+    moduleCatalogWorkCache.set(targetId, result)
+    moduleCatalogWorkCache.set(result.id, result)
+    queryClient?.setQueryData(bookKeys.catalogWork(targetId), result)
+    queryClient?.setQueryData(bookKeys.catalogWork(result.id), result)
+
+    if (result.id !== targetId) {
       await router.replace({ path: `/books/work/${result.id}`, query: route.query })
       return
     }
     void loadResources()
-  } catch (err) { if (alive) error.value = err instanceof ApiErrorResponseError && err.status === 404 ? '图书不存在或已下架。' : '图书加载失败，请重试。' }
-  finally { if (alive) loading.value = false }
+  } catch (err) {
+    if (alive) {
+      if (!cachedWork) work.value = null
+      error.value = err instanceof ApiErrorResponseError && err.status === 404
+        ? '图书不存在或已下架。'
+        : '图书加载失败，请重试。'
+    }
+  } finally {
+    if (alive) loading.value = false
+  }
 }
+
 async function loadResources() {
   if (!work.value) return
-  resourcesLoading.value = true
+  const targetId = work.value.id
   resourceError.value = ''
-  try { const result = await listCatalogResources(work.value.id); if (alive) resources.value = result.items }
-  catch { if (alive) resourceError.value = '文件信息加载失败。图书本身仍已公开，请重试加载文件。' }
-  finally { if (alive) resourcesLoading.value = false }
+
+  const cachedRes = moduleCatalogResourcesCache.get(targetId) || queryClient?.getQueryData<CatalogResource[]>(bookKeys.catalogResources(targetId))
+  if (cachedRes) {
+    resources.value = cachedRes
+    resourcesLoading.value = false
+  } else {
+    resourcesLoading.value = true
+  }
+
+  try {
+    const result = await listCatalogResources(targetId)
+    if (!alive) return
+    resources.value = result.items
+    moduleCatalogResourcesCache.set(targetId, result.items)
+    queryClient?.setQueryData(bookKeys.catalogResources(targetId), result.items)
+  } catch {
+    if (alive) {
+      resourceError.value = '文件信息加载失败。图书本身仍已公开，请重试加载文件。'
+    }
+  } finally {
+    if (alive) resourcesLoading.value = false
+  }
 }
+
 onMounted(() => { void load(); if (!auth.isAuthenticated) void auth.restoreSession() })
 onBeforeUnmount(() => { alive = false })
 </script>

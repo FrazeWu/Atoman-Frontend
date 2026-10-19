@@ -3,12 +3,30 @@
     class="player-mini-window"
     data-player-mode="cover"
   >
+    <!-- Hover track info tooltip -->
+    <div v-if="songTitle" class="player-mini-tooltip">
+      <div class="player-mini-tooltip__title">{{ songTitle }}</div>
+      <div v-if="artistText" class="player-mini-tooltip__artist">{{ artistText }}</div>
+    </div>
+
+    <!-- Quick skip previous button -->
+    <button
+      type="button"
+      class="player-mini-skip-btn player-mini-skip-btn--prev"
+      aria-label="上一首"
+      title="上一首"
+      @click.stop="$emit('play-previous')"
+    >
+      <SkipBack :size="12" aria-hidden="true" />
+    </button>
+
     <button
       type="button"
       class="player-mini-cover"
       :aria-label="isPlaying ? '暂停播放' : '继续播放'"
-      :title="isPlaying ? '暂停播放' : '继续播放'"
+      :title="isPlaying ? '暂停播放（双击打开歌词）' : '继续播放（双击打开歌词）'"
       @click="$emit('toggle-play')"
+      @dblclick.stop="$emit('open-lyrics')"
     >
       <img
         v-if="coverUrl"
@@ -33,6 +51,18 @@
         <Play :size="22" fill="currentColor" />
       </span>
     </button>
+
+    <!-- Quick skip next button -->
+    <button
+      type="button"
+      class="player-mini-skip-btn player-mini-skip-btn--next"
+      aria-label="下一首"
+      title="下一首"
+      @click.stop="$emit('play-next')"
+    >
+      <SkipForward :size="12" aria-hidden="true" />
+    </button>
+
     <button
       type="button"
       class="player-mini-expand"
@@ -46,17 +76,22 @@
 </template>
 
 <script setup lang="ts">
-import { Play, ChevronLeft } from 'lucide-vue-next'
+import { Play, ChevronLeft, SkipBack, SkipForward } from 'lucide-vue-next'
 
 defineProps<{
   coverUrl?: string
   coverFallback?: string
+  songTitle?: string
+  artistText?: string
   isPlaying: boolean
   miniProgressPercent: number
 }>()
 
 defineEmits<{
   'toggle-play': []
+  'play-previous': []
+  'play-next': []
+  'open-lyrics': []
   'expand': []
 }>()
 </script>
@@ -181,6 +216,86 @@ defineEmits<{
   background: color-mix(in srgb, var(--a-color-primary) 12%, transparent);
   color: var(--a-color-primary);
   outline: none;
+}
+
+/* Quick skip buttons */
+.player-mini-skip-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-bg);
+  color: var(--a-color-muted);
+  box-shadow: var(--a-shadow-dropdown);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  z-index: 3;
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.player-mini-skip-btn--prev {
+  left: -28px;
+}
+
+.player-mini-skip-btn--next {
+  right: -28px;
+}
+
+.player-mini-skip-btn:hover {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+}
+
+.player-mini-window:hover .player-mini-skip-btn,
+.player-mini-window:focus-within .player-mini-skip-btn {
+  opacity: 0.95;
+  pointer-events: auto;
+}
+
+/* Hover track info tooltip */
+.player-mini-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  max-width: 200px;
+  padding: 6px 10px;
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card, 4px);
+  box-shadow: var(--a-shadow-dropdown);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 10;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.player-mini-tooltip__title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--a-color-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-mini-tooltip__artist {
+  font-size: 10px;
+  color: var(--a-color-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-mini-window:hover .player-mini-tooltip {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 @media (min-width: 1440px) {

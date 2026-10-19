@@ -5,14 +5,23 @@
       v-if="playerDisplayMode === 'full'"
       class="player"
       data-player-mode="full"
-      :class="{ 'is-auto-hidden': !effectivePinned && !playerHovered }"
+      :class="{ 'is-auto-hidden': !effectivePinned && !playerHovered, 'is-touch-dragging': isTouchDragging }"
+      :style="playerTouchTransformStyle"
       @mouseenter="revealPlayer"
       @mouseleave="scheduleAutoHide"
       @focusin="revealPlayer"
       @focusout="scheduleAutoHide"
       @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
       @touchend="handleTouchEnd"
     >
+    <!-- Mobile top micro progress line -->
+    <div class="player-mobile-top-progress" aria-hidden="true">
+      <div
+        class="player-mobile-top-progress__bar"
+        :style="{ width: `${miniProgressPercent}%` }"
+      />
+    </div>
     <div
       ref="playerInnerRef"
       class="player-inner"
@@ -149,12 +158,13 @@
           <button
             type="button"
             class="main-play-btn"
-            :aria-label="player.isPlaying ? '暂停' : '播放'"
-            :title="player.isPlaying ? '暂停' : '播放'"
-            :data-hint="player.isPlaying ? '暂停 (Space)' : '播放 (Space)'"
-            @click="player.togglePlay()"
+            :class="{ 'has-error': Boolean(player.playbackError) }"
+            :aria-label="player.playbackError ? '重试播放' : (player.isPlaying ? '暂停' : '播放')"
+            :title="player.playbackError ? '音频加载失败，点击重试' : (player.isPlaying ? '暂停' : '播放')"
+            :data-hint="player.playbackError ? '重试' : (player.isPlaying ? '暂停 (Space)' : '播放 (Space)')"
+            @click="player.playbackError ? player.retryPlayback() : player.togglePlay()"
           >
-            {{ player.isPlaying ? '暂停' : '播放' }}
+            {{ player.playbackError ? '重试' : (player.isPlaying ? '暂停' : '播放') }}
           </button>
           <button type="button" class="nav-btn" aria-label="下一首" title="下一首" data-hint="下一首 (Alt+→)" @click="player.playNext()">下一首</button>
           <button v-if="isPodcast" type="button" class="skip-btn" aria-label="前进 15 秒" title="前进 15 秒" data-hint="前进 15S (→)" @click="player.skip(15)">+15S</button>
@@ -224,9 +234,14 @@
       v-else
       :cover-url="player.currentSong.cover_url"
       :cover-fallback="coverFallback"
+      :song-title="player.currentSong.title"
+      :artist-text="artistText"
       :is-playing="player.isPlaying"
       :mini-progress-percent="miniProgressPercent"
       @toggle-play="player.togglePlay()"
+      @play-previous="player.playPrevious()"
+      @play-next="player.playNext()"
+      @open-lyrics="player.toggleLyrics()"
       @expand="setPlayerDisplayMode('full')"
     />
     </Transition>
@@ -362,16 +377,42 @@ function isInputActive(): boolean {
 
 let touchStartX = 0;
 let touchStartY = 0;
+const touchDeltaX = ref(0);
+const isTouchDragging = ref(false);
+
+const playerTouchTransformStyle = computed(() => {
+  if (!isTouchDragging.value || touchDeltaX.value === 0) return undefined;
+  // Apply damping factor 0.35, clamp to +/- 18px
+  const dampened = Math.max(-18, Math.min(18, touchDeltaX.value * 0.35));
+  return {
+    transform: `translateX(${dampened}px)`,
+    transition: 'none',
+  };
+});
 
 function handleTouchStart(e: TouchEvent) {
   if (e.touches.length === 1) {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
+    touchDeltaX.value = 0;
+    isTouchDragging.value = true;
+  }
+}
+
+function handleTouchMove(e: TouchEvent) {
+  if (!isTouchDragging.value || e.touches.length !== 1) return;
+  const currentX = e.touches[0].clientX;
+  const currentY = e.touches[0].clientY;
+  const diffX = currentX - touchStartX;
+  const diffY = currentY - touchStartY;
+  // Only track horizontal swipes if horizontal displacement dominates
+  if (Math.abs(diffX) > Math.abs(diffY)) {
+    touchDeltaX.value = diffX;
   }
 }
 
 function handleTouchEnd(e: TouchEvent) {
-  if (e.changedTouches.length === 1) {
+  if (isTouchDragging.value && e.changedTouches.length === 1) {
     const deltaX = e.changedTouches[0].clientX - touchStartX;
     const deltaY = e.changedTouches[0].clientY - touchStartY;
     // Horizontal swipe threshold: 50px, vertical displacement < 40px
@@ -385,6 +426,8 @@ function handleTouchEnd(e: TouchEvent) {
       }
     }
   }
+  isTouchDragging.value = false;
+  touchDeltaX.value = 0;
 }
 
 function cyclePlaybackRate() {
@@ -628,6 +671,10 @@ watch(
   border-top-color: var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
+}
+
+.player-mobile-top-progress {
+  display: none;
 }
 
 .player.is-auto-hidden {
@@ -968,6 +1015,17 @@ watch(
 }
 .main-play-btn:active {
   transform: translateY(1px);
+}
+
+.main-play-btn.has-error {
+  background: var(--a-color-danger, #ef4444);
+  color: #fff;
+  animation: pulse-subtle 1.8s infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.82; }
 }
 
 .progress-container {
@@ -1665,6 +1723,28 @@ watch(
     border-bottom: 0;
     border-left: 0;
     border-radius: 0;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .player.is-touch-dragging {
+    transition: none !important;
+  }
+
+  .player-mobile-top-progress {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--a-color-border-soft);
+    overflow: hidden;
+  }
+
+  .player-mobile-top-progress__bar {
+    height: 100%;
+    background: var(--a-color-primary);
+    transition: width 0.15s linear;
   }
 
   .player.is-auto-hidden {

@@ -419,6 +419,12 @@ function formatTime(timeMs: number | null | undefined): string {
   flex-shrink: 0;
   text-align: left;
   margin-top: 0.55rem;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.music-lyrics-line:hover .music-lyrics-line__time {
+  opacity: 1;
+  color: var(--a-color-text);
 }
 
 .music-lyrics-line__seek {
@@ -429,7 +435,7 @@ function formatTime(timeMs: number | null | undefined): string {
   height: 20px;
   border: 0;
   padding: 0;
-  border-radius: 50%;
+  border-radius: var(--a-radius-control, 4px);
   background: transparent;
   color: inherit;
   cursor: pointer;

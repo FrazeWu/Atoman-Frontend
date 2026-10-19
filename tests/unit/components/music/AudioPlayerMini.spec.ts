@@ -57,4 +57,33 @@ describe('AudioPlayerMini.vue', () => {
     const ring = wrapper.find('.player-mini-progress-ring__value')
     expect(ring.attributes('style')).toContain('stroke-dashoffset: 70')
   })
+
+  it('renders track info tooltip and handles quick skip buttons', async () => {
+    const wrapper = mount(AudioPlayerMini, {
+      props: {
+        coverUrl: '/test-cover.jpg',
+        songTitle: 'Test Track Title',
+        artistText: 'Test Artist',
+        isPlaying: true,
+        miniProgressPercent: 50,
+      },
+    })
+
+    const tooltip = wrapper.find('.player-mini-tooltip')
+    expect(tooltip.exists()).toBe(true)
+    expect(tooltip.find('.player-mini-tooltip__title').text()).toBe('Test Track Title')
+    expect(tooltip.find('.player-mini-tooltip__artist').text()).toBe('Test Artist')
+
+    // Click previous
+    await wrapper.find('.player-mini-skip-btn--prev').trigger('click')
+    expect(wrapper.emitted('play-previous')).toHaveLength(1)
+
+    // Click next
+    await wrapper.find('.player-mini-skip-btn--next').trigger('click')
+    expect(wrapper.emitted('play-next')).toHaveLength(1)
+
+    // Double click cover
+    await wrapper.find('.player-mini-cover').trigger('dblclick')
+    expect(wrapper.emitted('open-lyrics')).toHaveLength(1)
+  })
 })

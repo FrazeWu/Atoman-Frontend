@@ -611,4 +611,69 @@ describe("AudioPlayer", () => {
 		expect(wrapper.get('[aria-label="添加到最爱"]').exists()).toBe(true);
 		expect(wrapper.get('[aria-label="切换播放模式"]').exists()).toBe(true);
 	});
+
+	it("renders mobile top progress bar and reflects current progress", async () => {
+		const player = usePlayerStore();
+		player.currentSong = {
+			id: "song-1",
+			title: "Song 1",
+			artist: "Artist 1",
+			audio_url: "/song-1.mp3",
+		} as any;
+		player.currentTime = 30;
+		player.duration = 100;
+
+		const wrapper = mount(AudioPlayer, {
+			global: {
+				plugins: [createTestRouter()],
+				stubs: {
+					MusicLyricsPanel: true,
+					PDropdown: { template: '<div><slot name="trigger" /><slot /></div>' },
+					PToast: true,
+				},
+			},
+		});
+
+		const topProgress = wrapper.find(".player-mobile-top-progress");
+		expect(topProgress.exists()).toBe(true);
+		const bar = wrapper.find(".player-mobile-top-progress__bar");
+		expect(bar.attributes("style")).toContain("width: 30%");
+
+		player.currentTime = 60;
+		await wrapper.vm.$nextTick();
+		expect(bar.attributes("style")).toContain("width: 60%");
+		wrapper.unmount();
+	});
+
+	it("renders retry error state when playbackError occurs and triggers retryPlayback", async () => {
+		const player = usePlayerStore();
+		player.currentSong = {
+			id: "song-1",
+			title: "Song 1",
+			artist: "Artist 1",
+			audio_url: "/song-1.mp3",
+		} as any;
+		player.playbackError = "音频加载失败，请重试";
+		const retrySpy = vi.spyOn(player, "retryPlayback");
+
+		const wrapper = mount(AudioPlayer, {
+			global: {
+				plugins: [createTestRouter()],
+				stubs: {
+					MusicLyricsPanel: true,
+					PDropdown: { template: '<div><slot name="trigger" /><slot /></div>' },
+					PToast: true,
+				},
+			},
+		});
+
+		const playBtn = wrapper.get(".main-play-btn");
+		expect(playBtn.classes()).toContain("has-error");
+		expect(playBtn.text()).toBe("重试");
+		expect(playBtn.attributes("aria-label")).toBe("重试播放");
+
+		await playBtn.trigger("click");
+		expect(retrySpy).toHaveBeenCalledOnce();
+		wrapper.unmount();
+	});
 });

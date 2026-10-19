@@ -1268,26 +1268,62 @@ describe("player store", () => {
 	});
 
 	it("falls back to 0.5 if volume was initially 0 when unmuting", () => {
-		const store = usePlayerStore();
-		store.setVolume(0);
-		store.toggleMute();
-		expect(store.volume).toBe(0.5);
-		expect(store.isMuted).toBe(false);
+		localStorage.setItem("playerVolume", "0");
+		try {
+			const store = usePlayerStore();
+			expect(store.volume).toBe(0);
+			store.toggleMute();
+			expect(store.volume).toBe(0.5);
+			expect(store.isMuted).toBe(false);
+		} finally {
+			localStorage.removeItem("playerVolume");
+		}
 	});
 
-	it("transitions audio source smoothly when swapping tracks during active playback", () => {
-		const store = usePlayerStore();
-		const song1 = { id: "trans-1", title: "Song 1", audio_url: "s1.mp3" } as any;
-		const song2 = { id: "trans-2", title: "Song 2", audio_url: "s2.mp3" } as any;
+	it("initializes lastNonZeroVolume to restored initial volume when > 0", () => {
+		localStorage.setItem("playerVolume", "0.75");
+		try {
+			const store = usePlayerStore();
+			expect(store.volume).toBe(0.75);
+			expect(store.lastNonZeroVolume).toBe(0.75);
+			store.toggleMute();
+			expect(store.volume).toBe(0);
+			store.toggleMute();
+			expect(store.volume).toBe(0.75);
+		} finally {
+			localStorage.removeItem("playerVolume");
+		}
+	});
 
-		store.playSong(song1);
-		const audio = audioInstances.at(-1)!;
-		audio.paused = false;
-		audio.currentTime = 15;
+	it("transitions audio source smoothly when swapping tracks during active playback", async () => {
+		vi.useFakeTimers();
+		try {
+			const store = usePlayerStore();
+			const song1 = { id: "trans-1", title: "Song 1", audio_url: "s1.mp3" } as any;
+			const song2 = { id: "trans-2", title: "Song 2", audio_url: "s2.mp3" } as any;
 
-		store.playSong(song2);
-		expect(store.currentSong?.id).toBe("trans-2");
-		expect(audioInstances.length).toBeGreaterThan(0);
+			store.playSong(song1);
+			const audio = audioInstances.at(-1)!;
+			expect(audio.src).toBe("s1.mp3");
+			audio.paused = false;
+			audio.currentTime = 15;
+			audio.play.mockClear();
+
+			store.playSong(song2);
+			expect(store.currentSong?.id).toBe("trans-2");
+			// During the micro-fadeout, audio.src has not transitioned yet and play has not been called on the new track
+			expect(audio.src).toBe("s1.mp3");
+			expect(audio.play).not.toHaveBeenCalled();
+
+			// Advance timers to let transitionAudioSource complete (35ms micro fade-out)
+			await vi.advanceTimersByTimeAsync(50);
+
+			// After transition completes, audio.src has been swapped and play was invoked
+			expect(audio.src).toBe("s2.mp3");
+			expect(audio.play).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });
 

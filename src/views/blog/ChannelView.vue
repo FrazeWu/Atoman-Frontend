@@ -149,7 +149,7 @@
     </button>
 
     <ThemeCustomizerDrawer
-      v-if="channel && (channel.user?.uuid || channel.user_id)"
+      v-if="isOwner && channel && (channel.user?.uuid || channel.user_id)"
       v-model:open="isThemeDrawerOpen"
       :creator-id="channel.user?.uuid || channel.user_id"
       :creator-handle="channel.user?.username"

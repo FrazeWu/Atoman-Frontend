@@ -4,7 +4,7 @@ import ThemeCustomizerDrawer from '@/components/theme/ThemeCustomizerDrawer.vue'
 import ThemePresetControl from '@/components/theme/ThemePresetControl.vue'
 import ThemeCssEditor from '@/components/theme/ThemeCssEditor.vue'
 import { themeApi } from '@/api/theme'
-import { resetCreatorThemeState } from '@/composables/useCreatorTheme'
+import { resetCreatorThemeState, useCreatorTheme } from '@/composables/useCreatorTheme'
 import type { UserTheme } from '@/types/theme'
 
 describe('ThemeCustomizerDrawer', () => {
@@ -141,7 +141,10 @@ describe('ThemeCustomizerDrawer', () => {
     expect(wrapper.emitted('update:open')?.length).toBe(2)
   })
 
-  it('handles reset by calling themeApi.reset, clearing preview, and emitting reset', async () => {
+  it('handles reset by calling themeApi.reset, clearing activeTheme, and emitting reset', async () => {
+    const { activeTheme } = useCreatorTheme()
+    activeTheme.value = mockTheme
+
     const wrapper = mount(ThemeCustomizerDrawer, {
       props: {
         open: true,
@@ -156,13 +159,18 @@ describe('ThemeCustomizerDrawer', () => {
     await resetBtn!.trigger('click')
 
     expect(themeApi.reset).toHaveBeenCalled()
+    expect(activeTheme.value).toBeNull()
     expect(wrapper.emitted('reset')).toBeTruthy()
     expect(wrapper.emitted('update:open')).toBeTruthy()
     expect(wrapper.emitted('update:open')![0]).toEqual([false])
     expect(document.getElementById('creator-theme-preview-style')).toBeNull()
+    expect(document.getElementById('creator-theme-style')).toBeNull()
   })
 
-  it('handles save by calling themeApi.update with current form state and emitting save', async () => {
+  it('handles save by calling themeApi.update with current form state, updating activeTheme, and emitting save', async () => {
+    const { activeTheme } = useCreatorTheme()
+    expect(activeTheme.value).toBeNull()
+
     const wrapper = mount(ThemeCustomizerDrawer, {
       props: {
         open: true,
@@ -182,7 +190,9 @@ describe('ThemeCustomizerDrawer', () => {
       preset_config: mockTheme.preset_config,
       custom_css: mockTheme.custom_css,
     })
+    expect(activeTheme.value).toEqual(mockTheme)
     expect(wrapper.emitted('save')).toBeTruthy()
+    expect(wrapper.emitted('save')![0]).toEqual([mockTheme])
     expect(wrapper.emitted('update:open')).toBeTruthy()
     expect(wrapper.emitted('update:open')![0]).toEqual([false])
   })

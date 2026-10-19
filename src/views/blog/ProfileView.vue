@@ -239,7 +239,7 @@
       </button>
 
       <ThemeCustomizerDrawer
-        v-if="profile && profile.uuid"
+        v-if="isSelf && profile && profile.uuid"
         v-model:open="isThemeDrawerOpen"
         :creator-id="profile.uuid"
         :creator-handle="profile.username"

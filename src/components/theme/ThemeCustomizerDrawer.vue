@@ -149,7 +149,7 @@ const emit = defineEmits<{
   'reset': []
 }>()
 
-const { mountLivePreview, clearLivePreview } = useCreatorTheme()
+const { activeTheme, mountLivePreview, clearLivePreview, clearTheme } = useCreatorTheme()
 
 const isEnabled = ref<boolean>(props.initialTheme?.is_enabled ?? true)
 const mode = ref<ThemeMode>(props.initialTheme?.mode ?? 'preset')
@@ -281,7 +281,7 @@ async function handleReset() {
   saveError.value = null
   try {
     await themeApi.reset()
-    clearLivePreview()
+    clearTheme()
     emit('reset')
     close()
   } catch (err: unknown) {
@@ -301,6 +301,7 @@ async function handleSave() {
       preset_config: presetConfig.value,
       custom_css: customCss.value,
     })
+    activeTheme.value = updatedTheme
     emit('save', updatedTheme)
     close()
   } catch (err: unknown) {

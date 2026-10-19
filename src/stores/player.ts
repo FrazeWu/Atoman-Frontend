@@ -18,13 +18,9 @@ import {
 	saveMusicPlaybackSession,
 } from "@/api/musicV1";
 import {
-	readPodcastProgress,
-	writePodcastProgress,
-} from "@/composables/usePodcastProgress";
-import {
-	createContentConsumptionTracker,
-	useContentLifecycle,
-} from "@/composables/useContentLifecycle";
+	usePodcastPlaybackAdapter,
+	type PodcastTrackerInstance,
+} from "@/composables/usePodcastPlaybackAdapter";
 import { useAuthStore } from "@/stores/auth";
 import { usePlayerPresenceStore } from "@/stores/playerPresence";
 import { registerSessionReset } from "@/stores/sessionReset";
@@ -75,7 +71,7 @@ function resolvePlaybackAudioUrl(url: string) {
 }
 
 export const usePlayerStore = defineStore("player", () => {
-	const lifecycle = useContentLifecycle();
+	const podcastAdapter = usePodcastPlaybackAdapter();
 	const authStore = useAuthStore();
 	const {
 		broadcastPlayRequest,
@@ -450,8 +446,7 @@ export const usePlayerStore = defineStore("player", () => {
 	let listeningSongId: string | null = null;
 	let playReported = false;
 	let listeningEventId: string | null = null;
-	let podcastTracker: ReturnType<typeof createContentConsumptionTracker> | null =
-		null;
+	let podcastTracker: PodcastTrackerInstance | null = null;
 
 	const clearListeningTimer = () => {
 		if (listeningTimer === null) return;
@@ -1037,32 +1032,10 @@ export const usePlayerStore = defineStore("player", () => {
 
 		if (song.source_type === "podcast_episode" && song.source_id) {
 			const episodeID = song.source_id;
-			podcastTracker = createContentConsumptionTracker({
-				onEvent: (event) => {
-					void lifecycle
-						.recordEvent({
-							module: "podcast",
-							content_id: episodeID,
-							event,
-							position_sec: Math.floor(currentTime.value),
-							duration_sec: Math.floor(duration.value),
-							progress: duration.value > 0 ? currentTime.value / duration.value : 0,
-						})
-						.catch(() => undefined);
-				},
-				onProgress: (progress) => {
-					if (!authStore.token) return;
-					void lifecycle
-						.saveProgress({
-							module: "podcast",
-							content_id: episodeID,
-							position_sec: Math.floor(currentTime.value),
-							duration_sec: Math.floor(duration.value),
-							progress,
-							completed: progress >= 0.95,
-						})
-						.catch(() => undefined);
-				},
+			podcastTracker = podcastAdapter.createEpisodeConsumptionTracker({
+				episodeId: episodeID,
+				getCurrentTime: () => currentTime.value,
+				getDuration: () => duration.value,
 			});
 			podcastTracker.open();
 		}
@@ -1252,60 +1225,9 @@ export const usePlayerStore = defineStore("player", () => {
 		playbackMode.value = modes[(currentIndex + 1) % modes.length];
 	};
 
-	const createPodcastSong = (
-		feedItem: TimelineItem["feed_item"],
-	): Song | null => {
-		if (!isPlayableFeedPodcast(feedItem)) return null;
-
-		return {
-			id: /^\d+$/.test(String(feedItem.id)) ? Number(feedItem.id) : String(feedItem.id),
-			source_type: "feed_podcast",
-			source_id: String(feedItem.id),
-			title: feedItem.title || "未知播客",
-			artist: feedItem.author || feedItem.feed_source?.title || "Podcast",
-			album: feedItem.feed_source?.title || "Podcast",
-			album_id: -1,
-			year: new Date(feedItem.published_at || "").getFullYear() || 0,
-			release_date: feedItem.published_at || "",
-			lyrics: feedItem.summary || "",
-			audio_url: feedItem.enclosure_url || "",
-			media_kind: "feed_item",
-			cover_url: feedItem.image_url || feedItem.feed_source?.cover_url || "",
-			status: "approved" as const,
-		};
-	};
-
-	const episodeCover = (episode: PodcastEpisode) =>
-		episode.episode_cover_url ||
-		episode.post?.cover_url ||
-		episode.post?.collections?.[0]?.cover_url ||
-		episode.collections?.[0]?.cover_url ||
-		episode.channel?.cover_url ||
-		"";
-
-	const createPodcastEpisodeSong = (episode: PodcastEpisode): Song => ({
-		id: `podcast:${episode.id}`,
-		source_type: "podcast_episode",
-		source_id: episode.id,
-		title: episode.post?.title || "未命名单集",
-		artist: episode.channel?.name || "播客",
-		album:
-			episode.post?.collections?.[0]?.name ||
-			episode.collections?.[0]?.name ||
-			episode.channel?.name ||
-			"播客",
-		album_id:
-			episode.post?.collections?.[0]?.id ||
-			episode.collections?.[0]?.id ||
-			episode.channel_id,
-		year: new Date(episode.created_at || "").getFullYear() || 0,
-		release_date: episode.created_at || "",
-		lyrics: episode.post?.content || "",
-		audio_url: resolveUploadedMediaURL(episode.audio_url, api.url),
-		cover_url: resolveUploadedMediaURL(episodeCover(episode), api.url),
-		track_number: episode.episode_number,
-		status: "approved",
-	});
+	const createPodcastSong = podcastAdapter.createPodcastSong;
+	const createPodcastEpisodeSong = podcastAdapter.createPodcastEpisodeSong;
+	const readPodcastProgress = podcastAdapter.readPodcastProgress;
 
 	const setQueueFromCurrentItems = (items: TimelineItem[]) => {
 		const podcastSongs: Song[] = items
@@ -1322,25 +1244,37 @@ export const usePlayerStore = defineStore("player", () => {
 		queue.value = episodes.map(createPodcastEpisodeSong);
 	};
 
-	function savePodcastProgress(completed = false) {
-		const song = currentSong.value;
-		if (song?.source_type !== "podcast_episode" || !song.source_id) return;
-		const playerDuration = audio?.duration;
-		const durationSec = Number.isFinite(playerDuration)
-			? Math.floor(playerDuration || 0)
-			: Math.floor(duration.value || 0);
-		writePodcastProgress({
-			episode_id: song.source_id,
-			position_sec: Math.floor(audio?.currentTime ?? currentTime.value),
-			duration_sec: durationSec,
-			completed,
-			last_played_at: new Date().toISOString(),
-		});
+	function savePodcastProgress(
+		completedOrSong: boolean | Song | null = false,
+		currentTimeArg?: number,
+		durationArg?: number,
+		completedArg?: boolean,
+	) {
+		let song: Song | null;
+		let pos: number;
+		let dur: number;
+		let isCompleted: boolean | undefined;
+
+		if (typeof completedOrSong === "boolean") {
+			song = currentSong.value;
+			pos = audio?.currentTime ?? currentTime.value;
+			dur = Number.isFinite(audio?.duration)
+				? Math.floor(audio?.duration || 0)
+				: Math.floor(duration.value || 0);
+			isCompleted = completedOrSong;
+		} else {
+			song = completedOrSong ?? currentSong.value;
+			pos = currentTimeArg ?? (audio?.currentTime ?? currentTime.value);
+			dur = durationArg ?? (Number.isFinite(audio?.duration) ? Math.floor(audio?.duration || 0) : Math.floor(duration.value || 0));
+			isCompleted = completedArg;
+		}
+
+		podcastAdapter.savePodcastProgress(song, pos, dur, isCompleted);
 		podcastTracker?.update(
-			completed
+			isCompleted === true
 				? 1
-				: durationSec > 0
-					? Math.floor(audio?.currentTime ?? currentTime.value) / durationSec
+				: dur > 0
+					? Math.floor(pos) / dur
 					: 0,
 		);
 	}
@@ -1488,6 +1422,8 @@ export const usePlayerStore = defineStore("player", () => {
 		cyclePlaybackMode,
 		createPodcastSong,
 		createPodcastEpisodeSong,
+		savePodcastProgress,
+		readPodcastProgress,
 		setQueueFromCurrentItems,
 		setQueueFromPodcastEpisodes,
 		setVolume,

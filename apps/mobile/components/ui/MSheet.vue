@@ -1,10 +1,8 @@
 <template>
   <Teleport to="body" :disabled="!teleport || isTest">
-    <div v-if="modelValue" class="m-sheet" role="dialog" aria-modal="true">
-      <Transition name="m-sheet-fade" appear>
+    <Transition name="m-sheet">
+      <div v-if="modelValue" class="m-sheet" role="dialog" aria-modal="true">
         <div class="m-sheet__backdrop" @click="handleClose" />
-      </Transition>
-      <Transition name="m-sheet-slide" appear>
         <div class="m-sheet__panel">
           <div class="m-sheet__handle-wrapper">
             <div class="m-sheet__handle" />
@@ -26,8 +24,8 @@
             <slot />
           </div>
         </div>
-      </Transition>
-    </div>
+      </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -51,7 +49,9 @@ const emit = defineEmits<{
   close: []
 }>()
 
-const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
+const isTest =
+  (typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test') ||
+  (typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true'))
 
 function handleClose() {
   emit('update:modelValue', false)
@@ -148,23 +148,23 @@ function handleClose() {
 }
 
 /* Animations */
-.m-sheet-fade-enter-active,
-.m-sheet-fade-leave-active {
+.m-sheet-enter-active,
+.m-sheet-leave-active {
   transition: opacity 0.2s ease;
 }
 
-.m-sheet-fade-enter-from,
-.m-sheet-fade-leave-to {
-  opacity: 0;
-}
-
-.m-sheet-slide-enter-active,
-.m-sheet-slide-leave-active {
+.m-sheet-enter-active .m-sheet__panel,
+.m-sheet-leave-active .m-sheet__panel {
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.m-sheet-slide-enter-from,
-.m-sheet-slide-leave-to {
+.m-sheet-enter-from,
+.m-sheet-leave-to {
+  opacity: 0;
+}
+
+.m-sheet-enter-from .m-sheet__panel,
+.m-sheet-leave-to .m-sheet__panel {
   transform: translateY(100%);
 }
 </style>

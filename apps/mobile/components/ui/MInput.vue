@@ -4,7 +4,7 @@
     :class="{
       'is-disabled': disabled,
       'is-focused': isFocused,
-      'has-clear': clearable && modelValue.length > 0,
+      'has-clear': clearable && Boolean(modelValue?.length),
     }"
   >
     <input
@@ -18,7 +18,7 @@
       @blur="isFocused = false"
     />
     <button
-      v-if="clearable && modelValue.length > 0"
+      v-if="clearable && Boolean(modelValue?.length)"
       type="button"
       class="m-input__clear"
       aria-label="清空输入"
@@ -35,13 +35,14 @@ import MIcon from './MIcon.vue'
 
 const props = withDefaults(
   defineProps<{
-    modelValue: string
+    modelValue?: string
     placeholder?: string
     clearable?: boolean
     type?: string
     disabled?: boolean
   }>(),
   {
+    modelValue: '',
     placeholder: '',
     clearable: false,
     type: 'text',

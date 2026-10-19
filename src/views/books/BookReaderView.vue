@@ -466,6 +466,7 @@ async function loadReader() {
     }
     contentBlob.value = await fetchBookAssetContent(assetID)
     await nextTick()
+    if (!asset.value) return
     if (asset.value.format === 'txt') await loadText()
     else if (asset.value.format === 'pdf') await loadPDF()
     else if (asset.value.format === 'cbz' || asset.value.format === 'cbr') await loadComic()

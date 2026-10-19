@@ -652,6 +652,7 @@ onMounted(async () => {
     contentBlob = props.source ? await props.source.loadContent() : await fetchPublishedBookAssetContent(assetID)
     if (disposed) return
     await nextTick()
+    if (!asset.value) throw new Error('未找到图书文件')
     if (asset.value.format === 'txt') await loadText()
     else if (asset.value.format === 'pdf') await loadPDF()
     else if (asset.value.format === 'cbz' || asset.value.format === 'cbr') await loadComic()

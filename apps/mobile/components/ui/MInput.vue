@@ -78,12 +78,12 @@ function handleClear() {
   border-radius: var(--a-radius-control, 4px);
   padding: 0 10px;
   box-sizing: border-box;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease;
 }
 
 .m-input.is-focused {
-  border-color: var(--a-color-border, #cbd5e1);
-  box-shadow: 0 0 0 1px var(--a-color-border, #cbd5e1);
+  border-color: var(--a-color-primary, #0f172a);
+  box-shadow: none;
 }
 
 .m-input.is-disabled {

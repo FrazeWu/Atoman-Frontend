@@ -82,10 +82,10 @@ function handleClose() {
   width: 100%;
   max-height: 85vh;
   background-color: #ffffff;
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
+  border-top-left-radius: var(--a-radius-control, 4px);
+  border-top-right-radius: var(--a-radius-control, 4px);
   border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
-  box-shadow: 0 -4px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   padding-bottom: env(safe-area-inset-bottom, 16px);

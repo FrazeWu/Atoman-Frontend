@@ -1447,3 +1447,5 @@ export const usePlayerStore = defineStore("player", () => {
 		togglePinned,
 	};
 });
+
+export const useAudioPlayerStore = usePlayerStore;

@@ -662,7 +662,7 @@ watch(
   border-top: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card, 4px) 0 0 var(--a-radius-card, 4px);
   background: var(--a-color-bg);
-  box-shadow: var(--a-shadow-dropdown, 0 -4px 20px -2px rgba(15, 23, 42, 0.06));
+  box-shadow: none;
   color: var(--a-color-fg);
   transition: transform var(--a-motion-emphasis) var(--a-motion-ease-enter);
 }
@@ -878,7 +878,7 @@ watch(
     visibility 0.18s ease;
   transition-delay: 0s;
   z-index: 1000;
-  box-shadow: var(--a-shadow-dropdown, 0 12px 30px rgba(15, 23, 42, 0.12));
+  box-shadow: none;
   border-radius: var(--a-radius-control, 4px);
 }
 .player-tooltip::after {
@@ -971,7 +971,7 @@ watch(
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
   transition:
     opacity 0.18s ease,
     transform 0.18s ease,
@@ -1154,8 +1154,8 @@ watch(
   border: 1px solid var(--a-color-border-soft);
   padding: 12px 0 14px 0;
   z-index: 100;
-  box-shadow: var(--a-shadow-dropdown, var(--a-shadow-lg));
-  border-radius: 0;
+  box-shadow: none;
+  border-radius: var(--a-radius-card, 4px);
 }
 :root.dark .volume-control {
   background: var(--a-color-bg);
@@ -1254,15 +1254,17 @@ watch(
   border-radius: 50%;
   background: var(--a-color-bg);
   border: 2px solid var(--a-color-primary);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease;
 }
 
 .vol-slider:hover::-webkit-slider-thumb,
 .vol-slider:active::-webkit-slider-thumb {
   transform: scale(1.25);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--a-color-primary) 20%, transparent);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+  box-shadow: none;
 }
 
 .vol-slider::-moz-range-thumb {
@@ -1271,15 +1273,17 @@ watch(
   border-radius: 50%;
   background: var(--a-color-bg);
   border: 2px solid var(--a-color-primary);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease;
 }
 
 .vol-slider:hover::-moz-range-thumb,
 .vol-slider:active::-moz-range-thumb {
   transform: scale(1.25);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--a-color-primary) 20%, transparent);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+  box-shadow: none;
 }
 
 .queue-trigger {
@@ -1346,7 +1350,7 @@ watch(
   border-right: 0;
   border-radius: 0;
   background: var(--a-color-bg);
-  box-shadow: var(--a-shadow-md);
+  box-shadow: none;
 }
 
 .player-mini-cover {
@@ -1672,7 +1676,7 @@ watch(
 .track-add-menu {
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
-  box-shadow: var(--a-shadow-dropdown);
+  box-shadow: none;
   padding: 0.4rem 0;
   min-width: 130px;
   max-width: 200px;

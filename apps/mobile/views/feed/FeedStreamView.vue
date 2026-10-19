@@ -200,8 +200,15 @@ function openComments(article: FeedArticleItem) {
   void router.push(`/feed/article/${article.id}#comments`)
 }
 
-function toggleBookmark(article: FeedArticleItem) {
+async function toggleBookmark(article: FeedArticleItem) {
   article.bookmarked = !article.bookmarked
+  if (article.id && feedStore && typeof feedStore.toggleReadingListItem === 'function') {
+    try {
+      await feedStore.toggleReadingListItem(article.id)
+    } catch {
+      // ignore
+    }
+  }
 }
 
 function formatTime(isoString?: string): string {

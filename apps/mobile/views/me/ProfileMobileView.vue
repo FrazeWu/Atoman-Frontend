@@ -86,6 +86,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import MAvatar from '@mobile/components/ui/MAvatar.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
@@ -112,6 +113,7 @@ const props = withDefaults(
 )
 
 const router = useRouter()
+const authStore = useAuthStore()
 const isDarkMode = ref(false)
 
 const defaultProfile: UserProfileData = {
@@ -126,7 +128,19 @@ const defaultProfile: UserProfileData = {
   },
 }
 
-const profile = computed<UserProfileData>(() => props.user || defaultProfile)
+const profile = computed<UserProfileData>(() => {
+  if (props.user) return props.user
+  if (authStore.user) {
+    return {
+      username: authStore.user.username,
+      name: authStore.user.display_name || authStore.user.username,
+      avatar: authStore.user.avatar_url || '',
+      bio: authStore.user.bio || '保持阅读，持续思考与创造。',
+      stats: defaultProfile.stats,
+    }
+  }
+  return defaultProfile
+})
 
 function toggleTheme() {
   isDarkMode.value = !isDarkMode.value
@@ -142,7 +156,12 @@ function handleClearCache() {
   // Clear local temporary cache
 }
 
-function handleLogout() {
+async function handleLogout() {
+  try {
+    await authStore.logout()
+  } catch {
+    // proceed even if network fails
+  }
   if (router) {
     void router.push('/login')
   }

@@ -39,7 +39,7 @@
 
         <AudioWaveformProgress
           :song-id="String(player.currentSong.id)"
-          :audio-url="player.currentSong.audio_url"
+          :audio-url="player.currentSong.audio_url || ''"
           :waveform-peaks="player.currentSong.waveform_peaks"
           :current-time="player.currentTime"
           :duration="player.duration"

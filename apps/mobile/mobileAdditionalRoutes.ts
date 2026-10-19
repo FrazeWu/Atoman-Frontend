@@ -9,12 +9,23 @@ export const mobileAdditionalRoutes: RouteRecordRaw[] = additionalModules.flatMa
   const prefix = `/${moduleRooms[module].publicPathSegment}`
   return moduleFeatureRoutes[module].map((route): RouteRecordRaw => {
     if (route.path !== '/') return { ...route, path: `${prefix}${route.path}` }
+    const children = route.children
+      ?.filter((child) => {
+        // Books and Debate have their root mobile home views registered directly in mobileRoutes
+        if ((module === 'books' || module === 'debate') && child.path === '') return false
+        return true
+      })
+      .map((child) => {
+        if (module === 'video' && child.path === 'favorites') {
+          return { path: child.path, name: child.name, meta: child.meta, component: () => import('./MobileSavedView.vue'), props: { page: 'video-favorites' } }
+        }
+        return child
+      })
+
     return {
       path: prefix,
       component: mobileModuleLayout,
-      children: route.children?.map((child) => module === 'video' && child.path === 'favorites'
-        ? { path: child.path, name: child.name, meta: child.meta, component: () => import('./MobileSavedView.vue'), props: { page: 'video-favorites' } }
-        : child),
+      children,
       meta: { mobileModule: module },
     }
   })

@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
@@ -269,6 +269,7 @@ describe('Mobile Navigation Shell', () => {
           },
         },
       })
+      await flushPromises()
 
       expect(wrapper.findComponent(MobileTopbar).exists()).toBe(true)
       expect(wrapper.findComponent(MobileBottomNav).exists()).toBe(true)

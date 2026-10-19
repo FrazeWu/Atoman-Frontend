@@ -3,7 +3,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthStore } from "../../../../src/stores/auth";
 // @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
-import MusicPlaylistsView from "../../../../apps/mobile/MusicPlaylistsView.vue";
+import MusicPlaylistsView from "../../../../src/views/music/PlaylistsView.vue";
 
 const mocks = vi.hoisted(() => ({
 	listMusicPlaylists: vi.fn(),

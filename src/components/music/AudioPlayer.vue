@@ -663,7 +663,6 @@ watch(
   z-index: var(--a-z-player, 720);
   height: 4.5rem;
   border: 0;
-  border-top: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card, 4px) 0 0 var(--a-radius-card, 4px);
   background: var(--a-color-bg);
   box-shadow: none;
@@ -672,7 +671,6 @@ watch(
 }
 
 :root.dark .player {
-  border-top-color: var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
 }
@@ -804,8 +802,7 @@ watch(
   gap: 2px;
   flex-shrink: 0;
   margin-left: 4px;
-  padding-left: 6px;
-  border-left: 1px solid var(--a-color-border-soft);
+  padding-left: 2px;
   transition:
     opacity var(--a-motion-state) var(--a-motion-ease-enter),
     transform var(--a-motion-state) var(--a-motion-ease-enter);

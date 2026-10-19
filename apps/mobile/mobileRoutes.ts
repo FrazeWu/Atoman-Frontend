@@ -53,22 +53,23 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	},
 	{
 		path: "/feed",
-		component: () => import("@/views/feed/FeedLayout.vue"),
+		component: () => import("./MobileFeedLayout.vue"),
 		children: [
-			{ path: 'explore', component: () => import('@/views/feed/FeedRecommendedView.vue') },
+			{ path: 'explore', component: () => import('./views/feed/FeedStreamView.vue') },
 			{ path: 'stats', component: () => import('@/views/feed/FeedStatsView.vue'), meta: requiresAuth },
 			{
 				path: "",
-				component: () => import("@/views/feed/FeedRecommendedView.vue"),
+				component: () => import("./views/feed/FeedStreamView.vue"),
 			},
 			{
 				path: "sources",
-				component: () => import("./FeedSourcesView.vue"),
+				component: () => import("./views/feed/FeedSourcesView.vue"),
 				meta: requiresAuth,
 			},
 			{
 				path: "subscriptions",
-				component: () => import("@/views/feed/FeedView.vue"),
+				component: () => import("./views/feed/FeedStreamView.vue"),
+				props: { initialTab: 'subscriptions' },
 				meta: requiresAuth,
 			},
 			{
@@ -84,18 +85,22 @@ export const mobileRoutes: RouteRecordRaw[] = [
 				meta: requiresAuth,
 			},
 			{
+				path: "article/:id",
+				component: () => import("./views/feed/FeedArticleReaderView.vue"),
+			},
+			{
 				path: "item/:id",
-				component: () => import("@/views/feed/FeedItemDetailView.vue"),
+				component: () => import("./views/feed/FeedArticleReaderView.vue"),
 			},
 		],
 	},
 	{
 		path: "/posts",
-		component: () => import("@/views/blog/BlogHomeView.vue"),
+		component: () => import("./views/blog/BlogListView.vue"),
 	},
 	{
 		path: '/posts/articles',
-		component: () => import('@/views/blog/BlogArticlesView.vue'),
+		component: () => import('./views/blog/BlogListView.vue'),
 	},
 	{
 		path: "/posts/notes",
@@ -123,11 +128,11 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	},
 	{
 		path: "/post/:id",
-		component: () => import("@/views/blog/PostDetailView.vue"),
+		component: () => import("./views/blog/BlogPostReaderView.vue"),
 	},
 	{
 		path: "/posts/post/:id",
-		component: () => import("@/views/blog/PostDetailView.vue"),
+		component: () => import("./views/blog/BlogPostReaderView.vue"),
 	},
 	{
 		path: "/channel/:slug",

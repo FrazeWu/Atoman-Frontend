@@ -105,14 +105,13 @@ import { Repeat, Shuffle } from 'lucide-vue-next'
 
 interface Props {
   isPlaying: boolean
-  playbackError?: unknown
+  playbackError?: string | null | unknown
   isPodcast?: boolean
   playbackRate?: number
   playbackMode?: 'loop' | 'single' | 'random'
 }
 
 withDefaults(defineProps<Props>(), {
-  playbackError: undefined,
   isPodcast: false,
   playbackRate: 1,
   playbackMode: 'loop',

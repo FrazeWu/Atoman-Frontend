@@ -1,0 +1,78 @@
+/**
+ * Audio Player Common Styles & Transitions
+ */
+
+/* Slide transitions for player panels and drawers */
+.slide-up-enter-active {
+  transition: transform var(--a-motion-overlay) var(--a-motion-ease-enter);
+  will-change: transform;
+}
+
+.slide-up-leave-active {
+  transition: transform var(--a-motion-overlay-exit) var(--a-motion-ease-exit);
+  will-change: transform;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(100%);
+}
+
+.slide-right-enter-active {
+  transition: transform var(--a-motion-overlay) var(--a-motion-ease-enter);
+  will-change: transform;
+}
+
+.slide-right-leave-active {
+  transition: transform var(--a-motion-overlay-exit) var(--a-motion-ease-exit);
+  will-change: transform;
+}
+
+.slide-right-enter-from,
+.slide-right-leave-to {
+  transform: translateX(100%);
+}
+
+/* Common tooltip shortcut hints */
+[data-hint] {
+  position: relative;
+}
+
+[data-hint]::before {
+  content: attr(data-hint);
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  padding: 4px 8px;
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: var(--a-radius-control, 4px);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  box-shadow: none !important;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    visibility 0.18s ease;
+  transition-delay: 0s;
+  z-index: 999;
+}
+
+[data-hint]:hover::before {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  transition-delay: 1.2s;
+}
+
+@media (hover: none) {
+  [data-hint]::before {
+    display: none !important;
+  }
+}

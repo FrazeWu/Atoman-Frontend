@@ -7,6 +7,7 @@ import MusicDiscoverView from '@mobile/views/music/MusicDiscoverView.vue'
 import MusicLibraryView from '@mobile/views/music/MusicLibraryView.vue'
 import MusicPlaylistsView from '@mobile/views/music/MusicPlaylistsView.vue'
 import MobileAudioPlayer from '@mobile/MobileAudioPlayer.vue'
+import MobilePlayerView from '@mobile/MobilePlayerView.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MInput from '@mobile/components/ui/MInput.vue'
 
@@ -309,6 +310,56 @@ describe('Mobile Independent Music Views & Player', () => {
       expect(iconNames.some((name) => ['player-prev', 'previous', 'skip-back'].includes(name))).toBe(true)
       expect(iconNames.some((name) => ['player-play', 'player-pause', 'play', 'pause'].includes(name))).toBe(true)
       expect(iconNames.some((name) => ['player-next', 'next', 'skip-forward'].includes(name))).toBe(true)
+    })
+  })
+
+  describe('MobilePlayerView.vue', () => {
+    it('renders current track title, artist, and media controls', () => {
+      const playerStore = usePlayerStore()
+      playerStore.currentSong = {
+        id: 's-99',
+        title: 'Horizon Departure',
+        artist: 'Solaris',
+      } as any
+
+      const wrapper = mount(MobilePlayerView, {
+        global: {
+          plugins: [pinia, router],
+          stubs: {
+            PortalTeleport: true,
+          },
+        },
+      })
+
+      expect(wrapper.text()).toContain('Horizon Departure')
+      expect(wrapper.text()).toContain('Solaris')
+      const icons = wrapper.findAllComponents(MIcon)
+      expect(icons.length).toBeGreaterThan(0)
+    })
+
+    it('toggles playback when play/pause button is clicked', async () => {
+      const playerStore = usePlayerStore()
+      playerStore.currentSong = {
+        id: 's-99',
+        title: 'Horizon Departure',
+        artist: 'Solaris',
+      } as any
+      const togglePlaySpy = vi.spyOn(playerStore, 'togglePlay').mockImplementation(() => {})
+
+      const wrapper = mount(MobilePlayerView, {
+        global: {
+          plugins: [pinia, router],
+          stubs: {
+            PortalTeleport: true,
+          },
+        },
+      })
+
+      const playBtn = wrapper.find('.mobile-player-view__control--primary')
+      expect(playBtn.exists()).toBe(true)
+      await playBtn.trigger('click')
+
+      expect(togglePlaySpy).toHaveBeenCalled()
     })
   })
 })

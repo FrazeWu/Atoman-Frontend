@@ -372,7 +372,7 @@ onUnmounted(() => {
 .mobile-player-view h1 {
   margin-bottom: 0;
   font-size: 1.25rem;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .mobile-player-view__header-action,
@@ -437,7 +437,7 @@ onUnmounted(() => {
   background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
   font-size: 4rem;
-  font-weight: 650;
+  font-weight: 600;
   border-radius: var(--a-radius-card, 4px);
 }
 
@@ -450,7 +450,7 @@ onUnmounted(() => {
   margin-bottom: 0.35rem;
   overflow: hidden;
   font-size: 1.35rem;
-  font-weight: 650;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -508,7 +508,7 @@ onUnmounted(() => {
   z-index: 1;
   margin: 0;
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1;
   transform: translate(-50%, -50%);
 }

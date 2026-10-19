@@ -13,7 +13,7 @@
       :aria-expanded="activeDropdown === 'notification'"
       @click="handleNotificationClick"
     >
-      <Mail class="notif-btn__icon" :size="18" aria-hidden="true" />
+      <PIcon name="mail" size="md" class="notif-btn__icon" aria-hidden="true" />
       <span v-if="inboxStore.totalUnread > 0" class="notif-count">{{ inboxStore.totalUnread }}</span>
     </RouterLink>
     <Transition name="notification-menu">
@@ -31,7 +31,7 @@
     data-testid="studio-link"
     aria-label="创作"
   >
-    <PencilLine :size="17" aria-hidden="true" />
+    <PIcon name="pencil" size="md" aria-hidden="true" />
     <span>创作</span>
   </RouterLink>
 
@@ -65,7 +65,7 @@ import { useInboxStore } from '@/stores/inbox'
 import { notificationRoom } from '@/config/moduleRooms'
 import { isAdminRole } from '@/utils/roles'
 import { resolveMediaURL } from '@/utils/mediaUrl'
-import { Mail, PencilLine } from 'lucide-vue-next'
+import PIcon from '@/components/ui/PIcon.vue'
 import NotificationToastStack from '@/components/system/NotificationToastStack.vue'
 import NotificationPopover from '@/components/system/NotificationPopover.vue'
 

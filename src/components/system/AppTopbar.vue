@@ -9,7 +9,7 @@
           aria-label="Toggle sidebar"
           @click="toggleSidebar"
         >
-          <Menu :size="18" aria-hidden="true" />
+          <PIcon name="menu" size="md" aria-hidden="true" />
         </button>
         <a href="/" class="brand-logo-link" @click.prevent="handleBrandClick">
           <img class="logo-image" src="/atoman-house.svg" alt="Atoman" />
@@ -33,7 +33,7 @@
         data-testid="mobile-back-button"
         @click="goBack"
       >
-        <ArrowLeft :size="18" aria-hidden="true" />
+        <PIcon name="arrow-left" size="md" aria-hidden="true" />
       </button>
 
       <MobileModuleSwitcher
@@ -66,8 +66,8 @@
           aria-label="切换主题"
           @click="toggleTheme"
         >
-          <Sun v-if="isDark" :size="18" />
-          <Moon v-else :size="18" />
+          <PIcon v-if="isDark" name="sun" size="md" />
+          <PIcon v-else name="moon" size="md" />
         </button>
         <AppTopbarAuthControls v-if="showAuthControls" />
         <PButton v-else to="/login" size="sm">登录</PButton>
@@ -79,7 +79,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
-import { Menu, Sun, Moon, ArrowLeft } from 'lucide-vue-next'
+import PIcon from '@/components/ui/PIcon.vue'
 import { useSidebar } from '@/composables/useSidebar'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'

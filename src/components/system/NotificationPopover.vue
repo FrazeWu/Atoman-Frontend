@@ -42,7 +42,7 @@
         />
       </div>
       <div v-else class="popover-empty" data-test="popover-empty">
-        <BellOff :size="24" class="popover-empty-icon" />
+        <PIcon name="bell-off" size="xl" class="popover-empty-icon" />
         <span>暂无未读通知</span>
       </div>
     </div>
@@ -56,7 +56,7 @@
         @click.prevent="handleNavigate('/inbox')"
       >
         <span>进入收件箱查看全部</span>
-        <ArrowRight :size="14" class="popover-footer-arrow" />
+        <PIcon name="arrow-right" size="sm" class="popover-footer-arrow" />
       </RouterLink>
       <RouterLink
         to="/messages"
@@ -65,7 +65,7 @@
         @click.prevent="handleNavigate('/messages')"
       >
         <span>私信</span>
-        <ArrowRight :size="14" class="popover-footer-arrow" />
+        <PIcon name="arrow-right" size="sm" class="popover-footer-arrow" />
       </RouterLink>
     </footer>
   </div>
@@ -74,7 +74,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { ArrowRight, BellOff } from 'lucide-vue-next'
+import PIcon from '@/components/ui/PIcon.vue'
 import { useNotificationStore } from '@/stores/notification'
 import { useInboxStore } from '@/stores/inbox'
 import { notificationTargetPath } from '@/utils/notificationHelpers'

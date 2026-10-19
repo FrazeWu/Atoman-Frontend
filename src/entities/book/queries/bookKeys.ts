@@ -1,0 +1,15 @@
+export const bookKeys = {
+  all: ['books'] as const,
+  catalog: () => [...bookKeys.all, 'catalog'] as const,
+  catalogWorks: () => [...bookKeys.catalog(), 'works'] as const,
+  catalogWork: (workId: string | number) => [...bookKeys.catalogWorks(), String(workId)] as const,
+  catalogResources: (workId: string | number) => [...bookKeys.catalog(), 'resources', String(workId)] as const,
+  shelf: () => [...bookKeys.all, 'shelf'] as const,
+  shelfList: (status = '') => [...bookKeys.shelf(), 'list', status] as const,
+  continueReading: () => [...bookKeys.all, 'continue-reading'] as const,
+  readingState: (revisionId: string) => [...bookKeys.all, 'reading-state', revisionId] as const,
+  readingMarks: (revisionId: string) => [...bookKeys.all, 'reading-marks', revisionId] as const,
+  notes: () => [...bookKeys.all, 'notes'] as const,
+  notesList: (query?: Record<string, unknown>) => [...bookKeys.notes(), 'list', query || {}] as const,
+  reviews: (workId: string | number) => [...bookKeys.all, 'reviews', String(workId)] as const,
+}

@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
-import { musicKeys } from '@/entities/music/queries/musicKeys'
-import { useSongQuery } from '@/entities/music/queries/useSongQuery'
-import { useSongDetailQuery } from '@/entities/music/queries/useSongDetailQuery'
-import { useAlbumQuery } from '@/entities/music/queries/useAlbumQuery'
-import { useAlbumDetailQuery } from '@/entities/music/queries/useAlbumDetailQuery'
-import { useArtistDetailQuery } from '@/entities/music/queries/useArtistDetailQuery'
-import { useLyricsQuery } from '@/entities/music/queries/useLyricsQuery'
+import {
+  musicKeys,
+  useSongQuery,
+  useSongDetailQuery,
+  useAlbumQuery,
+  useAlbumDetailQuery,
+  useArtistDetailQuery,
+  useLyricsQuery,
+} from '@/entities/music'
 import { createTestQueryClient } from '../../helpers/queryClient'
 import { VUE_QUERY_CLIENT } from '@tanstack/vue-query'
 import { mount } from '@vue/test-utils'

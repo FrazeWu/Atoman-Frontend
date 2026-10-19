@@ -8,6 +8,7 @@
       <label><input v-model="trash" type="checkbox" @change="load()" />回收站（30 天）</label>
       <PButton variant="secondary" @click="load()">搜索</PButton>
       <PButton @click="create">写笔记</PButton>
+      <PButton to="/books/annotations" variant="secondary">划线批注中心</PButton>
       <PButton variant="secondary" :disabled="busy" @click="backup('json')">备份 JSON</PButton>
       <PButton variant="secondary" :disabled="busy" @click="backup('markdown')">导出 Markdown ZIP</PButton>
       <label>恢复备份<input type="file" accept="application/json,.json" :disabled="busy" @change="readBackup" /></label>

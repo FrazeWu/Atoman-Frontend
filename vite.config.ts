@@ -106,6 +106,7 @@ export default defineConfig(({ mode }) => {
 			dedupe: ['@codemirror/state', '@codemirror/view', '@codemirror/language'],
 			alias: {
 				"@": path.resolve(__dirname, "./src"),
+				"@mobile": path.resolve(__dirname, "./apps/mobile"),
 				"@atoman/module-config": path.resolve(
 					__dirname,
 					"./packages/module-config/src/index.ts",

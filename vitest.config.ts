@@ -45,6 +45,7 @@ export default defineConfig({
 		alias: {
 			...runtimeAliases,
 			"@": path.resolve(__dirname, "./src"),
+			"@mobile": path.resolve(__dirname, "./apps/mobile"),
 			"@atoman/module-config": path.resolve(
 				__dirname,
 				"./packages/module-config/src/index.ts",
@@ -64,6 +65,7 @@ export default defineConfig({
 					alias: {
 						...runtimeAliases,
 						"@": path.resolve(__dirname, "./src"),
+						"@mobile": path.resolve(__dirname, "./apps/mobile"),
 						"@atoman/module-config": path.resolve(
 							__dirname,
 							"./packages/module-config/src/index.ts",
@@ -90,6 +92,7 @@ export default defineConfig({
 					alias: {
 						...runtimeAliases,
 						"@": path.resolve(__dirname, "./src"),
+						"@mobile": path.resolve(__dirname, "./apps/mobile"),
 						"@atoman/module-config": path.resolve(
 							__dirname,
 							"./packages/module-config/src/index.ts",
@@ -124,6 +127,7 @@ export default defineConfig({
 					alias: {
 						...runtimeAliases,
 						"@": path.resolve(__dirname, "./src"),
+						"@mobile": path.resolve(__dirname, "./apps/mobile"),
 						"@atoman/module-config": path.resolve(
 							__dirname,
 							"./packages/module-config/src/index.ts",

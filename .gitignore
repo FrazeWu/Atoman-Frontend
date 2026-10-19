@@ -5,6 +5,7 @@
 !.env.production
 node_modules/
 dist/
+dist-mobile/
 coverage/
 playwright-report/
 test-results/

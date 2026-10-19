@@ -36,9 +36,22 @@ import {
 import { formatStoredPartialDate } from '@/components/music/birthDateMask'
 import { formatAlbumTypeLabel } from '@/utils/musicMedia'
 import { isStandaloneMobileApp } from '@/utils/appRuntime'
+import { useQueryClient } from '@tanstack/vue-query'
+import { musicKeys } from '@/entities/music'
+
+const moduleArtistDetailCache = new Map<string, MusicArtistListItem>()
+
+function resolveQueryClient() {
+  try {
+    return useQueryClient()
+  } catch {
+    return null
+  }
+}
 
 type ArtistLayer = Extract<MusicSheetLayer, { kind: 'artist' }>
 const props = withDefaults(defineProps<{ layer?: ArtistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
+const queryClient = resolveQueryClient()
 const { state, closeArtist, returnToLayer, isArtistShifted, isLayerActive, isLayerShifted, isTopLayer, openArtist, openAlbum, openSong, replaceArtist, openMusicCreationFlow, openNestedAction } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
 const player = usePlayerStore()
@@ -424,13 +437,25 @@ async function loadArtist(targetArtistId: string | null) {
     return
   }
 
-  loading.value = true
+  const shouldForceRefresh = state.value.artistRefreshToken > 0
+  const cachedFromMemory = !shouldForceRefresh ? moduleArtistDetailCache.get(targetArtistId) : null
+  const cachedFromQuery = !shouldForceRefresh && !cachedFromMemory && queryClient
+    ? queryClient.getQueryData<MusicArtistListItem>(musicKeys.artistDetail(targetArtistId))
+    : null
+  const cachedArtist = cachedFromMemory ?? cachedFromQuery
+
+  if (cachedArtist) {
+    artist.value = cachedArtist
+    loading.value = false
+  } else {
+    loading.value = true
+  }
+
   contributors.value = []
   contributorTotal.value = 0
   errorMessage.value = ''
   releaseErrorMessage.value = ''
   try {
-    const shouldForceRefresh = state.value.artistRefreshToken > 0
     const resolved = await resolveMusicRedirect(
       targetArtistId,
       (id) => getMusicArtist(id, { force: shouldForceRefresh }),
@@ -444,6 +469,8 @@ async function loadArtist(targetArtistId: string | null) {
     }
     redirectMessage.value = ''
     artist.value = artistResponse
+    moduleArtistDetailCache.set(targetArtistId, artistResponse)
+    queryClient?.setQueryData(musicKeys.artistDetail(targetArtistId), artistResponse)
     loading.value = false
     void Promise.all([
       loadArtistReleases(targetArtistId),
@@ -524,6 +551,14 @@ function openArtistHistory() {
 }
 
 watch(
+  () => state.value.artistRefreshToken,
+  () => {
+    moduleArtistDetailCache.clear()
+    queryClient?.invalidateQueries({ queryKey: musicKeys.artists() })
+  },
+)
+
+watch(
   () => [artistId.value, state.value.artistRefreshToken] as const,
   ([artistId, refreshToken]) => {
     const nextKey = artistId ? `${artistId}:${refreshToken}` : null
@@ -543,6 +578,8 @@ watch([releaseType, albumSortMode], () => {
   <PSheet
     panel-class="artist-drawer"
     content-max-width="64rem"
+    side="bottom"
+    height="88vh"
     :show="isOpen"
     :title="sheetTitle"
     mode="full"
@@ -879,13 +916,15 @@ watch([releaseType, albumSortMode], () => {
 <style scoped>
 :global(.artist-drawer) {
   background: var(--a-color-bg) !important;
-  border-left: 1px solid var(--a-color-border-soft) !important;
+  border-left: none !important;
+  border-top: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }
 
 :global(:root.dark .artist-drawer) {
   background: var(--a-color-bg) !important;
-  border-left: 1px solid var(--a-color-border) !important;
+  border-left: none !important;
+  border-top: 1px solid var(--a-color-border) !important;
 }
 
 .drawer-header-content { display: flex; flex-direction: column; gap: 0.25rem; }
@@ -1153,7 +1192,7 @@ watch([releaseType, albumSortMode], () => {
 .track:focus-within {
   background-color: var(--a-color-surface-muted);
   border-left-color: var(--a-color-text);
-  box-shadow: inset 0 0 0 1px var(--a-color-border-soft);
+  box-shadow: none;
 }
 .track-play-btn {
   position: relative;

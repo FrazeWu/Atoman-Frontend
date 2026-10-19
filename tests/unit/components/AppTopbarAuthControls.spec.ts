@@ -125,7 +125,7 @@ describe("AppTopbarAuthControls", () => {
 		expect(
 			wrapper.find('[data-testid="notification-link"]').text(),
 		).not.toContain("◌");
-		expect(wrapper.find('[data-testid="notification-link"] .lucide-mail').exists()).toBe(true);
+		expect(wrapper.find('[data-testid="notification-link"] .notif-btn__icon').exists()).toBe(true);
 		expect(wrapper.find('a[href="/me"]').exists()).toBe(true);
 		expect(wrapper.text()).toContain("我的");
 		expect(wrapper.text()).not.toContain("我的空间");

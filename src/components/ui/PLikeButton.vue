@@ -15,14 +15,14 @@
     :title="liked ? '取消点赞' : '点赞'"
     @click="handleClick"
   >
-    <component :is="iconComponent" :size="iconSize" class="p-like-button__icon" :class="{ 'is-filled': liked }" />
+    <PIcon :name="iconName" :size="iconSizePreset" class="p-like-button__icon" :class="{ 'is-filled': liked }" />
     <span v-if="showCount && count !== undefined" class="p-like-button__count">{{ count.toLocaleString() }}</span>
   </button>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Heart, ThumbsUp } from 'lucide-vue-next'
+import PIcon from '@/components/ui/PIcon.vue'
 
 const props = withDefaults(defineProps<{
   liked?: boolean
@@ -49,12 +49,17 @@ const emit = defineEmits<{
 
 const isAnimating = ref(false)
 
-const iconComponent = computed(() => (props.iconType === 'heart' ? Heart : ThumbsUp))
+const iconName = computed(() => {
+  if (props.iconType === 'heart') {
+    return props.liked ? 'heart-filled' : 'heart'
+  }
+  return 'thumbs-up'
+})
 
-const iconSize = computed(() => {
-  if (props.size === 'sm') return 14
-  if (props.size === 'lg') return 18
-  return 15
+const iconSizePreset = computed<'sm' | 'md' | 'lg'>(() => {
+  if (props.size === 'sm') return 'sm'
+  if (props.size === 'lg') return 'lg'
+  return 'md'
 })
 
 function handleClick() {

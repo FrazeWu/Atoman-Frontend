@@ -7,7 +7,7 @@
       data-testid="topbar-search-pill"
       @click="openSearch"
     >
-      <Search :size="14" class="search-pill-icon" aria-hidden="true" />
+      <PIcon name="search" size="sm" class="search-pill-icon" aria-hidden="true" />
       <span class="search-pill-text">搜索...</span>
       <kbd class="search-pill-kbd">{{ isMac ? '⌘K' : 'Ctrl K' }}</kbd>
     </button>
@@ -31,7 +31,7 @@
           >
             <!-- 头部搜索输入栏 -->
             <header class="palette-header">
-              <Search class="palette-search-icon" :size="18" aria-hidden="true" />
+              <PIcon name="search" size="md" class="palette-search-icon" aria-hidden="true" />
               <input
                 ref="searchInputRef"
                 v-model="searchDraft"
@@ -54,7 +54,7 @@
                 title="清空"
                 @click="searchDraft = ''; globalSearch.reset()"
               >
-                <X :size="14" aria-hidden="true" />
+                <PIcon name="xmark" size="sm" aria-hidden="true" />
               </button>
               <button
                 class="palette-close-badge search-close-btn"
@@ -156,7 +156,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, X } from 'lucide-vue-next'
+import PIcon from '@/components/ui/PIcon.vue'
 const TopbarSearchSection = defineAsyncComponent(() => import('@/components/system/TopbarSearchSection.vue'))
 import { useDialogFocus } from '@/composables/useDialogFocus'
 import { useGlobalSearch } from '@/composables/useGlobalSearch'

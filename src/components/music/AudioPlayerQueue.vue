@@ -96,7 +96,7 @@
                   @dragstart="handleQueueDragStart(index, $event)"
                   @dragend="clearQueueDragState"
                 >
-                  <GripVertical :size="15" aria-hidden="true" />
+                  <PIcon name="grip-vertical" size="sm" aria-hidden="true" />
                 </button>
 
                 <!-- 序号或正在播放动态均衡器 -->
@@ -138,7 +138,7 @@
                     title="上移"
                     @click.stop="moveQueueItem(index, index - 1)"
                   >
-                    <ChevronUp :size="15" aria-hidden="true" />
+                    <PIcon name="chevron-up" size="sm" aria-hidden="true" />
                   </button>
                   <button
                     type="button"
@@ -147,7 +147,7 @@
                     title="下移"
                     @click.stop="moveQueueItem(index, index + 1)"
                   >
-                    <ChevronDown :size="15" aria-hidden="true" />
+                    <PIcon name="chevron-down" size="sm" aria-hidden="true" />
                   </button>
                 </span>
 
@@ -224,7 +224,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { ChevronDown, ChevronUp, GripVertical } from 'lucide-vue-next'
+import PIcon from '@/components/ui/PIcon.vue'
 import { useDialogFocus } from '@/composables/useDialogFocus'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'

@@ -24,17 +24,17 @@
         :title="volume > 0 ? '静音' : '解除静音'"
         @click="$emit('toggle-mute')"
       >
-        <Volume2 v-if="volume > 0.6" :size="20" />
-        <Volume1 v-else-if="volume > 0.2" :size="20" />
-        <Volume v-else-if="volume > 0" :size="20" />
-        <VolumeX v-else :size="20" />
+        <PIcon v-if="volume > 0.6" name="volume-high" size="lg" />
+        <PIcon v-else-if="volume > 0.2" name="volume-medium" size="lg" />
+        <PIcon v-else-if="volume > 0" name="volume-low" size="lg" />
+        <PIcon v-else name="volume-mute" size="lg" />
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Volume2, Volume1, Volume, VolumeX } from 'lucide-vue-next'
+import PIcon from '@/components/ui/PIcon.vue'
 
 defineProps<{
   volume: number

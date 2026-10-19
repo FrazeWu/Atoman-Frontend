@@ -560,6 +560,8 @@ watch(
   <PSheet
     :show="isOpen"
     :title="sheetTitle"
+    side="bottom"
+    height="88vh"
     mode="full"
     content-max-width="96rem"
     :is-shifted="shifted"
@@ -758,11 +760,24 @@ watch(
 </template>
 
 <style scoped>
+:global(.song-drawer) {
+  background: var(--a-color-bg) !important;
+  border-left: none !important;
+  border-top: 1px solid var(--a-color-border-soft) !important;
+  box-shadow: none !important;
+}
+
+:global(:root.dark .song-drawer) {
+  background: var(--a-color-bg) !important;
+  border-left: none !important;
+  border-top: 1px solid var(--a-color-border) !important;
+}
+
 .song-detail { max-width: 96rem; margin: 0 auto; padding: 1.5rem; container-type: inline-size; }
 .song-detail__content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem); gap: 1.5rem; align-items: start; }
 .song-detail__primary { display: grid; grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr); gap: 1.5rem; min-width: 0; }
 .song-detail__tags { min-width: 0; align-self: start; border-left: 1px solid var(--a-color-border-soft); padding-left: 1rem; }
-.song-detail__cover { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; background: var(--a-color-bg-subtle); }
+.song-detail__cover { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; background: var(--a-color-bg-subtle); }
 .song-detail__main { display: grid; align-content: center; justify-items: start; gap: 0.75rem; }
 .song-detail__main h1, .song-detail__album, .song-detail__release-date { margin: 0; }
 .song-detail__match-badge { color: var(--a-text-muted); font-size: 0.6875rem; font-weight: 600; }

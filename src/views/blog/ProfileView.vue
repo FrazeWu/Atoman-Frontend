@@ -3,7 +3,8 @@
   <component
     v-else
     :is="embedded ? 'section' : 'main'"
-    class="profile-page"
+    class="profile-page creator-theme-scope"
+    :data-creator-id="profile?.uuid"
     :class="{ 'profile-page--embedded': embedded, 'a-page': !embedded }"
     aria-labelledby="profile-title"
   >
@@ -225,6 +226,25 @@
           </article>
         </div>
       </section>
+
+      <!-- 创作者装扮入口与定制抽屉 -->
+      <button
+        v-if="isSelf"
+        class="theme-customize-launcher fixed bottom-6 right-6 z-[600] flex items-center gap-1.5 px-3 py-2 bg-surface text-text border border-border shadow-lg rounded-full text-xs font-medium hover:bg-surface-soft transition-transform hover:scale-105 cursor-pointer"
+        title="装扮空间"
+        @click="isThemeDrawerOpen = true"
+      >
+        <span>🎨</span>
+        <span>装扮空间</span>
+      </button>
+
+      <ThemeCustomizerDrawer
+        v-if="profile && profile.uuid"
+        v-model:open="isThemeDrawerOpen"
+        :creator-id="profile.uuid"
+        :creator-handle="profile.username"
+        :initial-theme="activeTheme"
+      />
     </template>
   </component>
 
@@ -291,7 +311,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { apiRequestResult } from '@/api/client'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
@@ -303,9 +323,11 @@ import PSheet from '@/components/ui/PSheet.vue'
 import PToast from '@/components/ui/PToast.vue'
 import ChannelView from '@/views/blog/ChannelView.vue'
 import UserSummaryCard from '@/components/user/UserSummaryCard.vue'
+import ThemeCustomizerDrawer from '@/components/theme/ThemeCustomizerDrawer.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useApi } from '@/composables/useApi'
+import { useCreatorTheme } from '@/composables/useCreatorTheme'
 import { resolveSiteContext } from '@/router/siteContext'
 import { channelUrl, moduleUrl, userUrl } from '@/composables/useSubdomainNav'
 import { desktopAppPath } from '@/utils/desktopAppUrl'
@@ -340,6 +362,9 @@ const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const api = useApi()
 const blogSheets = useBlogSheets()
+
+const { activeTheme, loadCreatorTheme, clearTheme } = useCreatorTheme()
+const isThemeDrawerOpen = ref(false)
 
 const profile = ref<UserProfile | null>(null)
 const loading = ref(true)
@@ -803,6 +828,10 @@ async function loadProfilePage() {
   if (generation !== profileLoadSequence || resolvedChannelSlug.value) return
   await fetchProfile(generation)
   if (generation !== profileLoadSequence || !profile.value) return
+  const currentProfile = profile.value as UserProfile | null
+  if (currentProfile?.username) {
+    void loadCreatorTheme(currentProfile.username).catch(() => {})
+  }
   void fetchFollowingState(generation)
   void loadChannelsAndContent(generation)
   if (authStore.isAuthenticated) {
@@ -813,6 +842,7 @@ async function loadProfilePage() {
 
 watch([() => route.fullPath, () => props.handle], () => { void loadProfilePage() })
 onMounted(() => { void loadProfilePage() })
+onUnmounted(() => { clearTheme() })
 </script>
 
 <style scoped>

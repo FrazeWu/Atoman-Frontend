@@ -1,5 +1,5 @@
 <template>
-  <div class="a-page-xl">
+  <div class="a-page-xl creator-theme-scope" :data-creator-id="channel?.user?.uuid || channel?.user_id">
     <PToast v-model="toastVisible" :message="toastMessage" />
     <div v-if="loading" class="a-grid-2" style="margin-top:1rem">
       <div v-for="i in 4" :key="i" class="a-skeleton" style="height:10rem" />
@@ -136,13 +136,32 @@
         </div>
       </div>
     </PModal>
+
+    <!-- 创作者装扮入口与定制抽屉 -->
+    <button
+      v-if="isOwner"
+      class="theme-customize-launcher fixed bottom-6 right-6 z-[600] flex items-center gap-1.5 px-3 py-2 bg-surface text-text border border-border shadow-lg rounded-full text-xs font-medium hover:bg-surface-soft transition-transform hover:scale-105 cursor-pointer"
+      title="装扮空间"
+      @click="isThemeDrawerOpen = true"
+    >
+      <span>🎨</span>
+      <span>装扮空间</span>
+    </button>
+
+    <ThemeCustomizerDrawer
+      v-if="channel && (channel.user?.uuid || channel.user_id)"
+      v-model:open="isThemeDrawerOpen"
+      :creator-id="channel.user?.uuid || channel.user_id"
+      :creator-handle="channel.user?.username"
+      :initial-theme="activeTheme"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { errorMessage, reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { FileText, FolderKanban, CalendarDays } from 'lucide-vue-next'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -153,6 +172,8 @@ import type { Channel, Collection, Post } from '@/types'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
+import { useCreatorTheme } from '@/composables/useCreatorTheme'
+import ThemeCustomizerDrawer from '@/components/theme/ThemeCustomizerDrawer.vue'
 import PToast from '@/components/ui/PToast.vue'
 import BlogEntityCard from '@/components/blog/BlogEntityCard.vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
@@ -172,6 +193,9 @@ const api = useApi()
 const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const blogSheets = useBlogSheets()
+
+const { activeTheme, loadCreatorTheme, clearTheme } = useCreatorTheme()
+const isThemeDrawerOpen = ref(false)
 
 const loading = ref(true)
 const loadError = ref('')
@@ -446,6 +470,9 @@ const loadChannel = async () => {
     if (!param) return
     const loadedChannel = await fetchChannel(param, slug, generation)
     if (!loadedChannel || generation !== loadGeneration) return
+    if (loadedChannel.user?.username) {
+      void loadCreatorTheme(loadedChannel.user.username).catch(() => {})
+    }
     void Promise.all([
       fetchCollections(loadedChannel, param, slug, generation),
       fetchPosts(loadedChannel, generation),
@@ -471,6 +498,7 @@ watch(activeCollectionId, () => {
 })
 
 watch(routeParam, () => { void loadChannel() }, { immediate: true })
+onUnmounted(() => { clearTheme() })
 </script>
 
 <style scoped>

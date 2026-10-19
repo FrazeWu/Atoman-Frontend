@@ -80,7 +80,7 @@ function openPlayer() {
 .mobile-mini-player {
   position: fixed;
   right: 0;
-  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   left: 0;
   z-index: var(--a-z-player);
   display: grid;

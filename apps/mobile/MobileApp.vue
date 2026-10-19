@@ -74,16 +74,19 @@ const mobileRouteTransition = ref('')
 
 const isDrawerOpen = ref(false)
 
+const lastActiveSpace = ref<string>('music')
+
 const currentSpace = computed<string>(() => {
   const p = route.path || '/'
-  if (/^\/music(\/|$)/.test(p)) return 'music'
-  if (/^\/feed(\/|$)/.test(p)) return 'feed'
-  if (/^\/books(\/|$)/.test(p)) return 'books'
-  if (/^\/(?:posts|post|channel|channels|collection|users)(\/|$)/.test(p)) return 'blog'
-  if (/^\/debate(\/|$)/.test(p)) return 'debate'
-  if (/^\/(?:inbox|messages)(\/|$)/.test(p)) return 'messages'
-  if (/^\/studio(\/|$)/.test(p)) return 'studio'
-  return 'feed'
+  if (/^\/music(\/|$)/.test(p)) return (lastActiveSpace.value = 'music')
+  if (/^\/feed(\/|$)/.test(p)) return (lastActiveSpace.value = 'feed')
+  if (/^\/books(\/|$)/.test(p)) return (lastActiveSpace.value = 'books')
+  if (/^\/(?:posts|post|channel|channels|collection|users)(\/|$)/.test(p)) return (lastActiveSpace.value = 'blog')
+  if (/^\/debate(\/|$)/.test(p)) return (lastActiveSpace.value = 'debate')
+  if (/^\/(?:inbox|messages|notifications)(\/|$)/.test(p)) return (lastActiveSpace.value = 'messages')
+  if (/^\/studio(\/|$)/.test(p)) return (lastActiveSpace.value = 'studio')
+  if (/^\/me(\/|$)/.test(p)) return lastActiveSpace.value
+  return lastActiveSpace.value || 'feed'
 })
 
 const SPACE_PATHS: Record<string, string> = {
@@ -138,7 +141,14 @@ watch(() => route.fullPath, (to, from) => {
 
 const reportPageView = () => {
   if (isAuthRoute.value) return
-  void apiRequest(`${apiUrl}/site/visits`, { method: 'POST', keepalive: true }).catch(() => {})
+  try {
+    const res = apiRequest(`${apiUrl}/site/visits`, { method: 'POST', keepalive: true })
+    if (res && typeof (res as Promise<unknown>).catch === 'function') {
+      void (res as Promise<unknown>).catch(() => {})
+    }
+  } catch {
+    // ignore
+  }
 }
 
 const reportAnalyticsPageView = () => {

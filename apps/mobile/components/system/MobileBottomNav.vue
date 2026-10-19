@@ -59,12 +59,19 @@ const isTabActive = (tab: NavTabItem) => {
   if (!route?.path) {
     return false
   }
+  if (tab.path.includes('?')) {
+    return route.fullPath === tab.path
+  }
   const currentPath = route.path.replace(/\/$/, '') || '/'
-  const targetPath = tab.path.split('?')[0].replace(/\/$/, '') || '/'
-  return currentPath === targetPath
+  const targetPath = tab.path.replace(/\/$/, '') || '/'
+  const hasTabQuery = Boolean(route.query?.tab)
+  return currentPath === targetPath && !hasTabQuery
 }
 
 const onTabClick = (tab: NavTabItem, event: MouseEvent) => {
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) {
+    return
+  }
   event.preventDefault()
   emit('tab-click', tab)
   emit('update:activeTab', tab.key)

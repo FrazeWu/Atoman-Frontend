@@ -218,6 +218,31 @@ describe('Mobile Navigation Shell', () => {
       await playlistTab.trigger('click')
       expect(wrapper.emitted('tab-click')).toBeTruthy()
     })
+
+    it('distinguishes active tab with query params without colliding on base path', async () => {
+      const router = createRouter({
+        history: createMemoryHistory(),
+        routes: [
+          { path: '/debate', component: { template: '<div>Debate</div>' } },
+        ],
+      })
+      await router.push('/debate?tab=opinions')
+      await router.isReady()
+
+      const wrapper = mount(MobileBottomNav, {
+        props: {
+          currentSpace: 'debate',
+        },
+        global: {
+          plugins: [router],
+        },
+      })
+
+      const opinionsTab = wrapper.find('[data-tab-key="opinions"]')
+      const discoverTab = wrapper.find('[data-tab-key="discover"]')
+      expect(opinionsTab.classes()).toContain('is-active')
+      expect(discoverTab.classes()).not.toContain('is-active')
+    })
   })
 
   describe('MobileApp.vue integration', () => {
@@ -229,6 +254,7 @@ describe('Mobile Navigation Shell', () => {
         routes: [
           { path: '/', component: { template: '<div>Home</div>' } },
           { path: '/music', component: { template: '<div>Music</div>' } },
+          { path: '/notifications', component: { template: '<div>Notifications</div>' } },
         ],
       })
       await router.push('/music')
@@ -247,6 +273,12 @@ describe('Mobile Navigation Shell', () => {
       expect(wrapper.findComponent(MobileTopbar).exists()).toBe(true)
       expect(wrapper.findComponent(MobileBottomNav).exists()).toBe(true)
       expect(wrapper.findComponent(MobileSpaceDrawer).exists()).toBe(true)
+
+      await router.push('/notifications')
+      await router.isReady()
+      await wrapper.vm.$nextTick()
+      const topbar = wrapper.findComponent(MobileTopbar)
+      expect(topbar.props('currentSpace')).toBe('messages')
     })
   })
 })

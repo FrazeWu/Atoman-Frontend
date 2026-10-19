@@ -124,9 +124,12 @@ const handleSelect = (spaceKey: string) => {
 }
 
 .mobile-space-drawer__header {
-  height: 52px;
-  min-height: 52px;
-  padding: 0 16px;
+  height: calc(52px + env(safe-area-inset-top, 0px));
+  min-height: calc(52px + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: 16px;
+  padding-bottom: 0;
+  padding-left: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;

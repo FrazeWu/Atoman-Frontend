@@ -71,12 +71,15 @@ const displayLabel = computed(() => {
   top: 0;
   z-index: var(--a-z-navigation, 100);
   width: 100%;
-  height: 52px;
-  min-height: 52px;
+  height: calc(52px + env(safe-area-inset-top, 0px));
+  min-height: calc(52px + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: 12px;
+  padding-bottom: 0;
+  padding-left: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
   background-color: #ffffff;
   border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
 }

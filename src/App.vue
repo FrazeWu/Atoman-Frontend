@@ -23,7 +23,6 @@
       <BlogSheetStack />
       <SiteFooter v-if="showDeferredShell && !isAuthRoute" />
       <AudioPlayer v-if="hasActiveTrack" />
-      <PShortcutHints v-if="!isAuthRoute" v-model="shortcutHelpOpen" :hints="shortcutHints" />
   </div>
 </template>
 
@@ -33,7 +32,6 @@ import { RouterView, useRoute } from 'vue-router'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApiUrl'
 import AppTopbar from '@/components/system/AppTopbar.vue'
-import PShortcutHints, { type ShortcutHint } from '@/components/ui/PShortcutHints.vue'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { useUIStore } from '@/stores/ui'
 import { useSiteAccessStore } from '@/stores/siteAccess'
@@ -66,47 +64,11 @@ const hasSidebar = computed(() => route.matched.some((record) => record.meta.has
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const hasActiveTrack = computed(() => playerPresence.hasCurrentTrack)
 const showDeferredShell = ref(false)
-const shortcutHelpOpen = ref(false)
-const isMediaModule = computed(() => /^\/(music|podcasts|videos)(\/|$)/.test(route.path))
-
-const commonShortcutHints: ShortcutHint[] = [
-  { key: 'H', label: '聚焦侧边栏' },
-  { key: 'L', label: '聚焦内容区' },
-  { key: 'J / K', label: '上下选择项目' },
-  { key: 'Enter', label: '打开当前项目' },
-  { key: '/', label: '打开全局搜索' },
-  { key: '?', label: '打开快捷键说明' },
-]
-
-const shortcutHints = computed<ShortcutHint[]>(() => {
-  const path = route.path
-  const hints = [...commonShortcutHints]
-  if (path.startsWith('/feed') || path.startsWith('/posts')) {
-    hints.push(
-      { key: 'S', label: '收藏/取消收藏' },
-      { key: 'M', label: '标记已读/未读' },
-      { key: 'V', label: '查看原文' },
-    )
-  } else if (path.startsWith('/forum')) {
-    hints.push(
-      { key: 'N', label: '发起新话题' },
-    )
-  } else if (isMediaModule.value) {
-    hints.push(
-      { key: 'Space', label: '播放/暂停' },
-      { key: 'Alt + ← / →', label: '上一首/下一首' },
-      { key: '← / →', label: '快退/快进 5 秒' },
-      { key: 'M', label: '静音' },
-      { key: 'Shift + F', label: '打开歌词' },
-    )
-  }
-  return hints
-})
 
 const globalShortcuts = computed<KeyboardShortcut[]>(() => [
   { key: 'h', description: '聚焦侧边栏', handler: () => uiStore.focusSidebar() },
   { key: 'l', description: '聚焦内容区', handler: () => uiStore.focusContent() },
-  { key: '?', shift: true, description: '打开快捷键说明', handler: () => { shortcutHelpOpen.value = true } },
+  { key: '?', shift: true, description: '打开快捷键说明', handler: () => uiStore.openShortcutHelp() },
 ])
 
 useKeyboardShortcuts(globalShortcuts)

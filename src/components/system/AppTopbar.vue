@@ -60,6 +60,7 @@
         <div v-if="!isAuthRoute" class="topbar-search-slot">
           <AppTopbarGlobalSearch />
         </div>
+        <PShortcutHints v-if="!isAuthRoute" />
         <button
           type="button"
           class="theme-toggle-btn"
@@ -90,6 +91,7 @@ import { isRoomRouteActive, moduleRooms, topbarNavOrder, type ModuleRoomKey } fr
 import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
 import AppTopbarGlobalSearch from '@/components/system/AppTopbarGlobalSearch.vue'
+import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import PButton from '@/components/ui/PButton.vue'
 
 const { toggleSidebar } = useSidebar()

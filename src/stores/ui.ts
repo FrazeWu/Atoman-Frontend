@@ -28,13 +28,31 @@ export const useUIStore = defineStore('ui', () => {
     localStorage.setItem('atoman.global.sidebar.collapsed', String(sidebarCollapsed.value))
   }
 
+  const shortcutHelpOpen = ref(false)
+
+  const openShortcutHelp = () => {
+    shortcutHelpOpen.value = true
+  }
+
+  const closeShortcutHelp = () => {
+    shortcutHelpOpen.value = false
+  }
+
+  const toggleShortcutHelp = () => {
+    shortcutHelpOpen.value = !shortcutHelpOpen.value
+  }
+
   return {
     focusedSection,
     focusedSidebarIndex,
     sidebarCollapsed,
+    shortcutHelpOpen,
     focusSidebar,
     focusContent,
     toggleSection,
-    toggleSidebar
+    toggleSidebar,
+    openShortcutHelp,
+    closeShortcutHelp,
+    toggleShortcutHelp,
   }
 })

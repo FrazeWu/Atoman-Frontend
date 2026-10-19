@@ -1,17 +1,21 @@
 import { mount } from '@vue/test-utils'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
 
 import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 
 describe('PShortcutHints', () => {
-  it('anchors the menu below the topbar instead of the player area', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+  it('integrates seamlessly without floating over and blocking page content', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/components/ui/PShortcutHints.vue'), 'utf8')
 
-    expect(source).toMatch(/top:\s*calc\(var\(--a-topbar-height,\s*56px\)\s*\+\s*0\.75rem\)/)
-    expect(source).toContain('bottom: auto;')
-    expect(source).toContain('top: calc(100% + 0.5rem);')
+    expect(source).not.toContain('top: calc(var(--a-topbar-height, 56px) + 0.75rem);')
+    expect(source).toContain('shortcut-hints__backdrop')
+    expect(source).toContain('shortcut-hints__panel')
   })
 
   it('exposes a discoverable shortcut entry', () => {

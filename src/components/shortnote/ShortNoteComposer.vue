@@ -62,8 +62,8 @@
 
       <div class="short-note-composer__attachment-info">
         <div class="short-note-composer__attachment-title">{{ attachedMedia.title }}</div>
-        <div v-if="attachedMedia.subtitle" class="short-note-composer__attachment-subtitle">
-          {{ attachedMedia.subtitle }}
+        <div v-if="attachmentSubtitle" class="short-note-composer__attachment-subtitle">
+          {{ attachmentSubtitle }}
         </div>
       </div>
 
@@ -179,6 +179,11 @@ const attachedMedia = ref<MediaPickerItem | null>(
         title: props.initialMediaAttachment.title,
         subtitle: props.initialMediaAttachment.subtitle,
         cover_url: props.initialMediaAttachment.cover_url,
+        artist: props.initialMediaAttachment.artist,
+        album_id: props.initialMediaAttachment.album_id,
+        album_title: props.initialMediaAttachment.album_title,
+        year: props.initialMediaAttachment.year,
+        song_count: props.initialMediaAttachment.song_count,
       }
     : null
 )
@@ -188,6 +193,27 @@ let sortable: Sortable | null = null
 const uploading = ref(false)
 const uploadError = ref('')
 const charCount = computed(() => Array.from(content.value).length)
+
+const attachmentSubtitle = computed(() => {
+  if (!attachedMedia.value) return ''
+  const item = attachedMedia.value
+  if (item.type === 'song') {
+    const parts = [
+      item.artist,
+      item.album_title ? `《${item.album_title}》` : '',
+      item.year ? `${item.year}` : '',
+    ].filter(Boolean)
+    if (parts.length > 0) return parts.join(' · ')
+  } else if (item.type === 'album') {
+    const parts = [
+      item.artist,
+      item.year ? `${item.year}` : '',
+      item.song_count ? `${item.song_count} 首曲目` : '',
+    ].filter(Boolean)
+    if (parts.length > 0) return parts.join(' · ')
+  }
+  return item.subtitle || ''
+})
 
 watch(() => props.initialContent, value => { content.value = value })
 watch(() => props.initialMediaUrls, value => { mediaUrls.value = [...value] }, { deep: true })
@@ -201,6 +227,11 @@ watch(
           title: attachment.title,
           subtitle: attachment.subtitle,
           cover_url: attachment.cover_url,
+          artist: attachment.artist,
+          album_id: attachment.album_id,
+          album_title: attachment.album_title,
+          year: attachment.year,
+          song_count: attachment.song_count,
         }
       : null
   },

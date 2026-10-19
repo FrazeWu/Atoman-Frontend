@@ -103,7 +103,7 @@ describe('MediaAttachmentCard', () => {
     expect(img.attributes('src')).toBe('https://example.com/cover.jpg')
     expect(img.attributes('alt')).toBe('夜曲')
 
-    const songLink = wrapper.find('a[href="/music/?song_id=song-test-1"]')
+    const songLink = wrapper.find('a[href="/music/song/song-test-1"]')
     expect(songLink.exists()).toBe(true)
   })
 
@@ -245,7 +245,7 @@ describe('MediaAttachmentCard', () => {
     expect(parentClickHandler).not.toHaveBeenCalled()
 
     // 点击卡片内部跳转链接
-    const songLink = wrapper.find('a[href="/music/?song_id=song-test-1"]')
+    const songLink = wrapper.find('a[href="/music/song/song-test-1"]')
     expect(songLink.exists()).toBe(true)
     await songLink.trigger('click')
     expect(parentClickHandler).not.toHaveBeenCalled()
@@ -255,7 +255,7 @@ describe('MediaAttachmentCard', () => {
     const songWrapper = mountCard(MediaAttachmentCard, {
       props: { attachment: songAttachment },
     })
-    expect(songWrapper.find('a[href="/music/?song_id=song-test-1"]').exists()).toBe(true)
+    expect(songWrapper.find('a[href="/music/song/song-test-1"]').exists()).toBe(true)
 
     const albumWrapper = mountCard(MediaAttachmentCard, {
       props: { attachment: albumAttachment },
@@ -268,12 +268,55 @@ describe('MediaAttachmentCard', () => {
       props: { attachment: songAttachment },
     })
     await songWrapper.find('.media-attachment-card__info').trigger('click')
-    expect(apiMocks.routerPush).toHaveBeenCalledWith('/music/?song_id=song-test-1')
+    expect(apiMocks.routerPush).toHaveBeenCalledWith('/music/song/song-test-1')
 
     const albumWrapper = mountCard(MediaAttachmentCard, {
       props: { attachment: albumAttachment },
     })
     await albumWrapper.find('.media-attachment-card__info').trigger('click')
     expect(apiMocks.routerPush).toHaveBeenCalledWith('/music/album/album-test-1')
+  })
+
+  it('渲染丰富的歌曲和专辑元信息，并支持点击专辑直达专辑详情', () => {
+    const enrichedSong: ShortNoteMediaAttachment = {
+      type: 'song',
+      id: 'song-rich-1',
+      title: '晴天',
+      artist: '周杰伦',
+      album_id: 'album-rich-1',
+      album_title: '叶惠美',
+      year: 2003,
+      duration: 269,
+      cover_url: 'https://example.com/yehuimei.jpg',
+    }
+    const songWrapper = mountCard(MediaAttachmentCard, {
+      props: { attachment: enrichedSong },
+    })
+    expect(songWrapper.text()).toContain('晴天')
+    expect(songWrapper.text()).toContain('周杰伦')
+    expect(songWrapper.text()).toContain('《叶惠美》')
+    expect(songWrapper.text()).toContain('2003')
+    expect(songWrapper.text()).toContain('04:29')
+
+    const albumLink = songWrapper.find('a[href="/music/album/album-rich-1"]')
+    expect(albumLink.exists()).toBe(true)
+    expect(albumLink.text()).toBe('《叶惠美》')
+
+    const enrichedAlbum: ShortNoteMediaAttachment = {
+      type: 'album',
+      id: 'album-rich-1',
+      title: '叶惠美',
+      artist: '周杰伦',
+      year: 2003,
+      song_count: 11,
+      cover_url: 'https://example.com/yehuimei.jpg',
+    }
+    const albumWrapper = mountCard(MediaAttachmentCard, {
+      props: { attachment: enrichedAlbum },
+    })
+    expect(albumWrapper.text()).toContain('叶惠美')
+    expect(albumWrapper.text()).toContain('周杰伦')
+    expect(albumWrapper.text()).toContain('2003')
+    expect(albumWrapper.text()).toContain('11 首曲目')
   })
 })

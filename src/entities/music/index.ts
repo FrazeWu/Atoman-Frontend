@@ -5,4 +5,7 @@ export * from './queries/musicKeys'
 export * from './queries/useSongQuery'
 export * from './queries/useSongDetailQuery'
 export * from './queries/useAlbumQuery'
+export * from './queries/useAlbumDetailQuery'
+export * from './queries/useArtistDetailQuery'
 export * from './queries/useLyricsQuery'
+

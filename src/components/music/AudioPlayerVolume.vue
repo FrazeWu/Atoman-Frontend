@@ -74,7 +74,7 @@ defineEmits<{
   border: 1px solid var(--a-color-border-soft);
   padding: 12px 0 14px 0;
   z-index: 100;
-  box-shadow: var(--a-shadow-dropdown, var(--a-shadow-lg));
+  box-shadow: none;
   border-radius: var(--a-radius-card, 4px);
 }
 
@@ -183,15 +183,17 @@ defineEmits<{
   border-radius: 50%;
   background: var(--a-color-bg);
   border: 2px solid var(--a-color-primary);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease;
 }
 
 .vol-slider:hover::-webkit-slider-thumb,
 .vol-slider:active::-webkit-slider-thumb {
   transform: scale(1.25);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--a-color-primary) 20%, transparent);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+  box-shadow: none;
 }
 
 .vol-slider::-moz-range-thumb {
@@ -200,15 +202,17 @@ defineEmits<{
   border-radius: 50%;
   background: var(--a-color-bg);
   border: 2px solid var(--a-color-primary);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease;
 }
 
 .vol-slider:hover::-moz-range-thumb,
 .vol-slider:active::-moz-range-thumb {
   transform: scale(1.25);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--a-color-primary) 20%, transparent);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+  box-shadow: none;
 }
 
 @media (max-width: 900px) {

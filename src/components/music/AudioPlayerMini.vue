@@ -115,7 +115,7 @@ defineEmits<{
   border-left: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card, 4px) 0 0 var(--a-radius-card, 4px);
   background: var(--a-color-bg);
-  box-shadow: var(--a-shadow-dropdown, 0 4px 16px -2px rgba(15, 23, 42, 0.08));
+  box-shadow: none;
 }
 
 .player-mini-cover {
@@ -231,7 +231,7 @@ defineEmits<{
   border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-bg);
   color: var(--a-color-muted);
-  box-shadow: var(--a-shadow-dropdown);
+  box-shadow: none;
   opacity: 0;
   pointer-events: none;
   cursor: pointer;
@@ -268,7 +268,7 @@ defineEmits<{
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card, 4px);
-  box-shadow: var(--a-shadow-dropdown);
+  box-shadow: none;
   pointer-events: none;
   opacity: 0;
   transform: translateY(4px);

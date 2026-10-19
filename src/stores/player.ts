@@ -90,7 +90,26 @@ export const usePlayerStore = defineStore("player", () => {
 	const isShuffled = ref(false);
 	const repeatMode = ref<RepeatMode>("all");
 	const playbackMode = ref<PlaybackMode>("loop");
-	const volume = ref(1);
+	const INITIAL_VOLUME = 0.6;
+	const readInitialVolume = () => {
+		if (typeof localStorage === "undefined") return INITIAL_VOLUME;
+		try {
+			const saved = localStorage.getItem("playerVolume");
+			if (saved !== null) {
+				const val = parseFloat(saved);
+				if (Number.isFinite(val) && val >= 0 && val <= 1) {
+					return val;
+				}
+			}
+		} catch {
+			// localStorage might be unavailable
+		}
+		return INITIAL_VOLUME;
+	};
+
+	const volume = ref(readInitialVolume());
+	const playbackRate = ref(1.0);
+	const playedHistory = ref<Song[]>([]);
 	const currentTime = ref(0);
 	const duration = ref(0);
 	const isLoading = ref(false);
@@ -107,9 +126,28 @@ export const usePlayerStore = defineStore("player", () => {
 			localStorage.getItem("playerPinned") !== "false",
 	);
 
+	const recordSongToHistory = (song: Song) => {
+		const key = playbackItemKey(song);
+		const filtered = playedHistory.value.filter((item) => playbackItemKey(item) !== key);
+		filtered.unshift(compactPlaybackSong(song));
+		if (filtered.length > 50) {
+			filtered.length = 50;
+		}
+		playedHistory.value = filtered;
+	};
+
+	const clearPlayedHistory = () => {
+		playedHistory.value = [];
+	};
+
 	watch(
 		currentSong,
-		(song) => playerPresence.setHasCurrentTrack(Boolean(song)),
+		(song, oldSong) => {
+			playerPresence.setHasCurrentTrack(Boolean(song));
+			if (oldSong && hasPlayableAudio(oldSong)) {
+				recordSongToHistory(oldSong);
+			}
+		},
 		{ immediate: true },
 	);
 
@@ -697,6 +735,7 @@ export const usePlayerStore = defineStore("player", () => {
 			advanceToNextSong(true);
 		});
 		nextAudio.volume = computeActualVolume(volume.value);
+		nextAudio.playbackRate = playbackRate.value;
 
 		if (currentSong.value) {
 			nextAudio.src = resolvePlaybackAudioUrl(currentSong.value.audio_url);
@@ -718,6 +757,9 @@ export const usePlayerStore = defineStore("player", () => {
 				if (details.seekTime !== undefined) {
 					seek(details.seekTime);
 				}
+			},
+			skip: (seconds) => {
+				skip(seconds);
 			},
 		});
 
@@ -921,6 +963,9 @@ export const usePlayerStore = defineStore("player", () => {
 		}
 		savePodcastProgress();
 		if (persistPrevious) saveMusicProgress(false, true);
+		if (currentSong.value && hasPlayableAudio(currentSong.value)) {
+			recordSongToHistory(currentSong.value);
+		}
 		resetListening(song);
 		currentSongStartCached = false;
 		const player = ensureAudio();
@@ -1283,10 +1328,32 @@ export const usePlayerStore = defineStore("player", () => {
 	}
 
 	const setVolume = (v: number) => {
-		const clamped = Math.max(0, Math.min(1, Number.isFinite(v) ? v : 1));
+		const clamped = Math.max(0, Math.min(1, Number.isFinite(v) ? v : INITIAL_VOLUME));
 		volume.value = clamped;
+		if (typeof localStorage !== "undefined") {
+			try {
+				localStorage.setItem("playerVolume", String(clamped));
+			} catch (error) {
+				reportError(error, "Failed to persist player volume preference:");
+			}
+		}
 		if (audio) {
 			audio.volume = computeActualVolume(clamped);
+		}
+	};
+
+	const setPlaybackRate = (rate: number) => {
+		const safeRate = Math.max(0.5, Math.min(3.0, Number.isFinite(rate) ? rate : 1.0));
+		playbackRate.value = safeRate;
+		if (audio) {
+			audio.playbackRate = safeRate;
+		}
+		if (duration.value > 0) {
+			updateMediaSessionPosition({
+				duration: duration.value,
+				playbackRate: safeRate,
+				position: currentTime.value,
+			});
 		}
 	};
 
@@ -1392,6 +1459,10 @@ export const usePlayerStore = defineStore("player", () => {
 		setQueueFromCurrentItems,
 		setQueueFromPodcastEpisodes,
 		setVolume,
+		playbackRate,
+		setPlaybackRate,
+		playedHistory,
+		clearPlayedHistory,
 		seek,
 		skip,
 		retryPlayback,

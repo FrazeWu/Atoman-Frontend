@@ -15,6 +15,11 @@ describe('resolveMusicPlayerShortcut', () => {
     expect(resolveMusicPlayerShortcut(keydown('f'))).toBeNull()
   })
 
+  it('maps ArrowUp to volume-up and ArrowDown to volume-down', () => {
+    expect(resolveMusicPlayerShortcut(keydown('ArrowUp'))).toBe('volume-up')
+    expect(resolveMusicPlayerShortcut(keydown('ArrowDown'))).toBe('volume-down')
+  })
+
   it('does not consume modified typing shortcuts', () => {
     expect(resolveMusicPlayerShortcut(keydown('m', { ctrlKey: true }))).toBeNull()
     expect(resolveMusicPlayerShortcut(keydown(' ', { altKey: true }))).toBeNull()

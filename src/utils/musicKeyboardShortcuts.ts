@@ -5,6 +5,8 @@ export type MusicPlayerShortcut =
   | 'next'
   | 'skip-back'
   | 'skip-forward'
+  | 'volume-up'
+  | 'volume-down'
   | 'mute'
 
 export function resolveMusicPlayerShortcut(event: KeyboardEvent): MusicPlayerShortcut | null {
@@ -23,6 +25,8 @@ export function resolveMusicPlayerShortcut(event: KeyboardEvent): MusicPlayerSho
   if (event.key === ' ' || event.code === 'Space') return 'toggle-play'
   if (event.key === 'ArrowLeft') return 'skip-back'
   if (event.key === 'ArrowRight') return 'skip-forward'
+  if (event.key === 'ArrowUp') return 'volume-up'
+  if (event.key === 'ArrowDown') return 'volume-down'
   if (key === 'm') return 'mute'
   return null
 }

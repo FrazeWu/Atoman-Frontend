@@ -40,6 +40,7 @@ export function useAudioPlayerSync() {
 		previoustrack: () => void;
 		nexttrack: () => void;
 		seekto: (details: MediaSessionActionDetails) => void;
+		skip?: (seconds: number) => void;
 	}) => {
 		if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
 			const actions: Array<[MediaSessionAction, MediaSessionActionHandler]> = [
@@ -49,6 +50,24 @@ export function useAudioPlayerSync() {
 				["nexttrack", handlers.nexttrack],
 				["seekto", handlers.seekto],
 			];
+			if (handlers.skip) {
+				actions.push(
+					[
+						"seekbackward",
+						(details) => {
+							const offset = details.seekOffset || 10;
+							handlers.skip!(-offset);
+						},
+					],
+					[
+						"seekforward",
+						(details) => {
+							const offset = details.seekOffset || 10;
+							handlers.skip!(offset);
+						},
+					],
+				);
+			}
 			for (const [action, handler] of actions) {
 				try {
 					navigator.mediaSession.setActionHandler(action, handler);
@@ -67,19 +86,20 @@ export function useAudioPlayerSync() {
 	}) => {
 		if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
 			try {
+				const artwork = metadata.artworkUrl
+					? [
+							{ src: metadata.artworkUrl, sizes: "96x96", type: "image/jpeg" },
+							{ src: metadata.artworkUrl, sizes: "128x128", type: "image/jpeg" },
+							{ src: metadata.artworkUrl, sizes: "192x192", type: "image/jpeg" },
+							{ src: metadata.artworkUrl, sizes: "256x256", type: "image/jpeg" },
+							{ src: metadata.artworkUrl, sizes: "512x512", type: "image/jpeg" },
+						]
+					: [];
 				navigator.mediaSession.metadata = new MediaMetadata({
 					title: metadata.title,
 					artist: metadata.artist,
 					album: metadata.album,
-					artwork: metadata.artworkUrl
-						? [
-								{
-									src: metadata.artworkUrl,
-									sizes: "512x512",
-									type: "image/jpeg",
-								},
-							]
-						: [],
+					artwork,
 				});
 			} catch {
 				// Metadata is optional on partial Media Session implementations.

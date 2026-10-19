@@ -6,11 +6,13 @@
       class="player"
       data-player-mode="full"
       :class="{ 'is-auto-hidden': !effectivePinned && !playerHovered }"
-    @mouseenter="revealPlayer"
-    @mouseleave="scheduleAutoHide"
-    @focusin="revealPlayer"
-    @focusout="scheduleAutoHide"
-  >
+      @mouseenter="revealPlayer"
+      @mouseleave="scheduleAutoHide"
+      @focusin="revealPlayer"
+      @focusout="scheduleAutoHide"
+      @touchstart="handleTouchStart"
+      @touchend="handleTouchEnd"
+    >
     <div
       ref="playerInnerRef"
       class="player-inner"
@@ -156,6 +158,17 @@
           </button>
           <button type="button" class="nav-btn" aria-label="下一首" title="下一首" data-hint="下一首 (Alt+→)" @click="player.playNext()">下一首</button>
           <button v-if="isPodcast" type="button" class="skip-btn" aria-label="前进 15 秒" title="前进 15 秒" data-hint="前进 15S (→)" @click="player.skip(15)">+15S</button>
+          <button
+            v-if="isPodcast"
+            type="button"
+            class="feature-toggle player-rate-btn"
+            aria-label="倍速播放"
+            :title="`倍速播放 (${player.playbackRate}x)`"
+            :data-hint="`倍速 ${player.playbackRate}x`"
+            @click="cyclePlaybackRate"
+          >
+            <span>{{ player.playbackRate }}x</span>
+          </button>
           <button v-else type="button" class="feature-toggle player-mode-btn" aria-label="切换播放模式" title="切换播放模式" data-hint="播放模式" @click="player.cyclePlaybackMode()">
             <div v-if="player.playbackMode === 'single'" class="repeat-one-wrapper">
               <Repeat :size="20" />
@@ -176,7 +189,7 @@
           class="feature-link"
           aria-label="歌词"
           title="歌词"
-          data-hint="歌词 (L)"
+          data-hint="歌词 (Shift+F)"
           @click="player.toggleLyrics"
         >
           <span>{{ featureLabel }}</span>
@@ -347,6 +360,40 @@ function isInputActive(): boolean {
   )
 }
 
+let touchStartX = 0;
+let touchStartY = 0;
+
+function handleTouchStart(e: TouchEvent) {
+  if (e.touches.length === 1) {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }
+}
+
+function handleTouchEnd(e: TouchEvent) {
+  if (e.changedTouches.length === 1) {
+    const deltaX = e.changedTouches[0].clientX - touchStartX;
+    const deltaY = e.changedTouches[0].clientY - touchStartY;
+    // Horizontal swipe threshold: 50px, vertical displacement < 40px
+    if (Math.abs(deltaX) > 50 && Math.abs(deltaY) < 40) {
+      if (deltaX < 0) {
+        // Swiped left -> next song
+        player.playNext();
+      } else {
+        // Swiped right -> previous song
+        player.playPrevious();
+      }
+    }
+  }
+}
+
+function cyclePlaybackRate() {
+  const rates = [0.75, 1.0, 1.25, 1.5, 2.0];
+  const currentIndex = rates.indexOf(player.playbackRate);
+  const nextRate = currentIndex >= 0 && currentIndex < rates.length - 1 ? rates[currentIndex + 1] : rates[0];
+  player.setPlaybackRate(nextRate);
+}
+
 function handleGlobalKeydown(e: KeyboardEvent) {
   if (isInputActive()) return
   if (!player.currentSong) return
@@ -361,6 +408,8 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   else if (shortcut === 'skip-back') player.skip(-5)
   else if (shortcut === 'skip-forward') player.skip(5)
   else if (shortcut === 'mute') player.setVolume(player.volume > 0 ? 0 : 0.5)
+  else if (shortcut === 'volume-up') player.setVolume(player.volume + 0.05)
+  else if (shortcut === 'volume-down') player.setVolume(player.volume - 0.05)
 }
 
 onMounted(() => {
@@ -986,6 +1035,21 @@ watch(
 }
 .feature-toggle:hover {
   color: var(--a-color-text);
+}
+
+.player-rate-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: var(--a-radius-control, 4px);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
+  line-height: 1.2;
+}
+
+.player-rate-btn:hover {
+  background: var(--a-color-border-soft);
 }
 
 .repeat-one-wrapper {

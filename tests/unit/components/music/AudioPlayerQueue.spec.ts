@@ -162,5 +162,27 @@ describe("AudioPlayerQueue.vue", () => {
 
 		wrapper.unmount();
 	});
+
+	it("switches to history tab and replays a past song", async () => {
+		const player = usePlayerStore();
+		const song1 = { id: "h1", title: "History 1", audio_url: "/h1.mp3" } as Song;
+		player.playedHistory = [song1];
+		const playSong = vi.spyOn(player, "playSong");
+
+		const wrapper = mount(AudioPlayerQueue);
+		const tabs = wrapper.findAll(".queue-tab-btn");
+		expect(tabs).toHaveLength(2);
+
+		// Switch to history tab
+		await tabs[1]!.trigger("click");
+		expect(wrapper.findAll(".history-item")).toHaveLength(1);
+		expect(wrapper.find(".history-item").text()).toContain("History 1");
+
+		// Click replay button
+		await wrapper.get(".q-replay-btn").trigger("click");
+		expect(playSong).toHaveBeenCalledWith(song1);
+
+		wrapper.unmount();
+	});
 });
 

@@ -1209,4 +1209,46 @@ describe("player store", () => {
 		player.seek(35);
 		expect(audio.currentTime).toBe(35);
 	});
+
+	it("persists player volume to localStorage and respects saved setting", () => {
+		const player = usePlayerStore();
+		player.setVolume(0.45);
+		expect(localStorage.getItem("playerVolume")).toBe("0.45");
+
+		player.setVolume(0.8);
+		expect(localStorage.getItem("playerVolume")).toBe("0.8");
+	});
+
+	it("supports setting playbackRate and applies to audio element", () => {
+		const player = usePlayerStore();
+		player.playSong({ id: "rate-song", title: "Rate Song", audio_url: "rate.mp3" } as any);
+		const audio = audioInstances.at(-1)!;
+
+		player.setPlaybackRate(1.5);
+		expect(player.playbackRate).toBe(1.5);
+		expect(audio.playbackRate).toBe(1.5);
+
+		player.setPlaybackRate(0.75);
+		expect(player.playbackRate).toBe(0.75);
+		expect(audio.playbackRate).toBe(0.75);
+	});
+
+	it("maintains playedHistory when switching songs", () => {
+		const player = usePlayerStore();
+		const song1 = { id: "hist-1", title: "History 1", audio_url: "h1.mp3" } as any;
+		const song2 = { id: "hist-2", title: "History 2", audio_url: "h2.mp3" } as any;
+		const song3 = { id: "hist-3", title: "History 3", audio_url: "h3.mp3" } as any;
+
+		player.playSong(song1);
+		expect(player.playedHistory).toHaveLength(0);
+
+		player.playSong(song2);
+		expect(player.playedHistory).toHaveLength(1);
+		expect(player.playedHistory[0].id).toBe("hist-1");
+
+		player.playSong(song3);
+		expect(player.playedHistory).toHaveLength(2);
+		expect(player.playedHistory[0].id).toBe("hist-2");
+		expect(player.playedHistory[1].id).toBe("hist-1");
+	});
 });

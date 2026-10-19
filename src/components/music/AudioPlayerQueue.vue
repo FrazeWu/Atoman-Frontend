@@ -10,16 +10,45 @@
       @keydown="handleKeydown"
     >
       <div class="queue-header">
-        <div class="queue-title-wrap">
-          <h2 id="queue-title" class="queue-title">播放队列</h2>
-          <span class="queue-badge">{{ player.queue.length }} 首</span>
+        <div class="queue-tabs" role="tablist">
+          <div
+            role="tab"
+            :aria-selected="activeTab === 'queue'"
+            class="queue-tab-btn"
+            :class="{ active: activeTab === 'queue' }"
+            @click="activeTab = 'queue'"
+            @keydown.enter.space="activeTab = 'queue'"
+          >
+            <h2 id="queue-title" class="queue-title">播放队列</h2>
+            <span class="queue-badge">{{ player.queue.length }} 首</span>
+          </div>
+          <div
+            role="tab"
+            :aria-selected="activeTab === 'history'"
+            class="queue-tab-btn"
+            :class="{ active: activeTab === 'history' }"
+            @click="activeTab = 'history'"
+            @keydown.enter.space="activeTab = 'history'"
+          >
+            <span class="queue-title">历史已播</span>
+            <span class="queue-badge">{{ player.playedHistory.length }} 首</span>
+          </div>
         </div>
         <button
-          v-if="player.queue.length"
+          v-if="activeTab === 'queue' && player.queue.length"
           type="button"
           class="queue-clear-btn"
           title="清空队列"
           @click="player.clearQueue"
+        >
+          清空
+        </button>
+        <button
+          v-else-if="activeTab === 'history' && player.playedHistory.length"
+          type="button"
+          class="queue-clear-btn"
+          title="清空历史"
+          @click="player.clearPlayedHistory"
         >
           清空
         </button>
@@ -29,126 +58,163 @@
       </div>
 
       <div class="queue-content">
-        <div v-if="player.queue.length" class="queue-list">
-          <template
-            v-for="(song, index) in player.queue"
-            :key="player.playbackItemKey(song)"
-          >
-            <div
-              :data-testid="`queue-drop-slot-${index}`"
-              class="queue-drop-slot"
-              :class="{ 'is-drag-over': dragOverQueueIndex === index }"
-              @dragover.prevent="handleQueueDragOver(index, $event)"
-              @dragleave="handleQueueDragLeave(index)"
-              @drop="dropQueueItem(index, $event)"
-            />
-            <div
-              class="queue-item"
-              :class="[
-                { active: isSongActive(song) },
-                getQueueDisplacementClass(index),
-              ]"
-              @click="player.playQueuedSong(song)"
-              @dragover.prevent="handleQueueItemDragOver(index, $event)"
-              @drop="dropQueueRow(index, $event)"
+        <!-- Tab 1: Queue -->
+        <template v-if="activeTab === 'queue'">
+          <div v-if="player.queue.length" class="queue-list">
+            <template
+              v-for="(song, index) in player.queue"
+              :key="player.playbackItemKey(song)"
             >
-              <!-- 拖动把手 -->
-              <button
-                type="button"
-                class="q-drag"
-                draggable="true"
-                :aria-label="`拖动 ${song.title}`"
-                title="拖动排序"
-                @click.stop
-                @dragstart="handleQueueDragStart(index, $event)"
-                @dragend="clearQueueDragState"
+              <div
+                :data-testid="`queue-drop-slot-${index}`"
+                class="queue-drop-slot"
+                :class="{ 'is-drag-over': dragOverQueueIndex === index }"
+                @dragover.prevent="handleQueueDragOver(index, $event)"
+                @dragleave="handleQueueDragLeave(index)"
+                @drop="dropQueueItem(index, $event)"
+              />
+              <div
+                class="queue-item"
+                :class="[
+                  { active: isSongActive(song) },
+                  getQueueDisplacementClass(index),
+                ]"
+                @click="player.playQueuedSong(song)"
+                @dragover.prevent="handleQueueItemDragOver(index, $event)"
+                @drop="dropQueueRow(index, $event)"
               >
-                <GripVertical :size="15" aria-hidden="true" />
-              </button>
+                <!-- 拖动把手 -->
+                <button
+                  type="button"
+                  class="q-drag"
+                  draggable="true"
+                  :aria-label="`拖动 ${song.title}`"
+                  title="拖动排序"
+                  @click.stop
+                  @dragstart="handleQueueDragStart(index, $event)"
+                  @dragend="clearQueueDragState"
+                >
+                  <GripVertical :size="15" aria-hidden="true" />
+                </button>
 
-              <!-- 序号或正在播放动态均衡器 -->
-              <div class="q-visual">
-                <div v-if="isSongActive(song)" class="q-equalizer" aria-label="正在播放">
-                  <span class="eq-bar" />
-                  <span class="eq-bar" />
-                  <span class="eq-bar" />
+                <!-- 序号或正在播放动态均衡器 -->
+                <div class="q-visual">
+                  <div v-if="isSongActive(song)" class="q-equalizer" aria-label="正在播放">
+                    <span class="eq-bar" />
+                    <span class="eq-bar" />
+                    <span class="eq-bar" />
+                  </div>
+                  <span class="q-sequence" :class="{ 'is-active-track': isSongActive(song) }">
+                    <span class="q-sequence__text">{{ (index + 1).toString().padStart(2, '0') }}</span>
+                    <input
+                      class="q-sequence__input"
+                      type="text"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      :value="(index + 1).toString().padStart(2, '0')"
+                      :aria-label="`修改歌曲 ${song.title} 队列序号`"
+                      title="修改序号以重排"
+                      @click.stop
+                      @keydown.enter.prevent="($event.target as HTMLInputElement).blur()"
+                      @change="handleQueueSequenceChange(index, $event)"
+                    />
+                  </span>
                 </div>
-                <span class="q-sequence" :class="{ 'is-active-track': isSongActive(song) }">
+
+                <!-- 标题与艺人 -->
+                <div class="q-info">
+                  <span class="q-title a-clamp-1">{{ song.title }}</span>
+                  <span class="q-artist a-clamp-1">{{ song.artist || '未知艺术家' }}</span>
+                </div>
+
+                <!-- 移动端上下移动按钮 -->
+                <span class="q-mobile-order">
+                  <button
+                    type="button"
+                    :disabled="index === 0"
+                    :aria-label="`上移 ${song.title}`"
+                    title="上移"
+                    @click.stop="moveQueueItem(index, index - 1)"
+                  >
+                    <ChevronUp :size="15" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    :disabled="index === player.queue.length - 1"
+                    :aria-label="`下移 ${song.title}`"
+                    title="下移"
+                    @click.stop="moveQueueItem(index, index + 1)"
+                  >
+                    <ChevronDown :size="15" aria-hidden="true" />
+                  </button>
+                </span>
+
+                <!-- 移除按钮 -->
+                <button
+                  v-if="!isSongActive(song)"
+                  type="button"
+                  class="q-remove"
+                  :aria-label="`移除 ${song.title}`"
+                  title="移除"
+                  @click.stop="player.removeFromQueue(song)"
+                >
+                  ×
+                </button>
+              </div>
+            </template>
+            <div
+              :data-testid="`queue-drop-slot-${player.queue.length}`"
+              class="queue-drop-slot"
+              :class="{ 'is-drag-over': dragOverQueueIndex === player.queue.length }"
+              @dragover.prevent="handleQueueDragOver(player.queue.length, $event)"
+              @dragleave="handleQueueDragLeave(player.queue.length)"
+              @drop="dropQueueItem(player.queue.length, $event)"
+            />
+          </div>
+          <div v-else class="queue-empty-box">
+            <p class="placeholder-title">播放队列为空</p>
+            <p class="placeholder-desc">在音乐或播客中点击播放或添加，曲目将显示在这里</p>
+          </div>
+        </template>
+
+        <!-- Tab 2: Played History -->
+        <template v-else>
+          <div v-if="player.playedHistory.length" class="queue-list">
+            <div
+              v-for="(song, index) in player.playedHistory"
+              :key="`hist-${player.playbackItemKey(song)}`"
+              class="queue-item history-item"
+              @click="player.playSong(song)"
+            >
+              <div class="q-visual">
+                <span class="q-sequence">
                   <span class="q-sequence__text">{{ (index + 1).toString().padStart(2, '0') }}</span>
-                  <input
-                    class="q-sequence__input"
-                    type="text"
-                    inputmode="numeric"
-                    pattern="[0-9]*"
-                    :value="(index + 1).toString().padStart(2, '0')"
-                    :aria-label="`修改歌曲 ${song.title} 队列序号`"
-                    title="修改序号以重排"
-                    @click.stop
-                    @keydown.enter.prevent="($event.target as HTMLInputElement).blur()"
-                    @change="handleQueueSequenceChange(index, $event)"
-                  />
                 </span>
               </div>
-
-              <!-- 标题与艺人 -->
               <div class="q-info">
                 <span class="q-title a-clamp-1">{{ song.title }}</span>
                 <span class="q-artist a-clamp-1">{{ song.artist || '未知艺术家' }}</span>
               </div>
-
-              <!-- 移动端上下移动按钮 -->
-              <span class="q-mobile-order">
-                <button
-                  type="button"
-                  :disabled="index === 0"
-                  :aria-label="`上移 ${song.title}`"
-                  title="上移"
-                  @click.stop="moveQueueItem(index, index - 1)"
-                >
-                  <ChevronUp :size="15" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  :disabled="index === player.queue.length - 1"
-                  :aria-label="`下移 ${song.title}`"
-                  title="下移"
-                  @click.stop="moveQueueItem(index, index + 1)"
-                >
-                  <ChevronDown :size="15" aria-hidden="true" />
-                </button>
-              </span>
-
-              <!-- 移除按钮 -->
               <button
-                v-if="!isSongActive(song)"
                 type="button"
-                class="q-remove"
-                :aria-label="`移除 ${song.title}`"
-                title="移除"
-                @click.stop="player.removeFromQueue(song)"
+                class="q-replay-btn"
+                title="重新播放"
+                @click.stop="player.playSong(song)"
               >
-                ×
+                重播
               </button>
             </div>
-          </template>
-          <div
-            :data-testid="`queue-drop-slot-${player.queue.length}`"
-            class="queue-drop-slot"
-            :class="{ 'is-drag-over': dragOverQueueIndex === player.queue.length }"
-            @dragover.prevent="handleQueueDragOver(player.queue.length, $event)"
-            @dragleave="handleQueueDragLeave(player.queue.length)"
-            @drop="dropQueueItem(player.queue.length, $event)"
-          />
-        </div>
-        <div v-else class="queue-empty-box">
-          <p class="placeholder-title">播放队列为空</p>
-          <p class="placeholder-desc">在音乐或播客中点击播放或添加，曲目将显示在这里</p>
-        </div>
+          </div>
+          <div v-else class="queue-empty-box">
+            <p class="placeholder-title">暂无播放历史</p>
+            <p class="placeholder-desc">播放过的歌曲将自动记录在这里</p>
+          </div>
+        </template>
       </div>
 
       <div class="queue-footer">
-        <span>{{ playbackModeLabel }}</span>
-        <span>拖动调整顺序</span>
+        <span>{{ activeTab === 'queue' ? playbackModeLabel : '最近播放记录 (最多50首)' }}</span>
+        <span>{{ activeTab === 'queue' ? '拖动调整顺序' : '点击直接重播' }}</span>
       </div>
     </div>
   </div>
@@ -162,6 +228,7 @@ import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 
 const player = usePlayerStore()
+const activeTab = ref<'queue' | 'history'>('queue')
 const queuePanelRef = ref<HTMLElement | null>(null)
 const queueOpen = computed(() => player.showQueue)
 const { handleKeydown: handleDialogKeydown } = useDialogFocus(
@@ -332,6 +399,41 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   border-bottom: 1px solid var(--a-color-border-soft);
 }
 
+.queue-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.queue-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 0.25rem 0.4rem;
+  border-radius: var(--a-radius-control, 4px);
+  color: var(--a-color-muted);
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.queue-tab-btn:hover {
+  color: var(--a-color-text);
+  background: var(--a-color-surface-muted);
+}
+
+.queue-tab-btn.active {
+  color: var(--a-color-fg);
+  font-weight: 600;
+}
+
+.queue-tab-btn.active .queue-badge {
+  background: color-mix(in srgb, var(--a-color-primary) 15%, transparent);
+  color: var(--a-color-primary);
+}
+
 .queue-title-wrap {
   display: flex;
   align-items: center;
@@ -343,13 +445,14 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
   font-weight: 500;
   font-size: 1rem;
   margin: 0;
-  color: var(--a-color-fg);
+  color: inherit;
 }
 
 .queue-badge {
   font-size: 0.72rem;
   font-weight: 600;
   padding: 0.15rem 0.45rem;
+  border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
 }
@@ -672,6 +775,23 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 .q-remove:hover {
   color: var(--a-color-danger);
   background: color-mix(in srgb, var(--a-color-danger) 12%, transparent);
+}
+
+.q-replay-btn {
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--a-radius-control, 4px);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.q-replay-btn:hover {
+  background: var(--a-color-border-soft);
+  color: var(--a-color-fg);
 }
 
 .queue-empty-box {

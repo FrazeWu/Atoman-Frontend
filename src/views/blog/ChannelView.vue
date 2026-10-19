@@ -1,5 +1,5 @@
 <template>
-  <div class="a-page-xl creator-theme-scope" :data-creator-id="channel?.user?.uuid || channel?.user_id">
+  <div class="a-page-xl">
     <PToast v-model="toastVisible" :message="toastMessage" />
     <div v-if="loading" class="a-grid-2" style="margin-top:1rem">
       <div v-for="i in 4" :key="i" class="a-skeleton" style="height:10rem" />
@@ -11,7 +11,8 @@
     <PEmpty v-else-if="!channel" title="频道不存在" description="该频道已被删除或链接无效" />
 
     <template v-else>
-      <section class="channel-identity-card" aria-labelledby="channel-title">
+      <CreatorThemeScope :creator-id="channel.user?.uuid || channel.user_id" :preset-config="activeTheme?.preset_config">
+        <section class="channel-identity-card" aria-labelledby="channel-title">
         <div class="channel-identity-card__cover" aria-hidden="true">
           <img v-if="channel.cover_url" :src="resolveMediaURL(channel.cover_url)" alt="" />
           <span v-else>{{ channel.name.slice(0, 1).toUpperCase() }}</span>
@@ -117,6 +118,7 @@
           </div>
         </main>
       </div>
+      </CreatorThemeScope>
     </template>
 
     <!-- Collection Modal -->
@@ -155,6 +157,8 @@
       :creator-handle="channel.user?.username"
       :initial-theme="activeTheme"
     />
+
+    <ThemeEscapeHatch />
   </div>
 </template>
 
@@ -174,6 +178,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useCreatorTheme } from '@/composables/useCreatorTheme'
 import ThemeCustomizerDrawer from '@/components/theme/ThemeCustomizerDrawer.vue'
+import CreatorThemeScope from '@/components/theme/CreatorThemeScope.vue'
+import ThemeEscapeHatch from '@/components/theme/ThemeEscapeHatch.vue'
 import PToast from '@/components/ui/PToast.vue'
 import BlogEntityCard from '@/components/blog/BlogEntityCard.vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'

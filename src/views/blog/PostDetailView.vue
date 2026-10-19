@@ -4,6 +4,8 @@ import { useRoute } from 'vue-router'
 
 import BlogPostReader from '@/components/blog/BlogPostReader.vue'
 import ThemeCustomizerDrawer from '@/components/theme/ThemeCustomizerDrawer.vue'
+import CreatorThemeScope from '@/components/theme/CreatorThemeScope.vue'
+import ThemeEscapeHatch from '@/components/theme/ThemeEscapeHatch.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCreatorTheme } from '@/composables/useCreatorTheme'
 import type { Post } from '@/types'
@@ -62,7 +64,7 @@ defineExpose({ post, loading, errorStatus, isAcademic, bookmarked, postEmbeds, m
 </script>
 
 <template>
-  <div class="creator-theme-scope" :data-creator-id="authorId || undefined">
+  <CreatorThemeScope :creator-id="authorId" :preset-config="activeTheme?.preset_config">
     <BlogPostReader ref="reader" :post-id="postId" presentation="page" />
 
     <!-- 创作者装扮入口与定制抽屉 -->
@@ -83,5 +85,7 @@ defineExpose({ post, loading, errorStatus, isAcademic, bookmarked, postEmbeds, m
       :creator-handle="authorHandle"
       :initial-theme="activeTheme"
     />
-  </div>
+
+    <ThemeEscapeHatch />
+  </CreatorThemeScope>
 </template>

@@ -3,8 +3,7 @@
   <component
     v-else
     :is="embedded ? 'section' : 'main'"
-    class="profile-page creator-theme-scope"
-    :data-creator-id="profile?.uuid"
+    class="profile-page"
     :class="{ 'profile-page--embedded': embedded, 'a-page': !embedded }"
     aria-labelledby="profile-title"
   >
@@ -20,7 +19,8 @@
     </section>
 
     <template v-else>
-      <PToast v-model="toastVisible" :message="toastMessage" />
+      <CreatorThemeScope :creator-id="profile.uuid" :preset-config="activeTheme?.preset_config">
+        <PToast v-model="toastVisible" :message="toastMessage" />
 
       <section class="profile-header" aria-label="用户身份">
         <PAvatar
@@ -226,6 +226,7 @@
           </article>
         </div>
       </section>
+      </CreatorThemeScope>
 
       <!-- 创作者装扮入口与定制抽屉 -->
       <button
@@ -245,6 +246,8 @@
         :creator-handle="profile.username"
         :initial-theme="activeTheme"
       />
+
+      <ThemeEscapeHatch />
     </template>
   </component>
 
@@ -324,6 +327,8 @@ import PToast from '@/components/ui/PToast.vue'
 import ChannelView from '@/views/blog/ChannelView.vue'
 import UserSummaryCard from '@/components/user/UserSummaryCard.vue'
 import ThemeCustomizerDrawer from '@/components/theme/ThemeCustomizerDrawer.vue'
+import CreatorThemeScope from '@/components/theme/CreatorThemeScope.vue'
+import ThemeEscapeHatch from '@/components/theme/ThemeEscapeHatch.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import { useApi } from '@/composables/useApi'

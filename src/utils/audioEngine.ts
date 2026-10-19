@@ -30,6 +30,10 @@ export class AudioPrefetcher {
   private prefetchedUrls = new Set<string>()
   private abortController: AbortController | null = null
 
+  public get urls(): ReadonlySet<string> {
+    return this.prefetchedUrls
+  }
+
   public isPrefetched(url: string): boolean {
     return this.prefetchedUrls.has(url)
   }

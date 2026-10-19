@@ -1,8 +1,14 @@
 import { apiGetOptional, apiGetRaw, apiPostJson } from '@/api/client'
 import type { Song, Album, Artist } from '../model/types'
+import { getMusicSongDetail } from '@/api/musicV1'
 
 export async function fetchSongById(id: string | number): Promise<Song | null> {
-  return apiGetOptional<Song>(`/api/v1/music/songs/${id}`)
+  try {
+    const detail = await getMusicSongDetail(String(id))
+    return (detail?.song as unknown as Song) || null
+  } catch {
+    return apiGetOptional<Song>(`/api/v1/music/songs/${id}`)
+  }
 }
 
 export async function fetchAlbumById(id: string | number): Promise<Album | null> {

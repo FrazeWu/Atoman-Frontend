@@ -1,4 +1,10 @@
-import { apiPostJson, apiGetOptional } from '@/api/client'
+import { apiGetOptional, apiPostJson } from '@/api/client'
+import {
+  saveMusicPlaybackProgress,
+  getMusicPlaybackSession,
+  type SaveMusicPlaybackProgressInput,
+  type MusicPlaybackSession,
+} from '@/api/musicV1'
 
 export interface PlaybackSessionDTO {
   song_id: string
@@ -6,12 +12,19 @@ export interface PlaybackSessionDTO {
   queue?: string[]
 }
 
-export async function saveMusicProgress(songId: string, positionMs: number): Promise<void> {
-  await apiPostJson('/api/v1/music/progress', { song_id: songId, position: positionMs })
+export async function saveMusicProgress(
+  songIdOrPayload: string | SaveMusicPlaybackProgressInput,
+  positionMs?: number,
+): Promise<void> {
+  if (typeof songIdOrPayload === 'object') {
+    await saveMusicPlaybackProgress(songIdOrPayload)
+    return
+  }
+  await apiPostJson('/api/v1/music/progress', { song_id: songIdOrPayload, position: positionMs })
 }
 
-export async function restoreMusicSession(): Promise<PlaybackSessionDTO | null> {
-  return apiGetOptional<PlaybackSessionDTO>('/api/v1/music/session')
+export async function restoreMusicSession(): Promise<MusicPlaybackSession | null> {
+  return getMusicPlaybackSession()
 }
 
 export async function fetchSessionRecommendation(context?: Record<string, string>): Promise<unknown> {

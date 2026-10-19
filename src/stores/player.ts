@@ -2,16 +2,19 @@ import { reportError } from "@/utils/logger";
 import { apiRequestResult } from "@/api/client";
 import { defineStore, getActivePinia } from "pinia";
 import { computed, onScopeDispose, ref, watch } from "vue";
-import type { Song, RepeatMode, TimelineItem, PodcastEpisode } from "@/types";
+import type { RepeatMode, TimelineItem, PodcastEpisode } from "@/types";
+import {
+	type Song,
+	fetchSongById,
+	saveMusicProgress as saveEntityMusicProgress,
+	restoreMusicSession as restoreEntityMusicSession,
+} from "@/entities/music";
 import { isPlayableFeedPodcast } from "@/utils/feedPodcast";
 import { useApi } from "@/composables/useApi";
 import {
 	getMusicPlaybackProgress,
-	getMusicSongDetail,
-	getMusicPlaybackSession,
 	recordMusicRecommendationEvents,
 	recordMusicSongPlay,
-	saveMusicPlaybackProgress,
 	saveMusicPlaybackSession,
 } from "@/api/musicV1";
 import {
@@ -48,6 +51,8 @@ import {
 	audioStartPrefetchConcurrency,
 	computeActualVolume,
 	fadeOutAudio,
+	resolvePlaybackAudioUrl as resolveAudioEngineUrl,
+	AudioPrefetcher,
 } from "@/utils/audioEngine";
 
 export { computeActualVolume, fadeOutAudio };
@@ -65,7 +70,7 @@ type PersistedPlaybackState = {
 };
 
 function resolvePlaybackAudioUrl(url: string) {
-	return resolvePlayableAudioURL(url, api.url);
+	return resolvePlayableAudioURL(resolveAudioEngineUrl(url), api.url);
 }
 
 export const usePlayerStore = defineStore("player", () => {
@@ -179,7 +184,7 @@ export const usePlayerStore = defineStore("player", () => {
 	let playGeneration = 0;
 	let playRequested = false;
 	let currentSongStartCached = false;
-	let audioStartPrefetchController: AbortController | null = null;
+	const audioPrefetcher = new AudioPrefetcher();
 	let audioStartPrefetchKey: string | null = null;
 
 	function releaseCachedAudioObjectUrl() {
@@ -187,7 +192,6 @@ export const usePlayerStore = defineStore("player", () => {
 		URL.revokeObjectURL(cachedAudioObjectUrl);
 		cachedAudioObjectUrl = "";
 	}
-	const prefetchedAudioStartUrls = new Set<string>();
 	let songsRequest: Promise<void> | null = null;
 	let musicProgressLastSavedAt = 0;
 	let musicProgressRestored = false;
@@ -210,7 +214,7 @@ export const usePlayerStore = defineStore("player", () => {
 		const total = audio?.duration ?? duration.value;
 		if (!Number.isFinite(position) || position < 0) return;
 		musicProgressLastSavedAt = now;
-		void saveMusicPlaybackProgress({
+		void saveEntityMusicProgress({
 			song_id: String(song.id),
 			position_seconds: position,
 			duration_seconds: Number.isFinite(total) && total > 0 ? total : 0,
@@ -285,7 +289,7 @@ export const usePlayerStore = defineStore("player", () => {
 		const playbackGeneration = playGeneration;
 		const userID = authStore.user?.uuid;
 		try {
-			const session = await getMusicPlaybackSession();
+			const session = await restoreEntityMusicSession();
 			if (
 				generation !== musicAccountGeneration ||
 				playbackGeneration !== playGeneration ||
@@ -479,8 +483,7 @@ export const usePlayerStore = defineStore("player", () => {
 	};
 
 	const resetAudioStartPrefetch = () => {
-		audioStartPrefetchController?.abort();
-		audioStartPrefetchController = null;
+		audioPrefetcher.abortPending();
 		audioStartPrefetchKey = null;
 	};
 
@@ -504,7 +507,7 @@ export const usePlayerStore = defineStore("player", () => {
 		playReported = false;
 		podcastTracker = null;
 		currentSongStartCached = false;
-		prefetchedAudioStartUrls.clear();
+		audioPrefetcher.reset();
 		songsRequest = null;
 		musicProgressLastSavedAt = 0;
 		musicProgressRestored = false;
@@ -563,18 +566,17 @@ export const usePlayerStore = defineStore("player", () => {
 
 		resetAudioStartPrefetch();
 		audioStartPrefetchKey = prefetchKey;
-		const controller = new AbortController();
-		audioStartPrefetchController = controller;
+		const signal = audioPrefetcher.getAbortSignal();
 		const urls = buildPrefetchCandidates(
 			queue.value,
 			currentKey,
 			resolvePlaybackAudioUrl,
 			hasPlayableAudio,
-			prefetchedAudioStartUrls,
+			audioPrefetcher.urls,
 		);
 		let nextUrlIndex = 0;
 		const prefetch = async () => {
-			while (!controller.signal.aborted) {
+			while (!signal.aborted) {
 				const url = urls[nextUrlIndex++];
 				if (!url) return;
 				try {
@@ -583,14 +585,14 @@ export const usePlayerStore = defineStore("player", () => {
 						headers: {
 							Range: `bytes=0-${audioStartPrefetchBytes - 1}`,
 						},
-						signal: controller.signal,
+						signal,
 					});
 					if (response.status !== 206) {
 						await response.body?.cancel();
 						continue;
 					}
 					await response.arrayBuffer();
-					prefetchedAudioStartUrls.add(url);
+					audioPrefetcher.markPrefetched(url);
 				} catch {
 					// A failed background prefetch must not affect playback.
 				}
@@ -602,10 +604,7 @@ export const usePlayerStore = defineStore("player", () => {
 				{ length: Math.min(audioStartPrefetchConcurrency, urls.length) },
 				prefetch,
 			),
-		).then(() => {
-			if (audioStartPrefetchController === controller)
-				audioStartPrefetchController = null;
-		});
+		);
 	}
 
 	const pauseCurrentAudio = (player: HTMLAudioElement) => {
@@ -928,8 +927,8 @@ export const usePlayerStore = defineStore("player", () => {
 		const generation = ++playGeneration;
 		currentSong.value = normalizedSong;
 		if (normalizedSong.summary_only && isMusicSong(normalizedSong)) {
-			void getMusicSongDetail(String(normalizedSong.id)).then(({ song: detail }) => {
-				if (generation !== playGeneration || !currentSong.value || playbackItemKey(currentSong.value) !== playbackItemKey(normalizedSong)) return;
+			void fetchSongById(String(normalizedSong.id)).then((detail) => {
+				if (!detail || generation !== playGeneration || !currentSong.value || playbackItemKey(currentSong.value) !== playbackItemKey(normalizedSong)) return;
 				const update = { lyrics: detail.lyrics || '', waveform_peaks: detail.waveform_peaks, summary_only: false };
 				currentSong.value = { ...currentSong.value, ...update };
 				queue.value = queue.value.map(item => playbackItemKey(item) === playbackItemKey(normalizedSong) ? { ...item, ...update } : item);

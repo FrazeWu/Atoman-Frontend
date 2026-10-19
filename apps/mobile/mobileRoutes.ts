@@ -4,7 +4,6 @@ import { mobileInitialRoutes } from "./mobileInitialRoutes";
 import { mobileAdditionalRoutes } from './mobileAdditionalRoutes';
 
 const requiresAuth = { requiresAuth: true };
-const mobileSavedView = () => import('./MobileSavedView.vue');
 export { MOBILE_MODULES } from "./mobileInitialRoutes";
 
 export const mobileRoutes: RouteRecordRaw[] = [
@@ -100,14 +99,14 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			},
 			{
 				path: "reading-list",
-				component: mobileSavedView,
-				props: { page: 'feed-reading' },
+				component: () => import("./views/feed/FeedStreamView.vue"),
+				props: { initialTab: 'reading-list' },
 				meta: requiresAuth,
 			},
 			{
 				path: "starred",
-				component: mobileSavedView,
-				props: { page: 'feed-starred' },
+				component: () => import("./views/feed/FeedStreamView.vue"),
+				props: { initialTab: 'starred' },
 				meta: requiresAuth,
 			},
 			{
@@ -148,8 +147,8 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	},
 	{
 		path: "/posts/bookmarks",
-		component: mobileSavedView,
-		props: { page: 'blog-bookmarks' },
+		component: () => import("./views/blog/BlogListView.vue"),
+		props: { initialTab: 'bookmarks' },
 		meta: requiresAuth,
 	},
 	{
@@ -232,19 +231,18 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			},
 			{
 				path: "bookmarks",
-				component: mobileSavedView,
-				props: { page: 'music-library' },
+				component: () => import("./views/music/MusicLibraryView.vue"),
 				meta: requiresAuth,
 			},
 			{
 				path: "history",
-				component: mobileSavedView,
-				props: { page: 'music-history' },
+				component: () => import("./views/music/MusicLibraryView.vue"),
+				props: { initialTab: 'history' },
 				meta: requiresAuth,
 			},
 			{
 				path: "me",
-				component: () => import("@/views/music/MusicProfileView.vue"),
+				component: () => import("./views/me/ProfileMobileView.vue"),
 				meta: requiresAuth,
 			},
 			{ path: "more", component: () => import("@/views/music/MusicMoreView.vue") },

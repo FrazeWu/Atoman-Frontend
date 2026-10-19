@@ -19,7 +19,7 @@
     >
       <RouterView v-slot="{ Component, route: viewRoute }">
         <Transition :name="mobileRouteTransition">
-          <KeepAlive :key="authStore.user?.uuid || 'guest'" include="MobileSavedView" :max="6">
+          <KeepAlive :key="authStore.user?.uuid || 'guest'" :max="6">
             <component :is="Component" :key="viewRoute.meta.mobileModule || /^\/(feed|music|studio)(\/|$)/.test(viewRoute.path) ? viewRoute.matched[0]?.path : viewRoute.path" />
           </KeepAlive>
         </Transition>

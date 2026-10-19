@@ -4,7 +4,7 @@ import { useNotificationStore } from '@/stores/notification'
 import { registerSessionReset } from '@/stores/sessionReset'
 
 import {
-  blockConversation, getTargetConversation, getTargetParty, listConversations, listMailboxes, listMessages, mailboxKey,
+  blockConversation, getTargetConversation, getTargetParty, isUUID, listConversations, listMailboxes, listMessages, mailboxKey,
   markConversationRead, normalizeDMRealtimeEvent, reportDMMessage, sendInConversation, sendToTarget, unblockConversation, uploadDMImage,
   type DMConversation, type DMMailbox, type DMMessage, type DMRealtimeEvent, type DMTarget,
 } from '@/api/dm'
@@ -79,9 +79,49 @@ export const useDMStore = defineStore('dm', () => {
     if (!activeMailboxKey.value && mailboxOrder.value[0]) activeMailboxKey.value = mailboxOrder.value[0]
   }
 
+  const enrichMessageSender = (message: DMMessage, conversation?: DMConversation | null): DMMessage => {
+    if (!conversation) return message
+    let sender = message.sender
+    if (sender.id === conversation.other_party.id) {
+      const displayName = conversation.other_party.display_name && !isUUID(conversation.other_party.display_name)
+        ? conversation.other_party.display_name
+        : (!isUUID(sender.display_name) ? sender.display_name : (sender.type === 'channel' ? '频道' : '用户'))
+      sender = {
+        ...sender,
+        display_name: displayName,
+        avatar_url: sender.avatar_url || conversation.other_party.avatar_url,
+      }
+    } else if (sender.id === conversation.reply_as.id || sender.id === conversation.mailbox?.id) {
+      const selfParty = conversation.reply_as || conversation.mailbox
+      const displayName = selfParty.display_name && !isUUID(selfParty.display_name)
+        ? selfParty.display_name
+        : (!isUUID(sender.display_name) ? sender.display_name : (sender.type === 'channel' ? '频道' : '用户'))
+      sender = {
+        ...sender,
+        display_name: displayName,
+        avatar_url: sender.avatar_url || selfParty.avatar_url,
+      }
+    } else if (isUUID(sender.display_name)) {
+      sender = {
+        ...sender,
+        display_name: sender.type === 'channel' ? '频道' : '用户',
+      }
+    }
+    return { ...message, sender }
+  }
+
   const mergeConversations = (key: string, conversations: DMConversation[], append = false) => {
     const next = { ...conversationsById.value }
-    conversations.forEach((conversation) => { next[conversation.id] = conversation })
+    conversations.forEach((conversation) => {
+      next[conversation.id] = conversation
+      const existing = messagesByConversation.value[conversation.id]
+      if (existing?.length) {
+        messagesByConversation.value = {
+          ...messagesByConversation.value,
+          [conversation.id]: existing.map((msg) => enrichMessageSender(msg, conversation)),
+        }
+      }
+    })
     conversationsById.value = next
     const current = append ? (conversationIdsByMailbox.value[key] ?? []) : []
     conversationIdsByMailbox.value = {
@@ -91,12 +131,14 @@ export const useDMStore = defineStore('dm', () => {
   }
 
   const mergeMessages = (conversationID: string, incoming: DMMessage[]) => {
+    const conversation = conversationsById.value[conversationID]
     const current = messagesByConversation.value[conversationID] ?? []
     const byID = new Map(current.map((message) => [message.id, message]))
     incoming.forEach((message) => {
-      const echoed = current.find((item) => item.client_message_id === message.client_message_id)
-      if (echoed && echoed.id !== message.id) byID.delete(echoed.id)
-      byID.set(message.id, message)
+      const enriched = enrichMessageSender(message, conversation)
+      const echoed = current.find((item) => item.client_message_id === enriched.client_message_id)
+      if (echoed && echoed.id !== enriched.id) byID.delete(echoed.id)
+      byID.set(enriched.id, enriched)
     })
     messagesByConversation.value = { ...messagesByConversation.value, [conversationID]: sortMessages([...byID.values()]) }
   }
@@ -107,6 +149,13 @@ export const useDMStore = defineStore('dm', () => {
     conversationsById.value = { ...conversationsById.value, [conversation.id]: conversation }
     const ids = conversationIdsByMailbox.value[key] ?? []
     conversationIdsByMailbox.value = { ...conversationIdsByMailbox.value, [key]: [conversation.id, ...ids.filter((id) => id !== conversation.id)] }
+    const existing = messagesByConversation.value[conversation.id]
+    if (existing?.length) {
+      messagesByConversation.value = {
+        ...messagesByConversation.value,
+        [conversation.id]: existing.map((msg) => enrichMessageSender(msg, conversation)),
+      }
+    }
   }
 
   const bootstrapDM = async () => {
@@ -166,7 +215,8 @@ export const useDMStore = defineStore('dm', () => {
     activeTarget.value = null
     loadingMessages.value = true
     try {
-      const page = await listMessages(conversationID)
+      const conversation = conversationsById.value[conversationID]
+      const page = await listMessages(conversationID, undefined, 30, conversation)
       if (generation !== requestGeneration.value || activeConversationId.value !== conversationID) return
       mergeMessages(conversationID, page.items)
       messageCursorByConversation.value = { ...messageCursorByConversation.value, [conversationID]: page.next_cursor ?? null }
@@ -201,7 +251,8 @@ export const useDMStore = defineStore('dm', () => {
     const generation = requestGeneration.value
     loadingMessages.value = true
     try {
-      const page = await listMessages(conversationID, cursor)
+      const conversation = conversationsById.value[conversationID]
+      const page = await listMessages(conversationID, cursor, 30, conversation)
       if (generation !== requestGeneration.value || activeConversationId.value !== conversationID) return
       mergeMessages(conversationID, page.items)
       messageCursorByConversation.value = { ...messageCursorByConversation.value, [conversationID]: page.next_cursor ?? null }

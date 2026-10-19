@@ -108,4 +108,41 @@ describe('dm api', () => {
 
     expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({ method: 'PUT' })
   })
+
+  it('resolves sender name from conversation and avoids uuid as fallback in listMessages', async () => {
+    const rawUuid = '01a05581-b157-7017-b2d1-45088f5c8d09'
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => new Response(JSON.stringify({
+      data: {
+        items: [
+          {
+            id: 'm1',
+            conversation_id: 'c1',
+            sender_type: 'user',
+            sender_id: rawUuid,
+            client_message_id: 'cli-1',
+            content: 'hello',
+            created_at: '2026-07-23T00:00:00Z',
+          },
+        ],
+      },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })))
+
+    const { listMessages } = await import('@/api/dm')
+    const pageWithConv = await listMessages('c1', undefined, 30, {
+      id: 'c1',
+      mailbox: { type: 'user', id: 'me', display_name: '我', unread_count: 0 },
+      other_party: { type: 'user', id: rawUuid, display_name: 'cols/wys' },
+      last_message_at: null,
+      last_message_preview: '',
+      unread_count: 0,
+      blocked: false,
+      reply_as: { type: 'user', id: 'me', display_name: '我' },
+    })
+
+    expect(pageWithConv.items[0].sender.display_name).toBe('cols/wys')
+
+    const pageWithoutConv = await listMessages('c1')
+    // Without conversation, fallback should NEVER be the raw UUID
+    expect(pageWithoutConv.items[0].sender.display_name).toBe('未知用户')
+  })
 })

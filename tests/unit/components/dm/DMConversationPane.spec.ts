@@ -244,5 +244,37 @@ describe('DMConversationPane', () => {
     await blockBtn.trigger('click')
     expect(wrapper.emitted('unblock')).toHaveLength(1)
   })
+
+  it('resolves sender display_name from conversation when message sender has uuid or missing name and avoids displaying raw uuid', () => {
+    const rawUuid = '01a05581-b157-7017-b2d1-45088f5c8d09'
+    const conversationWithRealName: DMConversation = {
+      ...mockConversation,
+      other_party: { type: 'user', id: rawUuid, display_name: 'cols/wys' },
+    }
+    const messages: DMMessage[] = [
+      {
+        id: 'm1',
+        conversation_id: 'c1',
+        client_message_id: 'cli-1',
+        sender: { type: 'user', id: rawUuid, display_name: rawUuid }, // UUID leaked from API
+        content: '可以 这下正常了',
+        created_at: '2026-04-17T10:00:00Z',
+      },
+    ]
+
+    const wrapper = mount(DMConversationPane, {
+      props: {
+        conversation: conversationWithRealName,
+        messages,
+        hasMore: false,
+        loading: false,
+      },
+    })
+
+    const senderSpan = wrapper.find('.dm-message-group__sender')
+    expect(senderSpan.exists()).toBe(true)
+    expect(senderSpan.text()).toBe('cols/wys')
+    expect(wrapper.text()).not.toContain(rawUuid)
+  })
 })
 

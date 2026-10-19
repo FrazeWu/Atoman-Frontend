@@ -334,4 +334,32 @@ describe('dm store', () => {
 
     expect(store.activeMessages[0].read_at).toBe('2026-07-23T00:05:00Z')
   })
+
+  it('enriches message sender display_name from conversation other_party when message has raw uuid', () => {
+    const store = useDMStore()
+    const otherUuid = '01a05581-b157-7017-b2d1-45088f5c8d09'
+    const conversation = {
+      ...makeConversation('conversation-1'),
+      other_party: { type: 'user' as const, id: otherUuid, username: 'cols/wys', display_name: 'cols/wys' },
+    }
+    store.reconcile({
+      mailboxes: [userMailbox],
+      conversationsByMailbox: { 'user:me': [conversation] },
+      activeConversationId: 'conversation-1',
+      activeMessages: [],
+    })
+
+    store.mergeMessages('conversation-1', [
+      {
+        id: 'm1',
+        conversation_id: 'conversation-1',
+        client_message_id: 'cli-1',
+        sender: { type: 'user', id: otherUuid, display_name: otherUuid },
+        content: 'hello',
+        created_at: '2026-07-23T00:00:00Z',
+      },
+    ])
+
+    expect(store.messagesByConversation['conversation-1'][0].sender.display_name).toBe('cols/wys')
+  })
 })

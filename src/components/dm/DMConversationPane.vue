@@ -63,7 +63,7 @@
         <!-- 连续消息成组 -->
         <div class="dm-message-group" :class="{ self: group.isSelf }">
           <span
-            v-if="!group.isSelf && group.sender.display_name"
+            v-if="!group.isSelf && group.sender.display_name && !isUUID(group.sender.display_name)"
             class="dm-message-group__sender"
           >
             {{ group.sender.display_name }}
@@ -142,7 +142,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { Check, CheckCheck, Copy, Flag, Info } from 'lucide-vue-next'
-import type { DMConversation, DMMessage, DMParty } from '@/api/dm'
+import { isUUID, type DMConversation, type DMMessage, type DMParty } from '@/api/dm'
 
 const props = withDefaults(
   defineProps<{
@@ -257,6 +257,39 @@ interface MessageGroup {
   messages: DMMessage[]
 }
 
+const resolveSender = (sender: DMParty): DMParty => {
+  if (props.conversation) {
+    if (sender.id === props.conversation.other_party.id) {
+      const name = props.conversation.other_party.display_name && !isUUID(props.conversation.other_party.display_name)
+        ? props.conversation.other_party.display_name
+        : (!isUUID(sender.display_name) ? sender.display_name : (sender.type === 'channel' ? '频道' : '用户'))
+      return {
+        ...sender,
+        display_name: name,
+        avatar_url: sender.avatar_url || props.conversation.other_party.avatar_url,
+      }
+    }
+    if (sender.id === props.conversation.reply_as.id || sender.id === props.conversation.mailbox?.id) {
+      const selfParty = props.conversation.reply_as || props.conversation.mailbox
+      const name = selfParty.display_name && !isUUID(selfParty.display_name)
+        ? selfParty.display_name
+        : (!isUUID(sender.display_name) ? sender.display_name : (sender.type === 'channel' ? '频道' : '用户'))
+      return {
+        ...sender,
+        display_name: name,
+        avatar_url: sender.avatar_url || selfParty.avatar_url,
+      }
+    }
+  }
+  if (isUUID(sender.display_name)) {
+    const fallbackName = props.conversation?.other_party?.display_name && !isUUID(props.conversation.other_party.display_name)
+      ? props.conversation.other_party.display_name
+      : (props.targetLabel && !isUUID(props.targetLabel) ? props.targetLabel : (sender.type === 'channel' ? '频道' : '用户'))
+    return { ...sender, display_name: fallbackName }
+  }
+  return sender
+}
+
 const groupedMessages = computed<MessageGroup[]>(() => {
   const groups: MessageGroup[] = []
   let lastDateKey = ''
@@ -289,7 +322,7 @@ const groupedMessages = computed<MessageGroup[]>(() => {
         showDateDivider,
         senderId,
         isSelf,
-        sender: message.sender,
+        sender: resolveSender(message.sender),
         messages: [message],
       }
       groups.push(currentGroup)

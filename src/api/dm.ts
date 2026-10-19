@@ -54,7 +54,11 @@ const query = (values: Record<string, string | number | undefined>) => {
   Object.entries(values).forEach(([key, value]) => { if (value !== undefined) params.set(key, String(value)) })
   return params.size ? `?${params}` : ''
 }
-const fallbackPartyName = (type: DMPartyType, id?: string) => id?.trim() || (type === 'channel' ? '未知频道' : '未知用户')
+export const isUUID = (val?: string) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim()))
+const fallbackPartyName = (type: DMPartyType, id?: string) => {
+  if (id && !isUUID(id)) return id.trim()
+  return type === 'channel' ? '未知频道' : '未知用户'
+}
 const partyName = (value: Pick<DMRawParty, 'type' | 'id' | 'name' | 'display_name'>) => value.name?.trim() || value.display_name?.trim() || fallbackPartyName(value.type, value.id)
 const party = (value: DMRawParty): DMParty => ({ type: value.type, id: value.id, display_name: partyName(value), ...(value.avatar_url ? { avatar_url: value.avatar_url } : {}) })
 const mailbox = (value: DMRawMailbox): DMMailbox => ({ type: value.party.type, id: value.party.id, display_name: partyName(value.party), unread_count: value.unread, ...(value.party.avatar_url ? { avatar_url: value.party.avatar_url } : {}) })
@@ -66,11 +70,19 @@ const normalizeConversation = (value: DMRawConversation, targetMailbox?: DMMailb
   const replyAs: DMParty = targetMailbox ? { type: targetMailbox.type, id: targetMailbox.id, display_name: targetMailbox.display_name, ...(targetMailbox.avatar_url ? { avatar_url: targetMailbox.avatar_url } : {}) } : current
   return { id: value.id, mailbox: normalizedMailbox, other_party: party(other), last_message_at: value.last_message_at ?? null, last_message_preview: value.last_message_preview, unread_count: value.unread, blocked: value.blocked, reply_as: replyAs }
 }
-const senderName = (value: DMRawMessage, conversation?: DMRawConversation) => {
-  const participant = conversation && [conversation.participant_a, conversation.participant_b].find((item) => item.type === value.sender_type && item.id === value.sender_id)
-  return participant ? partyName(participant) : fallbackPartyName(value.sender_type, value.sender_id)
+const senderName = (value: DMRawMessage, conversation?: DMRawConversation | DMConversation) => {
+  if (conversation) {
+    if ('participant_a' in conversation) {
+      const participant = [conversation.participant_a, conversation.participant_b].find((item) => item && item.type === value.sender_type && item.id === value.sender_id)
+      if (participant) return partyName(participant)
+    } else {
+      const party = [conversation.other_party, conversation.reply_as, conversation.mailbox].find((item) => item && item.type === value.sender_type && item.id === value.sender_id)
+      if (party?.display_name && !isUUID(party.display_name)) return party.display_name
+    }
+  }
+  return fallbackPartyName(value.sender_type, value.sender_id)
 }
-const normalizeMessage = (value: DMRawMessage, conversation?: DMRawConversation): DMMessage => ({
+const normalizeMessage = (value: DMRawMessage, conversation?: DMRawConversation | DMConversation): DMMessage => ({
   id: value.id, conversation_id: value.conversation_id, client_message_id: value.client_message_id,
   sender: { type: value.sender_type, id: value.sender_id, display_name: senderName(value, conversation) }, content: value.content,
   ...(value.image_id ? { image_id: value.image_id } : {}), ...(value.image_url ? { image_url: value.image_url } : {}),
@@ -121,14 +133,14 @@ export const getTargetConversation = async (target: DMTarget): Promise<DMConvers
   return normalizeConversation(conversation, { type: ownParty.type, id: ownParty.id, display_name: partyName(ownParty), unread_count: 0, ...(ownParty.avatar_url ? { avatar_url: ownParty.avatar_url } : {}) })
 }
 export const getTargetParty = (target: DMTarget) => apiGet<DMRawParty>(`${base()}/targets/${partyPath(target)}`)
-export const listMessages = async (conversationID: string, before?: string, limit = 30): Promise<DMPaged<DMMessage>> => {
+export const listMessages = async (conversationID: string, before?: string, limit = 30, conversation?: DMRawConversation | DMConversation): Promise<DMPaged<DMMessage>> => {
   const page = await apiGet<RawPage<DMRawMessage>>(`${base()}/conversations/${encodeURIComponent(conversationID)}/messages${query({ before, limit })}`)
-  return { items: page.items.map((item) => normalizeMessage(item)), ...(page.next_cursor ? { next_cursor: page.next_cursor } : {}) }
+  return { items: page.items.map((item) => normalizeMessage(item, conversation)), ...(page.next_cursor ? { next_cursor: page.next_cursor } : {}) }
 }
 
 export type DMSendInput = { client_message_id: string; content: string; image_id?: string | null }
-export const sendToTarget = async (target: DMTarget, input: DMSendInput) => normalizeMessage(await apiPostJson<DMRawMessage>(`${base()}/targets/${partyPath(target)}/messages`, input))
-export const sendInConversation = async (conversationID: string, input: DMSendInput) => normalizeMessage(await apiPostJson<DMRawMessage>(`${base()}/conversations/${encodeURIComponent(conversationID)}/messages`, input))
+export const sendToTarget = async (target: DMTarget, input: DMSendInput) => normalizeMessage(await apiPostJson<DMRawMessage>(`${base()}/targets/${partyPath(target)}/messages`, input), { participant_a: { type: target.type, id: target.id, display_name: target.display_name }, participant_b: { type: target.type, id: target.id, display_name: target.display_name } } as any)
+export const sendInConversation = async (conversationID: string, input: DMSendInput, conversation?: DMRawConversation | DMConversation) => normalizeMessage(await apiPostJson<DMRawMessage>(`${base()}/conversations/${encodeURIComponent(conversationID)}/messages`, input), conversation)
 export const markConversationRead = (conversationID: string) => apiPutJson<DMReadResult>(`${base()}/conversations/${encodeURIComponent(conversationID)}/read`)
 export const blockConversation = async (conversationID: string, activeMailbox: DMMailbox) => normalizeConversation(await apiPutJson<DMRawConversation>(`${base()}/conversations/${encodeURIComponent(conversationID)}/block`), activeMailbox)
 export const unblockConversation = async (conversationID: string, activeMailbox: DMMailbox) => normalizeConversation(await apiDeleteJson<DMRawConversation>(`${base()}/conversations/${encodeURIComponent(conversationID)}/block`), activeMailbox)

@@ -42,24 +42,15 @@ import {
 } from "@/utils/playerQueue";
 
 const api = useApi();
-const audioStartPrefetchBytes = 512 * 1024;
-const audioStartPrefetchConcurrency = 4;
 
-export const computeActualVolume = (v: number): number => {
-	const clamped = Math.max(0, Math.min(1, Number.isFinite(v) ? v : 1));
-	return Math.pow(clamped, 2);
-};
+import {
+	audioStartPrefetchBytes,
+	audioStartPrefetchConcurrency,
+	computeActualVolume,
+	fadeOutAudio,
+} from "@/utils/audioEngine";
 
-export const fadeOutAudio = async (targetAudio: HTMLAudioElement, durationMs = 120): Promise<void> => {
-	if (!targetAudio || targetAudio.paused || targetAudio.volume <= 0) return;
-	const steps = 6;
-	const interval = Math.max(10, Math.floor(durationMs / steps));
-	const initialVolume = targetAudio.volume;
-	for (let i = 1; i <= steps; i++) {
-		targetAudio.volume = Math.max(0, initialVolume * (1 - i / steps));
-		await new Promise((resolve) => setTimeout(resolve, interval));
-	}
-};
+export { computeActualVolume, fadeOutAudio };
 
 export type PlaybackMode = "loop" | "single" | "random";
 

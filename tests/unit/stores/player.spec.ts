@@ -1233,6 +1233,24 @@ describe("player store", () => {
 		expect(audio.playbackRate).toBe(0.75);
 	});
 
+	it("restores player.playbackRate on audio element when loading new song", () => {
+		const player = usePlayerStore();
+		player.playSong({ id: "rate-1", title: "Rate 1", audio_url: "r1.mp3" } as any);
+		const audio = audioInstances.at(-1)!;
+		player.setPlaybackRate(1.75);
+		expect(player.playbackRate).toBe(1.75);
+		expect(audio.playbackRate).toBe(1.75);
+
+		// Simulate browser reset of playbackRate to 1.0 on src change
+		audio.playbackRate = 1.0;
+
+		const song2 = { id: "rate-2", title: "Rate 2", audio_url: "r2.mp3" } as any;
+		player.playSong(song2);
+
+		expect(audio.src).toContain("r2.mp3");
+		expect(audio.playbackRate).toBe(1.75);
+	});
+
 	it("maintains playedHistory when switching songs", () => {
 		const player = usePlayerStore();
 		const song1 = { id: "hist-1", title: "History 1", audio_url: "h1.mp3" } as any;
@@ -1250,6 +1268,30 @@ describe("player store", () => {
 		expect(player.playedHistory).toHaveLength(2);
 		expect(player.playedHistory[0].id).toBe("hist-2");
 		expect(player.playedHistory[1].id).toBe("hist-1");
+	});
+
+	it("does not duplicate history when currentSong is enriched or updated in-place", () => {
+		const player = usePlayerStore();
+		const song1 = { id: "dedupe-1", title: "Dedupe 1", audio_url: "d1.mp3" } as any;
+		const song2 = { id: "dedupe-2", title: "Dedupe 2", audio_url: "d2.mp3" } as any;
+
+		player.playSong(song1);
+		expect(player.playedHistory).toHaveLength(0);
+
+		// In-place property update or object replacement with same key
+		player.currentSong = { ...player.currentSong!, lyrics: "[00:00.00]Lyrics" };
+		expect(player.playedHistory).toHaveLength(0);
+
+		// Switch to next song
+		player.playSong(song2);
+		expect(player.playedHistory).toHaveLength(1);
+		expect(player.playedHistory[0].id).toBe("dedupe-1");
+
+		// Switching again does not duplicate dedupe-1
+		player.playSong(song1);
+		expect(player.playedHistory).toHaveLength(2);
+		expect(player.playedHistory[0].id).toBe("dedupe-2");
+		expect(player.playedHistory[1].id).toBe("dedupe-1");
 	});
 
 	it("remembers previous volume and restores it when toggling mute", () => {

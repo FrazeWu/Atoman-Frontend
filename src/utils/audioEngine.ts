@@ -47,8 +47,8 @@ export async function transitionAudioSource(
     // Ignore audio element errors during transition
   }
 
-  prepareNext()
   targetAudio.volume = originalVolume
+  prepareNext()
 }
 
 export function resolvePlaybackAudioUrl(url: string): string {

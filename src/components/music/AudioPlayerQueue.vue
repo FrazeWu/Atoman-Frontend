@@ -13,6 +13,7 @@
         <div class="queue-tabs" role="tablist">
           <div
             role="tab"
+            tabindex="0"
             :aria-selected="activeTab === 'queue'"
             class="queue-tab-btn"
             :class="{ active: activeTab === 'queue' }"
@@ -24,6 +25,7 @@
           </div>
           <div
             role="tab"
+            tabindex="0"
             :aria-selected="activeTab === 'history'"
             class="queue-tab-btn"
             :class="{ active: activeTab === 'history' }"

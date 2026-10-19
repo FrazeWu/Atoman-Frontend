@@ -391,6 +391,10 @@ const playerTouchTransformStyle = computed(() => {
 });
 
 function handleTouchStart(e: TouchEvent) {
+  const target = e.target as HTMLElement | null;
+  if (target?.closest('button, input, select, textarea, a, .progress-container, .vol-slider, .player-collapse-tab, .waveform-progress, .player-mini-cover, .player-mini-expand')) {
+    return;
+  }
   if (e.touches.length === 1) {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;

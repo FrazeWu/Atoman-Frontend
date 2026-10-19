@@ -115,5 +115,29 @@ describe('transitionAudioSource', () => {
     expect(sourceChanged).toBe(true)
     expect(targetAudio.pause).not.toHaveBeenCalled()
   })
+
+  it('restores targetAudio.volume before calling prepareNext', async () => {
+    let volumeDuringPrepareNext = -1
+    const targetAudio = {
+      paused: false,
+      currentTime: 10,
+      volume: 0.8,
+      pause: vi.fn(() => {
+        targetAudio.paused = true
+      }),
+    } as unknown as HTMLAudioElement
+
+    await transitionAudioSource(
+      targetAudio,
+      'https://example.com/next.mp3',
+      () => {
+        volumeDuringPrepareNext = targetAudio.volume
+      },
+      30,
+    )
+
+    expect(volumeDuringPrepareNext).toBe(0.8)
+    expect(targetAudio.volume).toBe(0.8)
+  })
 })
 

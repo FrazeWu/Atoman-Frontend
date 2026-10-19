@@ -676,4 +676,58 @@ describe("AudioPlayer", () => {
 		expect(retrySpy).toHaveBeenCalledOnce();
 		wrapper.unmount();
 	});
+
+	it("guards touch swipe gestures when touching interactive controls", async () => {
+		const player = usePlayerStore();
+		player.currentSong = {
+			id: "song-1",
+			title: "Song 1",
+			artist: "Artist 1",
+			audio_url: "/song-1.mp3",
+		} as any;
+		const nextSpy = vi.spyOn(player, "playNext");
+
+		const wrapper = mount(AudioPlayer, {
+			global: {
+				plugins: [createTestRouter()],
+				stubs: {
+					MusicLyricsPanel: true,
+					PDropdown: { template: '<div><slot name="trigger" /><slot /></div>' },
+					PToast: true,
+				},
+			},
+		});
+
+		const playerEl = wrapper.get(".player");
+		const playBtn = wrapper.get(".main-play-btn");
+
+		// Touch starting on an interactive control (e.g. button or waveform scrubber)
+		const touchStartInteractive = new Event("touchstart", { bubbles: true }) as any;
+		touchStartInteractive.touches = [{ clientX: 100, clientY: 100 }];
+		playBtn.element.dispatchEvent(touchStartInteractive);
+		await wrapper.vm.$nextTick();
+
+		expect(playerEl.classes()).not.toContain("is-touch-dragging");
+
+		// Touchend should not trigger song navigation
+		const touchEndInteractive = new Event("touchend", { bubbles: true }) as any;
+		touchEndInteractive.changedTouches = [{ clientX: 30, clientY: 100 }];
+		playBtn.element.dispatchEvent(touchEndInteractive);
+		expect(nextSpy).not.toHaveBeenCalled();
+
+		// Now test touch starting on neutral background
+		const touchStartNeutral = new Event("touchstart", { bubbles: true }) as any;
+		touchStartNeutral.touches = [{ clientX: 100, clientY: 100 }];
+		playerEl.element.dispatchEvent(touchStartNeutral);
+		await wrapper.vm.$nextTick();
+		expect(playerEl.classes()).toContain("is-touch-dragging");
+
+		// Swipe left by 70px -> playNext
+		const touchEndNeutral = new Event("touchend", { bubbles: true }) as any;
+		touchEndNeutral.changedTouches = [{ clientX: 30, clientY: 100 }];
+		playerEl.element.dispatchEvent(touchEndNeutral);
+		expect(nextSpy).toHaveBeenCalledOnce();
+
+		wrapper.unmount();
+	});
 });

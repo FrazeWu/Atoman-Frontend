@@ -143,11 +143,11 @@ export const usePlayerStore = defineStore("player", () => {
 		currentSong,
 		(song, oldSong) => {
 			playerPresence.setHasCurrentTrack(Boolean(song));
-			if (oldSong && hasPlayableAudio(oldSong)) {
+			if (oldSong && hasPlayableAudio(oldSong) && (!song || playbackItemKey(song) !== playbackItemKey(oldSong))) {
 				recordSongToHistory(oldSong);
 			}
 		},
-		{ immediate: true },
+		{ immediate: true, flush: 'sync' },
 	);
 
 	watch(isPinned, (value) => {
@@ -965,9 +965,6 @@ export const usePlayerStore = defineStore("player", () => {
 		}
 		savePodcastProgress();
 		if (persistPrevious) saveMusicProgress(false, true);
-		if (currentSong.value && hasPlayableAudio(currentSong.value)) {
-			recordSongToHistory(currentSong.value);
-		}
 		resetListening(song);
 		currentSongStartCached = false;
 		const player = ensureAudio();
@@ -1003,6 +1000,7 @@ export const usePlayerStore = defineStore("player", () => {
 		const applySongSourceAndPlay = () => {
 			if (generation !== playGeneration || audio !== player) return;
 			player.src = normalizedSong.audio_url;
+			player.playbackRate = playbackRate.value;
 			isCurrentAudioCached.value = false;
 			player.volume = computeActualVolume(volume.value);
 			applyResumePosition();

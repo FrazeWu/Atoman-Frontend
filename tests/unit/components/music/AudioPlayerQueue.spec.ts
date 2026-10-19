@@ -69,8 +69,10 @@ describe("AudioPlayerQueue.vue", () => {
 		const panel = wrapper.get(".queue-panel");
 		expect(panel.attributes("role")).toBe("dialog");
 		expect(panel.attributes("aria-modal")).toBe("false");
-		expect(wrapper.find(".queue-backdrop").exists()).toBe(false);
-		expect(document.activeElement).toBe(wrapper.get(".queue-close-btn").element);
+		const tabs = wrapper.findAll('[role="tab"]');
+		expect(tabs[0]!.attributes("tabindex")).toBe("0");
+		expect(tabs[1]!.attributes("tabindex")).toBe("0");
+		expect(document.activeElement).toBe(tabs[0]!.element);
 
 		wrapper.unmount();
 		expect(document.activeElement).toBe(trigger);
@@ -181,6 +183,28 @@ describe("AudioPlayerQueue.vue", () => {
 		// Click replay button
 		await wrapper.get(".q-replay-btn").trigger("click");
 		expect(playSong).toHaveBeenCalledWith(song1);
+
+		wrapper.unmount();
+	});
+
+	it("supports keyboard tab switching with Enter and Space", async () => {
+		const player = usePlayerStore();
+		player.playedHistory = [{ id: "h1", title: "History 1", audio_url: "/h1.mp3" } as Song];
+		player.queue = [{ id: "q1", title: "Queue 1", audio_url: "/q1.mp3" } as Song];
+
+		const wrapper = mount(AudioPlayerQueue);
+		const tabs = wrapper.findAll(".queue-tab-btn");
+		expect(tabs[0]!.classes()).toContain("active");
+
+		// Switch to history with Enter
+		await tabs[1]!.trigger("keydown", { key: "Enter" });
+		expect(tabs[1]!.classes()).toContain("active");
+		expect(tabs[1]!.attributes("aria-selected")).toBe("true");
+
+		// Switch back to queue with Space
+		await tabs[0]!.trigger("keydown", { key: " " });
+		expect(tabs[0]!.classes()).toContain("active");
+		expect(tabs[0]!.attributes("aria-selected")).toBe("true");
 
 		wrapper.unmount();
 	});

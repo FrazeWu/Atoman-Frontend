@@ -488,6 +488,7 @@ const backdropZIndex = computed(() => {
 
 const backdropTop = computed(() => {
   if (isPartial.value && partialBounds.value) return partialBounds.value.top
+  if (props.side === 'bottom') return '0px'
   const top = props.partialTopAnchor?.getBoundingClientRect().top
   return typeof top === 'number' ? `${top}px` : props.top
 })
@@ -599,11 +600,12 @@ const mobileSheetStyle = computed(() => {
   right: 0;
   left: 0;
   width: 100%;
-  max-height: 70dvh;
+  max-height: 88dvh;
   border-top: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card, 4px) var(--a-radius-card, 4px) 0 0;
   border-right: 0;
   border-left: 0;
-  box-shadow: none;
+  box-shadow: none !important;
 }
 
 .p-sheet-mobile-page__header {
@@ -701,7 +703,9 @@ const mobileSheetStyle = computed(() => {
   left: 0;
   right: 0;
   top: auto;
-  box-shadow: none;
+  border-top: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card, 4px) var(--a-radius-card, 4px) 0 0;
+  box-shadow: none !important;
 }
 
 .p-sheet-backdrop {

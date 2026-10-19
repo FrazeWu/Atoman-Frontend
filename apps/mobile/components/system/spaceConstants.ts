@@ -1,0 +1,89 @@
+export interface SpaceDefinition {
+  key: string
+  name: string
+  icon: string
+  badge?: string
+  path: string
+}
+
+export const ATOMAN_SPACES: SpaceDefinition[] = [
+  { key: 'feed', name: 'Feed', icon: 'feed', badge: 'RSS', path: '/feed' },
+  { key: 'music', name: '音乐', icon: 'music', badge: 'Hi-Res', path: '/music' },
+  { key: 'books', name: '阅读', icon: 'books', badge: 'EPUB', path: '/books' },
+  { key: 'blog', name: '博客', icon: 'blog', path: '/posts' },
+  { key: 'debate', name: '辩论', icon: 'debate', path: '/debate' },
+  { key: 'messages', name: '消息', icon: 'messages', path: '/inbox' },
+  { key: 'studio', name: 'Studio', icon: 'studio', path: '/studio' },
+]
+
+export const SPACE_LABELS: Record<string, string> = {
+  feed: 'Feed',
+  music: '音乐',
+  books: '阅读',
+  blog: '博客',
+  debate: '辩论',
+  messages: '消息',
+  studio: 'Studio',
+}
+
+export const SPACE_PATHS: Record<string, string> = {
+  feed: '/feed',
+  music: '/music',
+  books: '/books',
+  blog: '/posts',
+  debate: '/debate',
+  messages: '/inbox',
+  studio: '/studio',
+}
+
+export interface NavTabItem {
+  key: string
+  label: string
+  icon: string
+  path: string
+}
+
+export const SPACE_TABS: Record<string, NavTabItem[]> = {
+  music: [
+    { key: 'discover', label: '发现', icon: 'compass', path: '/music' },
+    { key: 'library', label: '曲库', icon: 'library', path: '/music/library' },
+    { key: 'playlists', label: '歌单', icon: 'playlists', path: '/music/playlists' },
+    { key: 'me', label: '我的', icon: 'person', path: '/music/me' },
+  ],
+  feed: [
+    { key: 'discover', label: '推荐', icon: 'compass', path: '/feed' },
+    { key: 'sources', label: '订阅源', icon: 'antenna', path: '/feed/sources' },
+    { key: 'reading-list', label: '稍后读', icon: 'bookmark', path: '/feed/reading-list' },
+    { key: 'starred', label: '已收藏', icon: 'heart', path: '/feed/starred' },
+  ],
+  books: [
+    { key: 'discover', label: '发现', icon: 'compass', path: '/books' },
+    { key: 'shelf', label: '书架', icon: 'shelf', path: '/books/shelf' },
+    { key: 'lists', label: '书单', icon: 'bookmark', path: '/books/lists' },
+    { key: 'notes', label: '划线笔记', icon: 'notes', path: '/books/notes' },
+  ],
+  blog: [
+    { key: 'discover', label: '发现', icon: 'compass', path: '/posts' },
+    { key: 'channels', label: '专栏', icon: 'library', path: '/channels' },
+    { key: 'subscriptions', label: '订阅', icon: 'antenna', path: '/posts/subscriptions' },
+    { key: 'me', label: '我的', icon: 'person', path: '/me' },
+  ],
+  debate: [
+    { key: 'discover', label: '辩题', icon: 'compass', path: '/debate' },
+    { key: 'opinions', label: '观点', icon: 'notes', path: '/debate?tab=opinions' },
+    { key: 'subscriptions', label: '关注', icon: 'antenna', path: '/debate?tab=subscriptions' },
+    { key: 'me', label: '我的', icon: 'person', path: '/debate?tab=mine' },
+  ],
+  messages: [
+    { key: 'inbox', label: '私信', icon: 'messages', path: '/inbox' },
+    { key: 'notifications', label: '通知', icon: 'bell', path: '/notifications' },
+    { key: 'subscriptions', label: '关注', icon: 'antenna', path: '/inbox?tab=subscriptions' },
+    { key: 'me', label: '我的', icon: 'person', path: '/me' },
+  ],
+  studio: [
+    { key: 'content', label: '内容', icon: 'library', path: '/studio' },
+    { key: 'drafts', label: '草稿', icon: 'notes', path: '/studio?tab=drafts' },
+    { key: 'subscriptions', label: '数据', icon: 'antenna', path: '/studio?tab=analytics' },
+    { key: 'me', label: '设置', icon: 'person', path: '/me' },
+  ],
+}

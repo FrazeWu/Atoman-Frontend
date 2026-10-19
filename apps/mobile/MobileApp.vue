@@ -1,6 +1,18 @@
 <template>
   <div class="app-shell has-sidebar mobile-app-shell" :class="{ 'mobile-app-shell--with-player': showMobilePlayer }">
-    <MobileTopbar />
+    <MobileTopbar
+      :current-space="currentSpace"
+      @open-drawer="isDrawerOpen = true"
+      @search="handleSearch"
+      @notifications="handleNotifications"
+    />
+    <MobileSpaceDrawer
+      :open="isDrawerOpen"
+      :current-space="currentSpace"
+      @update:open="isDrawerOpen = $event"
+      @select-space="handleSelectSpace"
+      @close="isDrawerOpen = false"
+    />
     <main
       class="app-main mobile-app-main"
       :class="{ 'app-main--auth': isAuthRoute, 'mobile-app-main--no-bottom-nav': !showMobileBottomNav, 'mobile-app-main--with-player': showMobilePlayer }"
@@ -14,13 +26,16 @@
       </RouterView>
     </main>
     <MobileAudioPlayer v-if="showMobilePlayer" />
-    <MobileBottomNav v-if="showMobileBottomNav" />
+    <MobileBottomNav
+      v-if="showMobileBottomNav"
+      :current-space="currentSpace"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
@@ -29,13 +44,14 @@ import { useApiUrl } from '@/composables/useApiUrl'
 import { scheduleGoogleAnalytics } from '@/utils/analytics'
 import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
 import { isMobileDetailRoute } from './mobileRouteMeta'
-import MobileTopbar from './MobileTopbar.vue'
+import MobileTopbar from './components/system/MobileTopbar.vue'
+import MobileSpaceDrawer from './components/system/MobileSpaceDrawer.vue'
+import MobileBottomNav from './components/system/MobileBottomNav.vue'
 import './mobileModules.css'
 import './mobileDiscovery.css'
 import './mobileSaved.css'
 import './mobileContent.css'
 
-const MobileBottomNav = defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))
 const MobileAudioPlayer = defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))
 
 declare global {
@@ -45,19 +61,73 @@ declare global {
 }
 
 const route = useRoute()
+const router = useRouter()
 const siteAccessStore = useSiteAccessStore()
 const authStore = useAuthStore()
 const playerPresence = usePlayerPresenceStore()
 const apiUrl = useApiUrl()
-const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
-const showMobileBottomNav = computed(() => !isAuthRoute.value && route.path !== '/')
+
+const isAuthRoute = computed(() => route.matched?.some((record) => record.meta?.authLayout) ?? false)
+const showMobileBottomNav = computed(() => !isAuthRoute.value && route.path !== '/' && route.path !== '/music/player')
 const showMobilePlayer = computed(() => playerPresence.hasCurrentTrack && showMobileBottomNav.value && route.path !== '/music/player')
 const mobileRouteTransition = ref('')
+
+const isDrawerOpen = ref(false)
+
+const currentSpace = computed<string>(() => {
+  const p = route.path || '/'
+  if (/^\/music(\/|$)/.test(p)) return 'music'
+  if (/^\/feed(\/|$)/.test(p)) return 'feed'
+  if (/^\/books(\/|$)/.test(p)) return 'books'
+  if (/^\/(?:posts|post|channel|channels|collection|users)(\/|$)/.test(p)) return 'blog'
+  if (/^\/debate(\/|$)/.test(p)) return 'debate'
+  if (/^\/(?:inbox|messages)(\/|$)/.test(p)) return 'messages'
+  if (/^\/studio(\/|$)/.test(p)) return 'studio'
+  return 'feed'
+})
+
+const SPACE_PATHS: Record<string, string> = {
+  feed: '/feed',
+  music: '/music',
+  books: '/books',
+  blog: '/posts',
+  debate: '/debate',
+  messages: '/inbox',
+  studio: '/studio',
+}
+
+const handleSelectSpace = (spaceKey: string) => {
+  isDrawerOpen.value = false
+  const targetPath = SPACE_PATHS[spaceKey] || `/${spaceKey}`
+  if (router && typeof router.push === 'function') {
+    void router.push(targetPath).catch(() => {})
+  }
+}
+
+const handleSearch = () => {
+  if (router && typeof router.push === 'function') {
+    if (currentSpace.value === 'music') {
+      void router.push('/music/tags').catch(() => {})
+    } else if (currentSpace.value === 'books') {
+      void router.push('/books/search').catch(() => {})
+    } else if (currentSpace.value === 'debate') {
+      void router.push('/debate/search').catch(() => {})
+    } else {
+      void router.push(`/${currentSpace.value}`).catch(() => {})
+    }
+  }
+}
+
+const handleNotifications = () => {
+  if (router && typeof router.push === 'function') {
+    void router.push('/inbox').catch(() => {})
+  }
+}
 
 watch(() => route.fullPath, (to, from) => {
   if (isMobileDetailRoute(to)) {
     mobileRouteTransition.value = 'mobile-detail-forward'
-  } else if (isMobileDetailRoute(from)) {
+  } else if (from && isMobileDetailRoute(from)) {
     mobileRouteTransition.value = 'mobile-detail-back'
   } else {
     mobileRouteTransition.value = ''
@@ -124,23 +194,23 @@ body {
   overflow-x: clip;
   --mobile-app-player-height: 76px;
   --mobile-app-player-reserved-height: 0px;
-  --a-color-bg: #f2f2f7;
+  --a-color-bg: #ffffff;
   --a-color-fg: #1c1c1e;
   --a-color-text: #1c1c1e;
   --a-color-text-secondary: #3a3a3c;
   --a-color-surface: #ffffff;
-  --a-color-surface-muted: #e5e5ea;
-  --a-color-border: #c6c6c8;
-  --a-color-border-soft: #d1d1d6;
-  --a-color-muted: #5c5c60;
-  --a-color-muted-soft: #48484a;
+  --a-color-surface-muted: #f8fafc;
+  --a-color-border: #e2e8f0;
+  --a-color-border-soft: #e2e8f0;
+  --a-color-muted: #64748b;
+  --a-color-muted-soft: #475569;
   --a-color-primary: #0066cc;
   --a-color-primary-hover: #005bb5;
   --a-color-primary-pressed: #004c99;
   --a-color-primary-contrast: #ffffff;
-  --a-radius-base: 8px;
-  --a-radius-control: 8px;
-  --a-radius-card: 8px;
+  --a-radius-base: 4px;
+  --a-radius-control: 4px;
+  --a-radius-card: 4px;
   --a-shadow-button: none;
   --a-shadow-dropdown: none;
   --a-shadow-modal: none;
@@ -156,7 +226,7 @@ body {
   min-width: 0;
   width: 100%;
   max-width: 100%;
-  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
 }
 
 .mobile-app-main--no-bottom-nav {
@@ -164,7 +234,7 @@ body {
 }
 
 .mobile-app-main--with-player {
-  padding-bottom: calc(9rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(56px + var(--mobile-app-player-height) + env(safe-area-inset-bottom, 0px));
 }
 
 .mobile-app-shell--with-player {
@@ -225,7 +295,7 @@ body {
   min-width: 0;
   margin-top: 0.5rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 8px;
+  border-radius: 4px;
   box-shadow: none;
   background: var(--a-color-surface);
 }

@@ -146,12 +146,20 @@ function handleBack() {
   router.back()
 }
 
-function handleToggleBookmark() {
+async function handleToggleBookmark() {
   localBookmarked.value = !localBookmarked.value
   if (loadedArticle.value) {
     loadedArticle.value.bookmarked = localBookmarked.value
   }
   emit('toggle-bookmark', localBookmarked.value)
+  const id = currentArticle.value?.id
+  if (id && feedStore && typeof feedStore.toggleReadingListItem === 'function') {
+    try {
+      await feedStore.toggleReadingListItem(id)
+    } catch {
+      // fallback
+    }
+  }
 }
 
 function handleShare() {

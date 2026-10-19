@@ -1,7 +1,7 @@
 <template>
   <div class="mobile-feed-layout">
     <RouterView v-slot="{ Component, route: viewRoute }">
-      <KeepAlive include="MobileSavedView" :max="2">
+      <KeepAlive :max="2">
         <component :is="Component" :key="viewRoute.path" />
       </KeepAlive>
     </RouterView>

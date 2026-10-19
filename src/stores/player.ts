@@ -108,8 +108,9 @@ export const usePlayerStore = defineStore("player", () => {
 		return INITIAL_VOLUME;
 	};
 
-	const volume = ref(readInitialVolume());
-	const lastNonZeroVolume = ref(0);
+	const initialVolume = readInitialVolume();
+	const volume = ref(initialVolume);
+	const lastNonZeroVolume = ref(initialVolume > 0 ? initialVolume : 0.5);
 	const playbackRate = ref(1.0);
 	const playedHistory = ref<Song[]>([]);
 	const currentTime = ref(0);
@@ -862,7 +863,11 @@ export const usePlayerStore = defineStore("player", () => {
 
 		try {
 			const state = JSON.parse(savedState) as PersistedPlaybackState;
-			volume.value = typeof state.volume === "number" ? state.volume : 1;
+			const restoredVol = typeof state.volume === "number" ? state.volume : 1;
+			volume.value = restoredVol;
+			if (restoredVol > 0) {
+				lastNonZeroVolume.value = restoredVol;
+			}
 			isShuffled.value = Boolean(state.isShuffled);
 			repeatMode.value = state.repeatMode || "all";
 			playbackMode.value = state.playbackMode || "loop";
@@ -984,16 +989,6 @@ export const usePlayerStore = defineStore("player", () => {
 		playbackError.value = "";
 		isLoading.value = true;
 		releaseCachedAudioObjectUrl();
-		const applySongSource = () => {
-			player.src = normalizedSong.audio_url;
-			isCurrentAudioCached.value = false;
-			player.volume = computeActualVolume(volume.value);
-		};
-		if (audio && !audio.paused && audio.currentTime > 0) {
-			void transitionAudioSource(player, normalizedSong.audio_url, applySongSource);
-		} else {
-			applySongSource();
-		}
 		const savedProgress =
 			song.source_type === "podcast_episode" && song.source_id
 				? readPodcastProgress(song.source_id)
@@ -1009,12 +1004,27 @@ export const usePlayerStore = defineStore("player", () => {
 				// Metadata may not be available yet; loadedmetadata retries below.
 			}
 		};
-		applyResumePosition();
-		if (resumePosition > 0) {
-			player.addEventListener("loadedmetadata", applyResumePosition, {
-				once: true,
-			});
+
+		const applySongSourceAndPlay = () => {
+			if (generation !== playGeneration || audio !== player) return;
+			player.src = normalizedSong.audio_url;
+			isCurrentAudioCached.value = false;
+			player.volume = computeActualVolume(volume.value);
+			applyResumePosition();
+			if (resumePosition > 0) {
+				player.addEventListener("loadedmetadata", applyResumePosition, {
+					once: true,
+				});
+			}
+			attemptPlay(player, generation);
+		};
+
+		if (audio && !audio.paused && audio.currentTime > 0) {
+			void transitionAudioSource(player, normalizedSong.audio_url, applySongSourceAndPlay);
+		} else {
+			applySongSourceAndPlay();
 		}
+
 		duration.value = 0;
 		podcastTracker = null;
 
@@ -1056,7 +1066,6 @@ export const usePlayerStore = defineStore("player", () => {
 			});
 			podcastTracker.open();
 		}
-		attemptPlay(player, generation);
 	};
 
 	const playSong = (song: Song) => {

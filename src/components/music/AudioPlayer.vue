@@ -566,17 +566,17 @@ watch(
   left: 2.5vw;
   z-index: var(--a-z-player, 720);
   height: 4.5rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-right: 0;
-  border-radius: 0;
+  border: 0;
+  border-top: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card, 4px) 0 0 var(--a-radius-card, 4px);
   background: var(--a-color-bg);
-  box-shadow: var(--a-shadow-md);
+  box-shadow: var(--a-shadow-dropdown, 0 -4px 20px -2px rgba(15, 23, 42, 0.06));
   color: var(--a-color-fg);
   transition: transform var(--a-motion-emphasis) var(--a-motion-ease-enter);
 }
 
 :root.dark .player {
-  border-color: var(--a-color-border-soft);
+  border-top-color: var(--a-color-border-soft);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
 }
@@ -634,7 +634,8 @@ watch(
   width: 3.25rem;
   height: 3.25rem;
   border: 0;
-  border-radius: 0;
+  border-radius: var(--a-radius-control, 4px);
+  overflow: hidden;
   padding: 0;
   background: var(--a-color-surface-muted);
   color: var(--a-color-text);
@@ -702,7 +703,9 @@ watch(
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
-  margin-left: 2px;
+  margin-left: 4px;
+  padding-left: 6px;
+  border-left: 1px solid var(--a-color-border-soft);
   transition:
     opacity var(--a-motion-state) var(--a-motion-ease-enter),
     transform var(--a-motion-state) var(--a-motion-ease-enter);
@@ -780,7 +783,7 @@ watch(
   transition-delay: 0s;
   z-index: 1000;
   box-shadow: var(--a-shadow-dropdown, 0 12px 30px rgba(15, 23, 42, 0.12));
-  border-radius: 0;
+  border-radius: var(--a-radius-control, 4px);
 }
 .player-tooltip::after {
   content: "";
@@ -867,7 +870,7 @@ watch(
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 10px;
   font-weight: 600;
-  border-radius: 0;
+  border-radius: var(--a-radius-control, 4px);
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
@@ -900,8 +903,8 @@ watch(
 .main-play-btn {
   background: var(--a-color-text);
   color: var(--a-color-bg);
-  border: 1px solid var(--a-color-text);
-  border-radius: 0;
+  border: 0;
+  border-radius: var(--a-radius-control, 4px);
   padding: 4px 16px;
   font-weight: 500;
   font-size: 11px;
@@ -947,27 +950,28 @@ watch(
   letter-spacing: 0.1em;
 }
 .feature-link {
-  min-height: 44px;
+  min-height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
   border: 0;
+  border-radius: var(--a-radius-control, 4px);
   background: transparent;
   color: var(--a-color-text);
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
-  opacity: 0.5;
-  padding: 0 0.5rem;
-  border-bottom: 1.5px solid transparent;
+  opacity: 0.65;
+  padding: 0 0.55rem;
   transition:
-    opacity 0.2s,
-    border-bottom-color 0.2s;
+    opacity 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 .feature-link:hover {
   opacity: 1;
-  border-bottom-color: var(--a-color-text);
+  background: var(--a-color-surface-muted);
 }
 
 .feature-toggle {
@@ -1167,7 +1171,7 @@ watch(
     background-color var(--a-motion-state) ease,
     opacity var(--a-motion-state) ease;
   padding: 4px 8px;
-  border-radius: 0;
+  border-radius: var(--a-radius-control, 4px);
   background: rgba(0, 0, 0, 0.05);
   border: none;
 }

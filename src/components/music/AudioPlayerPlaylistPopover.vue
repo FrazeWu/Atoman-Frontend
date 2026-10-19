@@ -113,7 +113,7 @@ defineEmits<{
 }
 
 .track-add-menu-item:hover {
-  background: var(--a-color-surface);
+  background: var(--a-color-surface-muted, rgba(0, 0, 0, 0.04));
   color: var(--a-color-primary);
 }
 </style>

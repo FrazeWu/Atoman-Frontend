@@ -75,11 +75,12 @@ defineEmits<{
   width: 4.5rem;
   height: 4.5rem;
   overflow: visible;
-  border: 1px solid var(--a-color-border-soft);
-  border-right: 0;
-  border-radius: 0;
+  border: 0;
+  border-top: 1px solid var(--a-color-border-soft);
+  border-left: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card, 4px) 0 0 var(--a-radius-card, 4px);
   background: var(--a-color-bg);
-  box-shadow: var(--a-shadow-md);
+  box-shadow: var(--a-shadow-dropdown, 0 4px 16px -2px rgba(15, 23, 42, 0.08));
 }
 
 .player-mini-cover {
@@ -89,6 +90,8 @@ defineEmits<{
   height: 4.5rem;
   padding: 0;
   border: 0;
+  border-radius: var(--a-radius-control, 4px);
+  overflow: hidden;
   background: transparent;
   font: inherit;
   cursor: pointer;
@@ -163,9 +166,10 @@ defineEmits<{
   height: 4.5rem;
   place-items: center;
   padding: 0;
-  border: 1px solid var(--a-color-border-soft);
-  border-right: 0;
-  border-radius: 0;
+  border: 0;
+  border-top: 1px solid var(--a-color-border-soft);
+  border-left: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px) 0 0 var(--a-radius-control, 4px);
   background: var(--a-color-bg);
   color: var(--a-color-muted);
   cursor: pointer;

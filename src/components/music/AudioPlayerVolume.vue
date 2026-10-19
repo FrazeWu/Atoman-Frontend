@@ -75,7 +75,7 @@ defineEmits<{
   padding: 12px 0 14px 0;
   z-index: 100;
   box-shadow: var(--a-shadow-dropdown, var(--a-shadow-lg));
-  border-radius: 0;
+  border-radius: var(--a-radius-card, 4px);
 }
 
 :root.dark .volume-control {

@@ -1856,7 +1856,8 @@ watch(
   }
 
   .player-mini-window {
-    right: 0;
+    left: 1rem;
+    right: auto;
     bottom: var(--a-mobile-nav-reserved-height);
     width: 3rem;
     height: 3rem;

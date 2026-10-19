@@ -99,7 +99,8 @@ defineEmits<{
 <style scoped>
 .player-mini-window {
   position: fixed;
-  right: 0;
+  left: calc(2.5vw + 1.25rem);
+  right: auto;
   bottom: calc(
     var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height) +
       1.25rem
@@ -111,9 +112,7 @@ defineEmits<{
   height: 4.5rem;
   overflow: visible;
   border: 0;
-  border-top: 1px solid var(--a-color-border-soft);
-  border-left: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card, 4px) 0 0 var(--a-radius-card, 4px);
+  border-radius: var(--a-radius-card, 4px);
   background: var(--a-color-bg);
   box-shadow: none;
 }
@@ -202,8 +201,6 @@ defineEmits<{
   place-items: center;
   padding: 0;
   border: 0;
-  border-top: 1px solid var(--a-color-border-soft);
-  border-left: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px) 0 0 var(--a-radius-control, 4px);
   background: var(--a-color-bg);
   color: var(--a-color-muted);
@@ -227,7 +224,7 @@ defineEmits<{
   height: 22px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--a-color-border-soft);
+  border: 0;
   border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-bg);
   color: var(--a-color-muted);
@@ -262,11 +259,12 @@ defineEmits<{
 .player-mini-tooltip {
   position: absolute;
   bottom: calc(100% + 10px);
-  right: 0;
+  left: 0;
+  right: auto;
   max-width: 200px;
   padding: 6px 10px;
   background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
+  border: 0;
   border-radius: var(--a-radius-card, 4px);
   box-shadow: none;
   pointer-events: none;
@@ -274,7 +272,7 @@ defineEmits<{
   transform: translateY(4px);
   transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 10;
-  text-align: right;
+  text-align: left;
   white-space: nowrap;
 }
 
@@ -310,9 +308,17 @@ defineEmits<{
   }
 }
 
+@media (min-width: 768px) and (max-width: 1024px) {
+  .player-mini-window {
+    left: calc(1rem + 1.25rem);
+    right: auto;
+  }
+}
+
 @media (max-width: 768px) {
   .player-mini-window {
-    right: 0;
+    left: 1rem;
+    right: auto;
     bottom: var(--a-mobile-nav-reserved-height);
     width: 3rem;
     height: 3rem;

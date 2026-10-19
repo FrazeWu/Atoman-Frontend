@@ -18,7 +18,7 @@
         class="player-cover"
       />
       <div v-else class="player-cover-fallback">{{ resolvedCoverFallback }}</div>
-      <span class="cover-overlay" aria-hidden="true"><ChevronUp :size="20" /></span>
+      <span class="cover-overlay" aria-hidden="true"><PIcon name="chevron-up" size="lg" /></span>
     </button>
     <div
       class="player-meta"
@@ -67,7 +67,7 @@
         :title="isFavorite ? '移出最爱' : '添加到最爱'"
         @click="$emit('toggle-favorite', String(currentSong?.id))"
       >
-        <Heart :size="18" :fill="isFavorite ? 'currentColor' : 'none'" aria-hidden="true" />
+        <PIcon :name="isFavorite ? 'heart-filled' : 'heart'" size="md" class="fav-icon" :class="{ 'is-filled': isFavorite }" aria-hidden="true" />
       </button>
 
       <AudioPlayerPlaylistPopover
@@ -88,7 +88,7 @@
         data-hint="收藏单集"
         @click="$emit('add-podcast-bookmark', currentSong?.source_id)"
       >
-        <Heart :size="16" />
+        <PIcon name="heart" size="md" />
       </button>
 
       <button
@@ -99,7 +99,7 @@
         data-hint="稍后听"
         @click="$emit('add-podcast-listen-later', currentSong?.source_id)"
       >
-        <Clock :size="16" />
+        <PIcon name="clock" size="md" />
       </button>
     </div>
   </div>
@@ -107,7 +107,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ChevronUp, Heart, Clock } from 'lucide-vue-next'
+import PIcon from '@/components/ui/PIcon.vue'
 import AudioPlayerPlaylistPopover from '@/components/music/AudioPlayerPlaylistPopover.vue'
 import type { MusicPlaylistSummary } from '@/api/musicV1'
 import type { Song } from '@/entities/music'

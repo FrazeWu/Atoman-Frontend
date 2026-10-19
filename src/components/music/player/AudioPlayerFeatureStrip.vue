@@ -39,14 +39,14 @@
       title="播放队列"
       @click="$emit('toggle-queue')"
     >
-      <List :size="20" aria-hidden="true" />
+      <PIcon name="list" size="lg" aria-hidden="true" />
       <span class="queue-count">{{ queueCount || 0 }}</span>
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { List } from 'lucide-vue-next'
+import PIcon from '@/components/ui/PIcon.vue'
 import AudioPlayerVolume from '@/components/music/AudioPlayerVolume.vue'
 
 defineProps<{

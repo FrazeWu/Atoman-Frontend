@@ -3,6 +3,8 @@ import { musicKeys } from '@/entities/music/queries/musicKeys'
 import { useSongQuery } from '@/entities/music/queries/useSongQuery'
 import { useSongDetailQuery } from '@/entities/music/queries/useSongDetailQuery'
 import { useAlbumQuery } from '@/entities/music/queries/useAlbumQuery'
+import { useAlbumDetailQuery } from '@/entities/music/queries/useAlbumDetailQuery'
+import { useArtistDetailQuery } from '@/entities/music/queries/useArtistDetailQuery'
 import { useLyricsQuery } from '@/entities/music/queries/useLyricsQuery'
 import { createTestQueryClient } from '../../helpers/queryClient'
 import { VUE_QUERY_CLIENT } from '@tanstack/vue-query'
@@ -19,8 +21,10 @@ describe('musicKeys factory', () => {
     expect(musicKeys.lyrics('song-123')).toEqual(['music', 'songs', 'song-123', 'lyrics'])
     expect(musicKeys.albums()).toEqual(['music', 'albums'])
     expect(musicKeys.album('album-456')).toEqual(['music', 'albums', 'album-456'])
+    expect(musicKeys.albumDetail('album-456')).toEqual(['music', 'albums', 'detail', 'album-456'])
     expect(musicKeys.artists()).toEqual(['music', 'artists'])
     expect(musicKeys.artist('artist-789')).toEqual(['music', 'artists', 'artist-789'])
+    expect(musicKeys.artistDetail('artist-789')).toEqual(['music', 'artists', 'detail', 'artist-789'])
   })
 })
 
@@ -159,3 +163,73 @@ describe('useLyricsQuery', () => {
     })
   })
 })
+
+describe('useAlbumDetailQuery', () => {
+  it('fetches album detail through musicApi', async () => {
+    const mockAlbum = {
+      id: '456',
+      title: 'Solaris Full Album',
+      entry_status: 'open',
+      songs: [],
+    }
+    vi.spyOn(musicApi, 'fetchAlbumDetail').mockResolvedValue(mockAlbum as any)
+
+    const client = createTestQueryClient()
+    const TestComponent = defineComponent({
+      props: { albumId: { type: String, required: true } },
+      setup(props) {
+        const query = useAlbumDetailQuery(toRef(props, 'albumId'))
+        return { query }
+      },
+      template: '<div><span v-if="query.data.value">{{ query.data.value.title }}</span></div>',
+    })
+
+    const wrapper = mount(TestComponent, {
+      props: { albumId: '456' },
+      global: {
+        provide: {
+          [VUE_QUERY_CLIENT]: client,
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('Solaris Full Album')
+    })
+  })
+})
+
+describe('useArtistDetailQuery', () => {
+  it('fetches artist detail through musicApi', async () => {
+    const mockArtist = {
+      id: '789',
+      name: 'Solaris Band',
+      entry_status: 'open',
+    }
+    vi.spyOn(musicApi, 'fetchArtistDetail').mockResolvedValue(mockArtist as any)
+
+    const client = createTestQueryClient()
+    const TestComponent = defineComponent({
+      props: { artistId: { type: String, required: true } },
+      setup(props) {
+        const query = useArtistDetailQuery(toRef(props, 'artistId'))
+        return { query }
+      },
+      template: '<div><span v-if="query.data.value">{{ query.data.value.name }}</span></div>',
+    })
+
+    const wrapper = mount(TestComponent, {
+      props: { artistId: '789' },
+      global: {
+        provide: {
+          [VUE_QUERY_CLIENT]: client,
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('Solaris Band')
+    })
+  })
+})
+

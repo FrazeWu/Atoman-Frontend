@@ -59,34 +59,37 @@
             @add-podcast-listen-later="addPodcastListenLater"
           />
 
-          <!-- Waveform Progress -->
-          <div class="progress-container player-waveform">
-            <AudioWaveformProgress
-              :song-id="String(player.currentSong.id)"
-              :audio-url="player.currentSong.audio_url"
-              :waveform-peaks="player.currentSong.waveform_peaks"
-              :current-time="player.currentTime"
-              :duration="player.duration"
-              :generate-waveform="!isPodcast"
-              @seek="player.seek"
+          <!-- Center: Waveform + Controls stacked vertically -->
+          <div class="player-center-stage">
+            <!-- Waveform Progress -->
+            <div class="progress-container player-waveform">
+              <AudioWaveformProgress
+                :song-id="String(player.currentSong.id)"
+                :audio-url="player.currentSong.audio_url"
+                :waveform-peaks="player.currentSong.waveform_peaks"
+                :current-time="player.currentTime"
+                :duration="player.duration"
+                :generate-waveform="!isPodcast"
+                @seek="player.seek"
+              />
+            </div>
+
+            <!-- Center: Controls -->
+            <AudioPlayerControlsHub
+              :is-playing="player.isPlaying"
+              :playback-error="player.playbackError"
+              :is-podcast="isPodcast"
+              :playback-rate="player.playbackRate"
+              :playback-mode="player.playbackMode"
+              @skip="player.skip"
+              @play-previous="player.playPrevious()"
+              @toggle-play="player.togglePlay()"
+              @retry-playback="player.retryPlayback()"
+              @play-next="player.playNext()"
+              @cycle-rate="cyclePlaybackRate"
+              @cycle-mode="player.cyclePlaybackMode()"
             />
           </div>
-
-          <!-- Center: Controls -->
-          <AudioPlayerControlsHub
-            :is-playing="player.isPlaying"
-            :playback-error="player.playbackError"
-            :is-podcast="isPodcast"
-            :playback-rate="player.playbackRate"
-            :playback-mode="player.playbackMode"
-            @skip="player.skip"
-            @play-previous="player.playPrevious()"
-            @toggle-play="player.togglePlay()"
-            @retry-playback="player.retryPlayback()"
-            @play-next="player.playNext()"
-            @cycle-rate="cyclePlaybackRate"
-            @cycle-mode="player.cyclePlaybackMode()"
-          />
 
           <!-- Right: Feature Strip -->
           <!-- Contract requirement: class="feature-link" -->
@@ -531,15 +534,14 @@ watch(
 .player {
   position: fixed;
   right: 0;
-  bottom: calc(
-    var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height) +
-      1.25rem
-  );
-  left: 2.5vw;
+  bottom: 0;
+  left: 0;
+  width: 100%;
   z-index: var(--a-z-player, 720);
   height: 4.5rem;
   border: 0;
-  border-radius: var(--a-radius-card, 4px) 0 0 var(--a-radius-card, 4px);
+  border-top: 1px solid var(--a-color-border-soft);
+  border-radius: 0;
   background: var(--a-color-bg);
   box-shadow: none !important;
   color: var(--a-color-fg);
@@ -560,25 +562,28 @@ watch(
 }
 
 .player-inner {
-  display: grid;
-  grid-template-columns: 20px minmax(10rem, 0.85fr) minmax(20rem, 2.4fr) minmax(17rem, 1.25fr) minmax(14rem, 0.8fr);
+  display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: space-between;
+  gap: 1.5rem;
   width: 100%;
   height: 100%;
-  padding: 0 0.75rem 0 0;
+  padding: 0 1.5rem 0 0.5rem;
 }
 
 .player-collapse-tab {
-  align-self: stretch;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 100%;
   border: 0;
   background: transparent;
   color: var(--a-color-muted);
   cursor: pointer;
   box-shadow: none !important;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .player-collapse-tab:hover,
@@ -588,10 +593,21 @@ watch(
   outline: none;
 }
 
+.player-center-stage {
+  flex: 1;
+  max-width: 580px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
 .progress-container {
   width: 100%;
   min-width: 0;
-  height: 2.75rem;
+  height: 1.75rem;
   display: flex;
   align-items: center;
 }
@@ -601,7 +617,8 @@ watch(
 }
 
 .player-waveform {
-  padding-right: 0.25rem;
+  width: 100%;
+  padding: 0 0.25rem;
 }
 
 .feature-link {
@@ -755,6 +772,10 @@ watch(
     grid-template-columns: minmax(0, 1fr) 116px 88px;
     gap: 0.75rem;
     padding: 0 0.75rem 16px;
+  }
+
+  .player-center-stage {
+    display: contents;
   }
 
   .player-controls-hub {

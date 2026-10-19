@@ -99,11 +99,11 @@ defineEmits<{
 <style scoped>
 .player-mini-window {
   position: fixed;
-  left: calc(2.5vw + 1.25rem);
+  left: 1.5rem;
   right: auto;
   bottom: calc(
     var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height) +
-      1.25rem
+      1rem
   );
   z-index: var(--a-z-player, 720);
   display: grid;
@@ -111,7 +111,7 @@ defineEmits<{
   width: 4.5rem;
   height: 4.5rem;
   overflow: visible;
-  border: 0;
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card, 4px);
   background: var(--a-color-bg);
   box-shadow: none;

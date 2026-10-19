@@ -23,7 +23,8 @@
         data-hint="上一首 (Alt+←)"
         @click="$emit('play-previous')"
       >
-        上一首
+        <PIcon name="player-prev" size="sm" class="nav-icon" aria-hidden="true" />
+        <span class="nav-text">上一首</span>
       </button>
 
       <!-- 主播放/暂停/错误重试按键 -->
@@ -36,7 +37,13 @@
         :data-hint="playbackError ? '重试' : (isPlaying ? '暂停 (Space)' : '播放 (Space)')"
         @click="playbackError ? $emit('retry-playback') : $emit('toggle-play')"
       >
-        {{ playbackError ? '重试' : (isPlaying ? '暂停' : '播放') }}
+        <PIcon
+          :name="playbackError ? 'refresh' : (isPlaying ? 'player-pause' : 'player-play')"
+          size="sm"
+          class="play-icon"
+          aria-hidden="true"
+        />
+        <span class="sr-only">{{ playbackError ? '重试' : (isPlaying ? '暂停' : '播放') }}</span>
       </button>
 
       <!-- 下一首 -->
@@ -48,7 +55,8 @@
         data-hint="下一首 (Alt+→)"
         @click="$emit('play-next')"
       >
-        下一首
+        <span class="nav-text">下一首</span>
+        <PIcon name="player-next" size="sm" class="nav-icon" aria-hidden="true" />
       </button>
 
       <!-- 播客模式下的前进 15 秒 -->
@@ -88,12 +96,12 @@
         @click="$emit('cycle-mode')"
       >
         <div v-if="playbackMode === 'single'" class="repeat-one-wrapper">
-          <Repeat :size="20" aria-hidden="true" />
+          <PIcon name="repeat-1" size="md" aria-hidden="true" />
           <span class="one-badge">1</span>
         </div>
         <span v-else style="display: flex; align-items: center">
-          <Repeat v-if="playbackMode === 'loop'" :size="20" aria-hidden="true" />
-          <Shuffle v-else-if="playbackMode === 'random'" :size="20" aria-hidden="true" />
+          <PIcon v-if="playbackMode === 'loop'" name="repeat" size="md" aria-hidden="true" />
+          <PIcon v-else-if="playbackMode === 'random'" name="shuffle" size="md" aria-hidden="true" />
         </span>
       </button>
     </div>
@@ -101,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { Repeat, Shuffle } from 'lucide-vue-next'
+import PIcon from '@/components/ui/PIcon.vue'
 
 interface Props {
   isPlaying: boolean
@@ -161,26 +169,27 @@ defineEmits<{
 .nav-btn {
   font-size: 11px;
   font-weight: 500;
-  opacity: 0.5;
+  opacity: 0.65;
   border: 0;
   background: transparent;
   color: inherit;
-  padding: 4px;
+  padding: 4px 6px;
   display: inline-flex;
   align-items: center;
+  gap: 0.25rem;
   justify-content: center;
   cursor: pointer;
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;
   transition:
-    opacity 0.2s,
-    color 0.2s;
+    opacity 0.15s,
+    background-color 0.15s;
 }
 
 .skip-btn:hover,
 .nav-btn:hover {
   opacity: 1;
-  text-decoration: underline;
+  background-color: var(--a-color-surface-muted);
 }
 
 /* Tooltip 快捷键提示 */
@@ -228,26 +237,41 @@ defineEmits<{
 }
 
 .main-play-btn {
+  width: 2rem;
+  height: 2rem;
   background: var(--a-color-text);
   color: var(--a-color-bg);
   border: 0;
   border-radius: var(--a-radius-control, 4px);
-  padding: 4px 16px;
-  font-weight: 500;
-  font-size: 11px;
+  padding: 0;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  letter-spacing: 0;
   box-shadow: none !important;
   transition:
     transform 0.1s,
-    background-color 0.15s;
+    opacity 0.15s;
+}
+
+.main-play-btn:hover {
+  opacity: 0.9;
 }
 
 .main-play-btn:active {
-  transform: translateY(1px);
+  transform: scale(0.96);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 .main-play-btn.has-error {

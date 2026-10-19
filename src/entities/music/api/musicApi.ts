@@ -1,10 +1,26 @@
 import { apiGetOptional, apiGetRaw, apiPostJson } from '@/api/client'
 import type { Song, Album, Artist } from '../model/types'
-import { getMusicSongDetail, type MusicSongDetail } from '@/api/musicV1'
+import {
+  getMusicSongDetail,
+  getMusicAlbum,
+  getMusicArtist,
+  type MusicSongDetail,
+  type MusicAlbumListItem,
+  type MusicArtistListItem,
+} from '@/api/musicV1'
 
 export async function fetchSongDetail(id: string | number): Promise<MusicSongDetail> {
   return getMusicSongDetail(String(id))
 }
+
+export async function fetchAlbumDetail(id: string | number): Promise<MusicAlbumListItem> {
+  return getMusicAlbum(String(id))
+}
+
+export async function fetchArtistDetail(id: string | number): Promise<MusicArtistListItem> {
+  return getMusicArtist(String(id))
+}
+
 
 export async function fetchSongById(id: string | number): Promise<Song | null> {
   try {

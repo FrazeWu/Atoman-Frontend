@@ -1251,4 +1251,43 @@ describe("player store", () => {
 		expect(player.playedHistory[0].id).toBe("hist-2");
 		expect(player.playedHistory[1].id).toBe("hist-1");
 	});
+
+	it("remembers previous volume and restores it when toggling mute", () => {
+		const store = usePlayerStore();
+		store.setVolume(0.85);
+		expect(store.volume).toBe(0.85);
+		expect(store.isMuted).toBe(false);
+
+		store.toggleMute();
+		expect(store.volume).toBe(0);
+		expect(store.isMuted).toBe(true);
+
+		store.toggleMute();
+		expect(store.volume).toBe(0.85);
+		expect(store.isMuted).toBe(false);
+	});
+
+	it("falls back to 0.5 if volume was initially 0 when unmuting", () => {
+		const store = usePlayerStore();
+		store.setVolume(0);
+		store.toggleMute();
+		expect(store.volume).toBe(0.5);
+		expect(store.isMuted).toBe(false);
+	});
+
+	it("transitions audio source smoothly when swapping tracks during active playback", () => {
+		const store = usePlayerStore();
+		const song1 = { id: "trans-1", title: "Song 1", audio_url: "s1.mp3" } as any;
+		const song2 = { id: "trans-2", title: "Song 2", audio_url: "s2.mp3" } as any;
+
+		store.playSong(song1);
+		const audio = audioInstances.at(-1)!;
+		audio.paused = false;
+		audio.currentTime = 15;
+
+		store.playSong(song2);
+		expect(store.currentSong?.id).toBe("trans-2");
+		expect(audioInstances.length).toBeGreaterThan(0);
+	});
 });
+

@@ -52,6 +52,7 @@ import {
 	computeActualVolume,
 	fadeOutAudio,
 	resolvePlaybackAudioUrl as resolveAudioEngineUrl,
+	transitionAudioSource,
 	AudioPrefetcher,
 } from "@/utils/audioEngine";
 
@@ -108,6 +109,7 @@ export const usePlayerStore = defineStore("player", () => {
 	};
 
 	const volume = ref(readInitialVolume());
+	const lastNonZeroVolume = ref(0);
 	const playbackRate = ref(1.0);
 	const playedHistory = ref<Song[]>([]);
 	const currentTime = ref(0);
@@ -982,9 +984,16 @@ export const usePlayerStore = defineStore("player", () => {
 		playbackError.value = "";
 		isLoading.value = true;
 		releaseCachedAudioObjectUrl();
-		player.src = normalizedSong.audio_url;
-		isCurrentAudioCached.value = false;
-		player.volume = computeActualVolume(volume.value);
+		const applySongSource = () => {
+			player.src = normalizedSong.audio_url;
+			isCurrentAudioCached.value = false;
+			player.volume = computeActualVolume(volume.value);
+		};
+		if (audio && !audio.paused && audio.currentTime > 0) {
+			void transitionAudioSource(player, normalizedSong.audio_url, applySongSource);
+		} else {
+			applySongSource();
+		}
 		const savedProgress =
 			song.source_type === "podcast_episode" && song.source_id
 				? readPodcastProgress(song.source_id)
@@ -1329,6 +1338,9 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const setVolume = (v: number) => {
 		const clamped = Math.max(0, Math.min(1, Number.isFinite(v) ? v : INITIAL_VOLUME));
+		if (clamped > 0) {
+			lastNonZeroVolume.value = clamped;
+		}
 		volume.value = clamped;
 		if (typeof localStorage !== "undefined") {
 			try {
@@ -1341,6 +1353,17 @@ export const usePlayerStore = defineStore("player", () => {
 			audio.volume = computeActualVolume(clamped);
 		}
 	};
+
+	const toggleMute = () => {
+		if (volume.value > 0) {
+			lastNonZeroVolume.value = volume.value;
+			setVolume(0);
+		} else {
+			setVolume(lastNonZeroVolume.value > 0 ? lastNonZeroVolume.value : 0.5);
+		}
+	};
+
+	const isMuted = computed(() => volume.value === 0);
 
 	const setPlaybackRate = (rate: number) => {
 		const safeRate = Math.max(0.5, Math.min(3.0, Number.isFinite(rate) ? rate : 1.0));
@@ -1459,6 +1482,9 @@ export const usePlayerStore = defineStore("player", () => {
 		setQueueFromCurrentItems,
 		setQueueFromPodcastEpisodes,
 		setVolume,
+		isMuted,
+		lastNonZeroVolume,
+		toggleMute,
 		playbackRate,
 		setPlaybackRate,
 		playedHistory,

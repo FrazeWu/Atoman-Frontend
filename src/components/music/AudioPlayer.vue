@@ -202,7 +202,7 @@
         <AudioPlayerVolume
           :volume="player.volume"
           @change="player.setVolume"
-          @toggle-mute="player.setVolume(player.volume > 0 ? 0 : 0.5)"
+          @toggle-mute="player.toggleMute()"
         />
 
         <button
@@ -407,7 +407,7 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   else if (shortcut === 'next') player.playNext()
   else if (shortcut === 'skip-back') player.skip(-5)
   else if (shortcut === 'skip-forward') player.skip(5)
-  else if (shortcut === 'mute') player.setVolume(player.volume > 0 ? 0 : 0.5)
+  else if (shortcut === 'mute') player.toggleMute()
   else if (shortcut === 'volume-up') player.setVolume(player.volume + 0.05)
   else if (shortcut === 'volume-down') player.setVolume(player.volume - 0.05)
 }

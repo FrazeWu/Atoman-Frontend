@@ -102,4 +102,38 @@ describe('AudioWaveformProgress', () => {
     expect(wrapper.emitted('seek')).toHaveLength(2)
     expect(wrapper.emitted('seek')?.[1]?.[0]).toBe(60)
   })
+
+  it('does not emit duplicate seek on click (pointerdown followed by pointerup at same position)', async () => {
+    const wrapper = mount(AudioWaveformProgress, {
+      props: {
+        songId: 'click-song',
+        audioUrl: '/click.mp3',
+        currentTime: 0,
+        duration: 100,
+        generateWaveform: false,
+      },
+    })
+    const root = wrapper.get('.waveform-progress')
+    vi.spyOn(root.element, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      width: 100,
+      top: 0,
+      right: 100,
+      bottom: 34,
+      height: 34,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+
+    // User clicks at 40% (pointerdown then pointerup at clientX: 40)
+    root.element.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 40 }))
+    await nextTick()
+    root.element.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 40 }))
+    await nextTick()
+
+    // Must only emit seek ONCE, never twice!
+    expect(wrapper.emitted('seek')).toHaveLength(1)
+    expect(wrapper.emitted('seek')?.[0]?.[0]).toBe(40)
+  })
 })

@@ -696,7 +696,7 @@ export const usePlayerStore = defineStore("player", () => {
 			reportRecommendationEvent(currentSong.value, "play_complete");
 			advanceToNextSong(true);
 		});
-		nextAudio.volume = volume.value;
+		nextAudio.volume = computeActualVolume(volume.value);
 
 		if (currentSong.value) {
 			nextAudio.src = resolvePlaybackAudioUrl(currentSong.value.audio_url);
@@ -746,7 +746,7 @@ export const usePlayerStore = defineStore("player", () => {
 		currentSongStartCached = false;
 		resetAudioStartPrefetch();
 		audio.src = normalizedSong.audio_url;
-		audio.volume = volume.value;
+		audio.volume = computeActualVolume(volume.value);
 		if (currentTime.value > 0) {
 			audio.currentTime = currentTime.value;
 		}
@@ -759,7 +759,7 @@ export const usePlayerStore = defineStore("player", () => {
 		isLoading.value = true;
 		playRequested = true;
 		playbackError.value = "";
-		player.volume = volume.value;
+		player.volume = computeActualVolume(volume.value);
 		player
 			.play()
 			.then(() => {
@@ -939,7 +939,7 @@ export const usePlayerStore = defineStore("player", () => {
 		releaseCachedAudioObjectUrl();
 		player.src = normalizedSong.audio_url;
 		isCurrentAudioCached.value = false;
-		player.volume = volume.value;
+		player.volume = computeActualVolume(volume.value);
 		const savedProgress =
 			song.source_type === "podcast_episode" && song.source_id
 				? readPodcastProgress(song.source_id)
@@ -1107,7 +1107,7 @@ export const usePlayerStore = defineStore("player", () => {
 		if (!player.src) {
 			player.src = currentSong.value.audio_url;
 		}
-		player.volume = volume.value;
+		player.volume = computeActualVolume(volume.value);
 		if (currentTime.value > 0) {
 			player.currentTime = currentTime.value;
 		}
@@ -1291,9 +1291,12 @@ export const usePlayerStore = defineStore("player", () => {
 	};
 
 	const seek = (time: number) => {
-		currentTime.value = time;
+		const safeTime = Math.max(0, Number.isFinite(time) ? time : 0);
+		currentTime.value = safeTime;
 		if (audio) {
-			audio.currentTime = time;
+			if (Math.abs(audio.currentTime - safeTime) > 0.03) {
+				audio.currentTime = safeTime;
+			}
 		}
 	};
 

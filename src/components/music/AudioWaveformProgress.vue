@@ -67,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { generateWaveformPlaceholder } from '@/utils/audioWaveform'
 
 const props = withDefaults(defineProps<{
@@ -89,7 +89,39 @@ const rootRef = ref<HTMLElement | null>(null)
 const trackRef = ref<HTMLElement | null>(null)
 const dragging = ref(false)
 const hoverRatio = ref<number | null>(null)
+const lastCommittedRatio = ref<number | null>(null)
+const pendingSeekRatio = ref<number | null>(null)
+let pendingSeekTimeout: ReturnType<typeof setTimeout> | null = null
 const waveformPeakCount = 280
+
+function clearPendingSeekTimeout() {
+  if (pendingSeekTimeout !== null) {
+    clearTimeout(pendingSeekTimeout)
+    pendingSeekTimeout = null
+  }
+}
+
+function clearPendingSeekAfterTimeout() {
+  clearPendingSeekTimeout()
+  pendingSeekTimeout = setTimeout(() => {
+    pendingSeekRatio.value = null
+    pendingSeekTimeout = null
+  }, 400)
+}
+
+onBeforeUnmount(() => {
+  clearPendingSeekTimeout()
+})
+
+watch(() => props.currentTime, (time) => {
+  if (pendingSeekRatio.value !== null && props.duration > 0) {
+    const currentRatio = time / props.duration
+    if (Math.abs(currentRatio - pendingSeekRatio.value) < 0.02) {
+      pendingSeekRatio.value = null
+      clearPendingSeekTimeout()
+    }
+  }
+})
 
 const peaks = computed(() => {
   if (!props.generateWaveform) return []
@@ -109,6 +141,9 @@ const progressRatio = computed(() => {
 const displayRatio = computed(() => {
   if (dragging.value && hoverRatio.value !== null) {
     return hoverRatio.value
+  }
+  if (pendingSeekRatio.value !== null) {
+    return pendingSeekRatio.value
   }
   return progressRatio.value
 })
@@ -153,6 +188,9 @@ function seekFromPointer(event: PointerEvent) {
   if (!props.duration) return
   const ratio = pointerRatio(event)
   hoverRatio.value = ratio
+  lastCommittedRatio.value = ratio
+  pendingSeekRatio.value = ratio
+  clearPendingSeekAfterTimeout()
   emit('seek', ratio * props.duration)
 }
 
@@ -172,7 +210,16 @@ function stopSeek(event: PointerEvent) {
   dragging.value = false
   if (rootRef.value?.hasPointerCapture?.(event.pointerId)) rootRef.value.releasePointerCapture?.(event.pointerId)
   if (props.duration && hoverRatio.value !== null) {
-    emit('seek', hoverRatio.value * props.duration)
+    const targetRatio = hoverRatio.value
+    if (lastCommittedRatio.value === null || Math.abs(targetRatio - lastCommittedRatio.value) >= 0.005) {
+      lastCommittedRatio.value = targetRatio
+      pendingSeekRatio.value = targetRatio
+      clearPendingSeekAfterTimeout()
+      emit('seek', targetRatio * props.duration)
+    } else {
+      pendingSeekRatio.value = lastCommittedRatio.value
+      clearPendingSeekAfterTimeout()
+    }
   }
 }
 

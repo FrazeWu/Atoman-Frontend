@@ -1180,4 +1180,33 @@ describe("player store", () => {
 		await fadeOutAudio(mockAudio, 60);
 		expect(mockAudio.volume).toBe(0);
 	});
+
+	it("retains logarithmic volume curve when switching songs or toggling play", () => {
+		const player = usePlayerStore();
+		player.setVolume(0.6);
+
+		player.playSong({ id: "song-a", title: "Song A", audio_url: "a.mp3" } as any);
+		const audio = audioInstances.at(-1)!;
+		expect(audio.volume).toBeCloseTo(0.36);
+
+		player.playSong({ id: "song-b", title: "Song B", audio_url: "b.mp3" } as any);
+		expect(audio.volume).toBeCloseTo(0.36);
+	});
+
+	it("avoids resetting audio currentTime when seeking to negligible time difference", () => {
+		const player = usePlayerStore();
+		player.playSong({ id: "song-seek", title: "Song Seek", audio_url: "seek.mp3" } as any);
+		const audio = audioInstances.at(-1)!;
+
+		player.seek(30);
+		expect(audio.currentTime).toBe(30);
+
+		audio.currentTime = 30.02;
+		player.seek(30.04);
+		expect(audio.currentTime).toBe(30.02);
+		expect(player.currentTime).toBe(30.04);
+
+		player.seek(35);
+		expect(audio.currentTime).toBe(35);
+	});
 });

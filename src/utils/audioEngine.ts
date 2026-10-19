@@ -17,6 +17,40 @@ export const fadeOutAudio = async (targetAudio: HTMLAudioElement, durationMs = 1
   }
 }
 
+/**
+ * Smoothly transitions an audio element to a new source by performing a micro fade-out
+ * (30-40ms) to prevent digital DC-offset clicks/pops when swapping playback sources.
+ * In paused state or test environment without playback, runs immediately.
+ */
+export async function transitionAudioSource(
+  targetAudio: HTMLAudioElement,
+  nextUrl: string,
+  prepareNext: () => void,
+  durationMs = 35,
+): Promise<void> {
+  if (!targetAudio || targetAudio.paused || targetAudio.currentTime <= 0) {
+    prepareNext()
+    return
+  }
+
+  const originalVolume = targetAudio.volume
+  const steps = 3
+  const stepTime = Math.max(8, Math.floor(durationMs / steps))
+
+  try {
+    for (let i = 1; i <= steps; i++) {
+      targetAudio.volume = Math.max(0, originalVolume * (1 - i / steps))
+      await new Promise((resolve) => setTimeout(resolve, stepTime))
+    }
+    targetAudio.pause()
+  } catch {
+    // Ignore audio element errors during transition
+  }
+
+  prepareNext()
+  targetAudio.volume = originalVolume
+}
+
 export function resolvePlaybackAudioUrl(url: string): string {
   if (!url) return ''
   if (url.includes('.r2.cloudflarestorage.com') || url.includes('assets.atoman.org')) {

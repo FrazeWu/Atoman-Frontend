@@ -6,6 +6,7 @@ import {
   resolvePlaybackAudioUrl,
   audioStartPrefetchBytes,
   audioStartPrefetchConcurrency,
+  transitionAudioSource,
 } from '@/utils/audioEngine'
 
 describe('audioEngine constants', () => {
@@ -67,3 +68,52 @@ describe('AudioPrefetcher', () => {
     expect(prefetcher.isPrefetched('https://example.com/audio.mp3')).toBe(false)
   })
 })
+
+describe('transitionAudioSource', () => {
+  it('smoothly transitions audio source with micro-fadeout when audio is playing', async () => {
+    const targetAudio = {
+      paused: false,
+      currentTime: 10,
+      volume: 0.8,
+      pause: vi.fn(() => {
+        targetAudio.paused = true
+      }),
+    } as unknown as HTMLAudioElement
+
+    let sourceChanged = false
+    await transitionAudioSource(
+      targetAudio,
+      'https://example.com/next.mp3',
+      () => {
+        sourceChanged = true
+      },
+      30,
+    )
+
+    expect(sourceChanged).toBe(true)
+    expect(targetAudio.pause).toHaveBeenCalled()
+  })
+
+  it('immediately executes prepareNext without fade when audio is already paused', async () => {
+    const targetAudio = {
+      paused: true,
+      currentTime: 0,
+      volume: 0.8,
+      pause: vi.fn(),
+    } as unknown as HTMLAudioElement
+
+    let sourceChanged = false
+    await transitionAudioSource(
+      targetAudio,
+      'https://example.com/next.mp3',
+      () => {
+        sourceChanged = true
+      },
+      30,
+    )
+
+    expect(sourceChanged).toBe(true)
+    expect(targetAudio.pause).not.toHaveBeenCalled()
+  })
+})
+

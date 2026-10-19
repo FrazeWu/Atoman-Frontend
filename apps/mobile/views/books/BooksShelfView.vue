@@ -1,0 +1,428 @@
+<template>
+  <div class="books-shelf-view">
+    <!-- Header / Title -->
+    <header class="books-shelf-header">
+      <h1 class="books-shelf-title">书架</h1>
+    </header>
+
+    <!-- Empty State if no books -->
+    <div v-if="!currentReadingBook && booksList.length === 0" class="books-shelf-empty" data-testid="books-empty-state">
+      <div class="books-shelf-empty__icon">
+        <MIcon name="books" size="lg" />
+      </div>
+      <p class="books-shelf-empty__title">书架暂无图书</p>
+      <p class="books-shelf-empty__desc">从发现或导入添加你感兴趣的书籍。</p>
+    </div>
+
+    <div v-else class="books-shelf-content">
+      <!-- "当前在读" Card -->
+      <section v-if="currentReadingBook" class="books-current-card" data-testid="current-reading-card" @click="openBook(currentReadingBook.id)">
+        <div class="books-current-card__badge">当前在读</div>
+        <div class="books-current-card__body">
+          <!-- 58x80 Book Spine/Cover -->
+          <div class="books-current-card__spine">
+            <img v-if="currentReadingBook.cover" :src="currentReadingBook.cover" :alt="currentReadingBook.title" class="books-current-card__img" />
+            <div v-else class="books-current-card__placeholder">
+              <MIcon name="books" size="md" />
+            </div>
+          </div>
+          <!-- Info -->
+          <div class="books-current-card__info">
+            <h2 class="books-current-card__title">{{ currentReadingBook.title }}</h2>
+            <p class="books-current-card__author">{{ currentReadingBook.author }}</p>
+            <div class="books-current-card__meta">
+              已读 {{ currentReadingBook.progress }}% · {{ currentReadingBook.annotationsCount }} 条划线批注
+            </div>
+            <!-- 3px progress bar fill -->
+            <div class="books-current-card__progress-track" data-testid="reading-progress-bar">
+              <div
+                class="books-current-card__progress-fill"
+                :style="{ width: `${currentReadingBook.progress}%` }"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- "书架图书" List -->
+      <section v-if="booksList.length > 0" class="books-shelf-section">
+        <div class="books-shelf-section__header">
+          <h2 class="books-shelf-section__title">书架图书</h2>
+          <span class="books-shelf-section__count">{{ booksList.length }} 本</span>
+        </div>
+        <div class="books-shelf-list">
+          <div
+            v-for="book in booksList"
+            :key="book.id"
+            class="books-shelf-item"
+            data-testid="book-shelf-item"
+            @click="openBook(book.id)"
+          >
+            <div class="books-shelf-item__icon">
+              <MIcon name="books" size="md" />
+            </div>
+            <div class="books-shelf-item__info">
+              <div class="books-shelf-item__row">
+                <span class="books-shelf-item__title">{{ book.title }}</span>
+                <span class="books-shelf-item__badge">{{ book.format || 'EPUB' }}</span>
+              </div>
+              <div class="books-shelf-item__meta">
+                <span>{{ book.author }}</span>
+                <span v-if="book.fileSize" class="books-shelf-item__dot">·</span>
+                <span v-if="book.fileSize">{{ book.fileSize }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import MIcon from '@mobile/components/ui/MIcon.vue'
+
+export interface ShelfBook {
+  id: string
+  title: string
+  author: string
+  format?: string
+  fileSize?: string
+  progress?: number
+  annotationsCount?: number
+  cover?: string
+}
+
+const props = withDefaults(
+  defineProps<{
+    currentReading?: ShelfBook | null
+    initialBooks?: ShelfBook[]
+  }>(),
+  {
+    currentReading: undefined,
+    initialBooks: undefined,
+  }
+)
+
+const router = useRouter()
+
+const defaultCurrentReading: ShelfBook = {
+  id: 'book-1',
+  title: '设计心理学',
+  author: '唐·诺曼',
+  progress: 64,
+  annotationsCount: 12,
+  format: 'EPUB',
+}
+
+const defaultBooks: ShelfBook[] = [
+  {
+    id: 'book-1',
+    title: '设计心理学',
+    author: '唐·诺曼',
+    format: 'EPUB',
+    fileSize: '4.2 MB',
+  },
+  {
+    id: 'book-2',
+    title: '计算机程序的构造和解释',
+    author: 'Harold Abelson / Gerald Jay Sussman',
+    format: 'TXT',
+    fileSize: '1.8 MB',
+  },
+  {
+    id: 'book-3',
+    title: '黑客与画家',
+    author: 'Paul Graham',
+    format: 'EPUB',
+    fileSize: '2.5 MB',
+  },
+]
+
+const currentReadingBook = computed<ShelfBook | null>(() => {
+  if (props.currentReading !== undefined) return props.currentReading
+  return defaultCurrentReading
+})
+
+const booksList = computed<ShelfBook[]>(() => {
+  if (props.initialBooks !== undefined) return props.initialBooks
+  return defaultBooks
+})
+
+function openBook(bookId: string) {
+  if (router && typeof router.push === 'function') {
+    void router.push(`/books/read/${bookId}`)
+  }
+}
+</script>
+
+<style scoped>
+.books-shelf-view {
+  min-height: 100vh;
+  background-color: var(--a-color-bg, #ffffff);
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.books-shelf-header {
+  margin-bottom: 16px;
+}
+
+.books-shelf-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--a-color-text, #0f172a);
+}
+
+.books-shelf-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* "当前在读" Card */
+.books-current-card {
+  background-color: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  padding: 16px;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+}
+
+.books-current-card:active {
+  background-color: var(--a-color-surface-muted, #f8fafc);
+}
+
+.books-current-card__badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--a-color-muted, #64748b);
+  margin-bottom: 12px;
+}
+
+.books-current-card__body {
+  display: flex;
+  gap: 14px;
+}
+
+.books-current-card__spine {
+  width: 58px;
+  height: 80px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background-color: var(--a-color-surface-muted, #f1f5f9);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.books-current-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.books-current-card__placeholder {
+  color: var(--a-color-muted, #94a3b8);
+}
+
+.books-current-card__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.books-current-card__title {
+  margin: 0 0 4px 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--a-color-text, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.books-current-card__author {
+  margin: 0 0 8px 0;
+  font-size: 0.75rem;
+  color: var(--a-color-muted, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.books-current-card__meta {
+  font-size: 0.75rem;
+  color: var(--a-color-text-secondary, #475569);
+  margin-bottom: 8px;
+}
+
+.books-current-card__progress-track {
+  width: 100%;
+  height: 3px;
+  background-color: var(--a-color-border-soft, #e2e8f0);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: auto;
+}
+
+.books-current-card__progress-fill {
+  height: 100%;
+  background-color: var(--a-color-primary, #0f172a);
+  transition: width 0.2s ease;
+}
+
+/* Books List */
+.books-shelf-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.books-shelf-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.books-shelf-section__title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--a-color-text, #0f172a);
+}
+
+.books-shelf-section__count {
+  font-size: 0.75rem;
+  color: var(--a-color-muted, #64748b);
+}
+
+.books-shelf-list {
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  overflow: hidden;
+}
+
+.books-shelf-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
+  transition: background-color 0.15s ease;
+}
+
+.books-shelf-item:last-child {
+  border-bottom: none;
+}
+
+.books-shelf-item:active {
+  background-color: var(--a-color-surface-muted, #f8fafc);
+}
+
+.books-shelf-item__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  background-color: var(--a-color-surface-muted, #f1f5f9);
+  color: var(--a-color-text, #0f172a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.books-shelf-item__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.books-shelf-item__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.books-shelf-item__title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--a-color-text, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.books-shelf-item__badge {
+  font-size: 0.625rem;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background-color: var(--a-color-surface-muted, #f8fafc);
+  color: var(--a-color-muted, #64748b);
+  flex-shrink: 0;
+}
+
+.books-shelf-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--a-color-muted, #64748b);
+}
+
+.books-shelf-item__dot {
+  opacity: 0.5;
+}
+
+/* Empty State */
+.books-shelf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 20px;
+  text-align: center;
+}
+
+.books-shelf-empty__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 4px;
+  background-color: var(--a-color-surface-muted, #f1f5f9);
+  color: var(--a-color-muted, #94a3b8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.books-shelf-empty__title {
+  margin: 0 0 6px 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--a-color-text, #0f172a);
+}
+
+.books-shelf-empty__desc {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--a-color-muted, #64748b);
+}
+</style>

@@ -43,13 +43,39 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	},
 	{
 		path: "/inbox",
-		component: () => import("@/views/feed/InboxPage.vue"),
+		component: () => import("./views/messages/MessagesMobileView.vue"),
+		meta: requiresAuth,
+	},
+	{
+		path: "/messages",
+		component: () => import("./views/messages/MessagesMobileView.vue"),
 		meta: requiresAuth,
 	},
 	{
 		path: "/me",
-		component: () => import("@/views/user/MyHubView.vue"),
+		component: () => import("./views/me/ProfileMobileView.vue"),
 		meta: requiresAuth,
+	},
+	{
+		path: "/studio",
+		component: () => import("./views/studio/StudioMobileView.vue"),
+		meta: requiresAuth,
+	},
+	{
+		path: "/books",
+		component: () => import("./views/books/BooksShelfView.vue"),
+	},
+	{
+		path: "/books/shelf",
+		component: () => import("./views/books/BooksShelfView.vue"),
+	},
+	{
+		path: "/books/read/:id",
+		component: () => import("./views/books/BookReaderMobileView.vue"),
+	},
+	{
+		path: "/debate",
+		component: () => import("./views/debate/DebateHallView.vue"),
 	},
 	{
 		path: "/feed",

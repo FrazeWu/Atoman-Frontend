@@ -174,15 +174,15 @@ export const mobileRoutes: RouteRecordRaw[] = [
 		path: "/music",
 		component: () => import("./MobileMusicLayout.vue"),
 		children: [
-			{ path: "", component: () => import("@/views/music/DiscoverView.vue") },
+			{ path: "", component: () => import("./views/music/MusicDiscoverView.vue") },
 			{ path: 'albums', component: () => import('@/views/music/AlbumsView.vue') },
 			{ path: 'artists', component: () => import('@/views/music/ArtistsView.vue') },
 			{ path: 'imports', component: () => import('@/views/music/ImportsView.vue'), meta: requiresAuth },
-			{ path: 'library', redirect: '/music/bookmarks', meta: requiresAuth },
+			{ path: 'library', component: () => import("./views/music/MusicLibraryView.vue"), meta: requiresAuth },
 			{ path: 'starred', redirect: '/music/bookmarks', meta: requiresAuth },
 			{
 				path: "discover",
-				component: () => import("@/views/music/DiscoverView.vue"),
+				component: () => import("./views/music/MusicDiscoverView.vue"),
 			},
 			{
 				path: "tags",
@@ -196,7 +196,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			{
 				path: "playlists",
 				name: "mobile-music-playlists",
-				component: () => import("@/views/music/PlaylistsView.vue"),
+				component: () => import("./views/music/MusicPlaylistsView.vue"),
 				meta: requiresAuth,
 			},
 			{

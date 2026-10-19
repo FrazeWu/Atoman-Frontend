@@ -1,7 +1,7 @@
 <template>
-  <PlaylistsView />
+  <MusicPlaylistsView />
 </template>
 
 <script setup lang="ts">
-import PlaylistsView from '@/views/music/PlaylistsView.vue'
+import MusicPlaylistsView from './views/music/MusicPlaylistsView.vue'
 </script>

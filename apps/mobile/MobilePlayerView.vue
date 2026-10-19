@@ -13,8 +13,8 @@
           :title="showQueue ? '返回播放器' : '打开播放队列'"
           @click="showQueue = !showQueue"
         >
-          <Play v-if="showQueue" :size="20" aria-hidden="true" />
-          <ListMusic v-else :size="20" aria-hidden="true" />
+          <MIcon v-if="showQueue" name="player-play" size="sm" />
+          <MIcon v-else name="queue" size="sm" />
           <span v-if="!showQueue && player.queue.length">{{ player.queue.length }}</span>
         </button>
       </header>
@@ -62,7 +62,7 @@
             title="后退 15 秒"
             @click="player.skip(-15)"
           >
-            <RotateCcw :size="22" aria-hidden="true" />
+            <MIcon name="rotate-ccw" size="sm" />
             <span>15</span>
           </button>
           <button
@@ -73,7 +73,7 @@
             title="后退 5 秒"
             @click="player.skip(-5)"
           >
-            <RotateCcw :size="22" aria-hidden="true" />
+            <MIcon name="rotate-ccw" size="sm" />
             <span>5</span>
           </button>
 
@@ -84,7 +84,7 @@
             title="上一首"
             @click="player.playPrevious"
           >
-            <SkipBack :size="24" fill="currentColor" aria-hidden="true" />
+            <MIcon name="player-prev" size="md" />
           </button>
 
           <button
@@ -94,9 +94,9 @@
             :title="player.isPlaying ? '暂停' : '播放'"
             @click="player.togglePlay"
           >
-            <LoaderCircle v-if="player.isLoading" :size="30" class="mobile-player-view__spinner" aria-hidden="true" />
-            <Pause v-else-if="player.isPlaying" :size="30" fill="currentColor" aria-hidden="true" />
-            <Play v-else :size="30" fill="currentColor" aria-hidden="true" />
+            <span v-if="player.isLoading" class="mobile-player-view__spinner" aria-hidden="true" />
+            <MIcon v-else-if="player.isPlaying" name="player-pause" size="md" />
+            <MIcon v-else name="player-play" size="md" />
           </button>
 
           <button
@@ -106,7 +106,7 @@
             title="下一首"
             @click="player.playNext"
           >
-            <SkipForward :size="24" fill="currentColor" aria-hidden="true" />
+            <MIcon name="player-next" size="md" />
           </button>
 
           <button
@@ -117,7 +117,7 @@
             title="前进 30 秒"
             @click="player.skip(30)"
           >
-            <RotateCw :size="22" aria-hidden="true" />
+            <MIcon name="rotate-cw" size="sm" />
             <span>30</span>
           </button>
           <button
@@ -128,7 +128,7 @@
             title="前进 5 秒"
             @click="player.skip(5)"
           >
-            <RotateCw :size="22" aria-hidden="true" />
+            <MIcon name="rotate-cw" size="sm" />
             <span>5</span>
           </button>
         </div>
@@ -143,7 +143,7 @@
             :title="isFavorite ? '移出最爱' : '加入最爱'"
             @click="toggleFavorite"
           >
-            <Heart :size="20" :fill="isFavorite ? 'currentColor' : 'none'" aria-hidden="true" />
+            <MIcon name="heart" size="sm" />
             <span>收藏</span>
           </button>
           <button
@@ -154,7 +154,7 @@
             title="收藏单集"
             @click="addPodcastBookmark(player.currentSong.source_id)"
           >
-            <Heart :size="20" aria-hidden="true" />
+            <MIcon name="heart" size="sm" />
             <span>收藏</span>
           </button>
           <button
@@ -165,7 +165,7 @@
             title="稍后听"
             @click="addPodcastListenLater(player.currentSong.source_id)"
           >
-            <Clock3 :size="20" aria-hidden="true" />
+            <MIcon name="clock" size="sm" />
             <span>稍后听</span>
           </button>
           <button
@@ -176,8 +176,8 @@
             :title="modeLabel"
             @click="player.cyclePlaybackMode"
           >
-            <Shuffle v-if="player.playbackMode === 'random'" :size="20" aria-hidden="true" />
-            <Repeat v-else :size="20" aria-hidden="true" />
+            <MIcon v-if="player.playbackMode === 'random'" name="shuffle" size="sm" />
+            <MIcon v-else name="repeat" size="sm" />
             <span>{{ modeLabel }}</span>
           </button>
           <button
@@ -187,7 +187,7 @@
             :title="isPodcast ? '打开节目说明' : '打开歌词'"
             @click="openLyrics"
           >
-            <FileText :size="20" aria-hidden="true" />
+            <MIcon name="file-text" size="sm" />
             <span>{{ isPodcast ? '说明' : '歌词' }}</span>
           </button>
           <button
@@ -197,7 +197,7 @@
             title="播放队列"
             @click="showQueue = true"
           >
-            <ListMusic :size="20" aria-hidden="true" />
+            <MIcon name="queue" size="sm" />
             <span>队列</span>
           </button>
         </div>
@@ -218,8 +218,8 @@
                 <strong>{{ queueSong.title }}</strong>
                 <span>{{ queueSong.artist || '未知艺术家' }}</span>
               </span>
-              <Pause v-if="player.currentSong && player.playbackItemKey(player.currentSong) === player.playbackItemKey(queueSong) && player.isPlaying" :size="18" fill="currentColor" aria-label="正在播放" />
-              <Play v-else :size="18" fill="currentColor" aria-label="播放" />
+              <MIcon v-if="player.currentSong && player.playbackItemKey(player.currentSong) === player.playbackItemKey(queueSong) && player.isPlaying" name="player-pause" size="xs" />
+              <MIcon v-else name="player-play" size="xs" />
             </button>
             <div class="mobile-player-view__queue-actions">
               <button type="button" :disabled="index === 0" :aria-label="`上移 ${queueSong.title}`" title="上移" @click="player.moveQueueItem(index, index - 1)">↑</button>
@@ -242,7 +242,7 @@
     </template>
 
     <section v-else class="mobile-player-view__empty">
-      <Music2 :size="32" aria-hidden="true" />
+      <MIcon name="music" size="lg" />
       <h1>还没有正在播放的内容</h1>
       <p>从音乐发现页选择一首歌曲开始播放。</p>
       <RouterLink to="/music" class="mobile-player-view__back-link">返回音乐</RouterLink>
@@ -253,7 +253,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Clock3, FileText, Heart, ListMusic, LoaderCircle, Music2, Pause, Play, Repeat, RotateCcw, RotateCw, Shuffle, SkipBack, SkipForward } from 'lucide-vue-next'
+import MIcon from '@mobile/components/ui/MIcon.vue'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
@@ -392,6 +392,7 @@ onUnmounted(() => {
   justify-content: center;
   padding: 0;
   border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
 }
@@ -402,7 +403,7 @@ onUnmounted(() => {
   right: -0.35rem;
   min-width: 1.1rem;
   padding: 0 0.2rem;
-  border-radius: 999px;
+  border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-primary);
   color: var(--a-color-primary-contrast);
   font-size: 0.65rem;
@@ -427,6 +428,7 @@ onUnmounted(() => {
   height: 100%;
   object-fit: cover;
   border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card, 4px);
 }
 
 .mobile-player-view__cover--fallback {
@@ -436,6 +438,7 @@ onUnmounted(() => {
   color: var(--a-color-muted);
   font-size: 4rem;
   font-weight: 650;
+  border-radius: var(--a-radius-card, 4px);
 }
 
 .mobile-player-view__identity {
@@ -476,6 +479,7 @@ onUnmounted(() => {
   border: 0;
   background: transparent;
   color: var(--a-color-fg);
+  border-radius: var(--a-radius-control, 4px);
 }
 
 .mobile-player-view__control--secondary {
@@ -486,7 +490,7 @@ onUnmounted(() => {
   min-height: 52px;
   margin: 0 auto;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 50%;
+  border-radius: var(--a-radius-control, 4px);
   color: var(--a-color-muted);
   font-size: 0.7rem;
 }
@@ -510,12 +514,12 @@ onUnmounted(() => {
 }
 
 .mobile-player-view__control--primary {
-  width: 60px;
-  height: 60px;
-  min-width: 60px;
-  min-height: 60px;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
   margin: 0 auto;
-  border-radius: 50%;
+  border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-fg);
   color: var(--a-color-bg);
 }
@@ -634,6 +638,7 @@ onUnmounted(() => {
   flex: 0 0 44px;
   object-fit: cover;
   border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
 }
 
 .mobile-player-view__queue-cover-fallback {
@@ -682,6 +687,7 @@ onUnmounted(() => {
   background: transparent;
   color: inherit;
   font-size: 1.1rem;
+  border-radius: var(--a-radius-control, 4px);
 }
 
 .mobile-player-view__queue-actions button:disabled {
@@ -694,6 +700,7 @@ onUnmounted(() => {
   margin-top: 1rem;
   padding: 0 0.75rem;
   border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-bg);
   color: var(--a-color-muted);
 }
@@ -732,6 +739,7 @@ onUnmounted(() => {
   align-items: center;
   padding: 0 1rem;
   border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
   color: var(--a-color-fg);
   text-decoration: none;
 }

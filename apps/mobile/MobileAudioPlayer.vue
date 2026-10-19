@@ -1,5 +1,11 @@
 <template>
   <section class="mobile-mini-player" aria-label="正在播放">
+    <!-- 2px Top Progress Line -->
+    <div class="mobile-mini-player__progress" aria-hidden="true">
+      <span :style="{ width: `${progressRatio}%` }" />
+    </div>
+
+    <!-- Track Info (Click opens full-screen player) -->
     <button type="button" class="mobile-mini-player__track" @click="openPlayer">
       <img
         v-if="player.currentSong?.cover_url"
@@ -11,36 +17,45 @@
         {{ coverFallback }}
       </span>
       <span class="mobile-mini-player__meta">
-        <strong>{{ player.currentSong?.title }}</strong>
+        <strong>{{ player.currentSong?.title || '未在播放' }}</strong>
         <span>{{ artistText }}</span>
       </span>
     </button>
 
-    <button
-      type="button"
-      class="mobile-mini-player__action mobile-mini-player__action--primary"
-      :aria-label="player.isPlaying ? '暂停' : '播放'"
-      :title="player.isPlaying ? '暂停' : '播放'"
-      @click="player.togglePlay()"
-    >
-      <LoaderCircle v-if="player.isLoading" :size="22" class="mobile-mini-player__spinner" aria-hidden="true" />
-      <Pause v-else-if="player.isPlaying" :size="22" fill="currentColor" aria-hidden="true" />
-      <Play v-else :size="22" fill="currentColor" aria-hidden="true" />
-    </button>
+    <!-- Controls: Previous, Play/Pause, Next -->
+    <div class="mobile-mini-player__controls">
+      <button
+        type="button"
+        class="mobile-mini-player__action"
+        aria-label="上一首"
+        title="上一首"
+        @click="player.playPrevious()"
+      >
+        <MIcon name="player-prev" size="sm" />
+      </button>
 
-    <button
-      type="button"
-      class="mobile-mini-player__action"
-      aria-label="打开播放队列"
-      title="播放队列"
-      @click="openPlayer"
-    >
-      <ListMusic :size="22" aria-hidden="true" />
-      <span v-if="player.queue.length" class="mobile-mini-player__badge">{{ player.queue.length }}</span>
-    </button>
+      <button
+        type="button"
+        class="mobile-mini-player__action mobile-mini-player__action--primary"
+        data-testid="player-play-btn"
+        :aria-label="player.isPlaying ? '暂停' : '播放'"
+        :title="player.isPlaying ? '暂停' : '播放'"
+        @click="player.togglePlay()"
+      >
+        <span v-if="player.isLoading" class="mobile-mini-player__spinner" aria-hidden="true" />
+        <MIcon v-else-if="player.isPlaying" name="player-pause" size="sm" />
+        <MIcon v-else name="player-play" size="sm" />
+      </button>
 
-    <div class="mobile-mini-player__progress" aria-hidden="true">
-      <span :style="{ width: `${progressRatio}%` }" />
+      <button
+        type="button"
+        class="mobile-mini-player__action"
+        aria-label="下一首"
+        title="下一首"
+        @click="player.playNext()"
+      >
+        <MIcon name="player-next" size="sm" />
+      </button>
     </div>
   </section>
 </template>
@@ -48,8 +63,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ListMusic, LoaderCircle, Pause, Play } from 'lucide-vue-next'
 import { usePlayerStore } from '@/stores/player'
+import MIcon from '@mobile/components/ui/MIcon.vue'
 
 const player = usePlayerStore()
 const router = useRouter()
@@ -68,7 +83,7 @@ const coverFallback = computed(() => {
 
 const progressRatio = computed(() => {
   if (!player.duration) return 0
-  return Math.min(100, Math.max(0, player.currentTime / player.duration * 100))
+  return Math.min(100, Math.max(0, (player.currentTime / player.duration) * 100))
 })
 
 function openPlayer() {
@@ -82,54 +97,70 @@ function openPlayer() {
   right: 0;
   bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   left: 0;
-  z-index: var(--a-z-player);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px 44px;
-  gap: 0.25rem;
+  z-index: var(--a-z-player, 90);
+  display: flex;
   align-items: center;
-  min-height: var(--mobile-app-player-height, 76px);
-  padding: 0.5rem 0.75rem 0.75rem;
-  border-top: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface);
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: var(--mobile-app-player-height, 64px);
+  padding: 0.5rem 0.875rem;
+  border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background: #ffffff;
   box-shadow: none;
+}
+
+.mobile-mini-player__progress {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: var(--a-color-border-soft, #e2e8f0);
+}
+
+.mobile-mini-player__progress span {
+  display: block;
+  height: 100%;
+  background: var(--a-color-primary, #0f172a);
+  transition: width 120ms linear;
 }
 
 .mobile-mini-player__track {
   display: flex;
   min-width: 0;
-  min-height: 56px;
+  flex: 1;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.625rem;
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--a-color-fg);
+  color: var(--a-color-text, #0f172a);
   text-align: left;
   cursor: pointer;
 }
 
 .mobile-mini-player__cover {
-  width: 48px;
-  height: 48px;
-  flex: 0 0 48px;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
   object-fit: cover;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
 }
 
 .mobile-mini-player__cover--fallback {
   display: grid;
   place-items: center;
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-muted);
-  font-size: 1.25rem;
-  font-weight: 650;
+  background: var(--a-color-surface-muted, #f8fafc);
+  color: var(--a-color-muted, #64748b);
+  font-size: 1.125rem;
+  font-weight: 600;
 }
 
 .mobile-mini-player__meta {
   display: grid;
   min-width: 0;
-  gap: 0.2rem;
+  gap: 0.125rem;
 }
 
 .mobile-mini-player__meta strong,
@@ -140,76 +171,71 @@ function openPlayer() {
 }
 
 .mobile-mini-player__meta strong {
-  font-size: 0.9rem;
-  font-weight: 650;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--a-color-text, #0f172a);
 }
 
 .mobile-mini-player__meta span {
-  color: var(--a-color-muted);
+  color: var(--a-color-muted, #64748b);
   font-size: 0.75rem;
+}
+
+.mobile-mini-player__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
 }
 
 .mobile-mini-player__action {
   position: relative;
   display: inline-grid;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   place-items: center;
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--a-color-fg);
+  color: var(--a-color-text, #0f172a);
   cursor: pointer;
+  border-radius: var(--a-radius-control, 4px);
+  transition: background-color 0.1s ease;
+}
+
+.mobile-mini-player__action:active {
+  background-color: var(--a-color-surface-muted, #f8fafc);
 }
 
 .mobile-mini-player__action--primary {
-  border-radius: 50%;
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-text, #0f172a);
+  color: #ffffff;
+}
+
+.mobile-mini-player__action--primary:active {
+  opacity: 0.9;
+  background: var(--a-color-text, #0f172a);
 }
 
 .mobile-mini-player__action:focus-visible,
 .mobile-mini-player__track:focus-visible {
-  outline: 2px solid var(--a-color-primary);
+  outline: 2px solid var(--a-color-primary, #0f172a);
   outline-offset: 2px;
 }
 
-.mobile-mini-player__badge {
-  position: absolute;
-  top: 2px;
-  right: 0;
-  min-width: 16px;
-  padding: 0 3px;
-  border-radius: 999px;
-  background: var(--a-color-primary);
-  color: var(--a-color-primary-contrast);
-  font-size: 0.65rem;
-  line-height: 16px;
-  text-align: center;
-}
-
-.mobile-mini-player__progress {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 2px;
-  background: var(--a-color-border-soft);
-}
-
-.mobile-mini-player__progress span {
-  display: block;
-  height: 100%;
-  background: var(--a-color-primary);
-  transition: width 120ms linear;
-}
-
 .mobile-mini-player__spinner {
-  animation: mobile-player-spin 0.9s linear infinite;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: mobile-player-spin 0.8s linear infinite;
 }
 
 @keyframes mobile-player-spin {
   to { transform: rotate(360deg); }
 }
-
 </style>

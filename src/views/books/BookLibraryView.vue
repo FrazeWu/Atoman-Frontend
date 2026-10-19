@@ -184,13 +184,27 @@ import {
   retryBookImport,
   linkBookImportToCatalog,
 } from '@/api/books'
+import { useQueryClient } from '@tanstack/vue-query'
+import { bookKeys } from '@/entities/book'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import BookLibraryCard from '@/components/books/BookLibraryCard.vue'
 import BookLibraryContinueCard from '@/components/books/BookLibraryContinueCard.vue'
 import BookImportUploadModal from '@/components/books/BookImportUploadModal.vue'
 
+let moduleShelvesCache: BookShelfItem[] | null = null
+let moduleContinueCache: BookContinueReading[] | null = null
+let moduleImportsCache: BookImportSession[] | null = null
+let moduleNotesCountCache: number | null = null
+
 const router = useRouter()
+
+let queryClient: ReturnType<typeof useQueryClient> | null = null
+try {
+  queryClient = useQueryClient()
+} catch {
+  // Graceful fallback for environments without VueQueryPlugin
+}
 
 const isLoading = ref(true)
 const errorMessage = ref('')
@@ -264,8 +278,18 @@ function getReadingPercent(item: BookShelfItem | BookImportSession): number | un
 }
 
 async function loadLibrary() {
-  isLoading.value = true
   errorMessage.value = ''
+  const hasCache = moduleShelvesCache !== null && moduleContinueCache !== null && moduleImportsCache !== null
+  if (hasCache) {
+    shelves.value = moduleShelvesCache!
+    continueItems.value = moduleContinueCache!
+    imports.value = moduleImportsCache!
+    notesCount.value = moduleNotesCountCache ?? 0
+    isLoading.value = false
+  } else {
+    isLoading.value = true
+  }
+
   try {
     const [shelfRes, continueRes, importRes, notesRes] = await Promise.all([
       listBookShelf('', 100, 0),
@@ -277,6 +301,15 @@ async function loadLibrary() {
     continueItems.value = continueRes || []
     imports.value = importRes || []
     notesCount.value = notesRes.total || 0
+
+    moduleShelvesCache = shelves.value
+    moduleContinueCache = continueItems.value
+    moduleImportsCache = imports.value
+    moduleNotesCountCache = notesCount.value
+
+    queryClient?.setQueryData(bookKeys.shelfList(''), shelfRes)
+    queryClient?.setQueryData(bookKeys.continueReading(), continueRes)
+    queryClient?.setQueryData(bookKeys.notesList({ limit: 1 }), notesRes)
   } catch (err) {
     errorMessage.value = err instanceof Error ? err.message : '书架数据加载失败，请刷新重试'
   } finally {
@@ -295,6 +328,9 @@ async function handleUpdateStatus(workId: string, status: string) {
     if (target) {
       target.status = status
     }
+    moduleShelvesCache = [...shelves.value]
+    void queryClient?.invalidateQueries({ queryKey: bookKeys.shelf() })
+    void queryClient?.invalidateQueries({ queryKey: bookKeys.continueReading() })
   } catch {
     errorMessage.value = '更新阅读状态失败，请重试'
   }
@@ -307,6 +343,9 @@ async function handleDeleteItem(id: string) {
     try {
       await deleteBookShelf(id)
       shelves.value = shelves.value.filter((i) => i.work_id !== id && i.id !== id)
+      moduleShelvesCache = [...shelves.value]
+      void queryClient?.invalidateQueries({ queryKey: bookKeys.shelf() })
+      void queryClient?.invalidateQueries({ queryKey: bookKeys.continueReading() })
     } catch {
       errorMessage.value = '移出书架失败，请稍后重试'
     }
@@ -315,6 +354,7 @@ async function handleDeleteItem(id: string) {
     try {
       await deleteBookImport(id)
       imports.value = imports.value.filter((i) => i.id !== id)
+      moduleImportsCache = [...imports.value]
     } catch {
       errorMessage.value = '删除本地导入记录失败，请稍后重试'
     }

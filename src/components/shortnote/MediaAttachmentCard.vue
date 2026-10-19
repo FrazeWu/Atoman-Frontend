@@ -83,8 +83,62 @@
             {{ attachment.title }}
           </span>
         </div>
-        <div v-if="subtitleText" class="media-attachment-card__subtitle" :title="subtitleText">
-          {{ subtitleText }}
+
+        <div class="media-attachment-card__meta" :title="subtitleText">
+          <template v-if="attachment.type === 'song'">
+            <span v-if="displayArtist" class="media-attachment-card__artist">
+              {{ displayArtist }}
+            </span>
+            <span v-if="displayArtist && (attachment.album_title || attachment.year || durationFormatted)" class="media-attachment-card__dot">·</span>
+
+            <RouterLink
+              v-if="attachment.album_title && attachment.album_id"
+              :to="`/music/album/${attachment.album_id}`"
+              class="media-attachment-card__album-link"
+              :title="`查看专辑《${attachment.album_title}》`"
+              @click.stop
+            >
+              《{{ attachment.album_title }}》
+            </RouterLink>
+            <span v-else-if="attachment.album_title" class="media-attachment-card__album-name">
+              《{{ attachment.album_title }}》
+            </span>
+            <span v-if="attachment.album_title && (attachment.year || durationFormatted)" class="media-attachment-card__dot">·</span>
+
+            <span v-if="attachment.year" class="media-attachment-card__year">
+              {{ attachment.year }}
+            </span>
+            <span v-if="attachment.year && durationFormatted" class="media-attachment-card__dot">·</span>
+
+            <span v-if="durationFormatted" class="media-attachment-card__duration">
+              {{ durationFormatted }}
+            </span>
+          </template>
+
+          <template v-else-if="attachment.type === 'album'">
+            <span v-if="displayArtist" class="media-attachment-card__artist">
+              {{ displayArtist }}
+            </span>
+            <span v-if="displayArtist && (attachment.year || attachment.song_count)" class="media-attachment-card__dot">·</span>
+
+            <span v-if="attachment.year" class="media-attachment-card__year">
+              {{ attachment.year }}
+            </span>
+            <span v-if="attachment.year && attachment.song_count" class="media-attachment-card__dot">·</span>
+
+            <span v-if="attachment.song_count" class="media-attachment-card__count">
+              {{ attachment.song_count }} 首曲目
+            </span>
+          </template>
+
+          <template v-else>
+            <span v-if="durationFormatted" class="media-attachment-card__duration">
+              {{ durationFormatted }}
+            </span>
+            <span v-else-if="attachment.subtitle" class="media-attachment-card__fallback-subtitle">
+              {{ attachment.subtitle }}
+            </span>
+          </template>
         </div>
       </div>
 
@@ -155,7 +209,7 @@ const typeLabel = computed(() => {
 
 const targetHref = computed(() => {
   if (props.attachment.type === 'song') {
-    return `/music/?song_id=${props.attachment.id}`
+    return `/music/song/${props.attachment.id}`
   }
   if (props.attachment.type === 'album') {
     return `/music/album/${props.attachment.id}`
@@ -169,23 +223,47 @@ const targetHref = computed(() => {
 const actionBtnTitle = computed(() => {
   switch (props.attachment.type) {
     case 'album':
-      return '查看专辑'
+      return '进入专辑页面'
     case 'video':
       return '观看视频'
     case 'song':
     default:
-      return '查看单曲'
+      return '进入歌曲页面'
   }
 })
 
-const subtitleText = computed(() => {
-  if (props.attachment.subtitle) return props.attachment.subtitle
+const displayArtist = computed(() => {
+  return props.attachment.artist || props.attachment.subtitle || ''
+})
+
+const durationFormatted = computed(() => {
   if (props.attachment.duration && props.attachment.duration > 0) {
-    const mins = Math.floor(props.attachment.duration / 60)
+    const mins = String(Math.floor(props.attachment.duration / 60)).padStart(2, '0')
     const secs = String(Math.floor(props.attachment.duration % 60)).padStart(2, '0')
     return `${mins}:${secs}`
   }
   return ''
+})
+
+const subtitleText = computed(() => {
+  if (props.attachment.type === 'song') {
+    const parts = [
+      props.attachment.artist,
+      props.attachment.album_title ? `《${props.attachment.album_title}》` : '',
+      props.attachment.year ? `${props.attachment.year}` : '',
+      durationFormatted.value,
+    ].filter(Boolean)
+    if (parts.length > 0) return parts.join(' · ')
+  } else if (props.attachment.type === 'album') {
+    const parts = [
+      props.attachment.artist,
+      props.attachment.year ? `${props.attachment.year}` : '',
+      props.attachment.song_count ? `${props.attachment.song_count} 首曲目` : '',
+    ].filter(Boolean)
+    if (parts.length > 0) return parts.join(' · ')
+  }
+  if (props.attachment.subtitle) return props.attachment.subtitle
+  return durationFormatted.value
 })
 
 const isCurrentSong = computed(() => {
@@ -487,13 +565,34 @@ function handlePrimaryAction() {
   text-decoration: underline;
 }
 
+.media-attachment-card__meta,
 .media-attachment-card__subtitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
   font-size: 0.75rem;
   color: var(--a-color-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 0.125rem;
+}
+
+.media-attachment-card__dot {
+  opacity: 0.6;
+  user-select: none;
+}
+
+.media-attachment-card__album-link {
+  color: var(--a-color-muted);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.media-attachment-card__album-link:hover {
+  color: var(--a-color-primary, #3b82f6);
+  text-decoration: underline;
 }
 
 /* 操作区 */

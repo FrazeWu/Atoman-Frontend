@@ -403,6 +403,11 @@ export interface ShortNoteMediaAttachment {
 	cover_url?: string;
 	audio_url?: string;
 	duration?: number;
+	artist?: string;
+	album_id?: string;
+	album_title?: string;
+	year?: number;
+	song_count?: number;
 }
 
 export interface ShortNote {

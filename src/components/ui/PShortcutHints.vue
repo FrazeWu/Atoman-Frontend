@@ -252,7 +252,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
   outline: none;
 }
 
@@ -365,7 +365,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   color: var(--a-color-muted);
   cursor: pointer;
   font-size: 0.875rem;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .shortcut-hints__close-btn:hover {

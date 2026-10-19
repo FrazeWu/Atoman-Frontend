@@ -46,13 +46,13 @@ import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
 import { isMobileDetailRoute } from './mobileRouteMeta'
 import MobileTopbar from './components/system/MobileTopbar.vue'
 import MobileSpaceDrawer from './components/system/MobileSpaceDrawer.vue'
-import MobileBottomNav from './components/system/MobileBottomNav.vue'
 import './mobileModules.css'
 import './mobileDiscovery.css'
 import './mobileSaved.css'
 import './mobileContent.css'
 
 const MobileAudioPlayer = defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))
+const MobileBottomNav = defineAsyncComponent(() => import('./components/system/MobileBottomNav.vue'))
 
 declare global {
   interface Window {
@@ -212,8 +212,8 @@ body {
   --a-color-surface-muted: #f8fafc;
   --a-color-border: #e2e8f0;
   --a-color-border-soft: #e2e8f0;
-  --a-color-muted: #64748b;
-  --a-color-muted-soft: #475569;
+  --a-color-muted: #5c5c60;
+  --a-color-muted-soft: #48484a;
   --a-color-primary: #0066cc;
   --a-color-primary-hover: #005bb5;
   --a-color-primary-pressed: #004c99;

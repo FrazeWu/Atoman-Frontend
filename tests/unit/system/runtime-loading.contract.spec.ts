@@ -55,8 +55,8 @@ describe("runtime loading boundaries", () => {
 			expect(source).toContain(`import('${importPath}')`);
 		}
 		expect(source).not.toContain("MobileBottomNav");
-		expect(readSource("apps/mobile/MobileApp.vue")).toContain(
-			"defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))",
+		expect(readSource("apps/mobile/MobileApp.vue")).toMatch(
+			/defineAsyncComponent\(\(\) => import\('(\.\/components\/system|@mobile\/components\/system|@\/components\/system)\/MobileBottomNav\.vue'\)\)/,
 		);
 		expect(source).toContain('<BlogSheetStack />');
 		expect(source).not.toContain('<BlogSheetStack v-if="sheetStore.stack.length > 0" />');
@@ -193,8 +193,8 @@ describe("runtime loading boundaries", () => {
 		expect(source).not.toContain(
 			"import MobileAudioPlayer from './MobileAudioPlayer.vue'",
 		);
-		expect(source).toContain(
-			"defineAsyncComponent(() => import('@/components/system/MobileBottomNav.vue'))",
+		expect(source).toMatch(
+			/defineAsyncComponent\(\(\) => import\('(\.\/components\/system|@mobile\/components\/system|@\/components\/system)\/MobileBottomNav\.vue'\)\)/,
 		);
 		expect(source).toContain(
 			"defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))",

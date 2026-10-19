@@ -1,131 +1,131 @@
 <template>
-  <div v-if="open">
-    <!-- 遮罩背景 -->
-    <div
-      class="theme-customizer-backdrop fixed inset-0 bg-black/40 backdrop-blur-xs z-[690] transition-opacity"
-      aria-hidden="true"
-      @click="cancel"
-    />
-
-    <!-- 侧边定制抽屉 -->
-    <aside
-      class="theme-customizer-drawer fixed inset-y-0 right-0 z-[700] w-full max-w-md bg-surface border-l border-border shadow-xl flex flex-col"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="theme-customizer-title"
-    >
-      <!-- 头部 -->
-      <header class="p-4 border-b border-border-soft flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <h2 id="theme-customizer-title" class="text-base font-semibold text-text">
-            装扮空间
-          </h2>
-          <label class="inline-flex items-center gap-2 cursor-pointer text-xs text-muted select-none">
-            <input
-              v-model="isEnabled"
-              type="checkbox"
-              role="switch"
-              aria-label="启用装扮"
-              class="rounded border-border text-primary focus:ring-primary w-4 h-4 cursor-pointer"
-              @change="updateLivePreview"
-            />
-            <span>启用</span>
-          </label>
-        </div>
-
-        <button
-          type="button"
-          class="p-1 rounded-md text-muted hover:text-text hover:bg-surface-soft transition-colors cursor-pointer"
-          aria-label="关闭"
+  <div v-if="open" class="theme-customizer-root">
+      <!-- 遮罩背景 -->
+      <Transition name="drawer-backdrop" appear>
+        <div
+          class="theme-customizer-backdrop"
+          aria-hidden="true"
           @click="cancel"
+        />
+      </Transition>
+
+      <!-- 侧边定制抽屉 -->
+      <Transition name="drawer-slide" appear>
+        <aside
+          class="theme-customizer-drawer"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="theme-customizer-title"
         >
-          ✕
-        </button>
-      </header>
+          <!-- 头部 -->
+          <header class="drawer-header">
+            <div class="drawer-title-group">
+              <h2 id="theme-customizer-title" class="drawer-title">
+                装扮空间
+              </h2>
+              <label class="drawer-switch-label">
+                <input
+                  v-model="isEnabled"
+                  type="checkbox"
+                  role="switch"
+                  aria-label="启用装扮"
+                  class="drawer-switch-input"
+                  @change="updateLivePreview"
+                />
+                <span class="drawer-switch-text">启用</span>
+              </label>
+            </div>
 
-      <!-- 模式切换标签 -->
-      <div class="px-4 pt-3 border-b border-border-soft bg-surface-soft/50">
-        <div role="tablist" class="flex gap-2">
-          <button
-            type="button"
-            role="tab"
-            :aria-selected="mode === 'preset'"
-            class="pb-2.5 px-3 text-xs font-medium border-b-2 transition-colors cursor-pointer"
-            :class="mode === 'preset'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted hover:text-text'"
-            @click="switchMode('preset')"
-          >
-            基础装扮
-          </button>
-          <button
-            type="button"
-            role="tab"
-            :aria-selected="mode === 'custom_css'"
-            class="pb-2.5 px-3 text-xs font-medium border-b-2 transition-colors cursor-pointer"
-            :class="mode === 'custom_css'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted hover:text-text'"
-            @click="switchMode('custom_css')"
-          >
-            高级 CSS
-          </button>
-        </div>
-      </div>
+            <button
+              type="button"
+              class="drawer-close-btn"
+              aria-label="关闭"
+              @click="cancel"
+            >
+              ✕
+            </button>
+          </header>
 
-      <!-- 内容面板 -->
-      <main class="flex-1 overflow-y-auto p-4 space-y-4">
-        <div v-if="saveError" class="p-3 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 rounded text-xs" role="alert">
-          {{ saveError }}
-        </div>
+          <!-- 模式切换标签 -->
+          <div class="drawer-tabs-wrapper">
+            <div role="tablist" class="drawer-tabs">
+              <button
+                type="button"
+                role="tab"
+                :aria-selected="mode === 'preset'"
+                class="drawer-tab-btn"
+                :class="{ 'is-active': mode === 'preset' }"
+                @click="switchMode('preset')"
+              >
+                基础装扮
+              </button>
+              <button
+                type="button"
+                role="tab"
+                :aria-selected="mode === 'custom_css'"
+                class="drawer-tab-btn"
+                :class="{ 'is-active': mode === 'custom_css' }"
+                @click="switchMode('custom_css')"
+              >
+                高级 CSS
+              </button>
+            </div>
+          </div>
 
-        <div v-if="mode === 'preset'" role="tabpanel" aria-label="基础装扮">
-          <ThemePresetControl
-            :config="presetConfig"
-            @update:config="onPresetUpdate"
-          />
-        </div>
+          <!-- 内容面板 -->
+          <main class="drawer-content">
+            <div v-if="saveError" class="drawer-error" role="alert">
+              {{ saveError }}
+            </div>
 
-        <div v-else-if="mode === 'custom_css'" role="tabpanel" aria-label="高级 CSS" class="h-full flex flex-col">
-          <ThemeCssEditor
-            :model-value="customCss"
-            @update:model-value="onCssUpdate"
-          />
-        </div>
-      </main>
+            <div v-if="mode === 'preset'" role="tabpanel" aria-label="基础装扮">
+              <ThemePresetControl
+                :config="presetConfig"
+                @update:config="onPresetUpdate"
+              />
+            </div>
 
-      <!-- 底部操作栏 -->
-      <footer class="p-4 border-t border-border-soft flex items-center justify-between bg-surface-soft/30">
-        <button
-          type="button"
-          class="px-3 py-1.5 text-xs text-muted hover:text-text hover:bg-surface-soft rounded transition-colors cursor-pointer disabled:opacity-50"
-          :disabled="saving || resetting"
-          @click="handleReset"
-        >
-          {{ resetting ? '恢复中...' : '恢复默认' }}
-        </button>
+            <div v-else-if="mode === 'custom_css'" role="tabpanel" aria-label="高级 CSS" class="drawer-editor-panel">
+              <ThemeCssEditor
+                :model-value="customCss"
+                @update:model-value="onCssUpdate"
+              />
+            </div>
+          </main>
 
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
-            class="px-3 py-1.5 text-xs border border-border-soft rounded text-text hover:bg-surface-soft transition-colors cursor-pointer"
-            :disabled="saving"
-            @click="cancel"
-          >
-            取消
-          </button>
-          <button
-            type="button"
-            class="px-3.5 py-1.5 text-xs rounded bg-primary text-primary-contrast font-medium hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
-            :disabled="saving"
-            @click="handleSave"
-          >
-            {{ saving ? '保存中...' : '保存并生效' }}
-          </button>
-        </div>
-      </footer>
-    </aside>
-  </div>
+          <!-- 底部操作栏 -->
+          <footer class="drawer-footer">
+            <button
+              type="button"
+              class="btn-reset"
+              :disabled="saving || resetting"
+              @click="handleReset"
+            >
+              {{ resetting ? '恢复中...' : '恢复默认' }}
+            </button>
+
+            <div class="drawer-footer-actions">
+              <button
+                type="button"
+                class="btn-cancel"
+                :disabled="saving"
+                @click="cancel"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                class="btn-save"
+                :disabled="saving"
+                @click="handleSave"
+              >
+                {{ saving ? '保存中...' : '保存并生效' }}
+              </button>
+            </div>
+          </footer>
+        </aside>
+      </Transition>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -178,9 +178,9 @@ function generatePresetScopedCss(creatorId: string, config: ThemePresetConfig): 
   }
   if (config.font_family) {
     const fontMap: Record<string, string> = {
-      sans: 'ui-sans-serif, system-ui, sans-serif',
-      serif: 'ui-serif, Georgia, serif',
-      mono: 'ui-monospace, monospace',
+      sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif',
+      serif: '"Noto Serif SC", "Source Han Serif SC", "Songti SC", Georgia, serif',
+      mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
     }
     vars.push(`--creator-font: ${fontMap[config.font_family] || 'sans-serif'};`)
   }
@@ -326,3 +326,244 @@ onUnmounted(() => {
   clearLivePreview()
 })
 </script>
+
+<style scoped>
+.theme-customizer-root {
+  position: relative;
+  z-index: var(--a-layer-above-player-sheet-panel, 740);
+}
+
+.theme-customizer-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.45);
+  z-index: var(--a-layer-above-player-sheet-backdrop, 730);
+}
+
+.theme-customizer-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 420px;
+  background-color: var(--a-color-surface);
+  border-left: 1px solid var(--a-color-border-soft);
+  box-shadow: var(--a-shadow-lg);
+  z-index: var(--a-layer-above-player-sheet-panel, 740);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.drawer-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--a-color-surface);
+}
+
+.drawer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.drawer-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--a-color-text);
+  margin: 0;
+}
+
+.drawer-switch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.drawer-switch-input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--a-color-primary);
+  cursor: pointer;
+}
+
+.drawer-switch-text {
+  font-weight: 500;
+}
+
+.drawer-close-btn {
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--a-radius-control, 4px);
+  color: var(--a-color-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.drawer-close-btn:hover {
+  color: var(--a-color-text);
+  background-color: var(--a-color-surface-muted);
+}
+
+.drawer-tabs-wrapper {
+  padding: 0.75rem 1.25rem 0;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  background-color: var(--a-color-surface-muted);
+}
+
+.drawer-tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.drawer-tab-btn {
+  padding: 0 0.5rem 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--a-color-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.drawer-tab-btn:hover {
+  color: var(--a-color-text);
+}
+
+.drawer-tab-btn.is-active {
+  color: var(--a-color-primary);
+  border-bottom-color: var(--a-color-primary);
+  font-weight: 600;
+}
+
+.drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.drawer-error {
+  padding: 0.75rem;
+  background-color: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  color: var(--a-color-danger, #dc2626);
+  border-radius: var(--a-radius-control, 4px);
+  font-size: 0.75rem;
+}
+
+.drawer-editor-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 380px;
+}
+
+.drawer-footer {
+  padding: 0.875rem 1.25rem;
+  border-top: 1px solid var(--a-color-border-soft);
+  background-color: var(--a-color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn-reset {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--a-color-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--a-radius-control, 4px);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.btn-reset:hover:not(:disabled) {
+  color: var(--a-color-text);
+  background-color: var(--a-color-surface-muted);
+}
+
+.btn-reset:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.drawer-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-cancel {
+  padding: 0.375rem 0.875rem;
+  font-size: 0.75rem;
+  color: var(--a-color-text);
+  background-color: var(--a-color-surface);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background-color: var(--a-color-surface-muted);
+  border-color: var(--a-color-border);
+}
+
+.btn-save {
+  padding: 0.375rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--a-color-primary-contrast, #ffffff);
+  background-color: var(--a-color-primary);
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-control, 4px);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.btn-save:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Transitions */
+.drawer-backdrop-enter-active,
+.drawer-backdrop-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.drawer-backdrop-enter-from,
+.drawer-backdrop-leave-to {
+  opacity: 0;
+}
+
+.drawer-slide-enter-active,
+.drawer-slide-leave-active {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drawer-slide-enter-from,
+.drawer-slide-leave-to {
+  transform: translateX(100%);
+}
+</style>

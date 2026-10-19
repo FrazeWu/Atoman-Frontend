@@ -68,15 +68,17 @@ defineExpose({ post, loading, errorStatus, isAcademic, bookmarked, postEmbeds, m
     <BlogPostReader ref="reader" :post-id="postId" presentation="page" />
 
     <!-- 创作者装扮入口与定制抽屉 -->
-    <button
-      v-if="isAuthor"
-      class="theme-customize-launcher fixed bottom-6 right-6 z-[600] flex items-center gap-1.5 px-3 py-2 bg-surface text-text border border-border shadow-lg rounded-full text-xs font-medium hover:bg-surface-soft transition-transform hover:scale-105 cursor-pointer"
-      title="装扮空间"
-      @click="isThemeDrawerOpen = true"
-    >
-      <span>🎨</span>
-      <span>装扮空间</span>
-    </button>
+    <Teleport to="body">
+      <button
+        v-if="isAuthor"
+        class="theme-customize-launcher"
+        title="装扮空间"
+        @click="isThemeDrawerOpen = true"
+      >
+        <span>🎨</span>
+        <span>装扮空间</span>
+      </button>
+    </Teleport>
 
     <ThemeCustomizerDrawer
       v-if="isAuthor && authorId"
@@ -86,6 +88,40 @@ defineExpose({ post, loading, errorStatus, isAcademic, bookmarked, postEmbeds, m
       :initial-theme="activeTheme"
     />
 
-    <ThemeEscapeHatch />
+    <ThemeEscapeHatch v-if="!isAuthor" />
   </CreatorThemeScope>
 </template>
+
+<style scoped>
+.theme-customize-launcher {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: var(--a-layer-normal-sheet-panel, 310);
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  background-color: var(--a-color-surface);
+  color: var(--a-color-text);
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: var(--a-shadow-md);
+  border-radius: var(--a-radius-control, 4px);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  outline: none;
+}
+
+.theme-customize-launcher:hover {
+  transform: scale(1.05);
+  background-color: var(--a-color-surface-muted);
+  border-color: var(--a-color-border);
+}
+
+.theme-customize-launcher:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
+}
+</style>

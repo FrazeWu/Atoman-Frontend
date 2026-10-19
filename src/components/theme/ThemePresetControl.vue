@@ -1,9 +1,9 @@
 <template>
-  <div class="theme-preset-control space-y-6">
+  <div class="theme-preset-control">
     <!-- 主色调选择 -->
-    <div class="theme-section space-y-2">
-      <label class="text-xs font-medium text-muted tracking-wider uppercase block">主色调</label>
-      <div class="grid grid-cols-6 gap-2">
+    <div class="theme-section">
+      <label class="theme-label">主色调</label>
+      <div class="color-grid">
         <button
           v-for="color in presetColors"
           :key="color"
@@ -11,7 +11,7 @@
           :data-color="color"
           :aria-label="`选择主色调 ${color}`"
           :aria-pressed="internalConfig.primary_color === color"
-          class="w-8 h-8 rounded-full border-2 transition-transform hover:scale-105 flex items-center justify-center cursor-pointer focus-visible:ring-2 focus-visible:ring-primary"
+          class="color-btn"
           :style="{
             backgroundColor: color,
             borderColor: internalConfig.primary_color === color ? 'var(--a-color-text)' : 'transparent',
@@ -20,23 +20,23 @@
         >
           <span
             v-if="internalConfig.primary_color === color"
-            class="w-2 h-2 rounded-full bg-white shadow-xs"
+            class="color-check-dot"
           />
         </button>
       </div>
     </div>
 
     <!-- 圆角风格 -->
-    <div class="theme-section space-y-2">
-      <label class="text-xs font-medium text-muted tracking-wider uppercase block">圆角风格</label>
-      <div class="grid grid-cols-4 gap-2">
+    <div class="theme-section">
+      <label class="theme-label">圆角风格</label>
+      <div class="radius-grid">
         <button
           v-for="r in radiusOptions"
           :key="r.value"
           type="button"
           :aria-pressed="internalConfig.corner_radius === r.value"
-          class="py-1.5 px-2 text-xs font-medium border rounded transition-colors cursor-pointer text-center focus-visible:ring-2 focus-visible:ring-primary"
-          :class="internalConfig.corner_radius === r.value ? 'border-primary bg-primary/10 text-primary' : 'border-border-soft hover:border-border text-text'"
+          class="option-btn"
+          :class="{ 'is-active': internalConfig.corner_radius === r.value }"
           @click="selectRadius(r.value)"
         >
           {{ r.label }}
@@ -45,16 +45,16 @@
     </div>
 
     <!-- 字体集 -->
-    <div class="theme-section space-y-2">
-      <label class="text-xs font-medium text-muted tracking-wider uppercase block">字体集</label>
-      <div class="grid grid-cols-3 gap-2">
+    <div class="theme-section">
+      <label class="theme-label">字体集</label>
+      <div class="font-grid">
         <button
           v-for="f in fontOptions"
           :key="f.value"
           type="button"
           :aria-pressed="internalConfig.font_family === f.value"
-          class="py-2 px-2 text-xs font-medium border rounded transition-colors cursor-pointer text-center focus-visible:ring-2 focus-visible:ring-primary"
-          :class="internalConfig.font_family === f.value ? 'border-primary bg-primary/10 text-primary' : 'border-border-soft hover:border-border text-text'"
+          class="option-btn"
+          :class="{ 'is-active': internalConfig.font_family === f.value }"
           @click="selectFont(f.value)"
         >
           {{ f.label }}
@@ -117,3 +117,103 @@ function selectFont(font: FontFamily) {
   emit('update:config', { ...internalConfig.value })
 }
 </script>
+
+<style scoped>
+.theme-preset-control {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.theme-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.theme-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--a-color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.5rem;
+}
+
+.color-btn {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  border-width: 2px;
+  border-style: solid;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  outline: none;
+}
+
+.color-btn:hover {
+  transform: scale(1.1);
+}
+
+.color-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--a-color-bg), 0 0 0 4px var(--a-color-primary);
+}
+
+.color-check-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.radius-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.font-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.option-btn {
+  padding: 0.5rem 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--a-radius-control, 4px);
+  border: 1px solid var(--a-color-border-soft);
+  background-color: var(--a-color-surface);
+  color: var(--a-color-text);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  outline: none;
+}
+
+.option-btn:hover {
+  border-color: var(--a-color-border);
+  background-color: var(--a-color-surface-muted);
+}
+
+.option-btn.is-active {
+  border-color: var(--a-color-primary);
+  background-color: rgba(37, 99, 235, 0.08);
+  color: var(--a-color-primary);
+  font-weight: 600;
+}
+
+.option-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--a-color-primary);
+}
+</style>

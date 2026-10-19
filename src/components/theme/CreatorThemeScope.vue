@@ -65,3 +65,9 @@ const scopeStyles = computed<Record<string, string>>(() => {
   return styles
 })
 </script>
+
+<style scoped>
+.creator-theme-scope {
+  font-family: var(--creator-font, inherit);
+}
+</style>

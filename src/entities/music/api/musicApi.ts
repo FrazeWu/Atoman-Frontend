@@ -1,6 +1,10 @@
 import { apiGetOptional, apiGetRaw, apiPostJson } from '@/api/client'
 import type { Song, Album, Artist } from '../model/types'
-import { getMusicSongDetail } from '@/api/musicV1'
+import { getMusicSongDetail, type MusicSongDetail } from '@/api/musicV1'
+
+export async function fetchSongDetail(id: string | number): Promise<MusicSongDetail> {
+  return getMusicSongDetail(String(id))
+}
 
 export async function fetchSongById(id: string | number): Promise<Song | null> {
   try {

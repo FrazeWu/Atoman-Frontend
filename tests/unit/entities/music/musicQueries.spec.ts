@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { musicKeys } from '@/entities/music/queries/musicKeys'
 import { useSongQuery } from '@/entities/music/queries/useSongQuery'
+import { useSongDetailQuery } from '@/entities/music/queries/useSongDetailQuery'
 import { useAlbumQuery } from '@/entities/music/queries/useAlbumQuery'
 import { useLyricsQuery } from '@/entities/music/queries/useLyricsQuery'
 import { createTestQueryClient } from '../../helpers/queryClient'
@@ -14,11 +15,50 @@ describe('musicKeys factory', () => {
     expect(musicKeys.all).toEqual(['music'])
     expect(musicKeys.songs()).toEqual(['music', 'songs'])
     expect(musicKeys.song('song-123')).toEqual(['music', 'songs', 'song-123'])
+    expect(musicKeys.songDetail('song-123')).toEqual(['music', 'songs', 'detail', 'song-123'])
     expect(musicKeys.lyrics('song-123')).toEqual(['music', 'songs', 'song-123', 'lyrics'])
     expect(musicKeys.albums()).toEqual(['music', 'albums'])
     expect(musicKeys.album('album-456')).toEqual(['music', 'albums', 'album-456'])
     expect(musicKeys.artists()).toEqual(['music', 'artists'])
     expect(musicKeys.artist('artist-789')).toEqual(['music', 'artists', 'artist-789'])
+  })
+})
+
+describe('useSongDetailQuery', () => {
+  it('fetches song detail through musicApi', async () => {
+    const mockDetail = {
+      song: {
+        id: 101,
+        title: 'Echoes of Dawn',
+        artist: 'Solaris',
+      },
+      artists: [],
+      playable: true,
+    }
+    vi.spyOn(musicApi, 'fetchSongDetail').mockResolvedValue(mockDetail as any)
+
+    const client = createTestQueryClient()
+    const TestComponent = defineComponent({
+      props: { songId: { type: String, required: true } },
+      setup(props) {
+        const query = useSongDetailQuery(toRef(props, 'songId'))
+        return { query }
+      },
+      template: '<div><span v-if="query.data.value">{{ query.data.value.song.title }}</span></div>',
+    })
+
+    const wrapper = mount(TestComponent, {
+      props: { songId: '101' },
+      global: {
+        provide: {
+          [VUE_QUERY_CLIENT]: client,
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('Echoes of Dawn')
+    })
   })
 })
 

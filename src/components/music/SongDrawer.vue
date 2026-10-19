@@ -1,7 +1,13 @@
+<script lang="ts">
+import type { MusicSongDetail } from '@/api/musicV1'
+
+export const moduleSongDetailCache = new Map<string, MusicSongDetail>()
+</script>
+
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { ChevronLeft, ChevronRight, Copy, Heart, History, ListPlus, Pencil, Play, Plus, StepForward } from 'lucide-vue-next'
-import { deleteMusicSongRating, getMusicSongDetail, setMusicSongRating, type MusicLyricsAnnotation, type MusicLyricsAnnotationVote, type MusicSongDetail, type MusicSongLyricsLine, type MusicSongListItem } from '@/api/musicV1'
+import { deleteMusicSongRating, setMusicSongRating, type MusicLyricsAnnotation, type MusicLyricsAnnotationVote, type MusicSongLyricsLine, type MusicSongListItem } from '@/api/musicV1'
 import MusicAnnotationWorkspace from '@/components/music/MusicAnnotationWorkspace.vue'
 import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
 import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
@@ -30,7 +36,8 @@ import { formatAlbumTypeLabel } from '@/utils/musicMedia'
 import { formatStoredPartialDate } from '@/components/music/birthDateMask'
 import { getMountedPinia } from '@/utils/pinia'
 import { useAuthStore } from '@/stores/auth'
-import { useSongQuery } from '@/entities/music'
+import { useQueryClient } from '@tanstack/vue-query'
+import { fetchSongDetail, musicKeys } from '@/entities/music'
 import type { MusicSheetLayer } from './musicSheetTypes'
 
 type SongLayer = Extract<MusicSheetLayer, { kind: 'song' }>
@@ -63,10 +70,9 @@ const { navigation, loading: navigationLoading, direction: navigationDirection, 
 const closeCurrentSong = () => closeSong(props.layer?.key)
 const returnCurrentSong = () => props.layer && returnToLayer(props.layer.key)
 const detail = ref<MusicSongDetail | null>(null)
-const songDetailCache = new Map<string, MusicSongDetail>()
-let songQuery: ReturnType<typeof useSongQuery> | null = null
+let queryClient: ReturnType<typeof useQueryClient> | null = null
 try {
-  songQuery = useSongQuery(computed(() => songId.value ?? ''))
+  queryClient = useQueryClient()
 } catch {
   // graceful fallback when QueryClient is not provided
 }
@@ -214,7 +220,9 @@ function applyRating(summary: { rating_score: number; rating_count: number; view
   detail.value.song.rating_count = Number(summary.rating_count ?? 0)
   detail.value.song.viewer_rating = summary.viewer_rating ?? null
   if (detail.value.song.id) {
-    songDetailCache.set(String(detail.value.song.id), detail.value)
+    const songIdStr = String(detail.value.song.id)
+    moduleSongDetailCache.set(songIdStr, detail.value)
+    queryClient?.setQueryData(musicKeys.songDetail(songIdStr), detail.value)
   }
 }
 
@@ -458,11 +466,15 @@ function clearRebindState() {
 async function loadDetail(targetSongId: unknown) {
   if (typeof targetSongId !== 'string' || !targetSongId) return
   const request = detailRequests.beginRequest()
-  const cached = songDetailCache.get(targetSongId)
+  const cached = moduleSongDetailCache.get(targetSongId)
+    ?? queryClient?.getQueryData<MusicSongDetail>(musicKeys.songDetail(targetSongId))
   if (cached) {
     detail.value = cached
     loading.value = false
     error.value = ''
+    if (!moduleSongDetailCache.has(targetSongId)) {
+      moduleSongDetailCache.set(targetSongId, cached)
+    }
   } else {
     detail.value = null
     loading.value = true
@@ -470,13 +482,14 @@ async function loadDetail(targetSongId: unknown) {
   }
   ratingLoading.value = false
   try {
-    const response = await getMusicSongDetail(targetSongId)
+    const response = await fetchSongDetail(targetSongId)
     if (!request.isCurrent()) return
     if (String(response.song.id) !== targetSongId) {
       replaceSong(String(response.song.id), { focusAnnotationId: focusAnnotationId.value, startRebind: startRebind.value })
       return
     }
-    songDetailCache.set(targetSongId, response)
+    moduleSongDetailCache.set(targetSongId, response)
+    queryClient?.setQueryData(musicKeys.songDetail(targetSongId), response)
     detail.value = response
     try {
       if (!authStore.isAuthenticated) {
@@ -512,8 +525,14 @@ watch(
     selectedAnnotationIds.value = []
     editingAnnotation.value = null
     clearRebindState()
-    if (oldRefreshToken !== undefined && state.value.songRefreshToken !== oldRefreshToken && typeof targetSongId === 'string' && targetSongId) {
-      songDetailCache.delete(targetSongId)
+    if (oldRefreshToken !== undefined && state.value.songRefreshToken !== oldRefreshToken) {
+      if (typeof targetSongId === 'string' && targetSongId) {
+        moduleSongDetailCache.delete(targetSongId)
+        void queryClient?.invalidateQueries({ queryKey: musicKeys.songDetail(targetSongId) })
+      } else {
+        moduleSongDetailCache.clear()
+        void queryClient?.invalidateQueries({ queryKey: musicKeys.songs() })
+      }
     }
     void loadDetail(targetSongId)
     if (typeof targetSongId === 'string' && targetSongId) void loadLyrics(targetSongId)

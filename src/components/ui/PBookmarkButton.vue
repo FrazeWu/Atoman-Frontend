@@ -15,14 +15,14 @@
     :title="bookmarked ? '取消收藏' : '收藏'"
     @click="handleClick"
   >
-    <Bookmark :size="iconSize" class="p-bookmark-button__icon" :class="{ 'is-filled': bookmarked }" />
+    <PIcon :name="bookmarked ? 'bookmark-filled' : 'bookmark'" :size="iconSizePreset" class="p-bookmark-button__icon" :class="{ 'is-filled': bookmarked }" />
     <span v-if="showCount && count !== undefined" class="p-bookmark-button__count">{{ count.toLocaleString() }}</span>
   </button>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Bookmark } from 'lucide-vue-next'
+import PIcon from '@/components/ui/PIcon.vue'
 
 const props = withDefaults(defineProps<{
   bookmarked?: boolean
@@ -47,10 +47,10 @@ const emit = defineEmits<{
 
 const isAnimating = ref(false)
 
-const iconSize = computed(() => {
-  if (props.size === 'sm') return 14
-  if (props.size === 'lg') return 18
-  return 15
+const iconSizePreset = computed<'sm' | 'md' | 'lg'>(() => {
+  if (props.size === 'sm') return 'sm'
+  if (props.size === 'lg') return 'lg'
+  return 'md'
 })
 
 function handleClick() {

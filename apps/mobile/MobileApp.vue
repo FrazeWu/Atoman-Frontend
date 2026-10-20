@@ -3,9 +3,9 @@
     <MobileTopbar
       v-if="showMobileTopbar"
       :current-space="currentSpace"
-      :show-back="isAuthRoute"
-      :hide-actions="isAuthRoute"
-      :title="isAuthRoute ? authTitle : undefined"
+      :show-back="isSubRoute"
+      :hide-actions="isSubRoute"
+      :title="isSubRoute ? subRouteTitle : undefined"
       @back="handleBack"
       @open-drawer="isDrawerOpen = true"
       @search="handleSearch"
@@ -74,22 +74,54 @@ const apiUrl = useApiUrl()
 
 const isAuthRoute = computed(() => route.matched?.some((record) => record.meta?.authLayout) ?? false)
 
-const authTitle = computed(() => {
-  if (route.path.startsWith('/register')) return '注册'
-  if (route.path.startsWith('/forgot-password')) return '重置密码'
-  return '登录'
+const isUtilityRoute = computed(() => {
+  return /^\/(?:about|terms|privacy|modules|users\/[^/]+\/settings)(\/|$)/.test(route.path)
+})
+
+const isSubRoute = computed(() => {
+  return (
+    isAuthRoute.value ||
+    isUtilityRoute.value ||
+    /^\/music\/(?:tags|songs|albums|artists|imports|more)(\/|$)/.test(route.path) ||
+    /^\/posts\/(?:notes|subscriptions)(\/|$)/.test(route.path) ||
+    /^\/(?:channel|channels|collection)(\/|$)/.test(route.path)
+  )
+})
+
+const subRouteTitle = computed(() => {
+  const p = route.path || '/'
+  if (p.startsWith('/login')) return '登录'
+  if (p.startsWith('/register')) return '注册'
+  if (p.startsWith('/forgot-password')) return '重置密码'
+  if (p.startsWith('/about')) return '关于'
+  if (p.startsWith('/terms')) return '服务条款'
+  if (p.startsWith('/privacy')) return '隐私政策'
+  if (p.startsWith('/modules')) return '功能目录'
+  if (p.includes('/settings')) return '设置'
+  if (p.startsWith('/music/tags')) return '标签'
+  if (p.startsWith('/music/songs')) return '单曲'
+  if (p.startsWith('/music/albums')) return '专辑'
+  if (p.startsWith('/music/artists')) return '艺术家'
+  if (p.startsWith('/music/imports')) return '导入记录'
+  if (p.startsWith('/music/more')) return '更多'
+  if (p.startsWith('/posts/notes')) return '便签'
+  if (p.startsWith('/posts/subscriptions')) return '订阅'
+  if (/^\/channels?(\/|$)/.test(p)) return '专栏'
+  if (p.startsWith('/collection')) return '合集'
+  if (p.startsWith('/feed/stats')) return '统计'
+  return ''
 })
 
 const isDetailRoute = computed(() => isMobileDetailRoute(route.path))
 
 const showMobileTopbar = computed(() => {
   if (route.path === '/' || route.path === '/music/player') return false
-  if (isAuthRoute.value) return true
+  if (isAuthRoute.value || isUtilityRoute.value) return true
   return !isDetailRoute.value
 })
 
 const showMobileBottomNav = computed(() => {
-  if (isAuthRoute.value || route.path === '/' || route.path === '/music/player') return false
+  if (isAuthRoute.value || isUtilityRoute.value || route.path === '/' || route.path === '/music/player') return false
   return !isDetailRoute.value
 })
 
@@ -100,7 +132,8 @@ const handleBack = () => {
   if (typeof window !== 'undefined' && window.history.length > 1) {
     router.back()
   } else {
-    void router.push('/music')
+    const spacePath = SPACE_PATHS[currentSpace.value] || '/music'
+    void router.push(spacePath)
   }
 }
 

@@ -56,7 +56,7 @@
           class="artist-title-link"
           @click.prevent.stop="$emit('click')"
         >
-          {{ displayName }}
+          <span class="artist-name">{{ displayName }}</span>
           <span v-if="birthYear" class="birth-year">· {{ birthYear }}</span>
         </RouterLink>
       </h3>
@@ -285,6 +285,8 @@ const formattedSubscribers = computed(() => {
   gap: 8px;
   padding: 10px 0 0;
   text-align: left;
+  min-width: 0;
+  width: 100%;
 }
 
 .artist-info__arrow {
@@ -302,6 +304,8 @@ const formattedSubscribers = computed(() => {
 }
 
 .artist-title {
+  min-width: 0;
+  flex: 1;
   font-size: 0.95rem;
   font-weight: 500;
   line-height: 1.35;
@@ -321,8 +325,22 @@ const formattedSubscribers = computed(() => {
 }
 
 .artist-title-link {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
   color: inherit;
   text-decoration: none;
+}
+
+.artist-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .artist-title-link:focus-visible {
@@ -331,9 +349,11 @@ const formattedSubscribers = computed(() => {
 }
 
 .birth-year {
+  flex-shrink: 0;
   font-weight: 400;
   color: var(--a-color-muted-soft);
   font-size: 0.85rem;
+  white-space: nowrap;
 }
 
 @media (max-width: 767px) {

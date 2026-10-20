@@ -9,17 +9,6 @@
       <div v-if="artistText" class="player-mini-tooltip__artist">{{ artistText }}</div>
     </div>
 
-    <!-- Expand button (folds open to the left) -->
-    <button
-      type="button"
-      class="player-mini-expand"
-      aria-label="展开完整播放器"
-      title="展开完整播放器"
-      @click.stop="$emit('expand')"
-    >
-      <ChevronLeft :size="15" aria-hidden="true" />
-    </button>
-
     <!-- Play / Pause Cover Button with progress ring and play overlay -->
     <button
       type="button"
@@ -52,6 +41,17 @@
         <Play :size="22" fill="currentColor" />
       </span>
     </button>
+
+    <!-- Expand button (fixed at the far right, matching collapse tab position) -->
+    <button
+      type="button"
+      class="player-mini-expand"
+      aria-label="展开完整播放器"
+      title="展开完整播放器"
+      @click.stop="$emit('expand')"
+    >
+      <ChevronLeft :size="15" aria-hidden="true" />
+    </button>
   </div>
 </template>
 
@@ -81,15 +81,13 @@ defineEmits<{
   left: auto;
   bottom: 0;
   z-index: var(--a-z-player, 720);
-  display: grid;
-  place-items: center;
-  width: 4.5rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
   height: 4.5rem;
+  width: auto;
   overflow: visible;
   border: 0;
-  border-top: 1px solid var(--a-color-border-soft);
-  border-left: 1px solid var(--a-color-border-soft);
-  border-radius: 0;
   background: var(--a-color-bg);
   box-shadow: none !important;
 }
@@ -101,11 +99,14 @@ defineEmits<{
   height: 4.5rem;
   padding: 0;
   border: 0;
+  border-top: 1px solid var(--a-color-border-soft);
+  border-left: 1px solid var(--a-color-border-soft);
   border-radius: 0;
   overflow: hidden;
   background: transparent;
   font: inherit;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .player-mini-cover:focus-visible {
@@ -169,23 +170,21 @@ defineEmits<{
 }
 
 .player-mini-expand {
-  position: absolute;
-  top: 0;
-  left: -1.5rem;
-  display: grid;
-  width: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
   height: 4.5rem;
-  place-items: center;
   padding: 0;
   border: 0;
   border-top: 1px solid var(--a-color-border-soft);
   border-left: 1px solid var(--a-color-border-soft);
-  border-bottom: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control, 4px) 0 0 var(--a-radius-control, 4px);
+  border-radius: 0;
   background: var(--a-color-bg);
   color: var(--a-color-muted);
   cursor: pointer;
-  z-index: 2;
+  flex-shrink: 0;
+  box-shadow: none !important;
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 
@@ -239,7 +238,6 @@ defineEmits<{
 }
 
 @media (min-width: 1440px) {
-  .player-mini-window,
   .player-mini-cover {
     width: 4.5rem;
     height: 4.5rem;
@@ -247,6 +245,7 @@ defineEmits<{
 
   .player-mini-expand {
     height: 4.5rem;
+    width: 28px;
   }
 }
 
@@ -262,7 +261,6 @@ defineEmits<{
     right: 0;
     left: auto;
     bottom: var(--a-mobile-nav-reserved-height);
-    width: 3rem;
     height: 3rem;
   }
 
@@ -273,8 +271,7 @@ defineEmits<{
 
   .player-mini-expand {
     height: 3rem;
-    left: -1.25rem;
-    width: 1.25rem;
+    width: 24px;
   }
 }
 </style>

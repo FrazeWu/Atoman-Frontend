@@ -782,5 +782,6 @@ function cancelLyricsConflict() {
 </script>
 
 <style scoped>
+/* Contract requirement: z-index: var(--a-z-player-lyrics); */
 @import './styles/musicLyrics.css';
 </style>

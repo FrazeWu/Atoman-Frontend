@@ -241,7 +241,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
 .shortcut-hints__trigger {
   position: fixed;
   right: 1.5rem;
-  bottom: calc(4.5rem + 0.75rem);
+  bottom: calc(4.5rem + 6px);
   z-index: var(--a-z-navigation, 100);
   display: inline-flex;
   align-items: center;
@@ -499,10 +499,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
 @media (max-width: 767px) {
   .shortcut-hints__trigger {
     right: 1rem;
-    bottom: calc(var(--a-mobile-nav-reserved-height, 0px) + 1rem);
-  }
-  .shortcut-hints__trigger.has-player {
-    bottom: calc(var(--a-mobile-nav-reserved-height, 0px) + 4rem + 0.75rem);
+    bottom: calc(var(--a-mobile-nav-reserved-height, 0px) + 4rem + 6px);
   }
 }
 </style>

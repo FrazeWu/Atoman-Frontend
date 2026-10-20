@@ -89,7 +89,7 @@ defineEmits<{
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -97,7 +97,9 @@ defineEmits<{
 
 .book-thumbnail-item.is-active .book-thumbnail-item__page {
   border-color: var(--a-color-primary);
-  box-shadow: 0 0 0 1px var(--a-color-primary);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+  box-shadow: none;
 }
 
 .book-thumbnail-item__indicator {

@@ -414,9 +414,9 @@ onBeforeUnmount(clearCoverPreview)
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
 }
-.studio-channels__list li:hover { border-color: var(--a-color-border); box-shadow: var(--a-shadow-sm); }
+.studio-channels__list li:hover { border-color: var(--a-color-border); background: var(--a-color-surface-muted); box-shadow: none; }
 .studio-channels__identity { min-width: 0; display: grid; grid-template-columns: auto auto 1fr; gap: 0.25rem 0.6rem; align-items: center; }
 .studio-channels__cover-thumb { width: 3rem; height: 3rem; border-radius: var(--a-radius-control); object-fit: cover; grid-row: span 2; }
 .studio-channels__identity > span {

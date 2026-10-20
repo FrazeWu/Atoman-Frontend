@@ -422,7 +422,7 @@ watch(
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -430,7 +430,9 @@ watch(
 
 .book-thumbnail-item.is-active .book-thumbnail-item__page {
   border-color: var(--a-color-primary);
-  box-shadow: 0 0 0 1px var(--a-color-primary);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+  box-shadow: none;
 }
 
 .book-thumbnail-item__indicator {
@@ -595,7 +597,7 @@ watch(
   border: 1px solid var(--a-color-border-soft);
   cursor: pointer;
   padding: 0;
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  transition: transform 0.1s ease;
 }
 
 .book-reader-sidebar__filter-dot:hover {
@@ -603,7 +605,9 @@ watch(
 }
 
 .book-reader-sidebar__filter-dot.is-active {
-  box-shadow: 0 0 0 1.5px var(--a-color-fg);
+  outline: 2px solid var(--a-color-fg);
+  outline-offset: 1px;
+  box-shadow: none;
 }
 
 .book-reader-sidebar__filter-dot[data-color="yellow"] {
@@ -645,7 +649,7 @@ watch(
   background: var(--a-color-bg);
   overflow: hidden;
   cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .book-annotation-card:hover {

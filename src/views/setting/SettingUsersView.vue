@@ -831,7 +831,7 @@ onMounted(() => {
   min-height: 36px;
   padding: 0;
   border-radius: var(--a-radius-control);
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
 }
 
 .setting-users__icon-button:hover {
@@ -937,7 +937,7 @@ onMounted(() => {
     background: var(--a-color-bg);
     border: 1px solid var(--a-color-border-soft);
     border-radius: var(--a-radius-card);
-    box-shadow: var(--a-shadow-sm);
+    box-shadow: none;
   }
 
   .setting-users__table td {

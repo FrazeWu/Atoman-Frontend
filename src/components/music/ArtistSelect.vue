@@ -228,8 +228,9 @@ watch(query, (v) => {
   right: 0;
   top: calc(100% + 2px);
   background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  box-shadow: none;
   z-index: 50;
   max-height: 240px;
   overflow-y: auto;
@@ -256,7 +257,7 @@ watch(query, (v) => {
   font-weight: var(--a-font-weight-strong, 700);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
 }
 .add-artist-link:hover { background: var(--a-color-bg); color: var(--a-color-text); }
 </style>

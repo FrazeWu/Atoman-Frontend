@@ -231,7 +231,7 @@ onBeforeUnmount(() => loadMoreObserver?.disconnect())
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   overflow: hidden;
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .short-note-timeline__rail-header {
@@ -278,7 +278,7 @@ onBeforeUnmount(() => loadMoreObserver?.disconnect())
   background: transparent;
   cursor: pointer;
   overflow: hidden;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
 }
 
 .short-note-timeline__rail-note::before {
@@ -304,7 +304,9 @@ onBeforeUnmount(() => loadMoreObserver?.disconnect())
 }
 
 .short-note-timeline__rail-note:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--a-color-primary);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: -2px;
+  box-shadow: none;
 }
 
 .short-note-timeline__rail-note:hover::before {

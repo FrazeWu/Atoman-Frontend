@@ -453,14 +453,15 @@ onBeforeUnmount(() => {
   border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
   overflow: hidden;
-  transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .song-result:hover,
 .song-result:focus-within {
   border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
-  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
+  border-left: 3px solid var(--a-color-text);
+  box-shadow: none;
 }
 
 .song-result button,
@@ -561,7 +562,8 @@ onBeforeUnmount(() => {
 .entity-row:focus-within {
   border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
-  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
+  border-left: 3px solid var(--a-color-text);
+  box-shadow: none;
 }
 
 .entity {

@@ -117,7 +117,7 @@ function formatDate(value?: string) {
   border-radius: var(--a-radius-card);
   border: 1px solid var(--a-color-border-soft);
   margin-bottom: 1.5rem;
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .post-header__cover {

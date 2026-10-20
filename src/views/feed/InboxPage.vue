@@ -807,7 +807,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  box-shadow: var(--a-shadow-lg);
+  box-shadow: none;
   z-index: 10;
 }
 

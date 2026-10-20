@@ -485,7 +485,7 @@ onMounted(() => {
   border: none;
   border-radius: var(--a-radius-control);
   cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .book-library-tab-btn:hover {
@@ -495,7 +495,8 @@ onMounted(() => {
 .book-library-tab-btn--active {
   color: var(--a-color-fg);
   background: var(--a-color-bg);
-  box-shadow: var(--a-shadow-sm);
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: none;
 }
 
 .book-library-tab-count {
@@ -562,7 +563,7 @@ onMounted(() => {
   color: var(--a-color-text-muted);
   border-radius: var(--a-radius-control);
   cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .book-library-view-btn:hover {
@@ -572,7 +573,8 @@ onMounted(() => {
 .book-library-view-btn--active {
   color: var(--a-color-fg);
   background: var(--a-color-bg);
-  box-shadow: var(--a-shadow-sm);
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: none;
 }
 
 /* Main Stream */

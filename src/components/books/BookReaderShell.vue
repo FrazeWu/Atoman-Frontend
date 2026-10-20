@@ -536,7 +536,7 @@ function togglePanel(panel: 'tools' | 'settings') {
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
   background: var(--book-reader-surface, var(--a-color-bg));
-  box-shadow: var(--a-shadow-md);
+  box-shadow: none;
 }
 
 .book-reader-shell__progress {

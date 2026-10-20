@@ -48,7 +48,7 @@ const activityValue = computed({ get: () => props.activity, set: value => emit('
   padding: 1rem 1.25rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .admin-user-filter-bar__form {

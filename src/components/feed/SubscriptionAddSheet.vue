@@ -371,16 +371,20 @@ watch(() => props.resetKey, () => {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .candidate-option:hover {
-  box-shadow: var(--a-shadow-sm);
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface-muted);
+  box-shadow: none;
 }
 
 .candidate-option--active {
   border-color: var(--a-color-text);
-  box-shadow: var(--a-shadow-sm);
+  outline: 2px solid var(--a-color-text);
+  outline-offset: 0;
+  box-shadow: none;
 }
 
 .candidate-option__title-row {

@@ -478,7 +478,7 @@ onUnmounted(() => {
   color: var(--a-color-text-secondary);
   font-size: 0.8rem;
   cursor: pointer;
-  transition: color 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: color 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .star-group-button:hover {
@@ -491,7 +491,7 @@ onUnmounted(() => {
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
   font-weight: 600;
 }
 

@@ -486,7 +486,7 @@ onBeforeUnmount(() => {
   background-position: left bottom;
   background-repeat: no-repeat;
   background-size: 100% 2px;
-  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .music-tag:hover,
@@ -501,7 +501,7 @@ onBeforeUnmount(() => {
   background-position: left bottom;
   background-repeat: no-repeat;
   background-size: 100% 2px;
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .music-tag__name {
@@ -608,13 +608,14 @@ onBeforeUnmount(() => {
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease;
 }
 
 .music-tags__add :deep(.p-input:focus) {
   border-color: var(--a-color-primary);
-  outline: none;
-  box-shadow: 0 0 0 1px var(--a-color-primary);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 0;
+  box-shadow: none;
 }
 
 .music-tags__add :deep(.p-input::placeholder) {
@@ -628,7 +629,7 @@ onBeforeUnmount(() => {
   border-radius: var(--a-radius-control);
   overflow: hidden;
   background: var(--a-color-bg);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
   max-height: 160px;
   overflow-y: auto;
 }

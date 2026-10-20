@@ -374,14 +374,15 @@ watch(
   border: 1px solid transparent;
   border-bottom-color: var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 
 .history-row:hover,
 .history-row:focus-within {
   background: var(--a-color-surface-muted);
   border-color: var(--a-color-border-soft);
-  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
+  border-left: 3px solid var(--a-color-text);
+  box-shadow: none;
 }
 
 .history-song {

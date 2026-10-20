@@ -246,7 +246,7 @@ onUnmounted(() => {
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-dropdown);
+  box-shadow: none;
   z-index: 120;
   display: flex;
   flex-direction: column;
@@ -274,7 +274,7 @@ onUnmounted(() => {
   border: 1px solid var(--a-color-border-soft);
   cursor: pointer;
   padding: 0;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transition: transform 0.12s ease;
 }
 
 .book-selection-toolbar__color-btn[data-color="yellow"] {
@@ -302,7 +302,9 @@ onUnmounted(() => {
 }
 
 .book-selection-toolbar__color-btn.is-active {
-  box-shadow: 0 0 0 2px var(--a-color-bg), 0 0 0 3.5px var(--a-color-primary);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+  box-shadow: none;
 }
 
 .book-selection-toolbar__icon-btn {
@@ -365,12 +367,14 @@ onUnmounted(() => {
   border-radius: var(--a-radius-card);
   resize: none;
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease;
 }
 
 .book-selection-toolbar__textarea:focus {
   border-color: var(--a-color-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--a-color-primary) 15%, transparent);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 0;
+  box-shadow: none;
 }
 
 .book-selection-toolbar__note-actions {

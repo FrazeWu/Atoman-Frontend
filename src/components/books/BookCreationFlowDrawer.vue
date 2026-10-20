@@ -1147,7 +1147,7 @@ async function submitCreation() {
   border: 1px solid var(--a-color-border-soft);
   overflow: hidden;
   background: var(--a-color-surface-muted);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .book-douban-card__img {

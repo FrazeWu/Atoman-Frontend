@@ -606,7 +606,7 @@ const copyMessage = async (content?: string) => {
   background: #ffffff;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
   transition: opacity var(--a-motion-micro), visibility var(--a-motion-micro);
 }
 

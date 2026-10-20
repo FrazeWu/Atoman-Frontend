@@ -1308,7 +1308,7 @@ watch(
   border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
   border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .track-adjustment__header {
@@ -1432,7 +1432,8 @@ watch(
 
 .track-drop-slot.is-drag-over::after {
   opacity: 1;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--a-color-primary) 24%, transparent);
+  outline: 2px solid var(--a-color-primary);
+  box-shadow: none;
 }
 
 .track-row {
@@ -1492,7 +1493,7 @@ watch(
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 .track-row__menu button {
   display: flex;
@@ -2046,7 +2047,7 @@ watch(
   position: absolute;
   right: 0.75rem;
   bottom: 0.75rem;
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 .file-picker-icon {
   color: var(--a-color-muted);

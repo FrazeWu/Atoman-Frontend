@@ -322,7 +322,7 @@ const albumYear = computed(() => {
   justify-content: center;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease, opacity 0.25s ease;
-  box-shadow: var(--a-shadow-dropdown);
+  box-shadow: none;
   padding: 0;
   opacity: 0;
 }

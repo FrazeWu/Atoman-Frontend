@@ -1272,14 +1272,15 @@ const hasSearchResults = computed(() => searchSongs.value.length > 0 || searchAl
   background: var(--a-color-bg);
   color: inherit;
   text-align: left;
-  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 
 .recently-played-item:hover,
 .recently-played-item:focus-within {
   border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
-  box-shadow: inset 4px 0 0 var(--a-color-text), var(--a-shadow-sm);
+  border-left: 3px solid var(--a-color-text);
+  box-shadow: none;
 }
 
 .recently-played-item__play {

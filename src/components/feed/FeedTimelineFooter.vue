@@ -170,13 +170,15 @@ const submitJump = () => {
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
 }
 
 .feed-page-control:hover:not(:disabled),
 .feed-page-number:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: var(--a-shadow-sm);
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface-muted);
+  box-shadow: none;
 }
 
 .feed-page-number.is-active {

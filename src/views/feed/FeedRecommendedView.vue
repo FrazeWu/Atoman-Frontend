@@ -1475,7 +1475,7 @@ onUnmounted(() => { recommendationRequest++ })
   font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
 }
 .topic-pill:hover {
   color: var(--a-color-fg);
@@ -1675,8 +1675,9 @@ onUnmounted(() => { recommendationRequest++ })
   min-width: 9rem;
   padding: 0.3rem;
   border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
   background: #fff;
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .recommendation-feedback__menu button {

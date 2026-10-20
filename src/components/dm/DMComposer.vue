@@ -155,13 +155,14 @@ const submit = () => {
   font: inherit;
   font-size: 0.925rem;
   line-height: 1.5;
-  transition: border-color var(--a-motion-micro), box-shadow var(--a-motion-micro);
+  transition: border-color var(--a-motion-micro);
 }
 
 .dm-composer textarea:focus {
-  outline: none;
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 0;
   border-color: var(--a-color-primary);
-  box-shadow: 0 0 0 1px var(--a-color-primary);
+  box-shadow: none;
 }
 
 .dm-composer textarea:disabled {
@@ -248,7 +249,7 @@ const submit = () => {
   background: #ffffff;
   color: var(--a-color-text-secondary);
   cursor: pointer;
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
   transition: background-color var(--a-motion-micro), color var(--a-motion-micro);
 }
 

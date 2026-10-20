@@ -155,4 +155,24 @@ describe('AudioPlayerTrackInfo', () => {
     expect(wrapper.find('.player-meta').classes()).toContain('player-meta--collapsed')
     expect(wrapper.find('.player-actions').classes()).toContain('player-actions--collapsed')
   })
+
+  it('renders audio quality badge for flac or lossless audio', () => {
+    const wrapper = mount(AudioPlayerTrackInfo, {
+      props: {
+        ...defaultProps,
+        currentSong: {
+          ...defaultProps.currentSong,
+          audio_url: 'https://example.com/song.flac',
+        },
+      },
+      global: {
+        plugins: [createTestRouter()],
+        stubs: { AudioPlayerPlaylistPopover: true },
+      },
+    })
+
+    const badge = wrapper.find('.player-audio-badge')
+    expect(badge.exists()).toBe(true)
+    expect(badge.text()).toBe('LOSSLESS')
+  })
 })

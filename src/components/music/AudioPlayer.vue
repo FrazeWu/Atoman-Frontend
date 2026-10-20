@@ -59,6 +59,7 @@
                 :audio-url="player.currentSong.audio_url"
                 :waveform-peaks="player.currentSong.waveform_peaks"
                 :current-time="player.currentTime"
+                :buffered-time="player.bufferedTime"
                 :duration="player.duration"
                 :generate-waveform="!isPodcast"
                 @seek="player.seek"
@@ -746,6 +747,22 @@ watch(
 
   .player-mini-expand {
     height: 6.75rem;
+  }
+}
+
+@media (max-width: 1024px) and (min-width: 768px) {
+  .player-inner {
+    gap: 1rem;
+    padding: 0 0 0 1rem;
+  }
+
+  .player-inner > :deep(.player-info) {
+    flex: 0 1 320px;
+    min-width: 180px;
+  }
+
+  .player-center-stage {
+    gap: 0.75rem;
   }
 }
 

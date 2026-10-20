@@ -110,6 +110,7 @@ export const usePlayerStore = defineStore("player", () => {
 	const playbackRate = ref(1.0);
 	const playedHistory = ref<Song[]>([]);
 	const currentTime = ref(0);
+	const bufferedTime = ref(0);
 	const duration = ref(0);
 	const isLoading = ref(false);
 	const isCurrentAudioCached = ref(false);
@@ -702,8 +703,24 @@ export const usePlayerStore = defineStore("player", () => {
 			currentSongStartCached = true;
 			prefetchQueueAudioStarts();
 		});
+		const updateBuffered = () => {
+			if (!nextAudio || !nextAudio.buffered || nextAudio.buffered.length === 0) {
+				bufferedTime.value = 0;
+				return;
+			}
+			const ct = nextAudio.currentTime;
+			for (let i = 0; i < nextAudio.buffered.length; i++) {
+				if (nextAudio.buffered.start(i) <= ct && ct <= nextAudio.buffered.end(i)) {
+					bufferedTime.value = nextAudio.buffered.end(i);
+					return;
+				}
+			}
+			bufferedTime.value = nextAudio.buffered.end(nextAudio.buffered.length - 1);
+		};
+		nextAudio.addEventListener("progress", updateBuffered);
 		nextAudio.addEventListener("timeupdate", () => {
 			currentTime.value = nextAudio.currentTime;
+			updateBuffered();
 			savePodcastProgress();
 			saveMusicProgress();
 			saveMusicSession();
@@ -1396,6 +1413,7 @@ export const usePlayerStore = defineStore("player", () => {
 		playbackMode,
 		volume,
 		currentTime,
+		bufferedTime,
 		duration,
 		isLoading,
 		playbackError,

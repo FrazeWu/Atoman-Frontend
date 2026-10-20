@@ -19,12 +19,19 @@
       >
         <path class="waveform-shape__unplayed" :d="waveformPath" />
         <path
+          v-if="bufferedRatio > 0"
+          class="waveform-shape__buffered"
+          :d="waveformPath"
+          :style="{ clipPath: `inset(0 ${100 - bufferedRatio * 100}% 0 0)` }"
+        />
+        <path
           class="waveform-shape__played"
           :d="waveformPath"
           :style="{ clipPath: `inset(0 ${100 - displayRatio * 100}% 0 0)` }"
         />
       </svg>
       <div v-else class="waveform-fallback-line" aria-hidden="true">
+        <span v-if="bufferedRatio > 0" class="waveform-fallback-buffer" :style="{ width: `${bufferedRatio * 100}%` }" />
         <span :style="{ width: `${displayRatio * 100}%` }" />
       </div>
       <div class="waveform-mobile-line" aria-hidden="true">
@@ -75,9 +82,11 @@ const props = withDefaults(defineProps<{
   audioUrl: string
   waveformPeaks?: number[]
   currentTime: number
+  bufferedTime?: number
   duration: number
   generateWaveform?: boolean
 }>(), {
+  bufferedTime: 0,
   generateWaveform: true,
 })
 
@@ -136,6 +145,11 @@ const peaks = computed(() => {
 const progressRatio = computed(() => {
   if (!props.duration) return 0
   return Math.min(1, Math.max(0, props.currentTime / props.duration))
+})
+
+const bufferedRatio = computed(() => {
+  if (!props.duration || !props.bufferedTime) return 0
+  return Math.min(1, Math.max(0, props.bufferedTime / props.duration))
 })
 
 const displayRatio = computed(() => {
@@ -263,6 +277,7 @@ function handleRangeInput(event: Event) {
 }
 
 .waveform-shape__unplayed,
+.waveform-shape__buffered,
 .waveform-shape__played {
   fill: none;
   stroke-linecap: round;
@@ -274,18 +289,36 @@ function handleRangeInput(event: Event) {
   stroke: color-mix(in srgb, var(--a-color-muted) 28%, transparent);
 }
 
+.waveform-shape__buffered {
+  stroke: color-mix(in srgb, var(--a-color-muted) 55%, transparent);
+  transition: clip-path 120ms ease-out;
+}
+
 .waveform-shape__played {
   stroke: color-mix(in srgb, var(--a-color-primary) 82%, transparent);
   transition: clip-path 80ms linear;
 }
 
 .waveform-fallback-line {
+  position: relative;
   width: 100%;
   height: 2px;
   background: var(--a-color-border-soft);
 }
 
+.waveform-fallback-buffer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  height: 100%;
+  background: color-mix(in srgb, var(--a-color-muted) 45%, transparent);
+  pointer-events: none;
+  transition: width 120ms ease-out;
+}
+
 .waveform-fallback-line span {
+  position: relative;
   display: block;
   height: 100%;
   background: var(--a-color-primary);

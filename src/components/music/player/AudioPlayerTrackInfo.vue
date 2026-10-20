@@ -49,6 +49,7 @@
             <button v-if="currentSong?.album_id" type="button" @click="$emit('open-album', String(currentSong.album_id))">{{ currentSong.album }}</button>
             <span v-else>{{ currentSong.album }}</span>
           </template>
+          <span v-if="audioQualityBadge" class="player-audio-badge">{{ audioQualityBadge }}</span>
         </p>
         <div class="player-tooltip player-tooltip--subtle">
           {{ resolvedArtistText }}<template v-if="!isPodcast && currentSong?.album"> · {{ currentSong.album }}</template>
@@ -176,6 +177,21 @@ const resolvedCoverFallback = computed(() => {
     'P'
   const firstChar = text.trim().charAt(0)
   return firstChar || 'P'
+})
+
+const audioQualityBadge = computed(() => {
+  if (props.isPodcast) return null
+  const song = props.currentSong as any
+  if (!song) return null
+  if (song.audio_quality) return String(song.audio_quality).toUpperCase()
+  const url = (song.audio_url || '').toLowerCase()
+  if (url.includes('.flac') || url.includes('.wav') || url.includes('.alac') || url.includes('lossless')) {
+    return 'LOSSLESS'
+  }
+  if (url.includes('hi-res') || url.includes('hires')) {
+    return 'HI-RES'
+  }
+  return null
 })
 </script>
 
@@ -319,6 +335,27 @@ const resolvedCoverFallback = computed(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+}
+
+.player-audio-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  padding: 1px 4px;
+  margin-left: 6px;
+  flex-shrink: 0;
+  border-radius: var(--a-radius-control, 4px);
+  border: 1px solid var(--a-color-border-soft);
+  color: var(--a-color-muted);
+  background: color-mix(in srgb, var(--a-color-bg) 80%, var(--a-color-surface-muted));
+  text-transform: uppercase;
 }
 
 .player-title:hover,

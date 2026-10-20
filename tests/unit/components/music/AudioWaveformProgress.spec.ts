@@ -136,4 +136,21 @@ describe('AudioWaveformProgress', () => {
     expect(wrapper.emitted('seek')).toHaveLength(1)
     expect(wrapper.emitted('seek')?.[0]?.[0]).toBe(40)
   })
+
+  it('renders waveform buffer path with clip-path matching buffered ratio', () => {
+    const wrapper = mount(AudioWaveformProgress, {
+      props: {
+        songId: 'buffer-song',
+        audioUrl: '/buffer.mp3',
+        currentTime: 20,
+        bufferedTime: 60,
+        duration: 100,
+        waveformPeaks: Array.from({ length: 280 }, () => 100),
+      },
+    })
+
+    const bufferedPath = wrapper.find('.waveform-shape__buffered')
+    expect(bufferedPath.exists()).toBe(true)
+    expect(bufferedPath.attributes('style')).toContain('clip-path: inset(0 40% 0 0)')
+  })
 })

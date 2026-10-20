@@ -182,6 +182,10 @@ onMounted(() => {
 
 <style scoped>
 .mobile-music-discover {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
   padding: 1rem 1rem 5rem;
   background-color: #ffffff;
   color: var(--a-color-text, #0f172a);
@@ -225,13 +229,16 @@ onMounted(() => {
 /* 2-Column Curated Grid */
 .mobile-music-discover__grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.875rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .mobile-music-discover__card {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   background: #ffffff;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-card, 4px);

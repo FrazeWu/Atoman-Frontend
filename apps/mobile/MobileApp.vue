@@ -1,5 +1,5 @@
 <template>
-  <div class="app-shell has-sidebar mobile-app-shell" :class="{ 'mobile-app-shell--with-player': showMobilePlayer }">
+  <div class="app-shell mobile-app-shell" :class="{ 'mobile-app-shell--with-player': showMobilePlayer }">
     <MobileTopbar
       :current-space="currentSpace"
       @open-drawer="isDrawerOpen = true"

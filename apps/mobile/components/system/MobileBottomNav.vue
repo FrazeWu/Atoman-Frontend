@@ -88,19 +88,21 @@ const onTabClick = (tab: NavTabItem, event: MouseEvent) => {
   right: 0;
   bottom: 0;
   left: 0;
+  display: block !important;
+  width: 100% !important;
   z-index: var(--a-z-navigation, 100);
   pointer-events: none;
 }
 
 .mobile-bottom-nav__bar {
   position: relative;
-  width: 100%;
+  width: 100% !important;
   max-width: 480px;
   height: calc(56px + env(safe-area-inset-bottom, 0px));
   min-height: 56px;
   margin: 0 auto;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background-color: #ffffff;
   border-top: 1px solid var(--a-color-border-soft, #e2e8f0);

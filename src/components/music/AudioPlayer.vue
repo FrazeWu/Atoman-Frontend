@@ -38,6 +38,7 @@
             :favorite-song-ids="favoriteSongIds"
             :playlists="playlists"
             :playlist-load-error="playlistLoadError"
+            :show-actions="false"
             @toggle-lyrics="player.toggleLyrics()"
             @open-artist="openArtist"
             @open-album="openAlbum"
@@ -88,11 +89,23 @@
             :volume="player.volume"
             :show-queue="player.showQueue"
             :queue-count="player.queue.length"
+            :current-song="player.currentSong"
+            :is-podcast="isPodcast"
+            :is-podcast-episode="isPodcastEpisode"
+            :is-favorite="isCurrentSongFavorite"
+            :playlists="playlists"
+            :playlist-load-error="playlistLoadError"
             @toggle-lyrics="player.toggleLyrics()"
             @open-comments="commentsOpen = true"
             @set-volume="player.setVolume"
             @toggle-mute="player.toggleMute()"
             @toggle-queue="player.toggleQueue()"
+            @toggle-favorite="toggleTrackFavorite"
+            @guard-playlist-menu="guardPlaylistMenu"
+            @retry-load-playlists="loadPlaylists"
+            @add-to-playlist="addTrackToPlaylist"
+            @add-podcast-bookmark="addPodcastBookmark"
+            @add-podcast-listen-later="addPodcastListenLater"
           />
 
           <!-- Far Right: Collapse tab (folds towards right edge) -->
@@ -409,6 +422,11 @@ const {
   addSongToPlaylist,
 } = useMusicFavoritePlaylist();
 
+const isCurrentSongFavorite = computed(() => {
+  if (!player.currentSong?.id) return false;
+  return favoriteSongIds.value.has(String(player.currentSong.id));
+});
+
 async function loadPlaylists() {
   playlistLoadError.value = '';
   if (!authStore.isAuthenticated) {
@@ -572,8 +590,8 @@ watch(
 }
 
 .player-inner > :deep(.player-info) {
-  flex: 0 1 440px;
-  min-width: 220px;
+  flex: 0 1 460px;
+  min-width: 240px;
 }
 
 .player-collapse-tab {
@@ -601,12 +619,12 @@ watch(
 
 .player-center-stage {
   flex: 1;
-  max-width: 860px;
+  max-width: 780px;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 1.5rem;
+  gap: 1.25rem;
   min-width: 0;
 }
 

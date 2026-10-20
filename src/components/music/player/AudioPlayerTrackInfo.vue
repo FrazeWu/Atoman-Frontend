@@ -44,9 +44,10 @@
             </template>
           </template>
           <span v-else>{{ resolvedArtistText }}</span>
-          <template v-if="!isPodcast && currentSong?.album_id">
+          <template v-if="!isPodcast && (currentSong?.album || currentSong?.album_id)">
             <span aria-hidden="true"> · </span>
-            <button type="button" @click="$emit('open-album', String(currentSong.album_id))">{{ currentSong.album }}</button>
+            <button v-if="currentSong?.album_id" type="button" @click="$emit('open-album', String(currentSong.album_id))">{{ currentSong.album }}</button>
+            <span v-else>{{ currentSong.album }}</span>
           </template>
         </p>
         <div class="player-tooltip player-tooltip--subtle">
@@ -56,7 +57,11 @@
     </div>
 
     <!-- Track actions: Favorite & Add to Playlist -->
-    <div class="player-actions" :class="{ 'player-actions--collapsed': isMetaCollapsed }">
+    <div
+      v-if="showActions"
+      class="player-actions"
+      :class="{ 'player-actions--collapsed': isMetaCollapsed }"
+    >
       <button
         v-if="!isPodcast"
         type="button"
@@ -121,6 +126,7 @@ interface Props {
   favoriteSongIds?: Set<string>
   playlists?: MusicPlaylistSummary[]
   playlistLoadError?: string
+  showActions?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -132,6 +138,7 @@ const props = withDefaults(defineProps<Props>(), {
   favoriteSongIds: () => new Set<string>(),
   playlists: () => [],
   playlistLoadError: '',
+  showActions: true,
 })
 
 defineEmits<{
@@ -192,8 +199,8 @@ const resolvedCoverFallback = computed(() => {
 .cover-wrap {
   position: relative;
   align-self: center;
-  width: 3.25rem;
-  height: 3.25rem;
+  width: 3.5rem;
+  height: 3.5rem;
   border: 0;
   border-radius: var(--a-radius-control, 4px);
   overflow: hidden;
@@ -290,8 +297,9 @@ const resolvedCoverFallback = computed(() => {
 .player-title {
   display: block;
   font-family: var(--a-font-sans);
-  font-weight: 500;
-  font-size: 13px;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.3;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -303,7 +311,7 @@ const resolvedCoverFallback = computed(() => {
 
 .player-artist {
   font-family: var(--a-font-sans);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.35;
   margin: 0;
   color: var(--a-color-muted);

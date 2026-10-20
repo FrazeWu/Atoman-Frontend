@@ -23,7 +23,6 @@
         data-hint="上一首 (Alt+←)"
         @click="$emit('play-previous')"
       >
-        <PIcon name="player-prev" size="sm" class="nav-icon" aria-hidden="true" />
         <span class="nav-text">上一首</span>
       </button>
 
@@ -56,7 +55,6 @@
         @click="$emit('play-next')"
       >
         <span class="nav-text">下一首</span>
-        <PIcon name="player-next" size="sm" class="nav-icon" aria-hidden="true" />
       </button>
 
       <!-- 播客模式下的前进 15 秒 -->
@@ -237,8 +235,8 @@ defineEmits<{
 }
 
 .main-play-btn {
-  width: 2rem;
-  height: 2rem;
+  width: 44px;
+  height: 30px;
   background: var(--a-color-text);
   color: var(--a-color-bg);
   border: 0;

@@ -1,5 +1,52 @@
 <template>
   <div class="player-features">
+    <!-- 最爱 (Favorite) -->
+    <button
+      v-if="currentSong && !isPodcast"
+      type="button"
+      class="player-fav-btn"
+      :class="{ 'is-active': isFavorite }"
+      :aria-label="isFavorite ? '移出最爱' : '添加到最爱'"
+      :title="isFavorite ? '移出最爱' : '添加到最爱'"
+      @click="$emit('toggle-favorite', String(currentSong?.id))"
+    >
+      <PIcon :name="isFavorite ? 'heart-filled' : 'heart'" size="md" class="fav-icon" :class="{ 'is-filled': isFavorite }" aria-hidden="true" />
+    </button>
+
+    <!-- 收藏 (添加到歌单) -->
+    <AudioPlayerPlaylistPopover
+      v-if="currentSong && !isPodcast"
+      :current-song-id="currentSong?.id"
+      :is-podcast="isPodcast"
+      :playlists="playlists"
+      :playlist-load-error="playlistLoadError"
+      @trigger-click="$emit('guard-playlist-menu', $event)"
+      @retry-load="$emit('retry-load-playlists')"
+      @add-to-playlist="(pId, sId, close) => $emit('add-to-playlist', pId, sId, close)"
+    />
+
+    <!-- 播客收藏/稍后听 -->
+    <button
+      v-if="isPodcastEpisode"
+      type="button"
+      class="player-fav-btn"
+      title="收藏单集"
+      data-hint="收藏单集"
+      @click="$emit('add-podcast-bookmark', currentSong?.source_id)"
+    >
+      <PIcon name="heart" size="md" />
+    </button>
+    <button
+      v-if="isPodcastEpisode"
+      type="button"
+      class="player-add-btn"
+      title="稍后听"
+      data-hint="稍后听"
+      @click="$emit('add-podcast-listen-later', currentSong?.source_id)"
+    >
+      <PIcon name="clock" size="md" />
+    </button>
+
     <!-- 歌词 / 说明切换 -->
     <button
       type="button"
@@ -48,13 +95,30 @@
 <script setup lang="ts">
 import PIcon from '@/components/ui/PIcon.vue'
 import AudioPlayerVolume from '@/components/music/AudioPlayerVolume.vue'
+import AudioPlayerPlaylistPopover from '@/components/music/AudioPlayerPlaylistPopover.vue'
 
-defineProps<{
-  featureLabel: string
-  volume: number
-  showQueue: boolean
-  queueCount: number
-}>()
+withDefaults(
+  defineProps<{
+    featureLabel: string
+    volume: number
+    showQueue: boolean
+    queueCount: number
+    currentSong?: any
+    isPodcast?: boolean
+    isPodcastEpisode?: boolean
+    isFavorite?: boolean
+    playlists?: any[]
+    playlistLoadError?: string
+  }>(),
+  {
+    currentSong: null,
+    isPodcast: false,
+    isPodcastEpisode: false,
+    isFavorite: false,
+    playlists: () => [],
+    playlistLoadError: '',
+  },
+)
 
 defineEmits<{
   (e: 'toggle-lyrics'): void
@@ -62,6 +126,12 @@ defineEmits<{
   (e: 'set-volume', volume: number): void
   (e: 'toggle-mute'): void
   (e: 'toggle-queue'): void
+  (e: 'toggle-favorite', songId: string): void
+  (e: 'guard-playlist-menu', event: MouseEvent): void
+  (e: 'retry-load-playlists'): void
+  (e: 'add-to-playlist', playlistId: string, songId: string, close?: () => void): void
+  (e: 'add-podcast-bookmark', sourceId?: string): void
+  (e: 'add-podcast-listen-later', sourceId?: string): void
 }>()
 </script>
 
@@ -104,6 +174,38 @@ defineEmits<{
 .feature-link:hover {
   opacity: 1;
   background: var(--a-color-surface-muted);
+}
+
+.player-fav-btn,
+.player-add-btn {
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--a-radius-control, 4px);
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  box-shadow: none !important;
+}
+
+.player-fav-btn:hover,
+.player-fav-btn:focus-visible,
+.player-add-btn:hover,
+.player-add-btn:focus-visible {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+}
+
+.player-fav-btn.is-active {
+  color: var(--a-color-danger, #ef4444);
+}
+
+.fav-icon.is-filled {
+  color: var(--a-color-danger, #ef4444);
 }
 
 .queue-trigger {
@@ -190,6 +292,11 @@ defineEmits<{
 }
 
 @media (max-width: 767px) {
+  .player-fav-btn,
+  .player-add-btn {
+    display: none;
+  }
+
   .player-features {
     margin-left: 0;
     gap: 0;

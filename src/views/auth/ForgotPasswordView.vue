@@ -489,12 +489,21 @@ const handleTurnstileError = (errorCode?: string) => {
 @media (max-width: 720px) {
   .auth-page {
     align-items: flex-start;
-    min-height: 100%;
-    padding: 1.25rem 1rem 3rem;
+    min-height: auto;
+    padding: 1.5rem 1.25rem 3rem;
   }
 
   .auth-card {
-    padding: 1.75rem 1.25rem;
+    width: 100%;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .auth-title {
+    font-size: 1.75rem;
+    font-weight: 600;
   }
 
   .auth-buttons-row {

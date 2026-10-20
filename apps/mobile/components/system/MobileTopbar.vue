@@ -1,7 +1,19 @@
 <template>
-  <header class="mobile-topbar">
+  <header class="mobile-topbar" :class="{ 'mobile-topbar--auth': showBack }">
     <div class="mobile-topbar__left">
       <button
+        v-if="showBack"
+        type="button"
+        class="mobile-topbar__back"
+        data-testid="topbar-back-button"
+        aria-label="返回"
+        @click="emit('back')"
+      >
+        <MIcon name="chevron-left" size="sm" :stroke-width="2.2" />
+        <span class="mobile-topbar__space-name">{{ displayLabel }}</span>
+      </button>
+      <button
+        v-else
         type="button"
         class="mobile-topbar__trigger"
         data-testid="space-trigger"
@@ -13,7 +25,7 @@
       </button>
     </div>
 
-    <div class="mobile-topbar__right">
+    <div v-if="!hideActions" class="mobile-topbar__right">
       <button
         type="button"
         class="mobile-topbar__action"
@@ -45,10 +57,14 @@ const props = withDefaults(
   defineProps<{
     currentSpace?: string
     title?: string
+    showBack?: boolean
+    hideActions?: boolean
   }>(),
   {
     currentSpace: 'music',
     title: undefined,
+    showBack: false,
+    hideActions: false,
   }
 )
 
@@ -56,6 +72,7 @@ const emit = defineEmits<{
   (e: 'open-drawer'): void
   (e: 'search'): void
   (e: 'notifications'): void
+  (e: 'back'): void
 }>()
 
 const displayLabel = computed(() => {
@@ -87,6 +104,23 @@ const displayLabel = computed(() => {
 .mobile-topbar__left {
   display: flex;
   align-items: center;
+}
+
+.mobile-topbar__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-control, 4px);
+  color: var(--a-color-fg, #0f172a);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.mobile-topbar__back:active {
+  background-color: var(--a-color-surface-muted, #f1f5f9);
 }
 
 .mobile-topbar__trigger {

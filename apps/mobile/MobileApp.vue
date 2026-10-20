@@ -1,7 +1,12 @@
 <template>
   <div class="app-shell mobile-app-shell" :class="{ 'mobile-app-shell--with-player': showMobilePlayer }">
     <MobileTopbar
+      v-if="showMobileTopbar"
       :current-space="currentSpace"
+      :show-back="isAuthRoute"
+      :hide-actions="isAuthRoute"
+      :title="isAuthRoute ? authTitle : undefined"
+      @back="handleBack"
       @open-drawer="isDrawerOpen = true"
       @search="handleSearch"
       @notifications="handleNotifications"
@@ -68,9 +73,36 @@ const playerPresence = usePlayerPresenceStore()
 const apiUrl = useApiUrl()
 
 const isAuthRoute = computed(() => route.matched?.some((record) => record.meta?.authLayout) ?? false)
-const showMobileBottomNav = computed(() => !isAuthRoute.value && route.path !== '/' && route.path !== '/music/player')
+
+const authTitle = computed(() => {
+  if (route.path.startsWith('/register')) return '注册'
+  if (route.path.startsWith('/forgot-password')) return '重置密码'
+  return '登录'
+})
+
+const isDetailRoute = computed(() => isMobileDetailRoute(route.path))
+
+const showMobileTopbar = computed(() => {
+  if (route.path === '/' || route.path === '/music/player') return false
+  if (isAuthRoute.value) return true
+  return !isDetailRoute.value
+})
+
+const showMobileBottomNav = computed(() => {
+  if (isAuthRoute.value || route.path === '/' || route.path === '/music/player') return false
+  return !isDetailRoute.value
+})
+
 const showMobilePlayer = computed(() => playerPresence.hasCurrentTrack && showMobileBottomNav.value && route.path !== '/music/player')
 const mobileRouteTransition = ref('')
+
+const handleBack = () => {
+  if (typeof window !== 'undefined' && window.history.length > 1) {
+    router.back()
+  } else {
+    void router.push('/music')
+  }
+}
 
 const isDrawerOpen = ref(false)
 
@@ -189,19 +221,23 @@ body,
 
 html {
   overflow-x: hidden;
-  overflow-x: clip;
+  overscroll-behavior-x: none;
 }
 
 body {
+  width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
-  overflow-x: clip;
+  overscroll-behavior-x: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mobile-app-shell {
   min-width: 0;
   width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
-  overflow-x: clip;
+  overscroll-behavior-x: none;
   --mobile-app-player-height: 76px;
   --mobile-app-player-reserved-height: 0px;
   --a-color-bg: #ffffff;

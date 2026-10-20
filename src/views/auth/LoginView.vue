@@ -785,7 +785,7 @@ watch(username, (value) => {
   padding: 0.88rem 0.95rem;
   box-shadow: none;
   background: var(--a-color-bg);
-  font-size: 0.98rem;
+  font-size: 16px;
 }
 
 .auth-form :deep(.p-input::placeholder) {
@@ -835,7 +835,7 @@ watch(username, (value) => {
   border: 0;
   background: transparent;
   padding: 0.88rem 0.95rem;
-  font-size: 0.98rem;
+  font-size: 16px;
   font-family: inherit;
   color: var(--a-color-fg);
   width: 100%;
@@ -1046,17 +1046,23 @@ watch(username, (value) => {
 
 @media (max-width: 720px) {
   .auth-page {
-    padding: 2rem 1rem 4rem;
+    min-height: auto;
+    align-items: flex-start;
+    padding: 1.5rem 1.25rem 3rem;
   }
 
   .auth-card,
   .auth-card--register {
     width: 100%;
-    padding: 1.75rem 1.5rem;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
   }
 
   .auth-title {
     font-size: 1.75rem;
+    font-weight: 600;
   }
 
   .auth-buttons-row {

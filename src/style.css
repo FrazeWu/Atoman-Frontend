@@ -142,8 +142,16 @@ html[data-player-active="true"][data-player-pinned="true"] {
 	box-sizing: border-box;
 	letter-spacing: 0 !important;
 }
+html {
+	overflow-x: hidden;
+	overscroll-behavior-x: none;
+}
 body {
 	margin: 0;
+	width: 100%;
+	max-width: 100%;
+	overflow-x: hidden;
+	overscroll-behavior-x: none;
 	font-family: var(--a-font-sans);
 	background: var(--a-color-bg);
 	color: var(--a-color-fg);

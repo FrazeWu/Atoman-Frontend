@@ -101,7 +101,7 @@ function handleClear() {
   background: transparent;
   padding: 0;
   font-family: inherit;
-  font-size: 0.875rem;
+  font-size: 16px;
   color: var(--a-color-text, #0f172a);
   outline: none;
   box-sizing: border-box;

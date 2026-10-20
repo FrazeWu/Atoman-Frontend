@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 
 import PShortcutHints from '@/components/ui/PShortcutHints.vue'
-import { usePlayerPresenceStore } from '@/stores/playerPresence'
 
 describe('PShortcutHints', () => {
   beforeEach(() => {
@@ -46,21 +45,9 @@ describe('PShortcutHints', () => {
     expect(wrapper.find('[data-testid="shortcut-hints-panel"]').exists()).toBe(false)
   })
 
-  it('adjusts position above the music player when a track is active', async () => {
-    const pinia = createPinia()
-    setActivePinia(pinia)
-    const playerPresence = usePlayerPresenceStore(pinia)
-
-    const wrapper = mount(PShortcutHints, {
-      global: { plugins: [pinia] },
-    })
-
-    const trigger = wrapper.get('[data-testid="shortcut-hints-trigger"]')
-    expect(trigger.classes()).not.toContain('has-player')
-
-    playerPresence.setHasCurrentTrack(true)
-    await wrapper.vm.$nextTick()
-
-    expect(trigger.classes()).toContain('has-player')
+  it('is stably positioned above the player area on the right', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/ui/PShortcutHints.vue'), 'utf8')
+    expect(source).toContain('bottom: calc(4.5rem + 0.75rem);')
+    expect(source).toContain('right: 1.5rem;')
   })
 })

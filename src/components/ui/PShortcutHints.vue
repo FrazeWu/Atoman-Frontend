@@ -3,7 +3,6 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getActivePinia } from 'pinia'
 import { Keyboard } from 'lucide-vue-next'
 import { useUIStore } from '@/stores/ui'
-import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { useShortcutHints, type ShortcutHint } from '@/composables/useShortcutHints'
 
 export type { ShortcutHint } from '@/composables/useShortcutHints'
@@ -29,8 +28,6 @@ const isTeleportDisabled = computed(() => props.teleportDisabled ?? isTestEnv)
 
 const pinia = getActivePinia()
 const uiStore = pinia ? useUIStore(pinia) : null
-const playerPresence = pinia ? usePlayerPresenceStore(pinia) : null
-const hasPlayer = computed(() => Boolean(playerPresence?.hasCurrentTrack))
 const {
   commonShortcutHints,
   moduleShortcutHints,
@@ -111,12 +108,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
 
 <template>
   <div class="shortcut-hints">
-    <!-- 浮动键盘快捷键触发按钮：位于页面右下角，音乐播放器上方 -->
+    <!-- 浮动键盘快捷键触发按钮：固定位于页面右下角（音乐播放器上方右侧） -->
     <button
       ref="triggerRef"
       type="button"
       class="shortcut-hints__trigger"
-      :class="{ 'has-player': hasPlayer }"
       data-testid="shortcut-hints-trigger"
       aria-label="键盘快捷键"
       aria-keyshortcuts="Shift+?"
@@ -245,7 +241,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
 .shortcut-hints__trigger {
   position: fixed;
   right: 1.5rem;
-  bottom: calc(var(--a-player-reserved-height, 0px) + 1.25rem);
+  bottom: calc(4.5rem + 0.75rem);
   z-index: var(--a-z-navigation, 100);
   display: inline-flex;
   align-items: center;
@@ -260,17 +256,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
   transition:
-    bottom var(--a-motion-state, 220ms) var(--a-motion-ease-enter, cubic-bezier(0.16, 1, 0.3, 1)),
     border-color 0.15s ease,
     background-color 0.15s ease,
     color 0.15s ease,
     transform 0.15s ease,
     box-shadow 0.15s ease;
   outline: none;
-}
-
-.shortcut-hints__trigger.has-player {
-  bottom: calc(max(var(--a-player-reserved-height, 0px), 4.5rem) + 0.75rem);
 }
 
 .shortcut-hints__trigger:hover,

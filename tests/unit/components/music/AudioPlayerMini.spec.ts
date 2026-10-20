@@ -58,7 +58,7 @@ describe('AudioPlayerMini.vue', () => {
     expect(ring.attributes('style')).toContain('stroke-dashoffset: 70')
   })
 
-  it('renders track info tooltip and handles quick skip buttons', async () => {
+  it('renders track info tooltip and only retains play/pause and expand controls', async () => {
     const wrapper = mount(AudioPlayerMini, {
       props: {
         coverUrl: '/test-cover.jpg',
@@ -74,13 +74,11 @@ describe('AudioPlayerMini.vue', () => {
     expect(tooltip.find('.player-mini-tooltip__title').text()).toBe('Test Track Title')
     expect(tooltip.find('.player-mini-tooltip__artist').text()).toBe('Test Artist')
 
-    // Click previous
-    await wrapper.find('.player-mini-skip-btn--prev').trigger('click')
-    expect(wrapper.emitted('play-previous')).toHaveLength(1)
-
-    // Click next
-    await wrapper.find('.player-mini-skip-btn--next').trigger('click')
-    expect(wrapper.emitted('play-next')).toHaveLength(1)
+    // Verify only play/pause cover and expand button exist; no extra skip controls
+    expect(wrapper.find('.player-mini-skip-btn--prev').exists()).toBe(false)
+    expect(wrapper.find('.player-mini-skip-btn--next').exists()).toBe(false)
+    expect(wrapper.find('.player-mini-expand').exists()).toBe(true)
+    expect(wrapper.find('.player-mini-cover').exists()).toBe(true)
 
     // Double click cover
     await wrapper.find('.player-mini-cover').trigger('dblclick')

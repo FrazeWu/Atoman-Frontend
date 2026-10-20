@@ -9,17 +9,18 @@
       <div v-if="artistText" class="player-mini-tooltip__artist">{{ artistText }}</div>
     </div>
 
-    <!-- Quick skip previous button -->
+    <!-- Expand button (folds open to the left) -->
     <button
       type="button"
-      class="player-mini-skip-btn player-mini-skip-btn--prev"
-      aria-label="上一首"
-      title="上一首"
-      @click.stop="$emit('play-previous')"
+      class="player-mini-expand"
+      aria-label="展开完整播放器"
+      title="展开完整播放器"
+      @click.stop="$emit('expand')"
     >
-      <SkipBack :size="12" aria-hidden="true" />
+      <ChevronLeft :size="15" aria-hidden="true" />
     </button>
 
+    <!-- Play / Pause Cover Button with progress ring and play overlay -->
     <button
       type="button"
       class="player-mini-cover"
@@ -51,32 +52,11 @@
         <Play :size="22" fill="currentColor" />
       </span>
     </button>
-
-    <!-- Quick skip next button -->
-    <button
-      type="button"
-      class="player-mini-skip-btn player-mini-skip-btn--next"
-      aria-label="下一首"
-      title="下一首"
-      @click.stop="$emit('play-next')"
-    >
-      <SkipForward :size="12" aria-hidden="true" />
-    </button>
-
-    <button
-      type="button"
-      class="player-mini-expand"
-      aria-label="展开完整播放器"
-      title="展开完整播放器"
-      @click.stop="$emit('expand')"
-    >
-      <ChevronLeft :size="15" aria-hidden="true" />
-    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Play, ChevronLeft, SkipBack, SkipForward } from 'lucide-vue-next'
+import { Play, ChevronLeft } from 'lucide-vue-next'
 
 defineProps<{
   coverUrl?: string
@@ -89,8 +69,6 @@ defineProps<{
 
 defineEmits<{
   'toggle-play': []
-  'play-previous': []
-  'play-next': []
   'open-lyrics': []
   'expand': []
 }>()
@@ -99,22 +77,21 @@ defineEmits<{
 <style scoped>
 .player-mini-window {
   position: fixed;
-  left: 1.5rem;
-  right: auto;
-  bottom: calc(
-    var(--a-footer-reserved-height) + var(--a-mobile-nav-reserved-height) +
-      1rem
-  );
+  right: 0;
+  left: auto;
+  bottom: 0;
   z-index: var(--a-z-player, 720);
   display: grid;
   place-items: center;
   width: 4.5rem;
   height: 4.5rem;
   overflow: visible;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card, 4px);
+  border: 0;
+  border-top: 1px solid var(--a-color-border-soft);
+  border-left: 1px solid var(--a-color-border-soft);
+  border-radius: 0;
   background: var(--a-color-bg);
-  box-shadow: none;
+  box-shadow: none !important;
 }
 
 .player-mini-cover {
@@ -124,7 +101,7 @@ defineEmits<{
   height: 4.5rem;
   padding: 0;
   border: 0;
-  border-radius: var(--a-radius-control, 4px);
+  border-radius: 0;
   overflow: hidden;
   background: transparent;
   font: inherit;
@@ -133,7 +110,7 @@ defineEmits<{
 
 .player-mini-cover:focus-visible {
   outline: 2px solid var(--a-color-primary);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .player-mini-cover .player-cover,
@@ -193,100 +170,65 @@ defineEmits<{
 
 .player-mini-expand {
   position: absolute;
-  top: 50%;
-  left: -1.25rem;
+  top: 0;
+  left: -1.5rem;
   display: grid;
-  width: 1.25rem;
+  width: 1.5rem;
   height: 4.5rem;
   place-items: center;
   padding: 0;
   border: 0;
+  border-top: 1px solid var(--a-color-border-soft);
+  border-left: 1px solid var(--a-color-border-soft);
+  border-bottom: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px) 0 0 var(--a-radius-control, 4px);
   background: var(--a-color-bg);
   color: var(--a-color-muted);
   cursor: pointer;
-  transform: translateY(-50%);
   z-index: 2;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
+.player-mini-expand:hover,
 .player-mini-expand:focus-visible {
   background: color-mix(in srgb, var(--a-color-primary) 12%, transparent);
   color: var(--a-color-primary);
   outline: none;
 }
 
-/* Quick skip buttons */
-.player-mini-skip-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: var(--a-radius-control, 4px);
-  background: var(--a-color-bg);
-  color: var(--a-color-muted);
-  box-shadow: none;
-  opacity: 0;
-  pointer-events: none;
-  cursor: pointer;
-  z-index: 3;
-  transition: opacity 0.2s ease, transform 0.2s ease, background 0.15s ease, color 0.15s ease;
-}
-
-.player-mini-skip-btn--prev {
-  left: -28px;
-}
-
-.player-mini-skip-btn--next {
-  right: -28px;
-}
-
-.player-mini-skip-btn:hover {
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
-}
-
-.player-mini-window:hover .player-mini-skip-btn,
-.player-mini-window:focus-within .player-mini-skip-btn {
-  opacity: 0.95;
-  pointer-events: auto;
-}
-
 /* Hover track info tooltip */
 .player-mini-tooltip {
   position: absolute;
   bottom: calc(100% + 10px);
-  left: 0;
-  right: auto;
-  max-width: 200px;
+  right: 0;
+  left: auto;
+  max-width: 220px;
   padding: 6px 10px;
-  background: var(--a-color-bg);
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
   border: 0;
   border-radius: var(--a-radius-card, 4px);
-  box-shadow: none;
+  box-shadow: none !important;
   pointer-events: none;
   opacity: 0;
   transform: translateY(4px);
   transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 10;
-  text-align: left;
+  text-align: right;
   white-space: nowrap;
 }
 
 .player-mini-tooltip__title {
   font-size: 12px;
   font-weight: 500;
-  color: var(--a-color-fg);
+  color: var(--a-color-bg);
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .player-mini-tooltip__artist {
   font-size: 10px;
-  color: var(--a-color-muted);
+  color: color-mix(in srgb, var(--a-color-bg) 75%, transparent);
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -299,26 +241,26 @@ defineEmits<{
 @media (min-width: 1440px) {
   .player-mini-window,
   .player-mini-cover {
-    width: 6.75rem;
-    height: 6.75rem;
+    width: 4.5rem;
+    height: 4.5rem;
   }
 
   .player-mini-expand {
-    height: 6.75rem;
+    height: 4.5rem;
   }
 }
 
 @media (min-width: 768px) and (max-width: 1024px) {
   .player-mini-window {
-    left: calc(1rem + 1.25rem);
-    right: auto;
+    right: 0;
+    left: auto;
   }
 }
 
 @media (max-width: 768px) {
   .player-mini-window {
-    left: 1rem;
-    right: auto;
+    right: 0;
+    left: auto;
     bottom: var(--a-mobile-nav-reserved-height);
     width: 3rem;
     height: 3rem;
@@ -331,6 +273,8 @@ defineEmits<{
 
   .player-mini-expand {
     height: 3rem;
+    left: -1.25rem;
+    width: 1.25rem;
   }
 }
 </style>

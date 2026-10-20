@@ -27,16 +27,6 @@
           class="player-inner"
           :class="{ 'player-inner--meta-collapsed': isMetaCollapsed }"
         >
-          <button
-            type="button"
-            class="player-collapse-tab"
-            aria-label="收起为仅封面"
-            title="收起为仅封面"
-            @click="setPlayerDisplayMode('cover')"
-          >
-            <ChevronRight :size="16" aria-hidden="true" />
-          </button>
-
           <!-- Left: Identity -->
           <AudioPlayerTrackInfo
             :current-song="player.currentSong"
@@ -59,9 +49,9 @@
             @add-podcast-listen-later="addPodcastListenLater"
           />
 
-          <!-- Center: Waveform + Controls stacked vertically -->
+          <!-- Center: Waveform (left) and Controls Hub (right) side-by-side -->
           <div class="player-center-stage">
-            <!-- Waveform Progress -->
+            <!-- Left: Waveform Progress -->
             <div class="progress-container player-waveform">
               <AudioWaveformProgress
                 :song-id="String(player.currentSong.id)"
@@ -74,7 +64,7 @@
               />
             </div>
 
-            <!-- Center: Controls -->
+            <!-- Right: Controls -->
             <AudioPlayerControlsHub
               :is-playing="player.isPlaying"
               :playback-error="player.playbackError"
@@ -104,6 +94,17 @@
             @toggle-mute="player.toggleMute()"
             @toggle-queue="player.toggleQueue()"
           />
+
+          <!-- Far Right: Collapse tab (folds towards right edge) -->
+          <button
+            type="button"
+            class="player-collapse-tab"
+            aria-label="收起为仅封面"
+            title="收起为仅封面"
+            @click="setPlayerDisplayMode('cover')"
+          >
+            <ChevronRight :size="16" aria-hidden="true" />
+          </button>
         </div>
       </div>
 
@@ -116,8 +117,6 @@
         :is-playing="player.isPlaying"
         :mini-progress-percent="miniProgressPercent"
         @toggle-play="player.togglePlay()"
-        @play-previous="player.playPrevious()"
-        @play-next="player.playNext()"
         @open-lyrics="player.toggleLyrics()"
         @expand="setPlayerDisplayMode('full')"
       />
@@ -569,7 +568,7 @@ watch(
   gap: 1.5rem;
   width: 100%;
   height: 100%;
-  padding: 0 1.5rem 0 0.5rem;
+  padding: 0 0 0 1.5rem;
 }
 
 .player-collapse-tab {
@@ -577,9 +576,10 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
+  width: 28px;
   height: 100%;
   border: 0;
+  border-left: 1px solid var(--a-color-border-soft);
   background: transparent;
   color: var(--a-color-muted);
   cursor: pointer;
@@ -596,19 +596,20 @@ watch(
 
 .player-center-stage {
   flex: 1;
-  max-width: 580px;
+  max-width: 860px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
+  gap: 1.5rem;
   min-width: 0;
 }
 
 .progress-container {
+  flex: 1;
   width: 100%;
   min-width: 0;
-  height: 1.75rem;
+  height: 2.25rem;
   display: flex;
   align-items: center;
 }

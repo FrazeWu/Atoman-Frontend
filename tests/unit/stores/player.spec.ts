@@ -1393,5 +1393,25 @@ describe("player store", () => {
 			globalThis.BroadcastChannel = originalBC;
 		}
 	});
+
+	it("clears playbackError on timeupdate when audio is actively playing", async () => {
+		const store = usePlayerStore();
+		const song = { id: "timeupdate-1", title: "Timeupdate Test", audio_url: "timeupdate.mp3" } as any;
+
+		store.playSong(song);
+		const audio = audioInstances[0];
+		await audio.play.mock.results.at(-1)?.value;
+		await nextTick();
+
+		// Simulate an error string lingering while audio is playing
+		store.playbackError = "音频加载失败，请重试";
+		expect(store.playbackError).toBe("音频加载失败，请重试");
+
+		audio.paused = false;
+		audio.currentTime = 5;
+		audio.emit("timeupdate");
+
+		expect(store.playbackError).toBe("");
+	});
 });
 

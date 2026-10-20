@@ -30,19 +30,19 @@
       <button
         type="button"
         class="main-play-btn"
-        :class="{ 'has-error': Boolean(playbackError) }"
-        :aria-label="playbackError ? '重试播放' : (isPlaying ? '暂停' : '播放')"
-        :title="playbackError ? '音频加载失败，点击重试' : (isPlaying ? '暂停' : '播放')"
-        :data-hint="playbackError ? '重试' : (isPlaying ? '暂停 (Space)' : '播放 (Space)')"
-        @click="playbackError ? $emit('retry-playback') : $emit('toggle-play')"
+        :class="{ 'has-error': hasError }"
+        :aria-label="hasError ? '重试播放' : (isPlaying ? '暂停' : '播放')"
+        :title="hasError ? '音频加载失败，点击重试' : (isPlaying ? '暂停' : '播放')"
+        :data-hint="hasError ? '重试' : (isPlaying ? '暂停 (Space)' : '播放 (Space)')"
+        @click="hasError ? $emit('retry-playback') : $emit('toggle-play')"
       >
         <PIcon
-          :name="playbackError ? 'refresh' : (isPlaying ? 'player-pause' : 'player-play')"
+          :name="hasError ? 'refresh' : (isPlaying ? 'player-pause' : 'player-play')"
           size="sm"
           class="play-icon"
           aria-hidden="true"
         />
-        <span class="sr-only">{{ playbackError ? '重试' : (isPlaying ? '暂停' : '播放') }}</span>
+        <span class="sr-only">{{ hasError ? '重试' : (isPlaying ? '暂停' : '播放') }}</span>
       </button>
 
       <!-- 下一首 -->
@@ -107,6 +107,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import PIcon from '@/components/ui/PIcon.vue'
 
 interface Props {
@@ -117,11 +118,13 @@ interface Props {
   playbackMode?: 'loop' | 'single' | 'random'
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   isPodcast: false,
   playbackRate: 1,
   playbackMode: 'loop',
 })
+
+const hasError = computed(() => Boolean(props.playbackError) && !props.isPlaying)
 
 defineEmits<{
   (e: 'skip', seconds: number): void

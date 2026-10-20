@@ -82,6 +82,27 @@ describe('AudioPlayerControlsHub', () => {
     expect(wrapper.emitted('toggle-play')).toBeUndefined()
   })
 
+  it('prioritizes playing state over stale playbackError', async () => {
+    const wrapper = mount(AudioPlayerControlsHub, {
+      props: {
+        ...defaultProps,
+        isPlaying: true,
+        playbackError: 'MEDIA_ELEMENT_ERROR: 4',
+      },
+    })
+
+    const mainBtn = wrapper.find('.main-play-btn')
+    expect(mainBtn.classes()).not.toContain('has-error')
+    expect(mainBtn.text()).toBe('暂停')
+    expect(mainBtn.attributes('aria-label')).toBe('暂停')
+    expect(mainBtn.attributes('title')).toBe('暂停')
+    expect(mainBtn.attributes('data-hint')).toBe('暂停 (Space)')
+
+    await mainBtn.trigger('click')
+    expect(wrapper.emitted('toggle-play')).toHaveLength(1)
+    expect(wrapper.emitted('retry-playback')).toBeUndefined()
+  })
+
   it('emits play-previous and play-next when clicking nav buttons', async () => {
     const wrapper = mount(AudioPlayerControlsHub, {
       props: defaultProps,

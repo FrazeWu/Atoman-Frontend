@@ -667,19 +667,23 @@ export const usePlayerStore = defineStore("player", () => {
 		const nextAudio = new Audio();
 		nextAudio.preload = "auto";
 		nextAudio.addEventListener("loadstart", () => {
+			if (audio !== nextAudio) return;
 			isLoading.value = true;
 			playbackError.value = "";
 		});
 		nextAudio.addEventListener("waiting", () => {
+			if (audio !== nextAudio) return;
 			if (isPlaying.value) isLoading.value = true;
 		});
 		nextAudio.addEventListener("playing", () => {
+			if (audio !== nextAudio) return;
 			playRequested = false;
 			isLoading.value = false;
 			isPlaying.value = true;
 			playbackError.value = "";
 		});
 		nextAudio.addEventListener("pause", () => {
+			if (audio !== nextAudio) return;
 			if (!nextAudio.paused) return;
 			playRequested = false;
 			isPlaying.value = false;
@@ -690,6 +694,7 @@ export const usePlayerStore = defineStore("player", () => {
 			}
 		});
 		nextAudio.addEventListener("error", () => {
+			if (audio !== nextAudio) return;
 			playRequested = false;
 			isLoading.value = false;
 			isPlaying.value = false;
@@ -704,6 +709,7 @@ export const usePlayerStore = defineStore("player", () => {
 			}
 		});
 		nextAudio.addEventListener("canplay", () => {
+			if (audio !== nextAudio) return;
 			isLoading.value = false;
 			if (!currentSong.value) return;
 			currentSongStartCached = true;
@@ -725,7 +731,11 @@ export const usePlayerStore = defineStore("player", () => {
 		};
 		nextAudio.addEventListener("progress", updateBuffered);
 		nextAudio.addEventListener("timeupdate", () => {
+			if (audio !== nextAudio) return;
 			currentTime.value = nextAudio.currentTime;
+			if (playbackError.value && !nextAudio.paused) {
+				playbackError.value = "";
+			}
 			updateBuffered();
 			savePodcastProgress();
 			saveMusicProgress();
@@ -829,6 +839,7 @@ export const usePlayerStore = defineStore("player", () => {
 				if (generation !== playGeneration || player !== audio) return;
 				playRequested = false;
 				isPlaying.value = true;
+				playbackError.value = "";
 				try {
 					broadcastPlayRequest();
 				} catch {
@@ -1182,7 +1193,11 @@ export const usePlayerStore = defineStore("player", () => {
 		}
 		player.volume = computeActualVolume(volume.value);
 		if (currentTime.value > 0) {
-			player.currentTime = currentTime.value;
+			try {
+				player.currentTime = currentTime.value;
+			} catch {
+				// Metadata may not be available yet
+			}
 		}
 
 		if (shouldPauseAudio(player)) {

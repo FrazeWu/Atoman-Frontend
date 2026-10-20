@@ -23,6 +23,7 @@
       <BlogSheetStack />
       <SiteFooter v-if="showDeferredShell && !isAuthRoute" />
       <AudioPlayer v-if="hasActiveTrack" />
+      <PShortcutHints v-if="!isAuthRoute" />
   </div>
 </template>
 
@@ -32,6 +33,7 @@ import { RouterView, useRoute } from 'vue-router'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApiUrl'
 import AppTopbar from '@/components/system/AppTopbar.vue'
+import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { useUIStore } from '@/stores/ui'
 import { useSiteAccessStore } from '@/stores/siteAccess'

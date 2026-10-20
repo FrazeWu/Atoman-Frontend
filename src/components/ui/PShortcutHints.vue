@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getActivePinia } from 'pinia'
 import { Keyboard } from 'lucide-vue-next'
 import { useUIStore } from '@/stores/ui'
+import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { useShortcutHints, type ShortcutHint } from '@/composables/useShortcutHints'
 
 export type { ShortcutHint } from '@/composables/useShortcutHints'
@@ -28,6 +29,8 @@ const isTeleportDisabled = computed(() => props.teleportDisabled ?? isTestEnv)
 
 const pinia = getActivePinia()
 const uiStore = pinia ? useUIStore(pinia) : null
+const playerPresence = pinia ? usePlayerPresenceStore(pinia) : null
+const hasPlayer = computed(() => Boolean(playerPresence?.hasCurrentTrack))
 const {
   commonShortcutHints,
   moduleShortcutHints,
@@ -108,21 +111,22 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
 
 <template>
   <div class="shortcut-hints">
-    <!-- 顶部导航栏触发按钮 -->
+    <!-- 浮动键盘快捷键触发按钮：位于页面右下角，音乐播放器上方 -->
     <button
       ref="triggerRef"
       type="button"
       class="shortcut-hints__trigger"
+      :class="{ 'has-player': hasPlayer }"
       data-testid="shortcut-hints-trigger"
-      aria-label="显示键盘快捷键"
+      aria-label="键盘快捷键"
       aria-keyshortcuts="Shift+?"
       aria-haspopup="dialog"
       :aria-expanded="open"
-      title="查看快捷键（Shift + ?）"
+      title="快捷键 (Shift + ?)"
       @click="open = !open"
     >
-      <Keyboard :size="16" class="shortcut-hints__icon-svg" aria-hidden="true" />
-      <span class="shortcut-hints__label">快捷键</span>
+      <Keyboard :size="18" class="shortcut-hints__icon-svg" aria-hidden="true" />
+      <span class="sr-only">快捷键</span>
     </button>
 
     <!-- 居中视窗浮层弹窗 -->
@@ -235,25 +239,38 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
 
 <style scoped>
 .shortcut-hints {
-  display: inline-flex;
-  align-items: center;
+  display: contents;
 }
 
 .shortcut-hints__trigger {
+  position: fixed;
+  right: 1.5rem;
+  bottom: calc(var(--a-player-reserved-height, 0px) + 1.25rem);
+  z-index: var(--a-z-navigation, 100);
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  height: var(--a-control-height-md, 2rem);
-  padding: 0 0.5rem;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-surface);
   color: var(--a-color-muted);
-  font-size: 0.75rem;
-  font-weight: 500;
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  transition:
+    bottom var(--a-motion-state, 220ms) var(--a-motion-ease-enter, cubic-bezier(0.16, 1, 0.3, 1)),
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
   outline: none;
+}
+
+.shortcut-hints__trigger.has-player {
+  bottom: calc(max(var(--a-player-reserved-height, 0px), 4.5rem) + 0.75rem);
 }
 
 .shortcut-hints__trigger:hover,
@@ -261,16 +278,37 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
   color: var(--a-color-text);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+.shortcut-hints__trigger:active {
+  transform: translateY(0);
 }
 
 .shortcut-hints__icon-svg {
   flex-shrink: 0;
 }
 
-.shortcut-hints__label {
-  font-size: 0.75rem;
-  font-weight: 500;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+  border-width: 0;
+}
+
+:root.dark .shortcut-hints__trigger {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+:root.dark .shortcut-hints__trigger:hover,
+:root.dark .shortcut-hints__trigger:focus-visible {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
 }
 
 /* 弹窗全屏遮罩 */
@@ -467,20 +505,13 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   gap: 0.375rem;
 }
 
-@media (max-width: 1024px) {
-  .shortcut-hints__label {
-    display: none;
-  }
-  .shortcut-hints__trigger {
-    padding: 0;
-    width: var(--a-control-height-md, 2rem);
-    justify-content: center;
-  }
-}
-
 @media (max-width: 767px) {
-  .shortcut-hints {
-    display: none;
+  .shortcut-hints__trigger {
+    right: 1rem;
+    bottom: calc(var(--a-mobile-nav-reserved-height, 0px) + 1rem);
+  }
+  .shortcut-hints__trigger.has-player {
+    bottom: calc(var(--a-mobile-nav-reserved-height, 0px) + 4rem + 0.75rem);
   }
 }
 </style>

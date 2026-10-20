@@ -47,7 +47,7 @@ describe('PShortcutHints', () => {
 
   it('is stably positioned above the player area on the right', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/components/ui/PShortcutHints.vue'), 'utf8')
-    expect(source).toContain('bottom: calc(4.5rem + 0.75rem);')
+    expect(source).toContain('bottom: calc(4.5rem + 6px);')
     expect(source).toContain('right: 1.5rem;')
   })
 })

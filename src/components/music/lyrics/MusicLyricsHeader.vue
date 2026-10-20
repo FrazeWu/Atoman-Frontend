@@ -1,16 +1,27 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { BookOpen, History, Pencil, PictureInPicture, X } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 
-defineProps<{
-  isReadOnlyAnnotations: boolean
-  isAnnotationMode: boolean
-  isPlayerMode: boolean
-  isPiPSupported: boolean
-  isPiPActive: boolean
-  saving: boolean
-  reverting: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    isReadOnlyAnnotations: boolean
+    isAnnotationMode: boolean
+    isPlayerMode: boolean
+    isPipSupported?: boolean
+    isPiPSupported?: boolean
+    isPipActive?: boolean
+    isPiPActive?: boolean
+    saving: boolean
+    reverting: boolean
+  }>(),
+  {
+    isPipSupported: false,
+    isPiPSupported: false,
+    isPipActive: false,
+    isPiPActive: false,
+  },
+)
 
 const emit = defineEmits<{
   (e: 'open-song-detail'): void
@@ -20,6 +31,9 @@ const emit = defineEmits<{
   (e: 'toggle-pip'): void
   (e: 'close'): void
 }>()
+
+const pipSupported = computed(() => Boolean(props.isPipSupported || props.isPiPSupported))
+const pipActive = computed(() => Boolean(props.isPipActive || props.isPiPActive))
 </script>
 
 <template>
@@ -78,18 +92,18 @@ const emit = defineEmits<{
         <Pencil :size="16" aria-hidden="true" />
       </PButton>
       <PButton
-        v-if="isPlayerMode && isPiPSupported"
+        v-if="isPlayerMode && pipSupported"
         class="music-lyrics-panel__action-btn"
         type="button"
         variant="secondary"
-        :aria-label="isPiPActive ? '退出画中画' : '画中画歌词'"
-        :title="isPiPActive ? '退出画中画' : '画中画歌词'"
-        :aria-pressed="isPiPActive"
+        :aria-label="pipActive ? '退出画中画' : '画中画歌词'"
+        :title="pipActive ? '退出画中画' : '画中画歌词'"
+        :aria-pressed="pipActive"
         data-testid="lyrics-pip-trigger"
         @click="emit('toggle-pip')"
       >
         <PictureInPicture :size="16" aria-hidden="true" />
-        <span>{{ isPiPActive ? '画中画开' : '画中画' }}</span>
+        <span>{{ pipActive ? '画中画开' : '画中画' }}</span>
       </PButton>
       <button
         type="button"
@@ -142,7 +156,7 @@ const emit = defineEmits<{
   background: var(--a-color-bg);
   color: var(--a-color-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
   box-shadow: none;
 }
 

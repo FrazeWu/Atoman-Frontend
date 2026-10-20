@@ -1,194 +1,58 @@
 <template>
   <section class="music-lyrics-panel">
-    <header class="music-lyrics-panel__header">
-      <div class="music-lyrics-panel__actions">
-        <PButton
-          v-if="isReadOnlyAnnotations"
-          class="music-lyrics-panel__action-btn"
-          type="button"
-          variant="secondary"
-          aria-label="在歌曲详情中编辑注释"
-          title="在歌曲详情中编辑注释"
-          data-testid="lyrics-open-song-detail"
-          @click="emit('open-song-detail')"
-        >
-          <Pencil :size="16" aria-hidden="true" />
-          <span>编辑注释</span>
-        </PButton>
-        <PButton
-          v-else
-          class="music-lyrics-panel__action-btn"
-          type="button"
-          variant="secondary"
-          :aria-label="isAnnotationMode ? '返回歌词' : '歌词注解'"
-          :title="isAnnotationMode ? '返回歌词' : '歌词注解'"
-          :aria-pressed="isAnnotationMode"
-          data-testid="lyrics-annotations-trigger"
-          @click="openAnnotationOverview"
-        >
-          <BookOpen :size="16" aria-hidden="true" />
-          <span>{{ isAnnotationMode ? '返回歌词' : '歌词注解' }}</span>
-        </PButton>
-        <PButton
-          v-if="!isPlayerMode"
-          class="music-lyrics-panel__action-btn"
-          type="button"
-          variant="secondary"
-          aria-label="歌词版本"
-          title="歌词版本"
-          data-testid="lyrics-versions-trigger"
-          @click="toggleVersions"
-        >
-          <History :size="16" aria-hidden="true" />
-        </PButton>
-        <PButton
-          v-if="!isPlayerMode"
-          class="music-lyrics-panel__action-btn"
-          type="button"
-          variant="secondary"
-          aria-label="编辑歌词"
-          title="编辑歌词"
-          :disabled="saving || reverting"
-          data-testid="lyrics-edit-trigger"
-          @click="openLyricEditor"
-        >
-          <Pencil :size="16" aria-hidden="true" />
-        </PButton>
-        <PButton
-          v-if="isPlayerMode && isPiPSupported"
-          class="music-lyrics-panel__action-btn"
-          type="button"
-          variant="secondary"
-          :aria-label="isPiPActive ? '退出画中画' : '画中画歌词'"
-          :title="isPiPActive ? '退出画中画' : '画中画歌词'"
-          :aria-pressed="isPiPActive"
-          data-testid="lyrics-pip-trigger"
-          @click="togglePictureInPicture"
-        >
-          <PictureInPicture :size="16" aria-hidden="true" />
-          <span>{{ isPiPActive ? '画中画开' : '画中画' }}</span>
-        </PButton>
-        <button
-          type="button"
-          class="music-lyrics-panel__close"
-          aria-label="关闭歌词"
-          title="关闭歌词"
-          @click="emit('close')"
-        >
-          <X :size="18" aria-hidden="true" />
-        </button>
-      </div>
-    </header>
+    <MusicLyricsHeader
+      :is-read-only-annotations="isReadOnlyAnnotations"
+      :is-annotation-mode="isAnnotationMode"
+      :is-player-mode="isPlayerMode"
+      :is-pip-supported="isPiPSupported"
+      :is-pip-active="isPiPActive"
+      :saving="saving"
+      :reverting="reverting"
+      @open-song-detail="emit('open-song-detail')"
+      @toggle-annotation-overview="openAnnotationOverview"
+      @toggle-versions="toggleVersions"
+      @open-editor="openLyricEditor"
+      @toggle-pip="togglePictureInPicture"
+      @close="emit('close')"
+    />
 
     <p v-if="errorMessage" class="music-lyrics-panel__feedback">
       {{ errorMessage }}
     </p>
 
-    <div v-if="versionsVisible" class="music-lyrics-panel__versions">
-      <p v-if="versionsLoading" class="music-lyrics-panel__placeholder">正在加载版本</p>
-      <p v-else-if="versionsErrorMessage" class="music-lyrics-panel__placeholder">{{ versionsErrorMessage }}</p>
-      <p v-else-if="versionsSongId !== songId || !versions.length" class="music-lyrics-panel__placeholder">暂无版本</p>
-      <div v-else class="music-lyrics-panel__version-list">
-        <article
-          v-for="version in versions"
-          :key="version.id || version.version"
-          class="music-lyrics-panel__version"
-        >
-          <div>
-            <strong>第 {{ version.version }} 版</strong>
-            <span>{{ version.edit_summary || '歌词更新' }}</span>
-          </div>
-          <button
-            type="button"
-            class="music-lyrics-panel__version-action"
-            :data-testid="`lyrics-version-preview-${version.version}`"
-            @click="selectVersionPreview(version.version)"
-          >
-            预览
-          </button>
-
-          <div
-            v-if="selectedVersionPreview?.version === version.version"
-            class="music-lyrics-panel__version-preview"
-            :data-testid="`lyrics-version-diff-${version.version}`"
-          >
-            <p class="music-lyrics-panel__version-impact">
-              {{ selectedVersionPreview.affectedActiveAnnotationCount }} 条注释需重新绑定
-            </p>
-            <div class="music-lyrics-panel__version-diff-lines">
-              <p
-                v-for="(line, index) in selectedVersionPreview.lines"
-                :key="`${line.kind}-${line.currentIndex ?? ''}-${line.targetIndex ?? ''}-${index}`"
-                class="music-lyrics-panel__version-diff-line"
-                :class="[
-                  `is-${line.kind}`,
-                  { 'is-translation-only': line.kind === 'modified' && line.current?.text === line.target?.text },
-                ]"
-              >
-                <span>{{ versionDiffLabel(line.kind) }}</span>
-                <template v-if="line.kind === 'modified' && line.current && line.target && line.current.text === line.target.text">
-                  <span class="music-lyrics-panel__version-diff-original">{{ line.current.text }}</span>
-                  <del class="music-lyrics-panel__version-diff-translation">当前译文：{{ line.current.translation || '无译文' }}</del>
-                  <ins class="music-lyrics-panel__version-diff-translation">目标译文：{{ line.target.translation || '无译文' }}</ins>
-                </template>
-                <template v-else>
-                  <del v-if="line.current && line.kind !== 'unchanged'">{{ line.current.text }}</del>
-                  <ins v-if="line.target && line.kind !== 'removed'">{{ line.target.text }}</ins>
-                </template>
-              </p>
-            </div>
-            <button
-              type="button"
-              class="music-lyrics-panel__version-action"
-              :disabled="saving || reverting"
-              :data-testid="`lyrics-revert-version-${version.version}`"
-              @click="handleRevertVersion(version.version)"
-            >
-              确认恢复
-            </button>
-          </div>
-        </article>
-      </div>
-    </div>
+    <MusicLyricsVersionHistory
+      v-if="versionsVisible"
+      :versions="versions"
+      :versions-loading="versionsLoading"
+      :versions-error-message="versionsErrorMessage"
+      :versions-song-id="versionsSongId"
+      :song-id="songId"
+      :selected-version-preview="selectedVersionPreview"
+      :saving="saving"
+      :reverting="reverting"
+      @select-preview="selectVersionPreview"
+      @revert="handleRevertVersion"
+    />
 
     <div class="music-lyrics-panel__layout">
-      <div class="music-lyrics-panel__main">
-        <div v-if="hasTranslation" class="music-lyrics-panel__display-mode">
-          <PSegmentedControl v-model="displayMode" :options="displayModeOptions" />
-        </div>
-        <div ref="lyricsLinesElement" class="music-lyrics-panel__lines" @wheel="handleUserScroll" @touchmove="handleUserScroll">
-          <section class="music-lyrics-panel__song-info" aria-label="歌曲信息">
-            <p class="music-lyrics-panel__eyebrow">歌词 · {{ activeAnnotationCount }} 条注释</p>
-            <h2>{{ songTitle }}</h2>
-            <dl class="music-lyrics-panel__credits">
-              <div v-for="group in creditGroups" :key="group.role">
-                <dt>{{ group.label }}</dt>
-                <dd>{{ group.names.join(' / ') }}</dd>
-              </div>
-            </dl>
-          </section>
-
-          <p v-if="loading" class="music-lyrics-panel__placeholder">加载中</p>
-          <p v-else-if="!lyrics?.lines.length" class="music-lyrics-panel__placeholder">暂无歌词</p>
-          <template v-else>
-            <MusicLyricsLine
-              v-for="line in lyrics.lines"
-              :key="line.line_key ?? line.id ?? line.text"
-              :line="line"
-              :annotations="annotationsByLine.get(line.line_key ?? line.id ?? '') ?? []"
-              :active="isPlayerMode && currentLineId === (line.line_key ?? line.id ?? '')"
-              :bilingual="showTranslation"
-              :can-select="isAnnotationMode && isAuthenticated"
-              :can-annotate="isAnnotationMode && isAuthenticated"
-              :click-to-seek="isPlayerMode"
-              :selection-root="lyricsLinesElement"
-              @select-text="handleSelectText"
-              @open-annotations="handleOpenAnnotations"
-              @seek="emit('seek', $event)"
-            />
-          </template>
-        </div>
-      </div>
+      <MusicLyricsScroller
+        :song-title="songTitle"
+        :credit-groups="creditGroups"
+        :active-annotation-count="activeAnnotationCount"
+        :lyrics="lyrics"
+        :loading="loading"
+        :annotations-by-line="annotationsByLine"
+        :current-line-id="currentLineId"
+        :is-player-mode="isPlayerMode"
+        :is-annotation-mode="isAnnotationMode"
+        :is-authenticated="isAuthenticated"
+        :has-translation="hasTranslation"
+        :display-mode="displayMode"
+        @update:display-mode="displayMode = $event"
+        @select-text="handleSelectText"
+        @open-annotations="handleOpenAnnotations"
+        @seek="emit('seek', $event)"
+      />
 
       <Transition name="lyrics-annotation-panel">
         <aside v-if="!isMobileViewport" class="music-lyrics-panel__sidebar" aria-label="歌词注解">
@@ -316,7 +180,6 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { BookOpen, History, Pencil, PictureInPicture, X } from 'lucide-vue-next'
 import { usePictureInPictureLyrics } from '@/composables/usePictureInPictureLyrics'
 import { ApiErrorResponseError } from '@/api/client'
 import {
@@ -330,16 +193,16 @@ import {
 } from '@/api/musicV1'
 import MusicAnnotationWorkspace from '@/components/music/MusicAnnotationWorkspace.vue'
 import MusicLyricEditorDrawer from '@/components/music/MusicLyricEditorDrawer.vue'
-import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
-import PButton from '@/components/ui/PButton.vue'
+import MusicLyricsHeader from '@/components/music/lyrics/MusicLyricsHeader.vue'
+import MusicLyricsVersionHistory from '@/components/music/lyrics/MusicLyricsVersionHistory.vue'
+import MusicLyricsScroller from '@/components/music/lyrics/MusicLyricsScroller.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
-import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import { useMusicLyrics } from '@/composables/useMusicLyrics'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { removePendingMusicLyricsAnnotation } from '@/composables/usePendingMusicLyricsAnnotations'
 import { useAuthStore } from '@/stores/auth'
-import { buildMusicLyricsVersionPreview, type MusicLyricsVersionDiffKind } from '@/utils/musicLyricsVersionDiff'
+import { buildMusicLyricsVersionPreview } from '@/utils/musicLyricsVersionDiff'
 import { albumArtistRoleLabels } from '@/utils/musicAlbumCredits'
 
 const props = defineProps<{
@@ -376,6 +239,9 @@ const {
   reverting,
   errorMessage,
   versionsErrorMessage,
+  versions,
+  versionsSongId,
+  versionsLoading,
   annotationsByLine,
   load,
   save,
@@ -383,9 +249,6 @@ const {
   updateAnnotation,
   deleteAnnotation,
   voteAnnotation,
-  versions,
-  versionsSongId,
-  versionsLoading,
   loadVersions,
   resetVersions,
   revertVersion,
@@ -424,13 +287,10 @@ const pendingClose = ref<'editor' | 'lyrics' | null>(null)
 const versionsVisible = ref(false)
 const selectedVersionNumber = ref<number | null>(null)
 const displayMode = ref<'original' | 'bilingual'>('bilingual')
-const lyricsLinesElement = ref<HTMLElement | null>(null)
 const pendingLyricsInput = ref<UpdateMusicSongLyricsInput | null>(null)
 const conflictAnnotationIds = ref<string[]>([])
 const pendingLyricsSongId = ref('')
-const isUserScrolling = ref(false)
 const songCredits = ref<MusicSongDetail['artists']>([])
-let scrollLockTimer: ReturnType<typeof setTimeout> | null = null
 let pendingLyricsSaveGeneration = 0
 let activeLyricsSaveGeneration = 0
 let versionsViewGeneration = 0
@@ -451,30 +311,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   mobileViewportQuery?.removeEventListener('change', syncMobileViewport)
-  if (scrollLockTimer) clearTimeout(scrollLockTimer)
 })
-
-function handleUserScroll() {
-  isUserScrolling.value = true
-  if (scrollLockTimer) clearTimeout(scrollLockTimer)
-  scrollLockTimer = setTimeout(() => {
-    isUserScrolling.value = false
-    scrollToActiveLine()
-  }, 2500)
-}
-
-function scrollToActiveLine() {
-  if (isUserScrolling.value || !lyricsLinesElement.value || !currentLineId.value) return
-  const activeEl = lyricsLinesElement.value.querySelector('.music-lyrics-line.is-active') as HTMLElement | null
-  if (activeEl && typeof activeEl.scrollIntoView === 'function') {
-    activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
-}
-
-const displayModeOptions = [
-  { label: '原文', value: 'original' },
-  { label: '双语', value: 'bilingual' },
-]
 
 const isAuthenticated = computed(() => Boolean(authStore.isAuthenticated))
 const currentUserIds = computed(() => collectIdentityValues(authStore.user as Record<string, unknown> | null))
@@ -486,7 +323,6 @@ const activeTimedLine = computed(() => {
 })
 const currentLineId = computed(() => activeTimedLine.value?.line_key ?? activeTimedLine.value?.id ?? '')
 const hasTranslation = computed(() => Boolean(lyrics.value?.translation.trim()))
-const showTranslation = computed(() => hasTranslation.value && displayMode.value === 'bilingual')
 const activeAnnotationCount = computed(() => (
   lyrics.value?.annotations.filter((annotation) => annotation.status === 'active').length ?? 0
 ))
@@ -581,12 +417,6 @@ async function loadSongCredits(songId: string) {
     // 歌词仍可使用播放器已有的艺术家信息展示。
   }
 }
-
-watch(currentLineId, async (lineId, previousLineId) => {
-  if (!lineId || (previousLineId !== undefined && lineId === previousLineId)) return
-  await nextTick()
-  scrollToActiveLine()
-}, { immediate: true })
 
 watch(
   () => [props.focusAnnotationId, props.startRebind, lyrics.value?.song_id, lyrics.value?.annotations] as const,
@@ -748,15 +578,6 @@ function handleRebindAnnotation(annotation: MusicLyricsAnnotation) {
   editingAnnotation.value = null
   rebindingAnnotation.value = annotation
   if (isMobileViewport.value) mobileAnnotationOpen.value = false
-}
-
-function versionDiffLabel(kind: MusicLyricsVersionDiffKind) {
-  return {
-    unchanged: '未变更',
-    added: '新增',
-    removed: '删除',
-    modified: '修改',
-  }[kind]
 }
 
 async function handleConfirmRebind() {
@@ -961,343 +782,5 @@ function cancelLyricsConflict() {
 </script>
 
 <style scoped>
-.music-lyrics-panel {
-  position: fixed;
-  top: var(--a-topbar-height);
-  right: 0;
-  bottom: var(--a-content-bottom-offset);
-  left: 0;
-  display: grid;
-  grid-template-rows: auto 1fr;
-  gap: 1rem;
-  padding: 1.5rem 2rem 2rem;
-  background: var(--a-color-bg);
-  border-top: 1px solid var(--a-color-border-soft);
-  box-shadow: none;
-  z-index: var(--a-z-player-lyrics);
-}
-:root.dark .music-lyrics-panel {
-  background: var(--a-color-bg);
-  border-top: 1px solid var(--a-color-border-dark, rgba(255, 255, 255, 0.1));
-}
-
-.music-lyrics-panel__header {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  align-items: flex-start;
-}
-
-.music-lyrics-panel__song-info {
-  display: grid;
-  gap: 0.5rem;
-  min-width: 0;
-  margin: 0;
-  padding: 1rem 0 2.5rem;
-}
-
-.music-lyrics-panel__eyebrow {
-  margin: 0;
-  color: var(--a-color-muted);
-  font-family: var(--a-font-sans);
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.music-lyrics-panel__song-info h2 {
-  margin: 0;
-  color: var(--a-color-text);
-  font-family: var(--a-font-sans);
-  font-size: 1.85rem;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-}
-
-.music-lyrics-panel__credits {
-  display: grid;
-  gap: 0.3rem;
-  margin: 0.25rem 0 0;
-}
-
-.music-lyrics-panel__credits div {
-  display: grid;
-  grid-template-columns: 4rem minmax(0, 1fr);
-  gap: 0.75rem;
-}
-
-.music-lyrics-panel__credits dt,
-.music-lyrics-panel__credits dd {
-  margin: 0;
-  line-height: 1.5;
-}
-
-.music-lyrics-panel__credits dt {
-  color: var(--a-color-muted);
-  font-size: 0.75rem;
-}
-
-.music-lyrics-panel__credits dd {
-  color: var(--a-color-text);
-  font-size: 0.875rem;
-}
-
-.music-lyrics-panel__actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.music-lyrics-panel__action-btn {
-  border-radius: var(--a-radius-control) !important;
-  font-weight: 500 !important;
-  transition: transform 0.15s ease, background 0.2s ease !important;
-}
-
-.music-lyrics-panel__action-btn:hover {
-  transform: translateY(-1px);
-}
-
-.music-lyrics-panel__close {
-  min-width: 40px;
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--a-color-border-soft);
-  padding: 0.5rem;
-  background: transparent;
-  color: var(--a-color-text);
-  cursor: pointer;
-  font-family: var(--a-font-sans);
-  border-radius: var(--a-radius-control);
-  box-shadow: none;
-  transition: background 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
-}
-
-.music-lyrics-panel__close:hover {
-  background: color-mix(in srgb, var(--a-color-text) 8%, transparent);
-  border-color: var(--a-color-text);
-  transform: scale(1.05);
-}
-
-.music-lyrics-panel__feedback,
-.music-lyrics-panel__placeholder {
-  margin: 0;
-  color: var(--a-color-muted);
-}
-
-.music-lyrics-panel__versions {
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-surface-muted);
-  border-radius: var(--a-radius-card);
-  padding: 1rem;
-}
-
-.music-lyrics-panel__version-list {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.music-lyrics-panel__version {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 1rem;
-  color: var(--a-color-text);
-}
-
-.music-lyrics-panel__version div {
-  display: grid;
-  gap: 0.2rem;
-}
-
-.music-lyrics-panel__version span {
-  color: var(--a-color-muted);
-  font-size: 0.82rem;
-}
-
-.music-lyrics-panel__version-action {
-  border: 0;
-  background: transparent;
-  color: var(--a-color-text);
-  cursor: pointer;
-  font-family: var(--a-font-sans);
-  font-size: 0.72rem;
-  font-weight: 500;
-  border-radius: var(--a-radius-control);
-  padding: 0.3rem 0.75rem;
-  box-shadow: none;
-  transition: background 0.2s ease;
-}
-
-.music-lyrics-panel__version-action:hover {
-  background: color-mix(in srgb, var(--a-color-text) 10%, transparent);
-}
-
-.music-lyrics-panel__version-preview {
-  grid-column: 1 / -1;
-  display: grid;
-  gap: 0.6rem;
-  border-top: 1px solid var(--a-color-border-soft);
-  padding-top: 0.75rem;
-}
-
-.music-lyrics-panel__version-impact {
-  margin: 0;
-  color: var(--a-color-muted);
-  font-size: 0.82rem;
-}
-
-.music-lyrics-panel__version-diff-lines {
-  display: grid;
-  gap: 0.25rem;
-  max-height: 14rem;
-  overflow: auto;
-}
-
-.music-lyrics-panel__version-diff-line {
-  display: flex;
-  gap: 0.5rem;
-  margin: 0;
-  color: var(--a-color-text);
-  font-size: 0.82rem;
-  line-height: 1.5;
-}
-
-.music-lyrics-panel__version-diff-line > span {
-  flex: 0 0 3rem;
-  color: var(--a-color-muted);
-  font-weight: 600;
-}
-
-.music-lyrics-panel__version-diff-line del,
-.music-lyrics-panel__version-diff-line ins {
-  text-decoration: none;
-}
-
-.music-lyrics-panel__version-diff-line.is-added ins {
-  color: var(--a-color-success);
-}
-
-.music-lyrics-panel__version-diff-line.is-removed del {
-  color: var(--a-color-danger);
-}
-
-.music-lyrics-panel__version-diff-line.is-modified del {
-  color: var(--a-color-danger);
-}
-
-.music-lyrics-panel__version-diff-line.is-modified ins {
-  color: var(--a-color-success);
-}
-
-.music-lyrics-panel__version-diff-line.is-translation-only {
-  display: grid;
-  grid-template-columns: 3rem minmax(0, 1fr);
-}
-
-.music-lyrics-panel__version-diff-line.is-translation-only > span:first-child {
-  grid-column: 1;
-}
-
-.music-lyrics-panel__version-diff-original,
-.music-lyrics-panel__version-diff-translation {
-  grid-column: 2;
-}
-
-.music-lyrics-panel__layout {
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
-  gap: 1.25rem;
-}
-
-.music-lyrics-panel__main {
-  min-height: 0;
-  overflow: hidden;
-  padding-right: 1rem;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-}
-
-.music-lyrics-panel__display-mode {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 0.75rem;
-}
-
-.music-lyrics-panel__lines {
-  min-height: 0;
-  height: 100%;
-  box-sizing: border-box;
-  overflow-x: hidden;
-  overflow-y: auto;
-  display: grid;
-  gap: 0.2rem;
-  /* 让首句和末句也能在滚动边界停留在可视区中线。 */
-  padding: 50vh 0;
-  scroll-behavior: smooth;
-  mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%);
-}
-
-.music-lyrics-panel__sidebar {
-  min-height: 0;
-  display: grid;
-  align-content: start;
-  gap: 0.75rem;
-  border-left: 1px solid var(--a-color-border-soft);
-  padding-left: 1.25rem;
-  overflow: hidden;
-}
-
-.lyrics-annotation-panel-enter-active,
-.lyrics-annotation-panel-leave-active {
-  transition: opacity var(--a-motion-state) var(--a-motion-ease-enter),
-    transform var(--a-motion-state) var(--a-motion-ease-enter);
-  will-change: opacity, transform;
-}
-
-.lyrics-annotation-panel-enter-from,
-.lyrics-annotation-panel-leave-to {
-  opacity: 0;
-  transform: translateX(1rem);
-}
-
-@media (max-width: 900px) {
-  .music-lyrics-panel {
-    padding: 1rem 1rem 1.25rem;
-  }
-
-  .music-lyrics-panel__header {
-    display: grid;
-  }
-
-  .music-lyrics-panel__actions {
-    justify-content: flex-start;
-  }
-
-  .music-lyrics-panel__layout {
-    grid-template-columns: 1fr;
-  }
-
-  .music-lyrics-panel__main {
-    padding-right: 0;
-  }
-
-  .music-lyrics-panel__lines {
-    padding-block: 55vh;
-  }
-
-  .music-lyrics-panel__sidebar {
-    border-top: 1px solid var(--a-color-border-soft);
-    border-left: 0;
-    padding-top: 1rem;
-    padding-left: 0;
-  }
-}
-
+@import './styles/musicLyrics.css';
 </style>

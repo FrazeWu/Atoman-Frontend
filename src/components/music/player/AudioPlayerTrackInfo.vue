@@ -37,7 +37,6 @@
       </div>
       <div class="player-tooltip-wrap">
         <p class="player-artist">
-          TRACK //
           <template v-if="!isPodcast && currentSong?.artists?.length">
             <template v-for="(artist, index) in currentSong.artists" :key="artist.id">
               <span v-if="index" aria-hidden="true"> / </span>
@@ -51,7 +50,7 @@
           </template>
         </p>
         <div class="player-tooltip player-tooltip--subtle">
-          TRACK // {{ resolvedArtistText }}
+          {{ resolvedArtistText }}<template v-if="!isPodcast && currentSong?.album"> · {{ currentSong.album }}</template>
         </div>
       </div>
     </div>
@@ -246,10 +245,10 @@ const resolvedCoverFallback = computed(() => {
 
 .player-meta {
   min-width: 0;
-  max-width: 360px;
+  max-width: 480px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   flex: 1;
   overflow: visible;
   transition:
@@ -303,13 +302,12 @@ const resolvedCoverFallback = computed(() => {
 }
 
 .player-artist {
-  font-family: monospace;
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-family: var(--a-font-sans);
+  font-size: 11px;
+  line-height: 1.35;
   margin: 0;
   color: var(--a-color-muted);
-  font-weight: 500;
+  font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -326,9 +324,12 @@ const resolvedCoverFallback = computed(() => {
   background: transparent;
   color: inherit;
   font: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
   cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.player-artist button:hover {
+  color: var(--a-color-text);
 }
 
 .player-tooltip {

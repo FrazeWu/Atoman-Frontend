@@ -571,6 +571,11 @@ watch(
   padding: 0 0 0 1.5rem;
 }
 
+.player-inner > :deep(.player-info) {
+  flex: 0 1 440px;
+  min-width: 220px;
+}
+
 .player-collapse-tab {
   flex-shrink: 0;
   display: inline-flex;

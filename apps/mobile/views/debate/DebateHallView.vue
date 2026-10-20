@@ -112,9 +112,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
+import { useDebateStore } from '@/stores/debate'
 
 export interface DebateTopic {
   id: string
@@ -135,36 +136,46 @@ const props = withDefaults(
   }
 )
 
+const debateStore = useDebateStore()
 const activeTab = ref<'all' | 'hot' | 'participated'>('all')
-
-const defaultTopics: DebateTopic[] = [
-  {
-    id: 'deb-1',
-    title: '人工智能是否会替代大部分常规软件工程岗位？',
-    description: '探讨大语言模型自动化编程对软件工程分工体系的重塑与未来演进。',
-    affirmativeCount: 120,
-    negativeCount: 80,
-    userVote: null,
-    isHot: true,
-  },
-  {
-    id: 'deb-2',
-    title: '开源软件是否应当全面推行可持续商业化赞助许可？',
-    description: '分析传统开源协议在面临云服务巨头再包装时的权益保护困境。',
-    affirmativeCount: 95,
-    negativeCount: 65,
-    userVote: null,
-    isHot: true,
-  },
-]
+const loading = ref(false)
 
 const topics = ref<DebateTopic[]>(
-  props.initialTopics ? [...props.initialTopics] : [...defaultTopics]
+  props.initialTopics ? [...props.initialTopics] : []
 )
+
+async function loadDebates() {
+  if (props.initialTopics !== undefined) return
+  loading.value = true
+  try {
+    await debateStore.fetchDebates({ page: 1, limit: 30 })
+    if (debateStore.debates && debateStore.debates.length > 0) {
+      topics.value = debateStore.debates.map((d: any) => {
+        const aff = d.vote_summary?.affirmative_votes ?? d.affirmative_votes ?? 0
+        const neg = d.vote_summary?.negative_votes ?? d.negative_votes ?? 0
+        return {
+          id: String(d.id),
+          title: d.title,
+          description: d.description || '',
+          affirmativeCount: aff,
+          negativeCount: neg,
+          userVote: d.user_vote === 'affirmative' || d.user_vote === 'negative' ? d.user_vote : null,
+          isHot: aff + neg > 10,
+        }
+      })
+    } else {
+      topics.value = []
+    }
+  } catch {
+    topics.value = []
+  } finally {
+    loading.value = false
+  }
+}
 
 const filteredTopics = computed(() => {
   if (activeTab.value === 'hot') {
-    return topics.value.filter((t) => t.isHot || t.affirmativeCount + t.negativeCount > 100)
+    return topics.value.filter((t) => t.isHot || t.affirmativeCount + t.negativeCount > 10)
   }
   if (activeTab.value === 'participated') {
     return topics.value.filter((t) => t.userVote !== null && t.userVote !== undefined)
@@ -182,24 +193,36 @@ function calcPercentage(aff: number, neg: number) {
   }
 }
 
-function handleVote(topic: DebateTopic, stance: 'affirmative' | 'negative') {
+async function handleVote(topic: DebateTopic, stance: 'affirmative' | 'negative') {
+  const previousVote = topic.userVote
+  const newVote = previousVote === stance ? null : stance
+
   if (topic.userVote === stance) {
-    // Cancel vote
     if (stance === 'affirmative') topic.affirmativeCount--
     else topic.negativeCount--
     topic.userVote = null
-    return
+  } else {
+    if (topic.userVote === 'affirmative') topic.affirmativeCount--
+    else if (topic.userVote === 'negative') topic.negativeCount--
+    if (stance === 'affirmative') topic.affirmativeCount++
+    else topic.negativeCount++
+    topic.userVote = stance
   }
 
-  // If already voted for opposite side, cancel previous
-  if (topic.userVote === 'affirmative') topic.affirmativeCount--
-  else if (topic.userVote === 'negative') topic.negativeCount--
-
-  // Apply new vote
-  if (stance === 'affirmative') topic.affirmativeCount++
-  else topic.negativeCount++
-  topic.userVote = stance
+  try {
+    if (newVote) {
+      await debateStore.setVote(topic.id, newVote === 'affirmative' ? 'yes' : 'no')
+    } else {
+      await debateStore.removeVote(topic.id)
+    }
+  } catch {
+    // ignore
+  }
 }
+
+onMounted(() => {
+  void loadDebates()
+})
 </script>
 
 <style scoped>

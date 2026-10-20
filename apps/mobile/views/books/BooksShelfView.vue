@@ -80,9 +80,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import MIcon from '@mobile/components/ui/MIcon.vue'
+import { listBookShelf, listContinueReading, listBookImports } from '@/api/books'
 
 export interface ShelfBook {
   id: string
@@ -107,48 +108,74 @@ const props = withDefaults(
 )
 
 const router = useRouter()
+const loading = ref(false)
+const fetchedCurrentReading = ref<ShelfBook | null>(null)
+const fetchedBooks = ref<ShelfBook[]>([])
 
-const defaultCurrentReading: ShelfBook = {
-  id: 'book-1',
-  title: '设计心理学',
-  author: '唐·诺曼',
-  progress: 64,
-  annotationsCount: 12,
-  format: 'EPUB',
+async function loadShelfData() {
+  if (props.initialBooks !== undefined || props.currentReading !== undefined) return
+  loading.value = true
+  try {
+    const [continueRes, shelfRes, importsRes] = await Promise.allSettled([
+      listContinueReading(1),
+      listBookShelf('all', 50, 0),
+      listBookImports(),
+    ])
+
+    if (continueRes.status === 'fulfilled' && continueRes.value?.length) {
+      const first = continueRes.value[0]
+      fetchedCurrentReading.value = {
+        id: first.asset_id,
+        title: first.title,
+        author: first.author || '未知作者',
+        progress: Math.round((first.reading_percent || 0) * 100),
+        annotationsCount: 0,
+        format: (first.format || 'EPUB').toUpperCase(),
+      }
+    } else {
+      fetchedCurrentReading.value = null
+    }
+
+    const items: ShelfBook[] = []
+    if (shelfRes.status === 'fulfilled' && shelfRes.value?.items?.length) {
+      for (const item of shelfRes.value.items) {
+        items.push({
+          id: item.work_id || item.id,
+          title: item.work?.title || '未命名',
+          author: item.work?.authors?.map((a: any) => a.name).join(' / ') || '未知作者',
+          format: 'EPUB',
+        })
+      }
+    }
+    if (importsRes.status === 'fulfilled' && Array.isArray(importsRes.value)) {
+      for (const imp of importsRes.value) {
+        if (!items.some((x) => x.id === imp.id)) {
+          items.push({
+            id: imp.id,
+            title: imp.title || imp.file_name || '本地电子书',
+            author: imp.author || '未知作者',
+            format: (imp.format || 'EPUB').toUpperCase(),
+          })
+        }
+      }
+    }
+    fetchedBooks.value = items
+  } catch {
+    fetchedCurrentReading.value = null
+    fetchedBooks.value = []
+  } finally {
+    loading.value = false
+  }
 }
-
-const defaultBooks: ShelfBook[] = [
-  {
-    id: 'book-1',
-    title: '设计心理学',
-    author: '唐·诺曼',
-    format: 'EPUB',
-    fileSize: '4.2 MB',
-  },
-  {
-    id: 'book-2',
-    title: '计算机程序的构造和解释',
-    author: 'Harold Abelson / Gerald Jay Sussman',
-    format: 'TXT',
-    fileSize: '1.8 MB',
-  },
-  {
-    id: 'book-3',
-    title: '黑客与画家',
-    author: 'Paul Graham',
-    format: 'EPUB',
-    fileSize: '2.5 MB',
-  },
-]
 
 const currentReadingBook = computed<ShelfBook | null>(() => {
   if (props.currentReading !== undefined) return props.currentReading
-  return defaultCurrentReading
+  return fetchedCurrentReading.value
 })
 
 const booksList = computed<ShelfBook[]>(() => {
   if (props.initialBooks !== undefined) return props.initialBooks
-  return defaultBooks
+  return fetchedBooks.value
 })
 
 function openBook(bookId: string) {
@@ -156,6 +183,10 @@ function openBook(bookId: string) {
     void router.push(`/books/read/${bookId}`)
   }
 }
+
+onMounted(() => {
+  void loadShelfData()
+})
 </script>
 
 <style scoped>

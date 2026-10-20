@@ -97,11 +97,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import MAvatar from '@mobile/components/ui/MAvatar.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MInput from '@mobile/components/ui/MInput.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
+import { useDMStore } from '@/stores/dm'
 
 export interface Conversation {
   id: string
@@ -128,27 +129,15 @@ const props = withDefaults(
   }
 )
 
-const defaultConversations: Conversation[] = [
-  {
-    id: 'conv-1',
-    partyName: 'Alice',
-    avatar: '/avatars/alice.png',
-    lastMessage: '新设计的阅读器非常轻盈！',
-    unreadCount: 2,
-    updatedAt: '10:42',
-  },
-  {
-    id: 'conv-2',
-    partyName: 'Bob',
-    avatar: '',
-    lastMessage: '辩题观点已提交，请查看。',
-    unreadCount: 0,
-    updatedAt: '09:15',
-  },
-]
+let dmStore: ReturnType<typeof useDMStore> | null = null
+try {
+  dmStore = useDMStore()
+} catch {
+  // Graceful fallback
+}
 
 const conversations = ref<Conversation[]>(
-  props.initialConversations ? [...props.initialConversations] : [...defaultConversations]
+  props.initialConversations ? [...props.initialConversations] : []
 )
 
 const activeConversation = ref<Conversation | null>(null)
@@ -156,14 +145,33 @@ const inputText = ref('')
 
 const activeMessages = ref<ChatMessage[]>([])
 
+async function loadConversations() {
+  if (props.initialConversations !== undefined || !dmStore) return
+  try {
+    await dmStore.reconcileFromServer()
+    if (dmStore.conversations && dmStore.conversations.length > 0) {
+      conversations.value = dmStore.conversations.map((c) => ({
+        id: c.conversation_id,
+        partyName: c.other_username || '用户',
+        avatar: '',
+        lastMessage: c.preview || '',
+        unreadCount: c.unread_count || 0,
+        updatedAt: c.last_message_at ? new Date(c.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+      }))
+    }
+  } catch {
+    // Graceful fallback
+  }
+}
+
 function openConversation(conv: Conversation) {
   activeConversation.value = conv
   conv.unreadCount = 0
   activeMessages.value = [
     {
       id: 'm-1',
-      text: conv.lastMessage,
-      time: conv.updatedAt,
+      text: conv.lastMessage || '已开启会话',
+      time: conv.updatedAt || '刚刚',
       isMe: false,
     },
   ]
@@ -192,6 +200,10 @@ function sendMessage() {
   activeConversation.value.updatedAt = timeStr
   inputText.value = ''
 }
+
+onMounted(() => {
+  void loadConversations()
+})
 </script>
 
 <style scoped>

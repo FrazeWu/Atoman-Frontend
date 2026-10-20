@@ -137,6 +137,7 @@ export interface FeedArticleItem {
   comments_count?: number
   liked?: boolean
   bookmarked?: boolean
+  target_path?: string
 }
 
 const props = withDefaults(
@@ -184,6 +185,14 @@ function selectTab(tab: 'recommend' | 'subscriptions') {
 
 function openArticle(article: FeedArticleItem) {
   emit('select', article)
+  if (article.target_path) {
+    if (article.target_path.startsWith('http://') || article.target_path.startsWith('https://')) {
+      if (typeof window !== 'undefined') window.open(article.target_path, '_blank', 'noopener,noreferrer')
+      return
+    }
+    void router.push(article.target_path)
+    return
+  }
   void router.push(`/feed/article/${article.id}`)
 }
 
@@ -234,45 +243,77 @@ async function fetchArticles() {
     if (activeTab.value === 'subscriptions') {
       await feedStore.fetchTimeline()
       const timeline = feedStore.timeline || []
-      articlesList.value = timeline.map((item) => {
-        const feedItem = item.feed_item
-        const post = item.post
-        return {
-          id: feedItem?.id || post?.id || '',
-          title: feedItem?.title || post?.title || '',
-          summary: feedItem?.summary || post?.summary || '',
-          author: {
-            name: feedItem?.author || post?.author?.nickname || post?.user?.display_name || post?.user?.username || feedItem?.feed_source?.title || '订阅源',
-            avatar: post?.author?.avatar || post?.user?.avatar_url || '',
-          },
-          source_title: feedItem?.feed_source?.title || post?.channel?.name,
-          published_at: feedItem?.published_at || post?.published_at || item.published_at,
-          likes_count: post?.likes_count || 0,
-          comments_count: post?.comments_count || 0,
-          bookmarked: Boolean(post?.bookmarked),
-        }
-      })
+      articlesList.value = timeline
+        .map((item) => {
+          const feedItem = item.feed_item
+          const post = item.post
+          const title = feedItem?.title || post?.title || ''
+          return {
+            id: feedItem?.id || post?.id || '',
+            title,
+            summary: feedItem?.summary || post?.summary || '',
+            author: {
+              name: feedItem?.author || post?.author?.nickname || post?.user?.display_name || post?.user?.username || feedItem?.feed_source?.title || '订阅源',
+              avatar: post?.author?.avatar || post?.user?.avatar_url || '',
+            },
+            source_title: feedItem?.feed_source?.title || post?.channel?.name,
+            published_at: feedItem?.published_at || post?.published_at || item.published_at,
+            likes_count: post?.likes_count || 0,
+            comments_count: post?.comments_count || 0,
+            bookmarked: Boolean(post?.bookmarked),
+          }
+        })
+        .filter((item) => Boolean(item.title))
     } else {
-      const res = await apiRequestResult(`${api.url}/feed/explore?limit=20`)
-      if (res.ok && res.data?.data) {
-        articlesList.value = res.data.data.map((item: any) => ({
-          id: String(item.id),
-          title: item.title || '',
-          summary: item.summary || item.snippet || '',
-          author: {
-            name: item.author || item.source_title || '推荐',
-            avatar: item.author_avatar || '',
-          },
-          source_title: item.source_title,
-          published_at: item.published_at || item.created_at,
-          likes_count: item.likes_count || 0,
-          comments_count: item.comments_count || 0,
-          bookmarked: Boolean(item.bookmarked),
-        }))
+      // Primary: recommended articles API
+      const recRes = await apiRequestResult(`${api.url}/feed/recommend/articles?page=1&page_size=20&mode=hot`)
+      const recItems = recRes.ok && Array.isArray(recRes.data?.data) ? recRes.data.data : []
+      if (recItems.length > 0) {
+        articlesList.value = recItems
+          .map((item: any) => ({
+            id: String(item.id),
+            title: item.title || '',
+            summary: item.summary || item.description || '',
+            author: {
+              name: item.source_title || '推荐',
+              avatar: item.source_image_url || item.image_url || '',
+            },
+            source_title: item.source_title,
+            published_at: item.last_published_at || item.published_at || item.created_at,
+            likes_count: item.view_count || 0,
+            comments_count: item.bookmark_count || 0,
+            bookmarked: false,
+            target_path: item.target_path || (item.id ? `/feed/article/${item.id}` : undefined),
+          }))
+          .filter((item: FeedArticleItem) => Boolean(item.title))
+      } else {
+        // Fallback: explore feed API
+        const exploreRes = await apiRequestResult(`${api.url}/feed/explore?limit=20`)
+        const exploreItems = exploreRes.ok && Array.isArray(exploreRes.data?.data) ? exploreRes.data.data : []
+        articlesList.value = exploreItems
+          .map((raw: any) => {
+            const item = raw.feed_item || raw.post || raw
+            return {
+              id: String(item.id || raw.id || ''),
+              title: item.title || '',
+              summary: item.summary || item.snippet || item.description || '',
+              author: {
+                name: item.author || item.feed_source?.title || item.source_title || '推荐',
+                avatar: item.feed_source?.icon_url || item.author_avatar || '',
+              },
+              source_title: item.feed_source?.title || item.source_title,
+              published_at: item.published_at || raw.published_at || item.created_at,
+              likes_count: item.likes_count || 0,
+              comments_count: item.comments_count || 0,
+              bookmarked: Boolean(item.bookmarked),
+              target_path: item.url || (item.id ? `/feed/article/${item.id}` : undefined),
+            }
+          })
+          .filter((item: FeedArticleItem) => Boolean(item.title))
       }
     }
   } catch {
-    // Graceful fallback
+    articlesList.value = []
   } finally {
     loading.value = false
   }

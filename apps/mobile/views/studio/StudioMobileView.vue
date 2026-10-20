@@ -105,9 +105,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import MIcon from '@mobile/components/ui/MIcon.vue'
+import { useStudioStore } from '@/stores/studio'
 
 export interface DraftItem {
   id: string
@@ -126,25 +127,37 @@ const props = withDefaults(
 )
 
 const router = useRouter()
+let studioStore: ReturnType<typeof useStudioStore> | null = null
+try {
+  studioStore = useStudioStore()
+} catch {
+  // Graceful fallback
+}
 
-const defaultDrafts: DraftItem[] = [
-  {
-    id: 'draft-1',
-    title: '移动端手势与纯白极简规范',
-    type: 'post',
-    updatedAt: '2 小时前',
-  },
-  {
-    id: 'draft-2',
-    title: '周末闲谈短记',
-    type: 'note',
-    updatedAt: '昨天',
-  },
-]
-
+const loading = ref(false)
 const drafts = ref<DraftItem[]>(
-  props.initialDrafts ? [...props.initialDrafts] : [...defaultDrafts]
+  props.initialDrafts ? [...props.initialDrafts] : []
 )
+
+async function loadDrafts() {
+  if (props.initialDrafts !== undefined || !studioStore) return
+  loading.value = true
+  try {
+    await studioStore.loadState()
+    await studioStore.loadContents('blog', { q: '', status: 'draft', visibility: '', collection_id: '', page: 1 })
+    const items = studioStore.contents.blog || []
+    drafts.value = items.map((item) => ({
+      id: String(item.id),
+      title: item.title || '无标题草稿',
+      type: 'post',
+      updatedAt: item.updated_at ? new Date(item.updated_at).toLocaleDateString([], { month: 'numeric', day: 'numeric' }) : '最近',
+    }))
+  } catch {
+    // Graceful fallback
+  } finally {
+    loading.value = false
+  }
+}
 
 function formatDraftType(type: string) {
   if (type === 'post') return '长文'
@@ -174,6 +187,10 @@ function handleEdit(draft: DraftItem) {
 function handleDelete(draftId: string) {
   drafts.value = drafts.value.filter((d) => d.id !== draftId)
 }
+
+onMounted(() => {
+  void loadDrafts()
+})
 </script>
 
 <style scoped>

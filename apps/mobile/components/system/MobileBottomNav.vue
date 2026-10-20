@@ -90,7 +90,7 @@ const onTabClick = (tab: NavTabItem, event: MouseEvent) => {
   left: 0;
   display: block !important;
   width: 100% !important;
-  z-index: var(--a-z-navigation, 100);
+  z-index: var(--a-z-navigation, 1000) !important;
   pointer-events: none;
 }
 

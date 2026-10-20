@@ -87,7 +87,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getMusicHome, listPublicMusicPlaylists, type MusicPlaylistSummary } from '@/api/musicV1'
+import { getMusicHome, listPublicMusicPlaylists, listMusicSongs, type MusicPlaylistSummary } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 import MIcon from '@mobile/components/ui/MIcon.vue'
@@ -154,10 +154,28 @@ async function loadData() {
       if (items.length > 0) {
         recentTracks.value = items.map((item) => toPlayerSong(item.song ? item.song : item))
       } else {
-        recentTracks.value = fallbackTracks
+        try {
+          const songsRes = await listMusicSongs({ page: 1, page_size: 5 })
+          if (songsRes?.data?.length) {
+            recentTracks.value = songsRes.data.map(toPlayerSong)
+          } else {
+            recentTracks.value = fallbackTracks
+          }
+        } catch {
+          recentTracks.value = fallbackTracks
+        }
       }
     } else {
-      recentTracks.value = fallbackTracks
+      try {
+        const songsRes = await listMusicSongs({ page: 1, page_size: 5 })
+        if (songsRes?.data?.length) {
+          recentTracks.value = songsRes.data.map(toPlayerSong)
+        } else {
+          recentTracks.value = fallbackTracks
+        }
+      } catch {
+        recentTracks.value = fallbackTracks
+      }
     }
   } catch {
     playlists.value = fallbackPlaylists

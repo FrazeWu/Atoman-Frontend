@@ -449,7 +449,7 @@ async function loadComic() {
 }
 
 async function loadReader() {
-  const assetID = String(route.params.assetId || '')
+  const assetID = String(route.params.assetId || route.params.id || '')
   if (!assetID) {
     errorMessage.value = '私有资源标识无效'
     isLoading.value = false

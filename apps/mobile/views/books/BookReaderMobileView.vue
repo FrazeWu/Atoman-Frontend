@@ -65,9 +65,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import MIcon from '@mobile/components/ui/MIcon.vue'
+import { getBookAsset, fetchBookAssetContent } from '@/api/books'
 
 const props = withDefaults(
   defineProps<{
@@ -79,33 +80,53 @@ const props = withDefaults(
   }>(),
   {
     bookTitle: '',
-    chapterTitle: '第一章 日用品中的设计原则',
+    chapterTitle: '',
     content: '',
     initialNightMode: false,
     initialFontSize: 16,
   }
 )
 
+const route = useRoute()
 const router = useRouter()
 const isNightMode = ref(props.initialNightMode)
 const fontSize = ref(props.initialFontSize)
+const fetchedTitle = ref('')
+const fetchedContent = ref('')
+const loading = ref(false)
 
-const displayTitle = computed(() => props.bookTitle || '图书阅读')
-const currentChapterTitle = computed(() => props.chapterTitle)
-
-const defaultContent = `好的设计其实是一个交流过程，是设计者与使用者之间的信息传递。人造物本身应当提供清晰的心理暗示与可视线索。
-
-当你在门前犹豫究竟该推还是该拉时，错不在你，而在于门的设计违反了直觉认知。这种在日常生活中随处可见的困惑，我们称之为“诺曼门现象”。
-
-可视性、反馈、概念模型以及示能，是构建自然交互的四大基石。在数字界面中，优秀的产品同样懂得克制与明晰：不给用户制造额外的认知负担，把精力留给真正重要的内容与思考。`
+const displayTitle = computed(() => props.bookTitle || fetchedTitle.value || '图书阅读')
+const currentChapterTitle = computed(() => props.chapterTitle || '')
 
 const paragraphs = computed(() => {
-  const text = props.content || defaultContent
+  const text = props.content || fetchedContent.value
+  if (!text) return []
   return text
     .split('\n\n')
     .map((p) => p.trim())
     .filter(Boolean)
 })
+
+async function loadBookContent() {
+  const assetId = String(route?.params?.id || route?.params?.assetId || '')
+  if (!assetId || props.content) return
+  loading.value = true
+  try {
+    const asset = await getBookAsset(assetId)
+    if (asset?.title) {
+      fetchedTitle.value = asset.title
+    }
+    const blob = await fetchBookAssetContent(assetId)
+    if (asset?.format === 'txt' || blob.type.includes('text')) {
+      const text = await blob.text()
+      fetchedContent.value = text.slice(0, 50000)
+    }
+  } catch {
+    // Graceful fallback
+  } finally {
+    loading.value = false
+  }
+}
 
 function goBack() {
   if (router && typeof router.back === 'function') {
@@ -122,6 +143,10 @@ function changeFontSize(delta: number) {
 function toggleTheme() {
   isNightMode.value = !isNightMode.value
 }
+
+onMounted(() => {
+  void loadBookContent()
+})
 </script>
 
 <style scoped>

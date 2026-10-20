@@ -208,5 +208,28 @@ describe("AudioPlayerQueue.vue", () => {
 
 		wrapper.unmount();
 	});
+
+	it("efficiently handles a large queue of 100 songs without breaking sequence reordering", async () => {
+		const player = usePlayerStore();
+		const songs: Song[] = Array.from({ length: 100 }, (_, i) => ({
+			id: `song-${i + 1}`,
+			title: `Song ${i + 1}`,
+			artist: "Artist",
+			audio_url: `/${i + 1}.mp3`,
+		}));
+		player.queue = songs;
+
+		const wrapper = mount(AudioPlayerQueue);
+		expect(wrapper.get(".queue-badge").text()).toBe("100 首");
+		const items = wrapper.findAll(".queue-item");
+		expect(items.length).toBeGreaterThan(0);
+
+		// Sequence input on first rendered item works
+		const firstInput = wrapper.findAll(".q-sequence__input")[0]!;
+		firstInput.element.value = "10";
+		await firstInput.trigger("change");
+		expect(player.queue[9]!.id).toBe("song-1");
+		wrapper.unmount();
+	});
 });
 

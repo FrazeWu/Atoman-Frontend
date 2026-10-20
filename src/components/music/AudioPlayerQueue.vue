@@ -59,12 +59,17 @@
         </button>
       </div>
 
-      <div class="queue-content">
+      <div ref="queueContentRef" class="queue-content" @scroll="handleScroll">
         <!-- Tab 1: Queue -->
         <template v-if="activeTab === 'queue'">
           <div v-if="player.queue.length" class="queue-list">
+            <div
+              v-if="topSpacerHeight > 0"
+              class="queue-spacer"
+              :style="{ height: `${topSpacerHeight}px` }"
+            />
             <template
-              v-for="(song, index) in player.queue"
+              v-for="{ song, index } in visibleQueueItems"
               :key="player.playbackItemKey(song)"
             >
               <div
@@ -165,6 +170,12 @@
               </div>
             </template>
             <div
+              v-if="bottomSpacerHeight > 0"
+              class="queue-spacer"
+              :style="{ height: `${bottomSpacerHeight}px` }"
+            />
+            <div
+              v-if="!isVirtualActive || endIndex >= player.queue.length"
               :data-testid="`queue-drop-slot-${player.queue.length}`"
               class="queue-drop-slot"
               :class="{ 'is-drag-over': dragOverQueueIndex === player.queue.length }"
@@ -232,6 +243,7 @@ import type { Song } from '@/types'
 const player = usePlayerStore()
 const activeTab = ref<'queue' | 'history'>('queue')
 const queuePanelRef = ref<HTMLElement | null>(null)
+const queueContentRef = ref<HTMLElement | null>(null)
 const queueOpen = computed(() => player.showQueue)
 const { handleKeydown: handleDialogKeydown } = useDialogFocus(
   queueOpen,
@@ -242,6 +254,56 @@ const { handleKeydown: handleDialogKeydown } = useDialogFocus(
 const draggedQueueIndex = ref<number | null>(null)
 const dragOverQueueIndex = ref<number | null>(null)
 const hoverQueueIndex = ref<number | null>(null)
+
+// Virtual windowing state for large queues
+const scrollTop = ref(0)
+const containerHeight = ref(0)
+const ITEM_HEIGHT = 56
+
+function handleScroll(e: Event) {
+  const el = e.target as HTMLElement
+  scrollTop.value = el.scrollTop
+}
+
+const isVirtualActive = computed(() => player.queue.length > 40 && containerHeight.value > 0)
+
+const startIndex = computed(() => {
+  if (!isVirtualActive.value) return 0
+  return Math.max(0, Math.floor(scrollTop.value / ITEM_HEIGHT) - 5)
+})
+
+const endIndex = computed(() => {
+  if (!isVirtualActive.value) return player.queue.length
+  return Math.min(
+    player.queue.length,
+    Math.ceil((scrollTop.value + containerHeight.value) / ITEM_HEIGHT) + 5,
+  )
+})
+
+const topSpacerHeight = computed(() => {
+  if (!isVirtualActive.value) return 0
+  return startIndex.value * ITEM_HEIGHT
+})
+
+const bottomSpacerHeight = computed(() => {
+  if (!isVirtualActive.value) return 0
+  return Math.max(0, (player.queue.length - endIndex.value) * ITEM_HEIGHT)
+})
+
+const visibleQueueItems = computed(() => {
+  if (!isVirtualActive.value) {
+    return player.queue.map((song, index) => ({ song, index }))
+  }
+  const result: Array<{ song: Song; index: number }> = []
+  for (let i = startIndex.value; i < endIndex.value; i++) {
+    const song = player.queue[i]
+    if (song) {
+      result.push({ song, index: i })
+    }
+  }
+  return result
+})
+
 const playbackModeLabel = computed(() => {
   const labels = {
     loop: '循环播放',
@@ -275,6 +337,17 @@ function handleQueueSequenceChange(index: number, event: Event) {
   }
 }
 
+function checkDragAutoScroll(event: DragEvent) {
+  if (!queueContentRef.value) return
+  const rect = queueContentRef.value.getBoundingClientRect()
+  const threshold = 40
+  if (event.clientY < rect.top + threshold) {
+    queueContentRef.value.scrollTop -= 12
+  } else if (event.clientY > rect.bottom - threshold) {
+    queueContentRef.value.scrollTop += 12
+  }
+}
+
 function handleQueueDragStart(index: number, event: DragEvent) {
   draggedQueueIndex.value = index
   hoverQueueIndex.value = index
@@ -302,6 +375,7 @@ function handleQueueDragOver(insertionIndex: number, event: DragEvent) {
   dragOverQueueIndex.value = insertionIndex
   const sourceIndex = draggedQueueIndex.value
   hoverQueueIndex.value = insertionIndex <= sourceIndex ? insertionIndex : insertionIndex - 1
+  checkDragAutoScroll(event)
 }
 
 function handleQueueItemDragOver(index: number, event: DragEvent) {
@@ -310,6 +384,7 @@ function handleQueueItemDragOver(index: number, event: DragEvent) {
   const sourceIndex = draggedQueueIndex.value
   hoverQueueIndex.value = index
   dragOverQueueIndex.value = index > sourceIndex ? index + 1 : index
+  checkDragAutoScroll(event)
 }
 
 function handleQueueDragLeave(index: number) {
@@ -364,8 +439,27 @@ function handleWindowKeydown(event: KeyboardEvent) {
   player.toggleQueue()
 }
 
-onMounted(() => window.addEventListener('keydown', handleWindowKeydown))
-onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
+let resizeObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  window.addEventListener('keydown', handleWindowKeydown)
+  if (queueContentRef.value) {
+    containerHeight.value = queueContentRef.value.clientHeight
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          containerHeight.value = entry.contentRect.height
+        }
+      })
+      resizeObserver.observe(queueContentRef.value)
+    }
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleWindowKeydown)
+  resizeObserver?.disconnect()
+})
 </script>
 
 <style scoped>
@@ -508,6 +602,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleWindowKeydown))
 .queue-list {
   display: flex;
   flex-direction: column;
+}
+
+.queue-spacer {
+  width: 100%;
+  pointer-events: none;
+  flex-shrink: 0;
 }
 
 .queue-drop-slot {

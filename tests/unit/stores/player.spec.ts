@@ -1367,5 +1367,31 @@ describe("player store", () => {
 			vi.useRealTimers();
 		}
 	});
+
+	it("does not fail playback if broadcastPlayRequest throws an error", async () => {
+		const store = usePlayerStore();
+		const song = { id: "sync-err-1", title: "Sync Test", audio_url: "sync.mp3" } as any;
+
+		// Even if BroadcastChannel throws InvalidStateError, playback should succeed
+		const originalBC = globalThis.BroadcastChannel;
+		try {
+			globalThis.BroadcastChannel = class MockClosedChannel {
+				postMessage() {
+					throw new DOMException("Failed to execute 'postMessage' on 'BroadcastChannel': Channel is closed", "InvalidStateError");
+				}
+				close() {}
+			} as any;
+
+			store.playSong(song);
+			const audio = audioInstances[0];
+			await audio.play.mock.results.at(-1)?.value;
+			await nextTick();
+
+			expect(store.isPlaying).toBe(true);
+			expect(store.playbackError).toBe("");
+		} finally {
+			globalThis.BroadcastChannel = originalBC;
+		}
+	});
 });
 

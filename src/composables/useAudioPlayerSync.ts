@@ -11,26 +11,55 @@ export function useAudioPlayerSync() {
 		onForeignPlayRequest: () => {},
 	};
 
-	if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-		channel = new BroadcastChannel(channelName);
-		channel.onmessage = (event) => {
-			const msg = event.data as AudioSyncMessage;
-			if (msg.tabId === tabId) return;
+	const getChannel = (): BroadcastChannel | null => {
+		if (typeof window === "undefined" || !("BroadcastChannel" in window)) {
+			return null;
+		}
+		if (!channel) {
+			try {
+				channel = new BroadcastChannel(channelName);
+				channel.onmessage = (event) => {
+					const msg = event.data as AudioSyncMessage;
+					if (msg.tabId === tabId) return;
 
-			if (msg.type === "PLAY_REQUEST") {
-				callbacks.onForeignPlayRequest();
+					if (msg.type === "PLAY_REQUEST") {
+						callbacks.onForeignPlayRequest();
+					}
+				};
+			} catch {
+				channel = null;
 			}
-		};
-	}
+		}
+		return channel;
+	};
+
+	// Attempt initial channel creation
+	getChannel();
 
 	const broadcastPlayRequest = () => {
-		if (channel) {
-			channel.postMessage({ type: "PLAY_REQUEST", tabId });
+		try {
+			const activeChannel = getChannel();
+			if (activeChannel) {
+				activeChannel.postMessage({ type: "PLAY_REQUEST", tabId });
+			}
+		} catch {
+			// If channel was closed or invalid, reset it so next broadcast re-creates it.
+			// Never throw to prevent interrupting audio playback.
+			channel = null;
 		}
 	};
 
 	const setForeignPlayRequestCallback = (cb: () => void) => {
 		callbacks.onForeignPlayRequest = cb;
+	};
+
+	const closeChannel = () => {
+		try {
+			channel?.close();
+		} catch {
+			// Ignore close errors
+		}
+		channel = null;
 	};
 
 	// Media Session API Support
@@ -137,13 +166,10 @@ export function useAudioPlayerSync() {
 		}
 	};
 
-	if (getCurrentInstance()) {
-		onBeforeUnmount(() => channel?.close());
-	}
-
 	return {
 		broadcastPlayRequest,
 		setForeignPlayRequestCallback,
+		closeChannel,
 		setupMediaSession,
 		updateMediaSessionMetadata,
 		updateMediaSessionPosition,

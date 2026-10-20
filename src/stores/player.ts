@@ -76,6 +76,7 @@ export const usePlayerStore = defineStore("player", () => {
 	const {
 		broadcastPlayRequest,
 		setForeignPlayRequestCallback,
+		closeChannel,
 		setupMediaSession,
 		updateMediaSessionMetadata,
 		updateMediaSessionPosition,
@@ -585,6 +586,7 @@ export const usePlayerStore = defineStore("player", () => {
 	onScopeDispose(() => {
 		resetPlaybackForSession();
 		unregisterSessionReset();
+		closeChannel();
 	});
 
 	function prefetchQueueAudioStarts() {
@@ -694,7 +696,11 @@ export const usePlayerStore = defineStore("player", () => {
 			playbackError.value = "音频加载失败，请重试";
 			pauseListening();
 			if ("mediaSession" in navigator) {
-				navigator.mediaSession.playbackState = "paused";
+				try {
+					navigator.mediaSession.playbackState = "paused";
+				} catch {
+					// Ignore media session errors
+				}
 			}
 		});
 		nextAudio.addEventListener("canplay", () => {
@@ -823,13 +829,25 @@ export const usePlayerStore = defineStore("player", () => {
 				if (generation !== playGeneration || player !== audio) return;
 				playRequested = false;
 				isPlaying.value = true;
-				broadcastPlayRequest();
-				resumeListening();
+				try {
+					broadcastPlayRequest();
+				} catch {
+					// Ignore tab sync broadcast error
+				}
+				try {
+					resumeListening();
+				} catch {
+					// Ignore listening tracker error
+				}
 				if ("mediaSession" in navigator) {
-					navigator.mediaSession.playbackState = "playing";
+					try {
+						navigator.mediaSession.playbackState = "playing";
+					} catch {
+						// Ignore media session error
+					}
 				}
 			})
-			.catch(() => {
+			.catch((err) => {
 				if (generation !== playGeneration || player !== audio) return;
 				playRequested = false;
 				isLoading.value = false;
@@ -837,7 +855,11 @@ export const usePlayerStore = defineStore("player", () => {
 				isPlaying.value = false;
 				pauseListening();
 				if ("mediaSession" in navigator) {
-					navigator.mediaSession.playbackState = "paused";
+					try {
+						navigator.mediaSession.playbackState = "paused";
+					} catch {
+						// Ignore media session error
+					}
 				}
 			});
 	};

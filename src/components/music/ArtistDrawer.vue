@@ -578,8 +578,6 @@ watch([releaseType, albumSortMode], () => {
   <PSheet
     panel-class="artist-drawer"
     content-max-width="64rem"
-    side="bottom"
-    height="88vh"
     :show="isOpen"
     :title="sheetTitle"
     mode="full"
@@ -916,15 +914,13 @@ watch([releaseType, albumSortMode], () => {
 <style scoped>
 :global(.artist-drawer) {
   background: var(--a-color-bg) !important;
-  border-left: none !important;
-  border-top: 1px solid var(--a-color-border-soft) !important;
+  border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }
 
 :global(:root.dark .artist-drawer) {
   background: var(--a-color-bg) !important;
-  border-left: none !important;
-  border-top: 1px solid var(--a-color-border) !important;
+  border-left: 1px solid var(--a-color-border) !important;
 }
 
 .drawer-header-content { display: flex; flex-direction: column; gap: 0.25rem; }

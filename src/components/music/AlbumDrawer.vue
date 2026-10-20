@@ -741,8 +741,6 @@ watch(
   <PSheet
     :show="isOpen"
     :title="sheetTitle"
-    side="bottom"
-    height="88vh"
     mode="full"
     content-max-width="96rem"
     @close="closeCurrentAlbum"
@@ -1139,8 +1137,7 @@ watch(
 <style scoped>
 :global(.album-drawer) {
   background: var(--a-color-bg) !important;
-  border-left: none !important;
-  border-top: 1px solid var(--a-color-border-soft) !important;
+  border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }
 

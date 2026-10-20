@@ -560,8 +560,6 @@ watch(
   <PSheet
     :show="isOpen"
     :title="sheetTitle"
-    side="bottom"
-    height="88vh"
     mode="full"
     content-max-width="96rem"
     :is-shifted="shifted"
@@ -762,15 +760,13 @@ watch(
 <style scoped>
 :global(.song-drawer) {
   background: var(--a-color-bg) !important;
-  border-left: none !important;
-  border-top: 1px solid var(--a-color-border-soft) !important;
+  border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }
 
 :global(:root.dark .song-drawer) {
   background: var(--a-color-bg) !important;
-  border-left: none !important;
-  border-top: 1px solid var(--a-color-border) !important;
+  border-left: 1px solid var(--a-color-border) !important;
 }
 
 .song-detail { max-width: 96rem; margin: 0 auto; padding: 1.5rem; container-type: inline-size; }

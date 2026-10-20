@@ -86,7 +86,6 @@
         :rating-score="article.post.rating_score"
         :rating-count="article.post.rating_count"
         :viewer-rating="article.post.viewer_rating"
-        :disabled="!authStore.isAuthenticated"
         :loading="ratingLoading"
         :error-message="ratingError"
         @rate="ratePost"
@@ -216,7 +215,6 @@
               :rating-score="article.feed_item.rating_score"
               :rating-count="article.feed_item.rating_count"
               :viewer-rating="article.feed_item.viewer_rating"
-              :disabled="!authStore.isAuthenticated"
               :loading="ratingLoading"
               :error-message="ratingError"
               @rate="rateFeedItem"
@@ -308,6 +306,7 @@ import { resolveMediaURL } from '@/utils/mediaUrl'
 import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
 import { safeExternalUrl } from '@/utils/safeExternalUrl'
 import { useAuthStore } from '@/stores/auth'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useFeedStore } from '@/stores/feed'
 import { useApi } from '@/composables/useApi'
 
@@ -340,6 +339,7 @@ const isFeedItemTimeline = (
 
 const { renderMarkdown, runtimeState: markdownRuntimeState } = useMarkdownRenderer()
 const authStore = useAuthStore()
+const { requireLogin } = useLoginRedirect()
 const api = useApi()
 const feedStore = useFeedStore()
 const ratingLoading = ref(false)
@@ -665,7 +665,7 @@ async function toggleFeedItemStar() {
 
 async function ratePost(score: number) {
   const post = props.article?.type === 'post' ? props.article.post : null
-  if (!post || !authStore.isAuthenticated || ratingLoading.value) return
+  if (!post || !requireLogin() || ratingLoading.value) return
   const requestSequence = ++ratingRequestSequence
   const requestedKey = articleKey.value
   const isCurrent = () => requestSequence === ratingRequestSequence && articleKey.value === requestedKey
@@ -696,7 +696,7 @@ async function ratePost(score: number) {
 
 async function clearPostRating() {
   const post = props.article?.type === 'post' ? props.article.post : null
-  if (!post || !authStore.isAuthenticated || ratingLoading.value) return
+  if (!post || !requireLogin() || ratingLoading.value) return
   const requestSequence = ++ratingRequestSequence
   const requestedKey = articleKey.value
   const isCurrent = () => requestSequence === ratingRequestSequence && articleKey.value === requestedKey
@@ -736,7 +736,7 @@ function applyFeedItemRating(summary: Record<string, unknown>, fallbackScore?: n
 
 async function rateFeedItem(score: number) {
   const item = isFeedItemTimeline(props.article) ? props.article.feed_item : null
-  if (!item || !authStore.isAuthenticated || ratingLoading.value) return
+  if (!item || !requireLogin() || ratingLoading.value) return
   const requestSequence = ++ratingRequestSequence
   const requestedKey = articleKey.value
   const isCurrent = () => requestSequence === ratingRequestSequence && articleKey.value === requestedKey
@@ -763,7 +763,7 @@ async function rateFeedItem(score: number) {
 
 async function clearFeedItemRating() {
   const item = isFeedItemTimeline(props.article) ? props.article.feed_item : null
-  if (!item || !authStore.isAuthenticated || ratingLoading.value) return
+  if (!item || !requireLogin() || ratingLoading.value) return
   const requestSequence = ++ratingRequestSequence
   const requestedKey = articleKey.value
   const isCurrent = () => requestSequence === ratingRequestSequence && articleKey.value === requestedKey

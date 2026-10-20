@@ -25,7 +25,6 @@
               :rating-score="work.rating_score"
               :rating-count="work.rating_count"
               :viewer-rating="viewerRating"
-              :disabled="!authStore.isAuthenticated"
               :loading="ratingSaving"
               :error-message="ratingError"
               @rate="saveRating($event)"
@@ -126,6 +125,7 @@ import {
 } from '@/api/books'
 import { useBookReaderStore } from '@/stores/bookReader'
 import { useAuthStore } from '@/stores/auth'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 
 const props = defineProps<{
   workId: string
@@ -140,6 +140,7 @@ const emit = defineEmits<{
 const router = useRouter()
 const readerStore = useBookReaderStore()
 const authStore = useAuthStore()
+const { requireLogin } = useLoginRedirect()
 
 const work = ref<BookPublicWork | null>(null)
 const availableAssets = ref<BookPublishedAsset[]>([])
@@ -152,7 +153,7 @@ const ratingError = ref('')
 let loadSequence = 0
 
 async function saveRating(score: number | null) {
-  if (!work.value || !authStore.isAuthenticated || ratingSaving.value) return
+  if (!work.value || !requireLogin() || ratingSaving.value) return
   const id = work.value.id
   const sequence = loadSequence
   ratingSaving.value = true

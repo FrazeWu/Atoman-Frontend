@@ -271,8 +271,8 @@ function handleKeydown(event: KeyboardEvent, score: number) {
   right: 0;
 }
 
-.rating-control__score-target:disabled,
-.rating-control__score-target[aria-disabled="true"] {
+.rating-control[aria-busy="true"] .rating-control__score-target,
+.rating-control__score-target:disabled {
   cursor: default;
 }
 
@@ -328,6 +328,7 @@ function handleKeydown(event: KeyboardEvent, score: number) {
   grid-template-columns: minmax(0, 1fr) 8.75rem 2.75rem;
   flex-wrap: nowrap;
   gap: 0.2rem 0.35rem;
+  min-height: 28px;
 }
 
 .rating-control--compact .rating-control__prefix {
@@ -341,6 +342,11 @@ function handleKeydown(event: KeyboardEvent, score: number) {
 .rating-control--compact .rating-control__star {
   flex: 0 0 28px;
   width: 28px;
+  height: 28px;
+}
+
+.rating-control--compact .rating-control__score-target {
+  height: 28px;
 }
 
 .rating-control--compact .rating-control__stars {
@@ -357,6 +363,8 @@ function handleKeydown(event: KeyboardEvent, score: number) {
 
 .rating-control--compact .rating-control__clear {
   grid-column: 3;
+  width: 28px;
+  height: 28px;
 }
 
 .rating-control--compact .rating-control__star-fill {

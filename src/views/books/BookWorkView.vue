@@ -31,7 +31,6 @@
           :rating-score="work.rating_score"
           :rating-count="work.rating_count"
           :viewer-rating="viewerRating"
-          :disabled="!authStore.isAuthenticated"
           :loading="ratingSaving"
           :error-message="ratingError"
           @rate="submitRating"
@@ -241,6 +240,7 @@ import {
   type BookShelfItem,
 } from '@/api/books'
 import { useAuthStore } from '@/stores/auth'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 
 const shelfOptions = [
   { value: 'want_to_read', label: '想读' },
@@ -257,6 +257,7 @@ const visibilityOptions = [
 
 const route = useRoute()
 const authStore = useAuthStore()
+const { requireLogin } = useLoginRedirect()
 const work = ref<BookPublicWork | null>(null)
 const primaryEdition = computed(() => work.value?.editions.find(item => item.cover_url) || work.value?.editions[0])
 const reviews = ref<BookReview[]>([])
@@ -330,7 +331,7 @@ function applyRating(summary: { rating_score: number; rating_count: number; view
 }
 
 async function submitRating(score: number) {
-  if (!work.value || !authStore.isAuthenticated || ratingSaving.value) return
+  if (!work.value || !requireLogin() || ratingSaving.value) return
   const sequence = pageSequence
   ratingSaving.value = true
   ratingError.value = ''
@@ -349,7 +350,7 @@ async function submitRating(score: number) {
 }
 
 async function clearRating() {
-  if (!work.value || !authStore.isAuthenticated || ratingSaving.value) return
+  if (!work.value || !requireLogin() || ratingSaving.value) return
   const sequence = pageSequence
   ratingSaving.value = true
   ratingError.value = ''

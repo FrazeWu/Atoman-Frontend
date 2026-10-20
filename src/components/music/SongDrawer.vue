@@ -599,7 +599,6 @@ watch(
             :rating-score="detail.song.rating_score"
             :rating-count="detail.song.rating_count"
             :viewer-rating="detail.song.viewer_rating"
-            :disabled="!authStore.isAuthenticated"
             :loading="ratingLoading"
             @rate="rateSong"
             @clear="clearSongRating"

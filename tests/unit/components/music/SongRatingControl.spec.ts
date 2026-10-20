@@ -32,4 +32,16 @@ describe('SongRatingControl.vue', () => {
     expect(wrapper.get('.rating-control__mine').text()).toContain('我的评分：8/10 · 4.0 星（已保存）')
     expect(wrapper.emitted('clear')).toEqual([[]])
   })
+
+  it('allows clicking half-star score targets in compact mode to submit rating', async () => {
+    const wrapper = mount(SongRatingControl, {
+      props: { songTitle: '示例歌曲', size: 'compact' },
+    })
+
+    const target = wrapper.get('button[data-score="8"]')
+    expect(target.attributes('aria-label')).toBe('8 分，4.0 星')
+    await target.trigger('click')
+
+    expect(wrapper.emitted('rate')).toEqual([[8]])
+  })
 })

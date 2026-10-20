@@ -18,6 +18,7 @@ import VideoRecommendationRow from '@/components/video/VideoRecommendationRow.vu
 import { useInteractions } from '@/composables/useInteractions'
 import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
 import { useAuthStore } from '@/stores/auth'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useFeedStore } from '@/stores/feed'
 import { isModeratorRole } from '@/utils/roles'
 import { resolveMediaURL } from '@/utils/mediaUrl'
@@ -46,6 +47,7 @@ type CollectionContext = {
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const { requireLogin } = useLoginRedirect()
 const feedStore = useFeedStore()
 const bookmarks = useVideoBookmarks()
 const lifecycle = useContentLifecycle()
@@ -598,13 +600,13 @@ function applyRating(summary: VideoRatingSummary) {
 }
 
 async function rateVideo(score: number) {
-  if (!video.value || !authStore.token || ratingLoading.value) return
+  if (!video.value || !requireLogin() || ratingLoading.value) return
   const target = video.value
   const videoID = video.value.id
   ratingLoading.value = true
   ratingError.value = ''
   try {
-    const summary = await setVideoRating(videoID, score, authStore.token)
+    const summary = await setVideoRating(videoID, score, authStore.token || undefined)
     if (video.value === target) applyRating(summary)
   } catch {
     if (video.value === target) ratingError.value = '评分失败，请稍后再试'
@@ -614,13 +616,13 @@ async function rateVideo(score: number) {
 }
 
 async function clearRating() {
-  if (!video.value || !authStore.token || ratingLoading.value) return
+  if (!video.value || !requireLogin() || ratingLoading.value) return
   const target = video.value
   const videoID = video.value.id
   ratingLoading.value = true
   ratingError.value = ''
   try {
-    const summary = await deleteVideoRating(videoID, authStore.token)
+    const summary = await deleteVideoRating(videoID, authStore.token || undefined)
     if (video.value === target) applyRating(summary)
   } catch {
     if (video.value === target) ratingError.value = '清除评分失败，请稍后再试'
@@ -821,7 +823,6 @@ async function toggleChannelSubscription() {
           :rating-score="video.rating_score"
           :rating-count="video.rating_count"
           :viewer-rating="video.viewer_rating"
-          :disabled="!authStore.isAuthenticated"
           :loading="ratingLoading"
           :error-message="ratingError"
           @rate="rateVideo"

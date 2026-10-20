@@ -20,6 +20,7 @@ import BlogRelatedPosts, { type BlogRelatedPost } from '@/components/blog/BlogRe
 import BlogMediaContent from '@/components/blog/BlogMediaContent.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useFeedStore } from '@/stores/feed'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
@@ -61,6 +62,7 @@ const route = useRoute()
 const router = useRouter()
 const api = useApi()
 const authStore = useAuthStore()
+const { requireLogin } = useLoginRedirect()
 const feedStore = useFeedStore()
 const sheets = useBlogSheets()
 const { setPageMeta, restorePageMeta } = usePageMeta()
@@ -412,7 +414,7 @@ function ratingFailureMessage(error?: { code?: string; message?: string }) {
 }
 
 async function ratePost(score: number) {
-  if (!post.value || !authStore.isAuthenticated || ratingLoading.value) return
+  if (!post.value || !requireLogin() || ratingLoading.value) return
   const requestedId = post.value.id
   const sequence = loadSequence
   const operation = ++ratingOperationSequence
@@ -442,7 +444,7 @@ async function ratePost(score: number) {
 }
 
 async function clearPostRating() {
-  if (!post.value || !authStore.isAuthenticated || ratingLoading.value) return
+  if (!post.value || !requireLogin() || ratingLoading.value) return
   const requestedId = post.value.id
   const sequence = loadSequence
   const operation = ++ratingOperationSequence
@@ -835,7 +837,7 @@ defineExpose({
           <footer class="academic-paper__footer"><span>发布 {{ formatAcademicDate(publicationDate) }}</span><span>第 {{ index + 1 }} 页</span><span>更新 {{ formatAcademicDate(post.updated_at) }}</span></footer>
         </section>
       </div>
-      <PostRatingControl :rating-score="post.rating_score" :rating-count="post.rating_count" :viewer-rating="post.viewer_rating" :disabled="!authStore.isAuthenticated" :loading="ratingLoading" :error-message="ratingError" @rate="ratePost" @clear="clearPostRating" />
+      <PostRatingControl :rating-score="post.rating_score" :rating-count="post.rating_count" :viewer-rating="post.viewer_rating" :loading="ratingLoading" :error-message="ratingError" @rate="ratePost" @clear="clearPostRating" />
       <div class="post-sheet-actions-row">
         <PDropdown v-if="isSheet && !bookmarked" class="post-bookmark-dropdown" position="right">
           <template #trigger><PButton variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="loadBookmarkFolders"><Bookmark :size="15" aria-hidden="true" />收藏</PButton></template>

@@ -243,6 +243,10 @@ const reportAnalyticsPageView = () => {
 let cancelStartupTasks: (() => void) | undefined
 
 onMounted(() => {
+  if (!authStore.isAuthenticated) {
+    void authStore.restoreSession().catch(() => {})
+  }
+
   const cancelSiteAccessLoad = scheduleIdleTask(() => {
     void siteAccessStore.load().catch(() => {})
   }, 5000, 8000)

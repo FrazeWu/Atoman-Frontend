@@ -1,211 +1,250 @@
 <template>
   <div class="mobile-music-me">
-    <!-- User Profile Header -->
-    <header class="mobile-music-me__header">
-      <div class="mobile-music-me__user-card">
-        <MAvatar
-          :src="authStore.user?.avatar_url"
-          :name="authStore.user?.display_name || authStore.user?.username || '用户'"
-          :size="54"
-          class="mobile-music-me__avatar"
-        />
-        <div class="mobile-music-me__user-info">
-          <h1 class="mobile-music-me__name">
-            {{ authStore.user?.display_name || authStore.user?.username || '音乐爱好者' }}
-          </h1>
-          <span class="mobile-music-me__handle">
-            @{{ authStore.user?.username || 'music_listener' }}
-          </span>
-        </div>
-      </div>
+    <!-- Unauthenticated Guest Card -->
+    <div v-if="!isAuthenticated" class="mobile-music-me__guest-wrap">
+      <MGuestCard
+        title="登录以同步你的音乐"
+        description="登录后可跨端畅享收藏专辑、自建歌单与完整收听历史。"
+        icon="music"
+        login-redirect="/music/me"
+      />
+    </div>
 
-      <!-- Music Module Stats -->
-      <div class="mobile-music-me__stats">
-        <div class="mobile-music-me__stat" @click="activeTab = 'starred'">
-          <span class="mobile-music-me__stat-val">{{ starredList.length }}</span>
-          <span class="mobile-music-me__stat-label">我的收藏</span>
-        </div>
-        <div class="mobile-music-me__stat-divider" />
-        <div class="mobile-music-me__stat" @click="activeTab = 'history'">
-          <span class="mobile-music-me__stat-val">{{ historyList.length }}</span>
-          <span class="mobile-music-me__stat-label">收听历史</span>
-        </div>
-        <div class="mobile-music-me__stat-divider" />
-        <div class="mobile-music-me__stat" @click="activeTab = 'playlists'">
-          <span class="mobile-music-me__stat-val">{{ userPlaylists.length }}</span>
-          <span class="mobile-music-me__stat-label">自建歌单</span>
-        </div>
-      </div>
-
-      <!-- Navigation Tabs -->
-      <nav class="mobile-music-me__tabs" aria-label="音乐个人中心切换">
-        <button
-          type="button"
-          class="mobile-music-me__tab"
-          :class="{ 'is-active': activeTab === 'starred' }"
-          data-testid="tab-starred"
-          @click="activeTab = 'starred'"
-        >
-          收藏
-        </button>
-        <button
-          type="button"
-          class="mobile-music-me__tab"
-          :class="{ 'is-active': activeTab === 'history' }"
-          data-testid="tab-history"
-          @click="activeTab = 'history'"
-        >
-          收听历史
-        </button>
-        <button
-          type="button"
-          class="mobile-music-me__tab"
-          :class="{ 'is-active': activeTab === 'playlists' }"
-          data-testid="tab-playlists"
-          @click="activeTab = 'playlists'"
-        >
-          我的歌单
-        </button>
-      </nav>
-    </header>
-
-    <main class="mobile-music-me__content">
-      <!-- Loading State -->
-      <div v-if="loading" class="mobile-music-me__loading">
-        <div v-for="n in 4" :key="n" class="mobile-music-me__skeleton" />
-      </div>
-
-      <!-- TAB 1: 收藏 (Starred Albums & Playlists & Tracks) -->
-      <section v-else-if="activeTab === 'starred'" class="mobile-music-me__section">
-        <div v-if="starredList.length > 0" class="mobile-music-me__list">
-          <div
-            v-for="item in starredList"
-            :key="item.id"
-            class="mobile-music-me__item"
-            data-testid="starred-item"
-            @click="openStarred(item)"
-          >
-            <div class="mobile-music-me__item-cover">
-              <img v-if="item.cover_url" :src="item.cover_url" :alt="item.title" />
-              <div v-else class="mobile-music-me__item-art">
-                <MIcon :name="item.kind === 'album' ? 'note' : 'playlists'" size="sm" />
-              </div>
-            </div>
-
-            <div class="mobile-music-me__item-meta">
-              <span class="mobile-music-me__item-title">{{ item.title }}</span>
-              <span class="mobile-music-me__item-sub">
-                {{ item.kind === 'album' ? '专辑' : '歌单' }} · {{ item.subtitle || '收藏项' }}
-              </span>
-            </div>
-
-            <MIcon name="chevron-down" size="xs" class="mobile-music-me__arrow" />
-          </div>
-        </div>
-
-        <div v-else class="mobile-music-me__empty" data-testid="empty-starred">
-          <MIcon name="heart" size="lg" class="mobile-music-me__empty-icon" />
-          <p class="mobile-music-me__empty-title">暂无收藏内容</p>
-          <p class="mobile-music-me__empty-desc">在发现音乐或搜索中，收藏你喜爱的专辑与歌单。</p>
-          <router-link to="/music">
-            <MButton size="sm" variant="secondary">去发现音乐</MButton>
-          </router-link>
-        </div>
-      </section>
-
-      <!-- TAB 2: 收听历史 (Listening History) -->
-      <section v-else-if="activeTab === 'history'" class="mobile-music-me__section">
-        <div v-if="historyList.length > 0" class="mobile-music-me__list">
-          <div
-            v-for="(track, index) in historyList"
-            :key="track.id || index"
-            class="mobile-music-me__item"
-            data-testid="history-item"
-            @click="playSong(track)"
-          >
-            <span class="mobile-music-me__track-index">{{ String(index + 1).padStart(2, '0') }}</span>
-
-            <div class="mobile-music-me__item-cover">
-              <img v-if="track.cover_url" :src="track.cover_url" :alt="track.title" />
-              <div v-else class="mobile-music-me__item-art">
-                <MIcon name="note" size="sm" />
-              </div>
-            </div>
-
-            <div class="mobile-music-me__item-meta">
-              <span class="mobile-music-me__item-title">{{ track.title }}</span>
-              <span class="mobile-music-me__item-sub">
-                {{ track.artist }} · {{ track.album || '未归类' }}
-              </span>
-            </div>
-
-            <span v-if="formatDuration(track.duration)" class="mobile-music-me__item-dur">
-              {{ formatDuration(track.duration) }}
+    <!-- Authenticated User Content -->
+    <template v-else>
+      <!-- User Profile Header -->
+      <header class="mobile-music-me__header">
+        <div class="mobile-music-me__user-card">
+          <MAvatar
+            :src="authStore.user?.avatar_url"
+            :name="authStore.user?.display_name || authStore.user?.username || '用户'"
+            :size="54"
+            class="mobile-music-me__avatar"
+          />
+          <div class="mobile-music-me__user-info">
+            <h1 class="mobile-music-me__name">
+              {{ authStore.user?.display_name || authStore.user?.username }}
+            </h1>
+            <span class="mobile-music-me__handle">
+              @{{ authStore.user?.username }}
             </span>
           </div>
         </div>
 
-        <div v-else class="mobile-music-me__empty" data-testid="empty-history">
-          <MIcon name="waveform" size="lg" class="mobile-music-me__empty-icon" />
-          <p class="mobile-music-me__empty-title">暂无收听历史</p>
-          <p class="mobile-music-me__empty-desc">随时点播歌曲，记录你的音乐足迹。</p>
-          <router-link to="/music">
-            <MButton size="sm" variant="secondary">开启音乐之旅</MButton>
-          </router-link>
+        <!-- Music Module Stats -->
+        <div class="mobile-music-me__stats">
+          <div class="mobile-music-me__stat" @click="activeTab = 'starred'">
+            <span class="mobile-music-me__stat-val">{{ starredList.length }}</span>
+            <span class="mobile-music-me__stat-label">我的收藏</span>
+          </div>
+          <div class="mobile-music-me__stat-divider" />
+          <div class="mobile-music-me__stat" @click="activeTab = 'history'">
+            <span class="mobile-music-me__stat-val">{{ historyList.length }}</span>
+            <span class="mobile-music-me__stat-label">收听历史</span>
+          </div>
+          <div class="mobile-music-me__stat-divider" />
+          <div class="mobile-music-me__stat" @click="activeTab = 'playlists'">
+            <span class="mobile-music-me__stat-val">{{ userPlaylists.length }}</span>
+            <span class="mobile-music-me__stat-label">自建歌单</span>
+          </div>
         </div>
-      </section>
 
-      <!-- TAB 3: 我的歌单 (My Playlists) -->
-      <section v-else-if="activeTab === 'playlists'" class="mobile-music-me__section">
-        <!-- Create Form / Sheet -->
-        <div v-if="showCreatePlaylist" class="mobile-music-me__create-box">
-          <MInput
-            v-model="newPlaylistName"
-            placeholder="输入新歌单名称..."
-            clearable
-          />
-          <div class="mobile-music-me__create-actions">
-            <MButton size="sm" variant="ghost" @click="showCreatePlaylist = false">取消</MButton>
-            <MButton size="sm" variant="primary" :disabled="!newPlaylistName.trim()" @click="handleCreatePlaylist">
-              确定创建
+        <!-- Navigation Tabs -->
+        <nav class="mobile-music-me__tabs" aria-label="音乐个人中心切换">
+          <button
+            type="button"
+            class="mobile-music-me__tab"
+            :class="{ 'is-active': activeTab === 'starred' }"
+            data-testid="tab-starred"
+            @click="activeTab = 'starred'"
+          >
+            收藏
+          </button>
+          <button
+            type="button"
+            class="mobile-music-me__tab"
+            :class="{ 'is-active': activeTab === 'history' }"
+            data-testid="tab-history"
+            @click="activeTab = 'history'"
+          >
+            收听历史
+          </button>
+          <button
+            type="button"
+            class="mobile-music-me__tab"
+            :class="{ 'is-active': activeTab === 'playlists' }"
+            data-testid="tab-playlists"
+            @click="activeTab = 'playlists'"
+          >
+            我的歌单
+          </button>
+        </nav>
+      </header>
+
+      <main class="mobile-music-me__content">
+        <!-- Loading State -->
+        <div v-if="loading" class="mobile-music-me__loading">
+          <div v-for="n in 4" :key="n" class="mobile-music-me__skeleton" />
+        </div>
+
+        <!-- TAB 1: 收藏 (Starred Albums & Playlists & Artists) -->
+        <section v-else-if="activeTab === 'starred'" class="mobile-music-me__section">
+          <div v-if="starredList.length > 0" class="mobile-music-me__list">
+            <div
+              v-for="item in starredList"
+              :key="item.id"
+              class="mobile-music-me__item"
+              data-testid="starred-item"
+              @click="openStarred(item)"
+            >
+              <div class="mobile-music-me__item-cover">
+                <img v-if="item.cover_url" :src="item.cover_url" :alt="item.title" />
+                <div v-else class="mobile-music-me__item-art">
+                  <MIcon :name="item.kind === 'album' ? 'note' : item.kind === 'artist' ? 'person' : 'playlists'" size="sm" />
+                </div>
+              </div>
+
+              <div class="mobile-music-me__item-meta">
+                <span class="mobile-music-me__item-title">{{ item.title }}</span>
+                <span class="mobile-music-me__item-sub">
+                  {{ item.kind === 'album' ? '专辑' : item.kind === 'artist' ? '艺人' : '歌单' }} · {{ item.subtitle || '收藏项' }}
+                </span>
+              </div>
+
+              <MIcon name="chevron-right" size="xs" class="mobile-music-me__arrow" />
+            </div>
+          </div>
+
+          <div v-else class="mobile-music-me__empty" data-testid="empty-starred">
+            <MIcon name="heart" size="lg" class="mobile-music-me__empty-icon" />
+            <p class="mobile-music-me__empty-title">暂无收藏内容</p>
+            <p class="mobile-music-me__empty-desc">在发现音乐或搜索中，收藏你喜爱的专辑与歌单。</p>
+            <router-link to="/music">
+              <MButton size="sm" variant="secondary">去发现音乐</MButton>
+            </router-link>
+          </div>
+        </section>
+
+        <!-- TAB 2: 收听历史 (Listening History) -->
+        <section v-else-if="activeTab === 'history'" class="mobile-music-me__section">
+          <div v-if="historyList.length > 0" class="mobile-music-me__list">
+            <div
+              v-for="(track, index) in historyList"
+              :key="track.id || index"
+              class="mobile-music-me__item"
+              data-testid="history-item"
+              @click="playSong(track)"
+            >
+              <span class="mobile-music-me__track-index">{{ String(index + 1).padStart(2, '0') }}</span>
+
+              <div class="mobile-music-me__item-cover">
+                <img v-if="track.cover_url" :src="track.cover_url" :alt="track.title" />
+                <div v-else class="mobile-music-me__item-art">
+                  <MIcon name="note" size="sm" />
+                </div>
+              </div>
+
+              <div class="mobile-music-me__item-meta">
+                <span class="mobile-music-me__item-title">{{ track.title }}</span>
+                <span class="mobile-music-me__item-sub">
+                  {{ track.artist }} · {{ track.album || '未归类' }}
+                </span>
+              </div>
+
+              <span v-if="formatDuration(track.duration)" class="mobile-music-me__item-dur">
+                {{ formatDuration(track.duration) }}
+              </span>
+            </div>
+          </div>
+
+          <div v-else class="mobile-music-me__empty" data-testid="empty-history">
+            <MIcon name="waveform" size="lg" class="mobile-music-me__empty-icon" />
+            <p class="mobile-music-me__empty-title">暂无收听历史</p>
+            <p class="mobile-music-me__empty-desc">随时点播歌曲，记录你的音乐足迹。</p>
+            <router-link to="/music">
+              <MButton size="sm" variant="secondary">开启音乐之旅</MButton>
+            </router-link>
+          </div>
+        </section>
+
+        <!-- TAB 3: 我的歌单 (My Playlists) -->
+        <section v-else-if="activeTab === 'playlists'" class="mobile-music-me__section">
+          <!-- Create Playlist Bar / Action -->
+          <div class="mobile-music-me__playlists-bar">
+            <span class="mobile-music-me__playlists-count">自建歌单 ({{ userPlaylists.length }})</span>
+            <MButton
+              v-if="!showCreatePlaylist"
+              size="sm"
+              variant="secondary"
+              data-testid="create-playlist-trigger-btn"
+              @click="showCreatePlaylist = true"
+            >
+              <MIcon name="plus" size="xs" />
+              <span>新建歌单</span>
             </MButton>
           </div>
-        </div>
 
-        <div v-if="userPlaylists.length > 0" class="mobile-music-me__list">
-          <div
-            v-for="pl in userPlaylists"
-            :key="pl.id"
-            class="mobile-music-me__item"
-            data-testid="playlist-item"
-            @click="openPlaylist(pl.id)"
-          >
-            <div class="mobile-music-me__item-cover">
-              <img v-if="pl.cover_url" :src="pl.cover_url" :alt="pl.name" />
-              <div v-else class="mobile-music-me__item-art">
-                <MIcon name="playlists" size="md" />
-              </div>
+          <!-- Create Form / Sheet -->
+          <div v-if="showCreatePlaylist" class="mobile-music-me__create-box">
+            <MInput
+              v-model="newPlaylistName"
+              placeholder="输入新歌单名称..."
+              clearable
+            />
+            <div class="mobile-music-me__create-actions">
+              <MButton size="sm" variant="ghost" @click="showCreatePlaylist = false">取消</MButton>
+              <MButton
+                size="sm"
+                variant="primary"
+                data-testid="create-playlist-confirm-btn"
+                :disabled="!newPlaylistName.trim()"
+                @click="handleCreatePlaylist"
+              >
+                确定创建
+              </MButton>
             </div>
-
-            <div class="mobile-music-me__item-meta">
-              <span class="mobile-music-me__item-title">{{ pl.name }}</span>
-              <span class="mobile-music-me__item-sub">{{ pl.song_count || 0 }} 首曲目</span>
-            </div>
-
-            <MIcon name="chevron-down" size="xs" class="mobile-music-me__arrow" />
           </div>
-        </div>
 
-        <div v-else-if="!showCreatePlaylist" class="mobile-music-me__empty" data-testid="empty-playlists">
-          <MIcon name="playlists" size="lg" class="mobile-music-me__empty-icon" />
-          <p class="mobile-music-me__empty-title">暂无自建歌单</p>
-          <p class="mobile-music-me__empty-desc">创建专属歌单，整理属于你的曲库合集。</p>
-          <MButton size="sm" variant="secondary" @click="showCreatePlaylist = true">
-            新建歌单
-          </MButton>
-        </div>
-      </section>
-    </main>
+          <div v-if="userPlaylists.length > 0" class="mobile-music-me__list">
+            <div
+              v-for="pl in userPlaylists"
+              :key="pl.id"
+              class="mobile-music-me__item"
+              data-testid="playlist-item"
+              @click="openPlaylist(pl.id)"
+            >
+              <div class="mobile-music-me__item-cover">
+                <img v-if="pl.cover_url" :src="pl.cover_url" :alt="pl.name" />
+                <div v-else class="mobile-music-me__item-art">
+                  <MIcon name="playlists" size="md" />
+                </div>
+              </div>
+
+              <div class="mobile-music-me__item-meta">
+                <span class="mobile-music-me__item-title">{{ pl.name }}</span>
+                <span class="mobile-music-me__item-sub">{{ pl.song_count || 0 }} 首曲目</span>
+              </div>
+
+              <MIcon name="chevron-right" size="xs" class="mobile-music-me__arrow" />
+            </div>
+          </div>
+
+          <div v-else-if="!showCreatePlaylist" class="mobile-music-me__empty" data-testid="empty-playlists">
+            <MIcon name="playlists" size="lg" class="mobile-music-me__empty-icon" />
+            <p class="mobile-music-me__empty-title">暂无自建歌单</p>
+            <p class="mobile-music-me__empty-desc">创建专属歌单，整理属于你的曲库合集。</p>
+            <MButton
+              size="sm"
+              variant="secondary"
+              data-testid="create-playlist-trigger-btn"
+              @click="showCreatePlaylist = true"
+            >
+              新建歌单
+            </MButton>
+          </div>
+        </section>
+      </main>
+    </template>
   </div>
 </template>
 
@@ -214,9 +253,11 @@ import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   createMusicPlaylist,
+  listAlbumBookmarks,
+  listArtistBookmarks,
+  listPlaylistBookmarks,
   listMusicListeningHistory,
   listMusicPlaylists,
-  listMusicStarred,
   type MusicPlaylistSummary,
 } from '@/api/musicV1'
 import { useAuthStore } from '@/stores/auth'
@@ -226,6 +267,7 @@ import MAvatar from '@mobile/components/ui/MAvatar.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MInput from '@mobile/components/ui/MInput.vue'
+import MGuestCard from '@mobile/components/ui/MGuestCard.vue'
 
 export interface StarredViewItem {
   id: string
@@ -253,6 +295,17 @@ const props = withDefaults(
 const router = useRouter()
 const authStore = useAuthStore()
 const player = useAudioPlayerStore()
+
+const isAuthenticated = computed(() => {
+  if (
+    props.initialStarred !== undefined ||
+    props.initialHistory !== undefined ||
+    props.initialPlaylists !== undefined
+  ) {
+    return true
+  }
+  return authStore.isAuthenticated || Boolean(authStore.user)
+})
 
 const activeTab = ref<'starred' | 'history' | 'playlists'>(props.initialTab)
 const loading = ref(false)
@@ -288,56 +341,81 @@ function formatDuration(seconds?: number): string {
 }
 
 async function loadUserData() {
-  if (props.initialStarred !== undefined || props.initialHistory !== undefined) return
+  if (props.initialStarred !== undefined && props.initialHistory !== undefined && props.initialPlaylists !== undefined) {
+    return
+  }
+
   loading.value = true
   try {
-    const [starredRes, historyRes, playlistsRes] = await Promise.allSettled([
-      listMusicStarred(),
+    const [albumBookmarksRes, artistBookmarksRes, playlistBookmarksRes, historyRes, playlistsRes] = await Promise.allSettled([
+      listAlbumBookmarks({ page: 1, page_size: 50 }),
+      listArtistBookmarks({ page: 1, page_size: 50 }),
+      listPlaylistBookmarks({ page: 1, page_size: 50 }),
       listMusicListeningHistory({ page: 1, page_size: 50 }),
       listMusicPlaylists({ page: 1, page_size: 50 }),
     ])
 
-    // Starred
-    if (starredRes.status === 'fulfilled' && Array.isArray(starredRes.value)) {
-      starredList.value = starredRes.value.map((item: any) => {
-        if (item.album) {
-          return {
-            id: item.album.id,
-            title: item.album.title,
-            subtitle: item.album.artists?.map((a: any) => a.name).join(' / ') || '专辑',
+    // Starred Items
+    if (props.initialStarred === undefined) {
+      const starred: StarredViewItem[] = []
+
+      if (albumBookmarksRes.status === 'fulfilled' && albumBookmarksRes.value?.data) {
+        for (const b of albumBookmarksRes.value.data) {
+          starred.push({
+            id: b.album_id || b.id,
+            title: b.album?.title || '专辑',
+            subtitle: b.album?.artists?.map((a: any) => a.name).join(' / ') || '收藏专辑',
             kind: 'album',
-            cover_url: item.album.cover_url,
-          }
+            cover_url: b.album?.cover_url,
+          })
         }
-        if (item.playlist) {
-          return {
-            id: item.playlist.id,
-            title: item.playlist.name,
-            subtitle: `${item.playlist.song_count || 0} 首歌曲`,
+      }
+
+      if (artistBookmarksRes.status === 'fulfilled' && artistBookmarksRes.value?.data) {
+        for (const b of artistBookmarksRes.value.data) {
+          starred.push({
+            id: b.artist_id || b.id,
+            title: b.artist?.name || '艺术家',
+            subtitle: '关注艺人',
+            kind: 'artist',
+            cover_url: b.artist?.image_url,
+          })
+        }
+      }
+
+      if (playlistBookmarksRes.status === 'fulfilled' && playlistBookmarksRes.value?.data) {
+        for (const b of playlistBookmarksRes.value.data) {
+          starred.push({
+            id: b.playlist_id || b.id,
+            title: b.playlist?.name || '歌单',
+            subtitle: `${b.playlist?.song_count || 0} 首歌曲`,
             kind: 'playlist',
-            cover_url: item.playlist.cover_url,
-          }
+            cover_url: b.playlist?.cover_url,
+          })
         }
-        return {
-          id: item.id,
-          title: item.artist?.name || '艺术家',
-          subtitle: '关注的艺术家',
-          kind: 'artist',
-          cover_url: item.artist?.image_url,
-        }
-      })
+      }
+
+      starredList.value = starred
     }
 
-    // History
-    if (historyRes.status === 'fulfilled' && historyRes.value?.data?.length) {
-      historyList.value = historyRes.value.data.map((item: any) =>
-        toPlayerSong(item.song ? item.song : item)
-      )
+    // History Items
+    if (props.initialHistory === undefined) {
+      if (historyRes.status === 'fulfilled' && historyRes.value?.data?.length) {
+        historyList.value = historyRes.value.data.map((item: any) =>
+          toPlayerSong(item.song ? item.song : item)
+        )
+      } else {
+        historyList.value = []
+      }
     }
 
-    // Playlists
-    if (playlistsRes.status === 'fulfilled' && playlistsRes.value?.data?.length) {
-      userPlaylists.value = playlistsRes.value.data
+    // Playlists Items
+    if (props.initialPlaylists === undefined) {
+      if (playlistsRes.status === 'fulfilled' && playlistsRes.value?.data?.length) {
+        userPlaylists.value = playlistsRes.value.data
+      } else {
+        userPlaylists.value = []
+      }
     }
   } catch {
     // Keep empty lists gracefully
@@ -374,22 +452,28 @@ async function handleCreatePlaylist() {
       userPlaylists.value.unshift(created)
       newPlaylistName.value = ''
       showCreatePlaylist.value = false
+      return
     }
   } catch {
     // Fallback client-side addition
-    userPlaylists.value.unshift({
-      id: `local-${Date.now()}`,
-      name,
-      song_count: 0,
-      is_public: false,
-    })
-    newPlaylistName.value = ''
-    showCreatePlaylist.value = false
   }
+  userPlaylists.value.unshift({
+    id: `local-${Date.now()}`,
+    name,
+    song_count: 0,
+    is_public: false,
+  })
+  newPlaylistName.value = ''
+  showCreatePlaylist.value = false
 }
 
-onMounted(() => {
-  void loadUserData()
+onMounted(async () => {
+  if (!authStore.isAuthenticated) {
+    await authStore.restoreSession().catch(() => {})
+  }
+  if (isAuthenticated.value) {
+    void loadUserData()
+  }
 })
 </script>
 
@@ -400,6 +484,10 @@ onMounted(() => {
   min-height: 100%;
   background-color: #ffffff;
   padding-bottom: 96px;
+}
+
+.mobile-music-me__guest-wrap {
+  padding-top: 24px;
 }
 
 .mobile-music-me__header {
@@ -421,103 +509,108 @@ onMounted(() => {
 .mobile-music-me__user-info {
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  gap: 2px;
 }
 
 .mobile-music-me__name {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--a-color-text, #111111);
   margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--a-color-text-primary, #0f172a);
 }
 
 .mobile-music-me__handle {
-  font-size: 12px;
-  color: var(--a-color-text-secondary, #666666);
-  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--a-color-text-secondary, #64748b);
 }
 
-/* Stats Row */
 .mobile-music-me__stats {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 12px 8px;
-  border-radius: 4px;
-  border: 1px solid var(--a-color-border-soft, #eeeeee);
-  background: #fafafa;
+  padding: 12px 0;
   margin-bottom: 16px;
+  background-color: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
 }
 
 .mobile-music-me__stat {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   cursor: pointer;
-  flex: 1;
 }
 
 .mobile-music-me__stat-val {
-  font-size: 16px;
+  font-size: 1.125rem;
   font-weight: 600;
-  color: var(--a-color-text, #111111);
+  color: var(--a-color-text-primary, #0f172a);
 }
 
 .mobile-music-me__stat-label {
-  font-size: 11px;
-  color: var(--a-color-text-secondary, #777777);
+  font-size: 0.6875rem;
+  color: var(--a-color-text-secondary, #64748b);
 }
 
 .mobile-music-me__stat-divider {
   width: 1px;
-  height: 20px;
-  background-color: var(--a-color-border-soft, #e6e6e6);
+  height: 24px;
+  background-color: var(--a-color-border-soft, #e2e8f0);
 }
 
-/* Navigation Tabs */
 .mobile-music-me__tabs {
   display: flex;
   gap: 8px;
-  border-bottom: 1px solid transparent;
 }
 
 .mobile-music-me__tab {
-  padding: 6px 14px;
-  font-size: 13px;
+  flex: 1;
+  padding: 8px 0;
+  background-color: transparent;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  font-size: 0.8125rem;
   font-weight: 500;
-  border-radius: 4px;
-  border: 1px solid var(--a-color-border-soft, #eeeeee);
-  background: #ffffff;
-  color: var(--a-color-text-secondary, #666666);
+  color: var(--a-color-text-secondary, #64748b);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .mobile-music-me__tab.is-active {
-  background: var(--a-color-text, #111111);
+  background-color: var(--a-color-text-primary, #0f172a);
   color: #ffffff;
-  border-color: var(--a-color-text, #111111);
+  border-color: var(--a-color-text-primary, #0f172a);
 }
 
 .mobile-music-me__content {
-  flex: 1;
   padding: 16px;
 }
 
-/* Create Box */
+.mobile-music-me__playlists-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.mobile-music-me__playlists-count {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--a-color-text-primary, #0f172a);
+}
+
 .mobile-music-me__create-box {
+  background-color: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  padding: 12px;
+  margin-bottom: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 12px;
-  border-radius: 4px;
-  border: 1px solid var(--a-color-border-soft, #eeeeee);
-  background: #fafafa;
-  margin-bottom: 16px;
 }
 
 .mobile-music-me__create-actions {
@@ -526,53 +619,44 @@ onMounted(() => {
   gap: 8px;
 }
 
-/* Item Lists */
 .mobile-music-me__list {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--a-color-border-soft, #f0f0f0);
-  border-radius: 4px;
-  overflow: hidden;
-  background: #ffffff;
+  gap: 8px;
 }
 
 .mobile-music-me__item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--a-color-border-soft, #f7f7f7);
+  padding: 8px 10px;
+  background-color: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
   cursor: pointer;
-}
-
-.mobile-music-me__item:last-child {
-  border-bottom: none;
+  transition: background-color 0.15s ease;
 }
 
 .mobile-music-me__item:active {
-  background-color: var(--a-color-surface-hover, #fafafa);
+  background-color: #f8fafc;
 }
 
 .mobile-music-me__track-index {
-  font-size: 12px;
-  font-family: monospace;
-  color: var(--a-color-text-muted, #999999);
-  width: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--a-color-text-secondary, #94a3b8);
+  width: 18px;
   text-align: center;
-  flex-shrink: 0;
 }
 
 .mobile-music-me__item-cover {
-  width: 40px;
-  height: 40px;
-  border-radius: 4px;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--a-radius-control, 4px);
   overflow: hidden;
-  background: #f7f7f7;
-  border: 1px solid var(--a-color-border-soft, #eeeeee);
+  background-color: #f1f5f9;
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
 }
 
 .mobile-music-me__item-cover img {
@@ -582,7 +666,12 @@ onMounted(() => {
 }
 
 .mobile-music-me__item-art {
-  color: var(--a-color-text-muted, #999999);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--a-color-text-secondary, #64748b);
 }
 
 .mobile-music-me__item-meta {
@@ -594,32 +683,30 @@ onMounted(() => {
 }
 
 .mobile-music-me__item-title {
-  font-size: 13px;
+  font-size: 0.875rem;
   font-weight: 500;
-  color: var(--a-color-text, #111111);
+  color: var(--a-color-text-primary, #0f172a);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .mobile-music-me__item-sub {
-  font-size: 11px;
-  color: var(--a-color-text-secondary, #777777);
+  font-size: 0.75rem;
+  color: var(--a-color-text-secondary, #64748b);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .mobile-music-me__item-dur {
-  font-size: 11px;
-  font-family: monospace;
-  color: var(--a-color-text-muted, #999999);
-  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--a-color-text-secondary, #94a3b8);
+  font-variant-numeric: tabular-nums;
 }
 
 .mobile-music-me__arrow {
-  color: var(--a-color-text-muted, #cccccc);
-  transform: rotate(-90deg);
+  color: var(--a-color-text-secondary, #94a3b8);
   flex-shrink: 0;
 }
 
@@ -627,35 +714,45 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
+  justify-content: center;
   padding: 48px 16px;
+  text-align: center;
 }
 
 .mobile-music-me__empty-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 4px;
-  border: 1px solid var(--a-color-border-soft, #eeeeee);
-  background: #ffffff;
-  color: var(--a-color-text-muted, #999999);
-  margin-bottom: 16px;
+  color: var(--a-color-border, #cbd5e1);
+  margin-bottom: 12px;
 }
 
 .mobile-music-me__empty-title {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--a-color-text, #111111);
   margin: 0 0 6px 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--a-color-text-primary, #0f172a);
 }
 
 .mobile-music-me__empty-desc {
-  font-size: 13px;
-  color: var(--a-color-text-secondary, #777777);
   margin: 0 0 16px 0;
-  max-width: 260px;
-  line-height: 1.4;
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary, #64748b);
+  max-width: 240px;
+}
+
+.mobile-music-me__loading {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-music-me__skeleton {
+  height: 56px;
+  background-color: #f1f5f9;
+  border-radius: var(--a-radius-card, 4px);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 </style>

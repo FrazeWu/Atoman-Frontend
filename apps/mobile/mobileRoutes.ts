@@ -82,7 +82,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	{
 		path: "/me",
 		component: () => import("./views/me/ProfileMobileView.vue"),
-		meta: requiresAuth,
+		meta: { restoreSession: true },
 	},
 	{
 		path: "/studio",

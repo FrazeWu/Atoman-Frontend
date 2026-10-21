@@ -1,58 +1,68 @@
 <template>
   <div class="profile-mobile-view">
-    <!-- User Profile Card -->
-    <section class="profile-user-card" data-testid="profile-card">
-      <div class="profile-user-card__top">
-        <MAvatar :src="profile.avatar" :name="profile.name || profile.username" :size="60" />
-        <div class="profile-user-card__identity">
-          <div class="profile-user-card__name-row">
-            <h1 class="profile-user-card__name">{{ profile.name || profile.username }}</h1>
-            <span class="profile-user-card__handle">@{{ profile.username }}</span>
-          </div>
-          <div class="profile-user-card__actions">
-            <button
-              type="button"
-              class="profile-action-btn"
-              data-testid="edit-profile-btn"
-              @click="openEditSheet"
-            >
-              <MIcon name="edit" size="xs" :stroke-width="1.8" />
-              <span>编辑资料</span>
-            </button>
-            <RouterLink
-              to="/posts/me"
-              class="profile-action-btn profile-action-btn--link"
-              data-testid="public-profile-link"
-            >
-              <MIcon name="external-link" size="xs" :stroke-width="1.8" />
-              <span>公开主页</span>
-            </RouterLink>
+    <!-- Unauthenticated Guest State -->
+    <div v-if="!props.user && authStore && !authStore.isAuthenticated" class="profile-guest-wrap">
+      <MGuestCard
+        title="登录查看个人主页"
+        description="登录后可查看作品、阅读进度、收藏与互动动态。"
+        redirect="/me"
+      />
+    </div>
+
+    <template v-else>
+      <!-- User Profile Card -->
+      <section class="profile-user-card" data-testid="profile-card">
+        <div class="profile-user-card__top">
+          <MAvatar :src="profile.avatar" :name="profile.name || profile.username" :size="60" />
+          <div class="profile-user-card__identity">
+            <div class="profile-user-card__name-row">
+              <h1 class="profile-user-card__name">{{ profile.name || profile.username }}</h1>
+              <span class="profile-user-card__handle">@{{ profile.username }}</span>
+            </div>
+            <div class="profile-user-card__actions">
+              <button
+                type="button"
+                class="profile-action-btn"
+                data-testid="edit-profile-btn"
+                @click="openEditSheet"
+              >
+                <MIcon name="edit" size="xs" :stroke-width="1.8" />
+                <span>编辑资料</span>
+              </button>
+              <RouterLink
+                to="/posts/me"
+                class="profile-action-btn profile-action-btn--link"
+                data-testid="public-profile-link"
+              >
+                <MIcon name="external-link" size="xs" :stroke-width="1.8" />
+                <span>公开主页</span>
+              </RouterLink>
+            </div>
           </div>
         </div>
-      </div>
 
-      <p v-if="profile.bio" class="profile-user-card__bio">{{ profile.bio }}</p>
+        <p v-if="profile.bio" class="profile-user-card__bio">{{ profile.bio }}</p>
 
-      <!-- Multi-Space Stats Grid (4 columns) -->
-      <div class="profile-stats-grid">
-        <RouterLink to="/posts/me" class="profile-stat-box" data-testid="profile-stat-box">
-          <span class="profile-stat-box__val">{{ profile.stats?.articles ?? 0 }}</span>
-          <span class="profile-stat-box__label">作品</span>
-        </RouterLink>
-        <RouterLink to="/books/shelf" class="profile-stat-box" data-testid="profile-stat-box">
-          <span class="profile-stat-box__val">{{ profile.stats?.reading ?? 4 }}</span>
-          <span class="profile-stat-box__label">在读</span>
-        </RouterLink>
-        <RouterLink to="/feed/starred" class="profile-stat-box" data-testid="profile-stat-box">
-          <span class="profile-stat-box__val">{{ profile.stats?.bookmarks ?? 0 }}</span>
-          <span class="profile-stat-box__label">收藏</span>
-        </RouterLink>
-        <div class="profile-stat-box" data-testid="profile-stat-box">
-          <span class="profile-stat-box__val">{{ profile.stats?.followers ?? 0 }}</span>
-          <span class="profile-stat-box__label">关注者</span>
+        <!-- Multi-Space Stats Grid (4 columns) -->
+        <div class="profile-stats-grid">
+          <RouterLink to="/posts/me" class="profile-stat-box" data-testid="profile-stat-box">
+            <span class="profile-stat-box__val">{{ profile.stats?.articles ?? 0 }}</span>
+            <span class="profile-stat-box__label">作品</span>
+          </RouterLink>
+          <RouterLink to="/books/shelf" class="profile-stat-box" data-testid="profile-stat-box">
+            <span class="profile-stat-box__val">{{ profile.stats?.reading ?? 0 }}</span>
+            <span class="profile-stat-box__label">在读</span>
+          </RouterLink>
+          <RouterLink to="/feed/starred" class="profile-stat-box" data-testid="profile-stat-box">
+            <span class="profile-stat-box__val">{{ profile.stats?.bookmarks ?? 0 }}</span>
+            <span class="profile-stat-box__label">收藏</span>
+          </RouterLink>
+          <div class="profile-stat-box" data-testid="profile-stat-box">
+            <span class="profile-stat-box__val">{{ profile.stats?.followers ?? 0 }}</span>
+            <span class="profile-stat-box__label">关注者</span>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
     <!-- Space Footprints Hub -->
     <section class="profile-footprints-section">
@@ -230,17 +240,23 @@
         </div>
       </div>
     </MSheet>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
+import { getActivePinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
+import { useApi } from '@/composables/useApi'
+import { apiRequestEnvelope, apiRequestResult } from '@/api/client'
+import { listLibrary } from '@/api/bookPrivate'
 import MAvatar from '@mobile/components/ui/MAvatar.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
 import MSheet from '@mobile/components/ui/MSheet.vue'
+import MGuestCard from '@mobile/components/ui/MGuestCard.vue'
 
 export interface UserProfileData {
   username: string
@@ -265,7 +281,8 @@ const props = withDefaults(
 )
 
 const router = useRouter()
-const authStore = useAuthStore()
+const api = useApi()
+const authStore = getActivePinia() ? useAuthStore() : null
 
 const isDarkMode = ref(false)
 const cacheSizeText = ref('已占用 12.4 MB')
@@ -273,34 +290,42 @@ const editSheetOpen = ref(false)
 
 const localOverrides = ref<{ name?: string; bio?: string }>({})
 
+const liveStats = ref({
+  articles: 0,
+  reading: 0,
+  bookmarks: 0,
+  followers: 0,
+})
+
 const defaultProfile: UserProfileData = {
   username: 'atoman_user',
   name: 'Atoman User',
   avatar: '',
   bio: '保持阅读，持续思考与创造。',
   stats: {
-    articles: 18,
-    reading: 4,
-    bookmarks: 56,
-    followers: 128,
+    articles: 0,
+    reading: 0,
+    bookmarks: 0,
+    followers: 0,
   },
 }
 
 const profile = computed<UserProfileData>(() => {
   const base = props.user
     ? { ...props.user }
-    : authStore.user
+    : authStore?.user
       ? {
           username: authStore.user.username,
           name: authStore.user.display_name || authStore.user.username,
           avatar: authStore.user.avatar_url || '',
           bio: authStore.user.bio || '保持阅读，持续思考与创造。',
-          stats: defaultProfile.stats,
+          stats: liveStats.value,
         }
       : defaultProfile
 
   return {
     ...base,
+    stats: base.stats || liveStats.value,
     name: localOverrides.value.name !== undefined ? localOverrides.value.name : base.name,
     bio: localOverrides.value.bio !== undefined ? localOverrides.value.bio : base.bio,
   }
@@ -312,6 +337,44 @@ const formBio = ref(profile.value.bio || '')
 watch(profile, (newVal) => {
   formName.value = newVal.name
   formBio.value = newVal.bio || ''
+})
+
+onMounted(async () => {
+  if (props.user || !authStore?.isAuthenticated || !authStore.user) return
+
+  const authorId = authStore.user.uuid || authStore.user.id
+  try {
+    const [notesRes, articlesRes, libRes, starsRes] = await Promise.allSettled([
+      apiRequestEnvelope<any[]>(`${api.blog.shortNotes}?author_id=${encodeURIComponent(String(authorId))}&page=1&page_size=1`),
+      apiRequestEnvelope<any[]>(`${api.blog.posts}?author_id=${encodeURIComponent(String(authorId))}&page=1&limit=1`),
+      listLibrary(),
+      apiRequestResult(`${api.url}/feed/stars?page=1&limit=1`, {
+        headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : undefined,
+      }),
+    ])
+
+    let articlesCount = 0
+    if (articlesRes.status === 'fulfilled' && articlesRes.value?.data) {
+      const val = articlesRes.value
+      articlesCount += (val as any).total ?? (Array.isArray(val.data) ? val.data.length : 0)
+    }
+    if (notesRes.status === 'fulfilled' && notesRes.value?.data) {
+      const val = notesRes.value
+      articlesCount += (val as any).total ?? (Array.isArray(val.data) ? val.data.length : 0)
+    }
+    liveStats.value.articles = articlesCount
+
+    if (libRes.status === 'fulfilled' && libRes.value?.items) {
+      liveStats.value.reading = libRes.value.items.filter((i) => i.status === 'reading').length
+    }
+
+    if (starsRes.status === 'fulfilled' && starsRes.value?.ok && starsRes.value.data) {
+      const payload = starsRes.value.data as any
+      liveStats.value.bookmarks = payload?.total ?? payload?.data?.total ?? payload?.items?.length ?? payload?.data?.items?.length ?? 0
+    }
+  } catch (err) {
+    console.error('Failed to load profile counters:', err)
+  }
 })
 
 function openEditSheet() {
@@ -344,7 +407,7 @@ function handleClearCache() {
 
 async function handleLogout() {
   try {
-    await authStore.logout()
+    await authStore?.logout()
   } catch {
     // proceed even if network fails
   }

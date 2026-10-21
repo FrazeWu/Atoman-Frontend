@@ -591,8 +591,9 @@ watch(
 }
 
 .player-inner > :deep(.player-info) {
-  flex: 0 1 460px;
-  min-width: 240px;
+  flex: 0 0 280px;
+  max-width: 280px;
+  min-width: 200px;
 }
 
 .player-collapse-tab {
@@ -620,13 +621,17 @@ watch(
 
 .player-center-stage {
   flex: 1;
-  max-width: 780px;
+  max-width: none;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 1.25rem;
+  gap: 1.5rem;
   min-width: 0;
+}
+
+.player-center-stage > :deep(.player-controls-hub) {
+  flex-shrink: 0;
 }
 
 .progress-container {

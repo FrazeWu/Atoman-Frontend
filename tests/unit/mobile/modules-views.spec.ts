@@ -78,7 +78,7 @@ describe('Mobile Independent Module Views (Task 5)', () => {
       expect(wrapper.text()).toContain('8.8')
     })
 
-    it('clicking book item navigates to reader /books/read/:id', async () => {
+    it('clicking book item navigates to detail /books/work/:id', async () => {
       const pushSpy = vi.spyOn(router, 'push')
       const wrapper = mount(BooksDiscoverView, {
         props: { initialWorks: mockWorks },
@@ -87,7 +87,7 @@ describe('Mobile Independent Module Views (Task 5)', () => {
 
       const item = wrapper.find('[data-testid="book-catalog-item"]')
       await item.trigger('click')
-      expect(pushSpy).toHaveBeenCalledWith('/books/read/work-1')
+      expect(pushSpy).toHaveBeenCalledWith('/books/work/work-1')
     })
 
     it('renders empty state when no works match', async () => {

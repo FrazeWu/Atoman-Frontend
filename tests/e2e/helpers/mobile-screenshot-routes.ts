@@ -1,5 +1,8 @@
 export const mobileScreenshotRoutes = [
 	"/books",
+	"/books/shelf",
+	"/books/notes",
+	"/books/me",
 	"/books/search",
 	"/books/library",
 	"/books/contributions",

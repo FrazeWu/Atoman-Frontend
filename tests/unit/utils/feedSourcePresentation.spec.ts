@@ -37,6 +37,12 @@ describe('feedSourcePresentation', () => {
     expect(buildSourceFaviconURL('not a URL')).toBe('')
   })
 
+  it('upgrades http source URLs to https so favicons never trigger mixed content', () => {
+    expect(buildSourceFaviconURL('http://feeds.feedburner.com/example-feed')).toBe(
+      'https://feeds.feedburner.com/favicon.ico',
+    )
+  })
+
   it('falls back to the title when no URL is available', () => {
     expect(normalizeSourceUrlForCard(undefined, 'Dense Discovery')).toBe('Dense Discovery')
   })

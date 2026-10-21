@@ -180,6 +180,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { getActivePinia } from 'pinia'
 import { usePictureInPictureLyrics } from '@/composables/usePictureInPictureLyrics'
 import { ApiErrorResponseError } from '@/api/client'
 import {
@@ -202,6 +203,7 @@ import { useMusicLyrics } from '@/composables/useMusicLyrics'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { removePendingMusicLyricsAnnotation } from '@/composables/usePendingMusicLyricsAnnotations'
 import { useAuthStore } from '@/stores/auth'
+import { usePlayerStore } from '@/stores/player'
 import { buildMusicLyricsVersionPreview } from '@/utils/musicLyricsVersionDiff'
 import { albumArtistRoleLabels } from '@/utils/musicAlbumCredits'
 
@@ -255,15 +257,46 @@ const {
   currentLine,
 } = useMusicLyrics()
 
+const getPlayerSafe = () => {
+  if (typeof window !== 'undefined' && getActivePinia()) {
+    try {
+      return usePlayerStore()
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
 const { isPiPActive, isPiPSupported, togglePictureInPicture } = usePictureInPictureLyrics({
   songTitle: computed(() => props.songTitle),
   artistText: computed(() => props.artistText),
   currentTimeSeconds: computed(() => props.currentTimeSeconds),
+  durationSeconds: computed(() => getPlayerSafe()?.duration ?? 0),
+  isPlaying: computed(() => getPlayerSafe()?.isPlaying ?? false),
+  volume: computed(() => getPlayerSafe()?.volume ?? 1),
+  isMuted: computed(() => getPlayerSafe()?.isMuted ?? false),
   lines: computed(() => (lyrics.value?.lines ?? []).map((l) => ({
     text: l.text,
     translation: l.translation || '',
     time_ms: l.time_ms ?? undefined,
   }))),
+  onTogglePlay: () => getPlayerSafe()?.togglePlay(),
+  onPrev: () => getPlayerSafe()?.playPrevious(),
+  onNext: () => getPlayerSafe()?.playNext(),
+  onToggleMute: (muted) => {
+    const p = getPlayerSafe()
+    if (p) {
+      if (muted && !p.isMuted) p.toggleMute()
+      else if (!muted && p.isMuted) p.toggleMute()
+    }
+  },
+  onSetVolume: (vol) => getPlayerSafe()?.setVolume(vol),
+  onSeek: (seconds) => {
+    const p = getPlayerSafe()
+    if (p) p.seek(seconds)
+    else emit('seek', seconds)
+  },
 })
 
 const selectedAnnotationIds = ref<string[]>([])

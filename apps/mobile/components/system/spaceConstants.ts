@@ -76,9 +76,9 @@ export const SPACE_TABS: Record<string, NavTabItem[]> = {
   ],
   messages: [
     { key: 'inbox', label: '私信', icon: 'messages', path: '/inbox' },
-    { key: 'notifications', label: '通知', icon: 'bell', path: '/notifications' },
-    { key: 'subscriptions', label: '关注', icon: 'antenna', path: '/inbox?tab=subscriptions' },
-    { key: 'me', label: '我的', icon: 'person', path: '/me' },
+    { key: 'notifications', label: '通知', icon: 'bell', path: '/inbox/notifications' },
+    { key: 'contacts', label: '联系人', icon: 'person', path: '/inbox/contacts' },
+    { key: 'me', label: '设置', icon: 'settings', path: '/inbox/me' },
   ],
   studio: [
     { key: 'content', label: '内容', icon: 'library', path: '/studio' },

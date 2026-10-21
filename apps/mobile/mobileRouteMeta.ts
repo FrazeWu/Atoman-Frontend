@@ -10,6 +10,7 @@ const mobileDetailPatterns = [
   /^\/forum\/(?:topic\/|new$)/,
   /^\/timeline\/person\//,
   /^\/debate\/(?!search(?:\/|$)|me(?:\/|$)|rules(?:\/|$))[^/]+/,
+  /^\/(?:inbox|messages)\/chat\//,
 ]
 
 export function isMobileDetailRoute(path: string) {

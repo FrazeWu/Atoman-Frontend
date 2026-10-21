@@ -46,6 +46,35 @@ export const mobileRoutes: RouteRecordRaw[] = [
 		meta: requiresAuth,
 	},
 	{
+		path: "/inbox/notifications",
+		component: () => import("./views/messages/MessagesNotificationsView.vue"),
+		meta: requiresAuth,
+	},
+	{
+		path: "/inbox/contacts",
+		component: () => import("./views/messages/MessagesContactsView.vue"),
+		meta: requiresAuth,
+	},
+	{
+		path: "/inbox/me",
+		component: () => import("./views/messages/MessagesMeView.vue"),
+		meta: requiresAuth,
+	},
+	{
+		path: "/inbox/chat/:id",
+		component: () => import("./views/messages/MessageChatMobileView.vue"),
+		meta: requiresAuth,
+	},
+	{
+		path: "/messages/chat/:id",
+		component: () => import("./views/messages/MessageChatMobileView.vue"),
+		meta: requiresAuth,
+	},
+	{
+		path: "/notifications",
+		redirect: "/inbox/notifications",
+	},
+	{
 		path: "/messages",
 		component: () => import("./views/messages/MessagesMobileView.vue"),
 		meta: requiresAuth,

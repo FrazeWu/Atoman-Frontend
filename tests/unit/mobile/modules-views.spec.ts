@@ -8,6 +8,7 @@ import BooksShelfView from '@mobile/views/books/BooksShelfView.vue'
 import BookReaderMobileView from '@mobile/views/books/BookReaderMobileView.vue'
 import DebateHallView from '@mobile/views/debate/DebateHallView.vue'
 import MessagesMobileView from '@mobile/views/messages/MessagesMobileView.vue'
+import MessageChatMobileView from '@mobile/views/messages/MessageChatMobileView.vue'
 import StudioMobileView from '@mobile/views/studio/StudioMobileView.vue'
 import ProfileMobileView from '@mobile/views/me/ProfileMobileView.vue'
 import { mobileRoutes } from '@mobile/mobileRoutes'
@@ -335,7 +336,8 @@ describe('Mobile Independent Module Views (Task 5)', () => {
       expect(wrapper.text()).toContain('2')
     })
 
-    it('clicking a conversation switches to interactive chat pane', async () => {
+    it('clicking a conversation navigates to chat route', async () => {
+      const pushSpy = vi.spyOn(router, 'push')
       const wrapper = mount(MessagesMobileView, {
         props: {
           initialConversations: mockConversations,
@@ -348,26 +350,22 @@ describe('Mobile Independent Module Views (Task 5)', () => {
       const item = wrapper.find('[data-testid="conversation-item"]')
       await item.trigger('click')
 
-      expect(wrapper.find('[data-testid="chat-pane"]').exists()).toBe(true)
-      expect(wrapper.find('[data-testid="chat-header-title"]').text()).toBe('Alice')
-
-      // Back to conversation list
-      const backBtn = wrapper.find('[data-testid="chat-back-btn"]')
-      await backBtn.trigger('click')
-      expect(wrapper.find('[data-testid="chat-pane"]').exists()).toBe(false)
+      expect(pushSpy).toHaveBeenCalledWith('/inbox/chat/conv-1')
     })
 
     it('sends new message in chat pane using MInput and MButton', async () => {
-      const wrapper = mount(MessagesMobileView, {
+      const wrapper = mount(MessageChatMobileView, {
         props: {
-          initialConversations: mockConversations,
+          initialChat: {
+            partyId: 'c-1',
+            partyName: 'Alice',
+            messages: [{ id: 'm-1', text: '你好', time: '12:00', isMe: false }],
+          },
         },
         global: {
           plugins: [pinia, router],
         },
       })
-
-      await wrapper.find('[data-testid="conversation-item"]').trigger('click')
 
       const input = wrapper.find('[data-testid="chat-input"] input')
       await input.setValue('收到，马上跟进！')

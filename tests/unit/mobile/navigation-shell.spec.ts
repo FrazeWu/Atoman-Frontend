@@ -203,6 +203,19 @@ describe('Mobile Navigation Shell', () => {
       expect(labels).toEqual(['发现', '书架', '书摘', '我的'])
     })
 
+    it('renders scoped tabs for messages space', () => {
+      const wrapper = mount(MobileBottomNav, {
+        props: {
+          currentSpace: 'messages',
+        },
+      })
+
+      const tabs = wrapper.findAll('[data-testid="mobile-bottom-nav-tab"]')
+      expect(tabs).toHaveLength(4)
+      const labels = tabs.map((t) => t.text())
+      expect(labels).toEqual(['私信', '通知', '联系人', '设置'])
+    })
+
     it('renders MIcon and label for each tab item and supports tab click', async () => {
       const router = createRouter({
         history: createMemoryHistory(),

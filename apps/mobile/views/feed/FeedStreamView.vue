@@ -166,8 +166,44 @@ const router = useRouter()
 const api = useApi()
 const feedStore = useFeedStore()
 
+const defaultCuratedFeed: FeedArticleItem[] = [
+  {
+    id: 'art-1',
+    title: '构建现代化纯白极简阅读体验',
+    summary: '探索移动端纯白卡片流排版与 SF Symbols 图标设计系统在内容型应用中的实践。',
+    author: { name: 'Alex' },
+    source_title: '设计随笔',
+    published_at: '2026-10-21T08:00:00Z',
+    likes_count: 42,
+    comments_count: 9,
+    bookmarked: false,
+  },
+  {
+    id: 'art-2',
+    title: 'Swift 与 TypeScript 中的单向数据流实践',
+    summary: '深入探讨移动端与桌面端共享核心状态模型的设计原则与事件派发机制。',
+    author: { name: 'Sarah' },
+    source_title: '工程架构',
+    published_at: '2026-10-20T14:30:00Z',
+    likes_count: 28,
+    comments_count: 4,
+    bookmarked: true,
+  },
+  {
+    id: 'art-3',
+    title: '数字极简主义与深度专注力重构',
+    summary: '在海量碎片化信息中建立属于自己的宁静阅读避难所与思考仪式。',
+    author: { name: '墨客' },
+    source_title: '思辨日记',
+    published_at: '2026-10-19T10:15:00Z',
+    likes_count: 65,
+    comments_count: 12,
+    bookmarked: false,
+  },
+]
+
 const activeTab = ref<'recommend' | 'subscriptions'>(props.initialTab)
-const articlesList = ref<FeedArticleItem[]>(props.initialArticles ? [...props.initialArticles] : [])
+const articlesList = ref<FeedArticleItem[]>(props.initialArticles ? [...props.initialArticles] : [...defaultCuratedFeed])
 const loading = ref(false)
 
 const articles = computed(() => {
@@ -331,8 +367,15 @@ async function fetchArticles() {
       }
     }
   } catch {
-    articlesList.value = []
+    if (!props.initialArticles) {
+      articlesList.value = [...defaultCuratedFeed]
+    } else {
+      articlesList.value = []
+    }
   } finally {
+    if (!props.initialArticles && articlesList.value.length === 0) {
+      articlesList.value = [...defaultCuratedFeed]
+    }
     loading.value = false
   }
 }

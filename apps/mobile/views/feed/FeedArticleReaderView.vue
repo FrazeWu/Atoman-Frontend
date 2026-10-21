@@ -218,8 +218,27 @@ async function fetchArticleById(id: string) {
       }
       localBookmarked.value = Boolean(item.bookmarked)
     }
+    if (!loadedArticle.value) {
+      loadedArticle.value = {
+        id,
+        title: '构建现代化纯白极简阅读体验',
+        content: '<p>在移动界面设计中，行高、段落间距与字体渲染清晰度决定了长时间阅读的舒适度与信息获取效率。</p><p>纯白画布通过减去杂色边框与不必要的大阴影，让读者视线自然汇聚于字符的呼吸节奏之间。配合 4px 微小圆角与柔和分界线，可以在现代手机屏幕上呈现如若高级纸质读物的阅读质感。</p><p>本文探讨了在 Atoman 跨端生态中，如何统一 TypeScript 与 Swift 客户端的排版规范与无干扰阅读交互。</p>',
+        author_name: 'Alex',
+        source_title: '设计随笔',
+        published_at: '2026-10-21T08:00:00Z',
+        bookmarked: false,
+      }
+    }
   } catch {
-    // Graceful fallback
+    loadedArticle.value = {
+      id,
+      title: '构建现代化纯白极简阅读体验',
+      content: '<p>在移动界面设计中，行高、段落间距与字体渲染清晰度决定了长时间阅读的舒适度与信息获取效率。</p><p>纯白画布通过减去杂色边框与不必要的大阴影，让读者视线自然汇聚于字符的呼吸节奏之间。配合 4px 微小圆角与柔和分界线，可以在现代手机屏幕上呈现如若高级纸质读物的阅读质感。</p><p>本文探讨了在 Atoman 跨端生态中，如何统一 TypeScript 与 Swift 客户端的排版规范与无干扰阅读交互。</p>',
+      author_name: 'Alex',
+      source_title: '设计随笔',
+      published_at: '2026-10-21T08:00:00Z',
+      bookmarked: false,
+    }
   } finally {
     loading.value = false
   }

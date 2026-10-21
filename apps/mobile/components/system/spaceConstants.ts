@@ -51,10 +51,10 @@ export const SPACE_TABS: Record<string, NavTabItem[]> = {
     { key: 'me', label: '我的', icon: 'person', path: '/music/me' },
   ],
   feed: [
-    { key: 'discover', label: '推荐', icon: 'compass', path: '/feed' },
-    { key: 'sources', label: '订阅源', icon: 'antenna', path: '/feed/sources' },
-    { key: 'reading-list', label: '稍后读', icon: 'bookmark', path: '/feed/reading-list' },
-    { key: 'starred', label: '已收藏', icon: 'heart', path: '/feed/starred' },
+    { key: 'featured', label: '精选', icon: 'compass', path: '/feed' },
+    { key: 'following', label: '关注', icon: 'antenna', path: '/feed/following' },
+    { key: 'starred', label: '收藏', icon: 'bookmark', path: '/feed/starred' },
+    { key: 'me', label: '我的', icon: 'person', path: '/feed/me' },
   ],
   books: [
     { key: 'discover', label: '发现', icon: 'compass', path: '/books' },

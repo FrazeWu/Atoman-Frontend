@@ -437,3 +437,406 @@
   border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
   padding-top: 1.25rem;
 }
+
+/* Detail View Hero & Generic Cover Page */
+.book-catalog__hero {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .book-catalog__hero {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+.book-catalog__cover-col {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.book-catalog__cover-page {
+  width: 200px;
+  min-height: 300px;
+  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32px 20px 24px 26px;
+  user-select: none;
+  box-sizing: border-box;
+  box-shadow: none !important;
+}
+
+/* Left spine crease */
+.book-catalog__cover-page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 9px;
+  width: 1px;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.book-catalog__cover-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.book-catalog__cover-title {
+  font-family: "Songti SC", "SimSun", "STSong", "Noto Serif SC", serif;
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: var(--a-color-text, #1c1c1e);
+  letter-spacing: 0.2em;
+  margin: 0;
+  padding-left: 0.2em;
+  line-height: 1.3;
+}
+
+.book-catalog__cover-subtitle {
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+  font-size: 0.6875rem;
+  color: var(--a-color-text-secondary, #64748b);
+  letter-spacing: 0.1em;
+}
+
+.book-catalog__cover-body {
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-block: auto;
+  padding-block: 1rem;
+}
+
+.book-catalog__cover-author {
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+  font-size: 0.75rem;
+  color: var(--a-color-text, #1c1c1e);
+  letter-spacing: 0.15em;
+  padding-left: 0.15em;
+}
+
+.book-catalog__cover-quote {
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+  font-size: 0.6875rem;
+  font-style: italic;
+  color: var(--a-color-text-secondary, #64748b);
+  letter-spacing: 0.04em;
+  line-height: 1.7;
+  margin: 0;
+  padding-inline: 0.25rem;
+}
+
+.book-catalog__cover-footer {
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+  font-size: 0.6875rem;
+  color: var(--a-color-text-secondary, #64748b);
+  letter-spacing: 0.15em;
+  padding-left: 0.15em;
+}
+
+/* Info Column */
+.book-catalog__info-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.book-catalog__work-subtitle,
+.book-catalog__work-original {
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary, #64748b);
+  margin: 0;
+}
+
+/* Rating Card */
+.book-catalog__rating-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.875rem 1rem;
+  background-color: var(--a-color-surface-muted, #f8fafc);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  box-shadow: none !important;
+}
+
+.book-catalog__rating-score-box {
+  text-align: center;
+  padding-right: 1.25rem;
+  border-right: 1px solid var(--a-color-border-soft, #e2e8f0);
+}
+
+.book-catalog__rating-score {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--a-color-text, #1c1c1e);
+  line-height: 1;
+}
+
+.book-catalog__rating-count {
+  font-size: 0.6875rem;
+  color: var(--a-color-text-secondary, #64748b);
+  margin-top: 0.25rem;
+}
+
+.book-catalog__rating-stars-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.book-catalog__rating-stars {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.book-catalog__star-icon {
+  font-size: 1rem;
+  color: var(--a-color-border-soft, #cbd5e1);
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.book-catalog__star-icon.active,
+.book-catalog__star-icon:hover {
+  color: #f59e0b;
+}
+
+.book-catalog__rating-hint {
+  font-size: 0.75rem;
+  color: #d97706;
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+
+.book-catalog__rating-subtext {
+  font-size: 0.6875rem;
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+.book-catalog__hero-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+/* Tab Bar */
+.book-catalog__tab-bar {
+  margin-bottom: 1.5rem;
+}
+
+.p-segmented-control {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  background: var(--a-color-surface-muted, #f8fafc);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  user-select: none;
+  box-shadow: none !important;
+}
+
+.p-segmented-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 16px;
+  border: none;
+  background: transparent;
+  color: var(--a-color-text-secondary, #64748b);
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 3px;
+  cursor: pointer;
+  box-shadow: none !important;
+  transition: all 0.15s ease;
+}
+
+.p-segmented-item:hover {
+  color: var(--a-color-text, #1c1c1e);
+}
+
+.p-segmented-item.active {
+  background: #ffffff;
+  color: var(--a-color-text, #1c1c1e);
+  font-weight: 600;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+}
+
+/* Edition Cards under Tab */
+.book-catalog__edition-cards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.book-catalog__edition-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  background-color: var(--a-color-bg, #ffffff);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  box-shadow: none !important;
+}
+
+@media (min-width: 640px) {
+  .book-catalog__edition-card {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+.book-catalog__edition-cover {
+  width: 80px;
+  height: 110px;
+  flex-shrink: 0;
+  background-color: var(--a-color-surface-muted, #f8fafc);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8px 6px;
+  text-align: center;
+  user-select: none;
+  box-shadow: none !important;
+}
+
+.book-catalog__edition-publisher-tag {
+  font-size: 0.5625rem;
+  color: var(--a-color-text-secondary, #64748b);
+  border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
+  padding-bottom: 2px;
+}
+
+.book-catalog__edition-cover-title {
+  font-family: "Songti SC", "SimSun", "Noto Serif SC", serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--a-color-text, #1c1c1e);
+  line-height: 1.2;
+}
+
+.book-catalog__edition-cover-trans {
+  font-size: 0.5625rem;
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+.book-catalog__edition-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.book-catalog__edition-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.book-catalog__edition-sub {
+  font-size: 0.75rem;
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+.book-catalog__edition-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.875rem;
+  font-size: 0.75rem;
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+.book-catalog__edition-resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.book-catalog__resource-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 4px 8px;
+  background-color: var(--a-color-surface-muted, #f8fafc);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  font-size: 0.75rem;
+}
+
+.book-catalog__resource-badge {
+  font-weight: 700;
+  font-size: 0.625rem;
+  background-color: #1c1c1e;
+  color: #ffffff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.book-catalog__resource-name {
+  color: var(--a-color-text, #1c1c1e);
+}
+
+.book-catalog__edition-wiki-row {
+  padding-top: 0.25rem;
+}
+
+.book-catalog__wiki-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.book-catalog__wiki-panels {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.book-catalog__author-wiki-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background-color: var(--a-color-surface-muted, #f8fafc);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+}
+
+.book-catalog__author-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--a-color-text, #1c1c1e);
+}

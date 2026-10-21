@@ -1,31 +1,177 @@
 <template>
   <section class="book-catalog">
-    <PPageHeader title="添加图书" sub="先确认作品，再确认版本／译本。书目保存后直接公开，文件通过安全检查后可阅读。" />
+    <PPageHeader
+      title="添加图书"
+      sub="录入至全站公共书库：先确认作品实体，再确认具体出版版本与阅读文件。"
+    />
     <ol class="book-catalog__steps" aria-label="添加进度">
-      <li v-for="(label, index) in ['确认作品', '确认版本／译本', '关联文件与阅读']" :key="label" :aria-current="step === index + 1 ? 'step' : undefined">{{ index + 1 }} · {{ label }}</li>
+      <li
+        v-for="(label, index) in ['确认作品', '确认版本／译本', '关联文件与阅读']"
+        :key="label"
+        class="book-catalog__step-item"
+        :aria-current="step === index + 1 ? 'step' : undefined"
+      >
+        {{ index + 1 }} · {{ label }}
+      </li>
     </ol>
     <form v-if="step === 1" class="book-catalog__form" @submit.prevent="next">
       <fieldset class="book-catalog__fields" :disabled="busy">
-        <label for="create-source-file">选择电子文件（可选，也可以只填写书目）</label>
-        <input id="create-source-file" type="file" accept=".epub,.pdf,.txt,.cbz,.cbr" @change="chooseFile" />
-        <p v-if="file">{{ file.name }} · 文件暂存在本页，确认版本并同意公开分享后才上传。此步骤不会进行 OCR。</p>
-        <PInput id="create-work-search" v-model="query" label="查找已有作品" placeholder="输入书名或作者" />
-        <PButton type="button" variant="secondary" :disabled="searching" @click="findWorks">{{ searching ? '正在查找…' : '查找作品' }}</PButton>
-        <p v-if="searched && !matches.length && !searchError" role="status">没有找到匹配作品，可以选择新建。</p>
-        <p v-if="searchError" role="alert">{{ searchError }}</p>
-        <label v-for="work in matches" :key="work.id" class="book-catalog__choice"><input v-model="workChoice" type="radio" name="work" :value="work.id" /><span>{{ work.title }}<small>{{ work.authors.map(person => person.name).join(' / ') }} · {{ work.editions.length }} 个版本</small></span></label>
-        <label class="book-catalog__choice"><input v-model="workChoice" type="radio" name="work" value="new" /> 新建作品（不是新增出版版本）</label>
-        <template v-if="workChoice === 'new'">
-          <PInput id="create-book-title" v-model="title" label="作品书名" required :maxlength="200" />
-          <PTextarea id="create-book-authors" v-model="authors" label="作者" hint="每行一位新作者，也可以选择已有作者。译者在下一步填写。" :required="!selectedAuthors.length" :rows="3" />
-          <details><summary>选择已有作者</summary><PInput id="create-person-search" v-model="personQuery" label="作者姓名" /><PButton type="button" variant="secondary" @click="findPeople">搜索已有作者</PButton><label v-for="person in availablePeople" :key="person.id"><input v-model="selectedAuthors" type="checkbox" :value="person.id" />{{ person.name }}</label></details>
-          <PInput id="create-book-original" v-model="originalTitle" label="原作名（选填）" />
-          <PTextarea id="create-book-description" v-model="description" label="作品简介（选填）" />
-        </template>
+        <!-- 电子文件选择区域 -->
+        <div class="book-catalog__file-zone">
+          <label for="create-source-file" class="book-catalog__file-label">
+            选择电子文件（可选，也可以只填写书目）
+          </label>
+          <input
+            id="create-source-file"
+            type="file"
+            class="book-catalog__file-input"
+            accept=".epub,.pdf,.txt,.cbz,.cbr"
+            @change="chooseFile"
+          />
+          <p v-if="file" class="book-catalog__file-info">
+            {{ file.name }} · 文件暂存在本页，确认版本并同意公开分享后才上传。此步骤不会进行 OCR。
+          </p>
+        </div>
+
+        <!-- 查找已有作品 -->
+        <div class="book-catalog__search-row">
+          <PInput
+            id="create-work-search"
+            v-model="query"
+            label="查找已有作品"
+            placeholder="输入书名或作者"
+            @keyup.enter="findWorks"
+          />
+          <PButton
+            type="button"
+            variant="secondary"
+            :disabled="searching"
+            @click="findWorks"
+          >
+            {{ searching ? '正在查找…' : '查找作品' }}
+          </PButton>
+        </div>
+
+        <p v-if="searched && !matches.length && !searchError" role="status" class="book-catalog__empty-hint">
+          没有找到匹配作品，可以选择新建。
+        </p>
+        <p v-if="searchError" role="alert" class="book-catalog__error">
+          {{ searchError }}
+        </p>
+
+        <!-- 匹配作品与新建选项列表 -->
+        <div class="book-catalog__choices-container">
+          <label
+            v-for="work in matches"
+            :key="work.id"
+            class="book-catalog__choice"
+          >
+            <input
+              v-model="workChoice"
+              type="radio"
+              name="work"
+              :value="work.id"
+            />
+            <div class="book-catalog__choice-body">
+              <span class="book-catalog__choice-title">{{ work.title }}</span>
+              <small>{{ work.authors.map(person => person.name).join(' / ') }} · {{ work.editions.length }} 个版本</small>
+            </div>
+          </label>
+
+          <label class="book-catalog__choice">
+            <input
+              v-model="workChoice"
+              type="radio"
+              name="work"
+              value="new"
+            />
+            <div class="book-catalog__choice-body">
+              <span class="book-catalog__choice-title">新建作品（不是新增出版版本）</span>
+              <small>公共书库尚未收录此作品实体，建立全新作品后可为其添加具体出版版本。</small>
+            </div>
+          </label>
+        </div>
+
+        <!-- 新建作品表单卡片 -->
+        <div v-if="workChoice === 'new'" class="book-catalog__new-work-card">
+          <PInput
+            id="create-book-title"
+            v-model="title"
+            label="作品书名"
+            required
+            :maxlength="200"
+            placeholder="例如 沉思录、代码整洁之道"
+          />
+          <PTextarea
+            id="create-book-authors"
+            v-model="authors"
+            label="作者"
+            hint="每行一位新作者，也可以选择已有作者。译者在下一步填写。"
+            :required="!selectedAuthors.length"
+            :rows="3"
+            placeholder="例如 马可·奥勒留"
+          />
+          <details class="book-catalog__people-picker">
+            <summary class="book-catalog__people-summary">选择已有作者</summary>
+            <div class="book-catalog__people-content">
+              <div class="book-catalog__people-search-row">
+                <PInput
+                  id="create-person-search"
+                  v-model="personQuery"
+                  label="作者姓名"
+                  placeholder="搜索作者库"
+                  @keyup.enter="findPeople"
+                />
+                <PButton
+                  type="button"
+                  variant="secondary"
+                  @click="findPeople"
+                >
+                  搜索已有作者
+                </PButton>
+              </div>
+              <div v-if="availablePeople.length > 0" class="book-catalog__people-list">
+                <label
+                  v-for="person in availablePeople"
+                  :key="person.id"
+                  class="book-catalog__person-chip"
+                >
+                  <input
+                    v-model="selectedAuthors"
+                    type="checkbox"
+                    :value="person.id"
+                  />
+                  <span>{{ person.name }}</span>
+                </label>
+              </div>
+            </div>
+          </details>
+          <PInput
+            id="create-book-original"
+            v-model="originalTitle"
+            label="原作名（选填）"
+            placeholder="例如 Meditations、Clean Code"
+          />
+          <PTextarea
+            id="create-book-description"
+            v-model="description"
+            label="作品简介（选填）"
+            placeholder="关于这部作品的核心主旨、写作背景或作者思想概述..."
+            :rows="4"
+          />
+        </div>
       </fieldset>
       <div class="book-catalog__actions">
         <PButton type="submit" :disabled="!canContinue || busy">下一步：版本／译本</PButton>
-        <PButton v-if="workChoice === 'new' && !file" type="button" variant="secondary" :disabled="!canContinue || busy" @click="save(false)">仅创建并公开作品</PButton>
+        <PButton
+          v-if="workChoice === 'new' && !file"
+          type="button"
+          variant="secondary"
+          :disabled="!canContinue || busy"
+          @click="save(false)"
+        >
+          仅创建并公开作品
+        </PButton>
       </div>
     </form>
     <form v-else-if="step === 2" class="book-catalog__form" @submit.prevent="save(true)">

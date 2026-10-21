@@ -198,7 +198,7 @@ describe("AudioPlayer", () => {
 		);
 		expect(source).not.toContain("prefers-reduced-motion: reduce");
 		expect(source).toMatch(
-			/\.player-mini-window\s*\{[^}]*width: 4\.5rem;[^}]*height: 4\.5rem;/,
+			/\.player-mini-window\s*\{[^}]*width:\s*auto;[^}]*height:\s*4\.5rem;/,
 		);
 		expect(source).toMatch(
 			/\.player-mini-cover\s*\{[^}]*width: 4\.5rem;[^}]*height: 4\.5rem;/,

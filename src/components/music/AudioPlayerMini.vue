@@ -85,7 +85,8 @@ defineEmits<{
   flex-direction: row;
   align-items: center;
   height: 4.5rem;
-  width: auto;
+  width: auto !important;
+  max-width: none;
   overflow: visible;
   border: 0;
   background: var(--a-color-bg);

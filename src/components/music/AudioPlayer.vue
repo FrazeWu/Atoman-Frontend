@@ -657,7 +657,7 @@ watch(
 }
 
 .player-mini-window {
-  width: 4.5rem;
+  width: auto;
   height: 4.5rem;
 }
 
@@ -744,7 +744,11 @@ watch(
     gap: 0.25rem;
   }
 
-  .player-mini-window,
+  .player-mini-window {
+    width: auto;
+    height: 6.75rem;
+  }
+
   .player-mini-cover {
     width: 6.75rem;
     height: 6.75rem;

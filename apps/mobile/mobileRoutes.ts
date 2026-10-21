@@ -103,6 +103,18 @@ export const mobileRoutes: RouteRecordRaw[] = [
 				component: () => import("./views/feed/FeedStreamView.vue"),
 			},
 			{
+				path: "following",
+				component: () => import("./views/feed/FeedFollowingView.vue"),
+			},
+			{
+				path: "starred",
+				component: () => import("./views/feed/FeedStarredView.vue"),
+			},
+			{
+				path: "me",
+				component: () => import("./views/feed/FeedMeView.vue"),
+			},
+			{
 				path: "sources",
 				component: () => import("./views/feed/FeedSourcesView.vue"),
 				meta: requiresAuth,

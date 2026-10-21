@@ -174,7 +174,7 @@ describe('Mobile Navigation Shell', () => {
       const tabs = wrapper.findAll('[data-testid="mobile-bottom-nav-tab"]')
       expect(tabs).toHaveLength(4)
       const labels = tabs.map((t) => t.text())
-      expect(labels).toEqual(['推荐', '订阅源', '稍后读', '已收藏'])
+      expect(labels).toEqual(['精选', '关注', '收藏', '我的'])
     })
 
     it('renders scoped tabs for blog space', () => {

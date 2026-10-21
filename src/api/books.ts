@@ -81,6 +81,9 @@ export interface BookPublicEdition {
   id: string
   work_id: string
   title?: string
+  subtitle?: string
+  edition_statement?: string
+  translators?: BookPublicPerson[]
   publisher_id?: string
   publisher?: string
   publisher_info?: BookPublicPublisher

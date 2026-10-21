@@ -32,7 +32,7 @@ const uploadPath = (id: string) => `/upload-sessions/${encodeURIComponent(id)}`
 async function post<T>(path: string, body?: unknown): Promise<T> {
   return (await apiRequestEnvelope<T>(url(path), { method: 'POST', ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }) })).data
 }
-export const createCatalogResource = (workId: string, input: { title: string; language: string; format: CatalogResource['format'] }) =>
+export const createCatalogResource = (workId: string, input: { title: string; language: string; format: CatalogResource['format']; edition_id?: string }) =>
   post<CatalogResource>(`/works/${encodeURIComponent(workId)}/assets`, input)
 export const createResourceUpload = (assetId: string, file: File, confirmed: boolean) =>
   post<ResourceUpload>(`/assets/${encodeURIComponent(assetId)}/upload-sessions`, { file_name: file.name, size: file.size, content_type: bookContentType(file), public_distribution_confirmed: confirmed })

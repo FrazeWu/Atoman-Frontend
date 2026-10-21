@@ -8,6 +8,7 @@ import { ApiErrorResponseError } from '@/api/client'
 import BooksDiscoverView from '@/views/books/BooksDiscoverView.vue'
 import BookCreateView from '@/views/books/BookCreateView.vue'
 import BookCatalogWorkView from '@/views/books/BookCatalogWorkView.vue'
+import BookResourceUpload from '@/components/books/BookResourceUpload.vue'
 import type { CatalogWork } from '@/api/bookCatalog'
 import { moduleFeatureRoutes } from '@/router/routes/modules'
 
@@ -37,8 +38,17 @@ function mockDetail() {
   vi.spyOn(api, 'listCatalogResources').mockResolvedValue({ items: [] })
 }
 async function fill(wrapper: VueWrapper) {
+  await wrapper.get('input[type="radio"][value="new"]').setValue(true)
   await wrapper.get('#create-book-title').setValue('中国大历史')
   await wrapper.get('#create-book-authors').setValue(' 黄仁宇 \n\n黄仁宇')
+}
+async function chooseNewEdition(wrapper: VueWrapper) {
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
+  await wrapper.get('input[name="edition"][value="new"]').setValue(true)
+}
+async function createWorkOnly(wrapper: VueWrapper) {
+  await wrapper.findAll('button').find(button => button.text() === '仅创建并公开作品')!.trigger('click')
 }
 
 describe('发现图书', () => {
@@ -72,14 +82,57 @@ describe('发现图书', () => {
 })
 
 describe('无需文件创建公开作品', () => {
+  it('不预先选中匹配作品，必须由用户明确确认', async () => {
+    const create = vi.spyOn(api, 'createCatalogWork')
+    vi.spyOn(api, 'searchCatalogWorks').mockResolvedValue(page)
+    const { wrapper } = await setup('/books/new')
+    await wrapper.findAll('button').find(button => button.text() === '查找作品')!.trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('input[type="radio"]').every(input => !(input.element as HTMLInputElement).checked)).toBe(true)
+    await wrapper.get('form').trigger('submit')
+    expect(create).not.toHaveBeenCalled()
+    expect(wrapper.find('#create-edition-title').exists()).toBe(false)
+  })
+  it('确认已有作品和已有译本时不创建书目，文件绑定选中的版本', async () => {
+    mockDetail()
+    const existing = { id: 'edition-1', work_id: work.id, title: '中文译本', language: 'zh', isbn13: '9787511575920', translators: [{ id: 'translator-1', name: '译者', role: 'translator' }] }
+    vi.mocked(api.getCatalogWork).mockResolvedValue({ ...work, editions: [existing] })
+    const create = vi.spyOn(api, 'createCatalogWork'), edition = vi.spyOn(api, 'createCatalogEdition')
+    const { wrapper } = await setup('/books/new?work=work-1')
+    expect(wrapper.findAll('input[name="edition"]').every(input => !(input.element as HTMLInputElement).checked)).toBe(true)
+    await wrapper.get('#create-edition-search').setValue('978-7-5115-7592-0')
+    await wrapper.get('input[name="edition"][value="edition-1"]').setValue(true)
+    expect(wrapper.find('#create-edition-publisher').exists()).toBe(false)
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(create).not.toHaveBeenCalled(); expect(edition).not.toHaveBeenCalled()
+    expect(wrapper.findComponent(BookResourceUpload).props()).toMatchObject({ workId: 'work-1', editionId: 'edition-1', initialLanguage: 'zh' })
+  })
+  it('版本字段只提交给版本接口，返回上一步保留独立草稿', async () => {
+    const create = vi.spyOn(api, 'createCatalogWork').mockResolvedValue(work)
+    const edition = vi.spyOn(api, 'createCatalogEdition').mockResolvedValue({ id: 'edition-1', work_id: work.id })
+    const { wrapper } = await setup('/books/new')
+    await fill(wrapper); await chooseNewEdition(wrapper)
+    await wrapper.get('#create-edition-subtitle').setValue('版本副标题')
+    await wrapper.get('#create-edition-translators').setValue('译者甲\n译者乙')
+    await wrapper.get('#create-edition-language').setValue('zh')
+    await wrapper.findAll('button').find(button => button.text() === '返回作品')!.trigger('click')
+    expect((wrapper.get('#create-book-title').element as HTMLInputElement).value).toBe('中国大历史')
+    expect(wrapper.find('#create-book-subtitle').exists()).toBe(false)
+    await wrapper.get('form').trigger('submit'); await flushPromises()
+    expect((wrapper.get('#create-edition-subtitle').element as HTMLInputElement).value).toBe('版本副标题')
+    await wrapper.get('form').trigger('submit'); await flushPromises()
+    expect(create).toHaveBeenCalledWith(expect.not.objectContaining({ subtitle: expect.anything(), language: expect.anything() }))
+    expect(edition).toHaveBeenCalledWith(work.id, expect.objectContaining({ subtitle: '版本副标题', translators: ['译者甲', '译者乙'], language: 'zh' }))
+  })
   it('书名和作者即可创建，使用服务器返回 ID 跳转详情', async () => {
     mockDetail()
     const create = vi.spyOn(api, 'createCatalogWork').mockResolvedValue(work)
     const edition = vi.spyOn(api, 'createCatalogEdition')
     const { wrapper, router } = await setup('/books/new?q=历史&page=2')
     await fill(wrapper)
-    expect(wrapper.find('input[type="file"]').exists()).toBe(false)
-    await wrapper.get('form').trigger('submit')
+    expect(wrapper.find('input[type="file"]').exists()).toBe(true)
+    await createWorkOnly(wrapper)
     await flushPromises()
     expect(create).toHaveBeenCalledWith(expect.objectContaining({ title: '中国大历史', authors: ['黄仁宇'] }))
     expect(edition).not.toHaveBeenCalled()
@@ -89,6 +142,7 @@ describe('无需文件创建公开作品', () => {
   it('作者必填，不提交空作者列表', async () => {
     const create = vi.spyOn(api, 'createCatalogWork')
     const { wrapper } = await setup('/books/new')
+    await wrapper.get('input[type="radio"][value="new"]').setValue(true)
     await wrapper.get('#create-book-title').setValue('书名')
     await wrapper.get('form').trigger('submit')
     expect(create).not.toHaveBeenCalled()
@@ -99,8 +153,8 @@ describe('无需文件创建公开作品', () => {
     const create = vi.spyOn(api, 'createCatalogWork').mockReturnValue(new Promise(r => { resolve = r }))
     const { wrapper } = await setup('/books/new')
     await fill(wrapper)
-    await wrapper.get('form').trigger('submit')
-    await wrapper.get('form').trigger('submit')
+    await createWorkOnly(wrapper)
+    await createWorkOnly(wrapper)
     expect(create).toHaveBeenCalledTimes(1)
     resolve(work)
     await flushPromises()
@@ -111,23 +165,24 @@ describe('无需文件创建公开作品', () => {
     const edition = vi.spyOn(api, 'createCatalogEdition').mockRejectedValueOnce(new Error('network')).mockResolvedValue({ id: 'edition-1', work_id: 'work-1' })
     const { wrapper, router } = await setup('/books/new')
     await fill(wrapper)
-    await wrapper.get('input[type="checkbox"]').setValue(true)
+    await chooseNewEdition(wrapper)
     await wrapper.get('#create-edition-isbn').setValue('978-7-5115-7592-0')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(wrapper.text()).toContain('图书已公开')
+    expect(wrapper.text()).toContain('作品已保存')
     expect(router.currentRoute.value.path).toBe('/books/new')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
     expect(create).toHaveBeenCalledTimes(1)
     expect(edition).toHaveBeenLastCalledWith('work-1', expect.objectContaining({ isbn13: '9787511575920' }))
-    expect(router.currentRoute.value.path).toBe('/books/work/work-1')
+    expect(wrapper.text()).toContain('书目已公开')
+    expect(wrapper.find('a[href="/books/edition/edition-1"]').exists()).toBe(true)
   })
   it('版本信息不合法时先提示，不提前创建作品', async () => {
     const create = vi.spyOn(api, 'createCatalogWork')
     const { wrapper } = await setup('/books/new')
     await fill(wrapper)
-    await wrapper.get('input[type="checkbox"]').setValue(true)
+    await chooseNewEdition(wrapper)
     await wrapper.get('#create-edition-isbn').setValue('123')
     await wrapper.get('form').trigger('submit')
     expect(wrapper.text()).toContain('ISBN 请输入')

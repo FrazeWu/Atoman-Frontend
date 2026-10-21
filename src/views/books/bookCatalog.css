@@ -16,3 +16,8 @@
 .book-catalog__row { display: grid; gap: .5rem; padding-block: 1rem; border-bottom: 1px solid var(--a-color-border-soft); overflow-wrap: anywhere; }
 .book-catalog section { margin-block: 2rem; }
 .book-catalog__card:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 4px; }
+.book-catalog__steps { display: flex; flex-wrap: wrap; gap: 1rem 2rem; padding: 0; margin-block: 1.5rem 2rem; list-style: none; color: var(--a-color-text-secondary); }
+.book-catalog__steps [aria-current="step"] { color: var(--a-color-primary); font-weight: 600; }
+.book-catalog__choice { display: flex; align-items: start; gap: .75rem; padding: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: .5rem; cursor: pointer; min-height: 44px; }
+.book-catalog__choice:has(input:checked) { border-color: var(--a-color-primary); }
+.book-catalog__choice small { display: block; margin-top: .4rem; color: var(--a-color-text-secondary); overflow-wrap: anywhere; }

@@ -12,15 +12,23 @@
       <BookShelfAction v-if="auth.isAuthenticated" :key="auth.user?.uuid" :work-id="work.id" />
       <section aria-labelledby="catalog-editions-title">
         <h2 id="catalog-editions-title">出版版本</h2>
-        <BookAddEdition v-if="auth.isAuthenticated" :work-id="work.id" @saved="refreshWork" />
+        <PButton v-if="auth.isAuthenticated" :to="{ path: '/books/new', query: { ...route.query, work: work.id } }">添加版本／译本或文件</PButton>
         <p v-if="!work.editions.length">暂无出版信息，不影响图书公开展示。</p>
         <ul v-else class="book-catalog__list">
           <li v-for="edition in work.editions" :key="edition.id" class="book-catalog__row">
-            <strong>{{ edition.title || work.title }}</strong>
+            <PButton variant="ghost" :to="`/books/edition/${edition.id}`">{{ edition.title || work.title }}</PButton>
+            <span v-if="edition.subtitle">{{ edition.subtitle }}</span>
+            <span v-if="edition.translators?.length">{{ edition.translators.map(person => person.name).join(' / ') }} 译</span>
+            <span v-if="edition.language || edition.edition_statement">{{ [edition.language, edition.edition_statement].filter(Boolean).join(' · ') }}</span>
             <span>{{ edition.publisher || '出版社待补充' }}</span>
             <span v-if="edition.isbn13 || edition.isbn10">ISBN {{ edition.isbn13 || edition.isbn10 }}</span>
             <span v-if="edition.page_count">{{ edition.page_count }} 页</span>
             <BookWikiPanel kind="edition" :entity-id="edition.id" :work-id="work.id" :authenticated="auth.isAuthenticated" @changed="refreshWork" />
+            <div v-for="asset in resources.filter(asset => asset.edition_id === edition.id)" :key="asset.id" class="book-catalog__row">
+              <span>{{ asset.title || edition.title || work.title }} · {{ asset.format.toUpperCase() }} · {{ asset.language }}</span>
+              <PButton v-if="asset.current_revision_id" :to="resourceReaderPath(work.id, asset.id, asset.current_revision_id)">开始阅读</PButton>
+              <BookResourceVersions :asset="asset" :authenticated="auth.isAuthenticated" />
+            </div>
           </li>
         </ul>
       </section>
@@ -29,15 +37,16 @@
         <div v-if="resourceError" role="alert"><p>{{ resourceError }}</p><PButton variant="secondary" @click="loadResources">重试加载文件</PButton></div>
         <p v-else-if="resourcesLoading" role="status">正在检查可用文件…</p>
         <p v-else-if="!resources.length">图书已公开，暂时没有通过自动安全检查的电子书文件。</p>
-        <ul v-else class="book-catalog__list">
-          <li v-for="asset in resources" :key="asset.id" class="book-catalog__row">
+        <p v-else>文件按版本／译本展示。旧文件保持原状，不自动推断所属版本。</p>
+        <h3 v-if="resources.some(asset => !asset.edition_id)">尚未关联版本的旧文件</h3>
+        <ul class="book-catalog__list">
+          <li v-for="asset in resources.filter(asset => !asset.edition_id)" :key="asset.id" class="book-catalog__row">
             <strong>{{ asset.title || work.title }}</strong><span>{{ asset.format.toUpperCase() }} · {{ asset.language }}</span><span>文件已通过自动安全检查</span>
             <PButton v-if="asset.current_revision_id" :to="resourceReaderPath(work.id, asset.id, asset.current_revision_id)">开始阅读</PButton>
             <BookResourceVersions :asset="asset" :authenticated="auth.isAuthenticated" />
           </li>
         </ul>
-        <BookResourceUpload v-if="auth.isAuthenticated" :key="auth.user?.uuid" :work-id="work.id" :title="work.title" @ready="loadResources" />
-        <PButton v-else variant="secondary" :to="{ path: '/login', query: { redirect: route.fullPath } }">登录后上传文件</PButton>
+        <PButton v-if="!auth.isAuthenticated" variant="secondary" :to="{ path: '/login', query: { redirect: route.fullPath } }">登录后上传文件</PButton>
       </section>
       <BookWorkCommunity :key="`${work.id}:${auth.user?.uuid || 'guest'}`" :work-id="work.id" :authenticated="auth.isAuthenticated" />
     </template>
@@ -49,12 +58,10 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { resourceReaderPath } from '@/api/bookResources'
-import BookResourceUpload from '@/components/books/BookResourceUpload.vue'
 import BookResourceVersions from '@/components/books/BookResourceVersions.vue'
 import BookShelfAction from '@/components/books/BookShelfAction.vue'
 import BookWorkCommunity from '@/components/books/BookWorkCommunity.vue'
 import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
-import BookAddEdition from '@/components/books/BookAddEdition.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { getCatalogWork, listCatalogResources, type CatalogResource, type CatalogWork } from '@/api/bookCatalog'
 import { useQueryClient } from '@tanstack/vue-query'

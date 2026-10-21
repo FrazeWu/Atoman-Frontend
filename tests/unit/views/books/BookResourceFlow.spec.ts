@@ -28,7 +28,7 @@ async function setupUpload() {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/books/work/:workId', component: { template: '<div />' } }] })
   await router.push('/books/work/work-1')
   await router.isReady()
-  const wrapper = mount(BookResourceUpload, { props: { workId: 'work-1', title: '历史' }, global: { plugins: [router], stubs: { PConfirm: true } } })
+  const wrapper = mount(BookResourceUpload, { props: { workId: 'work-1', editionId: 'edition-1', title: '历史' }, global: { plugins: [router], stubs: { PConfirm: true } } })
   wrappers.push(wrapper)
   await flushPromises()
   return wrapper
@@ -84,13 +84,14 @@ describe('文件上传与公开反馈', () => {
     await wrapper.get('form').trigger('submit')
     await flushPromises()
     expect(api.createCatalogResource).toHaveBeenCalledTimes(1)
+    expect(api.createCatalogResource).toHaveBeenCalledWith('work-1', expect.objectContaining({ edition_id: 'edition-1' }))
     expect(api.createResourceUpload).toHaveBeenCalledTimes(1)
     expect(wrapper.text()).toContain('正在自动检查')
     expect(wrapper.text()).not.toContain('开始阅读')
-    expect(localStorage.getItem('atoman:book-upload:user-1:work-1')).toBe('upload-1')
+    expect(localStorage.getItem('atoman:book-upload:user-1:work-1:edition-1')).toBe('upload-1')
   })
   it('扫描完成后显示真实修订阅读地址并通知详情刷新', async () => {
-    localStorage.setItem('atoman:book-upload:user-1:work-1', 'upload-1')
+    localStorage.setItem('atoman:book-upload:user-1:work-1:edition-1', 'upload-1')
     vi.spyOn(api, 'getResourceUpload').mockResolvedValue({ ...session, status: 'ready', revision_id: 'revision-1' })
     const wrapper = await setupUpload()
     expect(wrapper.text()).toContain('文件已公开')
@@ -100,7 +101,7 @@ describe('文件上传与公开反馈', () => {
     expect(link?.props('to')).toBe('/books/read/work-1/asset-1/revision-1')
   })
   it('隔离文件不出现阅读入口，并停止自动检查', async () => {
-    localStorage.setItem('atoman:book-upload:user-1:work-1', 'upload-1')
+    localStorage.setItem('atoman:book-upload:user-1:work-1:edition-1', 'upload-1')
     const get = vi.spyOn(api, 'getResourceUpload').mockResolvedValue({ ...session, status: 'quarantined', error_message: '不安全文件' })
     const wrapper = await setupUpload()
     expect(wrapper.text()).toContain('文件未公开：不安全文件')
@@ -108,7 +109,7 @@ describe('文件上传与公开反馈', () => {
     expect(get).toHaveBeenCalledTimes(1)
   })
   it('处理状态请求失败可重试，不重新上传文件', async () => {
-    localStorage.setItem('atoman:book-upload:user-1:work-1', 'upload-1')
+    localStorage.setItem('atoman:book-upload:user-1:work-1:edition-1', 'upload-1')
     vi.spyOn(api, 'getResourceUpload').mockRejectedValueOnce(new Error('network')).mockResolvedValue({ ...session, status: 'ready', revision_id: 'revision-1' })
     const upload = vi.spyOn(api, 'uploadResourceFile')
     const wrapper = await setupUpload()

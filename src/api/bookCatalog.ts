@@ -1,40 +1,9 @@
 import { apiGet, apiRequestEnvelope } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
-import type { BookPublicEdition, BookPublicWork } from './books'
+import type { BookPublicEdition, CatalogWork, CreateCatalogWork, CreateCatalogEdition, CatalogResource, CatalogPage } from '@/entities/book/model/types'
 import { readonly, ref } from 'vue'
 
-export interface CatalogWork extends BookPublicWork { revision_id: string; redirected_from?: string }
-export interface CreateCatalogWork {
-  title: string
-  authors: string[]
-  author_ids?: string[]
-  subtitle?: string
-  original_title?: string
-  description?: string
-  language?: string
-}
-export interface CreateCatalogEdition {
-  title?: string
-  publisher?: string
-  producer?: string
-  isbn10?: string
-  isbn13?: string
-  language?: string
-  published_date?: string
-  page_count?: number
-  binding?: string
-  cover_url?: string
-}
-export interface CatalogResource {
-  id: string
-  work_id: string
-  title: string
-  language: string
-  format: 'epub' | 'pdf' | 'txt' | 'cbz' | 'cbr'
-  status: 'active' | 'removed'
-  current_revision_id?: string
-}
-export interface CatalogPage { items: BookPublicWork[]; total: number; limit: number; offset: number }
+export type { CatalogWork, CreateCatalogWork, CreateCatalogEdition, CatalogResource, CatalogPage } from '@/entities/book/model/types'
 const url = (path: string) => `${useApiUrl()}/books${path}`
 const revision = ref(0)
 export const catalogRevision = readonly(revision)

@@ -76,6 +76,9 @@ export interface BookPublicEdition {
   id: string
   work_id: string
   title?: string
+  subtitle?: string
+  edition_statement?: string
+  translators?: BookPublicPerson[]
   publisher_id?: string
   publisher?: string
   publisher_info?: BookPublicPublisher
@@ -478,6 +481,10 @@ export interface CreateCatalogWork {
 
 export interface CreateCatalogEdition {
   title?: string
+  subtitle?: string
+  edition_statement?: string
+  translators?: string[]
+  translator_ids?: string[]
   publisher?: string
   producer?: string
   isbn10?: string
@@ -492,6 +499,7 @@ export interface CreateCatalogEdition {
 export interface CatalogResource {
   id: string
   work_id: string
+  edition_id?: string
   title: string
   language: string
   format: 'epub' | 'pdf' | 'txt' | 'cbz' | 'cbr'

@@ -6,6 +6,7 @@
       <fieldset :disabled="busy || pending" class="resource-upload__fields">
         <label :for="`resource-file${idSuffix}`">电子书文件</label>
         <input :id="`resource-file${idSuffix}`" ref="fileInput" type="file" accept=".epub,.pdf,.txt,.cbz,.cbr" @change="chooseFile">
+        <p v-if="file">已选择：{{ file.name }}</p>
         <PInput v-if="!replaceAsset" id="resource-language" v-model="language" label="文件语言代码" placeholder="例如 zh、en；不确定时留空" />
         <label><input v-model="confirmed" type="checkbox"> 我确认有权将这个文件公开分享</label>
         <PButton type="submit" :loading="busy" :disabled="!file || !confirmed || (!!session && session.status !== 'uploading')">{{ session?.status === 'uploading' ? '继续本次上传' : '上传并公开文件' }}</PButton>
@@ -32,14 +33,14 @@ import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PInput from '@/components/ui/PInput.vue'
 
-const props = defineProps<{ workId: string; title: string; replaceAsset?: CatalogResource }>()
-const idSuffix = props.replaceAsset ? `-${props.replaceAsset.id}` : ''
+const props = defineProps<{ workId: string; title: string; editionId?: string; initialFile?: File | null; initialLanguage?: string; replaceAsset?: CatalogResource }>()
+const idSuffix = `-${props.replaceAsset?.id || props.editionId || props.workId}`
 const emit = defineEmits<{ ready: [] }>()
 const auth = useAuthStore()
-const storageKey = `atoman:book-upload:${auth.user?.uuid}:${props.workId}${props.replaceAsset ? ':' + props.replaceAsset.id : ''}`
-const file = ref<File | null>(null)
+const storageKey = `atoman:book-upload:${auth.user?.uuid}:${props.workId}:${props.replaceAsset?.id || props.editionId || 'legacy'}`
+const file = ref<File | null>(props.initialFile || null)
 const fileInput = ref<HTMLInputElement | null>(null)
-const language = ref('')
+const language = ref(props.initialLanguage || '')
 const confirmed = ref(false)
 const busy = ref(false)
 const percent = ref(0)
@@ -54,6 +55,7 @@ let controller: AbortController | undefined
 let timer: ReturnType<typeof setTimeout> | undefined
 let alive = true
 const pending = computed(() => !!session.value && ['uploaded', 'scanning', 'completing'].includes(session.value.status))
+const unsubmitted = computed(() => !!file.value && !pending.value && session.value?.status !== 'ready')
 const statusText = computed(() => {
   const status = session.value?.status
   if (status === 'ready') return '文件已公开，可以开始阅读。'
@@ -94,7 +96,8 @@ async function upload() {
       if (file.value.name.split('.').pop()?.toLowerCase() !== props.replaceAsset.format) throw new Error('替换文件必须与原文件格式相同。不同格式请创建独立电子书。')
       resource.value = props.replaceAsset
     }
-    if (!resource.value) resource.value = await createCatalogResource(props.workId, { title: props.title, language: language.value.trim(), format: file.value.name.split('.').pop()!.toLowerCase() as CatalogResource['format'] })
+    if (!props.replaceAsset && !props.editionId) throw new Error('请先确认文件所属的版本／译本。')
+    if (!resource.value) resource.value = await createCatalogResource(props.workId, { edition_id: props.editionId, title: props.title, language: language.value.trim(), format: file.value.name.split('.').pop()!.toLowerCase() as CatalogResource['format'] })
     if (!alive) return
     if (!session.value) session.value = await createResourceUpload(resource.value.id, file.value, confirmed.value)
     if (!alive) return
@@ -131,11 +134,11 @@ async function checkStatus() {
 }
 function leave(value: boolean) { leaveOpen.value = false; resolveLeave?.(value); resolveLeave = undefined }
 onBeforeRouteLeave(() => {
-  if (!busy.value) return true
+  if (!busy.value && !unsubmitted.value) return true
   leaveOpen.value = true
   return new Promise<boolean>(resolve => { resolveLeave = resolve })
 })
-function beforeUnload(event: BeforeUnloadEvent) { if (busy.value) { event.preventDefault(); event.returnValue = '' } }
+function beforeUnload(event: BeforeUnloadEvent) { if (busy.value || unsubmitted.value) { event.preventDefault(); event.returnValue = '' } }
 onMounted(async () => {
   window.addEventListener('beforeunload', beforeUnload)
   let saved: string | null = null

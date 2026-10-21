@@ -49,7 +49,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, getCurrentInstance } from 'vue'
+import { useRoute } from 'vue-router'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import { SPACE_LABELS } from './spaceConstants'
 
@@ -75,8 +76,13 @@ const emit = defineEmits<{
   (e: 'back'): void
 }>()
 
+const instance = getCurrentInstance()
+const hasRouter = Boolean(instance?.appContext.config.globalProperties.$router)
+const route = hasRouter ? useRoute() : undefined
+
 const displayLabel = computed(() => {
   if (props.title) return props.title
+  if (route?.path === '/me') return '个人中心'
   const key = props.currentSpace?.toLowerCase() || 'music'
   return SPACE_LABELS[key] || props.currentSpace || 'Atoman'
 })

@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body" :disabled="!teleport || isTest">
     <Transition name="m-sheet">
-      <div v-if="modelValue" class="m-sheet" role="dialog" aria-modal="true">
+      <div v-if="modelValue" class="m-sheet" role="dialog" aria-modal="true" v-bind="$attrs">
         <div class="m-sheet__backdrop" @click="handleClose" />
         <div class="m-sheet__panel">
           <div class="m-sheet__handle-wrapper">
@@ -28,6 +28,12 @@
     </Transition>
   </Teleport>
 </template>
+
+<script lang="ts">
+export default {
+  inheritAttrs: false,
+}
+</script>
 
 <script setup lang="ts">
 import MIcon from './MIcon.vue'
@@ -63,7 +69,7 @@ function handleClose() {
 .m-sheet {
   position: fixed;
   inset: 0;
-  z-index: var(--a-z-player-sheet, 740);
+  z-index: 1050;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;

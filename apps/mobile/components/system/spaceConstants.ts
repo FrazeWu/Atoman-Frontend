@@ -24,6 +24,7 @@ export const SPACE_LABELS: Record<string, string> = {
   debate: '辩论',
   messages: '消息',
   studio: 'Studio',
+  me: '个人中心',
 }
 
 export const SPACE_PATHS: Record<string, string> = {

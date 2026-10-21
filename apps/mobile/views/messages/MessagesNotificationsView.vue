@@ -11,6 +11,7 @@
           type="button"
           class="notifications-header__mark-btn"
           data-testid="notifications-mark-read-btn"
+          data-test="notifications-mark-read-btn"
           @click="markAllAsRead"
         >
           <MIcon name="check" size="xs" />
@@ -42,7 +43,7 @@
           class="notification-item"
           :class="{ 'is-unread': !item.read }"
           data-testid="notification-item"
-          @click="item.read = true"
+          @click="handleNotificationClick(item)"
         >
           <div class="notification-item__icon-wrap">
             <MIcon :name="getIconName(item.category)" size="sm" />
@@ -73,8 +74,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { getActivePinia } from 'pinia'
 import MIcon from '@mobile/components/ui/MIcon.vue'
+import { useNotificationStore } from '@/stores/notification'
 
 export interface NotificationItem {
   id: string
@@ -93,6 +96,8 @@ const props = withDefaults(
     initialNotifications: undefined,
   }
 )
+
+const notifStore = getActivePinia() ? useNotificationStore() : null
 
 const defaultSampleNotifications: NotificationItem[] = [
   {
@@ -129,8 +134,48 @@ const defaultSampleNotifications: NotificationItem[] = [
   },
 ]
 
+function formatNotificationTime(timeStr?: string): string {
+  if (!timeStr) return ''
+  try {
+    const d = new Date(timeStr)
+    if (isNaN(d.getTime())) return timeStr
+    const diff = Date.now() - d.getTime()
+    if (diff < 60000) return '刚刚'
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+    return `${d.getMonth() + 1}/${d.getDate()}`
+  } catch {
+    return timeStr
+  }
+}
+
+function mapStoreNotification(n: any): NotificationItem {
+  return {
+    id: String(n.id),
+    title: n.title || n.actor_name || '新通知',
+    category: n.category || 'system',
+    content: n.content || n.message || '',
+    time: formatNotificationTime(n.created_at || n.time),
+    read: Boolean(n.is_read || n.read),
+  }
+}
+
 const notifications = ref<NotificationItem[]>(
-  props.initialNotifications ? [...props.initialNotifications] : defaultSampleNotifications
+  props.initialNotifications
+    ? [...props.initialNotifications]
+    : notifStore && notifStore.notifications.length > 0
+      ? notifStore.notifications.map(mapStoreNotification)
+      : defaultSampleNotifications
+)
+
+watch(
+  () => notifStore?.notifications,
+  (storeItems) => {
+    if (!props.initialNotifications && storeItems && storeItems.length > 0) {
+      notifications.value = storeItems.map(mapStoreNotification)
+    }
+  },
+  { deep: true, immediate: true }
 )
 
 const categories = [
@@ -157,9 +202,45 @@ const filteredNotifications = computed(() => {
   return notifications.value.filter((n) => n.category === activeCategory.value)
 })
 
-function markAllAsRead() {
+async function markAllAsRead() {
   notifications.value = notifications.value.map((n) => ({ ...n, read: true }))
+  try {
+    if (notifStore) {
+      if (typeof notifStore.markAllRead === 'function') {
+        await notifStore.markAllRead()
+      } else if (typeof (notifStore as any).markAllAsRead === 'function') {
+        await (notifStore as any).markAllAsRead()
+      }
+    }
+  } catch {
+    // Graceful fallback
+  }
 }
+
+function handleNotificationClick(item: NotificationItem) {
+  item.read = true
+  try {
+    if (notifStore) {
+      if (typeof notifStore.markRead === 'function') {
+        void notifStore.markRead(Number(item.id) || item.id as any)
+      } else if (typeof (notifStore as any).markAsRead === 'function') {
+        void (notifStore as any).markAsRead(item.id)
+      }
+    }
+  } catch {
+    // Graceful fallback
+  }
+}
+
+onMounted(() => {
+  if (!props.initialNotifications && notifStore) {
+    if (typeof notifStore.fetchNotifications === 'function') {
+      void notifStore.fetchNotifications()
+    } else if (typeof (notifStore as any).loadNotifications === 'function') {
+      void (notifStore as any).loadNotifications()
+    }
+  }
+})
 
 function getIconName(cat: string): string {
   if (cat === 'like') return 'heart'

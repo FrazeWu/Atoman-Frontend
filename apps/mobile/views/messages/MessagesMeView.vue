@@ -1,112 +1,129 @@
 <template>
   <div class="messages-me-view">
-    <!-- Header -->
-    <header class="messages-me-header">
-      <h1 class="messages-me-title">消息设置</h1>
-      <p class="messages-me-subtitle">管理即时私信、通知推送与隐私权限</p>
-    </header>
+    <!-- Unauthenticated Guest State -->
+    <div v-if="authStore && !authStore.isAuthenticated" class="messages-me-guest-wrap">
+      <MGuestCard
+        title="登录查看消息档案"
+        description="登录后可与创作者交流、接收系统通知并管理互动记录。"
+        redirect="/inbox/me"
+      />
+    </div>
 
-    <!-- Stats Card -->
-    <section class="messages-stats-card" data-testid="messages-stats-card">
-      <div class="messages-stats-grid">
-        <div class="messages-stat-item">
-          <span class="messages-stat-item__value">{{ stats.unreadDMs }}</span>
-          <span class="messages-stat-item__label">未读私信</span>
-        </div>
-        <div class="messages-stat-item">
-          <span class="messages-stat-item__value">{{ stats.unreadNotifications }}</span>
-          <span class="messages-stat-item__label">未读通知</span>
-        </div>
-        <div class="messages-stat-item">
-          <span class="messages-stat-item__value">{{ stats.blacklistCount }}</span>
-          <span class="messages-stat-item__label">黑名单</span>
-        </div>
-      </div>
-    </section>
+    <template v-else>
+      <!-- Header -->
+      <header class="messages-me-header">
+        <h1 class="messages-me-title">消息设置</h1>
+        <p class="messages-me-subtitle">管理即时私信、通知推送与隐私权限</p>
+      </header>
 
-    <!-- Notification Preferences -->
-    <section class="messages-settings-section">
-      <h2 class="messages-settings-section__title">通知提醒</h2>
-      <div class="messages-settings-card">
-        <div class="messages-setting-row">
-          <div class="messages-setting-row__info">
-            <span class="messages-setting-row__label">消息免打扰</span>
-            <span class="messages-setting-row__desc">开启后将不再接收桌面与移动端横幅振动提示</span>
+      <!-- Stats Card -->
+      <section class="messages-stats-card" data-testid="messages-stats-card">
+        <div class="messages-stats-grid">
+          <div class="messages-stat-item">
+            <span class="messages-stat-item__value">{{ stats.unreadDMs }}</span>
+            <span class="messages-stat-item__label">未读私信</span>
           </div>
-          <button
-            type="button"
-            class="messages-switch"
-            :class="{ 'is-on': dndEnabled }"
-            data-testid="dnd-toggle-btn"
-            @click="dndEnabled = !dndEnabled"
-          >
-            <span class="messages-switch__handle" />
-          </button>
-        </div>
-
-        <div class="messages-setting-row">
-          <div class="messages-setting-row__info">
-            <span class="messages-setting-row__label">系统公告推送</span>
-            <span class="messages-setting-row__desc">接收平台功能迭代与版本升级通知</span>
+          <div class="messages-stat-item">
+            <span class="messages-stat-item__value">{{ stats.unreadNotifications }}</span>
+            <span class="messages-stat-item__label">未读通知</span>
           </div>
-          <button
-            type="button"
-            class="messages-switch"
-            :class="{ 'is-on': systemAnnounceEnabled }"
-            @click="systemAnnounceEnabled = !systemAnnounceEnabled"
-          >
-            <span class="messages-switch__handle" />
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Privacy & Permissions -->
-    <section class="messages-settings-section">
-      <h2 class="messages-settings-section__title">隐私与权限</h2>
-      <div class="messages-settings-card">
-        <div class="messages-setting-row">
-          <div class="messages-setting-row__info">
-            <span class="messages-setting-row__label">谁可以发私信给我</span>
-            <span class="messages-setting-row__desc">{{ dmPermissionLabel }}</span>
+          <div class="messages-stat-item">
+            <span class="messages-stat-item__value">{{ stats.blacklistCount }}</span>
+            <span class="messages-stat-item__label">黑名单</span>
           </div>
-          <button
-            type="button"
-            class="messages-setting-action-btn"
-            @click="togglePermission"
-          >
-            切换权限
-          </button>
         </div>
+      </section>
 
-        <div class="messages-setting-row">
-          <div class="messages-setting-row__info">
-            <span class="messages-setting-row__label">黑名单用户</span>
-            <span class="messages-setting-row__desc">已屏蔽 {{ stats.blacklistCount }} 位用户</span>
+      <!-- Notification Preferences -->
+      <section class="messages-settings-section">
+        <h2 class="messages-settings-section__title">通知提醒</h2>
+        <div class="messages-settings-card">
+          <div class="messages-setting-row">
+            <div class="messages-setting-row__info">
+              <span class="messages-setting-row__label">消息免打扰</span>
+              <span class="messages-setting-row__desc">开启后将不再接收桌面与移动端横幅振动提示</span>
+            </div>
+            <button
+              type="button"
+              class="messages-switch"
+              :class="{ 'is-on': dndEnabled }"
+              data-testid="dnd-toggle-btn"
+              @click="dndEnabled = !dndEnabled"
+            >
+              <span class="messages-switch__handle" />
+            </button>
           </div>
-          <span class="messages-setting-row__extra">管理</span>
-        </div>
-      </div>
-    </section>
 
-    <!-- Cleanup Actions -->
-    <section class="messages-settings-section">
-      <h2 class="messages-settings-section__title">数据与维护</h2>
-      <div class="messages-settings-card">
-        <div class="messages-setting-row" @click="clearReadCache">
-          <div class="messages-setting-row__info">
-            <span class="messages-setting-row__label">清理已读消息缓存</span>
-            <span class="messages-setting-row__desc">释放本地储存，不影响云端历史</span>
+          <div class="messages-setting-row">
+            <div class="messages-setting-row__info">
+              <span class="messages-setting-row__label">系统公告推送</span>
+              <span class="messages-setting-row__desc">接收平台功能迭代与版本升级通知</span>
+            </div>
+            <button
+              type="button"
+              class="messages-switch"
+              :class="{ 'is-on': systemAnnounceEnabled }"
+              @click="systemAnnounceEnabled = !systemAnnounceEnabled"
+            >
+              <span class="messages-switch__handle" />
+            </button>
           </div>
-          <span class="messages-setting-row__extra">{{ clearedCache ? '已清理' : '立即清理' }}</span>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <!-- Privacy & Permissions -->
+      <section class="messages-settings-section">
+        <h2 class="messages-settings-section__title">隐私与权限</h2>
+        <div class="messages-settings-card">
+          <div class="messages-setting-row">
+            <div class="messages-setting-row__info">
+              <span class="messages-setting-row__label">谁可以发私信给我</span>
+              <span class="messages-setting-row__desc">{{ dmPermissionLabel }}</span>
+            </div>
+            <button
+              type="button"
+              class="messages-setting-action-btn"
+              @click="togglePermission"
+            >
+              切换权限
+            </button>
+          </div>
+
+          <div class="messages-setting-row">
+            <div class="messages-setting-row__info">
+              <span class="messages-setting-row__label">黑名单用户</span>
+              <span class="messages-setting-row__desc">已屏蔽 {{ stats.blacklistCount }} 位用户</span>
+            </div>
+            <span class="messages-setting-row__extra">管理</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cleanup Actions -->
+      <section class="messages-settings-section">
+        <h2 class="messages-settings-section__title">数据与维护</h2>
+        <div class="messages-settings-card">
+          <div class="messages-setting-row" @click="clearReadCache">
+            <div class="messages-setting-row__info">
+              <span class="messages-setting-row__label">清理已读消息缓存</span>
+              <span class="messages-setting-row__desc">释放本地储存，不影响云端历史</span>
+            </div>
+            <span class="messages-setting-row__extra">{{ clearedCache ? '已清理' : '立即清理' }}</span>
+          </div>
+        </div>
+      </section>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { getActivePinia } from 'pinia'
+import MGuestCard from '@mobile/components/ui/MGuestCard.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useDMStore } from '@/stores/dm'
+import { useNotificationStore } from '@/stores/notification'
+import { useUserBlocksStore } from '@/stores/userBlocks'
 
 export interface MessagesStats {
   unreadDMs: number
@@ -123,6 +140,19 @@ const props = withDefaults(
   }
 )
 
+const hasPinia = computed(() => Boolean(getActivePinia()))
+const authStore = getActivePinia() ? useAuthStore() : null
+const dmStore = getActivePinia() ? useDMStore() : null
+const notifStore = getActivePinia() ? useNotificationStore() : null
+let blocksStore: ReturnType<typeof useUserBlocksStore> | null = null
+try {
+  if (getActivePinia()) {
+    blocksStore = useUserBlocksStore()
+  }
+} catch {
+  // Graceful fallback
+}
+
 const defaultStats: MessagesStats = {
   unreadDMs: 2,
   unreadNotifications: 5,
@@ -130,7 +160,13 @@ const defaultStats: MessagesStats = {
 }
 
 const stats = ref<MessagesStats>(
-  props.initialStats ? { ...props.initialStats } : defaultStats
+  props.initialStats
+    ? { ...props.initialStats }
+    : {
+        unreadDMs: dmStore?.dmUnread ?? defaultStats.unreadDMs,
+        unreadNotifications: notifStore?.unreadCount ?? defaultStats.unreadNotifications,
+        blacklistCount: blocksStore?.blockedUsers?.length ?? defaultStats.blacklistCount,
+      }
 )
 
 watch(
@@ -141,6 +177,20 @@ watch(
     }
   },
   { deep: true }
+)
+
+watch(
+  [() => dmStore?.dmUnread, () => notifStore?.unreadCount, () => blocksStore?.blockedUsers?.length],
+  ([dmUnread, notifUnread, blockedCount]) => {
+    if (!props.initialStats) {
+      stats.value = {
+        unreadDMs: dmUnread ?? defaultStats.unreadDMs,
+        unreadNotifications: notifUnread ?? defaultStats.unreadNotifications,
+        blacklistCount: blockedCount ?? defaultStats.blacklistCount,
+      }
+    }
+  },
+  { immediate: true }
 )
 
 const dndEnabled = ref(false)
@@ -162,6 +212,13 @@ function clearReadCache() {
     clearedCache.value = false
   }, 2000)
 }
+
+onMounted(() => {
+  if (authStore?.isAuthenticated && !props.initialStats) {
+    void dmStore?.reconcileFromServer?.().catch(() => {})
+    void notifStore?.fetchNotifications?.().catch(() => {})
+  }
+})
 </script>
 
 <style scoped>
@@ -173,6 +230,10 @@ function clearReadCache() {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.messages-me-guest-wrap {
+  padding-top: 16px;
 }
 
 .messages-me-header {

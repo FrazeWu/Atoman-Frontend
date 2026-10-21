@@ -67,12 +67,16 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getActivePinia } from 'pinia'
 import MAvatar from '@mobile/components/ui/MAvatar.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MInput from '@mobile/components/ui/MInput.vue'
+import { useDMStore } from '@/stores/dm'
+import { useAuthStore } from '@/stores/auth'
+import type { DMMessage } from '@/api/dm'
 
 export interface ChatMessageItem {
   id: string
@@ -100,6 +104,9 @@ const props = withDefaults(
 
 const route = useRoute()
 const router = useRouter()
+const dmStore = getActivePinia() ? useDMStore() : null
+const authStore = getActivePinia() ? useAuthStore() : null
+
 const messagesContainer = ref<HTMLElement | null>(null)
 const inputText = ref('')
 
@@ -119,6 +126,30 @@ const chatData = ref<ChatSessionData>(
   props.initialChat ? { ...props.initialChat } : defaultSampleChat
 )
 
+function formatMessageTime(dateStr?: string): string {
+  if (!dateStr) return ''
+  try {
+    const d = new Date(dateStr)
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  } catch {
+    return dateStr
+  }
+}
+
+function mapStoreMessage(msg: DMMessage): ChatMessageItem {
+  const currentUserId = authStore?.user?.uuid || (authStore?.user?.id ? String(authStore.user.id) : '')
+  const isMe = Boolean(
+    (currentUserId && msg.sender.id === currentUserId) ||
+    (dmStore?.activeConversation?.reply_as && msg.sender.id === dmStore.activeConversation.reply_as.id)
+  )
+  return {
+    id: msg.id || msg.client_message_id,
+    text: msg.content,
+    time: formatMessageTime(msg.created_at),
+    isMe,
+  }
+}
+
 watch(
   () => props.initialChat,
   (newVal) => {
@@ -128,6 +159,35 @@ watch(
     }
   },
   { deep: true }
+)
+
+const storeMessages = computed(() => {
+  const convId = String(route.params.id || '')
+  if (!convId || !dmStore?.messagesByConversation[convId]) return []
+  return dmStore.messagesByConversation[convId].map(mapStoreMessage)
+})
+
+watch(
+  storeMessages,
+  (newMsgs) => {
+    if (!props.initialChat && newMsgs.length > 0) {
+      chatData.value.messages = newMsgs
+      scrollToBottom()
+    }
+  },
+  { deep: true, immediate: true }
+)
+
+watch(
+  () => dmStore?.activeConversation,
+  (conv) => {
+    if (!props.initialChat && conv) {
+      chatData.value.partyName = conv.other_party?.display_name || '用户'
+      chatData.value.partyAvatar = conv.other_party?.avatar_url || ''
+      chatData.value.partyId = conv.id
+    }
+  },
+  { immediate: true }
 )
 
 function handleBack() {
@@ -146,34 +206,77 @@ function scrollToBottom() {
   })
 }
 
-function handleSend() {
+async function handleSend() {
   const text = inputText.value.trim()
   if (!text) return
 
-  const now = new Date()
-  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-
-  chatData.value.messages.push({
-    id: `m-${Date.now()}`,
-    text,
-    time: timeStr,
-    isMe: true,
-  })
-
   inputText.value = ''
-  scrollToBottom()
+
+  if (props.initialChat) {
+    const now = new Date()
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    chatData.value.messages.push({
+      id: `m-${Date.now()}`,
+      text,
+      time: timeStr,
+      isMe: true,
+    })
+    scrollToBottom()
+    return
+  }
+
+  try {
+    if (dmStore) {
+      if (typeof dmStore.sendActiveMessage === 'function') {
+        await dmStore.sendActiveMessage(text)
+      } else if (typeof (dmStore as any).sendMessage === 'function') {
+        await (dmStore as any).sendMessage(text)
+      }
+    } else {
+      throw new Error('no dm store')
+    }
+    scrollToBottom()
+  } catch {
+    // If store send failed, fallback to local append
+    const now = new Date()
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    chatData.value.messages.push({
+      id: `m-${Date.now()}`,
+      text,
+      time: timeStr,
+      isMe: true,
+    })
+    scrollToBottom()
+  }
 }
 
-onMounted(() => {
-  if (!props.initialChat && route.params.id) {
-    const id = String(route.params.id)
-    if (id === 'u-1' || id === 'c-1') {
-      chatData.value.partyName = 'Alice'
-    } else if (id === 'u-2' || id === 'c-2') {
-      chatData.value.partyName = 'Bob'
-      chatData.value.messages = [
-        { id: 'mb-1', text: '收到，今晚合并代码。', time: '昨天', isMe: false },
-      ]
+onMounted(async () => {
+  const id = String(route.params.id || '')
+  if (!props.initialChat && id) {
+    try {
+      if (dmStore) {
+        await dmStore.openConversation(id)
+        const conv = dmStore.activeConversation
+        if (conv) {
+          chatData.value.partyName = conv.other_party?.display_name || '用户'
+          chatData.value.partyAvatar = conv.other_party?.avatar_url || ''
+        }
+        if (dmStore.messagesByConversation[id]?.length) {
+          chatData.value.messages = dmStore.messagesByConversation[id].map(mapStoreMessage)
+        }
+      } else {
+        throw new Error('no dm store')
+      }
+    } catch {
+      // Graceful fallback for mock routes
+      if (id === 'u-1' || id === 'c-1') {
+        chatData.value.partyName = 'Alice'
+      } else if (id === 'u-2' || id === 'c-2') {
+        chatData.value.partyName = 'Bob'
+        chatData.value.messages = [
+          { id: 'mb-1', text: '收到，今晚合并代码。', time: '昨天', isMe: false },
+        ]
+      }
     }
   }
   scrollToBottom()

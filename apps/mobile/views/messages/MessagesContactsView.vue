@@ -61,11 +61,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { getActivePinia } from 'pinia'
 import MAvatar from '@mobile/components/ui/MAvatar.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MInput from '@mobile/components/ui/MInput.vue'
+import { useDMStore } from '@/stores/dm'
 
 export interface ContactItem {
   id: string
@@ -85,6 +87,7 @@ const props = withDefaults(
 )
 
 const router = useRouter()
+const dmStore = getActivePinia() ? useDMStore() : null
 const searchQuery = ref('')
 
 const defaultSampleContacts: ContactItem[] = [
@@ -108,6 +111,29 @@ watch(
   { deep: true }
 )
 
+watch(
+  () => dmStore?.conversationsById,
+  (convsById) => {
+    if (!props.initialContacts && convsById) {
+      const partyMap = new Map<string, ContactItem>()
+      Object.values(convsById).forEach((c) => {
+        if (c.other_party && !partyMap.has(c.other_party.id)) {
+          partyMap.set(c.other_party.id, {
+            id: c.other_party.id,
+            name: c.other_party.display_name || '用户',
+            avatar: c.other_party.avatar_url || '',
+            bio: c.mailbox?.display_name ? `来自 ${c.mailbox.display_name}` : undefined,
+          })
+        }
+      })
+      if (partyMap.size > 0) {
+        contacts.value = Array.from(partyMap.values())
+      }
+    }
+  },
+  { immediate: true }
+)
+
 const filteredContacts = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
   if (!query) return contacts.value
@@ -119,6 +145,12 @@ const filteredContacts = computed(() => {
 function startChat(id: string) {
   router.push(`/inbox/chat/${id}`)
 }
+
+onMounted(() => {
+  if (!props.initialContacts && dmStore) {
+    void dmStore.reconcileFromServer?.().catch(() => {})
+  }
+})
 </script>
 
 <style scoped>

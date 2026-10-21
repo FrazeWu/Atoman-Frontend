@@ -154,12 +154,12 @@ async function loadConversations() {
   try {
     const dmStore = useDMStore()
     await dmStore.reconcileFromServer()
-    if (dmStore.conversations && dmStore.conversations.length > 0) {
-      conversations.value = dmStore.conversations.map((c) => ({
-        id: c.conversation_id,
-        partyName: c.other_username || '用户',
-        avatar: '',
-        lastMessage: c.preview || '',
+    if (dmStore.conversations) {
+      conversations.value = dmStore.conversations.map((c: any) => ({
+        id: c.id || c.conversation_id,
+        partyName: c.other_party?.display_name || c.other_username || '用户',
+        avatar: c.other_party?.avatar_url || '',
+        lastMessage: c.last_message_preview || c.preview || '',
         unreadCount: c.unread_count || 0,
         updatedAt: c.last_message_at
           ? new Date(c.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })

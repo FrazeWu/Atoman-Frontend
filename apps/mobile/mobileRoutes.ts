@@ -58,7 +58,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	{
 		path: "/inbox/me",
 		component: () => import("./views/messages/MessagesMeView.vue"),
-		meta: requiresAuth,
+		meta: { requiresAuth: true, restoreSession: true },
 	},
 	{
 		path: "/inbox/chat/:id",

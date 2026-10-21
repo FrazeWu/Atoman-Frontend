@@ -69,6 +69,18 @@ export const mobileRoutes: RouteRecordRaw[] = [
 		component: () => import("./views/books/BooksShelfView.vue"),
 	},
 	{
+		path: "/books/notes",
+		component: () => import("./views/books/BooksNotesView.vue"),
+	},
+	{
+		path: "/books/me",
+		component: () => import("./views/books/BooksMeView.vue"),
+	},
+	{
+		path: "/books/work/:id",
+		component: () => import("./views/books/BookDetailMobileView.vue"),
+	},
+	{
 		path: "/books/read/:assetId",
 		component: () => import("@/views/books/BookReaderView.vue"),
 	},

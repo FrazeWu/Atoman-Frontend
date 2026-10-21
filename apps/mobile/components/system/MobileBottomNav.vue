@@ -24,7 +24,14 @@
 import { computed, getCurrentInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MIcon from '@mobile/components/ui/MIcon.vue'
-import { SPACE_TABS, type NavTabItem } from './spaceConstants'
+import { SPACE_TABS, type NavTabItem } from './bottomNavConstants'
+
+const DEFAULT_MUSIC_TABS: NavTabItem[] = [
+  { key: 'discover', label: '发现', icon: 'compass', path: '/music' },
+  { key: 'search', label: '搜索', icon: 'search', path: '/music/search' },
+  { key: 'playlists', label: '歌单', icon: 'playlists', path: '/music/playlists' },
+  { key: 'me', label: '我的', icon: 'person', path: '/music/me' },
+]
 
 const props = withDefaults(
   defineProps<{
@@ -49,7 +56,8 @@ const router = hasRouter ? useRouter() : undefined
 
 const tabs = computed<NavTabItem[]>(() => {
   const key = props.currentSpace?.toLowerCase() || 'music'
-  return SPACE_TABS[key] || SPACE_TABS.music
+  const map = SPACE_TABS || {}
+  return map[key] || map.music || DEFAULT_MUSIC_TABS
 })
 
 const isTabActive = (tab: NavTabItem) => {

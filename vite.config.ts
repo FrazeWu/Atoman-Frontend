@@ -79,6 +79,8 @@ export default defineConfig(({ mode }) => {
 				output: {
 					experimentalMinChunkSize: 15000,
 					manualChunks(id) {
+						if (id.includes("spaceConstants") || id.includes("bottomNavConstants"))
+							return "mobile-space-constants";
 						if (id.includes("lucide-vue-next")) return "ui-icons";
 						if (id.includes("node_modules/highlight.js")) return "highlight";
 						if (id.includes("node_modules/marked/")) return "markdown-runtime";

@@ -78,6 +78,8 @@ export default defineConfig(({ mode }) => {
 			rollupOptions: {
 				output: {
 					manualChunks(id) {
+						if (id.includes("spaceConstants") || id.includes("bottomNavConstants"))
+							return "mobile-space-constants";
 						if (id.includes("node_modules/highlight.js")) return "highlight";
 							if (id.includes("node_modules/marked/")) return "markdown-runtime";
 						if (

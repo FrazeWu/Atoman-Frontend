@@ -1,105 +1,122 @@
 <template>
   <div class="feed-me-view">
-    <!-- Header -->
-    <header class="feed-me-header">
-      <h1 class="feed-me-title">我的动态</h1>
-    </header>
+    <!-- Unauthenticated Guest State -->
+    <div v-if="!props.initialProfile && authStore && !authStore.isAuthenticated" class="feed-me-guest-wrap">
+      <MGuestCard
+        title="登录查看订阅档案"
+        description="登录后可管理 RSS 订阅源、同步星标收藏与阅读时长。"
+        redirect="/feed/me"
+      />
+    </div>
 
-    <!-- Profile & Stats Card -->
-    <section class="feed-profile-card" data-testid="feed-profile-card">
-      <div class="feed-profile-card__user">
-        <div class="feed-profile-card__avatar">
-          <span>{{ profile.name.slice(0, 1) }}</span>
-        </div>
-        <div class="feed-profile-card__info">
-          <h2 class="feed-profile-card__name">{{ profile.name }}</h2>
-          <p class="feed-profile-card__bio">{{ profile.bio || '用 RSS 捕获世界的细微震颤。' }}</p>
-        </div>
-      </div>
+    <template v-else>
+      <!-- Header -->
+      <header class="feed-me-header">
+        <h1 class="feed-me-title">我的动态</h1>
+      </header>
 
-      <!-- 4 Stats Grid -->
-      <div class="feed-stats-grid">
-        <div class="feed-stat-item">
-          <span class="feed-stat-item__value">{{ profile.stats.sourcesCount }}</span>
-          <span class="feed-stat-item__label">关注源</span>
-        </div>
-        <div class="feed-stat-item">
-          <span class="feed-stat-item__value">{{ profile.stats.starredCount }}</span>
-          <span class="feed-stat-item__label">收藏文章</span>
-        </div>
-        <div class="feed-stat-item">
-          <span class="feed-stat-item__value">{{ profile.stats.readCount }}</span>
-          <span class="feed-stat-item__label">已读文章</span>
-        </div>
-        <div class="feed-stat-item">
-          <span class="feed-stat-item__value">{{ profile.stats.readingHours }}h</span>
-          <span class="feed-stat-item__label">阅读时长</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- Shortcuts & Manage -->
-    <section class="feed-shortcuts-section">
-      <h2 class="feed-shortcuts-section__title">订阅管理与工具</h2>
-      <div class="feed-shortcuts-list">
-        <router-link
-          to="/feed/sources"
-          class="feed-shortcut-item"
-          data-testid="feed-sources-manager-link"
-        >
-          <div class="feed-shortcut-item__left">
-            <div class="feed-shortcut-item__icon">
-              <MIcon name="antenna" size="sm" />
-            </div>
-            <div>
-              <div class="feed-shortcut-item__name">订阅源管理</div>
-              <div class="feed-shortcut-item__sub">管理所有关注的 RSS 站点与播客</div>
-            </div>
+      <!-- Profile & Stats Card -->
+      <section class="feed-profile-card" data-testid="feed-profile-card">
+        <div class="feed-profile-card__user">
+          <div class="feed-profile-card__avatar">
+            <span>{{ profile.name.slice(0, 1) }}</span>
           </div>
-          <div class="feed-shortcut-item__right">
-            <span class="feed-shortcut-item__badge">{{ profile.stats.sourcesCount }} 个源</span>
-            <MIcon name="chevron-down" size="xs" class="feed-shortcut-item__arrow" />
+          <div class="feed-profile-card__info">
+            <h2 class="feed-profile-card__name">{{ profile.name }}</h2>
+            <p class="feed-profile-card__bio">{{ profile.bio || '用 RSS 捕获世界的细微震颤。' }}</p>
           </div>
-        </router-link>
-
-        <router-link to="/feed/starred" class="feed-shortcut-item">
-          <div class="feed-shortcut-item__left">
-            <div class="feed-shortcut-item__icon">
-              <MIcon name="bookmark" size="sm" />
-            </div>
-            <div>
-              <div class="feed-shortcut-item__name">收藏夹管理</div>
-              <div class="feed-shortcut-item__sub">查看已收藏的高价值文章</div>
-            </div>
-          </div>
-          <div class="feed-shortcut-item__right">
-            <span class="feed-shortcut-item__badge">{{ profile.stats.starredCount }} 篇</span>
-            <MIcon name="chevron-down" size="xs" class="feed-shortcut-item__arrow" />
-          </div>
-        </router-link>
-      </div>
-    </section>
-
-    <!-- Data Actions -->
-    <section class="feed-data-section">
-      <h2 class="feed-shortcuts-section__title">数据与偏好</h2>
-      <div class="feed-shortcuts-list">
-        <div class="feed-action-row" @click="handleOpmlExport">
-          <span class="feed-action-row__label">导出 OPML 文件</span>
-          <span class="feed-action-row__value">备份所有源</span>
         </div>
-        <div class="feed-action-row" @click="clearCache">
-          <span class="feed-action-row__label">清理文章已读缓存</span>
-          <span class="feed-action-row__value">{{ cacheCleared ? '已清理' : '释放空间' }}</span>
+
+        <!-- 4 Stats Grid -->
+        <div class="feed-stats-grid">
+          <div class="feed-stat-item">
+            <span class="feed-stat-item__value">{{ profile.stats.sourcesCount }}</span>
+            <span class="feed-stat-item__label">关注源</span>
+          </div>
+          <div class="feed-stat-item">
+            <span class="feed-stat-item__value">{{ profile.stats.starredCount }}</span>
+            <span class="feed-stat-item__label">收藏文章</span>
+          </div>
+          <div class="feed-stat-item">
+            <span class="feed-stat-item__value">{{ profile.stats.readCount }}</span>
+            <span class="feed-stat-item__label">已读文章</span>
+          </div>
+          <div class="feed-stat-item">
+            <span class="feed-stat-item__value">{{ profile.stats.readingHours }}h</span>
+            <span class="feed-stat-item__label">阅读时长</span>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <!-- Shortcuts & Manage -->
+      <section class="feed-shortcuts-section">
+        <h2 class="feed-shortcuts-section__title">订阅管理与工具</h2>
+        <div class="feed-shortcuts-list">
+          <router-link
+            to="/feed/sources"
+            class="feed-shortcut-item"
+            data-testid="feed-sources-manager-link"
+          >
+            <div class="feed-shortcut-item__left">
+              <div class="feed-shortcut-item__icon">
+                <MIcon name="antenna" size="sm" />
+              </div>
+              <div>
+                <div class="feed-shortcut-item__name">订阅源管理</div>
+                <div class="feed-shortcut-item__sub">管理所有关注的 RSS 站点与播客</div>
+              </div>
+            </div>
+            <div class="feed-shortcut-item__right">
+              <span class="feed-shortcut-item__badge">{{ profile.stats.sourcesCount }} 个源</span>
+              <MIcon name="chevron-down" size="xs" class="feed-shortcut-item__arrow" />
+            </div>
+          </router-link>
+
+          <router-link to="/feed/starred" class="feed-shortcut-item">
+            <div class="feed-shortcut-item__left">
+              <div class="feed-shortcut-item__icon">
+                <MIcon name="bookmark" size="sm" />
+              </div>
+              <div>
+                <div class="feed-shortcut-item__name">收藏夹管理</div>
+                <div class="feed-shortcut-item__sub">查看已收藏的高价值文章</div>
+              </div>
+            </div>
+            <div class="feed-shortcut-item__right">
+              <span class="feed-shortcut-item__badge">{{ profile.stats.starredCount }} 篇</span>
+              <MIcon name="chevron-down" size="xs" class="feed-shortcut-item__arrow" />
+            </div>
+          </router-link>
+        </div>
+      </section>
+
+      <!-- Data Actions -->
+      <section class="feed-data-section">
+        <h2 class="feed-shortcuts-section__title">数据与偏好</h2>
+        <div class="feed-shortcuts-list">
+          <div class="feed-action-row" @click="handleOpmlExport">
+            <span class="feed-action-row__label">导出 OPML 文件</span>
+            <span class="feed-action-row__value">备份所有源</span>
+          </div>
+          <div class="feed-action-row" @click="clearCache">
+            <span class="feed-action-row__label">清理文章已读缓存</span>
+            <span class="feed-action-row__value">{{ cacheCleared ? '已清理' : '释放空间' }}</span>
+          </div>
+        </div>
+      </section>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { getActivePinia } from 'pinia'
 import MIcon from '@mobile/components/ui/MIcon.vue'
+import MGuestCard from '@mobile/components/ui/MGuestCard.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
+import { useApi } from '@/composables/useApi'
+import { apiRequestResult } from '@/api/client'
 
 export interface FeedProfile {
   name: string
@@ -123,21 +140,45 @@ const props = withDefaults(
   }
 )
 
+const authStore = getActivePinia() ? useAuthStore() : null
+const feedStore = getActivePinia() ? useFeedStore() : null
+const api = useApi()
+
 const cacheCleared = ref(false)
+const starredCount = ref(0)
 
 const defaultProfile: FeedProfile = {
   name: '探索客',
   username: 'explorer_feed',
   bio: '用 RSS 捕获世界的细微震颤。',
   stats: {
-    sourcesCount: 24,
-    starredCount: 68,
-    readCount: 312,
-    readingHours: 42,
+    sourcesCount: 0,
+    starredCount: 0,
+    readCount: 0,
+    readingHours: 0,
   },
 }
 
-const profile = computed<FeedProfile>(() => props.initialProfile || defaultProfile)
+const profile = computed<FeedProfile>(() => {
+  if (props.initialProfile) return props.initialProfile
+  if (authStore?.isAuthenticated && authStore.user) {
+    const user = authStore.user
+    const subCount = feedStore?.subscriptions?.length ?? 0
+    return {
+      name: user.display_name || user.username || '探索客',
+      username: user.username || 'explorer',
+      bio: user.bio || '用 RSS 捕获世界的细微震颤。',
+      avatar: user.avatar_url || '',
+      stats: {
+        sourcesCount: subCount,
+        starredCount: starredCount.value,
+        readCount: 0,
+        readingHours: 0,
+      },
+    }
+  }
+  return defaultProfile
+})
 
 function handleOpmlExport() {
   // OPML export simulation or toast
@@ -149,6 +190,26 @@ function clearCache() {
     cacheCleared.value = false
   }, 2000)
 }
+
+onMounted(async () => {
+  if (authStore?.isAuthenticated) {
+    if (feedStore) {
+      void feedStore.fetchSubscriptions?.().catch(() => {})
+    }
+    try {
+      const res = await apiRequestResult(`${api.url}/feed/stars?limit=1`, {
+        headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : undefined,
+      })
+      if (res.ok && res.data) {
+        const data = res.data as any
+        const total = Number(data?.total ?? data?.data?.total ?? data?.meta?.total ?? 0)
+        starredCount.value = total
+      }
+    } catch {
+      // Graceful fallback
+    }
+  }
+})
 </script>
 
 <style scoped>
@@ -158,6 +219,13 @@ function clearCache() {
   padding: 16px 16px 96px;
   box-sizing: border-box;
   display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.feed-me-guest-wrap {
+  padding-top: 16px;
+}
   flex-direction: column;
   gap: 18px;
 }

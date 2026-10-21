@@ -72,9 +72,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { getActivePinia } from 'pinia'
 import MIcon from '@mobile/components/ui/MIcon.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useApi } from '@/composables/useApi'
+import { apiRequestResult } from '@/api/client'
 
 export interface StarredArticleItem {
   id: string
@@ -94,6 +98,8 @@ const props = withDefaults(
 )
 
 const router = useRouter()
+const api = useApi()
+const authStore = getActivePinia() ? useAuthStore() : null
 
 const defaultSampleStarred: StarredArticleItem[] = [
   {
@@ -167,6 +173,36 @@ function formatTime(isoString?: string): string {
     return '已收藏'
   }
 }
+
+async function loadStarredArticles() {
+  if (props.initialArticles || !authStore?.isAuthenticated) return
+  try {
+    const res = await apiRequestResult(`${api.url}/feed/stars?page=1&limit=50`, {
+      headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : undefined,
+    })
+    if (res.ok && res.data) {
+      const data = res.data as any
+      const itemsList = data?.items || data?.data?.items || []
+      if (Array.isArray(itemsList) && itemsList.length > 0) {
+        articles.value = itemsList.map((item: any) => ({
+          id: String(item.id),
+          title: item.title,
+          sourceName: item.source_title || 'RSS',
+          category: item.category || '全部',
+          savedAt: item.starred_at || item.created_at,
+        }))
+      } else if (authStore.isAuthenticated) {
+        articles.value = []
+      }
+    }
+  } catch {
+    // Graceful fallback
+  }
+}
+
+onMounted(() => {
+  void loadStarredArticles()
+})
 </script>
 
 <style scoped>

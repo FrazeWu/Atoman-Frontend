@@ -74,9 +74,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { getActivePinia } from 'pinia'
 import MIcon from '@mobile/components/ui/MIcon.vue'
+import { useFeedStore } from '@/stores/feed'
+import { useAuthStore } from '@/stores/auth'
 
 export interface FollowingArticleItem {
   id: string
@@ -98,6 +101,8 @@ const props = withDefaults(
 )
 
 const router = useRouter()
+const feedStore = getActivePinia() ? useFeedStore() : null
+const authStore = getActivePinia() ? useAuthStore() : null
 
 const defaultSampleArticles: FollowingArticleItem[] = [
   {
@@ -138,11 +143,28 @@ const defaultSampleArticles: FollowingArticleItem[] = [
   },
 ]
 
+function mapTimelineItem(item: any): FollowingArticleItem {
+  const fi = item.feed_item || item
+  return {
+    id: String(fi.id),
+    title: fi.title || '',
+    summary: fi.summary || fi.description || '',
+    sourceName: fi.source_title || 'RSS',
+    sourceAvatar: fi.source_avatar || '',
+    published_at: fi.published_at || item.published_at,
+    unread: !fi.is_read && !item.is_read,
+  }
+}
+
 const articles = ref<FollowingArticleItem[]>(
-  props.initialArticles ? [...props.initialArticles] : defaultSampleArticles
+  props.initialArticles
+    ? [...props.initialArticles]
+    : feedStore && feedStore.timeline.length > 0
+      ? feedStore.timeline.map(mapTimelineItem)
+      : defaultSampleArticles
 )
 
-const sourcesList = ref([
+const sourcesList = ref<{ id: string; name: string }[]>([
   { id: 'src-1', name: 'Evan You Blog' },
   { id: 'src-2', name: 'TypeScript Official' },
   { id: 'src-3', name: '前端技术周刊' },
@@ -157,6 +179,26 @@ watch(
     }
   },
   { deep: true }
+)
+
+watch(
+  () => feedStore?.timeline,
+  (timeline) => {
+    if (!props.initialArticles && timeline) {
+      articles.value = timeline.map(mapTimelineItem)
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => feedStore?.subscriptions,
+  (subs) => {
+    if (subs && subs.length > 0) {
+      sourcesList.value = subs.map((s) => ({ id: s.id, name: s.title || '未命名订阅源' }))
+    }
+  },
+  { immediate: true }
 )
 
 function openArticle(id: string) {
@@ -180,6 +222,24 @@ function formatTime(isoString?: string): string {
     return '近期'
   }
 }
+
+onMounted(async () => {
+  if (!props.initialArticles && feedStore) {
+    try {
+      await Promise.allSettled([
+        feedStore.fetchTimeline?.(),
+        feedStore.fetchSubscriptions?.(),
+      ])
+      if (feedStore.timeline?.length) {
+        articles.value = feedStore.timeline.map(mapTimelineItem)
+      } else if (authStore?.isAuthenticated) {
+        articles.value = []
+      }
+    } catch {
+      // Graceful fallback
+    }
+  }
+})
 </script>
 
 <style scoped>

@@ -30,6 +30,9 @@ export function normalizeSourceUrlForCard(url?: string, fallbackTitle?: string):
 export function buildSourceFaviconURL(sourceURL?: string): string {
   const parsed = parseSourceUrl(sourceURL?.trim() || '')
   if (!parsed || (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')) return ''
+  // Favicons are passive images: always request them over https so an
+  // http:// source URL cannot trigger mixed-content warnings on the page.
+  parsed.protocol = 'https:'
   return `${parsed.origin}/favicon.ico`
 }
 

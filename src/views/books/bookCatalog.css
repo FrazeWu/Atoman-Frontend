@@ -307,3 +307,133 @@
   color: var(--a-color-text, #1c1c1e);
   cursor: pointer;
 }
+
+/* Step 2 Summary Card */
+.book-catalog__summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 1rem 1.25rem;
+  background-color: var(--a-color-surface-muted, #f8fafc);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  box-shadow: none !important;
+}
+
+.book-catalog__summary-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--a-color-primary, #0066cc);
+}
+
+.book-catalog__summary-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--a-color-text, #1c1c1e);
+}
+
+.book-catalog__summary-authors {
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+.book-catalog__summary-original {
+  font-style: italic;
+  margin-left: 0.25rem;
+}
+
+.book-catalog__step-intro {
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary, #64748b);
+  margin: 0;
+}
+
+/* New Edition Form Card */
+.book-catalog__new-edition-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  background-color: var(--a-color-bg, #ffffff);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  box-shadow: none !important;
+}
+
+.book-catalog__date-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--a-color-text, #1c1c1e);
+}
+
+.book-catalog__chosen-box {
+  padding: 1rem;
+  background-color: var(--a-color-surface-muted, #f8fafc);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  margin: 0;
+}
+
+.book-catalog__chosen-box dt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--a-color-primary, #0066cc);
+  margin-bottom: 0.25rem;
+}
+
+.book-catalog__chosen-box dd {
+  font-size: 0.8125rem;
+  color: var(--a-color-text, #1c1c1e);
+  margin: 0;
+}
+
+.book-catalog__success-hint {
+  font-size: 0.8125rem;
+  color: var(--a-color-primary, #0066cc);
+  margin: 0;
+}
+
+/* Step 3 Resource Upload Section */
+.book-catalog__step3-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background-color: var(--a-color-bg, #ffffff);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  box-shadow: none !important;
+}
+
+.book-catalog__step3-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.book-catalog__step3-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--a-color-text, #1c1c1e);
+  margin: 0;
+}
+
+.book-catalog__step3-sub {
+  font-size: 0.875rem;
+  color: var(--a-color-text-secondary, #64748b);
+  margin: 0;
+}
+
+.book-catalog__step3-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.book-catalog__upload-wrap {
+  border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
+  padding-top: 1.25rem;
+}

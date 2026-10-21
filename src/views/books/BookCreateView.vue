@@ -175,37 +175,191 @@
       </div>
     </form>
     <form v-else-if="step === 2" class="book-catalog__form" @submit.prevent="save(true)">
-      <p>所属作品：<strong>{{ selectedWork?.title || title }}</strong> · {{ selectedWork?.authors.map(person => person.name).join(' / ') || authors }}</p>
-      <p>同一作品的不同出版版本、语言和译者都放在这里。请选择已有版本，或明确新建。</p>
+      <!-- 所属作品摘要卡片 -->
+      <div class="book-catalog__summary-card">
+        <div class="book-catalog__summary-badge">当前图书作品</div>
+        <div class="book-catalog__summary-title">{{ selectedWork?.title || title }}</div>
+        <div class="book-catalog__summary-authors">
+          {{ selectedWork?.authors.map(person => person.name).join(' / ') || authors }}
+          <span v-if="originalTitle" class="book-catalog__summary-original">· {{ originalTitle }}</span>
+        </div>
+      </div>
+
+      <p class="book-catalog__step-intro">同一作品的不同出版版本、语言和译者都放在这里。可选择已有版本，或录入新版本。</p>
+
       <fieldset class="book-catalog__fields" :disabled="busy">
-        <PInput v-if="selectedWork?.editions.length" id="create-edition-search" v-model="editionQuery" label="查找此作品的版本" placeholder="ISBN、译者、出版社或语言" />
-        <p v-if="selectedWork?.editions.length && !matchingEditions.length">没有找到符合条件的版本，可修改关键词或新建版本。</p>
-        <label v-for="edition in matchingEditions" :key="edition.id" class="book-catalog__choice"><input v-model="editionChoice" type="radio" name="edition" :value="edition.id" /><span>{{ edition.title || selectedWork?.title }}<small>{{ editionSummary(edition) }}</small></span></label>
-        <label class="book-catalog__choice"><input v-model="editionChoice" type="radio" name="edition" value="new" /> 新建版本／译本</label>
-        <template v-if="editionChoice === 'new'">
-          <PInput id="create-edition-title" v-model="editionTitle" label="版本书名（选填）" :placeholder="selectedWork?.title || title" />
-          <PInput id="create-edition-subtitle" v-model="subtitle" label="版本副标题（选填）" />
-          <PTextarea id="create-edition-translators" v-model="translators" label="译者（选填，每行一位）" :rows="2" />
-          <PInput id="create-edition-language" v-model="language" label="版本语言代码（选填）" placeholder="例如 zh 或 en" />
-          <PInput id="create-edition-publisher" v-model="publisher" label="出版社（选填）" />
-          <label>出版日期（选填，完整日期）<PMaskedDateInput v-model="publishedDate" /></label>
-          <PInput id="create-edition-statement" v-model="statement" label="版次（选填）" placeholder="例如 第 2 版、修订版" />
-          <PInput id="create-edition-isbn" v-model="isbn" label="ISBN（选填）" />
-          <PInput id="create-edition-pages" v-model="pages" label="页数（选填）" type="number" min="1" step="1" />
-          <PInput id="create-edition-cover" v-model="cover" label="封面图片地址（选填）" type="url" />
-        </template>
-        <dl v-else-if="chosenEdition"><dt>已选择版本（不会修改已有资料）</dt><dd>{{ editionSummary(chosenEdition) }}</dd></dl>
+        <PInput
+          v-if="selectedWork?.editions.length"
+          id="create-edition-search"
+          v-model="editionQuery"
+          label="查找此作品的版本"
+          placeholder="ISBN、译者、出版社或语言"
+        />
+        <p v-if="selectedWork?.editions.length && !matchingEditions.length" class="book-catalog__empty-hint">
+          没有找到符合条件的版本，可修改关键词或新建版本。
+        </p>
+
+        <div class="book-catalog__choices-container">
+          <label
+            v-for="edition in matchingEditions"
+            :key="edition.id"
+            class="book-catalog__choice"
+          >
+            <input
+              v-model="editionChoice"
+              type="radio"
+              name="edition"
+              :value="edition.id"
+            />
+            <div class="book-catalog__choice-body">
+              <span class="book-catalog__choice-title">{{ edition.title || selectedWork?.title }}</span>
+              <small>{{ editionSummary(edition) }}</small>
+            </div>
+          </label>
+
+          <label class="book-catalog__choice">
+            <input
+              v-model="editionChoice"
+              type="radio"
+              name="edition"
+              value="new"
+            />
+            <div class="book-catalog__choice-body">
+              <span class="book-catalog__choice-title">新建版本／译本</span>
+              <small>录入其他出版社、译者、精装版或外文原版</small>
+            </div>
+          </label>
+        </div>
+
+        <!-- 新建版本表单卡片 -->
+        <div v-if="editionChoice === 'new'" class="book-catalog__new-edition-card">
+          <PInput
+            id="create-edition-title"
+            v-model="editionTitle"
+            label="版本书名（选填）"
+            :placeholder="selectedWork?.title || title"
+          />
+          <PInput
+            id="create-edition-subtitle"
+            v-model="subtitle"
+            label="版本副标题（选填）"
+            placeholder="例如 汉译世界学术名著丛书"
+          />
+          <PTextarea
+            id="create-edition-translators"
+            v-model="translators"
+            label="译者（选填，每行一位）"
+            :rows="2"
+            placeholder="例如 何怀宏"
+          />
+          <PInput
+            id="create-edition-language"
+            v-model="language"
+            label="版本语言代码（选填）"
+            placeholder="例如 zh 或 en"
+          />
+          <PInput
+            id="create-edition-publisher"
+            v-model="publisher"
+            list="publisher-suggestions"
+            label="出版社（选填）"
+            placeholder="输入或选择出版社，例如 商务印书馆"
+          />
+          <datalist id="publisher-suggestions">
+            <option value="商务印书馆" />
+            <option value="译林出版社" />
+            <option value="生活·读书·新知三联书店" />
+            <option value="中华书局" />
+            <option value="人民文学出版社" />
+            <option value="上海译文出版社" />
+            <option value="重庆出版社" />
+          </datalist>
+
+          <label class="book-catalog__date-label">
+            出版日期（选填，完整日期）
+            <PMaskedDateInput v-model="publishedDate" />
+          </label>
+          <PInput
+            id="create-edition-statement"
+            v-model="statement"
+            label="版次（选填）"
+            placeholder="例如 第 2 版、修订版、精装插图版"
+          />
+          <PInput
+            id="create-edition-isbn"
+            v-model="isbn"
+            label="ISBN（选填）"
+            placeholder="例如 9787100057418"
+          />
+          <PInput
+            id="create-edition-pages"
+            v-model="pages"
+            label="页数（选填）"
+            type="number"
+            min="1"
+            step="1"
+          />
+          <PInput
+            id="create-edition-cover"
+            v-model="cover"
+            label="封面图片地址（选填）"
+            type="url"
+            placeholder="https://..."
+          />
+        </div>
+
+        <dl v-else-if="chosenEdition" class="book-catalog__chosen-box">
+          <dt>已选择版本（不会修改已有资料）</dt>
+          <dd>{{ editionSummary(chosenEdition) }}</dd>
+        </dl>
       </fieldset>
-      <p v-if="createdId" role="status">作品已保存。请重试保存版本，不会重复创建作品。</p>
+
+      <p v-if="createdId" role="status" class="book-catalog__success-hint">
+        作品已保存。请重试保存版本，不会重复创建作品。
+      </p>
+
       <div class="book-catalog__actions">
-        <PButton v-if="!createdId" type="button" variant="secondary" :disabled="busy" @click="step = 1">返回作品</PButton>
-        <PButton type="submit" :disabled="!editionChoice || busy">{{ busy ? '正在保存…' : editionChoice === 'new' ? '确认并公开版本' : '确认使用此版本' }}</PButton>
+        <PButton
+          v-if="!createdId"
+          type="button"
+          variant="secondary"
+          :disabled="busy"
+          @click="step = 1"
+        >
+          返回作品
+        </PButton>
+        <PButton type="submit" :disabled="!editionChoice || busy">
+          {{ busy ? '正在保存…' : editionChoice === 'new' ? '确认并公开版本' : '确认使用此版本' }}
+        </PButton>
       </div>
     </form>
-    <section v-else-if="createdId && editionId">
-      <h2>书目已公开</h2><p>{{ selectedWork?.title || title }} → {{ savedEditionTitle }}</p>
-      <PButton :to="`/books/edition/${editionId}`">查看版本详情</PButton>
-      <BookResourceUpload :key="editionId" :work-id="createdId" :edition-id="editionId" :title="savedEditionTitle" :initial-file="file" :initial-language="savedLanguage" @ready="file = null" />
+
+    <!-- Step 3: 关联文件与阅读 -->
+    <section v-else-if="createdId && editionId" class="book-catalog__step3-card">
+      <div class="book-catalog__step3-header">
+        <h2 class="book-catalog__step3-title">书目已公开</h2>
+        <p class="book-catalog__step3-sub">
+          <strong>{{ selectedWork?.title || title }}</strong> → {{ savedEditionTitle }}
+        </p>
+      </div>
+
+      <div class="book-catalog__step3-actions">
+        <PButton :to="`/books/edition/${editionId}`" variant="secondary">
+          查看版本详情
+        </PButton>
+      </div>
+
+      <div class="book-catalog__upload-wrap">
+        <BookResourceUpload
+          :key="editionId"
+          :work-id="createdId"
+          :edition-id="editionId"
+          :title="savedEditionTitle"
+          :initial-file="file"
+          :initial-language="savedLanguage"
+          @ready="file = null"
+        />
+      </div>
     </section>
     <p v-if="error" class="book-catalog__error" role="alert">{{ error }}</p>
     <PConfirm :show="leaveOpen" title="离开创建" message="未保存的信息和未上传的本地文件不会保留，确定离开吗？" @confirm="resolveLeave(true)" @cancel="resolveLeave(false)" />

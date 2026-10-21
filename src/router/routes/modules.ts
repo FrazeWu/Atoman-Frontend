@@ -234,6 +234,14 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 					meta: { requiresAuth: true },
 				},
 				{
+					path: "read/sample",
+					component: () => import("@/views/books/BookAcademicReaderView.vue"),
+				},
+				{
+					path: "read",
+					redirect: "/books/read/sample",
+				},
+				{
 					path: "read/:workId/:assetId/:revisionId",
 					component: () => import("@/views/books/BookRevisionReaderView.vue"),
 				},

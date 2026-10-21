@@ -6,6 +6,7 @@ import MobileTopbar from '@mobile/components/system/MobileTopbar.vue'
 import MobileSpaceDrawer from '@mobile/components/system/MobileSpaceDrawer.vue'
 import MobileBottomNav from '@mobile/components/system/MobileBottomNav.vue'
 import MobileApp from '@mobile/MobileApp.vue'
+import { usePlayerPresenceStore } from '@/stores/playerPresence'
 
 vi.mock('@/api/client', () => ({
   apiRequest: vi.fn().mockResolvedValue({}),
@@ -176,6 +177,19 @@ describe('Mobile Navigation Shell', () => {
       expect(labels).toEqual(['推荐', '订阅源', '稍后读', '已收藏'])
     })
 
+    it('renders scoped tabs for blog space', () => {
+      const wrapper = mount(MobileBottomNav, {
+        props: {
+          currentSpace: 'blog',
+        },
+      })
+
+      const tabs = wrapper.findAll('[data-testid="mobile-bottom-nav-tab"]')
+      expect(tabs).toHaveLength(4)
+      const labels = tabs.map((t) => t.text())
+      expect(labels).toEqual(['发现', '短笺', '长文', '我的'])
+    })
+
     it('renders scoped tabs for books space', () => {
       const wrapper = mount(MobileBottomNav, {
         props: {
@@ -280,6 +294,56 @@ describe('Mobile Navigation Shell', () => {
       await wrapper.vm.$nextTick()
       const topbar = wrapper.findComponent(MobileTopbar)
       expect(topbar.props('currentSpace')).toBe('messages')
+    })
+
+    it('persists MobileAudioPlayer and sets --mobile-app-player-bottom correctly when navigating to route without bottom nav', async () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      const presenceStore = usePlayerPresenceStore()
+      presenceStore.setHasCurrentTrack(true)
+
+      const router = createRouter({
+        history: createMemoryHistory(),
+        routes: [
+          { path: '/music', component: { template: '<div>Music</div>' } },
+          { path: '/books/work/:id', component: { template: '<div>Book Detail</div>' } },
+        ],
+      })
+      await router.push('/music')
+      await router.isReady()
+
+      const wrapper = mount(MobileApp, {
+        global: {
+          plugins: [router, pinia],
+          stubs: {
+            RouterView: true,
+            MobileAudioPlayer: {
+              name: 'MobileAudioPlayer',
+              template: '<div data-testid="mobile-audio-player">Player</div>',
+            },
+          },
+        },
+      })
+      await flushPromises()
+
+      // On /music with bottom nav
+      expect(wrapper.find('[data-testid="mobile-audio-player"]').exists()).toBe(true)
+      const shellWithNav = wrapper.find('.mobile-app-shell')
+      expect(shellWithNav.attributes('style')).toContain('--mobile-app-player-bottom: calc(56px + env(safe-area-inset-bottom, 0px))')
+
+      // Navigate to /books/work/1 (no bottom nav)
+      await router.push('/books/work/1')
+      await router.isReady()
+      await wrapper.vm.$nextTick()
+      await flushPromises()
+
+      // Bottom nav is hidden
+      expect(wrapper.findComponent(MobileBottomNav).exists()).toBe(false)
+      // Mini player is still rendered
+      expect(wrapper.find('[data-testid="mobile-audio-player"]').exists()).toBe(true)
+      // Player bottom offset adjusted to safe-area
+      const shellWithoutNav = wrapper.find('.mobile-app-shell')
+      expect(shellWithoutNav.attributes('style')).toContain('--mobile-app-player-bottom: env(safe-area-inset-bottom, 0px)')
     })
   })
 })

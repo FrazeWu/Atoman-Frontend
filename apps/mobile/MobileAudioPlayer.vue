@@ -5,8 +5,15 @@
       <span :style="{ width: `${progressRatio}%` }" />
     </div>
 
-    <!-- Track Info (Click opens full-screen player) -->
-    <button type="button" class="mobile-mini-player__track" @click="openPlayer">
+    <!-- Track Info (Click opens full-screen player, swipes expand or switch tracks) -->
+    <button
+      type="button"
+      class="mobile-mini-player__track"
+      @click="handleTrackClick"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
+    >
       <img
         v-if="player.currentSong?.cover_url"
         :src="player.currentSong.cover_url"
@@ -89,15 +96,80 @@ const progressRatio = computed(() => {
 function openPlayer() {
   if (route.path !== '/music/player') void router.push('/music/player')
 }
+
+let touchStartX = 0
+let touchStartY = 0
+let touchCurrentX = 0
+let touchCurrentY = 0
+let isSwiped = false
+
+function handleTouchStart(e: TouchEvent) {
+  const touch = e.touches[0]
+  if (!touch) return
+  touchStartX = touch.clientX
+  touchStartY = touch.clientY
+  touchCurrentX = touchStartX
+  touchCurrentY = touchStartY
+  isSwiped = false
+}
+
+function handleTouchMove(e: TouchEvent) {
+  const touch = e.touches[0]
+  if (!touch) return
+  touchCurrentX = touch.clientX
+  touchCurrentY = touch.clientY
+}
+
+function handleTouchEnd(e: TouchEvent) {
+  const touch = e.changedTouches?.[0] || e.touches?.[0]
+  if (touch) {
+    touchCurrentX = touch.clientX
+    touchCurrentY = touch.clientY
+  }
+  const deltaX = touchCurrentX - touchStartX
+  const deltaY = touchCurrentY - touchStartY
+  const absX = Math.abs(deltaX)
+  const absY = Math.abs(deltaY)
+
+  // Swipe up to expand to full player
+  if (deltaY < -40 && absY > 1.2 * absX) {
+    isSwiped = true
+    openPlayer()
+    return
+  }
+
+  // Swipe left for next track
+  if (deltaX < -50 && absX > 1.2 * absY) {
+    isSwiped = true
+    player.playNext()
+    return
+  }
+
+  // Swipe right for previous track
+  if (deltaX > 50 && absX > 1.2 * absY) {
+    isSwiped = true
+    player.playPrevious()
+    return
+  }
+}
+
+function handleTrackClick() {
+  if (isSwiped) {
+    isSwiped = false
+    return
+  }
+  openPlayer()
+}
 </script>
 
 <style scoped>
 .mobile-mini-player {
   position: fixed;
   right: 0;
-  bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  bottom: var(--mobile-app-player-bottom, calc(56px + env(safe-area-inset-bottom, 0px)));
   left: 0;
   z-index: var(--a-z-player, 90);
+  transition: bottom 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -106,7 +178,7 @@ function openPlayer() {
   padding: 0.5rem 0.875rem;
   border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
   background: #ffffff;
-  box-shadow: none;
+  box-shadow: none !important;
 }
 
 .mobile-mini-player__progress {

@@ -125,15 +125,15 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	},
 	{
 		path: "/posts",
-		component: () => import("./views/blog/BlogListView.vue"),
+		component: () => import("./views/blog/BlogDiscoverView.vue"),
 	},
 	{
 		path: '/posts/articles',
-		component: () => import('./views/blog/BlogListView.vue'),
+		component: () => import('./views/blog/BlogArticlesView.vue'),
 	},
 	{
 		path: "/posts/notes",
-		component: () => import("@/views/blog/ShortNoteTimelineView.vue"),
+		component: () => import("./views/blog/BlogNotesTimelineView.vue"),
 	},
 	{
 		path: "/posts/notes/:id/edit",
@@ -142,7 +142,12 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	},
 	{
 		path: "/posts/notes/:id",
-		component: () => import("@/views/blog/ShortNoteDetailView.vue"),
+		component: () => import("./views/blog/ShortNoteDetailMobileView.vue"),
+	},
+	{
+		path: "/posts/me",
+		component: () => import("./views/blog/BlogMeView.vue"),
+		meta: requiresAuth,
 	},
 	{
 		path: "/posts/subscriptions",
@@ -151,7 +156,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	},
 	{
 		path: "/posts/bookmarks",
-		component: () => import("./views/blog/BlogListView.vue"),
+		component: () => import("./views/blog/BlogMeView.vue"),
 		props: { initialTab: 'bookmarks' },
 		meta: requiresAuth,
 	},

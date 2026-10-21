@@ -1,5 +1,9 @@
 <template>
-  <div class="app-shell mobile-app-shell" :class="{ 'mobile-app-shell--with-player': showMobilePlayer }">
+  <div
+    class="app-shell mobile-app-shell"
+    :class="{ 'mobile-app-shell--with-player': showMobilePlayer }"
+    :style="{ '--mobile-app-player-bottom': mobilePlayerBottom }"
+  >
     <MobileTopbar
       v-if="showMobileTopbar"
       :current-space="currentSpace"
@@ -83,7 +87,7 @@ const isSubRoute = computed(() => {
     isAuthRoute.value ||
     isUtilityRoute.value ||
     /^\/music\/(?:tags|songs|albums|artists|imports|more)(\/|$)/.test(route.path) ||
-    /^\/posts\/(?:notes|subscriptions)(\/|$)/.test(route.path) ||
+    /^\/posts\/subscriptions(\/|$)/.test(route.path) ||
     /^\/(?:channel|channels|collection)(\/|$)/.test(route.path)
   )
 })
@@ -104,7 +108,8 @@ const subRouteTitle = computed(() => {
   if (p.startsWith('/music/artists')) return '艺术家'
   if (p.startsWith('/music/imports')) return '导入记录'
   if (p.startsWith('/music/more')) return '更多'
-  if (p.startsWith('/posts/notes')) return '便签'
+  if (p.startsWith('/posts/notes')) return '短笺'
+  if (p.startsWith('/posts/articles')) return '长文'
   if (p.startsWith('/posts/subscriptions')) return '订阅'
   if (/^\/channels?(\/|$)/.test(p)) return '专栏'
   if (p.startsWith('/collection')) return '合集'
@@ -123,10 +128,19 @@ const showMobileTopbar = computed(() => {
 const showMobileBottomNav = computed(() => {
   if (isAuthRoute.value || isUtilityRoute.value || route.path === '/' || route.path === '/music/player') return false
   if (/^\/music\/(?:playlist|album)\//.test(route.path)) return true
+  if (/^\/post\//.test(route.path) || /^\/posts\/notes\//.test(route.path)) return true
   return !isDetailRoute.value
 })
 
-const showMobilePlayer = computed(() => playerPresence.hasCurrentTrack && showMobileBottomNav.value && route.path !== '/music/player')
+const showMobilePlayer = computed(() => (
+  playerPresence.hasCurrentTrack && route.path !== '/music/player'
+))
+
+const mobilePlayerBottom = computed(() => (
+  showMobileBottomNav.value
+    ? 'calc(56px + env(safe-area-inset-bottom, 0px))'
+    : 'env(safe-area-inset-bottom, 0px)'
+))
 const mobileRouteTransition = ref('')
 
 const handleBack = () => {
@@ -315,7 +329,11 @@ body {
 }
 
 .mobile-app-main--with-player {
-  padding-bottom: calc(56px + var(--mobile-app-player-height) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(56px + var(--mobile-app-player-height, 64px) + env(safe-area-inset-bottom, 0px));
+}
+
+.mobile-app-main--no-bottom-nav.mobile-app-main--with-player {
+  padding-bottom: calc(var(--mobile-app-player-height, 64px) + env(safe-area-inset-bottom, 0px));
 }
 
 .mobile-app-shell--with-player {

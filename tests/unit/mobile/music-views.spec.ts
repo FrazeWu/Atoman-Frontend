@@ -517,6 +517,96 @@ describe('Mobile Independent Music Views & Player', () => {
       expect(iconNames.some((name) => ['player-play', 'player-pause', 'play', 'pause'].includes(name))).toBe(true)
       expect(iconNames.some((name) => ['player-next', 'next', 'skip-forward'].includes(name))).toBe(true)
     })
+
+    it('swiping up on track card navigates to full player (/music/player)', async () => {
+      const playerStore = usePlayerStore()
+      playerStore.currentSong = {
+        id: 's-42',
+        title: 'Celestial Drift',
+        artist: 'Astral Echo',
+      } as any
+
+      const pushSpy = vi.spyOn(router, 'push')
+
+      const wrapper = mount(MobileAudioPlayer, {
+        global: {
+          plugins: [pinia, router],
+        },
+      })
+
+      const track = wrapper.find('.mobile-mini-player__track')
+      expect(track.exists()).toBe(true)
+
+      await track.trigger('touchstart', {
+        touches: [{ clientX: 100, clientY: 200 }],
+      })
+      await track.trigger('touchmove', {
+        touches: [{ clientX: 100, clientY: 140 }],
+      })
+      await track.trigger('touchend', {
+        changedTouches: [{ clientX: 100, clientY: 140 }],
+      })
+
+      expect(pushSpy).toHaveBeenCalledWith('/music/player')
+    })
+
+    it('swiping left on track card triggers playNext', async () => {
+      const playerStore = usePlayerStore()
+      playerStore.currentSong = {
+        id: 's-42',
+        title: 'Celestial Drift',
+        artist: 'Astral Echo',
+      } as any
+      const nextSpy = vi.spyOn(playerStore, 'playNext').mockImplementation(() => {})
+
+      const wrapper = mount(MobileAudioPlayer, {
+        global: {
+          plugins: [pinia, router],
+        },
+      })
+
+      const track = wrapper.find('.mobile-mini-player__track')
+      await track.trigger('touchstart', {
+        touches: [{ clientX: 200, clientY: 100 }],
+      })
+      await track.trigger('touchmove', {
+        touches: [{ clientX: 130, clientY: 100 }],
+      })
+      await track.trigger('touchend', {
+        changedTouches: [{ clientX: 130, clientY: 100 }],
+      })
+
+      expect(nextSpy).toHaveBeenCalled()
+    })
+
+    it('swiping right on track card triggers playPrevious', async () => {
+      const playerStore = usePlayerStore()
+      playerStore.currentSong = {
+        id: 's-42',
+        title: 'Celestial Drift',
+        artist: 'Astral Echo',
+      } as any
+      const prevSpy = vi.spyOn(playerStore, 'playPrevious').mockImplementation(() => {})
+
+      const wrapper = mount(MobileAudioPlayer, {
+        global: {
+          plugins: [pinia, router],
+        },
+      })
+
+      const track = wrapper.find('.mobile-mini-player__track')
+      await track.trigger('touchstart', {
+        touches: [{ clientX: 100, clientY: 100 }],
+      })
+      await track.trigger('touchmove', {
+        touches: [{ clientX: 170, clientY: 100 }],
+      })
+      await track.trigger('touchend', {
+        changedTouches: [{ clientX: 170, clientY: 100 }],
+      })
+
+      expect(prevSpy).toHaveBeenCalled()
+    })
   })
 
   describe('MobilePlayerView.vue', () => {

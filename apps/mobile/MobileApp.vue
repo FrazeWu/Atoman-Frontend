@@ -129,6 +129,7 @@ const showMobileBottomNav = computed(() => {
   if (isAuthRoute.value || isUtilityRoute.value || route.path === '/' || route.path === '/music/player') return false
   if (/^\/music\/(?:playlist|album)\//.test(route.path)) return true
   if (/^\/post\//.test(route.path) || /^\/posts\/notes\//.test(route.path)) return true
+  if (/^\/books\/work\//.test(route.path)) return true
   return !isDetailRoute.value
 })
 

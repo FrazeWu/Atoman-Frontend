@@ -44,6 +44,56 @@
 
     <!-- Content -->
     <main class="mobile-books-discover__content">
+      <!-- Hero Featured Book Card -->
+      <section
+        v-if="heroBook"
+        class="mobile-books-discover__hero"
+        data-testid="books-hero-card"
+      >
+        <div class="mobile-books-discover__hero-tag">今日力荐</div>
+        <div class="mobile-books-discover__hero-body">
+          <div class="mobile-books-discover__hero-cover">
+            <img
+              v-if="heroBook.cover_url"
+              :src="heroBook.cover_url"
+              :alt="heroBook.title"
+              class="mobile-books-discover__hero-img"
+            />
+            <div v-else class="mobile-books-discover__hero-placeholder">
+              <MIcon name="books" size="md" />
+            </div>
+          </div>
+          <div class="mobile-books-discover__hero-info">
+            <h2 class="mobile-books-discover__hero-title">{{ heroBook.title }}</h2>
+            <p class="mobile-books-discover__hero-author">{{ getAuthors(heroBook) }}</p>
+            <div class="mobile-books-discover__hero-meta">
+              <span v-if="heroBook.rating_score" class="mobile-books-discover__rating-badge">
+                ★ {{ heroBook.rating_score.toFixed(1) }}
+              </span>
+              <span v-if="heroBook.publisher" class="mobile-books-discover__hero-publisher">
+                {{ heroBook.publisher }}
+              </span>
+            </div>
+            <button
+              type="button"
+              class="mobile-books-discover__hero-btn"
+              data-testid="hero-detail-btn"
+              @click="openWork(heroBook.id)"
+            >
+              查看图书详情
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section Title for List -->
+      <div v-if="filteredWorks.length > 0" class="mobile-books-discover__section-header">
+        <h3 class="mobile-books-discover__section-title">
+          {{ activeFilter === 'ranked' ? '高分作品榜' : '热门图书' }}
+        </h3>
+        <span class="mobile-books-discover__section-count">{{ filteredWorks.length }} 本</span>
+      </div>
+
       <!-- Loading Skeleton -->
       <div v-if="loading" class="mobile-books-discover__loading">
         <div v-for="n in 4" :key="n" class="mobile-books-discover__skeleton">
@@ -147,19 +197,49 @@ const props = withDefaults(
   }
 )
 
+const defaultCuratedWorks: DiscoverWorkItem[] = [
+  {
+    id: 'w-1',
+    title: '沉思录',
+    authors: [{ name: '马可·奥勒留' }],
+    rating_score: 9.3,
+    publisher: '中央编译出版社',
+  },
+  {
+    id: 'w-2',
+    title: '代码整洁之道',
+    authors: [{ name: 'Robert C. Martin' }],
+    rating_score: 9.1,
+    publisher: '人民邮电出版社',
+  },
+  {
+    id: 'w-3',
+    title: '瓦尔登湖',
+    authors: [{ name: '亨利·戴维·梭罗' }],
+    rating_score: 8.9,
+    publisher: '译林出版社',
+  },
+  {
+    id: 'w-4',
+    title: '工作颂歌',
+    authors: [{ name: '阿兰·德波顿' }],
+    rating_score: 8.7,
+    publisher: '上海译文出版社',
+  },
+]
+
 const router = useRouter()
 const searchQuery = ref('')
 const activeFilter = ref<'all' | 'ranked'>('all')
 const loading = ref(false)
-const worksList = ref<DiscoverWorkItem[]>(props.initialWorks ? [...props.initialWorks] : [])
+const worksList = ref<DiscoverWorkItem[]>(props.initialWorks ? [...props.initialWorks] : [...defaultCuratedWorks])
 const rankedWorks = ref<RankedItem[]>([])
 
 const filteredWorks = computed<DiscoverWorkItem[]>(() => {
-  if (props.initialWorks) return props.initialWorks
   const query = searchQuery.value.trim().toLowerCase()
-  let list = worksList.value
+  let list = props.initialWorks ? props.initialWorks : worksList.value
 
-  if (activeFilter.value === 'ranked' && rankedWorks.value.length > 0) {
+  if (!props.initialWorks && activeFilter.value === 'ranked' && rankedWorks.value.length > 0) {
     list = rankedWorks.value.map((r) => ({
       id: r.work_id,
       title: r.title,
@@ -175,6 +255,12 @@ const filteredWorks = computed<DiscoverWorkItem[]>(() => {
     const authorMatch = w.authors?.some((a) => a.name.toLowerCase().includes(query))
     return titleMatch || authorMatch
   })
+})
+
+const heroBook = computed<DiscoverWorkItem | null>(() => {
+  if (filteredWorks.value.length > 0) return filteredWorks.value[0]
+  if (worksList.value.length > 0) return worksList.value[0]
+  return null
 })
 
 function getCoverUrl(work: DiscoverWorkItem): string | undefined {
@@ -204,7 +290,7 @@ function handleSearch() {
 }
 
 function openWork(id: string) {
-  router.push(`/books/read/${id}`)
+  router.push(`/books/work/${id}`)
 }
 
 async function loadCatalog() {
@@ -212,7 +298,7 @@ async function loadCatalog() {
   loading.value = true
   try {
     const res = await searchCatalogWorks(searchQuery.value.trim(), 30, 0)
-    if (res?.items) {
+    if (res?.items && res.items.length > 0) {
       worksList.value = res.items.map((item: BookPublicWork) => ({
         id: item.id,
         title: item.title,
@@ -221,11 +307,17 @@ async function loadCatalog() {
         cover_url: item.editions?.[0]?.cover_url,
         publisher: item.editions?.[0]?.publisher,
       }))
+    } else if (!searchQuery.value.trim()) {
+      worksList.value = [...defaultCuratedWorks]
     } else {
       worksList.value = []
     }
   } catch {
-    worksList.value = []
+    if (!searchQuery.value.trim()) {
+      worksList.value = [...defaultCuratedWorks]
+    } else {
+      worksList.value = []
+    }
   } finally {
     loading.value = false
   }
@@ -322,6 +414,148 @@ onMounted(() => {
 .mobile-books-discover__content {
   flex: 1;
   padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Hero Book Card */
+.mobile-books-discover__hero {
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  background-color: #ffffff;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--a-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.03));
+}
+
+.mobile-books-discover__hero-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #b45309;
+  background-color: #fef3c7;
+  padding: 2px 6px;
+  border-radius: 2px;
+  align-self: flex-start;
+  letter-spacing: 0.02em;
+}
+
+.mobile-books-discover__hero-body {
+  display: flex;
+  gap: 14px;
+}
+
+.mobile-books-discover__hero-cover {
+  width: 68px;
+  height: 96px;
+  border-radius: 4px;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background-color: #f8fafc;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-books-discover__hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mobile-books-discover__hero-placeholder {
+  color: var(--a-color-text-muted, #94a3b8);
+}
+
+.mobile-books-discover__hero-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-books-discover__hero-title {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--a-color-text, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-books-discover__hero-author {
+  margin: 0 0 6px 0;
+  font-size: 12px;
+  color: var(--a-color-text-secondary, #475569);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-books-discover__hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.mobile-books-discover__rating-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #b45309;
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.mobile-books-discover__hero-publisher {
+  font-size: 11px;
+  color: var(--a-color-text-muted, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-books-discover__hero-btn {
+  align-self: flex-start;
+  margin-top: auto;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #ffffff;
+  background-color: var(--a-color-text, #0f172a);
+  border: 1px solid var(--a-color-text, #0f172a);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.mobile-books-discover__hero-btn:active {
+  opacity: 0.9;
+}
+
+.mobile-books-discover__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.mobile-books-discover__section-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--a-color-text, #0f172a);
+}
+
+.mobile-books-discover__section-count {
+  font-size: 11px;
+  color: var(--a-color-text-muted, #94a3b8);
 }
 
 .mobile-books-discover__loading {

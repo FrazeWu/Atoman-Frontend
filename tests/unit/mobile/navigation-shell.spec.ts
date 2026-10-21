@@ -200,7 +200,7 @@ describe('Mobile Navigation Shell', () => {
       const tabs = wrapper.findAll('[data-testid="mobile-bottom-nav-tab"]')
       expect(tabs).toHaveLength(4)
       const labels = tabs.map((t) => t.text())
-      expect(labels).toEqual(['发现', '书架', '书单', '划线笔记'])
+      expect(labels).toEqual(['发现', '书架', '书摘', '我的'])
     })
 
     it('renders MIcon and label for each tab item and supports tab click', async () => {
@@ -306,7 +306,7 @@ describe('Mobile Navigation Shell', () => {
         history: createMemoryHistory(),
         routes: [
           { path: '/music', component: { template: '<div>Music</div>' } },
-          { path: '/books/work/:id', component: { template: '<div>Book Detail</div>' } },
+          { path: '/books/read/:id', component: { template: '<div>Book Reader</div>' } },
         ],
       })
       await router.push('/music')
@@ -331,8 +331,8 @@ describe('Mobile Navigation Shell', () => {
       const shellWithNav = wrapper.find('.mobile-app-shell')
       expect(shellWithNav.attributes('style')).toContain('--mobile-app-player-bottom: calc(56px + env(safe-area-inset-bottom, 0px))')
 
-      // Navigate to /books/work/1 (no bottom nav)
-      await router.push('/books/work/1')
+      // Navigate to /books/read/1 (no bottom nav)
+      await router.push('/books/read/1')
       await router.isReady()
       await wrapper.vm.$nextTick()
       await flushPromises()

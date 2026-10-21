@@ -59,8 +59,8 @@ export const SPACE_TABS: Record<string, NavTabItem[]> = {
   books: [
     { key: 'discover', label: '发现', icon: 'compass', path: '/books' },
     { key: 'shelf', label: '书架', icon: 'shelf', path: '/books/shelf' },
-    { key: 'lists', label: '书单', icon: 'bookmark', path: '/books/lists' },
-    { key: 'notes', label: '划线笔记', icon: 'notes', path: '/books/notes' },
+    { key: 'notes', label: '书摘', icon: 'notes', path: '/books/notes' },
+    { key: 'me', label: '我的', icon: 'person', path: '/books/me' },
   ],
   blog: [
     { key: 'discover', label: '发现', icon: 'compass', path: '/posts' },

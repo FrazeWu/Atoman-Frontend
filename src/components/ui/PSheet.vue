@@ -12,13 +12,14 @@
   <Transition :name="transitionName" appear>
     <section
       v-if="isMobile && show"
+      ref="mobilePanelRef"
       class="p-sheet-mobile-page"
       :class="[panelClass, `is-${side}`, `is-${mode}`]"
-      :style="mobileSheetStyle"
+      :style="[mobileSheetStyle, dragStyle]"
       role="region"
       :aria-label="railTitle"
     >
-      <header v-if="title || slots.header" class="p-sheet-mobile-page__header">
+      <header v-if="title || slots.header" ref="mobileHeaderRef" class="p-sheet-mobile-page__header">
         <button type="button" class="p-sheet-mobile-page__back" :aria-label="closeLabel" @click="$emit('close')">
           <ChevronLeft :size="20" aria-hidden="true" />
           <span>返回</span>
@@ -30,7 +31,7 @@
         <button type="button" data-navigation="previous" :disabled="!navigation.previous || navigationLoading" :title="navigation.previous?.label" @click="emit('navigate', 'previous')">上一项</button>
         <button type="button" data-navigation="next" :disabled="!navigation.next || navigationLoading" :title="navigation.next?.label" @click="emit('navigate', 'next')">下一项</button>
       </nav>
-      <div class="p-sheet-mobile-page__content">
+      <div ref="mobileContentRef" class="p-sheet-mobile-page__content">
         <slot />
       </div>
       <footer v-if="slots.footer" class="p-sheet-footer">
@@ -199,6 +200,7 @@ import { getActivePinia } from 'pinia'
 import { X, ChevronLeft, ChevronUp, ChevronDown } from 'lucide-vue-next'
 import { isStandaloneMobileApp } from '@/utils/appRuntime'
 import { useDialogFocus } from '@/composables/useDialogFocus'
+import { useSheetGesture } from '@/composables/useSheetGesture'
 import { useSheetStore } from '@/stores/sheet'
 
 const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
@@ -274,7 +276,18 @@ const emit = defineEmits<{
 
 const slots = useSlots()
 const panelRef = ref<HTMLElement | null>(null)
+const mobilePanelRef = ref<HTMLElement | null>(null)
+const mobileHeaderRef = ref<HTMLElement | null>(null)
+const mobileContentRef = ref<HTMLElement | null>(null)
 const closeButtonRef = ref<HTMLButtonElement | null>(null)
+
+const { dragStyle } = useSheetGesture({
+  targetRef: mobilePanelRef,
+  headerRef: mobileHeaderRef,
+  contentRef: mobileContentRef,
+  onDismiss: () => emit('close'),
+  enabled: isMobile,
+})
 const partialRequested = computed(() => (
   props.show && props.mode === 'partial' && props.side === 'right' && !isMobile.value
 ))
@@ -579,7 +592,7 @@ const mobileSheetStyle = computed(() => {
   padding: 1rem 0 2rem;
   border-left: 1px solid var(--a-color-border-soft);
   background: #ffffff;
-  box-shadow: -8px 0 18px -16px rgba(0, 0, 0, 0.35);
+  box-shadow: none !important;
 }
 
 .p-sheet-mobile-page.is-partial {
@@ -592,7 +605,7 @@ const mobileSheetStyle = computed(() => {
   left: 0;
   border-left: 0;
   border-right: 1px solid var(--a-color-border-soft);
-  box-shadow: 8px 0 18px -16px rgba(0, 0, 0, 0.35);
+  box-shadow: none !important;
 }
 
 .p-sheet-mobile-page.is-bottom {
@@ -690,13 +703,13 @@ const mobileSheetStyle = computed(() => {
   right: 0;
   bottom: 0;
   border-left: 1px solid var(--a-color-border-soft);
-  box-shadow: -8px 0 18px -16px rgba(0, 0, 0, 0.35);
+  box-shadow: none !important;
 }
 
 .p-sheet-layer.is-left {
   left: 0;
   border-right: 1px solid var(--a-color-border-soft);
-  box-shadow: 8px 0 18px -16px rgba(0, 0, 0, 0.35);
+  box-shadow: none !important;
 }
 
 .p-sheet-layer.is-bottom {

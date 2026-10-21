@@ -1,21 +1,5 @@
 <template>
-  <div class="volume-container">
-    <div class="volume-control">
-      <span class="vol-percentage">{{ Math.round(volume * 100) }}%</span>
-      <div class="vol-slider-wrapper">
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          :value="volume"
-          :style="{ '--vol-percent': `${volume * 100}%` }"
-          class="vol-slider"
-          aria-label="音量"
-          @input="$emit('change', parseFloat(($event.target as HTMLInputElement).value))"
-        />
-      </div>
-    </div>
+  <div class="volume-container" @wheel.prevent="handleWheel">
     <div class="vol-trigger" data-hint="静音 / 解除静音 (M)">
       <button
         type="button"
@@ -30,100 +14,53 @@
         <PIcon v-else name="volume-mute" size="lg" />
       </button>
     </div>
+    <div class="volume-control">
+      <div class="vol-slider-wrapper">
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          :value="volume"
+          :style="{ '--vol-percent': `${volume * 100}%` }"
+          class="vol-slider"
+          aria-label="音量"
+          @input="$emit('change', parseFloat(($event.target as HTMLInputElement).value))"
+        />
+      </div>
+      <span class="vol-percentage" aria-live="off">{{ Math.round(volume * 100) }}%</span>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import PIcon from '@/components/ui/PIcon.vue'
 
-defineProps<{
+const props = defineProps<{
   volume: number
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'change': [volume: number]
   'toggle-mute': []
 }>()
+
+const handleWheel = (e: WheelEvent) => {
+  const delta = e.deltaY < 0 ? 0.05 : -0.05
+  const nextVolume = Math.min(1, Math.max(0, Math.round((props.volume + delta) * 100) / 100))
+  if (nextVolume !== props.volume) {
+    emit('change', nextVolume)
+  }
+}
 </script>
 
 <style scoped>
 .volume-container {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  gap: 0.25rem;
   position: relative;
-}
-
-.volume-control {
-  position: absolute;
-  bottom: calc(100% + 12px);
-  left: 50%;
-  transform: translateX(-50%) translateY(6px);
-  width: 48px;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition:
-    opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-    visibility 0.2s;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
-  padding: 12px 0 14px 0;
-  z-index: 100;
-  box-shadow: none;
-  border-radius: var(--a-radius-card, 4px);
-}
-
-:root.dark .volume-control {
-  background: var(--a-color-bg);
-  border-color: var(--a-color-border);
-}
-
-.volume-control::before {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  height: 16px;
-}
-
-.volume-control::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: var(--a-color-bg);
-}
-
-.volume-container:hover .volume-control,
-.volume-container:focus-within .volume-control {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translateX(-50%) translateY(0);
-}
-
-.vol-percentage {
-  font-size: 11px;
-  font-weight: 600;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  color: var(--a-color-muted);
   user-select: none;
-  line-height: 1;
-}
-
-.vol-slider-wrapper {
-  height: 96px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .vol-trigger {
@@ -137,82 +74,132 @@ defineEmits<{
   background: transparent;
   padding: 4px;
   color: var(--a-color-muted);
-  transition: color 0.2s;
+  border-radius: var(--a-radius-control, 4px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color var(--a-motion-state, 0.15s) ease,
+    background-color var(--a-motion-state, 0.15s) ease;
   flex-shrink: 0;
 }
 
-.vol-icon:hover {
+.vol-icon:hover,
+.vol-icon:focus-visible {
   color: var(--a-color-text);
+  background: var(--a-color-surface-muted);
+  outline: none;
+}
+
+.volume-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.vol-slider-wrapper {
+  display: flex;
+  align-items: center;
+  width: 76px;
+  height: 20px;
 }
 
 .vol-slider {
   -webkit-appearance: none;
   appearance: none;
-  height: 96px;
-  width: 6px;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
   outline: none;
-  border-radius: 3px;
   cursor: pointer;
-  writing-mode: vertical-lr;
-  direction: rtl;
   background: linear-gradient(
-    to top,
+    to right,
     var(--a-color-primary) 0%,
     var(--a-color-primary) var(--vol-percent, 50%),
     var(--a-color-surface-muted) var(--vol-percent, 50%),
     var(--a-color-surface-muted) 100%
   );
-  transition: background 0.1s linear;
+  transition:
+    height 0.15s ease,
+    background 0.08s linear;
 }
 
 :root.dark .vol-slider {
   background: linear-gradient(
-    to top,
+    to right,
     var(--a-color-primary) 0%,
     var(--a-color-primary) var(--vol-percent, 50%),
-    rgba(255, 255, 255, 0.12) var(--vol-percent, 50%),
-    rgba(255, 255, 255, 0.12) 100%
+    rgba(255, 255, 255, 0.16) var(--vol-percent, 50%),
+    rgba(255, 255, 255, 0.16) 100%
   );
+}
+
+.volume-container:hover .vol-slider,
+.vol-slider:focus-visible,
+.vol-slider:active {
+  height: 6px;
 }
 
 .vol-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
-  background: var(--a-color-bg);
-  border: 2px solid var(--a-color-primary);
-  box-shadow: none;
+  background: #ffffff;
+  border: 1.5px solid var(--a-color-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   cursor: pointer;
-  transition: transform 0.15s ease;
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.vol-slider:hover::-webkit-slider-thumb,
+.volume-container:hover .vol-slider::-webkit-slider-thumb,
+.vol-slider:focus-visible::-webkit-slider-thumb,
 .vol-slider:active::-webkit-slider-thumb {
-  transform: scale(1.25);
-  outline: 2px solid var(--a-color-primary);
-  outline-offset: 1px;
-  box-shadow: none;
+  opacity: 1;
+  transform: scale(1);
 }
 
 .vol-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
-  background: var(--a-color-bg);
-  border: 2px solid var(--a-color-primary);
-  box-shadow: none;
+  background: #ffffff;
+  border: 1.5px solid var(--a-color-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   cursor: pointer;
-  transition: transform 0.15s ease;
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.vol-slider:hover::-moz-range-thumb,
+.volume-container:hover .vol-slider::-moz-range-thumb,
+.vol-slider:focus-visible::-moz-range-thumb,
 .vol-slider:active::-moz-range-thumb {
-  transform: scale(1.25);
-  outline: 2px solid var(--a-color-primary);
-  outline-offset: 1px;
-  box-shadow: none;
+  opacity: 1;
+  transform: scale(1);
+}
+
+.vol-percentage {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  color: var(--a-color-muted);
+  user-select: none;
+  line-height: 1;
+  min-width: 28px;
+  text-align: right;
+  transition: color 0.15s ease;
+}
+
+.volume-container:hover .vol-percentage {
+  color: var(--a-color-text);
 }
 
 @media (max-width: 900px) {

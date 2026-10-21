@@ -6,6 +6,7 @@ import {
   useAlbumQuery,
   useAlbumDetailQuery,
   useArtistDetailQuery,
+  usePlaylistDetailQuery,
   useLyricsQuery,
 } from '@/entities/music'
 import { createTestQueryClient } from '../../helpers/queryClient'
@@ -27,6 +28,9 @@ describe('musicKeys factory', () => {
     expect(musicKeys.artists()).toEqual(['music', 'artists'])
     expect(musicKeys.artist('artist-789')).toEqual(['music', 'artists', 'artist-789'])
     expect(musicKeys.artistDetail('artist-789')).toEqual(['music', 'artists', 'detail', 'artist-789'])
+    expect(musicKeys.playlists()).toEqual(['music', 'playlists'])
+    expect(musicKeys.playlist('playlist-999')).toEqual(['music', 'playlists', 'playlist-999'])
+    expect(musicKeys.playlistDetail('playlist-999')).toEqual(['music', 'playlists', 'detail', 'playlist-999'])
   })
 })
 
@@ -234,4 +238,40 @@ describe('useArtistDetailQuery', () => {
     })
   })
 })
+
+describe('usePlaylistDetailQuery', () => {
+  it('fetches playlist detail through musicApi', async () => {
+    const mockPlaylist = {
+      id: '999',
+      name: 'Ambient Chill',
+      songs: [],
+      song_count: 0,
+    }
+    vi.spyOn(musicApi, 'fetchPlaylistDetail').mockResolvedValue(mockPlaylist as any)
+
+    const client = createTestQueryClient()
+    const TestComponent = defineComponent({
+      props: { playlistId: { type: String, required: true } },
+      setup(props) {
+        const query = usePlaylistDetailQuery(toRef(props, 'playlistId'))
+        return { query }
+      },
+      template: '<div><span v-if="query.data.value">{{ query.data.value.name }}</span></div>',
+    })
+
+    const wrapper = mount(TestComponent, {
+      props: { playlistId: '999' },
+      global: {
+        provide: {
+          [VUE_QUERY_CLIENT]: client,
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('Ambient Chill')
+    })
+  })
+})
+
 

@@ -46,7 +46,7 @@
           </div>
 
           <div class="mobile-music-library__track-end">
-            <span class="mobile-music-library__track-duration">{{ formatDuration(track.duration) }}</span>
+            <span v-if="formatDuration(track.duration)" class="mobile-music-library__track-duration">{{ formatDuration(track.duration) }}</span>
           </div>
         </div>
       </div>
@@ -91,14 +91,16 @@ function toPlayerSong(item: any): Song {
     album: typeof item.album === 'string'
       ? item.album
       : item.album?.title || '',
-    duration: typeof item.duration === 'number' ? item.duration : (item.duration_seconds || 0),
+    duration: typeof item.duration === 'number' && item.duration > 0
+      ? item.duration
+      : (item.duration_sec ?? item.duration_seconds ?? item.durationSeconds ?? 0),
     audio_url: item.audio_url || '',
     cover_url: item.cover_url || item.album?.cover_url || '',
   }
 }
 
 function formatDuration(seconds?: number): string {
-  if (!seconds || isNaN(seconds)) return '--:--'
+  if (!seconds || isNaN(seconds) || seconds <= 0) return ''
   const m = Math.floor(seconds / 60)
   const s = Math.floor(seconds % 60)
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`

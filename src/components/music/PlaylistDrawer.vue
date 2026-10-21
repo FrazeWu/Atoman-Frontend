@@ -1,7 +1,7 @@
 <!-- web/src/components/music/PlaylistDrawer.vue -->
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
-import { computed, ref, watch } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import { Play, Disc, Music, AlertCircle } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -31,9 +31,18 @@ import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 import type { MusicSheetLayer } from './musicSheetTypes'
+import { VUE_QUERY_CLIENT, type QueryClient } from '@tanstack/vue-query'
+import { musicKeys } from '@/entities/music'
+
+const modulePlaylistDetailCache = new Map<string, MusicPlaylistDetail>()
+
+function resolveQueryClient(): QueryClient | null {
+  return inject(VUE_QUERY_CLIENT, null)
+}
 
 type PlaylistLayer = Extract<MusicSheetLayer, { kind: 'playlist' }>
 const props = withDefaults(defineProps<{ layer?: PlaylistLayer; layerIndex?: number; stackSize?: number }>(), { layerIndex: 0, stackSize: 1 })
+const queryClient = resolveQueryClient()
 const { state, closePlaylist, returnToLayer, refreshPlaylists, isLayerActive, isLayerShifted, isTopLayer, openAlbum, openArtist, replacePlaylist } = useMusicDrawers()
 const player = usePlayerStore()
 const authStore = useAuthStore()
@@ -102,11 +111,33 @@ async function loadPlaylist(playlistId: string | null) {
       playlist.value = null
       editing.value = false
       playlistSongMeta.value = { page: 1, page_size: 20, total: 0, has_more: false }
+      loading.value = false
     }
     return
   }
 
-  loading.value = true
+  const shouldForceRefresh = Boolean(state.value.playlistRefreshToken && state.value.playlistRefreshToken > 0)
+  const cachedFromMemory = !shouldForceRefresh ? modulePlaylistDetailCache.get(playlistId) : null
+  const cachedFromQuery = !shouldForceRefresh && !cachedFromMemory && queryClient
+    ? queryClient.getQueryData<MusicPlaylistDetail>(musicKeys.playlistDetail(playlistId))
+    : null
+  const cachedPlaylist = cachedFromMemory ?? cachedFromQuery
+
+  if (cachedPlaylist) {
+    playlist.value = cachedPlaylist
+    playlistSongMeta.value = {
+      page: 1,
+      page_size: 20,
+      total: cachedPlaylist.song_count ?? cachedPlaylist.songs.length,
+      has_more: (cachedPlaylist.song_count ?? cachedPlaylist.songs.length) > cachedPlaylist.songs.length,
+    }
+    confirmedSongOrders.set(cachedPlaylist.id, [...cachedPlaylist.songs])
+    loading.value = false
+  } else {
+    playlist.value = null
+    loading.value = true
+  }
+
   errorMessage.value = ''
   try {
     const sessionRestore = authStore.restoreSession()
@@ -114,6 +145,9 @@ async function loadPlaylist(playlistId: string | null) {
     if (!isCurrentLoad()) return
 
     playlist.value = detail
+    modulePlaylistDetailCache.set(playlistId, detail)
+    queryClient?.setQueryData(musicKeys.playlistDetail(playlistId), detail)
+
     playlistSongMeta.value = {
       page: 1,
       page_size: 20,
@@ -223,11 +257,15 @@ async function savePlaylist() {
       ...(editCoverUrl.value.trim() ? { cover_url: editCoverUrl.value.trim() } : {}),
     }
     const updated = await updateMusicPlaylist(playlist.value.id, payload)
-    playlist.value = {
+    const nextPlaylist: MusicPlaylistDetail = {
       ...updated,
       songs: playlist.value.songs,
       song_count: playlist.value.song_count,
     }
+    playlist.value = nextPlaylist
+    modulePlaylistDetailCache.set(String(nextPlaylist.id), nextPlaylist)
+    queryClient?.setQueryData(musicKeys.playlistDetail(nextPlaylist.id), nextPlaylist)
+    refreshPlaylists()
     syncEditForm(playlist.value)
     editing.value = false
   } catch (error) {
@@ -249,10 +287,14 @@ async function deletePlaylist() {
 
 async function confirmDeletePlaylist() {
   if (!playlist.value || deleting.value) return
+  const targetId = String(playlist.value.id)
   deleting.value = true
   errorMessage.value = ''
   try {
-    await deleteMusicPlaylist(playlist.value.id)
+    await deleteMusicPlaylist(targetId)
+    modulePlaylistDetailCache.delete(targetId)
+    queryClient?.removeQueries({ queryKey: musicKeys.playlistDetail(targetId) })
+    queryClient?.invalidateQueries({ queryKey: musicKeys.playlists() })
     refreshPlaylists()
     editing.value = false
     closePlaylist()
@@ -276,11 +318,14 @@ async function removePlaylistSong(songId: string) {
   errorMessage.value = ''
   try {
     await removeMusicPlaylistSong(playlist.value.id, songId)
-    playlist.value = {
+    const nextPlaylist: MusicPlaylistDetail = {
       ...playlist.value,
       songs: playlist.value.songs.filter((song) => String(song.id) !== songId),
       song_count: Math.max(0, (playlist.value.song_count ?? 0) - 1),
     }
+    playlist.value = nextPlaylist
+    modulePlaylistDetailCache.set(String(nextPlaylist.id), nextPlaylist)
+    queryClient?.setQueryData(musicKeys.playlistDetail(nextPlaylist.id), nextPlaylist)
     refreshPlaylists()
   } catch (error) {
     reportError(error, 'Failed to remove playlist song:')
@@ -311,7 +356,11 @@ async function persistSongOrder(nextSongs: MusicSongListItem[]) {
       try {
         await reorderMusicPlaylistSongs(queuedPlaylistId, songs.map((item) => String(item.id)))
         confirmedSongOrders.set(queuedPlaylistId, [...songs])
-        if (playlist.value?.id === queuedPlaylistId) errorMessage.value = ''
+        if (playlist.value?.id === queuedPlaylistId) {
+          errorMessage.value = ''
+          modulePlaylistDetailCache.set(String(queuedPlaylistId), playlist.value)
+          queryClient?.setQueryData(musicKeys.playlistDetail(queuedPlaylistId), playlist.value)
+        }
         refreshPlaylists()
       } catch (error) {
         reportError(error, 'Failed to reorder playlist songs:')
@@ -492,6 +541,20 @@ async function toggleBookmark() {
 
 watch(playlistId, loadPlaylist, { immediate: true })
 watch(playlist, syncEditForm, { immediate: true })
+watch(
+  () => state.value.playlistRefreshToken,
+  () => {
+    modulePlaylistDetailCache.clear()
+    queryClient?.invalidateQueries({ queryKey: musicKeys.playlists() })
+    if (playlistId.value) void loadPlaylist(playlistId.value)
+  },
+)
+watch(
+  () => authStore.isAuthenticated,
+  () => {
+    if (playlistId.value) void loadPlaylist(playlistId.value)
+  },
+)
 </script>
 
 <template>

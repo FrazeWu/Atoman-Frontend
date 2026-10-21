@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
+import BooksDiscoverView from '@mobile/views/books/BooksDiscoverView.vue'
 import BooksShelfView from '@mobile/views/books/BooksShelfView.vue'
 import BookReaderMobileView from '@mobile/views/books/BookReaderMobileView.vue'
 import DebateHallView from '@mobile/views/debate/DebateHallView.vue'
@@ -21,7 +22,8 @@ describe('Mobile Independent Module Views (Task 5)', () => {
     router = createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: '/books', component: BooksShelfView },
+        { path: '/books', component: BooksDiscoverView },
+        { path: '/books/shelf', component: BooksShelfView },
         { path: '/books/read/:id', component: BookReaderMobileView },
         { path: '/debate', component: DebateHallView },
         { path: '/messages', component: MessagesMobileView },
@@ -31,6 +33,72 @@ describe('Mobile Independent Module Views (Task 5)', () => {
       ],
     })
     vi.clearAllMocks()
+  })
+
+  describe('BooksDiscoverView.vue', () => {
+    const mockWorks = [
+      {
+        id: 'work-1',
+        title: '设计心理学',
+        authors: [{ name: '唐·诺曼' }],
+        rating_score: 8.8,
+        publisher: '中信出版社',
+      },
+      {
+        id: 'work-2',
+        title: '计算机程序的构造和解释',
+        authors: [{ name: 'Harold Abelson' }, { name: 'Gerald Jay Sussman' }],
+        rating_score: 9.6,
+        publisher: '机械工业出版社',
+      },
+    ]
+
+    it('renders discover header, search input, and filter chips', async () => {
+      const wrapper = mount(BooksDiscoverView, {
+        props: { initialWorks: mockWorks },
+        global: { plugins: [pinia, router] },
+      })
+
+      expect(wrapper.text()).toContain('发现图书')
+      expect(wrapper.text()).toContain('全部图书')
+      expect(wrapper.text()).toContain('高分榜')
+      expect(wrapper.find('[data-testid="books-search-input"]').exists()).toBe(true)
+    })
+
+    it('renders catalog works list with title and authors', async () => {
+      const wrapper = mount(BooksDiscoverView, {
+        props: { initialWorks: mockWorks },
+        global: { plugins: [pinia, router] },
+      })
+
+      const items = wrapper.findAll('[data-testid="book-catalog-item"]')
+      expect(items.length).toBe(2)
+      expect(wrapper.text()).toContain('设计心理学')
+      expect(wrapper.text()).toContain('唐·诺曼')
+      expect(wrapper.text()).toContain('8.8')
+    })
+
+    it('clicking book item navigates to reader /books/read/:id', async () => {
+      const pushSpy = vi.spyOn(router, 'push')
+      const wrapper = mount(BooksDiscoverView, {
+        props: { initialWorks: mockWorks },
+        global: { plugins: [pinia, router] },
+      })
+
+      const item = wrapper.find('[data-testid="book-catalog-item"]')
+      await item.trigger('click')
+      expect(pushSpy).toHaveBeenCalledWith('/books/read/work-1')
+    })
+
+    it('renders empty state when no works match', async () => {
+      const wrapper = mount(BooksDiscoverView, {
+        props: { initialWorks: [] },
+        global: { plugins: [pinia, router] },
+      })
+
+      expect(wrapper.find('[data-testid="books-discover-empty"]').exists()).toBe(true)
+      expect(wrapper.text()).toContain('暂无收录图书')
+    })
   })
 
   describe('BooksShelfView.vue', () => {

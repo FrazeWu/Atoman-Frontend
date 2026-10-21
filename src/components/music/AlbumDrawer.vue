@@ -1,7 +1,7 @@
 <!-- web/src/components/music/AlbumDrawer.vue -->
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
-import { computed, ref, watch } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { modulePathUrl } from '@/router/siteUrls'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -44,17 +44,13 @@ import { resolveMusicRedirect } from '@/utils/musicRedirect'
 import { getMusicRecommendationAlbumContext } from '@/utils/musicRecommendationAttribution'
 import type { MusicSheetLayer } from './musicSheetTypes'
 import { albumArtistRoleLabels, albumContributorsFromResponse } from '@/utils/musicAlbumCredits'
-import { useQueryClient } from '@tanstack/vue-query'
+import { VUE_QUERY_CLIENT, type QueryClient } from '@tanstack/vue-query'
 import { musicKeys } from '@/entities/music'
 
 const moduleAlbumDetailCache = new Map<string, MusicAlbumListItem>()
 
-function resolveQueryClient() {
-  try {
-    return useQueryClient()
-  } catch {
-    return null
-  }
+function resolveQueryClient(): QueryClient | null {
+  return inject(VUE_QUERY_CLIENT, null)
 }
 
 type AlbumLayer = Extract<MusicSheetLayer, { kind: 'album' }>
@@ -536,7 +532,6 @@ async function loadAlbum(albumId: string | null) {
   ratingAlbumLoading.value = false
   ratingSongID.value = null
   bookmarkLoading.value = false
-  album.value = null
   commentsOpen.value = false
   commentSheetMode.value = 'partial'
   commentCount.value = undefined
@@ -552,6 +547,7 @@ async function loadAlbum(albumId: string | null) {
 
   if (!albumId) {
     if (isCurrentLoad()) {
+      album.value = null
       loading.value = false
     }
     return
@@ -569,6 +565,7 @@ async function loadAlbum(albumId: string | null) {
     loading.value = false
     void loadAlbumExtras(albumId, cachedAlbum, isCurrentLoad)
   } else {
+    album.value = null
     loading.value = true
   }
 
@@ -726,7 +723,7 @@ function guardPlaylistMenu(event: MouseEvent) {
 }
 
 watch(albumId, loadAlbum, { immediate: true })
-watch(isAuthenticated, () => void loadAlbum(albumId.value))
+watch(() => isAuthenticated.value, () => void loadAlbum(albumId.value))
 watch(
   () => state.value.albumRefreshToken,
   () => {

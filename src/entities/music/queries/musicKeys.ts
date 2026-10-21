@@ -10,5 +10,8 @@ export const musicKeys = {
   artists: () => [...musicKeys.all, 'artists'] as const,
   artist: (id: string | number) => [...musicKeys.artists(), String(id)] as const,
   artistDetail: (id: string | number) => [...musicKeys.artists(), 'detail', String(id)] as const,
+  playlists: () => [...musicKeys.all, 'playlists'] as const,
+  playlist: (id: string | number) => [...musicKeys.playlists(), String(id)] as const,
+  playlistDetail: (id: string | number) => [...musicKeys.playlists(), 'detail', String(id)] as const,
 }
 

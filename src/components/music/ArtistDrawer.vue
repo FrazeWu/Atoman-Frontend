@@ -1,7 +1,7 @@
 <!-- web/src/components/music/ArtistDrawer.vue -->
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
-import { computed, ref, watch } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import { Pause, Play, UserRound } from 'lucide-vue-next'
 import { ApiErrorResponseError } from '@/api/client'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -36,17 +36,14 @@ import {
 import { formatStoredPartialDate } from '@/components/music/birthDateMask'
 import { formatAlbumTypeLabel } from '@/utils/musicMedia'
 import { isStandaloneMobileApp } from '@/utils/appRuntime'
-import { useQueryClient } from '@tanstack/vue-query'
+import { VUE_QUERY_CLIENT, type QueryClient } from '@tanstack/vue-query'
 import { musicKeys } from '@/entities/music'
 
 const moduleArtistDetailCache = new Map<string, MusicArtistListItem>()
+const moduleArtistReleasesCache = new Map<string, { albums?: MusicAlbumListItem[]; songs?: MusicSongListItem[]; meta: any }>()
 
-function resolveQueryClient() {
-  try {
-    return useQueryClient()
-  } catch {
-    return null
-  }
+function resolveQueryClient(): QueryClient | null {
+  return inject(VUE_QUERY_CLIENT, null)
 }
 
 type ArtistLayer = Extract<MusicSheetLayer, { kind: 'artist' }>
@@ -338,7 +335,19 @@ async function loadArtistReleases(targetArtistId: string | null, page = 1) {
   const requestedSort = albumSortMode.value
   const isCurrentLoad = () => isCurrent() && artistId.value === targetArtistId
   const forceRefresh = state.value.artistRefreshToken > 0
-  releaseLoading.value = true
+  const cacheKey = `${targetArtistId}:${requestedType}:${requestedSort}:${page}`
+  const cachedReleases = !forceRefresh ? moduleArtistReleasesCache.get(cacheKey) : null
+  if (cachedReleases) {
+    releaseLoading.value = false
+    releaseMeta.value = cachedReleases.meta
+    if (requestedType === 'album' && cachedReleases.albums) {
+      albums.value = cachedReleases.albums
+    } else if (requestedType !== 'album' && cachedReleases.songs) {
+      songs.value = cachedReleases.songs
+    }
+  } else {
+    releaseLoading.value = true
+  }
   releaseErrorMessage.value = ''
   try {
     if (requestedType === 'album') {
@@ -348,7 +357,9 @@ async function loadArtistReleases(targetArtistId: string | null, page = 1) {
         : await listMusicAlbums(filters)
       if (!isCurrentLoad()) return
       releaseMeta.value = response.meta
-      albums.value = dedupeArtistAlbums(response.data)
+      const deduped = dedupeArtistAlbums(response.data)
+      albums.value = deduped
+      moduleArtistReleasesCache.set(cacheKey, { albums: deduped, meta: response.meta })
     } else {
       const filters = {
         artist_id: targetArtistId,
@@ -363,6 +374,7 @@ async function loadArtistReleases(targetArtistId: string | null, page = 1) {
       if (!isCurrentLoad()) return
       releaseMeta.value = response.meta
       songs.value = response.data
+      moduleArtistReleasesCache.set(cacheKey, { songs: response.data, meta: response.meta })
     }
   } catch (error) {
     if (!isCurrentLoad()) return
@@ -554,6 +566,7 @@ watch(
   () => state.value.artistRefreshToken,
   () => {
     moduleArtistDetailCache.clear()
+    moduleArtistReleasesCache.clear()
     queryClient?.invalidateQueries({ queryKey: musicKeys.artists() })
   },
 )

@@ -63,16 +63,22 @@
           />
           <div class="feed-article-item__author-info">
             <span class="feed-article-item__author">{{ article.author?.name || article.source_title || '匿名' }}</span>
-            <span v-if="article.source_title && article.author?.name" class="feed-article-item__source-bullet">·</span>
-            <span v-if="article.source_title && article.author?.name" class="feed-article-item__source">{{ article.source_title }}</span>
-            <span class="feed-article-item__dot">·</span>
-            <span class="feed-article-item__time">{{ formatTime(article.published_at) }}</span>
+            <span
+              v-if="article.source_title && article.author?.name && article.source_title.trim().toLowerCase() !== article.author.name.trim().toLowerCase()"
+              class="feed-article-item__source-bullet"
+            >·</span>
+            <span
+              v-if="article.source_title && article.author?.name && article.source_title.trim().toLowerCase() !== article.author.name.trim().toLowerCase()"
+              class="feed-article-item__source"
+            >{{ article.source_title }}</span>
+            <span v-if="formatTime(article.published_at)" class="feed-article-item__dot">·</span>
+            <span v-if="formatTime(article.published_at)" class="feed-article-item__time">{{ formatTime(article.published_at) }}</span>
           </div>
         </div>
 
         <!-- Article Title & Summary -->
-        <h2 class="feed-article-item__title">{{ article.title }}</h2>
-        <p v-if="article.summary" class="feed-article-item__summary">{{ article.summary }}</p>
+        <h2 class="feed-article-item__title">{{ decodeHtmlEntities(article.title) }}</h2>
+        <p v-if="article.summary" class="feed-article-item__summary">{{ decodeHtmlEntities(article.summary) }}</p>
 
         <!-- Bottom Action Row -->
         <div class="feed-article-item__meta" @click.stop>
@@ -218,6 +224,18 @@ async function toggleBookmark(article: FeedArticleItem) {
       // ignore
     }
   }
+}
+
+function decodeHtmlEntities(text?: string): string {
+  if (!text) return ''
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
 }
 
 function formatTime(isoString?: string): string {

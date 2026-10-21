@@ -12,7 +12,7 @@
         <MIcon name="chevron-left" size="md" :stroke-width="2" />
       </button>
 
-      <span class="feed-reader-topbar__title">{{ currentArticle?.title || '阅读文章' }}</span>
+      <span class="feed-reader-topbar__title">{{ decodeHtmlEntities(currentArticle?.title) || '阅读文章' }}</span>
 
       <button
         type="button"
@@ -35,12 +35,18 @@
 
     <!-- Article Content -->
     <main v-else-if="currentArticle" class="feed-reader-main">
-      <h1 class="feed-reader-title">{{ currentArticle.title }}</h1>
+      <h1 class="feed-reader-title">{{ decodeHtmlEntities(currentArticle.title) }}</h1>
 
       <div class="feed-reader-meta">
         <span class="feed-reader-meta__author">{{ currentArticle.author_name || '佚名' }}</span>
-        <span v-if="currentArticle.source_title" class="feed-reader-meta__dot">·</span>
-        <span v-if="currentArticle.source_title" class="feed-reader-meta__source">{{ currentArticle.source_title }}</span>
+        <span
+          v-if="currentArticle.source_title && currentArticle.source_title.trim().toLowerCase() !== (currentArticle.author_name || '').trim().toLowerCase()"
+          class="feed-reader-meta__dot"
+        >·</span>
+        <span
+          v-if="currentArticle.source_title && currentArticle.source_title.trim().toLowerCase() !== (currentArticle.author_name || '').trim().toLowerCase()"
+          class="feed-reader-meta__source"
+        >{{ currentArticle.source_title }}</span>
         <span v-if="currentArticle.published_at" class="feed-reader-meta__dot">·</span>
         <span v-if="currentArticle.published_at" class="feed-reader-meta__date">{{ formatDate(currentArticle.published_at) }}</span>
       </div>
@@ -121,6 +127,18 @@ const feedStore = useFeedStore()
 const loadedArticle = ref<ArticleDetailData | null>(null)
 const loading = ref(false)
 const localBookmarked = ref(Boolean(props.article?.bookmarked))
+
+function decodeHtmlEntities(text?: string): string {
+  if (!text) return ''
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+}
 
 const currentArticle = computed(() => props.article || loadedArticle.value)
 const isBookmarked = computed(() => {

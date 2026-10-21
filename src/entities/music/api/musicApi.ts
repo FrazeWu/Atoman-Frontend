@@ -4,9 +4,11 @@ import {
   getMusicSongDetail,
   getMusicAlbum,
   getMusicArtist,
+  getMusicPlaylist,
   type MusicSongDetail,
   type MusicAlbumListItem,
   type MusicArtistListItem,
+  type MusicPlaylistDetail,
 } from '@/api/musicV1'
 
 export async function fetchSongDetail(id: string | number): Promise<MusicSongDetail> {
@@ -19,6 +21,10 @@ export async function fetchAlbumDetail(id: string | number): Promise<MusicAlbumL
 
 export async function fetchArtistDetail(id: string | number): Promise<MusicArtistListItem> {
   return getMusicArtist(String(id))
+}
+
+export async function fetchPlaylistDetail(id: string | number): Promise<MusicPlaylistDetail> {
+  return getMusicPlaylist(String(id))
 }
 
 

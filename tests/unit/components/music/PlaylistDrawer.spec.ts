@@ -743,4 +743,75 @@ describe("PlaylistDrawer", () => {
 			wrapper.get('[data-testid="playlist-bookmark-button"]').text(),
 		).toContain("收藏歌单");
 	});
+
+	it("synchronizes with queryClient and renders cached playlist immediately when re-opened", async () => {
+		mocks.getMusicPlaylist.mockResolvedValueOnce({
+			id: "playlist-cached",
+			user_id: "user-1",
+			name: "缓存歌单测试",
+			description: "测试详情",
+			cover_url: "",
+			is_public: true,
+			song_count: 1,
+			owner_username: "alice",
+			songs: [{ id: "song-1", title: "Cached Song", artists: [] }],
+		});
+
+		const wrapper = mount(PlaylistDrawer, {
+			props: {
+				layer: {
+					key: "playlist-cached",
+					kind: "playlist",
+					title: "歌单详情",
+					payload: { playlistId: "playlist-cached" },
+				},
+			},
+		});
+		await flushPromises();
+		expect(wrapper.text()).toContain("缓存歌单测试");
+
+		await wrapper.setProps({
+			layer: {
+				key: "playlist-other",
+				kind: "playlist",
+				title: "歌单详情",
+				payload: { playlistId: "playlist-other" },
+			},
+		});
+		await flushPromises();
+
+		let resolveDelayed!: (val: unknown) => void;
+		mocks.getMusicPlaylist.mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					resolveDelayed = resolve;
+				}),
+		);
+
+		await wrapper.setProps({
+			layer: {
+				key: "playlist-cached",
+				kind: "playlist",
+				title: "歌单详情",
+				payload: { playlistId: "playlist-cached" },
+			},
+		});
+
+		// Content renders immediately from cache before background network revalidation completes
+		expect(wrapper.text()).toContain("缓存歌单测试");
+
+		resolveDelayed({
+			id: "playlist-cached",
+			user_id: "user-1",
+			name: "缓存歌单测试更新",
+			description: "测试详情",
+			cover_url: "",
+			is_public: true,
+			song_count: 1,
+			owner_username: "alice",
+			songs: [{ id: "song-1", title: "Cached Song", artists: [] }],
+		});
+		await flushPromises();
+		expect(wrapper.text()).toContain("缓存歌单测试更新");
+	});
 });

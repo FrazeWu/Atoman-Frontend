@@ -65,7 +65,17 @@ const isTabActive = (tab: NavTabItem) => {
   const currentPath = route.path.replace(/\/$/, '') || '/'
   const targetPath = tab.path.replace(/\/$/, '') || '/'
   const hasTabQuery = Boolean(route.query?.tab)
-  return currentPath === targetPath && !hasTabQuery
+
+  if (hasTabQuery) return false
+
+  if (currentPath === targetPath) return true
+
+  // Special case: "我的" (profile) tab can match /me or /<space>/me
+  if (tab.key === 'me' && (currentPath === '/me' || currentPath.endsWith('/me'))) {
+    return true
+  }
+
+  return false
 }
 
 const onTabClick = (tab: NavTabItem, event: MouseEvent) => {

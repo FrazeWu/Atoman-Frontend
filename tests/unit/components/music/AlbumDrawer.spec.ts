@@ -59,6 +59,7 @@ const {
 	deleteMusicAlbumRating,
 	setMusicSongRating,
 	deleteMusicSongRating,
+	listMusicTags,
 	requireLogin,
 	isAuthenticated,
 } = vi.hoisted(() => ({
@@ -84,6 +85,7 @@ const {
 	deleteMusicAlbumRating: vi.fn(),
 	setMusicSongRating: vi.fn(),
 	deleteMusicSongRating: vi.fn(),
+	listMusicTags: vi.fn(() => Promise.resolve({ data: [] })),
 	requireLogin: vi.fn(),
 	isAuthenticated: { value: true },
 }));
@@ -131,6 +133,7 @@ vi.mock("@/api/musicV1", () => ({
 	deleteMusicAlbumRating,
 	setMusicSongRating,
 	deleteMusicSongRating,
+	listMusicTags,
 }));
 
 vi.mock("@/stores/player", () => ({

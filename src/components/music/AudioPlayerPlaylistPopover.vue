@@ -116,4 +116,14 @@ defineEmits<{
   background: var(--a-color-surface-muted, rgba(0, 0, 0, 0.04));
   color: var(--a-color-primary);
 }
+
+.player-add-dropdown {
+  position: relative;
+  display: inline-flex;
+}
+
+.player-add-dropdown :deep(.p-dropdown-panel) {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
 </style>

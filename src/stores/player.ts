@@ -819,6 +819,7 @@ export const usePlayerStore = defineStore("player", () => {
 		currentSongStartCached = false;
 		resetAudioStartPrefetch();
 		audio.src = normalizedSong.audio_url;
+		audio.playbackRate = playbackRate.value;
 		audio.volume = computeActualVolume(volume.value);
 		if (currentTime.value > 0) {
 			audio.currentTime = currentTime.value;
@@ -1190,6 +1191,7 @@ export const usePlayerStore = defineStore("player", () => {
 		const player = ensureAudio();
 		if (!player.src) {
 			player.src = currentSong.value.audio_url;
+			player.playbackRate = playbackRate.value;
 		}
 		player.volume = computeActualVolume(volume.value);
 		if (currentTime.value > 0) {
@@ -1380,18 +1382,22 @@ export const usePlayerStore = defineStore("player", () => {
 		currentTime.value = safeTime;
 		if (audio) {
 			if (Math.abs(audio.currentTime - safeTime) > 0.03) {
-				audio.currentTime = safeTime;
+				try {
+					audio.currentTime = safeTime;
+				} catch {
+					// Metadata may not be available yet
+				}
 			}
 		}
 	};
 
 	const skip = (seconds: number) => {
-		if (!audio) return;
+		const current = audio && audio.currentTime > 0 ? audio.currentTime : currentTime.value;
 		const audioDuration =
-			Number.isFinite(audio.duration) && audio.duration > 0
-				? audio.duration
+			Number.isFinite(audio?.duration) && (audio?.duration || 0) > 0
+				? audio!.duration
 				: duration.value;
-		const targetTime = audio.currentTime + seconds;
+		const targetTime = current + seconds;
 		const newTime =
 			audioDuration > 0 ? Math.min(targetTime, audioDuration) : targetTime;
 		seek(Math.max(0, newTime));
@@ -1405,6 +1411,7 @@ export const usePlayerStore = defineStore("player", () => {
 		isLoading.value = true;
 		player.pause();
 		player.src = resolvePlaybackAudioUrl(currentSong.value.audio_url);
+		player.playbackRate = playbackRate.value;
 		player.load();
 		if (resumePosition > 0) {
 			const restorePosition = () => {

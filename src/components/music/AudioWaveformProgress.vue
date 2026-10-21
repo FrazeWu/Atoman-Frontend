@@ -180,9 +180,14 @@ const waveformPath = computed(() => {
 
 function formatTime(seconds: number) {
   const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0
-  const minutes = Math.floor(safeSeconds / 60)
-  const remainder = Math.floor(safeSeconds % 60)
-  return `${minutes}:${remainder.toString().padStart(2, '0')}`
+  const totalSeconds = Math.floor(safeSeconds)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const remainder = totalSeconds % 60
+  const tail = remainder.toString().padStart(2, '0')
+  return hours > 0
+    ? `${hours}:${minutes.toString().padStart(2, '0')}:${tail}`
+    : `${minutes}:${tail}`
 }
 
 function timePositionClass(ratio: number) {

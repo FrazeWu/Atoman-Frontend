@@ -63,6 +63,22 @@ describe('AudioPlayerFeatureStrip', () => {
     expect(wrapper.find('.queue-count').text()).toBe('0')
   })
 
+  it('renders podcast labels on feature link when isPodcast is true', () => {
+    const wrapper = mount(AudioPlayerFeatureStrip, {
+      props: {
+        ...defaultProps,
+        isPodcast: true,
+        featureLabel: '说明',
+      },
+    })
+
+    const featureBtn = wrapper.findAll('.feature-link')[0]
+    expect(featureBtn.text()).toBe('说明')
+    expect(featureBtn.attributes('aria-label')).toBe('节目说明')
+    expect(featureBtn.attributes('title')).toBe('节目说明')
+    expect(featureBtn.attributes('data-hint')).toBe('说明 (Shift+F)')
+  })
+
   it('adds active class to queue trigger when showQueue is true', () => {
     const wrapper = mount(AudioPlayerFeatureStrip, {
       props: {

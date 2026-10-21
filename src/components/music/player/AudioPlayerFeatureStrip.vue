@@ -51,9 +51,9 @@
     <button
       type="button"
       class="feature-link"
-      aria-label="歌词"
-      title="歌词"
-      data-hint="歌词 (Shift+F)"
+      :aria-label="isPodcast ? '节目说明' : '歌词'"
+      :title="isPodcast ? '节目说明' : '歌词'"
+      :data-hint="isPodcast ? '说明 (Shift+F)' : '歌词 (Shift+F)'"
       @click="$emit('toggle-lyrics')"
     >
       <span>{{ featureLabel }}</span>
@@ -293,7 +293,8 @@ defineEmits<{
 
 @media (max-width: 767px) {
   .player-fav-btn,
-  .player-add-btn {
+  .player-add-btn,
+  .player-add-dropdown {
     display: none;
   }
 
@@ -314,16 +315,9 @@ defineEmits<{
     padding: 0;
     opacity: 1;
     border-bottom: 0;
-  }
-
-  .feature-link span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    clip-path: inset(50%);
-    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 </style>

@@ -1413,5 +1413,32 @@ describe("player store", () => {
 
 		expect(store.playbackError).toBe("");
 	});
+
+	it("preserves playbackRate across retryPlayback", async () => {
+		const store = usePlayerStore();
+		const song = { id: "rate-test", title: "Rate Test", audio_url: "rate.mp3" } as any;
+
+		store.setPlaybackRate(1.75);
+		store.playSong(song);
+		const audio = audioInstances[0];
+		await audio.play.mock.results.at(-1)?.value;
+
+		expect(audio.playbackRate).toBe(1.75);
+
+		store.retryPlayback();
+		expect(audio.playbackRate).toBe(1.75);
+	});
+
+	it("skips time correctly even before audio starts playing", () => {
+		const store = usePlayerStore();
+		store.currentTime = 120;
+		store.duration = 600;
+
+		store.skip(15);
+		expect(store.currentTime).toBe(135);
+
+		store.skip(-30);
+		expect(store.currentTime).toBe(105);
+	});
 });
 

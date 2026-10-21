@@ -231,5 +231,22 @@ describe("AudioPlayerQueue.vue", () => {
 		expect(player.queue[9]!.id).toBe("song-1");
 		wrapper.unmount();
 	});
+
+	it("only displays clear button when queue has more than 1 item", async () => {
+		const player = usePlayerStore();
+		player.queue = [{ id: "song-1", title: "Song 1", audio_url: "/1.mp3" } as Song];
+
+		const wrapper = mount(AudioPlayerQueue);
+		expect(wrapper.find(".queue-clear-btn").exists()).toBe(false);
+
+		player.queue = [
+			{ id: "song-1", title: "Song 1", audio_url: "/1.mp3" } as Song,
+			{ id: "song-2", title: "Song 2", audio_url: "/2.mp3" } as Song,
+		];
+		await wrapper.vm.$nextTick();
+		expect(wrapper.find(".queue-clear-btn").exists()).toBe(true);
+
+		wrapper.unmount();
+	});
 });
 

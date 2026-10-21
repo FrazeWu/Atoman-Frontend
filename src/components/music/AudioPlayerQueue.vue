@@ -37,7 +37,7 @@
           </div>
         </div>
         <button
-          v-if="activeTab === 'queue' && player.queue.length"
+          v-if="activeTab === 'queue' && player.queue.length > 1"
           type="button"
           class="queue-clear-btn"
           title="清空队列"

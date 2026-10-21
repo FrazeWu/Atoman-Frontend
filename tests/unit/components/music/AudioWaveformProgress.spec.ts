@@ -42,6 +42,21 @@ describe('AudioWaveformProgress', () => {
     expect(wrapper.emitted('seek')?.at(-1)?.[0]).toBe(25)
   })
 
+  it('formats hours correctly for long audio exceeding one hour', () => {
+    const wrapper = mount(AudioWaveformProgress, {
+      props: {
+        songId: 'podcast-long',
+        audioUrl: '/podcast.mp3',
+        currentTime: 3665, // 1h 1m 5s
+        duration: 5400,    // 1h 30m 0s
+        generateWaveform: false,
+      },
+    })
+
+    const durationText = wrapper.get('[data-testid="waveform-duration"]').text()
+    expect(durationText).toBe('1:01:05 / 1:30:00')
+  })
+
   it('renders stored peaks as separate bars without loading the audio file', () => {
     const fetch = vi.fn()
     vi.stubGlobal('fetch', fetch)

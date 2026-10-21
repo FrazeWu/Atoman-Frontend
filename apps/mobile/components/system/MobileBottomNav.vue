@@ -94,13 +94,13 @@ const onTabClick = (tab: NavTabItem, event: MouseEvent) => {
 
 <style scoped>
 .mobile-bottom-nav {
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  position: fixed !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
   display: block !important;
   width: 100% !important;
-  z-index: var(--a-z-navigation, 1000) !important;
+  z-index: 850 !important;
   pointer-events: none;
 }
 

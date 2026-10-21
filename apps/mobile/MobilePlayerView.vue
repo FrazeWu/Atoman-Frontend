@@ -2,7 +2,17 @@
   <main class="mobile-player-view">
     <template v-if="player.currentSong">
       <header class="mobile-player-view__header">
-        <div>
+        <button
+          type="button"
+          class="mobile-player-view__header-action mobile-player-view__header-action--dismiss"
+          aria-label="最小化播放器"
+          title="最小化播放器"
+          data-testid="player-dismiss-btn"
+          @click="handleDismiss"
+        >
+          <MIcon name="chevron-down" size="md" />
+        </button>
+        <div class="mobile-player-view__header-title">
           <p class="mobile-player-view__eyebrow">{{ isPodcast ? '播客播放' : '音乐播放' }}</p>
           <h1>{{ showQueue ? '播放队列' : '正在播放' }}</h1>
         </div>
@@ -271,6 +281,14 @@ const feedback = ref('')
 
 const artistText = computed(() => player.currentSong?.artist || '未知艺术家')
 const isPodcast = computed(() => player.currentSong?.source_type === 'podcast_episode' || player.currentSong?.source_type === 'feed_podcast')
+
+function handleDismiss() {
+  if (typeof window !== 'undefined' && window.history.length > 1) {
+    router.back()
+  } else {
+    void router.push('/music')
+  }
+}
 const isPodcastEpisode = computed(() => player.currentSong?.source_type === 'podcast_episode')
 const isFavorite = computed(() => Boolean(player.currentSong && favoriteSongIds.value.has(String(player.currentSong.id))))
 const showQueue = computed({
@@ -351,8 +369,13 @@ onUnmounted(() => {
   min-height: 44px;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
+}
+
+.mobile-player-view__header-title {
+  flex: 1;
+  text-align: center;
 }
 
 .mobile-player-view__eyebrow {

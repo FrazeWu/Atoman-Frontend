@@ -168,7 +168,7 @@ function handleTrackClick() {
   right: 0;
   bottom: var(--mobile-app-player-bottom, calc(56px + env(safe-area-inset-bottom, 0px)));
   left: 0;
-  z-index: var(--a-z-player, 90);
+  z-index: var(--a-z-player, 720);
   transition: bottom 0.2s ease;
   display: flex;
   align-items: center;

@@ -1320,7 +1320,7 @@ body:has(.app-shell.has-sidebar) {
 		calc(8rem + var(--a-mobile-nav-offset, 0px));
 }
 
-.mobile-bottom-nav {
+html:not([data-atoman-app="mobile"]) .mobile-bottom-nav {
 	display: none;
 }
 
@@ -1417,7 +1417,7 @@ body:has(.app-shell.has-sidebar) {
 		padding: var(--a-page-start-space) 1rem
 			calc(7rem + env(safe-area-inset-bottom));
 	}
-	.mobile-bottom-nav {
+	html:not([data-atoman-app="mobile"]) .mobile-bottom-nav {
 		display: grid;
 		grid-template-columns: repeat(4, minmax(0, 1fr));
 		position: fixed;

@@ -657,5 +657,29 @@ describe('Mobile Independent Music Views & Player', () => {
 
       expect(togglePlaySpy).toHaveBeenCalled()
     })
+
+    it('renders dismiss button and triggers navigation back when clicked', async () => {
+      const playerStore = usePlayerStore()
+      playerStore.currentSong = {
+        id: 's-99',
+        title: 'Horizon Departure',
+        artist: 'Solaris',
+      } as any
+      const pushSpy = vi.spyOn(router, 'push').mockImplementation(async () => {})
+
+      const wrapper = mount(MobilePlayerView, {
+        global: {
+          plugins: [pinia, router],
+          stubs: {
+            PortalTeleport: true,
+          },
+        },
+      })
+
+      const dismissBtn = wrapper.find('[data-testid="player-dismiss-btn"]')
+      expect(dismissBtn.exists()).toBe(true)
+      await dismissBtn.trigger('click')
+      expect(pushSpy).toHaveBeenCalledWith('/music')
+    })
   })
 })

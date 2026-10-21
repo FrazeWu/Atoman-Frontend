@@ -162,16 +162,31 @@ const lastActiveSpace = ref<string>('music')
 
 const currentSpace = computed<string>(() => {
   const p = route.path || '/'
-  if (/^\/music(\/|$)/.test(p)) return (lastActiveSpace.value = 'music')
-  if (/^\/feed(\/|$)/.test(p)) return (lastActiveSpace.value = 'feed')
-  if (/^\/books(\/|$)/.test(p)) return (lastActiveSpace.value = 'books')
-  if (/^\/(?:posts|post|channel|channels|collection|users)(\/|$)/.test(p)) return (lastActiveSpace.value = 'blog')
-  if (/^\/debate(\/|$)/.test(p)) return (lastActiveSpace.value = 'debate')
-  if (/^\/(?:inbox|messages|notifications)(\/|$)/.test(p)) return (lastActiveSpace.value = 'messages')
-  if (/^\/studio(\/|$)/.test(p)) return (lastActiveSpace.value = 'studio')
+  if (/^\/music(\/|$)/.test(p)) return 'music'
+  if (/^\/feed(\/|$)/.test(p)) return 'feed'
+  if (/^\/books(\/|$)/.test(p)) return 'books'
+  if (/^\/(?:posts|post|channel|channels|collection|users)(\/|$)/.test(p)) return 'blog'
+  if (/^\/debate(\/|$)/.test(p)) return 'debate'
+  if (/^\/(?:inbox|messages|notifications)(\/|$)/.test(p)) return 'messages'
+  if (/^\/studio(\/|$)/.test(p)) return 'studio'
   if (/^\/me(\/|$)/.test(p)) return lastActiveSpace.value
   return lastActiveSpace.value || 'feed'
 })
+
+watch(
+  () => route.path,
+  (path) => {
+    const p = path || '/'
+    if (/^\/music(\/|$)/.test(p)) lastActiveSpace.value = 'music'
+    else if (/^\/feed(\/|$)/.test(p)) lastActiveSpace.value = 'feed'
+    else if (/^\/books(\/|$)/.test(p)) lastActiveSpace.value = 'books'
+    else if (/^\/(?:posts|post|channel|channels|collection|users)(\/|$)/.test(p)) lastActiveSpace.value = 'blog'
+    else if (/^\/debate(\/|$)/.test(p)) lastActiveSpace.value = 'debate'
+    else if (/^\/(?:inbox|messages|notifications)(\/|$)/.test(p)) lastActiveSpace.value = 'messages'
+    else if (/^\/studio(\/|$)/.test(p)) lastActiveSpace.value = 'studio'
+  },
+  { immediate: true }
+)
 
 const SPACE_PATHS: Record<string, string> = {
   feed: '/feed',
@@ -246,10 +261,6 @@ const reportAnalyticsPageView = () => {
 let cancelStartupTasks: (() => void) | undefined
 
 onMounted(() => {
-  if (!authStore.isAuthenticated) {
-    void authStore.restoreSession().catch(() => {})
-  }
-
   const cancelSiteAccessLoad = scheduleIdleTask(() => {
     void siteAccessStore.load().catch(() => {})
   }, 5000, 8000)

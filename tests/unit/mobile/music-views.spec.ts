@@ -6,6 +6,10 @@ import { useAudioPlayerStore, usePlayerStore } from '@/stores/player'
 import MusicDiscoverView from '@mobile/views/music/MusicDiscoverView.vue'
 import MusicLibraryView from '@mobile/views/music/MusicLibraryView.vue'
 import MusicPlaylistsView from '@mobile/views/music/MusicPlaylistsView.vue'
+import MusicSearchView from '@mobile/views/music/MusicSearchView.vue'
+import MusicPlaylistDetailView from '@mobile/views/music/MusicPlaylistDetailView.vue'
+import MusicAlbumDetailView from '@mobile/views/music/MusicAlbumDetailView.vue'
+import MusicMeView from '@mobile/views/music/MusicMeView.vue'
 import MobileAudioPlayer from '@mobile/MobileAudioPlayer.vue'
 import MobilePlayerView from '@mobile/MobilePlayerView.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
@@ -47,7 +51,11 @@ describe('Mobile Independent Music Views & Player', () => {
       routes: [
         { path: '/music', component: MusicDiscoverView },
         { path: '/music/library', component: MusicLibraryView },
+        { path: '/music/search', component: MusicSearchView },
         { path: '/music/playlists', component: MusicPlaylistsView },
+        { path: '/music/playlist/:playlistId', component: MusicPlaylistDetailView },
+        { path: '/music/album/:albumId', component: MusicAlbumDetailView },
+        { path: '/music/me', component: MusicMeView },
         { path: '/music/player', component: { template: '<div>Player</div>' } },
       ],
     })
@@ -244,6 +252,204 @@ describe('Mobile Independent Music Views & Player', () => {
       await new Promise((r) => setTimeout(r, 10))
 
       expect(wrapper.text()).toContain('暂无歌单')
+    })
+  })
+
+  describe('MusicSearchView.vue', () => {
+    const mockSongs = [
+      { id: 's-1', title: 'Power', artist: 'Kanye West', album: 'MBDTF', duration: 292 },
+      { id: 's-2', title: 'Stronger', artist: 'Kanye West', album: 'Graduation', duration: 311 },
+    ]
+    const mockAlbums = [
+      { id: 'alb-1', title: 'Graduation', artist: 'Kanye West', year: 2007 },
+    ]
+    const mockPlaylists = [
+      { id: 'pl-1', name: 'Kanye 精选', song_count: 25 },
+    ]
+
+    it('renders search input and hot search tags when query is empty', async () => {
+      const wrapper = mount(MusicSearchView, {
+        global: {
+          plugins: [pinia, router],
+        },
+      })
+
+      expect(wrapper.find('[data-testid="music-search-input"]').exists()).toBe(true)
+      expect(wrapper.text()).toContain('热门搜索')
+      expect(wrapper.text()).toContain('Ye')
+      expect(wrapper.text()).toContain('Kanye')
+    })
+
+    it('renders song, album, and playlist results when search query returns data', async () => {
+      const wrapper = mount(MusicSearchView, {
+        props: {
+          initialQuery: 'Kanye',
+          initialSongs: mockSongs,
+          initialAlbums: mockAlbums,
+          initialPlaylists: mockPlaylists,
+        },
+        global: {
+          plugins: [pinia, router],
+        },
+      })
+
+      expect(wrapper.text()).toContain('Power')
+      expect(wrapper.text()).toContain('Stronger')
+      expect(wrapper.text()).toContain('Graduation')
+      expect(wrapper.text()).toContain('Kanye 精选')
+      expect(wrapper.findAll('[data-testid="search-song-item"]').length).toBe(2)
+      expect(wrapper.findAll('[data-testid="search-album-item"]').length).toBe(1)
+      expect(wrapper.findAll('[data-testid="search-playlist-item"]').length).toBe(1)
+    })
+
+    it('clicking a search song triggers playback', async () => {
+      const playerStore = useAudioPlayerStore()
+      const playSpy = vi.spyOn(playerStore, 'playSong').mockImplementation(async () => {})
+
+      const wrapper = mount(MusicSearchView, {
+        props: {
+          initialQuery: 'Kanye',
+          initialSongs: mockSongs,
+        },
+        global: {
+          plugins: [pinia, router],
+        },
+      })
+
+      const item = wrapper.find('[data-testid="search-song-item"]')
+      await item.trigger('click')
+      expect(playSpy).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Power',
+      }))
+    })
+  })
+
+  describe('MusicPlaylistDetailView.vue', () => {
+    const mockDetail = {
+      id: 'pl-100',
+      name: '极简专注音',
+      description: '适合深度工作流的背景音乐精选',
+      creator: { display_name: 'Atoman 官方' },
+    }
+    const mockSongs = [
+      { id: 's-10', title: 'Focus Track 1', artist: 'Deep Flow', duration: 180 },
+      { id: 's-11', title: 'Focus Track 2', artist: 'Deep Flow', duration: 210 },
+    ]
+
+    it('renders playlist hero info, play all button, and songs list', async () => {
+      const wrapper = mount(MusicPlaylistDetailView, {
+        props: {
+          initialPlaylist: mockDetail,
+          initialSongs: mockSongs,
+        },
+        global: {
+          plugins: [pinia, router],
+        },
+      })
+
+      expect(wrapper.text()).toContain('极简专注音')
+      expect(wrapper.text()).toContain('适合深度工作流的背景音乐精选')
+      expect(wrapper.text()).toContain('Atoman 官方')
+      expect(wrapper.text()).toContain('2 首歌曲')
+      expect(wrapper.find('[data-testid="play-all-btn"]').exists()).toBe(true)
+      expect(wrapper.findAll('[data-testid="playlist-song-item"]').length).toBe(2)
+      expect(wrapper.text()).toContain('Focus Track 1')
+    })
+
+    it('clicking play all triggers playback of first song', async () => {
+      const playerStore = useAudioPlayerStore()
+      const playSpy = vi.spyOn(playerStore, 'playSong').mockImplementation(async () => {})
+
+      const wrapper = mount(MusicPlaylistDetailView, {
+        props: {
+          initialPlaylist: mockDetail,
+          initialSongs: mockSongs,
+        },
+        global: {
+          plugins: [pinia, router],
+        },
+      })
+
+      const playAllBtn = wrapper.find('[data-testid="play-all-btn"]')
+      await playAllBtn.trigger('click')
+      expect(playSpy).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Focus Track 1',
+      }))
+    })
+  })
+
+  describe('MusicAlbumDetailView.vue', () => {
+    const mockAlbum = {
+      id: 'alb-2049',
+      title: '2049',
+      artist: 'Ye',
+      year: 2026,
+    }
+    const mockSongs = [
+      { id: 's-20', title: 'Track 2049', artist: 'Ye', duration: 240 },
+    ]
+
+    it('renders album info and songs list', async () => {
+      const wrapper = mount(MusicAlbumDetailView, {
+        props: {
+          initialAlbum: mockAlbum,
+          initialSongs: mockSongs,
+        },
+        global: {
+          plugins: [pinia, router],
+        },
+      })
+
+      expect(wrapper.text()).toContain('2049')
+      expect(wrapper.text()).toContain('Ye')
+      expect(wrapper.text()).toContain('2026 年')
+      expect(wrapper.findAll('[data-testid="album-song-item"]').length).toBe(1)
+    })
+  })
+
+  describe('MusicMeView.vue', () => {
+    const mockStarred = [
+      { id: 'star-1', title: '2049', subtitle: 'Ye', kind: 'album' as const },
+      { id: 'star-2', title: '极简专注音', subtitle: '15 首歌曲', kind: 'playlist' as const },
+    ]
+    const mockHistory = [
+      { id: 'hist-1', title: 'Power', artist: 'Kanye West', duration: 292 },
+    ]
+    const mockPlaylists = [
+      { id: 'pl-mine', name: '我的私藏', song_count: 8, is_public: false },
+    ]
+
+    it('renders music stats and switches between 收藏, 收听历史, and 我的歌单 tabs', async () => {
+      const wrapper = mount(MusicMeView, {
+        props: {
+          initialTab: 'starred',
+          initialStarred: mockStarred,
+          initialHistory: mockHistory,
+          initialPlaylists: mockPlaylists,
+        },
+        global: {
+          plugins: [pinia, router],
+        },
+      })
+
+      // Starred Tab
+      expect(wrapper.text()).toContain('我的收藏')
+      expect(wrapper.text()).toContain('收听历史')
+      expect(wrapper.text()).toContain('自建歌单')
+      expect(wrapper.findAll('[data-testid="starred-item"]').length).toBe(2)
+      expect(wrapper.text()).toContain('2049')
+
+      // Switch to History Tab
+      const historyTab = wrapper.find('[data-testid="tab-history"]')
+      await historyTab.trigger('click')
+      expect(wrapper.findAll('[data-testid="history-item"]').length).toBe(1)
+      expect(wrapper.text()).toContain('Power')
+
+      // Switch to Playlists Tab
+      const playlistsTab = wrapper.find('[data-testid="tab-playlists"]')
+      await playlistsTab.trigger('click')
+      expect(wrapper.findAll('[data-testid="playlist-item"]').length).toBe(1)
+      expect(wrapper.text()).toContain('我的私藏')
     })
   })
 

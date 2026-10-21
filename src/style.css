@@ -143,14 +143,15 @@ html[data-player-active="true"][data-player-pinned="true"] {
 	letter-spacing: 0 !important;
 }
 html {
-	overflow-x: hidden;
+	/* 裁剪横向溢出，但不创建使顶栏 sticky 失效的滚动容器。 */
+	overflow-x: clip;
 	overscroll-behavior-x: none;
 }
 body {
 	margin: 0;
 	width: 100%;
 	max-width: 100%;
-	overflow-x: hidden;
+	overflow-x: clip;
 	overscroll-behavior-x: none;
 	font-family: var(--a-font-sans);
 	background: var(--a-color-bg);

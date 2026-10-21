@@ -160,7 +160,7 @@ describe('Mobile Navigation Shell', () => {
       const tabs = wrapper.findAll('[data-testid="mobile-bottom-nav-tab"]')
       expect(tabs).toHaveLength(4)
       const labels = tabs.map((t) => t.text())
-      expect(labels).toEqual(['发现', '曲库', '歌单', '我的'])
+      expect(labels).toEqual(['发现', '搜索', '歌单', '我的'])
     })
 
     it('renders scoped tabs for feed space', () => {

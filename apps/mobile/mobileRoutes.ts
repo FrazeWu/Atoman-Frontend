@@ -212,7 +212,8 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			{ path: 'albums', component: () => import('@/views/music/AlbumsView.vue') },
 			{ path: 'artists', component: () => import('@/views/music/ArtistsView.vue') },
 			{ path: 'imports', component: () => import('@/views/music/ImportsView.vue'), meta: requiresAuth },
-			{ path: 'library', component: () => import("./views/music/MusicLibraryView.vue"), meta: requiresAuth },
+			{ path: 'search', component: () => import("./views/music/MusicSearchView.vue") },
+			{ path: 'library', component: () => import("./views/music/MusicSearchView.vue") },
 			{ path: 'starred', redirect: '/music/bookmarks', meta: requiresAuth },
 			{
 				path: "discover",
@@ -245,8 +246,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			},
 			{
 				path: "me",
-				component: () => import("./views/me/ProfileMobileView.vue"),
-				meta: requiresAuth,
+				component: () => import("./views/music/MusicMeView.vue"),
 			},
 			{ path: "more", component: () => import("@/views/music/MusicMoreView.vue") },
 
@@ -258,7 +258,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			},
 			{
 				path: "album/:albumId",
-				component: () => import("@/views/music/MusicAlbumRouteView.vue"),
+				component: () => import("./views/music/MusicAlbumDetailView.vue"),
 			},
 			{
 				path: "song/:songId",
@@ -266,7 +266,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			},
 			{
 				path: "playlist/:playlistId",
-				component: () => import("@/views/music/MusicPlaylistRouteView.vue"),
+				component: () => import("./views/music/MusicPlaylistDetailView.vue"),
 			},
 		],
 	},

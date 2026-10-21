@@ -46,7 +46,7 @@ export interface NavTabItem {
 export const SPACE_TABS: Record<string, NavTabItem[]> = {
   music: [
     { key: 'discover', label: '发现', icon: 'compass', path: '/music' },
-    { key: 'library', label: '曲库', icon: 'library', path: '/music/library' },
+    { key: 'search', label: '搜索', icon: 'search', path: '/music/search' },
     { key: 'playlists', label: '歌单', icon: 'playlists', path: '/music/playlists' },
     { key: 'me', label: '我的', icon: 'person', path: '/music/me' },
   ],

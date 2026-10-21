@@ -14,16 +14,27 @@
 
       <span class="feed-reader-topbar__title">{{ decodeHtmlEntities(currentArticle?.title) || '阅读文章' }}</span>
 
-      <button
-        type="button"
-        class="feed-reader-topbar__btn feed-reader-topbar__btn--bookmark"
-        :class="{ 'is-bookmarked': isBookmarked }"
-        data-testid="reader-bookmark-btn"
-        aria-label="收藏"
-        @click="handleToggleBookmark"
-      >
-        <MIcon name="bookmark" size="md" :stroke-width="isBookmarked ? 2.4 : 1.8" />
-      </button>
+      <div class="feed-reader-topbar__actions">
+        <button
+          type="button"
+          class="feed-reader-topbar__btn"
+          aria-label="分享"
+          @click="handleShare"
+        >
+          <MIcon name="share" size="md" :stroke-width="1.8" />
+        </button>
+
+        <button
+          type="button"
+          class="feed-reader-topbar__btn feed-reader-topbar__btn--bookmark"
+          :class="{ 'is-bookmarked': isBookmarked }"
+          data-testid="reader-bookmark-btn"
+          aria-label="收藏"
+          @click="handleToggleBookmark"
+        >
+          <MIcon name="bookmark" size="md" :stroke-width="isBookmarked ? 2.4 : 1.8" />
+        </button>
+      </div>
     </header>
 
     <!-- Loading State -->
@@ -62,28 +73,6 @@
     <div v-else class="feed-reader-empty">
       <p>未找到文章内容</p>
     </div>
-
-    <!-- Bottom Floating Reading Actions Bar -->
-    <footer v-if="currentArticle" class="feed-reader-bottom-bar">
-      <button
-        type="button"
-        class="feed-reader-action"
-        :class="{ 'is-active': isBookmarked }"
-        @click="handleToggleBookmark"
-      >
-        <MIcon name="bookmark" size="sm" />
-        <span>{{ isBookmarked ? '已稍后读' : '稍后阅读' }}</span>
-      </button>
-
-      <button
-        type="button"
-        class="feed-reader-action"
-        @click="handleShare"
-      >
-        <MIcon name="share" size="sm" />
-        <span>分享</span>
-      </button>
-    </footer>
   </div>
 </template>
 
@@ -296,6 +285,12 @@ onMounted(() => {
   color: #f59e0b;
 }
 
+.feed-reader-topbar__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .feed-reader-topbar__title {
   font-size: 14px;
   font-weight: 600;
@@ -374,42 +369,7 @@ onMounted(() => {
   font-style: italic;
 }
 
-.feed-reader-bottom-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: calc(52px + env(safe-area-inset-bottom, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  background-color: #ffffff;
-  border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
-  z-index: 15;
-}
 
-.feed-reader-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: none;
-  font-size: 13px;
-  color: var(--a-color-muted, #64748b);
-  cursor: pointer;
-  padding: 8px 16px;
-  border-radius: 4px;
-  transition: all 0.15s ease;
-}
-
-.feed-reader-action:active {
-  background-color: var(--a-color-surface-muted, #f1f5f9);
-}
-
-.feed-reader-action.is-active {
-  color: #f59e0b;
-}
 
 .feed-reader-loading,
 .feed-reader-empty {

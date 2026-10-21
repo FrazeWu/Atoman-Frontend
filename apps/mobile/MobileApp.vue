@@ -86,6 +86,7 @@ const isSubRoute = computed(() => {
   return (
     isAuthRoute.value ||
     isUtilityRoute.value ||
+    isDetailRoute.value ||
     /^\/music\/(?:tags|songs|albums|artists|imports|more)(\/|$)/.test(route.path) ||
     /^\/posts\/subscriptions(\/|$)/.test(route.path) ||
     /^\/(?:channel|channels|collection)(\/|$)/.test(route.path)
@@ -120,17 +121,19 @@ const subRouteTitle = computed(() => {
 const isDetailRoute = computed(() => isMobileDetailRoute(route.path))
 
 const showMobileTopbar = computed(() => {
-  if (route.path === '/' || route.path === '/music/player') return false
-  if (isAuthRoute.value || isUtilityRoute.value) return true
-  return !isDetailRoute.value
+  if (route.path === '/music/player') return false
+  if (/^\/books\/(?:read|public-read)\//.test(route.path)) return false
+  if (/^\/(?:inbox|messages)\/chat\//.test(route.path)) return false
+  if (/^\/feed\/(?:article|item)\//.test(route.path)) return false
+  if (/^\/(?:post|posts\/post)\//.test(route.path)) return false
+  return true
 })
 
 const showMobileBottomNav = computed(() => {
-  if (isAuthRoute.value || isUtilityRoute.value || route.path === '/' || route.path === '/music/player') return false
-  if (/^\/music\/(?:playlist|album)\//.test(route.path)) return true
-  if (/^\/post\//.test(route.path) || /^\/posts\/notes\//.test(route.path)) return true
-  if (/^\/books\/work\//.test(route.path)) return true
-  return !isDetailRoute.value
+  if (isAuthRoute.value || route.path === '/music/player') return false
+  if (/^\/books\/(?:read|public-read)\//.test(route.path)) return false
+  if (/^\/(?:inbox|messages)\/chat\//.test(route.path)) return false
+  return true
 })
 
 const showMobilePlayer = computed(() => (

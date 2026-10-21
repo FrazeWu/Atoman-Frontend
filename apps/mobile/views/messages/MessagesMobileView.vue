@@ -21,8 +21,18 @@
       </div>
     </header>
 
+    <!-- Guest State -->
+    <div v-if="isGuest" class="messages-guest-wrap">
+      <MGuestCard
+        title="登录查看私信"
+        description="登录后可与创作者及好友收发即时消息与私信交流。"
+        action-text="立即登录"
+        icon="messages"
+      />
+    </div>
+
     <!-- Content -->
-    <main class="messages-content">
+    <main v-else class="messages-content">
       <div v-if="filteredConversations.length > 0" class="conversations-list">
         <article
           v-for="conv in filteredConversations"
@@ -74,8 +84,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import MAvatar from '@mobile/components/ui/MAvatar.vue'
+import MGuestCard from '@mobile/components/ui/MGuestCard.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MInput from '@mobile/components/ui/MInput.vue'
+import { useAuthStore } from '@/stores/auth'
 import { useDMStore } from '@/stores/dm'
 
 export interface Conversation {
@@ -99,6 +111,18 @@ const props = withDefaults(
 
 const router = useRouter()
 const searchQuery = ref('')
+
+let authStore: ReturnType<typeof useAuthStore> | null = null
+try {
+  authStore = useAuthStore()
+} catch {
+  // Graceful fallback for isolated tests
+}
+
+const isGuest = computed(() => {
+  if (props.initialConversations !== undefined) return false
+  return !authStore?.isAuthenticated && !authStore?.user
+})
 
 const defaultSampleConversations: Conversation[] = [
   {
@@ -219,6 +243,10 @@ onMounted(() => {
 
 .messages-header__search {
   margin-bottom: 4px;
+}
+
+.messages-guest-wrap {
+  margin-top: 8px;
 }
 
 .messages-content {

@@ -10,104 +10,118 @@
       </div>
     </header>
 
-    <!-- Quick Creation Action Cards -->
-    <section class="studio-actions-section">
-      <h2 class="studio-section-title">创作入口</h2>
-      <div class="studio-actions-grid">
-        <button
-          type="button"
-          class="studio-action-card"
-          data-testid="studio-action-note"
-          @click="handleAction('note')"
-        >
-          <div class="studio-action-card__icon">
-            <MIcon name="notes" size="md" />
-          </div>
-          <span class="studio-action-card__label">发布短记</span>
-        </button>
+    <!-- Guest State -->
+    <div v-if="isGuest" class="studio-guest-wrap">
+      <MGuestCard
+        title="登录进入 Studio"
+        description="登录后可创作长文、发布短记、上传单曲并管理您的内容草稿。"
+        action-text="立即登录"
+        icon="studio"
+      />
+    </div>
 
-        <button
-          type="button"
-          class="studio-action-card"
-          data-testid="studio-action-post"
-          @click="handleAction('post')"
-        >
-          <div class="studio-action-card__icon">
-            <MIcon name="file-text" size="md" />
-          </div>
-          <span class="studio-action-card__label">撰写长文</span>
-        </button>
-
-        <button
-          type="button"
-          class="studio-action-card"
-          data-testid="studio-action-audio"
-          @click="handleAction('audio')"
-        >
-          <div class="studio-action-card__icon">
-            <MIcon name="music" size="md" />
-          </div>
-          <span class="studio-action-card__label">上传单曲/播客</span>
-        </button>
-      </div>
-    </section>
-
-    <!-- Recent Drafts List -->
-    <section class="studio-drafts-section">
-      <div class="studio-drafts-section__header">
-        <h2 class="studio-section-title">近期草稿</h2>
-        <span class="studio-drafts-count">{{ drafts.length }} 篇</span>
-      </div>
-
-      <div v-if="drafts.length === 0" class="studio-drafts-empty" data-testid="drafts-empty-state">
-        <p class="studio-drafts-empty__text">暂无草稿内容</p>
-      </div>
-
-      <div v-else class="studio-drafts-list">
-        <div
-          v-for="draft in drafts"
-          :key="draft.id"
-          class="studio-draft-item"
-          data-testid="draft-item"
-        >
-          <div class="studio-draft-item__body">
-            <div class="studio-draft-item__header">
-              <span class="studio-draft-item__title">{{ draft.title }}</span>
-              <span class="studio-draft-item__badge">{{ formatDraftType(draft.type) }}</span>
+    <template v-else>
+      <!-- Quick Creation Action Cards -->
+      <section class="studio-actions-section">
+        <h2 class="studio-section-title">创作入口</h2>
+        <div class="studio-actions-grid">
+          <button
+            type="button"
+            class="studio-action-card"
+            data-testid="studio-action-note"
+            @click="handleAction('note')"
+          >
+            <div class="studio-action-card__icon">
+              <MIcon name="notes" size="md" />
             </div>
-            <span class="studio-draft-item__time">{{ draft.updatedAt }}</span>
-          </div>
+            <span class="studio-action-card__label">发布短记</span>
+          </button>
 
-          <div class="studio-draft-item__actions">
-            <button
-              type="button"
-              class="studio-draft-btn"
-              data-testid="draft-edit-btn"
-              aria-label="编辑草稿"
-              @click="handleEdit(draft)"
-            >
-              <MIcon name="edit" size="sm" />
-            </button>
-            <button
-              type="button"
-              class="studio-draft-btn studio-draft-btn--danger"
-              data-testid="draft-delete-btn"
-              aria-label="删除草稿"
-              @click="handleDelete(draft.id)"
-            >
-              <MIcon name="trash" size="sm" />
-            </button>
+          <button
+            type="button"
+            class="studio-action-card"
+            data-testid="studio-action-post"
+            @click="handleAction('post')"
+          >
+            <div class="studio-action-card__icon">
+              <MIcon name="file-text" size="md" />
+            </div>
+            <span class="studio-action-card__label">撰写长文</span>
+          </button>
+
+          <button
+            type="button"
+            class="studio-action-card"
+            data-testid="studio-action-audio"
+            @click="handleAction('audio')"
+          >
+            <div class="studio-action-card__icon">
+              <MIcon name="music" size="md" />
+            </div>
+            <span class="studio-action-card__label">上传单曲/播客</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Recent Drafts List -->
+      <section class="studio-drafts-section">
+        <div class="studio-drafts-section__header">
+          <h2 class="studio-section-title">近期草稿</h2>
+          <span class="studio-drafts-count">{{ drafts.length }} 篇</span>
+        </div>
+
+        <div v-if="drafts.length === 0" class="studio-drafts-empty" data-testid="drafts-empty-state">
+          <p class="studio-drafts-empty__text">暂无草稿内容</p>
+        </div>
+
+        <div v-else class="studio-drafts-list">
+          <div
+            v-for="draft in drafts"
+            :key="draft.id"
+            class="studio-draft-item"
+            data-testid="draft-item"
+          >
+            <div class="studio-draft-item__body">
+              <div class="studio-draft-item__header">
+                <span class="studio-draft-item__title">{{ draft.title }}</span>
+                <span class="studio-draft-item__badge">{{ formatDraftType(draft.type) }}</span>
+              </div>
+              <span class="studio-draft-item__time">{{ draft.updatedAt }}</span>
+            </div>
+
+            <div class="studio-draft-item__actions">
+              <button
+                type="button"
+                class="studio-draft-btn"
+                data-testid="draft-edit-btn"
+                aria-label="编辑草稿"
+                @click="handleEdit(draft)"
+              >
+                <MIcon name="edit" size="sm" />
+              </button>
+              <button
+                type="button"
+                class="studio-draft-btn studio-draft-btn--danger"
+                data-testid="draft-delete-btn"
+                aria-label="删除草稿"
+                @click="handleDelete(draft.id)"
+              >
+                <MIcon name="trash" size="sm" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import MGuestCard from '@mobile/components/ui/MGuestCard.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
+import { useAuthStore } from '@/stores/auth'
 import { useStudioStore } from '@/stores/studio'
 
 export interface DraftItem {
@@ -127,6 +141,18 @@ const props = withDefaults(
 )
 
 const router = useRouter()
+let authStore: ReturnType<typeof useAuthStore> | null = null
+try {
+  authStore = useAuthStore()
+} catch {
+  // Graceful fallback
+}
+
+const isGuest = computed(() => {
+  if (props.initialDrafts !== undefined) return false
+  return !authStore?.isAuthenticated && !authStore?.user
+})
+
 let studioStore: ReturnType<typeof useStudioStore> | null = null
 try {
   studioStore = useStudioStore()
@@ -140,7 +166,7 @@ const drafts = ref<DraftItem[]>(
 )
 
 async function loadDrafts() {
-  if (props.initialDrafts !== undefined || !studioStore) return
+  if (props.initialDrafts !== undefined || !studioStore || isGuest.value) return
   loading.value = true
   try {
     await studioStore.loadState()
@@ -230,6 +256,10 @@ onMounted(() => {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--a-color-text, #0f172a);
+}
+
+.studio-guest-wrap {
+  margin-top: 8px;
 }
 
 /* Quick Creation Cards */

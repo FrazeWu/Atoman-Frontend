@@ -43,22 +43,22 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	{
 		path: "/inbox",
 		component: () => import("./views/messages/MessagesMobileView.vue"),
-		meta: requiresAuth,
+		meta: { restoreSession: true },
 	},
 	{
 		path: "/inbox/notifications",
 		component: () => import("./views/messages/MessagesNotificationsView.vue"),
-		meta: requiresAuth,
+		meta: { restoreSession: true },
 	},
 	{
 		path: "/inbox/contacts",
 		component: () => import("./views/messages/MessagesContactsView.vue"),
-		meta: requiresAuth,
+		meta: { restoreSession: true },
 	},
 	{
 		path: "/inbox/me",
 		component: () => import("./views/messages/MessagesMeView.vue"),
-		meta: { requiresAuth: true, restoreSession: true },
+		meta: { restoreSession: true },
 	},
 	{
 		path: "/inbox/chat/:id",
@@ -77,7 +77,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	{
 		path: "/messages",
 		component: () => import("./views/messages/MessagesMobileView.vue"),
-		meta: requiresAuth,
+		meta: { restoreSession: true },
 	},
 	{
 		path: "/me",
@@ -87,7 +87,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	{
 		path: "/studio",
 		component: () => import("./views/studio/StudioMobileView.vue"),
-		meta: requiresAuth,
+		meta: { restoreSession: true },
 	},
 	{
 		path: "/books",
@@ -202,7 +202,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	{
 		path: "/posts/me",
 		component: () => import("./views/blog/BlogMeView.vue"),
-		meta: { requiresAuth: true, restoreSession: true },
+		meta: { restoreSession: true },
 	},
 	{
 		path: "/posts/subscriptions",

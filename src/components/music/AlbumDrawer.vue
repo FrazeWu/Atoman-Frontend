@@ -948,7 +948,17 @@ watch(
             <Pause v-if="isTrackPlaying(track)" class="track-play-icon" :size="14" fill="currentColor" />
             <Play v-else class="track-play-icon" :size="14" fill="currentColor" />
           </button>
-          <RouterLink class="track-title" :to="`/music/song/${track.id}`" :title="track.title">{{ track.title }}</RouterLink>
+          <div class="track-title-cell">
+            <RouterLink class="track-title" :to="`/music/song/${track.id}`" :title="track.title">{{ track.title }}</RouterLink>
+            <span
+              v-if="track.lyrics?.trim()"
+              class="track-lyrics-marker"
+              title="有歌词"
+              role="img"
+              aria-label="有歌词"
+              :data-testid="`track-has-lyrics-${track.id}`"
+            >词</span>
+          </div>
           <div class="track-meta">
             <span v-if="trackMatchBadge(track)" class="track-match-status">{{ trackMatchBadge(track) }}</span>
             <span v-if="!canPlayTrack(track)" class="track-unavailable">无音频</span>
@@ -1036,14 +1046,6 @@ watch(
             >
               <ChevronDown :size="16" aria-hidden="true" />
             </button>
-            <span
-              v-if="track.lyrics?.trim()"
-              class="track-lyrics-marker"
-              title="有歌词"
-              role="img"
-              aria-label="有歌词"
-              :data-testid="`track-has-lyrics-${track.id}`"
-            >词</span>
           </div>
           <div v-if="expandedTrackId === String(track.id)" class="track-specification">
             <p v-if="sourceSpecification(track)" class="track-specification__line">
@@ -1576,11 +1578,15 @@ watch(
 .track:hover .track-play-btn:not(:disabled) .track-num {
   display: none;
 }
-.track-title {
+.track-title-cell {
   display: flex;
-  align-self: stretch;
   align-items: center;
+  min-width: 0;
   min-height: 2rem;
+  gap: 0.45rem;
+}
+.track-title {
+  display: inline-block;
   color: var(--a-color-text);
   font-size: 1rem;
   line-height: 1.35;
@@ -1758,8 +1764,11 @@ watch(
     height: 2rem;
   }
 
-  .track-title {
+  .track-title-cell {
     min-height: 2rem;
+  }
+
+  .track-title {
     font-size: 0.95rem;
   }
 

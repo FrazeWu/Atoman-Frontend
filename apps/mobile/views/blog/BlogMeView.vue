@@ -353,7 +353,6 @@ onMounted(() => {
 .blog-me-guest-wrap {
   padding: 16px;
 }
-}
 
 .blog-me-profile {
   padding: 16px;

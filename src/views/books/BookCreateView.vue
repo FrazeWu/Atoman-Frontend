@@ -2,7 +2,7 @@
   <section class="book-catalog">
     <PPageHeader
       title="添加图书"
-      sub="录入至全站公共书库：先确认作品实体，再确认具体出版版本与阅读文件。"
+      sub="先确认作品，再确认具体出版版本与阅读文件。"
     />
     <ol class="book-catalog__steps" aria-label="添加进度">
       <li
@@ -87,7 +87,7 @@
             />
             <div class="book-catalog__choice-body">
               <span class="book-catalog__choice-title">新建作品（不是新增出版版本）</span>
-              <small>公共书库尚未收录此作品实体，建立全新作品后可为其添加具体出版版本。</small>
+              <small>尚未收录此作品，建立全新作品后可为其添加具体出版版本。</small>
             </div>
           </label>
         </div>

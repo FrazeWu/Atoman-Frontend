@@ -226,9 +226,6 @@ onMounted(async () => {
 .feed-me-guest-wrap {
   padding-top: 16px;
 }
-  flex-direction: column;
-  gap: 18px;
-}
 
 .feed-me-header {
   margin-bottom: 2px;

@@ -1,7 +1,17 @@
 <template>
   <div class="blog-me-view">
-    <!-- Author Profile Card -->
-    <section class="blog-me-profile" data-testid="author-profile-card">
+    <!-- Unauthenticated Guest State -->
+    <div v-if="authStore && !authStore.isAuthenticated" class="blog-me-guest-wrap">
+      <MGuestCard
+        title="登录查看创作者中心"
+        description="登录后可管理发表的短笺、长文与收藏内容。"
+        redirect="/posts/me"
+      />
+    </div>
+
+    <template v-else>
+      <!-- Author Profile Card -->
+      <section class="blog-me-profile" data-testid="author-profile-card">
       <div class="blog-me-profile__top">
         <MAvatar
           :src="profile.avatar"
@@ -155,16 +165,21 @@
         </div>
       </div>
     </main>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { getActivePinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
+import { useApi } from '@/composables/useApi'
+import { apiRequestEnvelope } from '@/api/client'
 import MAvatar from '@mobile/components/ui/MAvatar.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
+import MGuestCard from '@mobile/components/ui/MGuestCard.vue'
 
 export interface AuthorProfile {
   name: string
@@ -210,12 +225,8 @@ const props = withDefaults(
 )
 
 const router = useRouter()
-let authStore: ReturnType<typeof useAuthStore> | null = null
-try {
-  authStore = useAuthStore()
-} catch {
-  // Graceful fallback
-}
+const api = useApi()
+const authStore = getActivePinia() ? useAuthStore() : null
 
 const activeSubTab = ref<'notes' | 'articles' | 'bookmarks'>(props.initialTab)
 
@@ -226,46 +237,20 @@ const profile = ref<AuthorProfile>(
     avatar: authStore?.user?.avatar_url || '',
     bio: authStore?.user?.bio || '保持书写，持续记录与思考。',
     stats: {
-      notes: 12,
-      articles: 3,
-      likes: 86,
-      followers: 42,
+      notes: 0,
+      articles: 0,
+      likes: 0,
+      followers: 0,
     },
   }
 )
 
 const userNotes = ref<UserNoteItem[]>(
-  props.initialNotes
-    ? [...props.initialNotes]
-    : [
-        {
-          id: 'un-1',
-          content: '纯白微圆角设计系统的核心在于克制与呼吸感，而不是无节制的大圆角。',
-          created_at: new Date(Date.now() - 7200000).toISOString(),
-          likes_count: 45,
-          comments_count: 8,
-        },
-        {
-          id: 'un-2',
-          content: '雨天的午后很适合把手机调成静音，翻出巴赫的平均律键盘曲集。',
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-          likes_count: 28,
-          comments_count: 5,
-        },
-      ]
+  props.initialNotes ? [...props.initialNotes] : []
 )
 
 const userArticles = ref<UserArticleItem[]>(
-  props.initialArticles
-    ? [...props.initialArticles]
-    : [
-        {
-          id: 'ua-1',
-          title: '触觉与微交互：论纯白微圆角的美学逻辑',
-          reading_time_minutes: 8,
-          published_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-        },
-      ]
+  props.initialArticles ? [...props.initialArticles] : []
 )
 
 function deleteUserNote(id: string) {
@@ -288,15 +273,71 @@ function formatTime(isoString?: string): string {
   }
 }
 
-onMounted(() => {
-  if (authStore?.user && !props.initialProfile) {
-    profile.value.name = authStore.user.display_name || authStore.user.username || '文字作者'
-    profile.value.username = authStore.user.username || 'writer'
-    profile.value.avatar = authStore.user.avatar_url || ''
-    if (authStore.user.bio) {
-      profile.value.bio = authStore.user.bio
+async function loadAuthorData() {
+  if (!authStore?.isAuthenticated || !authStore.user) return
+
+  const user = authStore.user
+  if (!props.initialProfile) {
+    profile.value.name = user.display_name || user.username || '文字作者'
+    profile.value.username = user.username || 'writer'
+    profile.value.avatar = user.avatar_url || ''
+    if (user.bio) {
+      profile.value.bio = user.bio
     }
   }
+
+  const authorId = user.uuid || user.id
+  if (!authorId) return
+
+  try {
+    if (!props.initialNotes) {
+      const notesRes = await apiRequestEnvelope<any[]>(`${api.blog.shortNotes}?author_id=${encodeURIComponent(String(authorId))}&page=1&page_size=30`)
+      if (notesRes?.data && Array.isArray(notesRes.data)) {
+        userNotes.value = notesRes.data.map((n) => ({
+          id: String(n.id),
+          content: n.content || '',
+          created_at: n.created_at,
+          likes_count: n.likes_count || 0,
+          comments_count: n.comments_count || 0,
+        }))
+        if (profile.value.stats) {
+          profile.value.stats.notes = userNotes.value.length
+        }
+      }
+    }
+
+    if (!props.initialArticles) {
+      const articlesRes = await apiRequestEnvelope<any[]>(`${api.blog.posts}?author_id=${encodeURIComponent(String(authorId))}&page=1&limit=30`)
+      if (articlesRes?.data && Array.isArray(articlesRes.data)) {
+        userArticles.value = articlesRes.data.map((a) => {
+          const words = (a.content || '').length
+          return {
+            id: String(a.id),
+            title: a.title,
+            reading_time_minutes: Math.max(1, Math.round(words / 400)),
+            published_at: a.published_at || a.created_at,
+          }
+        })
+        if (profile.value.stats) {
+          profile.value.stats.articles = userArticles.value.length
+        }
+      }
+    }
+  } catch {
+    // Graceful fallback
+  }
+}
+
+watch(
+  () => authStore?.user,
+  () => {
+    void loadAuthorData()
+  },
+  { deep: true }
+)
+
+onMounted(() => {
+  void loadAuthorData()
 })
 </script>
 
@@ -307,6 +348,11 @@ onMounted(() => {
   min-height: 100%;
   background: var(--a-color-bg, #ffffff);
   padding-bottom: 32px;
+}
+
+.blog-me-guest-wrap {
+  padding: 16px;
+}
 }
 
 .blog-me-profile {

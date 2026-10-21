@@ -202,7 +202,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	{
 		path: "/posts/me",
 		component: () => import("./views/blog/BlogMeView.vue"),
-		meta: requiresAuth,
+		meta: { requiresAuth: true, restoreSession: true },
 	},
 	{
 		path: "/posts/subscriptions",

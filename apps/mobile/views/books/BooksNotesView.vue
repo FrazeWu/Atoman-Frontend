@@ -80,8 +80,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { getActivePinia } from 'pinia'
 import MIcon from '@mobile/components/ui/MIcon.vue'
+import { useAuthStore } from '@/stores/auth'
+import { listPrivateNotes } from '@/api/bookPrivate'
 
 export interface BookNoteItem {
   id: string
@@ -100,6 +103,8 @@ const props = withDefaults(
     initialNotes: undefined,
   }
 )
+
+const authStore = getActivePinia() ? useAuthStore() : null
 
 const defaultSampleNotes: BookNoteItem[] = [
   {
@@ -129,7 +134,11 @@ const defaultSampleNotes: BookNoteItem[] = [
 ]
 
 const notesList = ref<BookNoteItem[]>(
-  props.initialNotes ? [...props.initialNotes] : defaultSampleNotes
+  props.initialNotes
+    ? [...props.initialNotes]
+    : authStore
+      ? []
+      : defaultSampleNotes
 )
 
 watch(
@@ -164,6 +173,31 @@ function formatTime(isoString?: string): string {
     return '近期'
   }
 }
+
+async function loadPrivateNotes() {
+  if (props.initialNotes || !authStore?.isAuthenticated) return
+  try {
+    const res = await listPrivateNotes()
+    if (res?.items && Array.isArray(res.items) && res.items.length > 0) {
+      notesList.value = res.items.map((n) => ({
+        id: String(n.id),
+        bookTitle: n.title || '读书笔记',
+        chapter: '',
+        quote: n.body || '',
+        comment: '',
+        created_at: (n as any).created_at || '',
+      }))
+    } else if (authStore.isAuthenticated) {
+      notesList.value = []
+    }
+  } catch {
+    // Graceful fallback
+  }
+}
+
+onMounted(() => {
+  void loadPrivateNotes()
+})
 </script>
 
 <style scoped>

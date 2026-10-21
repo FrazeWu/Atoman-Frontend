@@ -1,7 +1,17 @@
 <template>
   <div class="books-me-view">
-    <!-- Header -->
-    <header class="books-me-header">
+    <!-- Unauthenticated Guest State -->
+    <div v-if="!props.initialProfile && authStore && !authStore.isAuthenticated" class="books-me-guest-wrap">
+      <MGuestCard
+        title="登录查看书房档案"
+        description="登录后可同步书架、阅读进度与划线笔记。"
+        redirect="/books/me"
+      />
+    </div>
+
+    <template v-else>
+      <!-- Header -->
+      <header class="books-me-header">
       <h1 class="books-me-title">我的阅读</h1>
     </header>
 
@@ -132,13 +142,18 @@
         </div>
       </div>
     </section>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { getActivePinia } from 'pinia'
 import MIcon from '@mobile/components/ui/MIcon.vue'
+import MGuestCard from '@mobile/components/ui/MGuestCard.vue'
+import { useAuthStore } from '@/stores/auth'
+import { listLibrary, listPrivateNotes, readingStatistics } from '@/api/bookPrivate'
 
 export interface ReaderProfile {
   name: string
@@ -167,25 +182,40 @@ const props = withDefaults(
 )
 
 const router = useRouter()
+const authStore = getActivePinia() ? useAuthStore() : null
 const activeTab = ref<'reading' | 'finished'>('reading')
 
-const defaultProfile: ReaderProfile = {
-  name: '爱书客',
-  username: 'book_lover',
-  bio: '在书页间旅行，在文字中呼吸。',
-  stats: {
-    readingCount: 3,
-    finishedCount: 14,
-    notesCount: 48,
-    readingHours: 56,
-  },
-  annualGoal: {
-    target: 20,
-    finished: 14,
-  },
-}
+const liveStats = ref({
+  readingCount: 0,
+  finishedCount: 0,
+  notesCount: 0,
+  readingHours: 0,
+})
 
-const profile = computed<ReaderProfile>(() => props.initialProfile || defaultProfile)
+const readingList = ref<{ id: string; title: string; author: string; progress?: number }[]>([])
+const finishedList = ref<{ id: string; title: string; author: string }[]>([])
+
+const profile = computed<ReaderProfile>(() => {
+  if (props.initialProfile) {
+    return props.initialProfile
+  }
+  const user = authStore?.user
+  return {
+    name: user?.display_name || user?.username || '爱书客',
+    username: user?.username || 'book_lover',
+    bio: user?.bio || '在书页间旅行，在文字中呼吸。',
+    stats: {
+      readingCount: liveStats.value.readingCount,
+      finishedCount: liveStats.value.finishedCount,
+      notesCount: liveStats.value.notesCount,
+      readingHours: liveStats.value.readingHours,
+    },
+    annualGoal: {
+      target: 20,
+      finished: liveStats.value.finishedCount,
+    },
+  }
+})
 
 const goalPercent = computed<number>(() => {
   const { target, finished } = profile.value.annualGoal
@@ -193,18 +223,47 @@ const goalPercent = computed<number>(() => {
   return Math.min(100, Math.round((finished / target) * 100))
 })
 
-const readingList = ref([
-  { id: 'b-current', title: '工作颂歌', author: '阿兰·德波顿', progress: 64 },
-  { id: 'w-1', title: '沉思录', author: '马可·奥勒留', progress: 32 },
-  { id: 'w-2', title: '代码整洁之道', author: 'Robert C. Martin', progress: 15 },
-])
+onMounted(async () => {
+  if (props.initialProfile) return
+  if (!authStore?.isAuthenticated) return
 
-const finishedList = ref([
-  { id: 'f-1', title: '悉达多', author: '赫尔曼·黑塞' },
-  { id: 'f-2', title: '艺术的慰藉', author: '阿兰·德波顿' },
-  { id: 'f-3', title: '人类简史', author: '尤瓦尔·赫拉利' },
-  { id: 'f-4', title: '哲学的故事', author: '威尔·杜兰特' },
-])
+  try {
+    const [libRes, notesRes, statsRes] = await Promise.allSettled([
+      listLibrary(),
+      listPrivateNotes(),
+      readingStatistics(),
+    ])
+
+    if (libRes.status === 'fulfilled' && libRes.value?.items) {
+      const items = libRes.value.items
+      const readingItems = items.filter((i) => i.status === 'reading')
+      const finishedItems = items.filter((i) => i.status === 'read')
+      liveStats.value.readingCount = readingItems.length
+      liveStats.value.finishedCount = finishedItems.length
+      readingList.value = readingItems.map((i) => ({
+        id: i.work_id,
+        title: i.work_title || '未命名书目',
+        author: '',
+        progress: 0,
+      }))
+      finishedList.value = finishedItems.map((i) => ({
+        id: i.work_id,
+        title: i.work_title || '未命名书目',
+        author: '',
+      }))
+    }
+
+    if (notesRes.status === 'fulfilled' && notesRes.value) {
+      liveStats.value.notesCount = notesRes.value.total ?? notesRes.value.items?.length ?? 0
+    }
+
+    if (statsRes.status === 'fulfilled' && statsRes.value) {
+      liveStats.value.readingHours = Math.round((statsRes.value.total_seconds || 0) / 3600)
+    }
+  } catch (err) {
+    console.error('Failed to load reader profile data:', err)
+  }
+})
 
 function openBook(id: string) {
   router.push(`/books/read/${id}`)

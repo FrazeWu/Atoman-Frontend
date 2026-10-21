@@ -82,7 +82,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { getActivePinia } from 'pinia'
 import MIcon from '@mobile/components/ui/MIcon.vue'
+import { useAuthStore } from '@/stores/auth'
 import { listBookShelf, listContinueReading, listBookImports } from '@/api/books'
 
 export interface ShelfBook {
@@ -125,9 +127,14 @@ const defaultSampleBooks: ShelfBook[] = [
 ]
 
 const router = useRouter()
+const authStore = getActivePinia() ? useAuthStore() : null
 const loading = ref(false)
-const fetchedCurrentReading = ref<ShelfBook | null>(defaultSampleCurrent)
-const fetchedBooks = ref<ShelfBook[]>(defaultSampleBooks)
+const fetchedCurrentReading = ref<ShelfBook | null>(
+  authStore ? null : defaultSampleCurrent
+)
+const fetchedBooks = ref<ShelfBook[]>(
+  authStore ? [] : defaultSampleBooks
+)
 
 async function loadShelfData() {
   if (props.initialBooks !== undefined || props.currentReading !== undefined || props.initialCurrentBook !== undefined) return
@@ -150,7 +157,7 @@ async function loadShelfData() {
         format: (first.format || 'EPUB').toUpperCase(),
       }
     } else {
-      fetchedCurrentReading.value = defaultSampleCurrent
+      fetchedCurrentReading.value = null
     }
 
     const items: ShelfBook[] = []
@@ -176,10 +183,12 @@ async function loadShelfData() {
         }
       }
     }
-    fetchedBooks.value = items.length > 0 ? items : defaultSampleBooks
+    fetchedBooks.value = items
   } catch {
-    fetchedCurrentReading.value = defaultSampleCurrent
-    fetchedBooks.value = defaultSampleBooks
+    if (!authStore) {
+      fetchedCurrentReading.value = defaultSampleCurrent
+      fetchedBooks.value = defaultSampleBooks
+    }
   } finally {
     loading.value = false
   }

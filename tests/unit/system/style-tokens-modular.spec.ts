@@ -11,6 +11,16 @@ describe('Style tokens modularization contract', () => {
     expect(existsSync(resolve(root, 'src/shared/tokens/layers.css'))).toBe(true)
   })
 
+  it('clips root horizontal overflow without trapping sticky navigation in a scroll container', () => {
+    const css = readFileSync(resolve(root, 'src/style.css'), 'utf-8')
+    for (const selector of ['html', 'body']) {
+      const rule = css.match(new RegExp(`(?:^|\\n)${selector}\\s*\\{([^}]+)\\}`))?.[1]
+      expect(rule).toMatch(/overflow-x:\s*clip\s*;/)
+      expect(rule).toMatch(/overscroll-behavior-x:\s*none\s*;/)
+      expect(rule).not.toMatch(/overflow(?:-y)?:\s*(?:hidden|auto|scroll)/)
+    }
+  })
+
   it('defines standard recommendation and comment sheet tokens in variables.css', () => {
     const vars = readFileSync(resolve(root, 'src/shared/tokens/variables.css'), 'utf-8')
     expect(vars).toContain('--a-recommendation-width')

@@ -213,6 +213,10 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				{ path: "work/:workId", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'work' } }, meta: { bookCatalog: true, restoreSession: true } },
 				{ path: "edition/:editionId", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'edition' } }, meta: { bookCatalog: true } },
 				{
+					path: "tags",
+					component: () => import("@/views/books/BookTagsView.vue"),
+				},
+				{
 					path: "library",
 					component: () => import("@/views/books/BookPrivateLibraryView.vue"),
 					meta: { requiresAuth: true },

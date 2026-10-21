@@ -418,9 +418,9 @@ const blogNavItems: { to: string; label: string; icon: Component; exact?: boolea
 
 // 4. Books Navigation Items
 const booksNavItems: { to: string; label: string; icon: Component; exact?: boolean }[] = [
-  { to: moduleUrl('books'), label: '探索', icon: Compass, exact: true },
+  { to: moduleUrl('books'), label: '发现', icon: Compass, exact: true },
+  { to: modulePathUrl('books', '/tags'), label: '标签', icon: Tags },
   { to: modulePathUrl('books', '/library'), label: '书架', icon: Library },
-  { to: modulePathUrl('books', '/lists'), label: '书单', icon: BookOpen },
   { to: modulePathUrl('books', '/notes'), label: '笔记', icon: FileText },
 ]
 

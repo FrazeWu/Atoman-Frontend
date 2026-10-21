@@ -840,3 +840,256 @@
   font-size: 0.875rem;
   color: var(--a-color-text, #1c1c1e);
 }
+
+/* ==========================================================================
+   Catalog Discover Card Mini Paper Cover & Single-Line Footer
+   ========================================================================== */
+
+.book-catalog__cover-mini {
+  width: 100%;
+  aspect-ratio: 130 / 182;
+  background-color: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 10px 10px 14px;
+  user-select: none;
+  box-sizing: border-box;
+  box-shadow: none !important;
+  transition: border-color 0.15s ease;
+  overflow: hidden;
+}
+
+.book-catalog__cover-mini::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 6px;
+  width: 1px;
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.book-catalog__cover-mini-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.book-catalog__cover-mini-header {
+  width: 100%;
+  text-align: center;
+  border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
+  padding-bottom: 0.25rem;
+  font-family: "Songti SC", "SimSun", "STSong", "Noto Serif SC", serif;
+  font-size: 0.625rem;
+  color: var(--a-color-text-secondary, #64748b);
+  letter-spacing: 0.12em;
+}
+
+.book-catalog__cover-mini-body {
+  margin-block: auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-inline: 0.25rem;
+}
+
+.book-catalog__cover-mini-title {
+  font-family: "Songti SC", "SimSun", "STSong", "Noto Serif SC", serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--a-color-text, #1c1c1e);
+  line-height: 1.25;
+  letter-spacing: 0.1em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.book-catalog__cover-mini-subtitle {
+  font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+  font-size: 0.625rem;
+  color: var(--a-color-text-secondary, #64748b);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.book-catalog__cover-mini-footer {
+  width: 100%;
+  border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
+  padding-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.625rem;
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+.book-catalog__cover-mini-author {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60%;
+}
+
+.book-catalog__cover-mini-year {
+  flex-shrink: 0;
+}
+
+/* Card single-line footer */
+.book-catalog__card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+  font-size: 0.8125rem;
+  line-height: 1.25;
+}
+
+.book-catalog__card-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--a-color-text, #1c1c1e);
+}
+
+.book-catalog__card:hover .book-catalog__cover-mini {
+  border-color: var(--a-color-text, #1c1c1e);
+}
+
+.book-catalog__card:hover .book-catalog__card-title {
+  color: var(--a-color-primary, #0284c7);
+}
+
+.book-catalog__card-rating {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Book Tags & Categories View
+   ========================================================================== */
+
+.book-tags-view {
+  max-width: 64rem;
+}
+
+.book-tags__filter-box {
+  max-width: 28rem;
+  margin-block: 1.25rem 2rem;
+}
+
+.book-tags__section {
+  margin-bottom: 2.5rem;
+}
+
+.book-tags__section-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--a-color-text, #1c1c1e);
+  margin-bottom: 1rem;
+}
+
+.book-tags__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
+.book-tags__category-card {
+  text-align: left;
+  padding: 1rem 1.25rem;
+  background-color: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  box-shadow: none !important;
+}
+
+.book-tags__category-card:hover {
+  border-color: var(--a-color-text, #1c1c1e);
+  background-color: var(--a-color-surface-muted, #f8fafc);
+}
+
+.book-tags__category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.375rem;
+}
+
+.book-tags__category-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--a-color-text, #1c1c1e);
+}
+
+.book-tags__category-count {
+  font-size: 0.75rem;
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+.book-tags__category-desc {
+  font-size: 0.75rem;
+  color: var(--a-color-text-secondary, #64748b);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.book-tags__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+}
+
+.book-tags__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  background-color: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  font-size: 0.8125rem;
+  color: var(--a-color-text, #1c1c1e);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  box-shadow: none !important;
+}
+
+.book-tags__chip:hover {
+  border-color: var(--a-color-text, #1c1c1e);
+  background-color: var(--a-color-surface-muted, #f8fafc);
+}
+
+.book-tags__chip-prefix {
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+.book-tags__chip-name {
+  font-weight: 500;
+}
+
+.book-tags__chip-count {
+  font-size: 0.6875rem;
+  color: var(--a-color-text-secondary, #64748b);
+  background-color: var(--a-color-surface-muted, #f1f5f9);
+  padding: 1px 5px;
+  border-radius: 2px;
+}

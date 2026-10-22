@@ -9,7 +9,6 @@ const commentSideSheetHosts = [
   'src/components/feed/FeedArticleSheet.vue',
   'src/components/shortnote/ShortNoteCard.vue',
   'src/components/music/AlbumDrawer.vue',
-  'src/views/books/BookWorkView.vue',
   'src/views/forum/ForumTopicView.vue',
   'src/views/podcast/PodcastEpisodeView.vue',
   'src/views/video/VideoDetailView.vue',

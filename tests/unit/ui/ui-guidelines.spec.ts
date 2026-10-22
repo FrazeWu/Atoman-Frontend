@@ -91,7 +91,6 @@ describe("UI 准则", () => {
 		expect(read("src/components/music/AlbumDrawer.vue")).not.toMatch(/UUID|复制 UUID/);
 		expect(read("src/components/music/SongDrawer.vue")).not.toMatch(/UUID|复制 UUID/);
 		expect(read("src/components/music/MusicCreationFlowDrawer.vue")).not.toContain("后台处理");
-		expect(read("src/views/books/BooksHomeView.vue")).not.toContain("作品 UUID");
 		expect(read("src/views/studio/StudioChannelView.vue")).not.toMatch(/>UUID<|复制 UUID|UUID：/);
 		expect(read("src/components/shared/PEditorRuntime.vue")).not.toContain("UUID");
 	});

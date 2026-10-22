@@ -35,17 +35,12 @@
     >
       <template #actions>
         <PButton v-if="source?.annotations !== undefined && ['txt', 'epub', 'pdf'].includes(asset?.format || '')" type="button" variant="ghost" :disabled="!selectionCandidate || isLoading" @pointerdown.prevent @click="annotateCandidate">标注选中文字</PButton>
-        <PButton v-if="!source" type="button" variant="ghost" :disabled="!asset" @click="reportAsset">
-          <Flag :size="16" aria-hidden="true" />
-          <span>举报正文</span>
-        </PButton>
         <PButton type="button" variant="ghost" :disabled="!asset || isLoading || bookmarkBusy" aria-label="添加书签" title="添加书签" @click="addBookmark">
           <Bookmark :size="16" aria-hidden="true" />
           <span>书签</span>
         </PButton>
       </template>
       <template #status>
-        <p v-if="reportMessage" class="public-reader__feedback" aria-live="polite">{{ reportMessage }}</p>
         <p v-if="annotationMessage" class="public-reader__feedback" role="status">{{ annotationMessage }}</p>
         <p v-if="errorMessage" class="public-reader__feedback public-reader__feedback--error" role="alert">{{ errorMessage }}</p>
         <p v-else-if="isLoading" class="public-reader__feedback" aria-live="polite">正在打开公共正文...</p>
@@ -137,7 +132,7 @@ import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
 import { findBookTextMatches, type BookTextSearchMatch } from '@/utils/bookTextSearch'
 import { getLocalBookReadingProgress, saveLocalBookReadingProgress, type LocalBookReadingProgress } from '@/utils/bookReadingProgress'
 import { parseBookReaderDisplayPreferences, type BookReaderBookmark, type BookReaderDisplayPreferences, type BookReaderScrollMode } from '@/utils/bookReaderPreferences'
-import { fetchPublishedBookAssetContent, getPublishedBookAsset, reportPublishedBookAsset, type BookPublishedAsset } from '@/api/books'
+import { fetchPublishedBookAssetContent, getPublishedBookAsset, type BookPublishedAsset } from '@/api/books'
 import type { BookReaderSource } from '@/types/bookReaderSource'
 import type { ReadingMark, ReadingAnchor } from '@/api/bookReading'
 import type { BookAnnotation } from '@/api/books'
@@ -166,7 +161,6 @@ const comicPages = ref<Array<ComicPage & { url: string }>>([])
 const epubTOC = ref<EpubTOCItem[]>([])
 const isLoading = ref(true)
 const errorMessage = ref('')
-const reportMessage = ref('')
 const bookmarks = ref<BookReaderBookmark[]>([])
 const bookmarkBusy = ref(false)
 const displayPreferences = ref<BookReaderDisplayPreferences>(parseBookReaderDisplayPreferences(null))
@@ -465,14 +459,6 @@ async function loadComic() {
   scrollToComicPage()
 }
 
-function reportAsset() {
-  if (!asset.value) return
-  const reason = window.prompt('请输入举报原因')?.trim()
-  if (!reason) return
-  void reportPublishedBookAsset(asset.value.id, reason)
-    .then(() => { reportMessage.value = '举报已提交，感谢你的反馈' })
-    .catch(() => { reportMessage.value = '举报提交失败，请登录后重试' })
-}
 
 function handleTextScroll() {
   const viewport = textViewport.value
@@ -560,8 +546,8 @@ async function addBookmark() {
   }
   if (props.source?.addBookmark) {
     bookmarkBusy.value = true
-    try { const result = await props.source.addBookmark(bookmark); if (!disposed) { bookmarks.value = result; reportMessage.value = '' } }
-    catch { reportMessage.value = '书签未保存到云端，请重试。' }
+    try { const result = await props.source.addBookmark(bookmark); if (!disposed) { bookmarks.value = result; errorMessage.value = '' } }
+    catch { errorMessage.value = '书签未保存到云端，请重试。' }
     finally { bookmarkBusy.value = false }
     return
   }
@@ -578,8 +564,8 @@ async function removeBookmark(id: string) {
   if (props.source?.removeBookmark) {
     if (bookmarkBusy.value) return
     bookmarkBusy.value = true
-    try { const result = await props.source.removeBookmark(id); if (!disposed) { bookmarks.value = result; reportMessage.value = '' } }
-    catch { reportMessage.value = '书签未从云端删除，请重试。' }
+    try { const result = await props.source.removeBookmark(id); if (!disposed) { bookmarks.value = result; errorMessage.value = '' } }
+    catch { errorMessage.value = '书签未从云端删除，请重试。' }
     finally { bookmarkBusy.value = false }
     return
   }

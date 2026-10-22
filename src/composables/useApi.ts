@@ -49,26 +49,16 @@ export function useApi() {
 			albumRevisions: (id: number | string) => `${apiUrl}/albums/${id}/revisions`,
 			albumRevision: (id: number | string, version: number | string) =>
 				`${apiUrl}/albums/${id}/revisions/${version}`,
-			albumRevisionDiff: (id: number | string) =>
-				`${apiUrl}/albums/${id}/revisions/diff`,
 			albumRevert: (id: number | string, version: number | string) =>
 				`${apiUrl}/albums/${id}/revisions/${version}/revert`,
-			albumDiscussions: (id: number | string) =>
-				`${apiUrl}/albums/${id}/discussions`,
 			albumEntryStatus: (id: number | string) =>
 				`${apiUrl}/albums/${id}/entry-status`,
 			albumProtection: (id: number | string) =>
 				`${apiUrl}/albums/${id}/protection`,
 			artistEntryStatus: (id: number | string) =>
 				`${apiUrl}/artists/${id}/entry-status`,
-			artistDiscussions: (id: number | string) =>
-				`${apiUrl}/artists/${id}/discussions`,
 			adminMusicReview: `${apiUrl}/admin/music/entries`,
 			adminMusicQuality: `${apiUrl}/admin/music/quality`,
-			adminMusicConfirm: (id: number | string, type: "album" | "artist") =>
-				type === "album"
-					? `${apiUrl}/albums/${id}/entry-status`
-					: `${apiUrl}/artists/${id}/entry-status`,
 		},
 
 		blog: {

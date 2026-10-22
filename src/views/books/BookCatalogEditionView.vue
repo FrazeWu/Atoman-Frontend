@@ -3,13 +3,32 @@
     <p v-if="loading" role="status">正在加载版本…</p>
     <div v-else-if="error" role="alert"><p>{{ error }}</p><PButton variant="secondary" @click="load">重新加载版本</PButton></div>
     <template v-else-if="metadata && work && edition">
-      <h1>{{ edition.title || work.title }}</h1>
-      <p v-if="edition.subtitle">{{ edition.subtitle }}</p>
-      <RouterLink :to="`/books/work/${work.id}`">所属作品：{{ work.title }}</RouterLink>
-      <p>{{ work.authors.map(person => person.name).join(' / ') }} 著</p>
-      <p v-if="edition.translators?.length">{{ edition.translators.map(person => person.name).join(' / ') }} 译</p>
-      <dl><template v-for="field in fields" :key="field.key"><dt>{{ field.label }}</dt><dd>{{ field.value || '待补充' }}</dd></template></dl>
-      <BookWikiPanel kind="edition" :entity-id="metadata.entity_id" :work-id="work.id" :authenticated="auth.isAuthenticated" @changed="load" />
+      <div class="book-catalog__hero">
+        <div class="book-catalog__cover-col">
+          <BookCover
+            variant="edition"
+            :src="edition.cover_url"
+            :title="edition.title || work.title"
+            :author="edition.publisher || work.authors.map(person => person.name).join(' / ')"
+            eager
+          />
+        </div>
+        <div class="book-catalog__info-col">
+          <h1>{{ edition.title || work.title }}</h1>
+          <p v-if="edition.subtitle" class="book-catalog__work-subtitle">{{ edition.subtitle }}</p>
+          <p class="book-catalog__edition-parent-link">
+            <RouterLink :to="`/books/work/${work.id}`">所属作品：{{ work.title }}</RouterLink>
+          </p>
+          <p class="book-catalog__authors">
+            <span>{{ work.authors.map(person => person.name).join(' / ') }} 著</span>
+            <span v-if="edition.translators?.length" class="ml-2"> · {{ edition.translators.map(person => person.name).join(' / ') }} 译</span>
+          </p>
+          <dl class="book-catalog__details-dl"><template v-for="field in fields" :key="field.key"><dt>{{ field.label }}</dt><dd>{{ field.value || '待补充' }}</dd></template></dl>
+          <div class="book-catalog__hero-actions">
+            <BookWikiPanel kind="edition" :entity-id="metadata.entity_id" :work-id="work.id" :authenticated="auth.isAuthenticated" @changed="load" />
+          </div>
+        </div>
+      </div>
       <h2>这个版本的电子文件</h2>
       <p v-if="resourceError" role="alert">{{ resourceError }}<PButton variant="secondary" @click="loadResources">重试加载文件</PButton></p>
       <p v-else-if="!resources.length">暂时没有通过安全检查的文件，版本书目已经公开。</p>
@@ -33,6 +52,7 @@ import { resourceReaderPath } from '@/api/bookResources'
 import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
 import BookResourceUpload from '@/components/books/BookResourceUpload.vue'
 import BookResourceVersions from '@/components/books/BookResourceVersions.vue'
+import BookCover from '@/components/books/BookCover.vue'
 import PButton from '@/components/ui/PButton.vue'
 import './bookCatalog.css'
 import './bookPrivate.css'

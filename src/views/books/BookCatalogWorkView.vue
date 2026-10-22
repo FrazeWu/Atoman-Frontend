@@ -10,30 +10,13 @@
       <div class="book-catalog__hero">
         <!-- 左侧通用纯白书页封面 -->
         <div class="book-catalog__cover-col">
-          <div class="book-catalog__cover-page" aria-label="作品通用封面">
-            <!-- 1. 书名与 2. 中文副标题 -->
-            <div class="book-catalog__cover-header">
-              <h1 class="book-catalog__cover-title">{{ work.title }}</h1>
-              <div v-if="work.subtitle || work.original_title" class="book-catalog__cover-subtitle">
-                {{ work.subtitle || work.original_title }}
-              </div>
-            </div>
-
-            <!-- 3. 作者与 4. 一句话书摘 -->
-            <div class="book-catalog__cover-body">
-              <div class="book-catalog__cover-author">
-                {{ work.authors.map(author => author.name).join(' / ') }} 著
-              </div>
-              <p class="book-catalog__cover-quote">
-                {{ extractQuote(work.description) }}
-              </p>
-            </div>
-
-            <!-- 5. 出版年份 -->
-            <div class="book-catalog__cover-footer">
-              {{ firstYear(work) }}
-            </div>
-          </div>
+          <BookCover
+            variant="work"
+            :title="work.title"
+            :subtitle="work.subtitle || work.original_title"
+            :author="work.authors.map(author => author.name).join(' / ')"
+            eager
+          />
         </div>
 
         <!-- 右侧元数据、导言与评分组件 -->
@@ -95,13 +78,14 @@
         <p v-if="!work.editions.length" class="book-catalog__empty-hint">暂无出版信息，不影响图书公开展示。</p>
         <ul v-else class="book-catalog__edition-cards">
           <li v-for="edition in work.editions" :key="edition.id" class="book-catalog__edition-card">
-            <!-- 版本具体封面或书名标牌 -->
-            <div class="book-catalog__edition-cover">
-              <div class="book-catalog__edition-publisher-tag">{{ edition.publisher || '出版社' }}</div>
-              <div class="book-catalog__edition-cover-title">{{ edition.title || work.title }}</div>
-              <div v-if="edition.translators?.length" class="book-catalog__edition-cover-trans">
-                {{ edition.translators.map(p => p.name).join(' / ') }} 译
-              </div>
+            <!-- 版本封面：原图封面或方案 2B 现代经典风回退 -->
+            <div class="book-catalog__edition-cover-col">
+              <BookCover
+                variant="edition"
+                :src="edition.cover_url"
+                :title="edition.title || work.title"
+                :author="edition.publisher || work.authors.map(author => author.name).join(' / ')"
+              />
             </div>
 
             <!-- 版本元数据 -->
@@ -204,6 +188,7 @@ import BookResourceVersions from '@/components/books/BookResourceVersions.vue'
 import BookShelfAction from '@/components/books/BookShelfAction.vue'
 import BookWorkCommunity from '@/components/books/BookWorkCommunity.vue'
 import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
+import BookCover from '@/components/books/BookCover.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { getCatalogWork, listCatalogResources, type CatalogResource, type CatalogWork } from '@/api/bookCatalog'
 import { useQueryClient } from '@tanstack/vue-query'
@@ -242,23 +227,6 @@ function rate(star: number) {
   userRating.value = star
   const labels = ['', '很差', '较差', '还行', '推荐', '力荐']
   ratingHint.value = `已评 ${star} 星 · ${labels[star]}`
-}
-
-function extractQuote(desc?: string): string {
-  if (!desc) return '“立身存笃信，景行胜将登。”'
-  const sentences = desc.split(/[。！？\n]/).filter(s => s.trim().length > 8)
-  if (sentences.length > 0) {
-    return `“${sentences[0].trim()}”`
-  }
-  return `“${desc.slice(0, 48)}…”`
-}
-
-function firstYear(w: CatalogWork): string {
-  const ed = w.editions?.find(e => !!e.published_date)
-  if (ed?.published_date) {
-    return `${ed.published_date.slice(0, 4)} 年`
-  }
-  return '初版年份待录'
 }
 
 async function refreshWork() {

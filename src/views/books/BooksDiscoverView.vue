@@ -26,31 +26,27 @@
         </RouterLink>
       </div>
 
-      <!-- 右侧：紧凑搜索栏与添加操作 -->
-      <form class="book-discover__search-form" role="search" @submit.prevent="search">
-        <select v-model="searchType" class="book-discover__scope-select" aria-label="搜索范围">
-          <option value="works">图书</option>
-          <option value="people">作者</option>
-          <option value="lists">书单</option>
-        </select>
-        <input
-          id="catalog-query"
+      <!-- 右侧：统一搜索栏 (Option 1A) 与添加操作 -->
+      <div class="book-discover__search-area">
+        <PSearchInput
           v-model="query"
-          type="search"
-          class="book-discover__search-input"
+          v-model:scope="searchType"
+          variant="bar"
+          size="md"
+          :scopes="searchScopes"
           placeholder="输入书名、作者或关键词..."
           aria-label="搜索书名、作者或关键词"
+          action-button-text="搜索"
+          class="book-discover__search-bar"
+          @search="search"
         />
-        <PButton type="submit" variant="secondary" class="book-discover__search-btn">
-          搜索
-        </PButton>
         <PButton
           class="book-discover__add-btn"
           :to="auth.isAuthenticated ? { path: '/books/new', query: route.query } : { path: '/login', query: { redirect: '/books/new' } }"
         >
           添加图书
         </PButton>
-      </form>
+      </div>
     </div>
 
     <!-- 错误重试状态 -->
@@ -127,6 +123,7 @@ import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
 import BookCard from '@/components/books/BookCard.vue'
 import type { BookPublicWork } from '@/api/books'
 import PButton from '@/components/ui/PButton.vue'
+import PSearchInput, { type SearchScopeOption } from '@/components/ui/PSearchInput.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
@@ -137,6 +134,11 @@ const router = useRouter()
 const auth = useAuthStore()
 const query = ref('')
 const searchType = ref('works')
+const searchScopes: SearchScopeOption[] = [
+  { label: '图书', value: 'works' },
+  { label: '作者', value: 'people' },
+  { label: '书单', value: 'lists' },
+]
 const people = ref<{ id: string; name: string; description?: string }[]>([])
 const page = computed(() => Math.max(1, Math.floor(Number(route.query.page) || 1)))
 const works = ref<BookPublicWork[]>([])
@@ -221,54 +223,17 @@ onBeforeUnmount(() => {
   margin-block: 1.25rem;
 }
 
-.book-discover__search-form {
+.book-discover__search-area {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex-wrap: wrap;
   flex: 1;
   max-width: 640px;
 }
 
-.book-discover__scope-select {
-  height: 38px;
-  padding: 0 0.75rem;
-  font-size: 0.8125rem;
-  color: var(--a-color-fg, #1c1c1e);
-  background: #ffffff;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-control, 4px);
-  box-shadow: none !important;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.book-discover__search-input {
-  height: 38px;
+.book-discover__search-bar {
   flex: 1;
-  min-width: 160px;
-  padding: 0 0.875rem;
-  font-size: 0.875rem;
-  color: var(--a-color-fg, #1c1c1e);
-  background: #ffffff;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-control, 4px);
-  box-shadow: none !important;
-  outline: none;
-  transition: border-color 0.15s ease;
-}
-
-.book-discover__search-input:focus {
-  border-color: var(--a-color-primary, #0ea5e9);
-}
-
-.book-discover__search-input::-webkit-search-cancel-button {
-  display: none;
-}
-
-.book-discover__search-btn {
-  height: 38px;
-  flex-shrink: 0;
+  min-width: 200px;
 }
 
 .book-discover__add-btn {

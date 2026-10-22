@@ -10,7 +10,7 @@
         <BookCover
           :src="detail.edition.cover_url"
           :title="detail.edition.title || detail.work.title"
-          :author="detail.work.authors.map(a => a.name).join(' / ')"
+          :author="detail.work.authors?.map(a => a.name).join(' / ') || ''"
           variant="edition"
           eager
           :width="480"

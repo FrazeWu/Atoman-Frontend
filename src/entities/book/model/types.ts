@@ -97,6 +97,7 @@ export interface BookPublicEdition {
 export interface BookPublicWork {
   id: string
   title: string
+  cover_url?: string
   subtitle?: string
   original_title?: string
   description?: string

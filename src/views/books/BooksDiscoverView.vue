@@ -2,44 +2,73 @@
   <section class="book-catalog">
     <PPageHeader title="发现图书" sub="收录经典著作与学术文献，探索人类思想谱系。" />
 
-    <!-- 顶部操作栏与检索 -->
-    <div class="book-catalog__toolbar">
-      <PButton variant="secondary" :to="{ path: '/books' }">全部图书</PButton>
-      <PButton variant="secondary" :to="{ path: '/books', query: { sort: 'high-rated' } }">高分榜</PButton>
-    </div>
+    <!-- 统一工具栏：分类过滤与搜索排布 -->
+    <div class="book-discover__controls">
+      <!-- 左侧：图书/榜单切换 -->
+      <div class="p-segmented-control" role="tablist">
+        <RouterLink
+          :to="{ path: '/books' }"
+          class="p-segmented-item"
+          :class="{ active: !ranked }"
+          role="tab"
+          :aria-selected="!ranked"
+        >
+          全部图书
+        </RouterLink>
+        <RouterLink
+          :to="{ path: '/books', query: { sort: 'high-rated' } }"
+          class="p-segmented-item"
+          :class="{ active: ranked }"
+          role="tab"
+          :aria-selected="ranked"
+        >
+          高分榜
+        </RouterLink>
+      </div>
 
-    <form class="book-catalog__toolbar" role="search" @submit.prevent="search">
-      <PInput id="catalog-query" v-model="query" label="搜索书名或作者" placeholder="输入书名、作者或关键词..." />
-      <label>
-        搜索范围
-        <select v-model="searchType">
+      <!-- 右侧：紧凑搜索栏与添加操作 -->
+      <form class="book-discover__search-form" role="search" @submit.prevent="search">
+        <select v-model="searchType" class="book-discover__scope-select" aria-label="搜索范围">
           <option value="works">图书</option>
           <option value="people">作者</option>
           <option value="lists">书单</option>
         </select>
-      </label>
-      <PButton type="submit" variant="secondary">搜索</PButton>
-      <PButton :to="auth.isAuthenticated ? { path: '/books/new', query: route.query } : { path: '/login', query: { redirect: '/books/new' } }">
-        添加图书
-      </PButton>
-    </form>
+        <input
+          id="catalog-query"
+          v-model="query"
+          type="search"
+          class="book-discover__search-input"
+          placeholder="输入书名、作者或关键词..."
+          aria-label="搜索书名、作者或关键词"
+        />
+        <PButton type="submit" variant="secondary" class="book-discover__search-btn">
+          搜索
+        </PButton>
+        <PButton
+          class="book-discover__add-btn"
+          :to="auth.isAuthenticated ? { path: '/books/new', query: route.query } : { path: '/login', query: { redirect: '/books/new' } }"
+        >
+          添加图书
+        </PButton>
+      </form>
+    </div>
 
     <!-- 错误重试状态 -->
-    <div v-if="error" role="alert">
+    <div v-if="error" role="alert" class="book-catalog__error-box">
       <p class="book-catalog__error">{{ error }}</p>
       <PButton variant="secondary" @click="load">重试</PButton>
     </div>
 
     <!-- 加载中状态 -->
-    <p v-else-if="loading" role="status">正在加载图书…</p>
+    <p v-else-if="loading" role="status" class="book-catalog__loading-status">正在加载图书…</p>
 
     <!-- 主体内容 -->
     <template v-else>
       <!-- 高分榜单视图 -->
       <template v-if="ranked">
-        <p>按加权评分与读者研读热度综合排序。</p>
-        <p v-if="!rankings.length">暂无满足门槛的图书。</p>
-        <ul class="book-catalog__list">
+        <p class="book-discover__meta-note">按加权评分与读者研读热度综合排序。</p>
+        <p v-if="!rankings.length" class="book-catalog__empty-hint">暂无满足门槛的图书。</p>
+        <ul v-else class="book-catalog__list">
           <li v-for="item in rankings" :key="item.work_id" class="book-catalog__row">
             <RouterLink :to="`/books/work/${item.work_id}`">{{ item.title }}</RouterLink>
             <span>加权评分 {{ item.weighted_rating_score }} · {{ item.rating_count }} 人研读</span>
@@ -49,9 +78,9 @@
 
       <!-- 作者检索视图 -->
       <template v-else-if="route.query.type === 'people'">
-        <p>{{ total }} 位作者</p>
-        <p v-if="!people.length">没有找到作者，试试其他姓名。</p>
-        <ul class="book-catalog__list">
+        <p class="book-discover__meta-note">{{ total }} 位作者</p>
+        <p v-if="!people.length" class="book-catalog__empty-hint">没有找到作者，试试其他姓名。</p>
+        <ul v-else class="book-catalog__list">
           <li v-for="person in people" :key="person.id" class="book-catalog__row">
             <strong>{{ person.name }}</strong>
             <p>{{ person.description || '作者简介待补充' }}</p>
@@ -63,7 +92,9 @@
 
       <!-- 作品书库网格视图（核心主视图） -->
       <template v-else>
-        <p>{{ total }} 本图书</p>
+        <div class="book-discover__count-row">
+          <span class="book-discover__total-count">{{ total }} 本图书</span>
+        </div>
         <PEmpty
           v-if="!works.length"
           class="book-catalog__empty"
@@ -96,7 +127,6 @@ import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
 import BookCard from '@/components/books/BookCard.vue'
 import type { BookPublicWork } from '@/api/books'
 import PButton from '@/components/ui/PButton.vue'
-import PInput from '@/components/ui/PInput.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
@@ -180,3 +210,95 @@ onBeforeUnmount(() => {
   request?.abort()
 })
 </script>
+
+<style scoped>
+.book-discover__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-block: 1.25rem;
+}
+
+.book-discover__search-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  flex: 1;
+  max-width: 640px;
+}
+
+.book-discover__scope-select {
+  height: 38px;
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--a-color-fg, #1c1c1e);
+  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  box-shadow: none !important;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.book-discover__search-input {
+  height: 38px;
+  flex: 1;
+  min-width: 160px;
+  padding: 0 0.875rem;
+  font-size: 0.875rem;
+  color: var(--a-color-fg, #1c1c1e);
+  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  box-shadow: none !important;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.book-discover__search-input:focus {
+  border-color: var(--a-color-primary, #0ea5e9);
+}
+
+.book-discover__search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.book-discover__search-btn {
+  height: 38px;
+  flex-shrink: 0;
+}
+
+.book-discover__add-btn {
+  height: 38px;
+  flex-shrink: 0;
+}
+
+.book-discover__count-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.book-discover__total-count {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+.book-discover__meta-note {
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary, #64748b);
+  margin-bottom: 1rem;
+}
+
+.book-catalog__error-box {
+  padding: 1.5rem;
+  margin-block: 1rem;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  background: #ffffff;
+}
+</style>

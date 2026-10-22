@@ -1,17 +1,19 @@
 <template>
-  <section class="book-catalog">
-    <p v-if="loading" role="status">正在加载图书…</p>
-    <div v-else-if="error" role="alert">
+  <section class="book-catalog private-books">
+    <!-- 加载中与错误反馈 -->
+    <p v-if="loading" role="status" class="book-catalog__status-text">正在加载图书…</p>
+    <div v-else-if="error" role="alert" class="book-catalog__error-box">
       <p class="book-catalog__error">{{ error }}</p>
       <PButton variant="secondary" @click="load">重试</PButton>
     </div>
+
     <template v-else-if="work">
-      <!-- 顶部主体区：左侧纯白纯中文书页封面，右侧主要信息与评分 -->
+      <!-- 顶部主体区：左侧 2B 现代经典封面，右侧主要信息与标准评分组件 -->
       <div class="book-catalog__hero">
-        <!-- 左侧通用纯白书页封面 -->
         <div class="book-catalog__cover-col">
           <BookCover
             variant="work"
+            :src="work.cover_url"
             :title="work.title"
             :subtitle="work.subtitle || work.original_title"
             :author="work.authors.map(author => author.name).join(' / ')"
@@ -19,7 +21,6 @@
           />
         </div>
 
-        <!-- 右侧元数据、导言与评分组件 -->
         <div class="book-catalog__info-col">
           <PPageHeader
             :title="work.title"
@@ -31,27 +32,19 @@
             {{ work.description || '暂无简介，书目信息可以后续补充。' }}
           </p>
 
-          <!-- 读者星级评分组件 -->
-          <div class="book-catalog__rating-card">
-            <div class="book-catalog__rating-score-box">
-              <div class="book-catalog__rating-score">{{ work.rating_score || '4.8' }}</div>
-              <div class="book-catalog__rating-count">{{ work.rating_count ? `${work.rating_count} 人研读` : '读者研读推荐' }}</div>
-            </div>
-            <div class="book-catalog__rating-stars-box">
-              <div class="book-catalog__rating-stars">
-                <span
-                  v-for="star in 5"
-                  :key="star"
-                  class="book-catalog__star-icon"
-                  :class="{ active: star <= userRating }"
-                  @click="rate(star)"
-                >
-                  ★
-                </span>
-                <span class="book-catalog__rating-hint">{{ ratingHint }}</span>
-              </div>
-              <div class="book-catalog__rating-subtext">高评分经典著作 · 读者社区共同研读分享</div>
-            </div>
+          <!-- 读者星级评分组件：使用全站标准公共 RatingControl -->
+          <div class="book-catalog__rating-wrapper">
+            <RatingControl
+              :aria-label="`${work.title} 评分`"
+              :rating-score="workRating?.rating_score ?? work.rating_score"
+              :rating-count="workRating?.rating_count ?? work.rating_count"
+              :viewer-rating="workRating?.viewer_rating"
+              :disabled="!auth.isAuthenticated"
+              :loading="ratingBusy"
+              :error-message="ratingError"
+              @rate="handleRate"
+              @clear="handleClearRate"
+            />
           </div>
 
           <div class="book-catalog__hero-actions">
@@ -67,7 +60,7 @@
         </div>
       </div>
 
-      <!-- 下方内容区域：出版版本与电子书文件 -->
+      <!-- 出版版本区 -->
       <section aria-labelledby="catalog-editions-title" class="book-catalog__section">
         <div class="book-catalog__section-header">
           <h2 id="catalog-editions-title">出版版本</h2>
@@ -136,15 +129,14 @@
       <!-- 电子书文件区 -->
       <section aria-labelledby="catalog-resources-title" class="book-catalog__section">
         <h2 id="catalog-resources-title">电子书文件</h2>
-        <div v-if="resourceError" role="alert">
-          <p>{{ resourceError }}</p>
+        <div v-if="resourceError" role="alert" class="book-catalog__error-box">
+          <p class="book-catalog__error">{{ resourceError }}</p>
           <PButton variant="secondary" @click="loadResources">重试加载文件</PButton>
         </div>
-        <p v-else-if="resourcesLoading" role="status">正在检查可用文件…</p>
+        <p v-else-if="resourcesLoading" role="status" class="book-catalog__status-text">正在检查可用文件…</p>
         <p v-else-if="!resources.length" class="book-catalog__empty-hint">图书已公开，暂时没有通过自动安全检查的电子书文件。</p>
         <div v-else>
           <p class="book-catalog__step-intro">文件按版本／译本展示。旧文件保持原状，不自动推断所属版本。</p>
-          <h3 v-if="resources.some(asset => !asset.edition_id)">尚未关联版本的旧文件</h3>
           <ul class="book-catalog__list">
             <li v-for="asset in resources" :key="asset.id" class="book-catalog__row">
               <strong>{{ asset.title || work.title }}</strong>
@@ -155,9 +147,11 @@
             </li>
           </ul>
         </div>
-        <PButton v-if="!auth.isAuthenticated" variant="secondary" :to="{ path: '/login', query: { redirect: route.fullPath } }">
-          登录后上传文件
-        </PButton>
+        <div class="book-catalog__upload-actions">
+          <PButton v-if="!auth.isAuthenticated" variant="secondary" :to="{ path: '/login', query: { redirect: route.fullPath } }">
+            登录后上传文件
+          </PButton>
+        </div>
       </section>
 
       <!-- 读者研讨与社区 -->
@@ -180,138 +174,173 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { resourceReaderPath } from '@/api/bookResources'
+import PButton from '@/components/ui/PButton.vue'
+import PPageHeader from '@/components/ui/PPageHeader.vue'
 import BookResourceVersions from '@/components/books/BookResourceVersions.vue'
 import BookShelfAction from '@/components/books/BookShelfAction.vue'
 import BookWorkCommunity from '@/components/books/BookWorkCommunity.vue'
 import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
 import BookCover from '@/components/books/BookCover.vue'
+import RatingControl from '@/components/shared/RatingControl.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { getCatalogWork, listCatalogResources, type CatalogResource, type CatalogWork } from '@/api/bookCatalog'
-import { useQueryClient } from '@tanstack/vue-query'
-import { bookKeys } from '@/entities/book'
-import PButton from '@/components/ui/PButton.vue'
-import PPageHeader from '@/components/ui/PPageHeader.vue'
+import { resourceReaderPath } from '@/api/bookResources'
+import { getWorkRating, setWorkRating, removeWorkRating, type WorkRating } from '@/api/bookCommunity'
 import './bookCatalog.css'
 import './bookPrivate.css'
-
-const moduleCatalogWorkCache = new Map<string, CatalogWork>()
-const moduleCatalogResourcesCache = new Map<string, CatalogResource[]>()
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-let queryClient: ReturnType<typeof useQueryClient> | null = null
-try {
-  queryClient = useQueryClient()
-} catch {
-  // Graceful fallback for environments without VueQueryPlugin
-}
-
-const work = ref<CatalogWork | null>(null)
+const work = ref<CatalogWork>()
+const workRating = ref<WorkRating | null>(null)
+const ratingBusy = ref(false)
+const ratingError = ref('')
 const resources = ref<CatalogResource[]>([])
 const loading = ref(true)
 const resourcesLoading = ref(false)
 const error = ref('')
 const resourceError = ref('')
-const currentTab = ref<'editions' | 'resources' | 'community' | 'wiki'>('editions')
-const userRating = ref(0)
-const ratingHint = ref('点击评分')
 let alive = true
-
-function rate(star: number) {
-  userRating.value = star
-  const labels = ['', '很差', '较差', '还行', '推荐', '力荐']
-  ratingHint.value = `已评 ${star} 星 · ${labels[star]}`
-}
 
 async function refreshWork() {
   if (!work.value) return
   const targetId = work.value.id
   try {
-    const result = await getCatalogWork(targetId)
-    if (alive) {
-      work.value = result
-      moduleCatalogWorkCache.set(targetId, result)
-      queryClient?.setQueryData(bookKeys.catalogWork(targetId), result)
-      void queryClient?.invalidateQueries({ queryKey: bookKeys.catalogWork(targetId) })
+    const fresh = await getCatalogWork(targetId)
+    if (!alive || work.value?.id !== targetId) return
+    work.value = fresh
+  } catch (err) {
+    if (!alive) return
+    if (err instanceof ApiErrorResponseError && err.status === 404) {
+      error.value = '图书不存在或已下架'
     }
-  } catch {
-    error.value = '资料已保存，但详情刷新失败，请重新加载。'
   }
 }
 
-async function load() {
-  const targetId = String(route.params.workId || '')
-  if (!targetId) return
-  error.value = ''
-
-  const cachedWork = moduleCatalogWorkCache.get(targetId) || queryClient?.getQueryData<CatalogWork>(bookKeys.catalogWork(targetId))
-  if (cachedWork) {
-    work.value = cachedWork
-    loading.value = false
-  } else {
-    loading.value = true
-  }
-
+async function loadRating(workId: string) {
   try {
-    const result = await getCatalogWork(targetId)
-    if (!alive) return
-    work.value = result
-    moduleCatalogWorkCache.set(targetId, result)
-    moduleCatalogWorkCache.set(result.id, result)
-    queryClient?.setQueryData(bookKeys.catalogWork(targetId), result)
-    queryClient?.setQueryData(bookKeys.catalogWork(result.id), result)
+    workRating.value = await getWorkRating(workId)
+  } catch {
+    workRating.value = null
+  }
+}
 
-    if (result.id !== targetId) {
-      await router.replace({ path: `/books/work/${result.id}`, query: route.query })
-      return
-    }
-    void loadResources()
-  } catch (err) {
-    if (alive) {
-      if (!cachedWork) work.value = null
-      error.value = err instanceof ApiErrorResponseError && err.status === 404
-        ? '图书不存在或已下架。'
-        : '图书加载失败，请重试。'
-    }
+async function handleRate(score: number) {
+  if (!work.value) return
+  if (!auth.isAuthenticated) {
+    void router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  ratingBusy.value = true
+  ratingError.value = ''
+  try {
+    workRating.value = await setWorkRating(work.value.id, score)
+  } catch {
+    ratingError.value = '评分保存失败，请稍后重试'
   } finally {
-    if (alive) loading.value = false
+    ratingBusy.value = false
+  }
+}
+
+async function handleClearRate() {
+  if (!work.value || !auth.isAuthenticated) return
+  ratingBusy.value = true
+  ratingError.value = ''
+  try {
+    workRating.value = await removeWorkRating(work.value.id)
+  } catch {
+    ratingError.value = '评分清除失败，请稍后重试'
+  } finally {
+    ratingBusy.value = false
   }
 }
 
 async function loadResources() {
   if (!work.value) return
   const targetId = work.value.id
+  resourcesLoading.value = true
   resourceError.value = ''
-
-  const cachedRes = moduleCatalogResourcesCache.get(targetId) || queryClient?.getQueryData<CatalogResource[]>(bookKeys.catalogResources(targetId))
-  if (cachedRes) {
-    resources.value = cachedRes
-    resourcesLoading.value = false
-  } else {
-    resourcesLoading.value = true
-  }
-
   try {
-    const result = await listCatalogResources(targetId)
-    if (!alive) return
-    resources.value = result.items
-    moduleCatalogResourcesCache.set(targetId, result.items)
-    queryClient?.setQueryData(bookKeys.catalogResources(targetId), result.items)
-  } catch {
-    if (alive) {
-      resourceError.value = '文件信息加载失败。图书本身仍已公开，请重试加载文件。'
-    }
+    const list = await listCatalogResources(targetId)
+    if (!alive || work.value?.id !== targetId) return
+    resources.value = list.items
+  } catch (err) {
+    if (!alive || work.value?.id !== targetId) return
+    resourceError.value = '文件信息加载失败，图书书目仍然公开。'
   } finally {
-    if (alive) resourcesLoading.value = false
+    if (alive && work.value?.id === targetId) {
+      resourcesLoading.value = false
+    }
   }
 }
 
-onMounted(() => { void load(); if (!auth.isAuthenticated) void auth.restoreSession() })
-onBeforeUnmount(() => { alive = false })
+async function load() {
+  const id = String(route.params.workId || '')
+  if (!id) {
+    error.value = '图书标识缺失。'
+    loading.value = false
+    return
+  }
+
+  loading.value = true
+  error.value = ''
+  try {
+    const result = await getCatalogWork(id)
+    if (!alive) return
+    if (result.id !== id) {
+      await router.replace({ path: `/books/work/${result.id}`, query: route.query })
+      return
+    }
+    work.value = result
+    loading.value = false
+    void loadRating(id)
+    void loadResources()
+  } catch (err) {
+    if (!alive) return
+    loading.value = false
+    error.value = err instanceof ApiErrorResponseError && err.status === 404
+      ? '图书不存在或已下架'
+      : '图书加载失败，请检查网络后重试。'
+  }
+}
+
+watch(
+  () => route.params.workId,
+  () => {
+    void load()
+  },
+  { immediate: true }
+)
+
+onBeforeUnmount(() => {
+  alive = false
+})
 </script>
+
+<style scoped>
+.book-catalog__rating-wrapper {
+  margin-block: 0.25rem;
+}
+
+.book-catalog__status-text {
+  font-size: 0.875rem;
+  color: var(--a-color-text-secondary, #64748b);
+  padding: 1.5rem 0;
+}
+
+.book-catalog__error-box {
+  padding: 1.5rem;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  background: #ffffff;
+}
+
+.book-catalog__upload-actions {
+  margin-top: 1.5rem;
+}
+</style>

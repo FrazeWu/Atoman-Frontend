@@ -47,7 +47,7 @@ function pathnameContext(pathname: string): SiteContext | null {
   }
 
   const [first, second] = segments
-  if (first === 'studio') {
+  if (first === 'studio' || first === 'search') {
     return { type: 'portal' }
   }
 

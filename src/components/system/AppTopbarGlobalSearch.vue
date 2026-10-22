@@ -106,7 +106,7 @@
                 </div>
               </div>
 
-              <p v-else-if="searchDraft.trim().length < 2" class="palette-state-text">
+              <p v-else-if="Array.from(searchDraft.trim()).length < 2" class="palette-state-text">
                 请再输入至少一个字符...
               </p>
 
@@ -115,12 +115,13 @@
               </p>
 
               <template v-else-if="filteredSections.length > 0">
+                <p v-if="globalSearch.partial.value" role="status" class="palette-state-text">部分结果暂不可用，可查看全部结果后重试。</p>
                 <div class="palette-results">
                   <TopbarSearchSection
                     v-for="section in filteredSections"
                     :key="section.type"
                     :section="section"
-                    :active-id="globalSearch.activeItem.value?.id || ''"
+                    :active-id="activeItem?.id || ''"
                     @open-item="openSearchHref"
                   />
                 </div>
@@ -161,6 +162,8 @@ const TopbarSearchSection = defineAsyncComponent(() => import('@/components/syst
 import { useDialogFocus } from '@/composables/useDialogFocus'
 import { useGlobalSearch } from '@/composables/useGlobalSearch'
 import { useSiteAccessStore } from '@/stores/siteAccess'
+import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
+import { moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 
 const router = useRouter()
 const siteAccessStore = useSiteAccessStore()
@@ -169,7 +172,7 @@ const globalSearch = useGlobalSearch({ isModuleVisible: siteAccessStore.isModule
 const showSearch = ref(false)
 const isExpanded = ref(false)
 const searchDraft = ref('')
-const activeFilter = ref<'all' | 'blog' | 'feed' | 'music'>('all')
+const activeFilter = ref<string>('all')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const searchPanelRef = ref<HTMLElement | null>(null)
 
@@ -177,7 +180,11 @@ const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'tes
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
 
-const filterTabs: Array<{ label: string; value: 'all' | 'blog' | 'feed' | 'music' }> = [
+const filterTabs = unifiedSearchEnabled ? [
+  { label: '全部', value: 'all' },
+  { label: '用户', value: 'user' },
+  ...Object.entries(moduleRooms).filter(([key]) => siteAccessStore.isModuleVisible(key as ModuleRoomKey)).map(([key, room]) => ({ label: room.name, value: key })),
+] : [
   { label: '全部', value: 'all' },
   { label: '博客', value: 'blog' },
   { label: '订阅', value: 'feed' },
@@ -188,6 +195,9 @@ const filteredSections = computed(() => {
   if (activeFilter.value === 'all') return globalSearch.sections.value
   return globalSearch.sections.value.filter((section) => section.type === activeFilter.value)
 })
+const filteredItems = computed(() => filteredSections.value.flatMap(section => section.items))
+const activeItem = computed(() => filteredItems.value[globalSearch.activeIndex.value] || null)
+watch(activeFilter, () => { globalSearch.activeIndex.value = filteredItems.value.length ? 0 : -1 })
 
 const openSearch = async () => {
   window.dispatchEvent(new CustomEvent('atoman:global-overlay-open', { detail: 'search' }))
@@ -213,21 +223,27 @@ const handleInput = () => {
 }
 
 const expandSearch = () => {
+  if (unifiedSearchEnabled) {
+    const location = searchLocation(searchDraft.value, activeFilter.value === 'all' ? '' : activeFilter.value === 'user' ? 'users' : activeFilter.value)
+    closeSearch()
+    void router.push(location)
+    return
+  }
   isExpanded.value = true
   void globalSearch.search(searchDraft.value, 'expanded')
 }
 
 const moveActive = (direction: 1 | -1) => {
-  globalSearch.moveActive(direction)
+  const total = filteredItems.value.length
+  globalSearch.activeIndex.value = total ? (globalSearch.activeIndex.value + direction + total) % total : -1
 }
 
 const handleEnter = () => {
-  const activeItem = globalSearch.activeItem.value
-  if (activeItem) {
-    void openSearchHref(activeItem.href)
+  if (activeItem.value) {
+    void openSearchHref(activeItem.value.href)
     return
   }
-  if (searchDraft.value.trim().length >= 2) expandSearch()
+  if (Array.from(searchDraft.value.trim()).length >= 2) expandSearch()
 }
 
 const openSearchHref = async (href: string) => {

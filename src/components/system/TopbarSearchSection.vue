@@ -37,7 +37,6 @@
 import { computed } from 'vue'
 import { FileText, BookOpen, Rss, Music, Disc, Mic, Video, User, MessageSquare, Sparkles, Layers, Flame, Calendar, type LucideIcon } from 'lucide-vue-next'
 import type { GlobalSearchSection, GlobalSearchSectionType } from '@/composables/useGlobalSearch'
-import type { ReferenceTargetType } from '@/api/references'
 
 const props = defineProps<{
   section: GlobalSearchSection
@@ -63,8 +62,11 @@ const sectionIcons: Record<GlobalSearchSectionType, LucideIcon> = {
 
 const sectionIcon = computed(() => sectionIcons[props.section.type] || Sparkles)
 
-function itemIcon(targetType: ReferenceTargetType): LucideIcon {
+function itemIcon(targetType: string): LucideIcon {
   switch (targetType) {
+    case 'work':
+    case 'book_list':
+      return BookOpen
     case 'post':
     case 'article':
       return FileText

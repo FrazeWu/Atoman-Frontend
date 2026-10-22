@@ -10,7 +10,9 @@
          ═══════════════════════════════════════════════════════════════ -->
     <div class="discovery-top-toolbar">
       <div class="discovery-search-box">
+        <ModuleSearch v-if="unifiedSearchEnabled" v-model="discoverySearchQuery" :target-types="['feed', 'article']" placeholder="搜索订阅源与文章..." input-test-id="discovery-search-input" dropdown-test-id="discovery-search-dropdown" />
         <SearchSurface
+          v-else
           :query="discoverySearchQuery"
           eyebrow=""
           placeholder="搜索全网文章、专栏、RSS 订阅源与播客..."
@@ -363,6 +365,8 @@ import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PToast from '@/components/ui/PToast.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
+import ModuleSearch from '@/components/search/ModuleSearch.vue'
+import { unifiedSearchEnabled } from '@/utils/searchUrl'
 import SubscriptionAddSheet from '@/components/feed/SubscriptionAddSheet.vue'
 import FeedSourceIdentityCard from '@/components/feed/FeedSourceIdentityCard.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'

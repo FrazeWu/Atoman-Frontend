@@ -10,6 +10,7 @@ export const mobileInitialRoutes: RouteRecordRaw[] = [
 		component: PortalView,
 		meta: { portalHome: true },
 	},
+  { path: '/search', component: () => import('@/views/search/SearchResultsView.vue'), meta: { restoreSession: true } },
 	{
 		path: "/login",
 		component: () => import("@/views/auth/LoginView.vue"),

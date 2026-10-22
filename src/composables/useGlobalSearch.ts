@@ -3,13 +3,15 @@ import { type ReferenceTarget, type ReferenceTargetType } from '@/api/references
 import { moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 import { modulePathUrl } from '@/router/siteUrls'
 import { useReferenceSearch } from '@/composables/useReferenceSearch'
+import { useUnifiedSearchPreview } from '@/composables/useUnifiedSearchPreview'
+import { unifiedSearchEnabled, safeSearchHref } from '@/utils/searchUrl'
 
 export type GlobalSearchSectionType = 'user' | ModuleRoomKey
 
 export type GlobalSearchItem = {
   id: string
   type: GlobalSearchSectionType
-  targetType: ReferenceTargetType
+  targetType: string
   title: string
   subtitle?: string
   meta: string
@@ -56,12 +58,17 @@ const sectionOrder: readonly GlobalSearchSectionType[] = [
   'debate',
   'feed',
   'music',
+  'books',
   'podcast',
   'video',
   'timeline',
 ]
 
-const targetLabels: Record<ReferenceTargetType, string> = {
+const targetLabels: Record<string, string> = {
+  topic: '主题',
+  work: '图书作品',
+  author: '作者',
+  book_list: '书单',
   user: '用户',
   post: '文章',
   short_note: '短笺',
@@ -112,7 +119,7 @@ function itemFromTarget(target: ReferenceTarget): GlobalSearchItem | null {
 }
 
 function interleaveItems(items: GlobalSearchItem[], limit: number) {
-  const buckets = new Map<ReferenceTargetType, GlobalSearchItem[]>()
+  const buckets = new Map<string, GlobalSearchItem[]>()
   for (const item of items) {
     const bucket = buckets.get(item.targetType) ?? []
     bucket.push(item)
@@ -138,7 +145,7 @@ export function useGlobalSearch(options: GlobalSearchOptions = {}) {
   const query = ref('')
   const activeIndex = ref(-1)
   const sectionLimit = ref(2)
-  const referenceSearch = useReferenceSearch({
+  const referenceSearch = unifiedSearchEnabled ? useUnifiedSearchPreview() : useReferenceSearch({
     targetTypes: globalTargetTypes,
     limit: 2,
   })
@@ -147,7 +154,15 @@ export function useGlobalSearch(options: GlobalSearchOptions = {}) {
     const grouped = new Map<GlobalSearchSectionType, GlobalSearchItem[]>()
     for (const target of referenceSearch.results.value) {
       if (!target.available) continue
-      const item = itemFromTarget(target)
+      const item: GlobalSearchItem | null = unifiedSearchEnabled
+        ? (target.module === 'users' || isModuleRoomKey(target.module) ? {
+          id: `${target.module}:${target.type}:${target.id}`,
+          type: target.module === 'users' ? 'user' : target.module as ModuleRoomKey,
+          targetType: target.type, title: target.label, subtitle: target.subtitle,
+          meta: targetLabels[target.type] || '结果',
+          href: safeSearchHref(target.path),
+        } : null)
+        : itemFromTarget(target as ReferenceTarget)
       if (!item) continue
       if (item.type !== 'user' && options.isModuleVisible && !options.isModuleVisible(item.type)) continue
       const items = grouped.get(item.type) ?? []
@@ -161,7 +176,7 @@ export function useGlobalSearch(options: GlobalSearchOptions = {}) {
       return [{
         type,
         label: type === 'user' ? '用户' : moduleRooms[type].name,
-        items: interleaveItems(items, sectionLimit.value),
+        items: unifiedSearchEnabled ? items : interleaveItems(items, sectionLimit.value),
       }]
     })
   })
@@ -214,6 +229,7 @@ export function useGlobalSearch(options: GlobalSearchOptions = {}) {
     query,
     loading: referenceSearch.loading,
     error,
+    partial: computed(() => 'partial' in referenceSearch && referenceSearch.partial.value),
     sections,
     activeIndex,
     activeItem,

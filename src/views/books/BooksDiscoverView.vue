@@ -114,6 +114,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { catalogRevision, searchCatalogWorks } from '@/api/bookCatalog'
@@ -181,8 +182,11 @@ async function load() {
     if (current === generation) loading.value = false
   }
 }
-
 function search() {
+  if (unifiedSearchEnabled) {
+    void router.push(searchLocation(query.value, 'books', [searchType.value === 'people' ? 'author' : searchType.value === 'lists' ? 'book_list' : 'work']))
+    return
+  }
   void router.push({
     path: searchType.value === 'lists' ? '/books/lists' : '/books',
     query: {

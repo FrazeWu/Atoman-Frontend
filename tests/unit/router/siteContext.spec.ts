@@ -15,6 +15,9 @@ describe('isLocalHost', () => {
 })
 
 describe('resolveSiteContext', () => {
+  it('统一搜索属于全站，不依附订阅模块或子域名', () => {
+    for (const host of ['localhost', 'www.atoman.org', 'music.atoman.org']) expect(resolveSiteContext(host, '', '/search')).toEqual({ type: 'portal' })
+  })
   it('maps known module paths to module context', () => {
     expect(resolveSiteContext('www.atoman.org', '', '/feed')).toEqual({ type: 'module', module: 'feed' })
     expect(resolveSiteContext('www.atoman.org', '', '/music')).toEqual({ type: 'module', module: 'music' })

@@ -7,6 +7,8 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
+import ModuleSearch from '@/components/search/ModuleSearch.vue'
+import { unifiedSearchEnabled } from '@/utils/searchUrl'
 import PButton from '@/components/ui/PButton.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
 import {
@@ -745,6 +747,7 @@ function handleSearchBlur() {
 }
 
 watch(searchQuery, () => {
+  if (unifiedSearchEnabled) return
   if (searchTimer) clearTimeout(searchTimer)
   if (props.contentMode === 'albums') {
     albumIndexRequests.beginRequest()
@@ -800,7 +803,9 @@ const hasSearchResults = computed(() => searchSongs.value.length > 0 || searchAl
     <div class="toolbar-row">
       <div class="toolbar-left">
         <div class="search-shell" :class="{ 'is-open': searchOpen }">
+          <ModuleSearch v-if="unifiedSearchEnabled" v-model="searchQuery" :target-types="['song', 'album', 'artist', 'playlist']" placeholder="搜索音乐..." input-test-id="music-explore-search-input" dropdown-test-id="music-explore-search-dropdown" />
           <SearchSurface
+            v-else
             v-model:query="searchQuery"
             :open="contentMode === 'discover' && searchOpen"
             compact

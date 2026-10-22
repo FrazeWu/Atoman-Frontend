@@ -142,6 +142,7 @@
 
 <script setup lang="ts">
 import { apiRequestResult } from '@/api/client'
+import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useForumStore } from '@/stores/forum'
@@ -432,7 +433,7 @@ let searchTimer: ReturnType<typeof setTimeout> | null = null
 
 const doSearch = () => {
   if (searchQuery.value.trim()) {
-    router.push(`/forum/search?q=${encodeURIComponent(searchQuery.value.trim())}`)
+    router.push(unifiedSearchEnabled ? searchLocation(searchQuery.value, 'forum') : `/forum/search?q=${encodeURIComponent(searchQuery.value.trim())}`)
   }
 }
 

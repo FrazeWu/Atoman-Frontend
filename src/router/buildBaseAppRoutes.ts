@@ -4,11 +4,12 @@ import { moduleRoutes } from '@/router/routes/modules'
 import { portalRoutes } from '@/router/routes/portal'
 import { settingRoutes } from '@/router/routes/settings'
 import { moduleRooms } from '@/config/moduleRooms'
+import { withUnifiedSearch } from '@/router/unifiedSearchRoutes'
 
 function scopedModuleRoutes(module: keyof typeof moduleRoutes): RouteRecordRaw[] {
   const publicPrefix = `/${moduleRooms[module].publicPathSegment}`
 
-  return moduleRoutes[module]
+  return withUnifiedSearch(moduleRoutes[module], module)
     .filter((route) => !(
       route.path === '/login'
       || route.path === '/register'

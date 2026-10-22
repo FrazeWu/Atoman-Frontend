@@ -1,7 +1,7 @@
 <template>
   <SearchSurface
     v-model:query="query"
-    :open="open && query.trim().length >= 2"
+    :open="open && queryLength >= 2"
     compact
     eyebrow=""
     overlay-results
@@ -10,7 +10,7 @@
     :input-test-id="inputTestId"
     :dropdown-test-id="dropdownTestId"
     :loading="loading"
-    :empty="!loading && !error && query.trim().length >= 2 && !results.length ? '没有匹配的结果' : ''"
+    :empty="!loading && !error && queryLength >= 2 && !results.length ? '没有匹配的结果' : ''"
     @focus="handleFocus"
     @blur="handleBlur"
     @submit="handleSubmit"
@@ -23,6 +23,7 @@
           type="button"
           class="module-search__item"
           @mousedown.prevent="selectTarget(target)"
+          @click="$event.detail === 0 && selectTarget(target)"
         >
           <span class="module-search__item-title">{{ target.label }}</span>
           <span class="module-search__item-meta">{{ targetLabel(target.type) }}</span>
@@ -39,6 +40,9 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import { type ReferenceTarget, type ReferenceTargetType } from '@/api/references'
 import { useReferenceSearch } from '@/composables/useReferenceSearch'
+import { useUnifiedSearchPreview } from '@/composables/useUnifiedSearchPreview'
+import { useRouter } from 'vue-router'
+import { safeSearchHref, searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 
 const props = withDefaults(defineProps<{
   modelValue: string
@@ -61,7 +65,10 @@ const emit = defineEmits<{
 }>()
 
 const open = ref(false)
-const referenceSearch = useReferenceSearch({
+const router = useRouter()
+const moduleByType: Record<string, string> = { post: 'blog', short_note: 'blog', channel: 'blog', collection: 'blog', thread: 'forum', debate: 'debate', feed: 'feed', article: 'feed', song: 'music', album: 'music', artist: 'music', playlist: 'music', podcast: 'podcast', episode: 'podcast', video: 'video', person: 'timeline', event: 'timeline' }
+const module = moduleByType[props.targetTypes[0] || ''] || ''
+const referenceSearch = unifiedSearchEnabled ? useUnifiedSearchPreview(module) : useReferenceSearch({
   targetTypes: () => props.targetTypes,
   limit: () => props.limit,
 })
@@ -78,6 +85,7 @@ const query = computed({
   get: () => props.modelValue,
   set: (value: string) => emit('update:modelValue', value),
 })
+const queryLength = computed(() => Array.from(query.value.trim()).length)
 
 const status = computed(() => {
   if (loading.value) return '搜索中...'
@@ -85,16 +93,19 @@ const status = computed(() => {
   return ''
 })
 
-const labels: Partial<Record<ReferenceTargetType, string>> = {
+const labels: Record<string, string> = {
   post: '文章',
   short_note: '短笺',
   channel: '频道',
   collection: '合集',
   podcast: '播客',
   episode: '单集',
+  topic: '主题', thread: '主题', debate: '辩题', video: '视频',
+  song: '歌曲', album: '专辑', artist: '艺术家', playlist: '歌单',
+  feed: '订阅源', article: '文章', person: '人物', event: '事件',
 }
 
-function targetLabel(type: ReferenceTargetType) {
+function targetLabel(type: string) {
   return labels[type] ?? '结果'
 }
 
@@ -111,6 +122,12 @@ function handleBlur() {
 function handleSubmit() {
   const trimmed = query.value.trim()
   if (!trimmed) return
+  if (unifiedSearchEnabled) {
+    open.value = false
+    referenceSearch.reset()
+    void router.push(searchLocation(trimmed, module))
+    return
+  }
   open.value = true
   if (trimmed.length >= 2) {
     cancelPending()
@@ -119,9 +136,10 @@ function handleSubmit() {
   emit('submit', trimmed)
 }
 
-function selectTarget(target: ReferenceTarget) {
+function selectTarget(target: { path: string }) {
   open.value = false
-  emit('select', target)
+  if (unifiedSearchEnabled) void router.push(safeSearchHref(target.path))
+  else emit('select', target as ReferenceTarget)
 }
 
 watch(() => props.modelValue, (value) => scheduleSearch(value), { immediate: true })
@@ -138,6 +156,7 @@ onUnmounted(() => {
 }
 
 .module-search__item {
+  min-height: 44px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.75rem;
@@ -154,8 +173,8 @@ onUnmounted(() => {
 .module-search__item:hover,
 .module-search__item:focus-visible {
   background: var(--a-color-surface-muted);
-  outline: none;
 }
+.module-search__item:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: -2px; }
 
 .module-search__item-title {
   overflow: hidden;

@@ -3,7 +3,7 @@ import { installRouteGuards } from '@/router/guards'
 import { installChunkLoadRecovery } from '@/router/chunkLoadRecovery'
 import { mobileInitialRoutes } from './mobileInitialRoutes'
 
-const initialRoutePaths = new Set(['/','/login','/register','/forgot-password'])
+const initialRoutePaths = new Set(['/','/login','/register','/forgot-password','/search'])
 let deferredRoutesPromise: Promise<void> | null = null
 let deferredRoutesReady = false
 

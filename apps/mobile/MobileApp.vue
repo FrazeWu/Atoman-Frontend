@@ -47,6 +47,7 @@ import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch 
 import { useRoute, useRouter } from 'vue-router'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useAuthStore } from '@/stores/auth'
+import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApiUrl'
@@ -82,7 +83,7 @@ const apiUrl = useApiUrl()
 const isAuthRoute = computed(() => route.matched?.some((record) => record.meta?.authLayout) ?? false)
 
 const isUtilityRoute = computed(() => {
-  return /^\/(?:about|terms|privacy|modules|users\/[^/]+\/settings)(\/|$)/.test(route.path)
+  return /^\/(?:search|about|terms|privacy|modules|users\/[^/]+\/settings)(\/|$)/.test(route.path)
 })
 
 const isSubRoute = computed(() => {
@@ -98,6 +99,7 @@ const isSubRoute = computed(() => {
 
 const subRouteTitle = computed(() => {
   const p = route.path || '/'
+  if (p === '/search') return '全站搜索'
   if (p.startsWith('/login')) return '登录'
   if (p.startsWith('/register')) return '注册'
   if (p.startsWith('/forgot-password')) return '重置密码'
@@ -212,6 +214,10 @@ const handleSelectSpace = (spaceKey: string) => {
 }
 
 const handleSearch = () => {
+  if (unifiedSearchEnabled) {
+    void router.push(searchLocation('', ['blog', 'feed', 'music', 'books', 'debate'].includes(currentSpace.value) ? currentSpace.value : ''))
+    return
+  }
   if (router && typeof router.push === 'function') {
     if (currentSpace.value === 'music') {
       void router.push('/music/tags').catch(() => {})

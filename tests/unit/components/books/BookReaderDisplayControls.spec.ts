@@ -17,4 +17,33 @@ describe('BookReaderDisplayControls', () => {
       [{ font_scale: 1, theme: 'night' }],
     ])
   })
+
+  it('emits updated font family', async () => {
+    const wrapper = mount(BookReaderDisplayControls, {
+      props: { modelValue: { font_scale: 1, font_family: 'serif', theme: 'paper' as const } },
+    })
+
+    const fontSelect = wrapper.findAll('select')[1]
+    await fontSelect.setValue('sans')
+
+    expect(wrapper.emitted('update:modelValue')).toContainEqual([
+      { font_scale: 1, font_family: 'sans', theme: 'paper' },
+    ])
+  })
+
+  it('supports 4 paper themes: paper, sepia, slate, night', async () => {
+    const wrapper = mount(BookReaderDisplayControls, {
+      props: { modelValue: { font_scale: 1, theme: 'paper' as const } },
+    })
+
+    await wrapper.get('[aria-label="羊皮纸主题"]').trigger('click')
+    await wrapper.get('[aria-label="雅灰主题"]').trigger('click')
+
+    expect(wrapper.emitted('update:modelValue')).toContainEqual([
+      { font_scale: 1, theme: 'sepia' },
+    ])
+    expect(wrapper.emitted('update:modelValue')).toContainEqual([
+      { font_scale: 1, theme: 'slate' },
+    ])
+  })
 })

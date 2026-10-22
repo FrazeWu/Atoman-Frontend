@@ -1,6 +1,14 @@
 <!-- 固定修订阅读器与云同步容器共用的正文渲染组件。 -->
 <template>
-  <main class="public-reader" :class="[`public-reader--theme-${displayPreferences.theme}`, { 'a-page-md': !source }]" :style="{ '--book-reader-font-scale': displayPreferences.font_scale }">
+  <main
+    class="public-reader"
+    :class="[
+      `public-reader--theme-${displayPreferences.theme}`,
+      `public-reader--font-${displayPreferences.font_family || 'serif'}`,
+      { 'a-page-md': !source }
+    ]"
+    :style="{ '--book-reader-font-scale': displayPreferences.font_scale }"
+  >
     <BookReaderShell
       :title="source?.title || asset?.file_name || '公共电子书'"
       :format="formatLabel"
@@ -689,16 +697,41 @@ onBeforeUnmount(() => {
   --book-reader-muted: var(--a-color-muted);
 }
 
+.public-reader--theme-paper {
+  --book-reader-surface: #ffffff;
+  --book-reader-text: #0f172a;
+  --book-reader-muted: #64748b;
+}
+
+.public-reader--theme-sepia,
 .public-reader--theme-dim {
-  --book-reader-surface: #f3eee4;
-  --book-reader-text: #423a2f;
-  --book-reader-muted: #756b5d;
+  --book-reader-surface: #fbf0d9;
+  --book-reader-text: #2d2013;
+  --book-reader-muted: #786c5e;
+}
+
+.public-reader--theme-slate {
+  --book-reader-surface: #f1f5f9;
+  --book-reader-text: #1e293b;
+  --book-reader-muted: #64748b;
 }
 
 .public-reader--theme-night {
-  --book-reader-surface: #1f2430;
-  --book-reader-text: #e7e9ee;
-  --book-reader-muted: #aab2c0;
+  --book-reader-surface: #18181b;
+  --book-reader-text: #e4e4e7;
+  --book-reader-muted: #a1a1aa;
+}
+
+.public-reader--font-serif {
+  font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", Georgia, serif;
+}
+
+.public-reader--font-sans {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif;
+}
+
+.public-reader--font-kaiti {
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
 }
 
 .public-reader__feedback {

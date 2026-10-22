@@ -246,7 +246,7 @@ onUnmounted(() => {
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  box-shadow: none;
+  box-shadow: none !important;
   z-index: 120;
   display: flex;
   flex-direction: column;

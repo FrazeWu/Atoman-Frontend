@@ -9,12 +9,14 @@ export type BookReaderBookmark = {
   created_at: string
 }
 
-export type BookReaderTheme = 'paper' | 'dim' | 'night'
+export type BookReaderTheme = 'paper' | 'sepia' | 'slate' | 'night' | 'dim'
+export type BookReaderFontFamily = 'serif' | 'sans' | 'kaiti'
 export type BookReaderPageLayout = 'single' | 'double'
 export type BookReaderScrollMode = 'continuous' | 'paginated'
 
 export type BookReaderDisplayPreferences = {
   font_scale: number
+  font_family?: BookReaderFontFamily
   theme: BookReaderTheme
   page_layout?: BookReaderPageLayout
   scroll_mode?: BookReaderScrollMode
@@ -23,6 +25,7 @@ export type BookReaderDisplayPreferences = {
 
 export const defaultBookReaderDisplayPreferences: BookReaderDisplayPreferences = {
   font_scale: 1,
+  font_family: 'serif',
   theme: 'paper',
   page_layout: 'single',
   scroll_mode: 'paginated',
@@ -33,9 +36,14 @@ export function parseBookReaderDisplayPreferences(value: unknown): BookReaderDis
   if (!value || typeof value !== 'object') return { ...defaultBookReaderDisplayPreferences }
   const candidate = value as Partial<BookReaderDisplayPreferences>
   const fontScale = Number(candidate.font_scale)
-  const theme = candidate.theme === 'dim' || candidate.theme === 'night' ? candidate.theme : 'paper'
+  const validThemes: BookReaderTheme[] = ['paper', 'sepia', 'slate', 'night', 'dim']
+  const theme = candidate.theme && validThemes.includes(candidate.theme) ? candidate.theme : 'paper'
+  const validFonts: BookReaderFontFamily[] = ['serif', 'sans', 'kaiti']
+  const fontFamily = candidate.font_family && validFonts.includes(candidate.font_family) ? candidate.font_family : 'serif'
+
   const res: BookReaderDisplayPreferences = {
     font_scale: Number.isFinite(fontScale) ? Math.max(0.85, Math.min(1.35, fontScale)) : 1,
+    font_family: fontFamily,
     theme,
   }
   if (candidate.page_layout !== undefined) {

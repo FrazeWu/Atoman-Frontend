@@ -60,15 +60,14 @@
 
         <!-- 筛选与搜索输入控件 -->
         <div class="private-books__filter-inputs">
-          <label class="private-books__filter-label">
-            <span>搜索书名</span>
-            <input
-              v-model="query"
-              type="search"
-              placeholder="输入书名检索..."
-              class="private-books__filter-input"
-            />
-          </label>
+          <PSearchInput
+            v-model="query"
+            variant="inline"
+            size="sm"
+            placeholder="输入书名检索..."
+            aria-label="搜索书名检索"
+            clearable
+          />
 
           <!-- 保持第 1 个 select 作为状态过滤器以兼容单测与辅助选择 -->
           <label class="private-books__filter-label">
@@ -210,6 +209,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
+import PSearchInput from '@/components/ui/PSearchInput.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'

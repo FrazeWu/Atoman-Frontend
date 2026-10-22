@@ -4,11 +4,15 @@
 
     <!-- 顶部快速检索标签 -->
     <div class="book-tags__filter-box">
-      <PInput
+      <PSearchInput
         id="tag-search"
         v-model="searchQuery"
-        label="搜索标签"
+        variant="inline"
+        size="md"
         placeholder="搜索领域、流派或主题标签..."
+        aria-label="搜索领域、流派或主题标签"
+        clearable
+        class="book-tags__search-input"
       />
     </div>
 
@@ -62,7 +66,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PInput from '@/components/ui/PInput.vue'
+import PSearchInput from '@/components/ui/PSearchInput.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import './bookCatalog.css'
 

@@ -8,6 +8,7 @@ export interface SearchScopeOption {
 }
 
 export interface PSearchInputProps {
+  id?: string
   modelValue?: string
   variant?: 'bar' | 'inline'
   size?: 'sm' | 'md' | 'lg'
@@ -212,6 +213,7 @@ defineExpose({
       </div>
 
       <input
+        :id="id"
         ref="inputRef"
         type="search"
         class="p-search-input__input"

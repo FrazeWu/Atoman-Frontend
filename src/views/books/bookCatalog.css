@@ -755,6 +755,10 @@
   margin-block: 1.25rem 2rem;
 }
 
+.book-tags__search-input {
+  width: 100%;
+}
+
 .book-tags__section {
   margin-bottom: 2.5rem;
 }

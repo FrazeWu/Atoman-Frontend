@@ -56,7 +56,6 @@ describe("books module foundation", () => {
       "lists/:listId/edit",
       "lists/:listId",
       "notes",
-      "read/sample",
       "read",
       "read/:workId/:assetId/:revisionId",
     ]);

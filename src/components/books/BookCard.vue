@@ -1,114 +1,99 @@
 <template>
   <RouterLink :to="target" class="book-card">
-    <BookCover :src="edition?.cover_url" :title="work.title" :eager="eager" />
-    <div class="book-card__heading">
-      <strong>{{ work.title }}</strong>
-      <ArrowRight :size="16" aria-hidden="true" />
+    <!-- 抽象书籍作品卡片：纯平 + 我们设计的典雅排版封面 -->
+    <BookCover
+      variant="work"
+      :title="work.title"
+      :subtitle="work.subtitle"
+      :author="authorText"
+      :eager="eager"
+    />
+
+    <!-- 卡片下方：严格单行【书名 + 评分】 -->
+    <div class="book-card__meta-line">
+      <strong class="book-card__title">{{ work.title }}</strong>
+      <span class="book-card__rating">
+        <Star :size="12" aria-hidden="true" />
+        <span>{{ formatRatingSummary(work.rating_score, work.rating_count) }}</span>
+      </span>
     </div>
-    <span class="book-card__authors">{{ work.authors.map(author => author.name).join(' / ') || '作者待补充' }}</span>
-    <small>{{ edition?.publisher || '出版信息待补充' }}</small>
-    <small v-if="needsChineseTitle">中文书名待补充</small>
-    <span class="book-card__rating">
-      <Star :size="13" aria-hidden="true" />
-      {{ formatRatingSummary(work.rating_score, work.rating_count) }}
-    </span>
   </RouterLink>
 </template>
+
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { ArrowRight, Star } from 'lucide-vue-next'
+import { Star } from 'lucide-vue-next'
 import type { BookPublicWork } from '@/api/books'
 import BookCover from './BookCover.vue'
 import { formatRatingSummary } from '@/utils/rating'
+
 const props = defineProps<{ work: BookPublicWork; eager?: boolean }>()
 const route = useRoute()
+
 const target = computed(() => ({
   path: `/books/work/${props.work.id}`,
   query: { ...route.query, ...(route.path === '/books/library' ? { from: '/books/library' } : {}) },
 }))
-const edition = computed(() => props.work.editions.find(item => item.cover_url) || props.work.editions[0])
-const needsChineseTitle = computed(() => ['chi', 'zho', 'zh'].includes(props.work.language || '') && /\p{L}/u.test(props.work.title) && !/\p{Script=Han}/u.test(props.work.title))
+
+const authorText = computed(() => props.work.authors?.map(a => a.name).join(' / ') || '')
 </script>
+
 <style scoped>
 .book-card {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.375rem;
   min-width: 0;
   color: var(--a-color-fg);
   text-decoration: none;
-  box-shadow: none;
+  box-shadow: none !important;
 }
 
-.book-card__heading {
+.book-card__meta-line {
   display: flex;
-  align-items: start;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 0.5rem;
-  margin-top: 0.4rem;
-  color: var(--a-color-fg);
-  transition: color 0.15s ease;
+  min-width: 0;
+  margin-top: 0.25rem;
 }
 
-.book-card__heading strong {
+.book-card__title {
   flex: 1;
   min-width: 0;
-  line-height: 1.4;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  overflow-wrap: anywhere;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  transition: color 0.15s ease;
-}
-
-.book-card__heading svg {
-  flex-shrink: 0;
-  margin-top: 0.2rem;
-  color: var(--a-color-muted);
-  transition: color 0.15s ease;
-}
-
-.book-card__authors,
-.book-card small {
-  color: var(--a-color-muted);
   font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--a-color-fg);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.book-card:hover .book-card__title,
+.book-card:focus-visible .book-card__title {
+  color: var(--a-color-primary);
 }
 
 .book-card__rating {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  font-size: 0.8125rem;
-  gap: 0.25rem;
+  gap: 0.2rem;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
-  color: var(--a-color-muted);
+  color: #d97706;
+  flex-shrink: 0;
 }
 
 .book-card__rating svg {
   flex-shrink: 0;
 }
 
-.book-card:hover .book-card__heading,
-.book-card:focus-visible .book-card__heading {
-  color: var(--a-color-primary);
-}
-
-.book-card:hover .book-card__heading svg,
-.book-card:focus-visible .book-card__heading svg {
-  color: var(--a-color-primary);
-}
-
-.book-card:active {
-  opacity: 0.8;
-}
-
 .book-card:focus-visible {
   outline: 2px solid var(--a-color-primary);
-  outline-offset: 5px;
+  outline-offset: 4px;
+  border-radius: var(--a-radius-card, 4px);
 }
 </style>

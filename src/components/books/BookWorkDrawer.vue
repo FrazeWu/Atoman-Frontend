@@ -11,7 +11,14 @@
       <!-- 头部：封面、标题与评分 -->
       <header class="book-work-drawer__header">
         <div class="book-work-drawer__cover">
-          <BookCover :src="primaryEdition?.cover_url" :title="work.title" eager :width="140" />
+          <BookCover
+            variant="work"
+            :title="work.title"
+            :subtitle="work.subtitle"
+            :author="work.authors.map(a => a.name).join(' / ')"
+            eager
+            :width="140"
+          />
         </div>
         <div class="book-work-drawer__identity">
           <h3>{{ work.title }}</h3>

@@ -26,4 +26,38 @@ describe('BookCover', () => {
     expect(wrapper.get('img').attributes('decoding')).toBe('async')
     wrapper.unmount()
   })
+
+  it('renders designed typography cover for abstract books (variant="work")', () => {
+    const wrapper = mount(BookCover, {
+      props: {
+        variant: 'work',
+        title: '理想国',
+        subtitle: '国家篇',
+        author: '柏拉图',
+      },
+    })
+    expect(wrapper.find('img').exists()).toBe(false)
+    expect(wrapper.find('.book-cover__work-canvas').exists()).toBe(true)
+    expect(wrapper.text()).toContain('理想国')
+    expect(wrapper.text()).toContain('国家篇')
+    expect(wrapper.text()).toContain('柏拉图')
+    wrapper.unmount()
+  })
+
+  it('renders 2B modern minimalist fallback when concrete book has no cover image', () => {
+    const wrapper = mount(BookCover, {
+      props: {
+        variant: 'edition',
+        title: 'Analyzing Quantitative Data',
+        author: 'Norman Blaikie',
+        category: 'METHODOLOGY',
+      },
+    })
+    expect(wrapper.find('img').exists()).toBe(false)
+    expect(wrapper.find('.book-cover__fallback-modern').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Analyzing Quantitative Data')
+    expect(wrapper.text()).toContain('Norman Blaikie')
+    expect(wrapper.text()).toContain('METHODOLOGY')
+    wrapper.unmount()
+  })
 })

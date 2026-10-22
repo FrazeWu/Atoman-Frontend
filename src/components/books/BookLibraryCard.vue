@@ -6,7 +6,7 @@
   >
     <!-- Cover -->
     <div class="book-library-card__cover">
-      <BookCover :src="coverUrl" :title="title" />
+      <BookCover :src="coverUrl" :title="title" :author="authorText" variant="edition" />
     </div>
 
     <!-- Content -->

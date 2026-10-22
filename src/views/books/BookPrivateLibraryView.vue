@@ -10,7 +10,7 @@
     </p>
 
     <!-- 加载中 -->
-    <p v-if="loading" role="status">正在加载书架…</p>
+    <p v-if="loading" role="status" class="text-xs text-[var(--a-color-text-secondary)]">正在加载书架…</p>
 
     <template v-else>
       <!-- 1. 阅读数据统计卡片 -->
@@ -51,41 +51,12 @@
 
       <!-- 2. 分栏切换与搜索工具栏 -->
       <div class="private-books__filter-bar">
-        <!-- Segmented Control 分栏选项卡 -->
-        <div class="private-books__segmented">
-          <button
-            type="button"
-            class="private-books__segmented-btn"
-            :class="{ 'is-active': status === '' }"
-            @click="setStatusFilter('')"
-          >
-            全部 ({{ entries.length }})
-          </button>
-          <button
-            type="button"
-            class="private-books__segmented-btn"
-            :class="{ 'is-active': status === 'reading' }"
-            @click="setStatusFilter('reading')"
-          >
-            正在读 ({{ countByStatus('reading') }})
-          </button>
-          <button
-            type="button"
-            class="private-books__segmented-btn"
-            :class="{ 'is-active': status === 'want_to_read' }"
-            @click="setStatusFilter('want_to_read')"
-          >
-            想读 ({{ countByStatus('want_to_read') }})
-          </button>
-          <button
-            type="button"
-            class="private-books__segmented-btn"
-            :class="{ 'is-active': status === 'read' }"
-            @click="setStatusFilter('read')"
-          >
-            读完 ({{ countByStatus('read') }})
-          </button>
-        </div>
+        <!-- Segmented Control 选项卡 -->
+        <PSegmentedControl
+          v-model="status"
+          :options="shelfTabOptions"
+          @change="setStatusFilter"
+        />
 
         <!-- 筛选与搜索输入控件 -->
         <div class="private-books__filter-inputs">
@@ -128,84 +99,66 @@
       </div>
 
       <!-- 3. 书架书目展示网格 -->
-      <p v-if="!filtered.length" class="book-catalog__empty">
-        暂无符合条件的图书。到发现页打开图书后即可加入书架。
-      </p>
+      <PEmpty
+        v-if="!filtered.length"
+        description="暂无符合条件的图书。到发现大厅添加书籍，或调整筛选条件。"
+      />
 
-      <ul v-else class="private-books__grid">
-        <li v-for="entry in filtered" :key="entry.id" class="private-books__card">
-          <!-- 纯白微书脊典雅封面 -->
-          <div
-            class="private-books__cover"
-            title="点击继续阅读"
-            @click="read(entry)"
-          >
-            <div class="private-books__cover-header">
-              {{ entry.tags[0] || '书目' }}
-            </div>
-            <div class="private-books__cover-title">
-              {{ entry.work_title }}
-            </div>
-            <div class="private-books__cover-footer">
-              {{ getStatusLabel(entry.status) }}
-            </div>
+      <ul v-else class="private-books__shelf-grid">
+        <li
+          v-for="entry in filtered"
+          :key="entry.id"
+          class="private-books__book-card"
+        >
+          <!-- 封面区域：使用通用 BookCover 组件 (具体书封面，无图自动回退 2B) -->
+          <div class="private-books__card-cover" @click="read(entry)">
+            <BookCover
+              variant="edition"
+              :title="entry.work_title"
+            />
           </div>
 
-          <!-- 右侧书籍信息与操作 -->
-          <div class="private-books__info">
-            <div>
-              <div class="private-books__header-row">
-                <RouterLink :to="`/books/work/${entry.work_id}`" class="private-books__title-link">
-                  <strong>{{ entry.work_title }}</strong>
-                </RouterLink>
-                <span class="private-books__rating-badge">★ 4.8</span>
-              </div>
-
-              <!-- 私人标签列表 -->
-              <div v-if="entry.tags.length" class="private-books__tags">
-                <span v-for="t in entry.tags" :key="t" class="private-books__tag">
-                  # {{ t }}
-                </span>
-              </div>
-
-              <!-- 阅读进度条 -->
-              <div class="private-books__progress-block tabular-nums">
-                <div class="private-books__progress-labels">
-                  <span class="font-medium text-amber-700">{{ getStatusLabel(entry.status) }}</span>
-                  <span>{{ entry.status === 'read' ? '100%' : '进行中' }}</span>
-                </div>
-                <div class="private-books__progress-track">
-                  <div
-                    class="private-books__progress-bar"
-                    :style="{ width: entry.status === 'read' ? '100%' : '35%' }"
-                  />
-                </div>
-              </div>
-
-              <!-- 快捷标签修改输入框 -->
-              <div class="private-books__tag-editor">
-                <label class="private-books__filter-label">
-                  <span>标签 (逗号分隔):</span>
-                  <input
-                    :value="entry.tags.join(', ')"
-                    :disabled="busy === entry.id"
-                    class="private-books__tag-input"
-                    @change="update(entry, entry.status, ($event.target as HTMLInputElement).value.split(/[,，]/))"
-                  />
-                </label>
-              </div>
+          <!-- 卡片元信息区域 -->
+          <div class="private-books__card-info">
+            <div class="private-books__card-header">
+              <span class="private-books__badge-status" :data-status="entry.status">
+                {{ getStatusLabel(entry.status) }}
+              </span>
             </div>
 
-            <!-- 操作按钮行 (保持第 2 个 select 用于状态更新) -->
-            <div class="private-books__actions">
-              <PButton
-                class="private-books__read-btn"
-                :disabled="!!busy"
+            <RouterLink
+              :to="`/books/work/${entry.work_id}`"
+              class="private-books__card-title"
+              :title="entry.work_title"
+            >
+              {{ entry.work_title }}
+            </RouterLink>
+
+            <!-- 私人标签展示 -->
+            <div v-if="entry.tags && entry.tags.length" class="private-books__card-tags">
+              <span v-for="t in entry.tags" :key="t" class="private-books__tag">
+                # {{ t }}
+              </span>
+            </div>
+
+            <!-- 细线进度条与一键继续阅读 -->
+            <div class="private-books__card-progress-area">
+              <div class="private-books__progress-bar">
+                <div class="private-books__progress-fill" style="width: 35%;" />
+              </div>
+
+              <button
+                type="button"
+                class="private-books__btn-read"
+                :disabled="busy === entry.id"
                 @click="read(entry)"
               >
                 继续阅读 ➔
-              </PButton>
+              </button>
+            </div>
 
+            <!-- 底部操作：保持第 2 个 select 供更新状态，兼容单测 -->
+            <div class="private-books__card-actions">
               <select
                 :value="entry.status"
                 :disabled="busy === entry.id"
@@ -259,6 +212,9 @@ import { RouterLink, useRouter } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import BookCover from '@/components/books/BookCover.vue'
 import {
   listLibrary,
   saveLibrary,
@@ -286,6 +242,13 @@ const status = ref('')
 const tag = ref('')
 const removing = ref<LibraryEntry | null>(null)
 const calendarOpen = ref(false)
+
+const shelfTabOptions = computed(() => [
+  { label: `全部 (${entries.value.length})`, value: '' },
+  { label: `正在读 (${countByStatus('reading')})`, value: 'reading' },
+  { label: `想读 (${countByStatus('want_to_read')})`, value: 'want_to_read' },
+  { label: `读完 (${countByStatus('read')})`, value: 'read' },
+])
 
 const filtered = computed(() =>
   entries.value.filter(
@@ -355,7 +318,6 @@ async function read(entry: LibraryEntry) {
     if (result.available && result.asset && result.revision_id) {
       await router.push(resourceReaderPath(result.work_id, result.asset.id, result.revision_id))
     } else {
-      // 优雅跳转到示范阅读器或详情页
       await router.push(`/books/work/${entry.work_id}`)
     }
   } catch {

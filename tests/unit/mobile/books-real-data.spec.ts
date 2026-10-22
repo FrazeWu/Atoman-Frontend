@@ -16,19 +16,16 @@ vi.mock('vue-router', () => ({
   },
 }))
 
-import { listBookImports, listBookShelf, listContinueReading } from '@/api/books'
-import { listLibrary, listPrivateNotes, readingStatistics } from '@/api/bookPrivate'
+import { listLibrary, listPrivateNotes, readingStatistics, readingRecommendation } from '@/api/bookPrivate'
+import { getCloudReadingState } from '@/api/bookReading'
 
-vi.mock('@/api/books', () => ({
-  listContinueReading: vi.fn(),
-  listBookShelf: vi.fn(),
-  listBookImports: vi.fn(),
-}))
+vi.mock('@/api/bookReading', () => ({ getCloudReadingState: vi.fn() }))
 
 vi.mock('@/api/bookPrivate', () => ({
   listLibrary: vi.fn(),
   listPrivateNotes: vi.fn(),
   readingStatistics: vi.fn(),
+  readingRecommendation: vi.fn(),
 }))
 
 describe('Books Mobile Real Data Wiring', () => {
@@ -38,32 +35,10 @@ describe('Books Mobile Real Data Wiring', () => {
     pinia = createPinia()
     setActivePinia(pinia)
     mockPush.mockReset()
+    vi.spyOn(useAuthStore(), 'restoreSession').mockResolvedValue(true)
 
-    vi.mocked(listContinueReading).mockResolvedValue([
-      {
-        asset_id: 'asset-real-1',
-        title: '西西弗神话',
-        author: '阿尔贝·加缪',
-        reading_percent: 0.45,
-        format: 'EPUB',
-      },
-    ] as any)
-
-    vi.mocked(listBookShelf).mockResolvedValue({
-      items: [
-        {
-          id: 'work-1',
-          work_id: 'work-1',
-          work: {
-            title: '局外人',
-            authors: [{ name: '阿尔贝·加缪' }],
-          },
-        },
-      ],
-      total: 1,
-    } as any)
-
-    vi.mocked(listBookImports).mockResolvedValue([] as any)
+    vi.mocked(readingRecommendation).mockResolvedValue({ work_id: 'w-1', available: true, asset: { id: 'asset-real-1', format: 'epub' }, revision_id: 'rev-real-1', source: 'selection' } as any)
+    vi.mocked(getCloudReadingState).mockResolvedValue({ current_percent: 0.45 } as any)
 
     vi.mocked(listLibrary).mockResolvedValue({
       items: [
@@ -107,9 +82,23 @@ describe('Books Mobile Real Data Wiring', () => {
     })
     await flushPromises()
 
-    expect(wrapper.text()).toContain('西西弗神话')
+    expect(wrapper.text()).toContain('鼠疫')
     expect(wrapper.text()).toContain('45%')
     expect(wrapper.text()).toContain('局外人')
+    await wrapper.get('[data-testid="current-reading-card"]').trigger('click')
+    await flushPromises()
+    expect(mockPush).toHaveBeenCalledWith('/books/read/w-1/asset-real-1/rev-real-1')
+    wrapper.unmount()
+  })
+
+  it('keeps the shelf visible when progress fails and reports the error', async () => {
+    vi.spyOn(useAuthStore(), 'restoreSession').mockResolvedValue(true)
+    vi.mocked(getCloudReadingState).mockRejectedValueOnce(new Error('offline'))
+    const wrapper = mount(BooksShelfView, { global: { plugins: [pinia] } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('局外人')
+    expect(wrapper.get('[role="alert"]').text()).toContain('加载失败')
+    wrapper.unmount()
   })
 
   it('renders real private notes in BooksNotesView', async () => {

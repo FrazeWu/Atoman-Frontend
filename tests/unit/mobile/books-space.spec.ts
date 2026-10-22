@@ -1,11 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import BooksDiscoverView from '@mobile/views/books/BooksDiscoverView.vue'
 import BooksShelfView from '@mobile/views/books/BooksShelfView.vue'
 import BooksNotesView from '@mobile/views/books/BooksNotesView.vue'
 import BooksMeView from '@mobile/views/books/BooksMeView.vue'
 import BookDetailMobileView from '@mobile/views/books/BookDetailMobileView.vue'
+vi.mock('@/api/bookPrivate', async importOriginal => ({
+  ...await importOriginal<typeof import('@/api/bookPrivate')>(),
+  readingRecommendation: vi.fn(async (workId: string) => ({ available: true, work_id: workId, asset: { id: 'asset-1' }, revision_id: 'rev-1' })),
+}))
 
 vi.mock('@mobile/components/ui/MIcon.vue', () => ({
   default: {
@@ -185,7 +189,8 @@ describe('Mobile Books Space Overhaul', () => {
 
       const card = wrapper.find('[data-testid="current-reading-card"]')
       await card.trigger('click')
-      expect(pushSpy).toHaveBeenCalledWith('/books/read/b-current')
+      await flushPromises()
+      expect(pushSpy).toHaveBeenCalledWith('/books/read/b-current/asset-1/rev-1')
     })
   })
 

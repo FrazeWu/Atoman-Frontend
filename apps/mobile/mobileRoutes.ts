@@ -97,6 +97,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	{
 		path: "/books/shelf",
 		component: () => import("./views/books/BooksShelfView.vue"),
+		meta: { restoreSession: true },
 	},
 	{
 		path: "/books/notes",

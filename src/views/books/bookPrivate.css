@@ -87,7 +87,7 @@
   background: transparent;
   border-radius: 3px;
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: color var(--a-motion-micro), background-color var(--a-motion-micro);
 }
 
 .private-books__segmented-btn:hover {
@@ -469,7 +469,7 @@
   border-radius: 9999px !important;
   cursor: pointer;
   border: 2px solid transparent;
-  transition: all 0.1s ease;
+  transition: border-color var(--a-motion-micro), transform var(--a-motion-micro);
 }
 
 .private-books__color-dot.is-active {

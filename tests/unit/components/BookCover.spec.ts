@@ -37,7 +37,7 @@ describe('BookCover', () => {
       },
     })
     expect(wrapper.find('img').exists()).toBe(false)
-    expect(wrapper.find('.book-cover__work-canvas').exists()).toBe(true)
+    expect(wrapper.find('.book-cover--work .book-cover__modern').exists()).toBe(true)
     expect(wrapper.text()).toContain('理想国')
     expect(wrapper.text()).toContain('国家篇')
     expect(wrapper.text()).toContain('柏拉图')
@@ -54,7 +54,7 @@ describe('BookCover', () => {
       },
     })
     expect(wrapper.find('img').exists()).toBe(false)
-    expect(wrapper.find('.book-cover__fallback-modern').exists()).toBe(true)
+    expect(wrapper.find('.book-cover--edition .book-cover__modern').exists()).toBe(true)
     expect(wrapper.text()).toContain('Analyzing Quantitative Data')
     expect(wrapper.text()).toContain('Norman Blaikie')
     expect(wrapper.text()).toContain('METHODOLOGY')

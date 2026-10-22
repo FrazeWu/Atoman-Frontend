@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -12,6 +12,9 @@ import MessageChatMobileView from '@mobile/views/messages/MessageChatMobileView.
 import StudioMobileView from '@mobile/views/studio/StudioMobileView.vue'
 import ProfileMobileView from '@mobile/views/me/ProfileMobileView.vue'
 import { mobileRoutes } from '@mobile/mobileRoutes'
+vi.mock('@/api/bookPrivate', () => ({
+  readingRecommendation: vi.fn(async (workId: string) => ({ available: true, work_id: workId, asset: { id: 'asset-1' }, revision_id: 'rev-1' })),
+}))
 
 describe('Mobile Independent Module Views (Task 5)', () => {
   let pinia: ReturnType<typeof createPinia>
@@ -165,7 +168,7 @@ describe('Mobile Independent Module Views (Task 5)', () => {
       expect(wrapper.text()).toContain('TXT')
     })
 
-    it('clicking book item navigates to reader /books/read/:id', async () => {
+    it('clicking book item resolves the resource and revision before opening the reader', async () => {
       const pushSpy = vi.spyOn(router, 'push')
       const wrapper = mount(BooksShelfView, {
         props: {
@@ -178,7 +181,8 @@ describe('Mobile Independent Module Views (Task 5)', () => {
 
       const item = wrapper.find('[data-testid="book-shelf-item"]')
       await item.trigger('click')
-      expect(pushSpy).toHaveBeenCalledWith('/books/read/book-1')
+      await flushPromises()
+      expect(pushSpy).toHaveBeenCalledWith('/books/read/book-1/asset-1/rev-1')
     })
 
     it('renders empty state when shelf has no books', async () => {

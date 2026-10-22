@@ -20,8 +20,7 @@ describe('bookKeys factory and bookApi', () => {
   it('exports expected bookApi functions', () => {
     expect(typeof bookApi.fetchCatalogWork).toBe('function')
     expect(typeof bookApi.fetchCatalogResources).toBe('function')
-    expect(typeof bookApi.fetchBookShelf).toBe('function')
-    expect(typeof bookApi.fetchContinueReading).toBe('function')
-    expect(typeof bookApi.fetchBookNotes).toBe('function')
+    expect(typeof bookApi.fetchCloudReadingState).toBe('function')
+    expect(typeof bookApi.fetchReadingMarks).toBe('function')
   })
 })

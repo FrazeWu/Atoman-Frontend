@@ -5,18 +5,20 @@
       <h1 class="books-shelf-title">书架</h1>
     </header>
 
+    <p v-if="loading" role="status">正在加载书架…</p>
+    <p v-if="error" role="alert">{{ error }} <button type="button" @click="loadShelfData">重试</button></p>
     <!-- Empty State if no books -->
-    <div v-if="!currentReadingBook && booksList.length === 0" class="books-shelf-empty" data-testid="books-empty-state">
+    <div v-if="!loading && !error && !currentReadingBook && booksList.length === 0" class="books-shelf-empty" data-testid="books-empty-state">
       <div class="books-shelf-empty__icon">
         <MIcon name="books" size="lg" />
       </div>
       <p class="books-shelf-empty__title">书架暂无图书</p>
-      <p class="books-shelf-empty__desc">从发现或导入添加你感兴趣的书籍。</p>
+      <p class="books-shelf-empty__desc">从图书详情添加你感兴趣的书籍。</p>
     </div>
 
     <div v-else class="books-shelf-content">
       <!-- "当前在读" Card -->
-      <section v-if="currentReadingBook" class="books-current-card" data-testid="current-reading-card" @click="openBook(currentReadingBook.id)">
+      <section v-if="currentReadingBook" class="books-current-card" data-testid="current-reading-card" role="button" tabindex="0" @click="openBook(currentReadingBook.id)" @keydown.enter="openBook(currentReadingBook.id)" @keydown.space.prevent="openBook(currentReadingBook.id)">
         <div class="books-current-card__badge">当前在读</div>
         <div class="books-current-card__body">
           <!-- 58x80 Book Spine/Cover -->
@@ -31,7 +33,7 @@
             <h2 class="books-current-card__title">{{ currentReadingBook.title }}</h2>
             <p class="books-current-card__author">{{ currentReadingBook.author }}</p>
             <div class="books-current-card__meta">
-              已读 {{ currentReadingBook.progress }}% · {{ currentReadingBook.annotationsCount }} 条划线批注
+              已读 {{ currentReadingBook.progress }}%<template v-if="currentReadingBook.annotationsCount !== undefined"> · {{ currentReadingBook.annotationsCount }} 条划线批注</template>
             </div>
             <!-- 3px progress bar fill -->
             <div class="books-current-card__progress-track" data-testid="reading-progress-bar">
@@ -56,7 +58,11 @@
             :key="book.id"
             class="books-shelf-item"
             data-testid="book-shelf-item"
+            role="button"
+            tabindex="0"
             @click="openBook(book.id)"
+            @keydown.enter="openBook(book.id)"
+            @keydown.space.prevent="openBook(book.id)"
           >
             <div class="books-shelf-item__icon">
               <MIcon name="books" size="md" />
@@ -64,7 +70,7 @@
             <div class="books-shelf-item__info">
               <div class="books-shelf-item__row">
                 <span class="books-shelf-item__title">{{ book.title }}</span>
-                <span class="books-shelf-item__badge">{{ book.format || 'EPUB' }}</span>
+                <span v-if="book.format" class="books-shelf-item__badge">{{ book.format }}</span>
               </div>
               <div class="books-shelf-item__meta">
                 <span>{{ book.author }}</span>
@@ -85,7 +91,9 @@ import { useRouter } from 'vue-router'
 import { getActivePinia } from 'pinia'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import { useAuthStore } from '@/stores/auth'
-import { listBookShelf, listContinueReading, listBookImports } from '@/api/books'
+import { listLibrary, readingRecommendation, type LibraryEntry } from '@/api/bookPrivate'
+import { getCloudReadingState } from '@/api/bookReading'
+import { resourceReaderPath } from '@/api/bookResources'
 
 export interface ShelfBook {
   id: string
@@ -129,6 +137,8 @@ const defaultSampleBooks: ShelfBook[] = [
 const router = useRouter()
 const authStore = getActivePinia() ? useAuthStore() : null
 const loading = ref(false)
+const error = ref('')
+const opening = ref(false)
 const fetchedCurrentReading = ref<ShelfBook | null>(
   authStore ? null : defaultSampleCurrent
 )
@@ -139,56 +149,33 @@ const fetchedBooks = ref<ShelfBook[]>(
 async function loadShelfData() {
   if (props.initialBooks !== undefined || props.currentReading !== undefined || props.initialCurrentBook !== undefined) return
   loading.value = true
+  error.value = ''
   try {
-    const [continueRes, shelfRes, importsRes] = await Promise.allSettled([
-      listContinueReading(1),
-      listBookShelf('all', 50, 0),
-      listBookImports(),
-    ])
-
-    if (continueRes.status === 'fulfilled' && continueRes.value?.length) {
-      const first = continueRes.value[0]
-      fetchedCurrentReading.value = {
-        id: first.asset_id,
-        title: first.title,
-        author: first.author || '未知作者',
-        progress: Math.round((first.reading_percent || 0) * 100),
-        annotationsCount: 0,
-        format: (first.format || 'EPUB').toUpperCase(),
-      }
-    } else {
-      fetchedCurrentReading.value = null
-    }
-
-    const items: ShelfBook[] = []
-    if (shelfRes.status === 'fulfilled' && shelfRes.value?.items?.length) {
-      for (const item of shelfRes.value.items) {
-        items.push({
-          id: item.work_id || item.id,
-          title: item.work?.title || '未命名',
-          author: item.work?.authors?.map((a: any) => a.name).join(' / ') || '未知作者',
-          format: 'EPUB',
-        })
-      }
-    }
-    if (importsRes.status === 'fulfilled' && Array.isArray(importsRes.value)) {
-      for (const imp of importsRes.value) {
-        if (!items.some((x) => x.id === imp.id)) {
-          items.push({
-            id: imp.id,
-            title: imp.title || imp.file_name || '本地电子书',
-            author: imp.author || '未知作者',
-            format: (imp.format || 'EPUB').toUpperCase(),
-          })
+    if (authStore && !await authStore.restoreSession()) return
+    const entries: LibraryEntry[] = []
+    let page
+    do {
+      page = await listLibrary(entries.length)
+      entries.push(...page.items)
+    } while (page.items.length && entries.length < page.total)
+    fetchedBooks.value = entries.map(entry => ({ id: entry.work_id, title: entry.work_title, author: '' }))
+    fetchedCurrentReading.value = null
+    const current = entries.find(entry => entry.status === 'reading')
+    if (current) {
+      const recommendation = await readingRecommendation(current.work_id)
+      if (recommendation.available && recommendation.asset && recommendation.revision_id) {
+        const state = await getCloudReadingState(recommendation.revision_id)
+        fetchedCurrentReading.value = {
+          id: current.work_id,
+          title: current.work_title,
+          author: '',
+          progress: Math.round(state.current_percent * 100),
+          format: recommendation.asset.format.toUpperCase(),
         }
       }
     }
-    fetchedBooks.value = items
   } catch {
-    if (!authStore) {
-      fetchedCurrentReading.value = defaultSampleCurrent
-      fetchedBooks.value = defaultSampleBooks
-    }
+    error.value = '书架或阅读进度加载失败，请重试。'
   } finally {
     loading.value = false
   }
@@ -205,9 +192,19 @@ const booksList = computed<ShelfBook[]>(() => {
   return fetchedBooks.value
 })
 
-function openBook(bookId: string) {
-  if (router && typeof router.push === 'function') {
-    void router.push(`/books/read/${bookId}`)
+async function openBook(workId: string) {
+  if (opening.value) return
+  opening.value = true
+  error.value = ''
+  try {
+    const result = await readingRecommendation(workId)
+    await router.push(result.available && result.asset && result.revision_id
+      ? resourceReaderPath(result.work_id, result.asset.id, result.revision_id)
+      : `/books/work/${workId}`)
+  } catch {
+    error.value = '无法恢复阅读，请重试。'
+  } finally {
+    opening.value = false
   }
 }
 

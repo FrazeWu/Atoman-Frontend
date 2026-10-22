@@ -343,7 +343,7 @@ onMounted(load)
   cursor: pointer;
   padding: 0.2rem 0.4rem;
   border-radius: var(--a-radius-control, 4px);
-  transition: all 0.15s ease;
+  transition: color var(--a-motion-micro), background-color var(--a-motion-micro);
 }
 
 .book-private-highlights__color-all.is-active,

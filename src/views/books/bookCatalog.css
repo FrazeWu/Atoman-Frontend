@@ -148,7 +148,7 @@
   flex-direction: column;
   gap: 0.5rem;
   padding: 1.25rem;
-  border: 1px dashed var(--a-color-border-soft, #cbd5e1);
+  border: 1px solid var(--a-color-border-soft, #cbd5e1);
   border-radius: var(--a-radius-card, 4px);
   background-color: var(--a-color-surface-muted, #f8fafc);
   box-shadow: none !important;
@@ -605,7 +605,7 @@
   border-radius: 3px;
   cursor: pointer;
   box-shadow: none !important;
-  transition: all 0.15s ease;
+  transition: color var(--a-motion-micro), background-color var(--a-motion-micro), border-color var(--a-motion-micro);
 }
 
 .p-segmented-item:hover {

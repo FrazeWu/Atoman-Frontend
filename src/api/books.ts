@@ -1,8 +1,6 @@
-import { apiGet, apiPostMultipart, apiRequest, apiRequestEnvelope } from '@/api/client'
-import { fetchResourceRevision, listResourceRevisions, type ResourceRevision } from '@/api/bookResources'
+import { apiGet, apiRequest, apiRequestEnvelope } from '@/api/client'
+import { listResourceRevisions, type ResourceRevision } from '@/api/bookResources'
 import { useApiUrl } from '@/composables/useApi'
-import { runMultipartUpload } from '@/api/multipartUpload'
-import { uploadBlobPart } from '@/api/uploadTransport'
 
 import type {
   BookImportStatus,
@@ -108,31 +106,12 @@ export type {
 
 
 const booksUrl = (suffix = '') => `${useApiUrl()}/books${suffix}`
-const importsUrl = (suffix = '') => booksUrl(`/imports${suffix}`)
 const assetsUrl = (suffix = '') => booksUrl(`/assets${suffix}`)
-const catalogUrl = (suffix = '') => booksUrl(`/catalog${suffix}`)
 
 async function requestEnvelope<T>(url: string, init: RequestInit): Promise<T> {
   const response = await apiRequestEnvelope<T>(url, init)
   return response.data
 }
-
-export const listContinueReading = (limit = 20) =>
-  apiGet<BookContinueReading[]>(`${booksUrl('/library/continue')}?limit=${limit}`)
-
-export const submitBookEdit = (input: SubmitBookEditInput) =>
-  requestEnvelope<BookEdit>(booksUrl('/contributions'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  })
-
-export const submitPublicationRequest = (assetId: string, input: SubmitPublicationInput) =>
-  requestEnvelope<BookPublicationRequest>(assetsUrl(`/${encodeURIComponent(assetId)}/publication-requests`), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  })
 
 export const getBookAsset = (assetId: string) =>
   apiGet<BookPrivateAsset>(assetsUrl(`/${encodeURIComponent(assetId)}`))
@@ -190,13 +169,6 @@ export async function fetchBookAssetContent(assetId: string): Promise<Blob> {
   return response.blob()
 }
 
-export async function uploadBookImportPart(uploadUrl: string, body: Blob): Promise<string> {
-  return uploadBlobPart(uploadUrl, body, {
-    transport: 'fetch',
-    messages: { missingETag: '上传分片未返回 ETag' },
-  })
-}
-
 export function bookContentType(file: Pick<File, 'name' | 'type'>): string {
   switch (file.name.toLowerCase().split('.').pop()) {
     case 'epub': return 'application/epub+zip'
@@ -210,29 +182,6 @@ export function bookContentType(file: Pick<File, 'name' | 'type'>): string {
   }
 }
 
-export interface BookFileUploadProgress {
-  loaded: number
-  total: number
-}
-
-
-export const listBookImports = () => apiGet<BookImportSession[]>(importsUrl())
-
-export const listBookShelf = (status = '', limit = 20, offset = 0) =>
-  apiGet<BookShelfListResult>(`${booksUrl('/library')}?status=${encodeURIComponent(status)}&limit=${limit}&offset=${offset}`)
-
-export const saveBookShelf = (workId: string, status: BookShelfItem['status'], note = '') =>
-  requestEnvelope<BookShelfItem>(booksUrl(`/library/works/${encodeURIComponent(workId)}`), {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status, note }),
-  })
-
-export const getPublicBookReviews = (workId: string, limit = 20, offset = 0) =>
-  apiGet<BookReviewListResult>(catalogUrl(`/works/${encodeURIComponent(workId)}/reviews?limit=${limit}&offset=${offset}`))
-
-export const getBookRating = (workId: string) =>
-  requestEnvelope<BookRatingSummary>(catalogUrl(`/works/${encodeURIComponent(workId)}/rating`), {})
 
 // ---------------------------------------------------------------------------
 // 公共阅读入口（books v2 契约）：以最新修订作为公共正文。

@@ -20,7 +20,8 @@ describe('book reader preferences', () => {
   })
 
   it('keeps display preferences inside the supported range', () => {
-    expect(parseBookReaderDisplayPreferences({ font_scale: 2, theme: 'night' })).toEqual({ font_scale: 1.35, theme: 'night' })
-    expect(parseBookReaderDisplayPreferences({ font_scale: 0.2, theme: 'unknown' })).toEqual({ font_scale: 0.85, theme: 'paper' })
+    expect(parseBookReaderDisplayPreferences({ font_scale: 2, theme: 'night' })).toEqual({ font_scale: 1.35, font_family: 'serif', theme: 'night' })
+    expect(parseBookReaderDisplayPreferences({ font_scale: 0.2, theme: 'unknown', font_family: 'unknown' })).toEqual({ font_scale: 0.85, font_family: 'serif', theme: 'paper' })
+    expect(parseBookReaderDisplayPreferences({ font_scale: 1, theme: 'sepia', font_family: 'sans' }).font_family).toBe('sans')
   })
 })

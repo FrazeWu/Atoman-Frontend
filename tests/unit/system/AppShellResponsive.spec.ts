@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { clearCSRFToken } from '@/api/transport';
 
 // @ts-expect-error Vitest resolves Vue SFC imports through Vite, outside tsconfig's src-only include.
 import App from "../../../src/App.vue";
@@ -127,6 +128,7 @@ const mountAppAt = async (path: string, settleDeferred = false) => {
 
 describe("App responsive shell", () => {
 	beforeEach(() => {
+		clearCSRFToken();
 		localStorage.clear();
 		vi.restoreAllMocks();
 		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
@@ -138,6 +140,26 @@ describe("App responsive shell", () => {
 				status: 404,
 			});
 		});
+	});
+
+	it('waits for session restoration before posting a visit with its CSRF token', async () => {
+		let finishSession!: (response: Response) => void;
+		vi.mocked(fetch).mockImplementation(async input => {
+			if (String(input).endsWith('/auth/session')) {
+				return new Promise<Response>(resolve => { finishSession = resolve });
+			}
+			return new Response(null, { status: 204 });
+		});
+		const { wrapper, router } = await mountAppAt('/');
+		await router.push('/plain');
+		await flushPromises();
+		expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith('/site/visits'))).toBe(false);
+		finishSession(new Response(JSON.stringify({ csrf_token: 'visit-csrf', user: { username: 'reader', email: 'reader@example.test' } }), { status: 200 }));
+		await flushPromises();
+		const visits = vi.mocked(fetch).mock.calls.filter(([url]) => String(url).endsWith('/site/visits'));
+		expect(visits).toHaveLength(1);
+		expect(new Headers(visits[0][1]?.headers).get('X-CSRF-Token')).toBe('visit-csrf');
+		wrapper.unmount();
 	});
 
 	it("does not mount mobile bottom nav in the desktop sidebar shell", async () => {

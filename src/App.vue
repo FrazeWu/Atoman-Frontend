@@ -36,6 +36,7 @@ import AppTopbar from '@/components/system/AppTopbar.vue'
 import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { useUIStore } from '@/stores/ui'
+import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useTransitionStore } from '@/stores/transition'
 import { useTransitionRelay } from '@/composables/useTransitionRelay'
@@ -57,6 +58,7 @@ const SiteFooter = defineAsyncComponent(() => import('@/components/system/SiteFo
 const route = useRoute()
 const playerPresence = usePlayerPresenceStore()
 const uiStore = useUIStore()
+const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const transition = useTransitionStore()
 const { checkRelay } = useTransitionRelay()
@@ -77,7 +79,10 @@ useKeyboardShortcuts(globalShortcuts)
 
 const reportPageView = (sendAnalytics = true) => {
   if (isAuthRoute.value) return
-  void apiRequest(`${apiUrl}/site/visits`, { method: 'POST', keepalive: true }).catch(() => {})
+  // 等待已有会话恢复，避免携带登录 cookie 却尚无 CSRF token 的首访请求。
+  void authStore.restoreSession().then(() =>
+    apiRequest(`${apiUrl}/site/visits`, { method: 'POST', keepalive: true })
+  ).catch(() => {})
   if (!sendAnalytics) return
   const ga = window.gtag
   if (typeof ga === 'function') {

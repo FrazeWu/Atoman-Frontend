@@ -2,6 +2,7 @@
   color: var(--a-color-text, #1c1c1e);
   padding-block: 1rem;
   background-color: var(--a-color-bg, #ffffff);
+  max-width: 960px;
 }
 
 .book-catalog__toolbar,

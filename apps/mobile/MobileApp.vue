@@ -60,6 +60,9 @@ import './mobileDiscovery.css'
 import './mobileSaved.css'
 import './mobileContent.css'
 
+// Pre-warm MobileBottomNav chunk so defineAsyncComponent resolves immediately
+void import('./components/system/MobileBottomNav.vue')
+
 const MobileBottomNav = defineAsyncComponent(() => import('./components/system/MobileBottomNav.vue'))
 const MobileAudioPlayer = defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))
 
@@ -108,6 +111,7 @@ const subRouteTitle = computed(() => {
   if (p.startsWith('/music/albums')) return '专辑'
   if (p.startsWith('/music/artists')) return '艺术家'
   if (p.startsWith('/music/imports')) return '导入记录'
+  if (/^\/music\/playlist\//.test(p)) return '歌单详情'
   if (p.startsWith('/music/more')) return '更多'
   if (p.startsWith('/posts/notes')) return '短笺'
   if (p.startsWith('/posts/articles')) return '长文'
@@ -126,6 +130,7 @@ const showMobileTopbar = computed(() => {
   if (/^\/(?:inbox|messages)\/chat\//.test(route.path)) return false
   if (/^\/feed\/(?:article|item)\//.test(route.path)) return false
   if (/^\/(?:post|posts\/post)\//.test(route.path)) return false
+  if (/^\/music\/(?:playlist|album)\//.test(route.path)) return false
   return true
 })
 

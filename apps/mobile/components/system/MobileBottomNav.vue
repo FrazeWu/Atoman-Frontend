@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, getCurrentInstance } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import { SPACE_TABS, type NavTabItem } from './bottomNavConstants'
@@ -49,10 +49,14 @@ const emit = defineEmits<{
   (e: 'update:activeTab', key: string): void
 }>()
 
-const instance = getCurrentInstance()
-const hasRouter = Boolean(instance?.appContext.config.globalProperties.$router)
-const route = hasRouter ? useRoute() : undefined
-const router = hasRouter ? useRouter() : undefined
+let route: ReturnType<typeof useRoute> | undefined
+let router: ReturnType<typeof useRouter> | undefined
+try {
+  route = useRoute()
+  router = useRouter()
+} catch {
+  // outside router context
+}
 
 const tabs = computed<NavTabItem[]>(() => {
   const key = props.currentSpace?.toLowerCase() || 'music'
@@ -83,6 +87,11 @@ const isTabActive = (tab: NavTabItem) => {
     return true
   }
 
+  // Special case: "歌单" tab matches /music/playlists and /music/playlist/:id
+  if (tab.key === 'playlists' && (currentPath === '/music/playlists' || currentPath.startsWith('/music/playlist/'))) {
+    return true
+  }
+
   return false
 }
 
@@ -107,25 +116,29 @@ const onTabClick = (tab: NavTabItem, event: MouseEvent) => {
   bottom: 0 !important;
   left: 0 !important;
   display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
   width: 100% !important;
-  z-index: 850 !important;
+  z-index: 1000 !important;
   pointer-events: none;
 }
 
 .mobile-bottom-nav__bar {
-  position: relative;
+  position: relative !important;
   width: 100% !important;
-  max-width: 480px;
-  height: calc(56px + env(safe-area-inset-bottom, 0px));
-  min-height: 56px;
-  margin: 0 auto;
+  max-width: 480px !important;
+  height: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+  min-height: 56px !important;
+  margin: 0 auto !important;
   display: grid !important;
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  background-color: #ffffff;
-  border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
-  box-shadow: none;
-  pointer-events: auto;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  background-color: #ffffff !important;
+  border-top: 1px solid var(--a-color-border-soft, #e2e8f0) !important;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.04) !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .mobile-bottom-nav__tab {

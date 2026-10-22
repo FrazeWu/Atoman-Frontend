@@ -96,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onActivated, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -182,6 +182,10 @@ watch(() => authStore.isAuthenticated, () => {
 })
 
 onMounted(() => {
+  void loadPlaylists()
+})
+
+onActivated(() => {
   void loadPlaylists()
 })
 </script>

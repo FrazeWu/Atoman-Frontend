@@ -12,9 +12,9 @@
     <!-- 卡片下方：严格单行【书名 + 评分】 -->
     <div class="book-card__meta-line">
       <strong class="book-card__title">{{ work.title }}</strong>
-      <span class="book-card__rating">
+      <span v-if="ratingText" class="book-card__rating">
         <Star :size="12" aria-hidden="true" />
-        <span>{{ formatRatingSummary(work.rating_score, work.rating_count) }}</span>
+        <span>{{ ratingText }}</span>
       </span>
     </div>
   </RouterLink>
@@ -26,7 +26,6 @@ import { RouterLink, useRoute } from 'vue-router'
 import { Star } from 'lucide-vue-next'
 import type { BookPublicWork } from '@/api/books'
 import BookCover from './BookCover.vue'
-import { formatRatingSummary } from '@/utils/rating'
 
 const props = defineProps<{ work: BookPublicWork; eager?: boolean }>()
 const route = useRoute()
@@ -37,6 +36,13 @@ const target = computed(() => ({
 }))
 
 const authorText = computed(() => props.work.authors?.map(a => a.name).join(' / ') || '')
+
+const ratingText = computed(() => {
+  if (props.work.rating_score && props.work.rating_score > 0) {
+    return props.work.rating_score.toFixed(1)
+  }
+  return null
+})
 </script>
 
 <style scoped>

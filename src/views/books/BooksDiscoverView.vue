@@ -64,42 +64,14 @@
       <!-- 作品书库网格视图（核心主视图） -->
       <template v-else>
         <p>{{ total }} 本图书</p>
-        <p v-if="!works.length" class="book-catalog__empty">
-          {{ route.query.q ? '没有找到图书，试试其他关键词，或添加这本书。' : '还没有图书，添加第一本书即可公开展示。' }}
-        </p>
+        <PEmpty
+          v-if="!works.length"
+          class="book-catalog__empty"
+          :description="route.query.q ? '没有找到图书，试试其他关键词，或添加这本书。' : '还没有图书，添加第一本书即可公开展示。'"
+        />
         <ul v-else class="book-catalog__grid">
-          <li v-for="work in works" :key="work.id">
-            <RouterLink :to="{ path: `/books/work/${work.id}`, query: route.query }" class="book-catalog__card">
-              <!-- 纯白微书脊极简书页封面 -->
-              <div class="book-catalog__cover-mini" :aria-label="work.title">
-                <img
-                  v-if="work.editions?.[0]?.cover_url"
-                  :src="work.editions[0].cover_url"
-                  :alt="work.title"
-                  class="book-catalog__cover-mini-img"
-                  loading="lazy"
-                />
-                <template v-else>
-                  <div class="book-catalog__cover-mini-header">
-                    {{ work.original_title || '学术著作' }}
-                  </div>
-                  <div class="book-catalog__cover-mini-body">
-                    <span class="book-catalog__cover-mini-title">{{ work.title }}</span>
-                    <span v-if="work.subtitle" class="book-catalog__cover-mini-subtitle">{{ work.subtitle }}</span>
-                  </div>
-                  <div class="book-catalog__cover-mini-footer">
-                    <span class="book-catalog__cover-mini-author">{{ formatAuthor(work) }}</span>
-                    <span class="book-catalog__cover-mini-year">{{ formatYear(work) }}</span>
-                  </div>
-                </template>
-              </div>
-
-              <!-- 封面下方：严格单行排列【书名 + 评分】 -->
-              <div class="book-catalog__card-footer">
-                <strong class="book-catalog__card-title">{{ work.title }}</strong>
-                <span class="book-catalog__card-rating">★ {{ formatRating(work) }}</span>
-              </div>
-            </RouterLink>
+          <li v-for="(work, index) in works" :key="work.id">
+            <BookCard :work="work" :eager="index < 6" />
           </li>
         </ul>
       </template>
@@ -121,10 +93,12 @@ import { catalogRevision, searchCatalogWorks } from '@/api/bookCatalog'
 import { highRatedWorks, type WorkRating } from '@/api/bookCommunity'
 import { searchWikiPeople } from '@/api/bookWiki'
 import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
+import BookCard from '@/components/books/BookCard.vue'
 import type { BookPublicWork } from '@/api/books'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
 import './bookCatalog.css'
 
@@ -143,27 +117,6 @@ const loading = ref(false)
 const error = ref('')
 let request: AbortController | undefined
 let generation = 0
-
-function formatAuthor(work: BookPublicWork): string {
-  if (!work.authors || work.authors.length === 0) return '佚名'
-  return work.authors.map(a => a.name).join(' / ')
-}
-
-function formatYear(work: BookPublicWork): string {
-  const dates = work.editions?.map(e => e.published_date).filter(Boolean) as string[] | undefined
-  if (dates && dates.length > 0) {
-    const sorted = [...dates].sort()
-    return sorted[0].slice(0, 4) + '年'
-  }
-  return '经典'
-}
-
-function formatRating(work: BookPublicWork): string {
-  if (work.rating_score && work.rating_score > 0) {
-    return work.rating_score.toFixed(1)
-  }
-  return '4.8'
-}
 
 async function load() {
   request?.abort()

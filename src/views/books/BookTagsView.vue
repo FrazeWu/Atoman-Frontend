@@ -12,41 +12,49 @@
       />
     </div>
 
-    <!-- 1. 核心学科领域分类 -->
-    <div class="book-tags__section">
-      <h2 class="book-tags__section-title">学科与领域</h2>
-      <div class="book-tags__grid">
-        <button
-          v-for="cat in filteredCategories"
-          :key="cat.name"
-          class="book-tags__category-card"
-          @click="selectTag(cat.name)"
-        >
-          <div class="book-tags__category-header">
-            <span class="book-tags__category-name">{{ cat.name }}</span>
-            <span class="book-tags__category-count">{{ cat.count }} 本</span>
-          </div>
-          <p class="book-tags__category-desc">{{ cat.desc }}</p>
-        </button>
-      </div>
-    </div>
+    <!-- 空状态 -->
+    <PEmpty
+      v-if="!filteredCategories.length && !filteredTags.length"
+      description="未找到匹配的学科领域或流派标签"
+    />
 
-    <!-- 2. 精细流派与主题标签 -->
-    <div class="book-tags__section">
-      <h2 class="book-tags__section-title">精选流派与时代</h2>
-      <div class="book-tags__chips">
-        <button
-          v-for="tag in filteredTags"
-          :key="tag.name"
-          class="book-tags__chip"
-          @click="selectTag(tag.name)"
-        >
-          <span class="book-tags__chip-prefix">#</span>
-          <span class="book-tags__chip-name">{{ tag.name }}</span>
-          <span class="book-tags__chip-count">{{ tag.count }}</span>
-        </button>
+    <template v-else>
+      <!-- 1. 核心学科领域分类 -->
+      <div v-if="filteredCategories.length" class="book-tags__section">
+        <h2 class="book-tags__section-title">学科与领域</h2>
+        <div class="book-tags__grid">
+          <button
+            v-for="cat in filteredCategories"
+            :key="cat.name"
+            class="book-tags__category-card"
+            @click="selectTag(cat.name)"
+          >
+            <div class="book-tags__category-header">
+              <span class="book-tags__category-name">{{ cat.name }}</span>
+              <span class="book-tags__category-count">{{ cat.count }} 本</span>
+            </div>
+            <p class="book-tags__category-desc">{{ cat.desc }}</p>
+          </button>
+        </div>
       </div>
-    </div>
+
+      <!-- 2. 精细流派与主题标签 -->
+      <div v-if="filteredTags.length" class="book-tags__section">
+        <h2 class="book-tags__section-title">精选流派与时代</h2>
+        <div class="book-tags__chips">
+          <button
+            v-for="tag in filteredTags"
+            :key="tag.name"
+            class="book-tags__chip"
+            @click="selectTag(tag.name)"
+          >
+            <span class="book-tags__chip-prefix">#</span>
+            <span class="book-tags__chip-name">{{ tag.name }}</span>
+            <span class="book-tags__chip-count">{{ tag.count }}</span>
+          </button>
+        </div>
+      </div>
+    </template>
   </section>
 </template>
 
@@ -55,6 +63,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import './bookCatalog.css'
 
 const router = useRouter()

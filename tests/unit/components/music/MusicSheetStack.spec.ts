@@ -1,15 +1,21 @@
-import { mount } from "@vue/test-utils";
+import { enableAutoUnmount, mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import type { MusicSheetLayer } from "../../../../src/components/music/musicSheetTypes";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // @ts-expect-error Vitest resolves Vue SFC aliases through Vite, outside the src-only tsconfig.
 import MusicSheetStack from "@/components/music/MusicSheetStack.vue";
 // @ts-expect-error Vitest resolves Vue/TypeScript aliases through Vite, outside the src-only tsconfig.
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
 
+enableAutoUnmount(afterEach);
+
 describe("MusicSheetStack", () => {
 	beforeEach(() => useMusicDrawers().closeAll());
+	afterEach(() => {
+		useMusicDrawers().closeAll();
+		vi.useRealTimers();
+	});
 
 	it("renders repeated entity kinds as separate ordered layers", () => {
 		const drawers = useMusicDrawers();

@@ -47,6 +47,7 @@ import { safeSearchHref, searchLocation, unifiedSearchEnabled } from '@/utils/se
 const props = withDefaults(defineProps<{
   modelValue: string
   targetTypes: readonly ReferenceTargetType[]
+  searchTypes?: readonly string[]
   placeholder?: string
   inputTestId?: string
   dropdownTestId?: string
@@ -56,6 +57,7 @@ const props = withDefaults(defineProps<{
   inputTestId: '',
   dropdownTestId: 'module-search-dropdown',
   limit: 12,
+  searchTypes: () => [],
 })
 
 const emit = defineEmits<{
@@ -68,7 +70,7 @@ const open = ref(false)
 const router = useRouter()
 const moduleByType: Record<string, string> = { post: 'blog', short_note: 'blog', channel: 'blog', collection: 'blog', thread: 'forum', debate: 'debate', feed: 'feed', article: 'feed', song: 'music', album: 'music', artist: 'music', playlist: 'music', podcast: 'podcast', episode: 'podcast', video: 'video', person: 'timeline', event: 'timeline' }
 const module = moduleByType[props.targetTypes[0] || ''] || ''
-const referenceSearch = unifiedSearchEnabled ? useUnifiedSearchPreview(module) : useReferenceSearch({
+const referenceSearch = unifiedSearchEnabled ? useUnifiedSearchPreview(module, () => props.searchTypes) : useReferenceSearch({
   targetTypes: () => props.targetTypes,
   limit: () => props.limit,
 })
@@ -125,7 +127,7 @@ function handleSubmit() {
   if (unifiedSearchEnabled) {
     open.value = false
     referenceSearch.reset()
-    void router.push(searchLocation(trimmed, module))
+    void router.push(searchLocation(trimmed, module, [...props.searchTypes]))
     return
   }
   open.value = true
@@ -142,7 +144,7 @@ function selectTarget(target: { path: string }) {
   else emit('select', target as ReferenceTarget)
 }
 
-watch(() => props.modelValue, (value) => scheduleSearch(value), { immediate: true })
+watch([() => props.modelValue, () => props.searchTypes], ([value]) => scheduleSearch(value), { immediate: true })
 
 onUnmounted(() => {
   cancelPending()

@@ -7,6 +7,11 @@ import {
 } from '../../../src/composables/useGlobalSearch'
 import type { ModuleRoomKey } from '../../../src/config/moduleRooms'
 
+// 保留显式关闭开关时的旧接口回退覆盖；默认启用路径另测。
+vi.mock('@/utils/searchUrl', async importOriginal => ({
+  ...await importOriginal<typeof import('@/utils/searchUrl')>(), unifiedSearchEnabled: false,
+}))
+
 vi.mock('@/api/references', () => ({
   referenceApi: {
     search: vi.fn(),

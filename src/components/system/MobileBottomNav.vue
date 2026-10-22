@@ -23,6 +23,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getMobileGlobalTabs, getMobilePrimaryTabs, type MobilePrimaryTab } from '@/composables/useResponsiveShell'
 import { resolveSiteContext } from '@/router/siteContext'
+import { moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
 
 
 defineOptions({
@@ -39,6 +40,7 @@ const siteContext = computed(() => {
 })
 
 const currentModule = computed(() => {
+  if (route.path === '/search' && typeof route.query.module === 'string' && Object.hasOwn(moduleRooms, route.query.module)) return route.query.module as ModuleRoomKey
   if (
     route.path === '/modules'
     || route.path === '/inbox'
@@ -56,6 +58,7 @@ const shouldRender = computed(() => route.path !== '/')
 const navStyle = computed(() => ({ '--mobile-nav-count': String(tabs.value.length) }))
 
 const isTabActive = (tab: MobilePrimaryTab) => {
+  if (route.path === '/search') return tab.key === 'search' && route.query.module === tab.module
   const currentPath = route.path.replace(/\/$/, '') || '/'
   const targetPath = router.resolve(tab.href).path.replace(/\/$/, '') || '/'
   if (tab.key === 'more') {

@@ -4,6 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ModuleSearch from "@/components/search/ModuleSearch.vue";
 import { referenceApi, type ReferenceTarget } from "@/api/references";
 
+// 显式关闭时，引用检索仍可作为旧入口回退。
+vi.mock('@/utils/searchUrl', async importOriginal => ({
+  ...await importOriginal<typeof import('@/utils/searchUrl')>(), unifiedSearchEnabled: false,
+}))
+
 const SearchSurfaceStub = {
   props: [
     "query",

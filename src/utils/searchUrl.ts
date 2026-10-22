@@ -1,7 +1,8 @@
 import type { LocationQuery, LocationQueryRaw } from 'vue-router'
 import type { SearchState } from '@/api/search'
 
-export const unifiedSearchEnabled = import.meta.env.VITE_UNIFIED_SEARCH_ENABLED === 'true'
+// 默认启用；部署时可显式设为 false 临时回退旧入口。
+export const unifiedSearchEnabled = import.meta.env.VITE_UNIFIED_SEARCH_ENABLED !== 'false'
 const values = (value: LocationQuery[string]) => (Array.isArray(value) ? value : [value]).filter((v): v is string => typeof v === 'string' && v !== '')
 export function readSearchQuery(query: LocationQuery): SearchState {
   const filters: Record<string, string[]> = {}

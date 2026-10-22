@@ -49,12 +49,15 @@ describe("books module foundation", () => {
       "new",
       "work/:workId",
       "edition/:editionId",
+      "tags",
       "library",
       "lists",
       "lists/new",
       "lists/:listId/edit",
       "lists/:listId",
       "notes",
+      "read/sample",
+      "read",
       "read/:workId/:assetId/:revisionId",
     ]);
     expect(

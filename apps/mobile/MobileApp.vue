@@ -127,6 +127,7 @@ const subRouteTitle = computed(() => {
 const isDetailRoute = computed(() => isMobileDetailRoute(route.path))
 
 const showMobileTopbar = computed(() => {
+  if (route.path === '/feed' && typeof route.query.source_id === 'string') return false
   if (route.path === '/music/player') return false
   if (/^\/books\/(?:read|public-read)\//.test(route.path)) return false
   if (/^\/(?:inbox|messages)\/chat\//.test(route.path)) return false
@@ -169,6 +170,7 @@ const lastActiveSpace = ref<string>('music')
 
 const currentSpace = computed<string>(() => {
   const p = route.path || '/'
+  if (p === '/search' && typeof route.query.module === 'string' && ['feed', 'blog', 'books', 'music', 'debate'].includes(route.query.module)) return route.query.module
   if (/^\/music(\/|$)/.test(p)) return 'music'
   if (/^\/feed(\/|$)/.test(p)) return 'feed'
   if (/^\/books(\/|$)/.test(p)) return 'books'

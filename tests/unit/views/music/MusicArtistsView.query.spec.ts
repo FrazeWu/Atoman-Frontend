@@ -5,6 +5,10 @@ import { createTestingPinia } from "@pinia/testing";
 // @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
 import ArtistsView from "@/views/music/ArtistsView.vue";
 
+vi.mock('@/utils/searchUrl', async importOriginal => ({
+  ...await importOriginal<typeof import('@/utils/searchUrl')>(), unifiedSearchEnabled: false,
+}))
+
 vi.mock("@/components/music/ArtistDrawer.vue", () => ({
 	default: { template: "<div />" },
 }));

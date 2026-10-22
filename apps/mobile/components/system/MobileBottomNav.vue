@@ -67,6 +67,9 @@ const tabs = computed<NavTabItem[]>(() => {
 })
 
 const isTabActive = (tab: NavTabItem) => {
+  if (unifiedSearchEnabled && tab.key === 'search' && route?.path === '/search') {
+    return route.query.module === (props.currentSpace?.toLowerCase() || 'music')
+  }
   if (props.activeTab) {
     return props.activeTab === tab.key
   }

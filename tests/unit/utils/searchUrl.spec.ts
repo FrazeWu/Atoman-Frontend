@@ -1,9 +1,15 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { readSearchQuery, writeSearchQuery, searchLocation, safeSearchHref, unifiedSearchEnabled } from '@/utils/searchUrl'
 import { searchParams } from '@/api/search'
 
 describe('统一搜索 URL', () => {
-  it('默认不切换现有入口', () => expect(unifiedSearchEnabled).toBe(false))
+  it('默认启用统一入口', () => expect(unifiedSearchEnabled).toBe(true))
+  it('显式 false 可临时回退', async () => {
+    vi.stubEnv('VITE_UNIFIED_SEARCH_ENABLED', 'false')
+    vi.resetModules()
+    try { expect((await import('@/utils/searchUrl')).unifiedSearchEnabled).toBe(false) }
+    finally { vi.unstubAllEnvs(); vi.resetModules() }
+  })
   it('重复类型和筛选往返不丢失', () => {
     const query = { q: '三体 世界', scope: 'mine', module: 'books', type: ['note', 'book_list'], page: '3', sort: 'recent', 'filter[language]': ['zh', 'en'] }
     expect(writeSearchQuery(readSearchQuery(query))).toEqual(query)

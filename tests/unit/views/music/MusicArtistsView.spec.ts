@@ -86,6 +86,7 @@ vi.mock("@/composables/useLoginRedirect", () => ({
 }));
 
 vi.mock("vue-router", () => ({
+	useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 	useRoute: () => ({
 		query: mocks.routeQuery,
 	}),
@@ -355,3 +356,7 @@ describe("Music ArtistsView.vue", () => {
 		expect(mocks.listArtistBookmarks).toHaveBeenCalled();
 	});
 });
+// 旧入口回退覆盖；默认统一查询由 unifiedSearchEntry.spec.ts 和浏览器验收覆盖。
+vi.mock('@/utils/searchUrl', async importOriginal => ({
+  ...await importOriginal<typeof import('@/utils/searchUrl')>(), unifiedSearchEnabled: false,
+}))

@@ -20,6 +20,7 @@ import {
 } from 'lucide-vue-next';
 import { modulePathUrl, moduleUrl } from "@/router/siteUrls";
 import type { ModuleRoomKey } from "@/config/moduleRooms";
+import { unifiedSearchEnabled } from '@/utils/searchUrl';
 
 export type MobilePrimaryTabKey = string;
 
@@ -142,7 +143,10 @@ const MORE_ITEMS: MobileMoreItem[] = [
 export const getMobilePrimaryTabs = (
 	module?: ModuleRoomKey,
 ): MobilePrimaryTab[] =>
-	module ? MOBILE_PRIMARY_TABS[module].map((tab) => ({ ...tab })) : [];
+	module ? MOBILE_PRIMARY_TABS[module].map((tab) => ({
+    ...tab,
+    href: unifiedSearchEnabled && tab.key === 'search' ? `/search?module=${module}` : tab.href,
+  })) : [];
 
 const MOBILE_GLOBAL_TABS: MobilePrimaryTab[] = [
 	{ key: 'feed', label: 'Feed', module: 'feed', href: moduleUrl('feed'), icon: Rss },

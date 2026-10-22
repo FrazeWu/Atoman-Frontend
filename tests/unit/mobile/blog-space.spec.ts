@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
+import { createPinia, setActivePinia } from 'pinia'
+import { useAuthStore } from '@/stores/auth'
 import BlogDiscoverView from '@mobile/views/blog/BlogDiscoverView.vue'
 import BlogNotesTimelineView from '@mobile/views/blog/BlogNotesTimelineView.vue'
 import BlogArticlesView from '@mobile/views/blog/BlogArticlesView.vue'
@@ -20,6 +22,7 @@ describe('Mobile Blog Space Overhaul', () => {
   let router: any
 
   beforeEach(() => {
+    setActivePinia(createPinia())
     router = createRouter({
       history: createMemoryHistory(),
       routes: [
@@ -72,12 +75,10 @@ describe('Mobile Blog Space Overhaul', () => {
         props: { initialPosts: mockPosts },
       })
 
-      const searchInput = wrapper.find('[data-testid="blog-search-input"] input')
-      if (searchInput.exists()) {
-        await searchInput.setValue('TypeScript')
-        expect(wrapper.text()).toContain('TypeScript 5.8')
-        expect(wrapper.text()).not.toContain('深度工作')
-      }
+      await wrapper.get('[data-testid="blog-search-input"]').setValue('TypeScript')
+      expect(wrapper.text()).toContain('TypeScript 5.8')
+      expect(wrapper.text()).not.toContain('深度工作')
+      wrapper.unmount()
     })
 
     it('clicking hero action navigates to reader', async () => {
@@ -219,6 +220,9 @@ describe('Mobile Blog Space Overhaul', () => {
   })
 
   describe('BlogMeView.vue (Tab 4: 我的)', () => {
+    beforeEach(() => {
+      useAuthStore().isAuthenticated = true
+    })
     const mockProfile = {
       name: '墨客',
       username: 'writer_moke',

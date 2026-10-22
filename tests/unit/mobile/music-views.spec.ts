@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -23,6 +23,7 @@ vi.mock('@/api/musicV1', () => ({
   getMusicHome: vi.fn(),
   listPublicMusicPlaylists: vi.fn(),
   listMusicPlaylists: vi.fn(),
+  listPlaylistBookmarks: vi.fn().mockResolvedValue({ data: [], total: 0 }),
   listMusicSongs: vi.fn(),
   searchMusicSongs: vi.fn(),
   createMusicPlaylist: vi.fn(),
@@ -209,7 +210,31 @@ describe('Mobile Independent Music Views & Player', () => {
   })
 
   describe('MusicPlaylistsView.vue', () => {
-    it('renders playlists list when playlists exist', async () => {
+    it('renders guest state when user is not authenticated', async () => {
+      const auth = (await import('@/stores/auth')).useAuthStore()
+      auth.user = null
+      auth.token = null
+      auth.isAuthenticated = false
+
+      const wrapper = mount(MusicPlaylistsView, {
+        global: {
+          plugins: [pinia, router],
+          stubs: { MIcon: true },
+        },
+      })
+      await flushPromises()
+
+      expect(wrapper.find('[data-testid="guest-card"]').exists()).toBe(true)
+      expect(wrapper.text()).toContain('登录开启自建歌单')
+      expect(wrapper.find('[data-testid="create-playlist-btn"]').exists()).toBe(false)
+    })
+
+    it('renders playlists list when authenticated and playlists exist', async () => {
+      const auth = (await import('@/stores/auth')).useAuthStore()
+      auth.user = { id: 'u-1', uuid: 'u-1', username: 'testuser', display_name: 'Test' } as any
+      auth.token = 'test-token'
+      auth.isAuthenticated = true
+
       const musicApi = await import('@/api/musicV1')
       vi.mocked(musicApi.listMusicPlaylists).mockResolvedValue({
         data: mockPlaylists,
@@ -222,22 +247,23 @@ describe('Mobile Independent Music Views & Player', () => {
           stubs: { MIcon: true },
         },
       })
-      await wrapper.vm.$nextTick()
-      await new Promise((r) => setTimeout(r, 10))
+      await flushPromises()
 
       const playlistItems = wrapper.findAll('[data-testid="playlist-item"]')
       expect(playlistItems.length).toBe(2)
       expect(wrapper.text()).toContain('深度工作流')
       expect(wrapper.text()).toContain('午夜脉冲')
+      expect(wrapper.find('[data-testid="create-playlist-btn"]').exists()).toBe(true)
     })
 
-    it('renders empty state when playlists are empty', async () => {
+    it('renders empty state when authenticated and playlists are empty', async () => {
+      const auth = (await import('@/stores/auth')).useAuthStore()
+      auth.user = { id: 'u-1', uuid: 'u-1', username: 'testuser', display_name: 'Test' } as any
+      auth.token = 'test-token'
+      auth.isAuthenticated = true
+
       const musicApi = await import('@/api/musicV1')
       vi.mocked(musicApi.listMusicPlaylists).mockResolvedValue({
-        data: [],
-        total: 0,
-      } as any)
-      vi.mocked(musicApi.listPublicMusicPlaylists).mockResolvedValue({
         data: [],
         total: 0,
       } as any)
@@ -248,10 +274,10 @@ describe('Mobile Independent Music Views & Player', () => {
           stubs: { MIcon: true },
         },
       })
-      await wrapper.vm.$nextTick()
-      await new Promise((r) => setTimeout(r, 10))
+      await flushPromises()
 
       expect(wrapper.text()).toContain('暂无歌单')
+      expect(wrapper.find('[data-testid="create-playlist-btn"]').exists()).toBe(true)
     })
   })
 

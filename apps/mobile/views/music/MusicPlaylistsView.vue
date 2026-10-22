@@ -4,6 +4,7 @@
     <header class="mobile-music-playlists__header">
       <h1 class="mobile-music-playlists__title">歌单</h1>
       <MButton
+        v-if="authStore.isAuthenticated"
         size="sm"
         variant="secondary"
         class="mobile-music-playlists__create-btn"
@@ -15,108 +16,129 @@
       </MButton>
     </header>
 
-    <!-- Create Playlist Form/Sheet if open -->
-    <div v-if="showCreateModal" class="mobile-music-playlists__create-panel" data-testid="create-panel">
-      <div class="mobile-music-playlists__create-content">
-        <h3 class="mobile-music-playlists__create-title">新建歌单</h3>
-        <MInput
-          v-model="newPlaylistName"
-          placeholder="歌单名称..."
-          clearable
-        />
-        <div class="mobile-music-playlists__create-actions">
-          <MButton size="sm" variant="ghost" @click="showCreateModal = false">取消</MButton>
-          <MButton size="sm" variant="primary" :disabled="!newPlaylistName.trim()" @click="handleCreate">确定</MButton>
-        </div>
-      </div>
+    <!-- Guest State -->
+    <div v-if="!authStore.isAuthenticated" class="mobile-music-playlists__guest">
+      <MGuestCard
+        title="登录开启自建歌单"
+        description="登录后可创建专属歌单、收藏喜爱的曲目并在多端同步。"
+        icon="playlists"
+      />
     </div>
 
-    <!-- Playlists Content -->
-    <section class="mobile-music-playlists__content" aria-label="歌单列表">
-      <div v-if="playlists.length > 0" class="mobile-music-playlists__list">
-        <div
-          v-for="playlist in playlists"
-          :key="playlist.id"
-          class="mobile-music-playlists__item"
-          data-testid="playlist-item"
-          @click="openPlaylist(playlist.id)"
-        >
-          <div class="mobile-music-playlists__item-cover">
-            <img
-              v-if="playlist.cover_url"
-              :src="playlist.cover_url"
-              :alt="playlist.name"
-              class="mobile-music-playlists__item-img"
-            />
-            <div v-else class="mobile-music-playlists__item-art">
-              <MIcon name="playlists" size="md" />
-            </div>
-          </div>
-
-          <div class="mobile-music-playlists__item-meta">
-            <span class="mobile-music-playlists__item-name">{{ playlist.name }}</span>
-            <span class="mobile-music-playlists__item-count">{{ playlist.song_count || 0 }} 首歌曲</span>
-          </div>
-
-          <div class="mobile-music-playlists__item-arrow">
-            <MIcon name="chevron-down" size="sm" class="mobile-music-playlists__arrow-icon" />
+    <!-- Authenticated State -->
+    <template v-else>
+      <!-- Create Playlist Form/Sheet if open -->
+      <div v-if="showCreateModal" class="mobile-music-playlists__create-panel" data-testid="create-panel">
+        <div class="mobile-music-playlists__create-content">
+          <h3 class="mobile-music-playlists__create-title">新建歌单</h3>
+          <MInput
+            v-model="newPlaylistName"
+            placeholder="歌单名称..."
+            clearable
+          />
+          <div class="mobile-music-playlists__create-actions">
+            <MButton size="sm" variant="ghost" @click="showCreateModal = false">取消</MButton>
+            <MButton size="sm" variant="primary" :disabled="!newPlaylistName.trim()" @click="handleCreate">确定</MButton>
           </div>
         </div>
       </div>
 
-      <!-- Empty State -->
-      <div v-else class="mobile-music-playlists__empty" data-testid="empty-state">
-        <MIcon name="playlists" size="lg" class="mobile-music-playlists__empty-icon" />
-        <p class="mobile-music-playlists__empty-title">暂无歌单</p>
-        <p class="mobile-music-playlists__empty-desc">创建专属歌单，收藏你喜爱的曲目</p>
-        <MButton
-          size="sm"
-          variant="secondary"
-          @click="showCreateModal = true"
-        >
-          <MIcon name="plus" size="xs" />
-          <span>新建歌单</span>
-        </MButton>
-      </div>
-    </section>
+      <!-- Playlists Content -->
+      <section class="mobile-music-playlists__content" aria-label="歌单列表">
+        <div v-if="playlists.length > 0" class="mobile-music-playlists__list">
+          <div
+            v-for="playlist in playlists"
+            :key="playlist.id"
+            class="mobile-music-playlists__item"
+            data-testid="playlist-item"
+            @click="openPlaylist(playlist.id)"
+          >
+            <div class="mobile-music-playlists__item-cover">
+              <img
+                v-if="playlist.cover_url"
+                :src="playlist.cover_url"
+                :alt="playlist.name"
+                class="mobile-music-playlists__item-img"
+              />
+              <div v-else class="mobile-music-playlists__item-art">
+                <MIcon name="playlists" size="md" />
+              </div>
+            </div>
+
+            <div class="mobile-music-playlists__item-meta">
+              <span class="mobile-music-playlists__item-name">{{ playlist.name }}</span>
+              <span class="mobile-music-playlists__item-count">{{ playlist.song_count || 0 }} 首歌曲</span>
+            </div>
+
+            <div class="mobile-music-playlists__item-arrow">
+              <MIcon name="chevron-down" size="sm" class="mobile-music-playlists__arrow-icon" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else-if="!loading" class="mobile-music-playlists__empty" data-testid="empty-state">
+          <MIcon name="playlists" size="lg" class="mobile-music-playlists__empty-icon" />
+          <p class="mobile-music-playlists__empty-title">暂无歌单</p>
+          <p class="mobile-music-playlists__empty-desc">创建专属歌单，收藏你喜爱的曲目</p>
+          <MButton
+            size="sm"
+            variant="secondary"
+            @click="showCreateModal = true"
+          >
+            <MIcon name="plus" size="xs" />
+            <span>新建歌单</span>
+          </MButton>
+        </div>
+      </section>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import {
   createMusicPlaylist,
   listMusicPlaylists,
-  listPublicMusicPlaylists,
+  listPlaylistBookmarks,
   type MusicPlaylistSummary,
 } from '@/api/musicV1'
 import MButton from '@mobile/components/ui/MButton.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MInput from '@mobile/components/ui/MInput.vue'
+import MGuestCard from '@mobile/components/ui/MGuestCard.vue'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const playlists = ref<MusicPlaylistSummary[]>([])
 const loading = ref(false)
 const showCreateModal = ref(false)
 const newPlaylistName = ref('')
 
 async function loadPlaylists() {
+  if (!authStore.isAuthenticated) {
+    playlists.value = []
+    loading.value = false
+    return
+  }
   loading.value = true
   try {
-    const [userRes, publicRes] = await Promise.allSettled([
-      listMusicPlaylists({ page: 1, page_size: 50 }),
-      listPublicMusicPlaylists({ page: 1, page_size: 50 }),
+    const [userRes, bookmarkRes] = await Promise.allSettled([
+      listMusicPlaylists({ page: 1, page_size: 100 }),
+      listPlaylistBookmarks({ page: 1, page_size: 100 }),
     ])
 
     const list: MusicPlaylistSummary[] = []
     if (userRes.status === 'fulfilled' && userRes.value?.data?.length) {
-      list.push(...userRes.value.data)
+      list.push(...userRes.value.data.filter((p) => p.kind !== 'later'))
     }
-    if (publicRes.status === 'fulfilled' && publicRes.value?.data?.length) {
-      for (const p of publicRes.value.data) {
-        if (!list.some((existing) => existing.id === p.id)) {
-          list.push(p)
+    if (bookmarkRes.status === 'fulfilled' && bookmarkRes.value?.data?.length) {
+      for (const b of bookmarkRes.value.data) {
+        const pl = b.playlist
+        if (pl && !list.some((existing) => existing.id === pl.id)) {
+          list.push(pl)
         }
       }
     }
@@ -155,6 +177,10 @@ function openPlaylist(id: string) {
   void router.push(`/music/playlist/${id}`)
 }
 
+watch(() => authStore.isAuthenticated, () => {
+  void loadPlaylists()
+})
+
 onMounted(() => {
   void loadPlaylists()
 })
@@ -179,6 +205,10 @@ onMounted(() => {
   font-weight: 600;
   letter-spacing: -0.02em;
   margin: 0;
+}
+
+.mobile-music-playlists__guest {
+  padding: 1.5rem 0 3rem;
 }
 
 .mobile-music-playlists__create-panel {

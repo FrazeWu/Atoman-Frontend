@@ -140,12 +140,8 @@
               </span>
             </div>
 
-            <!-- 细线进度条与一键继续阅读 -->
-            <div class="private-books__card-progress-area">
-              <div class="private-books__progress-bar">
-                <div class="private-books__progress-fill" style="width: 35%;" />
-              </div>
-
+            <!-- 一键继续阅读 -->
+            <div class="private-books__card-action-area">
               <button
                 type="button"
                 class="private-books__btn-read"

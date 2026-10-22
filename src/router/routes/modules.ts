@@ -214,7 +214,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				{ path: "edition/:editionId", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'edition' } }, meta: { bookCatalog: true } },
 				{
 					path: "tags",
-					component: () => import("@/views/books/BookTagsView.vue"),
+					redirect: "/books/lists",
 				},
 				{
 					path: "library",
@@ -234,12 +234,8 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 					meta: { requiresAuth: true },
 				},
 				{
-					path: "read/sample",
-					component: () => import("@/views/books/BookAcademicReaderView.vue"),
-				},
-				{
 					path: "read",
-					redirect: "/books/read/sample",
+					redirect: "/books/library",
 				},
 				{
 					path: "read/:workId/:assetId/:revisionId",

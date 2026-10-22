@@ -1341,3 +1341,7 @@ describe("Music DiscoverView.vue", () => {
 		expect(mocks.createArtistBookmark).toHaveBeenCalledWith("artist-1");
 	});
 });
+// 旧搜索回退契约；默认统一入口由搜索浏览器验收覆盖。
+vi.mock('@/utils/searchUrl', async importOriginal => ({
+  ...await importOriginal<typeof import('@/utils/searchUrl')>(), unifiedSearchEnabled: false,
+}))

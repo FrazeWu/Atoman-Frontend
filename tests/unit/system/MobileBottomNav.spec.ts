@@ -17,6 +17,7 @@ const makeRouter = () =>
 		history: createMemoryHistory(),
 		routes: [
 			{ path: "/music", component: { template: "<div />" } },
+			{ path: "/search", component: { template: "<div />" } },
 			{ path: "/music/discover", component: { template: "<div />" } },
 			{ path: "/music/songs", component: { template: "<div />" } },
 			{ path: "/music/playlists", component: { template: "<div />" } },
@@ -104,7 +105,7 @@ describe("useResponsiveShell", () => {
 			"is-active",
 		);
 
-		await router.push("/music/songs");
+		await router.push("/search?module=music&q=测试");
 		await wrapper.vm.$nextTick();
 		expect(wrapper.get('[data-tab-key="search"]').classes()).toContain(
 			"is-active",

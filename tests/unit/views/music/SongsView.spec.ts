@@ -4,6 +4,10 @@ import { createMemoryHistory, createRouter } from "vue-router";
 // @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
 import SongsView from "../../../../src/views/music/SongsView.vue";
 
+vi.mock('@/utils/searchUrl', async importOriginal => ({
+  ...await importOriginal<typeof import('@/utils/searchUrl')>(), unifiedSearchEnabled: false,
+}))
+
 const mocks = vi.hoisted(() => ({
 	searchMusic: vi.fn(),
 	listMusicSongs: vi.fn(),

@@ -10,7 +10,9 @@
          ═══════════════════════════════════════════════════════════════ -->
     <div class="discovery-top-toolbar">
       <div class="discovery-search-box">
+        <ModuleSearch v-if="unifiedSearchEnabled" v-model="discoverySearchQuery" :target-types="['feed', 'article']" placeholder="搜索订阅源与文章..." input-test-id="discovery-search-input" dropdown-test-id="discovery-search-dropdown" />
         <SearchSurface
+          v-else
           :query="discoverySearchQuery"
           eyebrow=""
           placeholder="搜索全网文章、专栏、RSS 订阅源与播客..."
@@ -363,6 +365,8 @@ import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PToast from '@/components/ui/PToast.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
+import ModuleSearch from '@/components/search/ModuleSearch.vue'
+import { unifiedSearchEnabled } from '@/utils/searchUrl'
 import SubscriptionAddSheet from '@/components/feed/SubscriptionAddSheet.vue'
 import FeedSourceIdentityCard from '@/components/feed/FeedSourceIdentityCard.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
@@ -1091,6 +1095,28 @@ function openSource(source: FeedArticleSource) {
   void fetchChannelArticles(source)
 }
 
+// 统一搜索来源的深链接；直接从公开来源接口恢复，不依赖推荐列表或登录。
+watch(() => route.query.source_id, async (sourceId, previous, onCleanup) => {
+  if (typeof sourceId !== 'string' || !sourceId) {
+    if (previous) closeChannelSheet()
+    return
+  }
+  const controller = new AbortController()
+  onCleanup(() => controller.abort())
+  try {
+    const response = await apiRequestResult(`${api.url}/feed/timeline?feed_source_id=${encodeURIComponent(sourceId)}&page=1&page_size=20`, { signal: controller.signal })
+    if (controller.signal.aborted || !response.ok) return
+    const items: TimelineItem[] = Array.isArray(response.data?.data) ? response.data.data : []
+    const source = items.find(item => item.feed_item?.feed_source)?.feed_item?.feed_source
+    if (!source) return
+    selectedChannelSource.value = { id: sourceId, title: source.title || 'RSS', type: 'external_rss', rssUrl: source.rss_url, subscribed: feedStore.subscriptions.some(item => item.feed_source_id === sourceId) }
+    channelArticles.value = items
+    showChannelSheet.value = true
+  } catch (error) {
+    if (!controller.signal.aborted) reportError(error, 'Failed to open search source:')
+  }
+}, { immediate: true })
+
 function openArticleSource(item: RecommendationItem) {
   openSource(sourceFromRecommendation(item))
 }
@@ -1142,6 +1168,11 @@ function closeChannelSheet() {
   showChannelSheet.value = false
   selectedChannelSource.value = null
   channelArticles.value = []
+  if (route.query.source_id) {
+    const query = { ...route.query }
+    delete query.source_id
+    void router.replace({ query })
+  }
 }
 
 function closeChannelArticleSheet() {

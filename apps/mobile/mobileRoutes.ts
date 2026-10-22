@@ -2,6 +2,7 @@
 import type { RouteRecordRaw } from "vue-router";
 import { mobileInitialRoutes } from "./mobileInitialRoutes";
 import { mobileAdditionalRoutes } from './mobileAdditionalRoutes';
+import { readSearchQuery, writeSearchQuery, unifiedSearchEnabled } from '@/utils/searchUrl'
 
 const requiresAuth = { requiresAuth: true };
 export { MOBILE_MODULES } from "./mobileInitialRoutes";
@@ -272,8 +273,8 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			{ path: 'albums', component: () => import('@/views/music/AlbumsView.vue') },
 			{ path: 'artists', component: () => import('@/views/music/ArtistsView.vue') },
 			{ path: 'imports', component: () => import('@/views/music/ImportsView.vue'), meta: requiresAuth },
-			{ path: 'search', component: () => import("./views/music/MusicSearchView.vue") },
-			{ path: 'library', component: () => import("./views/music/MusicSearchView.vue") },
+			{ path: 'search', ...(unifiedSearchEnabled ? { redirect: to => ({ path: '/search', query: writeSearchQuery({ ...readSearchQuery(to.query), module: 'music' }) }) } : { component: () => import("./views/music/MusicSearchView.vue") }) },
+			{ path: 'library', ...(unifiedSearchEnabled ? { redirect: to => ({ path: '/search', query: writeSearchQuery({ ...readSearchQuery(to.query), module: 'music' }) }) } : { component: () => import("./views/music/MusicSearchView.vue") }) },
 			{ path: 'starred', redirect: '/music/bookmarks', meta: requiresAuth },
 			{
 				path: "discover",

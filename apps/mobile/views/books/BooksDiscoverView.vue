@@ -171,6 +171,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { searchCatalogWorks } from '@/api/bookCatalog'
+import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import { highRatedWorks, type WorkRating } from '@/api/bookCommunity'
 import type { BookPublicWork } from '@/api/books'
 import MButton from '@mobile/components/ui/MButton.vue'
@@ -284,6 +285,10 @@ function setFilter(filter: 'all' | 'ranked') {
 }
 
 function handleSearch() {
+  if (unifiedSearchEnabled) {
+    void router.push(searchLocation(searchQuery.value, 'books', ['work']))
+    return
+  }
   if (activeFilter.value === 'all') {
     void loadCatalog()
   }

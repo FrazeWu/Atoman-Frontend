@@ -3,7 +3,9 @@
     <!-- Header & Search -->
     <header class="mobile-blog-discover__header">
       <div class="mobile-blog-discover__search">
+        <ModuleSearch v-if="unifiedSearchEnabled" v-model="searchQuery" :target-types="['post', 'short_note', 'channel', 'collection']" placeholder="搜索长文、短笺、专栏..." input-test-id="blog-search-input" />
         <MInput
+          v-else
           v-model="searchQuery"
           placeholder="搜索长文、短笺、专栏..."
           clearable
@@ -154,6 +156,9 @@ const props = withDefaults(
     initialPosts: undefined,
   }
 )
+
+import ModuleSearch from '@/components/search/ModuleSearch.vue'
+import { unifiedSearchEnabled } from '@/utils/searchUrl'
 
 const router = useRouter()
 const searchQuery = ref('')

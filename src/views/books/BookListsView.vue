@@ -8,8 +8,7 @@
       <PButton v-if="auth.isAuthenticated" to="/books/lists/new">创建书单</PButton>
     </div>
     <form v-if="activeTab === 'public'" class="booklists__toolbar" @submit.prevent="search">
-      <PInput id="booklist-search" v-model="query" label="搜索公开书单" placeholder="书单标题或简介" />
-      <PButton type="submit" variant="secondary">搜索</PButton>
+      <PSearchInput id="booklist-search" v-model="query" aria-label="搜索公开书单" placeholder="书单标题或简介" @search="search" />
     </form>
     <p v-if="activeTab !== 'public' && !auth.isAuthenticated">登录后查看{{ activeTab === 'mine' ? '我的草稿' : '收藏的书单' }}。<RouterLink :to="{ path: '/login', query: { redirect: route.fullPath } }">去登录</RouterLink></p>
     <template v-else>
@@ -42,7 +41,8 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import PButton from '@/components/ui/PButton.vue'
-import PInput from '@/components/ui/PInput.vue'
+import PSearchInput from '@/components/ui/PSearchInput.vue'
+import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import { deleteBookListBookmark, listBookListBookmarks, listMyBookLists, searchBookLists, type BookListCard } from '@/api/bookLists'
 import './bookLists.css'
@@ -91,7 +91,11 @@ async function load() {
   } catch { if (current === generation) error.value = '书单加载失败，请重试。' }
   finally { if (current === generation) loading.value = false }
 }
-function search() { void router.push({ path: '/books/lists', query: query.value.trim() ? { q: query.value.trim() } : {} }) }
+function search() {
+  void router.push(unifiedSearchEnabled
+    ? searchLocation(query.value, 'books', ['book_list'])
+    : { path: '/books/lists', query: query.value.trim() ? { q: query.value.trim() } : {} })
+}
 function page(delta: number) { offset.value += delta; void load() }
 async function removeBookmark(id: string) {
   removing.value = id
@@ -100,6 +104,14 @@ async function removeBookmark(id: string) {
   catch { notice.value = '取消收藏失败，请重试。' }
   finally { removing.value = '' }
 }
-watch(() => [route.query.tab, route.query.q, auth.isAuthenticated], () => { offset.value = 0; query.value = String(route.query.q || ''); void load() }, { immediate: true })
+watch(() => [route.query.tab, route.query.q, auth.isAuthenticated], () => {
+  offset.value = 0
+  query.value = String(route.query.q || '')
+  if (unifiedSearchEnabled && activeTab.value === 'public' && query.value.trim()) {
+    void router.replace(searchLocation(query.value, 'books', ['book_list']))
+    return
+  }
+  void load()
+}, { immediate: true })
 onBeforeUnmount(() => { generation++ })
 </script>

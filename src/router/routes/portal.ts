@@ -4,6 +4,7 @@ import PortalView from '@/views/portal/PortalView.vue'
 
 export const portalRoutes: RouteRecordRaw[] = [
   { path: '/', component: PortalView, meta: { portalHome: true } },
+  { path: '/search', component: () => import('@/views/search/SearchResultsView.vue'), meta: { hasSidebar: true, restoreSession: true } },
   ...settingRoutes,
   { path: '/login', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true, guestOnly: true } },
   { path: '/register', component: () => import('@/views/auth/LoginView.vue'), meta: { authLayout: true, guestOnly: true } },

@@ -15,6 +15,8 @@ import PSegmentedControl from "@/components/ui/PSegmentedControl.vue";
 import PEmpty from "@/components/ui/PEmpty.vue";
 import PButton from "@/components/ui/PButton.vue";
 import PaginationBar from "@/components/ui/PaginationBar.vue";
+import ModuleSearch from '@/components/search/ModuleSearch.vue';
+import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl';
 
 const route = useRoute();
 const router = useRouter();
@@ -27,7 +29,7 @@ const query = ref(queryValue(route.query.q));
 const tagID = ref(queryValue(route.query.tag_id));
 const tagEntity = ref<"" | "song" | "album">(tagEntityValue(route.query.tag_entity));
 const tagName = ref(queryValue(route.query.tag_name));
-const selectedType = ref<"" | MusicSearchKind>("");
+const selectedType = ref<"" | MusicSearchKind>(['song', 'album', 'artist', 'playlist'].includes(queryValue(route.query.type)) ? queryValue(route.query.type) as MusicSearchKind : "");
 const searchTypeOptions = [
   { label: "全部", value: "" },
   { label: "歌曲", value: "song" },
@@ -103,6 +105,10 @@ function trackSearchClick(entityType: MusicSearchKind, entityId: string) {
 
 async function runSearch(targetPage = 1) {
   const keyword = query.value.trim();
+  if (unifiedSearchEnabled && !tagID.value) {
+    await router.replace(searchLocation(keyword, 'music', selectedType.value ? [selectedType.value] : []));
+    return;
+  }
   if (!keyword && !tagID.value) return;
   controller?.abort();
   controller = new AbortController();
@@ -226,6 +232,7 @@ watch(
 watch([query, selectedType, tagID, tagEntity], ([value]) => {
 	window.clearTimeout(timer);
 	controller?.abort();
+	if (unifiedSearchEnabled && !tagID.value) return;
 	const keyword = value.trim();
 	if (!keyword && !tagID.value) {
     songs.value = [];
@@ -241,6 +248,13 @@ watch([query, selectedType, tagID, tagEntity], ([value]) => {
 		return;
 	}
 	timer = window.setTimeout(() => void runSearch(1), 250);
+}, { immediate: true });
+
+// 兼容带关键词的旧链接；输入过程由统一预览处理，不逐字跳转。
+watch(() => [route.query.q, route.query.tag_id], () => {
+  if (unifiedSearchEnabled && !route.query.tag_id && queryValue(route.query.q).trim()) {
+    void router.replace(searchLocation(queryValue(route.query.q), 'music', selectedType.value ? [selectedType.value] : []));
+  }
 }, { immediate: true });
 
 onBeforeUnmount(() => {
@@ -259,7 +273,15 @@ onBeforeUnmount(() => {
     </PPageHeader>
 
     <div class="search-bar-wrap">
+      <ModuleSearch
+        v-if="unifiedSearchEnabled && !tagID"
+        v-model="query"
+        :target-types="['song', 'album', 'artist', 'playlist']"
+        :search-types="selectedType ? [selectedType] : []"
+        placeholder="搜索歌曲、专辑、艺术家或歌单..."
+      />
       <PInput
+        v-else
         v-model="query"
         type="search"
         placeholder="搜索歌曲、专辑、艺术家或歌单..."

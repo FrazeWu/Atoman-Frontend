@@ -1,13 +1,14 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { moduleFeatureRoutes } from '@/router/routes/modules'
 import { moduleRooms } from '@/config/moduleRooms'
+import { withUnifiedSearch } from '@/router/unifiedSearchRoutes'
 
 const additionalModules = ['books', 'podcast', 'video', 'forum', 'debate', 'timeline'] as const
 const mobileModuleLayout = () => import('./MobileModuleLayout.vue')
 
 export const mobileAdditionalRoutes: RouteRecordRaw[] = additionalModules.flatMap((module) => {
   const prefix = `/${moduleRooms[module].publicPathSegment}`
-  return moduleFeatureRoutes[module].map((route): RouteRecordRaw => {
+  return withUnifiedSearch(moduleFeatureRoutes[module], module).map((route): RouteRecordRaw => {
     if (route.path !== '/') return { ...route, path: `${prefix}${route.path}` }
     const children = route.children
       ?.filter((child) => {

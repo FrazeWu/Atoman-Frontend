@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import {
@@ -20,6 +20,8 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
+import ModuleSearch from '@/components/search/ModuleSearch.vue'
+import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
@@ -40,6 +42,12 @@ const tabOptions = [
 ]
 
 const route = useRoute()
+const router = useRouter()
+watch(() => route.query.q, q => {
+  if (unifiedSearchEnabled && typeof q === 'string' && q.trim()) {
+    void router.replace(searchLocation(q, 'music', ['artist']))
+  }
+}, { immediate: true })
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
 const {
@@ -146,7 +154,7 @@ async function fetchArtists(page = 1) {
   errorMessage.value = ''
 
   try {
-    const query = searchQuery.value.trim()
+    const query = unifiedSearchEnabled ? '' : searchQuery.value.trim()
     if (query) {
       searchLoading.value = true
       const response = await listMusicArtists({ q: query, page: 1, page_size: 48 })
@@ -274,6 +282,7 @@ onMounted(() => {
 })
 
 watch(searchQuery, () => {
+  if (unifiedSearchEnabled) return
   activeRequestId += 1
   clearTimeout(searchTimer)
   searchLoading.value = Boolean(searchQuery.value.trim())
@@ -293,7 +302,7 @@ watch(
   },
 )
 
-const hasSearchQuery = computed(() => searchQuery.value.trim().length > 0)
+const hasSearchQuery = computed(() => !unifiedSearchEnabled && searchQuery.value.trim().length > 0)
 
 function handleSearchFocus() {
   showSearchDropdown.value = true
@@ -328,7 +337,17 @@ function handleSearchBlur() {
       <div class="toolbar-row">
         <div class="toolbar-left">
           <div class="search-shell" :class="{ 'is-open': showSearchDropdown }">
+            <ModuleSearch
+              v-if="unifiedSearchEnabled"
+              v-model="searchQuery"
+              :target-types="['artist']"
+              :search-types="['artist']"
+              placeholder="搜索艺术家..."
+              input-test-id="music-search-input"
+              dropdown-test-id="music-search-dropdown"
+            />
             <SearchSurface
+              v-else
               v-model:query="searchQuery"
               :open="showSearchDropdown"
               compact

@@ -25,6 +25,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import { SPACE_TABS, type NavTabItem } from './bottomNavConstants'
+import { unifiedSearchEnabled } from '@/utils/searchUrl'
 
 const DEFAULT_MUSIC_TABS: NavTabItem[] = [
   { key: 'discover', label: '发现', icon: 'compass', path: '/music' },
@@ -61,10 +62,14 @@ try {
 const tabs = computed<NavTabItem[]>(() => {
   const key = props.currentSpace?.toLowerCase() || 'music'
   const map = SPACE_TABS || {}
-  return map[key] || map.music || DEFAULT_MUSIC_TABS
+  const items = map[key] || map.music || DEFAULT_MUSIC_TABS
+  return unifiedSearchEnabled ? items.map(tab => tab.key === 'search' ? { ...tab, path: `/search?module=${key}` } : tab) : items
 })
 
 const isTabActive = (tab: NavTabItem) => {
+  if (unifiedSearchEnabled && tab.key === 'search' && route?.path === '/search') {
+    return route.query.module === (props.currentSpace?.toLowerCase() || 'music')
+  }
   if (props.activeTab) {
     return props.activeTab === tab.key
   }

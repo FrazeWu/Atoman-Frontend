@@ -238,42 +238,21 @@ describe("FeedRecommendedView", () => {
 		}
 	});
 
-	it("searches shared discovery results with sources before articles", async () => {
+	it("searches unified discovery results with sources before articles", async () => {
 		const fetchSpy = vi
 			.spyOn(globalThis, "fetch")
 			.mockImplementation(async (input) => {
 				const url = String(input);
-				if (url.includes("/feed/explore/sources?")) {
+				if (url.includes("/search?")) {
 					return new Response(
 						JSON.stringify({
-							data: [
-								{
-									id: "source-search",
-									title: "AI 来源",
-									rss_url: "https://example.com/ai.xml",
-								},
-							],
-							meta: { total: 1 },
-						}),
-						{ status: 200 },
-					);
-				}
-				if (url.includes("/feed/explore?")) {
-					return new Response(
-						JSON.stringify({
-							data: [
-								{
-									type: "post",
-									published_at: "2026-06-20T00:00:00Z",
-									post: {
-										id: "article-search",
-										title: "AI 文章",
-										summary: "文章摘要",
-										channel: { name: "博客频道" },
-									},
-								},
-							],
-							meta: { total: 1 },
+							data: {
+								view: "preview", scope: "public", query: "AI", partial: false,
+								groups: [
+									{ module: "feed", type: "feed", items: [{ key: "feed:source-search", id: "source-search", module: "feed", type: "feed", title: "AI 来源", href: "/feed/source/source-search" }] },
+									{ module: "feed", type: "article", items: [{ key: "article:article-search", id: "article-search", module: "feed", type: "article", title: "AI 文章", href: "/feed/article/article-search" }] },
+								],
+							},
 						}),
 						{ status: 200 },
 					);
@@ -298,12 +277,13 @@ describe("FeedRecommendedView", () => {
 		});
 
 		await flushPromises();
+		await wrapper.get('[data-testid="discovery-search-input"]').trigger("focus");
 		await wrapper.get('[data-testid="discovery-search-input"]').setValue("AI");
 		await new Promise((resolve) => setTimeout(resolve, 300));
 		await flushPromises();
 
 		const results = wrapper.findAll(
-			'[data-testid="discovery-search-dropdown"] .discovery-search-result',
+			'[data-testid="discovery-search-dropdown"] .module-search__item',
 		);
 		expect(results).toHaveLength(2);
 		expect(results[0].text()).toContain("AI 来源");
@@ -314,15 +294,14 @@ describe("FeedRecommendedView", () => {
 		expect(
 			fetchSpy.mock.calls.some(([input]) => {
 				const url = String(input);
-				return url.includes("/feed/explore/sources?") && url.includes("q=AI");
+				const parsed = new URL(url, "https://atoman.org");
+				return parsed.pathname.endsWith("/search") && parsed.searchParams.get("q") === "AI"
+					&& parsed.searchParams.get("module") === "feed" && parsed.searchParams.get("view") === "preview";
 			}),
 		).toBe(true);
-		expect(
-			fetchSpy.mock.calls.some(([input]) => {
-				const url = String(input);
-				return url.includes("/feed/explore?") && url.includes("q=AI");
-			}),
-		).toBe(true);
+		await results[1].trigger("mousedown");
+		expect(routerPush).toHaveBeenCalledWith("/feed/article/article-search");
+		wrapper.unmount();
 	});
 
 	it("closes the discovery dropdown after the search input blurs", async () => {
@@ -346,6 +325,8 @@ describe("FeedRecommendedView", () => {
 
 		const input = wrapper.get('[data-testid="discovery-search-input"]');
 		await input.trigger("focus");
+		expect(wrapper.find('[data-testid="discovery-search-dropdown"]').exists()).toBe(false);
+		await input.setValue("AI");
 		expect(
 			wrapper.find('[data-testid="discovery-search-dropdown"]').exists(),
 		).toBe(true);
@@ -354,6 +335,7 @@ describe("FeedRecommendedView", () => {
 		expect(
 			wrapper.find('[data-testid="discovery-search-dropdown"]').exists(),
 		).toBe(false);
+		wrapper.unmount();
 	});
 
 	it("uses the shared segmented control size for category filters", () => {

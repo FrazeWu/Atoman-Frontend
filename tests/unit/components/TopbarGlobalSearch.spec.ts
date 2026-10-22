@@ -4,10 +4,10 @@ import { createMemoryHistory, createRouter } from "vue-router";
 import { nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AppTopbarGlobalSearch from "@/components/system/AppTopbarGlobalSearch.vue";
-import { referenceApi } from "@/api/references";
+import { searchApi } from "@/api/search";
 
-vi.mock("@/api/references", () => ({
-  referenceApi: {
+vi.mock("@/api/search", () => ({
+  searchApi: {
     search: vi.fn(),
   },
 }));
@@ -88,24 +88,16 @@ describe("AppTopbarGlobalSearch", () => {
   });
 
   it("debounces input and opens the keyboard-selected result with Enter", async () => {
-    vi.mocked(referenceApi.search).mockResolvedValue([
-      {
-        type: "post",
-        id: "first",
-        label: "First",
-        module: "blog",
-        path: "/post/first",
-        available: true,
-      },
-      {
-        type: "post",
-        id: "second",
-        label: "Second",
-        module: "blog",
-        path: "/post/second",
-        available: true,
-      },
-    ]);
+    vi.mocked(searchApi.search).mockResolvedValue({
+      view: "preview", scope: "public", query: "atom", partial: false, items: [],
+      groups: [{
+        module: "blog", type: "post", label: "文章", total: 2, has_more: false, error: null,
+        items: [
+          { key: "post:first", type: "post", id: "first", title: "First", module: "blog", href: "/posts/post/first" },
+          { key: "post:second", type: "post", id: "second", title: "Second", module: "blog", href: "/posts/post/second" },
+        ],
+      }],
+    });
     const { wrapper, router } = await mountSearch();
     await wrapper.find('[data-testid="topbar-search-pill"]').trigger("click");
 
@@ -116,7 +108,7 @@ describe("AppTopbarGlobalSearch", () => {
     await vi.dynamicImportSettled();
     await nextTick();
 
-    expect(referenceApi.search).toHaveBeenCalledOnce();
+    expect(searchApi.search).toHaveBeenCalledOnce();
     expect(wrapper.findAll(".topbar-search-section__item")).toHaveLength(2);
     await input.trigger("keydown", { key: "ArrowDown" });
     await input.trigger("keydown", { key: "Enter" });

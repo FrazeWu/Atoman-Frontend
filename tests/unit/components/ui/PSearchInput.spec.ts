@@ -196,4 +196,41 @@ describe('PSearchInput.vue', () => {
     wrapper.unmount()
     focusSpy.mockRestore()
   })
+
+  it('renders dropdown slot when showDropdown is true', () => {
+    const wrapper = mount(PSearchInput, {
+      props: {
+        showDropdown: true,
+      },
+      slots: {
+        dropdown: '<div class="test-dropdown-content">Instant Results</div>',
+      },
+    })
+
+    const dropdown = wrapper.find('.p-search-input__dropdown')
+    expect(dropdown.exists()).toBe(true)
+    expect(dropdown.text()).toContain('Instant Results')
+  })
+
+  it('does not render dropdown container when showDropdown is false', () => {
+    const wrapper = mount(PSearchInput, {
+      props: {
+        showDropdown: false,
+      },
+      slots: {
+        dropdown: '<div class="test-dropdown-content">Instant Results</div>',
+      },
+    })
+
+    expect(wrapper.find('.p-search-input__dropdown').exists()).toBe(false)
+  })
+
+  it('emits keydown event when key pressed in input', async () => {
+    const wrapper = mount(PSearchInput)
+    const input = wrapper.find('input')
+
+    await input.trigger('keydown', { key: 'ArrowDown' })
+    expect(wrapper.emitted('keydown')).toBeTruthy()
+    expect((wrapper.emitted('keydown')?.[0]?.[0] as KeyboardEvent).key).toBe('ArrowDown')
+  })
 })

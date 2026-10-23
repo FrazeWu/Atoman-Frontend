@@ -1,24 +1,119 @@
 <template>
   <ul class="search-results">
-    <li v-for="item in items" :key="item.key">
-      <RouterLink :to="safeSearchHref(item.href)">
-        <span class="result-title">{{ item.title }}</span>
+    <li v-for="item in items" :key="item.key" class="search-result-item">
+      <RouterLink :to="safeSearchHref(item.href)" class="search-result-link">
+        <div class="result-header">
+          <span class="result-title">{{ item.title }}</span>
+          <span v-if="item.module" class="result-module-tag">{{ getModuleLabel(item.module) }}</span>
+        </div>
         <span v-if="item.subtitle" class="result-subtitle">{{ item.subtitle }}</span>
         <span v-if="item.snippet" class="result-snippet">{{ item.snippet }}</span>
       </RouterLink>
     </li>
   </ul>
 </template>
+
 <script setup lang="ts">
 import type { SearchHit } from '@/api/search'
 import { safeSearchHref } from '@/utils/searchUrl'
+
 defineProps<{ items: SearchHit[] }>()
+
+const MODULE_LABELS: Record<string, string> = {
+  books: '图书',
+  music: '音乐',
+  blog: '博客',
+  forum: '论坛',
+  debate: '辩题',
+  video: '视频',
+  podcast: '播客',
+  timeline: '时间线',
+  feed: '动态',
+}
+
+function getModuleLabel(mod: string): string {
+  return MODULE_LABELS[mod] || mod
+}
 </script>
+
 <style scoped>
-.search-results { list-style: none; margin: 0; padding: 0; }
-li { border-bottom: 1px solid var(--a-color-border); }
-a { display: grid; gap: .375rem; padding: 1rem .25rem; color: inherit; text-decoration: none; overflow-wrap: anywhere; }
-a:hover { background: var(--a-color-surface-muted); } a:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
-.result-title { font-weight: 600; } .result-subtitle, .result-snippet { color: var(--a-color-muted); font-size: .875rem; line-height: 1.6; }
-.result-snippet { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.search-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.search-result-item {
+  background-color: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  box-shadow: none !important;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  overflow: hidden;
+}
+
+.search-result-item:hover {
+  border-color: var(--a-color-border, #cbd5e1);
+  background-color: var(--a-color-bg-subtle, #f8fafc);
+}
+
+.search-result-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  color: inherit;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.search-result-link:focus-visible {
+  outline: 2px solid var(--a-color-primary, #0ea5e9);
+  outline-offset: -2px;
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.result-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--a-color-text-primary, #0f172a);
+}
+
+.result-module-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--a-color-text-secondary, #64748b);
+  background-color: var(--a-color-bg-muted, #f1f5f9);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+
+.result-subtitle {
+  font-size: 13px;
+  color: var(--a-color-text-secondary, #64748b);
+  line-height: 1.4;
+}
+
+.result-snippet {
+  font-size: 13px;
+  color: var(--a-color-text-tertiary, #94a3b8);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 </style>

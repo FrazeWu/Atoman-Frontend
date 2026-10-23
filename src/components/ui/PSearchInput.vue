@@ -26,6 +26,7 @@ export interface PSearchInputProps {
   loading?: boolean
   disabled?: boolean
   ariaLabel?: string
+  showDropdown?: boolean
 }
 
 const props = withDefaults(defineProps<PSearchInputProps>(), {
@@ -46,6 +47,7 @@ const props = withDefaults(defineProps<PSearchInputProps>(), {
   loading: false,
   disabled: false,
   ariaLabel: '搜索',
+  showDropdown: false,
 })
 
 const emit = defineEmits<{
@@ -55,6 +57,7 @@ const emit = defineEmits<{
   (e: 'clear'): void
   (e: 'focus', ev: FocusEvent): void
   (e: 'blur', ev: FocusEvent): void
+  (e: 'keydown', ev: KeyboardEvent): void
 }>()
 
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -124,8 +127,12 @@ const triggerSearch = () => {
 }
 
 const handleEnter = (e: KeyboardEvent) => {
-  if (e.isComposing) return
+  if (e.isComposing || e.defaultPrevented) return
   triggerSearch()
+}
+
+const handleKeydown = (e: KeyboardEvent) => {
+  emit('keydown', e)
 }
 
 const handleActionClick = () => {
@@ -222,6 +229,7 @@ defineExpose({
         :disabled="disabled"
         :aria-label="ariaLabel"
         @input="handleInput"
+        @keydown="handleKeydown"
         @keydown.enter="handleEnter"
         @focus="handleFocus"
         @blur="handleBlur"
@@ -260,6 +268,15 @@ defineExpose({
           {{ actionButtonText }}
         </button>
       </slot>
+    </div>
+
+    <!-- Dropdown Slot Container -->
+    <div
+      v-if="showDropdown"
+      class="p-search-input__dropdown"
+      tabindex="-1"
+    >
+      <slot name="dropdown" />
     </div>
   </div>
 </template>
@@ -510,5 +527,25 @@ defineExpose({
 .p-search-input__action-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Dropdown Slot Container */
+.p-search-input__dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background-color: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  box-shadow: none !important;
+  z-index: 50;
+  max-height: 420px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.p-search-input--inline .p-search-input__dropdown {
+  min-width: 320px;
 }
 </style>

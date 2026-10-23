@@ -83,7 +83,7 @@ function removeTag(name: string) {
   const draft = albumDetailsDraft.value
   if (draft) draft.tags = draft.tags.filter((tag) => tag.name !== name)
 }
-const sourceFieldLabel = computed(() => isEditMode.value ? '修改原因*' : '信息来源/修改原因*')
+const sourceFieldLabel = computed(() => isEditMode.value ? '修改原因*' : '信息来源/修改原因（可选）')
 const sourceFieldPlaceholder = computed(() => isEditMode.value ? '填写本次修改原因' : '填写信息来源或修改原因')
 const {
   coverInputRef,
@@ -544,7 +544,7 @@ watch(
             <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="date">
               <PMaskedDateInput
                 v-model="releaseDateModel"
-                :label="requiredLabel('日期')"
+                :label="isEditMode ? requiredLabel('日期') : '日期（可选）'"
                 testId="album-details-date-input"
               />
             </div>
@@ -552,7 +552,7 @@ watch(
             <div class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="type">
               <PSelect
                 v-model="albumTypeSelection"
-                :label="requiredLabel('类型')"
+                label="类型"
                 :options="albumTypeOptions"
               />
               <PInput
@@ -646,7 +646,7 @@ watch(
         <div class="p-field">
           <label class="p-field-label">
             <span class="p-field-dot" aria-hidden="true" />
-            {{ requiredLabel('封面') }}
+            {{ isEditMode ? requiredLabel('封面') : '封面（可选）' }}
           </label>
           <div
             class="custom-file-picker square-picker"

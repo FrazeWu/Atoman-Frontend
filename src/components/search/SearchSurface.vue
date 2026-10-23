@@ -141,23 +141,23 @@ function handleInput(event: Event) {
   width: 100%;
   min-width: min(100%, 24rem);
   position: relative;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  background: var(--a-color-bg);
-  box-shadow: var(--a-shadow-sm);
-  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  background: #ffffff;
+  box-shadow: none !important;
+  padding: 0.5rem 0.75rem;
   display: grid;
   align-items: center;
   gap: 0.4rem;
   overflow: hidden;
   box-sizing: border-box;
   height: 100%;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.15s ease;
 }
 
 .search-frame:focus-within {
-  border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-md);
+  border-color: var(--a-color-primary, #0ea5e9);
+  box-shadow: none !important;
 }
 
 .search-frame.is-open:not(.is-overlay-results) {
@@ -165,7 +165,7 @@ function handleInput(event: Event) {
 }
 
 .search-frame.is-compact {
-  padding: 0 0.85rem;
+  padding: 0 0.75rem;
   gap: 0.35rem;
 }
 
@@ -187,24 +187,25 @@ function handleInput(event: Event) {
 }
 
 .search-btn {
-  border: 1px solid var(--a-color-text);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
+  border: none;
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-primary, #0ea5e9);
+  color: #ffffff;
   cursor: pointer;
   font-family: inherit;
   font-size: 0.8rem;
   font-weight: 500;
-  padding: 0.35rem 0.75rem;
+  padding: 0.35rem 0.9rem;
   white-space: nowrap;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: none !important;
+  transition: filter 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .search-btn:hover {
-  opacity: 0.9;
+  filter: brightness(0.96);
 }
 
 .search-frame__head {
@@ -238,15 +239,15 @@ function handleInput(event: Event) {
 }
 
 .search-icon {
-  color: var(--a-color-muted-soft);
+  color: var(--a-color-text-tertiary, #94a3b8);
   pointer-events: none;
-  transition: color 0.2s ease;
+  transition: color 0.15s ease;
   flex-shrink: 0;
   margin-right: 0.5rem;
 }
 
 .search-frame:focus-within .search-icon {
-  color: var(--a-color-primary);
+  color: var(--a-color-primary, #0ea5e9);
 }
 
 .search-input {
@@ -254,33 +255,40 @@ function handleInput(event: Event) {
   flex: 1;
   border: 0;
   background: transparent;
-  color: var(--a-color-fg);
-  padding: 0.35rem 0;
-  font-size: 0.98rem;
+  color: var(--a-color-text-primary, #0f172a);
+  padding: 0.3rem 0;
+  font-size: 0.95rem;
   font-family: inherit;
   box-sizing: border-box;
-}
-
-.search-frame.is-compact .search-input {
-  padding: 0.25rem 0 !important;
-}
-
-.search-input:focus {
   outline: none;
+  box-shadow: none !important;
+}
+
+.search-input::placeholder {
+  color: var(--a-color-text-tertiary, #94a3b8);
+}
+
+.search-input::-webkit-search-cancel-button {
+  display: none;
 }
 
 .search-clear-btn {
   border: 0;
   background: transparent;
-  color: var(--a-color-muted);
+  color: var(--a-color-text-tertiary, #94a3b8);
   cursor: pointer;
-  padding: 0.2rem 0.4rem;
+  padding: 0.15rem 0.35rem;
   font-size: 0.75rem;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none !important;
 }
 
 .search-clear-btn:hover {
-  color: var(--a-color-fg);
+  color: var(--a-color-text-primary, #0f172a);
+  background: var(--a-color-bg-subtle, #f1f5f9);
 }
 
 .search-dropdown {
@@ -306,10 +314,10 @@ function handleInput(event: Event) {
   left: 0;
   right: 0;
   margin-top: 0;
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border);
-  border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-dropdown);
+  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  box-shadow: none !important;
   z-index: 80;
 }
 

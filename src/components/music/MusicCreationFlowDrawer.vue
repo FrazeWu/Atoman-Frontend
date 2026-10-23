@@ -486,13 +486,14 @@ const forwardBlockReason = computed(() => {
 	if (['queued', 'extracting', 'analyzing', 'transcoding'].includes(flow.draft.albumImport.status) && !flow.draft.tracks.length) return '正在识别音轨，请稍候'
 	if (!flow.draft.albumDetails.title.trim()) return ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) ? '请填写歌曲名' : '请填写专辑名'
 	const coverUrl = resolvedAlbumCoverUrl(flow)
-	if (!coverUrl) return ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) ? '请上传歌曲封面' : '请上传专辑封面'
-	if (/^(blob:|data:)/i.test(coverUrl)) return '请确认并上传本地封面'
-	if (!formatDateFromParts(flow.draft.albumDetails.releaseDateParts)) return '请填写发行日期'
-	if (!flow.draft.albumDetails.source.trim()) return '请填写信息来源或修改原因'
+	const isCreation = flow.mode !== 'edit'
+	if (coverUrl && /^(blob:|data:)/i.test(coverUrl)) return '请确认并上传本地封面'
+	if (!isCreation && !coverUrl) return ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) ? '请上传歌曲封面' : '请上传专辑封面'
+	if (!isCreation && !formatDateFromParts(flow.draft.albumDetails.releaseDateParts)) return '请填写发行日期'
+	if (!isCreation && !flow.draft.albumDetails.source.trim()) return '请填写信息来源或修改原因'
 	if (!flow.draft.tracks.length || flow.draft.tracks.some((track) => !track.title.trim())) return '请至少添加一首完整音轨'
 	if (['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) && flow.draft.tracks.length !== 1) return '单曲和泄曲只能包含一首歌曲，请先移除其他曲目或修改类型'
-	if (flow.draft.tracks.some((track) => track.origin === 'manual' && !hasTrackAudio(track))) return '请为新增曲目上传音频'
+	if (flow.draft.tracks.some((track) => !hasTrackAudio(track))) return '请为每首曲目添加有效音频'
 	if (!flow.draft.albumDetails.contributors?.length) {
 		return '请添加创作者'
 	}
@@ -534,29 +535,31 @@ const canGoForward = computed(() => {
 	}
 		if (flow.step === 'albumDetails') {
 			const coverUrl = resolvedAlbumCoverUrl(flow)
+			const isCreation = flow.mode !== 'edit'
 			return (flow.mode === 'edit' || !!flow.draft.albumImport.importId)
 				&& !!flow.draft.albumDetails.title.trim()
-					&& !!coverUrl
-					&& !/^(blob:|data:)/i.test(coverUrl)
-			&& !!formatDateFromParts(flow.draft.albumDetails.releaseDateParts)
-			&& !!flow.draft.albumDetails.source.trim()
+					&& (isCreation || !!coverUrl)
+					&& (!coverUrl || !/^(blob:|data:)/i.test(coverUrl))
+			&& (isCreation || !!formatDateFromParts(flow.draft.albumDetails.releaseDateParts))
+			&& (isCreation || !!flow.draft.albumDetails.source.trim())
 			&& flow.draft.tracks.length > 0
 			&& (!['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) || flow.draft.tracks.length === 1)
 			&& flow.draft.tracks.every((track) => !!track.title.trim())
-			&& flow.draft.tracks.every((track) => track.origin !== 'manual' || hasTrackAudio(track))
+			&& flow.draft.tracks.every((track) => hasTrackAudio(track))
 			&& hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
 			&& hasRequiredArtistSource(flow)
 	}
+		const isCreation = flow.mode !== 'edit'
 		return (flow.mode === 'edit' || !!flow.draft.albumImport.importId)
 			&& !!flow.draft.albumDetails.title.trim()
-				&& !!resolvedAlbumCoverUrl(flow)
-				&& !/^(blob:|data:)/i.test(resolvedAlbumCoverUrl(flow))
-		&& !!formatDateFromParts(flow.draft.albumDetails.releaseDateParts)
-		&& !!flow.draft.albumDetails.source.trim()
+				&& (isCreation || !!resolvedAlbumCoverUrl(flow))
+				&& (!resolvedAlbumCoverUrl(flow) || !/^(blob:|data:)/i.test(resolvedAlbumCoverUrl(flow)))
+		&& (isCreation || !!formatDateFromParts(flow.draft.albumDetails.releaseDateParts))
+		&& (isCreation || !!flow.draft.albumDetails.source.trim())
 		&& flow.draft.tracks.length > 0
 		&& (!['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) || flow.draft.tracks.length === 1)
 		&& flow.draft.tracks.every((track) => !!track.title.trim())
-		&& flow.draft.tracks.every((track) => track.origin !== 'manual' || hasTrackAudio(track))
+		&& flow.draft.tracks.every((track) => hasTrackAudio(track))
 		&& hasValidAlbumContributors(flow.draft.albumDetails.contributors ?? [])
 		&& hasRequiredArtistSource(flow)
 })

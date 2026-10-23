@@ -17,15 +17,19 @@ import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PInteractionActions from '@/components/ui/PInteractionActions.vue'
+import MusicTagAssignmentEditor from './MusicTagAssignmentEditor.vue'
 
 const props = defineProps<{
   entity: 'song' | 'album'
   entityId: string
+  suggestions?: string[]
 }>()
 
 const { isAuthenticated, requireLogin } = useLoginRedirect()
 const tags = ref<MusicTag[]>([])
 const loading = ref(false)
+const showDisputed = ref(false)
+const disputedCount = computed(() => tags.value.filter(tag => tag.confidence === 'disputed').length)
 const error = ref('')
 const actionError = ref('')
 const actionTagID = ref('')
@@ -71,7 +75,7 @@ const searchStates = reactive<Record<MusicTagKind, MusicTagSearchState>>({
 
 const tagGroups = computed(() => tagGroupOptions.map(group => ({
   ...group,
-  tags: tags.value.filter(tag => tag.kind === group.kind),
+  tags: tags.value.filter(tag => tag.kind === group.kind && (showDisputed.value || tag.confidence !== 'disputed')),
 })))
 
 const tagLimitReached = computed(() => tags.value.length >= 12)
@@ -264,9 +268,11 @@ onBeforeUnmount(() => {
         <span class="music-tags__count">{{ tags.length }}/12</span>
       </div>
       <span v-if="loading" class="music-tags__status" role="status">正在加载</span>
+      <MusicTagAssignmentEditor v-if="isAuthenticated" :entity="entity" :entity-id="entityId" :suggestions="suggestions" @changed="loadTags" />
     </div>
 
     <p v-if="error" class="music-tags__error">{{ error }}</p>
+    <PButton v-if="disputedCount" variant="ghost" size="sm" @click="showDisputed = !showDisputed">{{ showDisputed ? '收起' : '展开' }} {{ disputedCount }} 个高争议关联</PButton>
     <template v-else>
       <div v-if="!loading && !tags.length" class="music-tags__empty">还没有标签</div>
       <div
@@ -294,6 +300,8 @@ onBeforeUnmount(() => {
             >
               {{ tag.name }}
             </RouterLink>
+            <span v-if="tag.confidence === 'disputed'" title="达到争议阈值，默认搜索不展示；可继续投票纠正">高争议</span>
+            <span v-else-if="tag.confidence === 'supported'">社区认可</span>
             <PInteractionActions
               class="music-tag__actions"
               size="sm"
@@ -346,7 +354,7 @@ onBeforeUnmount(() => {
               :disabled="isAssigned(option) || tagLimitReached || Boolean(actionTagID)"
               @click="selectTag(group.kind, option)"
             >
-              <span>{{ option.name }}</span>
+              <span>{{ option.path?.join(' / ') || option.name }}</span>
               <small>{{ isAssigned(option) ? '已添加' : '使用此标签' }}</small>
             </button>
           </div>

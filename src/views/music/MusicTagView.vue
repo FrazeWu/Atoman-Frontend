@@ -11,6 +11,7 @@ import {
   type MusicTagOption,
 } from '@/api/musicV1'
 import { MusicAlbumCard } from '@/components/music'
+import MusicTagWikiEditor from '@/components/music/MusicTagWikiEditor.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -86,7 +87,7 @@ async function loadPage(targetPage = 1) {
     }
     if (current !== requestID) return
 
-    const filters = { tag_id: id, page: targetPage, page_size: 20, sort: '-release_date' as const }
+    const filters = { tag_id: tag.value?.canonical_tag_id || id, page: targetPage, page_size: 20, sort: '-release_date' as const }
     if (selectedView.value === 'albums') {
       const result = await listMusicAlbums(filters)
       if (current !== requestID) return
@@ -171,9 +172,12 @@ onBeforeUnmount(() => {
       mb="0"
     >
       <template #action>
+        <MusicTagWikiEditor v-if="tag" :tag="tag" @changed="tag = null; loadPage(1)" />
         <RouterLink to="/music/tags" class="music-tag-back">全部标签</RouterLink>
       </template>
     </PPageHeader>
+
+    <p v-if="tag?.canonical_tag_id" role="status">该标签已合并。<RouterLink :to="`/music/tags/${tag.canonical_tag_id}`">查看规范标签</RouterLink>；旧标签历史仍可查看。</p>
 
     <nav class="music-tag-tabs" aria-label="标签内容" role="tablist">
       <PTab v-for="option in viewOptions" :key="option.value" :label="option.label" :active="selectedView === option.value" role="tab" :aria-selected="selectedView === option.value" :data-testid="option.testid" @click="changeView(option.value)" />

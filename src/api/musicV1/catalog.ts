@@ -56,6 +56,9 @@ import type {
 	MusicTag,
 	MusicTagOption,
 	MusicTagKind,
+	MusicTagWikiInput,
+	MusicTagSnapshot,
+	MusicTagHistory,
 	MusicSongRatingSummary,
 	MusicAlbumRatingSummary,
 	MusicAppleSongPreview,
@@ -176,6 +179,19 @@ export async function createMusicTag(input: {
 
 export async function getMusicTag(tagId: string): Promise<MusicTagOption> {
 	return apiGet<MusicTagOption>(musicV1Endpoints.tagDetail(tagId))
+}
+
+export function getMusicTagHistory(id: string, entity?: 'song' | 'album') {
+	const url = entity ? `${musicV1Endpoints.tags().replace(/\/tags$/, '')}/entries/${entity}/${encodeURIComponent(id)}/tags/history` : `${musicV1Endpoints.tagDetail(id)}/history`;
+	return apiGet<MusicTagHistory>(url);
+}
+
+export function editMusicTagWiki(id: string, action: 'rename' | 'move' | 'merge' | 'revert', input: MusicTagWikiInput, preview = false) {
+	return apiPostJson<MusicTagSnapshot>(`${musicV1Endpoints.tagDetail(id)}/wiki/${action}${preview ? '?preview=true' : ''}`, input);
+}
+
+export function editMusicTagAssignments(entity: 'song' | 'album', id: string, input: { base_version: number; add?: string[]; remove?: string[]; revision_id?: string; summary?: string }) {
+	return apiPatchJson<MusicTagHistory>(`${musicV1Endpoints.tags().replace(/\/tags$/, '')}/entries/${entity}/${encodeURIComponent(id)}/tags`, input);
 }
 
 export async function addMusicTag(

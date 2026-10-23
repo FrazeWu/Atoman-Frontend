@@ -483,6 +483,7 @@ const forwardBlockReason = computed(() => {
     return ''
   }
 	if (!['albumDetails', 'preview'].includes(flow.step)) return ''
+	if (flow.step==='preview' && flow.draft.albumImport.metadataMatchStatus==='ambiguous' && !flow.metadataConfirmed) return '请核对候选发行版本和曲目，并勾选确认'
 	if (['queued', 'extracting', 'analyzing', 'transcoding'].includes(flow.draft.albumImport.status) && !flow.draft.tracks.length) return '正在识别音轨，请稍候'
 	if (!flow.draft.albumDetails.title.trim()) return ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) ? '请填写歌曲名' : '请填写专辑名'
 	const coverUrl = resolvedAlbumCoverUrl(flow)
@@ -551,6 +552,7 @@ const canGoForward = computed(() => {
 	}
 		const isCreation = flow.mode !== 'edit'
 		return (flow.mode === 'edit' || !!flow.draft.albumImport.importId)
+			&& (flow.draft.albumImport.metadataMatchStatus !== 'ambiguous' || !!flow.metadataConfirmed)
 			&& !!flow.draft.albumDetails.title.trim()
 				&& (isCreation || !!resolvedAlbumCoverUrl(flow))
 				&& (!resolvedAlbumCoverUrl(flow) || !/^(blob:|data:)/i.test(resolvedAlbumCoverUrl(flow)))
@@ -636,7 +638,7 @@ function requiresArtistSource(flow: NonNullable<typeof creationFlow.value>) {
 }
 
 function hasRequiredArtistSource(flow: NonNullable<typeof creationFlow.value>) {
-  if (flow.mode === 'edit' && (flow.entity === 'album' || flow.entity === 'song')) return true
+	if (flow.entity !== 'artist') return true
   return !requiresArtistSource(flow) || !!resolvedArtistSource(flow)
 }
 
@@ -713,8 +715,9 @@ function trackNumberWithinDisc(tracks: Array<{ discNumber?: number }>, index: nu
   return tracks.slice(0, index + 1).filter((track) => (track.discNumber ?? 1) === discNumber).length
 }
 
-function hasTrackAudio(track: { audioUrl?: string; audioKey?: string; audioAssetId?: string }) {
-  return !!track.audioUrl?.trim() || !!track.audioKey?.trim() || !!track.audioAssetId?.trim()
+function hasTrackAudio(track: { audioUrl?: string; audioKey?: string; audioAssetId?: string; importFileId?: string; songId?: string }) {
+  // 文件仍在处理时可登记提交；后端只有验证实际处理结果后才发布。
+  return !!track.audioUrl?.trim() || !!track.audioKey?.trim() || !!track.audioAssetId?.trim() || !!track.importFileId || !!track.songId
 }
 
 function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicApi.MusicAlbumImportCommitInput {
@@ -737,10 +740,12 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
 
   return {
     ...(primaryArtistID ? { artist_id: primaryArtistID } : {}),
+    ...(flow.metadataConfirmed ? { metadata_confirmed:true } : {}),
     draft_customization: {
       title: !!flow.titleCustomized, tracks: !!flow.tracksCustomized,
       releaseDate: !!flow.releaseDateCustomized, cover: !!flow.coverCustomized,
       type: !!flow.typeCustomized, tags: !!flow.metadataTagsApplied,
+      country: !!flow.metadataCountryCustomized, source: !!flow.sourceCustomized,
     },
     artist: {
       name: primary?.newArtistDraft
@@ -768,6 +773,8 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
       title: flow.draft.albumDetails.title.trim(),
       description: flow.draft.albumDetails.bio.trim(),
       album_type: flow.draft.albumDetails.type.trim() || 'album',
+      edition_type: flow.draft.albumDetails.editionType || 'original',
+      ...(flow.draft.albumDetails.canonicalAlbumId ? { canonical_album_id: flow.draft.albumDetails.canonicalAlbumId } : {}),
       ...(coverURL && !/^(blob:|data:)/i.test(coverURL) ? { cover_url: coverURL } : {}),
       ...(releaseDate ? { release_date: releaseDate } : {}),
       release_year: derivedReleaseYear || 0,
@@ -778,7 +785,6 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
         country: flow.draft.albumImport.metadataCountry ?? '',
         formats: flow.draft.albumImport.metadataFormats ?? [],
       },
-	  tags: flow.draft.albumDetails.tags.map(({ kind, name, parentName }) => ({ kind, name, ...(parentName ? { parent_name: parentName } : {}) })),
       tracks: flow.draft.tracks.map((track, index) => ({
         ...(track.songId ? { song_id: track.songId } : {}),
         ...(track.importFileId ? { file_id: track.importFileId } : {}),

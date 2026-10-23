@@ -102,6 +102,10 @@ function trackMatchSource(track: (typeof tracks.value)[number]) {
     <p v-if="albumImport.missingArtists?.length" class="album-preview-step__source" role="status">
       还需补充艺术家：{{ albumImport.missingArtists.join('、') }}
     </p>
+    <label v-if="albumImport.metadataMatchStatus === 'ambiguous' && creationFlow" class="album-preview-step__source">
+      <input v-model="creationFlow.metadataConfirmed" type="checkbox" />
+      我已核对来源发行版本、曲名和曲序，确认采用当前资料。
+    </label>
     <p v-if="albumImport.errorMessage" class="album-preview-step__error">{{ albumImport.errorMessage }}</p>
     <div v-if="coverUrl" class="album-preview-step__cover">
       <img :src="coverUrl" alt="专辑封面预览" />

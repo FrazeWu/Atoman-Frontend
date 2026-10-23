@@ -184,8 +184,7 @@ export function useAlbumImportUpload() {
 		draft.metadataGenres = [];
 		draft.metadataStyles = [];
 		draft.metadataLabels = [];
-		draft.metadataCountry = "";
-		flow.metadataCountryCustomized = false;
+		if (!flow.metadataCountryCustomized) draft.metadataCountry = "";
 		draft.metadataFormats = [];
 		draft.metadataSources = [];
 		draft.metadataFieldSources = {};
@@ -209,11 +208,11 @@ export function useAlbumImportUpload() {
 			albumDetails.releaseYear = "";
 		}
 		if (!flow.coverCustomized) albumDetails.coverUrl = "";
-		if (previousDerivedAlbumType && albumDetails.type === previousDerivedAlbumType) {
+		if (!flow.typeCustomized && previousDerivedAlbumType && albumDetails.type === previousDerivedAlbumType) {
 			albumDetails.type = "album";
 		}
 		if (clearTags) albumDetails.tags = [];
-		if (!albumDetails.source.trim() || albumDetails.source === previousSourceURL) {
+		if (!flow.sourceCustomized && (!albumDetails.source.trim() || albumDetails.source === previousSourceURL)) {
 			albumDetails.source = "";
 		}
 	}
@@ -275,6 +274,7 @@ export function useAlbumImportUpload() {
 		}
 		const previousDerivedAlbumType = draft.derivedAlbumType;
 		const previousMetadataSourceURL = draft.metadataSourceUrl;
+		if (snapshot.metadataExternalId !== draft.metadataExternalId || (metadataMatchStatus==='matching' && draft.metadataMatchStatus!=='matching')) flow.metadataConfirmed=false;
 
 		draft.importId = snapshot.importId;
 		draft.inputMode = snapshot.inputMode;
@@ -358,22 +358,6 @@ export function useAlbumImportUpload() {
 		if (!isCanceledSnapshot && importedCover && !flow.coverCustomized) {
 			flow.draft.albumDetails.coverUrl = importedCover;
 		}
-		if (!isCanceledSnapshot && shouldApplyMetadata && !flow.metadataTagsApplied) {
-			const parentName = snapshot.metadataGenres?.length === 1 ? snapshot.metadataGenres[0] : undefined;
-			const nextTags = [
-				...(snapshot.metadataGenres ?? []).map((name) => ({ name, kind: "type" as const, metadataCategory: "genre" as const })),
-				...(snapshot.metadataStyles ?? []).map((name) => ({ name, kind: "type" as const, parentName, metadataCategory: "style" as const })),
-			];
-			const existingKeys = new Set(flow.draft.albumDetails.tags.map((tag) => `${tag.kind}\u0000${tag.metadataCategory ?? ""}\u0000${tag.name.toLocaleLowerCase()}`));
-			for (const tag of nextTags) {
-				const key = `${tag.kind}\u0000${tag.metadataCategory}\u0000${tag.name.toLocaleLowerCase()}`;
-				if (!existingKeys.has(key)) {
-					flow.draft.albumDetails.tags.push(tag);
-					existingKeys.add(key);
-				}
-			}
-			if (nextTags.length) flow.metadataTagsApplied = true;
-		}
 		if (
 			!isCanceledSnapshot &&
 			snapshot.derivedAlbumType &&
@@ -385,6 +369,7 @@ export function useAlbumImportUpload() {
 		}
 		if (
 			!isCanceledSnapshot &&
+			!flow.sourceCustomized &&
 			snapshot.metadataSourceUrl &&
 			(!flow.draft.albumDetails.source.trim() ||
 				flow.draft.albumDetails.source === previousMetadataSourceURL)

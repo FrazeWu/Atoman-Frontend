@@ -36,6 +36,7 @@ async function mountView(query: Record<string, string> = {}) {
 		global: {
 			plugins: [router],
 			stubs: {
+				MusicTagWikiEditor: true,
 				MusicAlbumCard: {
 					props: ["album"],
 					template: '<button data-testid="album-card" type="button" @click="$emit(\'click\')">{{ album.title }}</button>',

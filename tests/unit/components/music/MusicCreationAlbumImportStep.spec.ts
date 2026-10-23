@@ -127,9 +127,9 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		flow.draft.albumImport.metadataCountry = "XW";
 		const wrapper = mount(MusicCreationAlbumDetailsStep);
 
-		await wrapper.get('[data-testid="album-details-country-input"]').setValue("新疆维吾尔自治区");
+		wrapper.findComponent({ name: 'PCountryRegionField' }).vm.$emit('update:modelValue', '中国');
 
-		expect(flow.draft.albumImport.metadataCountry).toBe("新疆维吾尔自治区");
+		expect(flow.draft.albumImport.metadataCountry).toBe("中国");
 		expect(flow.metadataCountryCustomized).toBe(true);
 		wrapper.unmount();
 	});
@@ -573,11 +573,18 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(flow.draft.albumDetails.coverUrl).toBe("https://cover.test/chrysanthemum.jpg");
 		expect(flow.draft.albumImport.metadataGenres).toEqual(["摇滚"]);
 		expect(flow.draft.albumImport.metadataStyles).toEqual(["民谣摇滚"]);
-		expect(flow.draft.albumDetails.tags).toEqual([
-			{ name: "摇滚", kind: "type", metadataCategory: "genre" },
-			{ name: "民谣摇滚", kind: "type", parentName: "摇滚", metadataCategory: "style" },
-		]);
+		expect(flow.draft.albumDetails.tags).toEqual([]);
 		expect(flow.draft.albumImport.metadataCountry).toBe("台湾");
+	});
+
+	it("人工清空国家和来源后重匹配仍保留空值", () => {
+		const flow=useMusicDrawers().state.value.creationFlow!;
+		flow.draft.albumImport.importId='import-1';
+		flow.draft.albumImport.metadataCountry='';flow.draft.albumDetails.source='';
+		flow.metadataCountryCustomized=true;flow.sourceCustomized=true;
+		useAlbumImportUpload().applyImportSnapshot(snapshot({metadataCountry:'CN',metadataSourceUrl:'https://www.discogs.com/release/1',metadataMatchStatus:'matched'}));
+		expect(flow.draft.albumImport.metadataCountry).toBe('');
+		expect(flow.draft.albumDetails.source).toBe('');
 	});
 
 	it("手动修改国家/地区后后续匹配快照不会覆盖", () => {
@@ -618,10 +625,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(flow.draft.albumDetails.coverUrl).toBe(
 			"https://cover.test/matched-cover.jpg",
 		);
-		expect(flow.draft.albumDetails.tags).toEqual([
-			{ name: "Hip Hop", kind: "type", metadataCategory: "genre" },
-			{ name: "Conscious", kind: "type", parentName: "Hip Hop", metadataCategory: "style" },
-		]);
+		expect(flow.draft.albumDetails.tags).toEqual([]);
 	});
 
 	it("解析中的中间快照不会清空已经回填的匹配元信息", () => {

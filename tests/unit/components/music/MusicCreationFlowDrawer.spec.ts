@@ -114,7 +114,7 @@ const createFlowState = (
 			bio: "",
 			source: "资料来源",
 		},
-		tracks: [{ id: "track-default", sequence: 1, title: "Default Track" }],
+		tracks: [{ id: "track-default", sequence: 1, title: "Default Track", audioUrl: "https://cdn.test/track.mp3" }],
 	},
 	tracksCustomized: false,
 	titleCustomized: false,
@@ -393,7 +393,7 @@ describe("MusicCreationFlowDrawer", () => {
 		await flushPromises();
 
 		expect(flow.step).toBe("albumDetails");
-		expect(flow.draft.tracks).toEqual([{ id: "track-default", sequence: 1, title: "Default Track" }]);
+		expect(flow.draft.tracks).toEqual([{ id: "track-default", sequence: 1, title: "Default Track", audioUrl: "https://cdn.test/track.mp3" }]);
 		expect(flow.draft.albumImport.metadataMatchStatus).toBe("unmatched");
 		expect(flow.draft.albumImport.metadataError).toContain("外部元数据服务暂时不可用");
 	});

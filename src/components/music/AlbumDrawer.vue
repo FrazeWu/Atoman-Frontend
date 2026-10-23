@@ -1109,7 +1109,7 @@ watch(
           />
         </div>
         <aside class="album-detail-tags" aria-label="专辑标签">
-          <MusicTagList entity="album" :entity-id="String(album.id)" />
+          <MusicTagList entity="album" :entity-id="String(album.id)" :suggestions="[...new Set([...(album.external_metadata?.genres ?? []), ...(album.external_metadata?.styles ?? [])])]" />
         </aside>
       </div>
     </div>

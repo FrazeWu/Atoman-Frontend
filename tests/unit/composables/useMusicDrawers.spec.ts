@@ -559,10 +559,8 @@ describe("useMusicDrawers music creation flow", () => {
 			month: "05",
 			day: "17",
 		});
-		expect(flow?.draft.albumDetails.tags).toEqual([
-			{ name: "Hip Hop", kind: "type", metadataCategory: "genre" },
-			{ name: "Conscious", kind: "type", parentName: "Hip Hop", metadataCategory: "style" },
-		]);
+		expect(flow?.draft.albumDetails.tags).toEqual([]);
+		expect(flow?.draft.albumImport.metadataStyles).toEqual(['Conscious']);
 	});
 
 	it("restores the deferred commit artist as the primary contributor", () => {
@@ -801,10 +799,6 @@ describe("useMusicDrawers music creation flow", () => {
 		});
 		expect(flow.draft.albumDetails.tags).toEqual([
 			{ kind: "type", name: "Dream Pop", parentName: "Rock" },
-			...(customized ? [] : [
-				{ kind: "type", name: "Electronic", metadataCategory: "genre" },
-				{ kind: "type", name: "Ambient", parentName: "Electronic", metadataCategory: "style" },
-			]),
 		]);
 	});
 

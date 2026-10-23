@@ -257,6 +257,7 @@ export type MusicSongArtistCredit = {
 export type MusicAlbumImportCommitInput = {
 	draft_only?: boolean;
 	draft_customization?: Record<string, boolean>;
+	metadata_confirmed?: boolean;
 	artist_id?: string;
 	artist: {
 		name: string;
@@ -272,6 +273,8 @@ export type MusicAlbumImportCommitInput = {
 	artist_source?: string;
 	artist_sources?: MusicSource[];
 	album: {
+		edition_type?: string;
+		canonical_album_id?: string;
 		title: string;
 		description: string;
 		album_type: string;
@@ -605,6 +608,9 @@ export type MusicArtistListItem = {
 
 export type MusicAlbumListItem = {
 	id: string;
+	canonical_album_id?: string | null;
+	edition_type?: string;
+	external_metadata?: { genres?: string[]; styles?: string[] };
 	redirect_song_id?: string | null;
 	title: string;
 	musicbrainz_matched?: boolean;
@@ -693,6 +699,8 @@ export type MusicTag = {
 	score: number;
 	viewer_vote: "up" | "down" | "";
 	can_delete: boolean;
+	confidence?: 'supported' | 'pending' | 'disputed';
+	confidence_score?: number;
 };
 
 export type MusicTagOption = {
@@ -705,6 +713,28 @@ export type MusicTagOption = {
 	song_count?: number;
 	album_count?: number;
 	child_count?: number;
+	version?: number;
+	canonical_tag_id?: string | null;
+	path?: string[];
+};
+
+export type MusicTagWikiInput = {
+	base_version: number;
+	name?: string;
+	parent_id?: string | null;
+	target_id?: string;
+	target_version?: number;
+	revision_id?: string;
+	summary?: string;
+};
+export type MusicTagSnapshot = {
+	tags: MusicTagOption[];
+	assignments: Array<{ id: string; entity_type: string; entity_id: string; tag_id: string }>;
+	votes: Array<{ id: string; assignment_id: string; user_id: string; vote: string }>;
+};
+export type MusicTagHistory = {
+	version: number;
+	revisions: Array<{ id: string; version: number; action: string; summary: string; actor_id: string; created_at: string; before: MusicTagSnapshot; after: MusicTagSnapshot }>;
 };
 
 export type MusicAlbumLinkSuggestion = {

@@ -260,6 +260,8 @@ export interface MusicCreationAlbumTagDraft {
 }
 
 export interface MusicCreationAlbumDetailsDraft {
+	editionType?: 'original' | 'reissue' | 'remaster' | 'other';
+	canonicalAlbumId?: string;
 	coverUrl: string;
 	coverAsset?: UploadAsset | null;
 	title: string;
@@ -305,6 +307,8 @@ export interface MusicCreationFlowState {
 	contributorReturnStep?: "albumImport" | "albumDetails";
 	metadataTagsApplied?: boolean;
 	metadataCountryCustomized?: boolean;
+	metadataConfirmed?: boolean;
+	sourceCustomized?: boolean;
 	typeCustomized?: boolean;
 	returnedToImport?: boolean;
 }

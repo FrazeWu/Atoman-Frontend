@@ -8,7 +8,9 @@ import { useMusicAlbumCoverEditor } from '@/composables/useMusicAlbumCoverEditor
 import { useMusicAlbumTrackEditor } from '@/composables/useMusicAlbumTrackEditor'
 import MusicSquareImageCropSheet from '@/components/music/MusicSquareImageCropSheet.vue'
 import MusicCreationContributorPicker from '@/components/music/MusicCreationContributorPicker.vue'
+import MusicAlbumEditionField from '@/components/music/MusicAlbumEditionField.vue'
 import PInput from '@/components/ui/PInput.vue'
+import PCountryRegionField from '@/components/ui/PCountryRegionField.vue'
 import PMaskedDateInput from '@/components/ui/PMaskedDateInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
@@ -40,7 +42,6 @@ const detailsTitleLabel = computed(() => standaloneTypeSelected.value ? '歌曲�
 const detailsDescriptionPlaceholder = computed(() => standaloneTypeSelected.value ? '补充歌曲简介...' : '补充专辑简介...')
 const showsTrackList = computed(() => !standaloneTypeSelected.value || (creationFlow.value?.draft.tracks.length ?? 0) !== 1 || isEditMode.value)
 const albumImportDraft = computed(() => creationFlow.value?.draft.albumImport ?? null)
-const tagInput = ref('')
 const unmatchedTrackCount = computed(() => (creationFlow.value?.draft.tracks ?? []).filter(track => track.matchStatus === 'unmatched' || track.matchStatus === 'ambiguous').length)
 const musicBrainzMatched = computed(() => isEditMode.value && albumDetailsDraft.value?.musicBrainzMatched === true)
 const importMetadataMatched = computed(() => !isEditMode.value && albumImportDraft.value?.metadataMatched === true)
@@ -54,11 +55,10 @@ const importedMetadata = computed(() => {
   return [
     ['厂牌', (importDraft.metadataLabels ?? []).join('、')],
     ['格式', (importDraft.metadataFormats ?? []).join('、')],
+    ['外部分类', (importDraft.metadataGenres ?? []).join('、')],
+    ['外部风格建议', (importDraft.metadataStyles ?? []).join('、')],
   ].filter(([, value]) => value)
 })
-const genreTags = computed(() => (albumDetailsDraft.value?.tags ?? []).filter((tag) => tag.kind === 'type' && tag.metadataCategory === 'genre'))
-const styleTags = computed(() => (albumDetailsDraft.value?.tags ?? []).filter((tag) => tag.kind === 'type' && tag.metadataCategory !== 'genre'))
-const otherTags = computed(() => (albumDetailsDraft.value?.tags ?? []).filter((tag) => tag.kind !== 'type'))
 
 function updateMetadataCountry(value: string | number) {
   if (!albumImportDraft.value || !creationFlow.value) return
@@ -66,23 +66,6 @@ function updateMetadataCountry(value: string | number) {
   creationFlow.value.metadataCountryCustomized = true
 }
 
-function addCustomTag() {
-  const draft = albumDetailsDraft.value
-  const name = tagInput.value.trim()
-  if (!draft || !name || name.length > 48) return
-  const normalized = name.toLocaleLowerCase()
-  if (draft.tags.some((tag) => tag.name.toLocaleLowerCase() === normalized)) {
-    tagInput.value = ''
-    return
-  }
-	draft.tags.push({ name, kind: 'type' })
-  tagInput.value = ''
-}
-
-function removeTag(name: string) {
-  const draft = albumDetailsDraft.value
-  if (draft) draft.tags = draft.tags.filter((tag) => tag.name !== name)
-}
 const sourceFieldLabel = computed(() => isEditMode.value ? '修改原因*' : '信息来源/修改原因（可选）')
 const sourceFieldPlaceholder = computed(() => isEditMode.value ? '填写本次修改原因' : '填写信息来源或修改原因')
 const {
@@ -573,64 +556,17 @@ watch(
             </div>
 
             <div v-if="albumImportDraft" class="field-group album-details-step__basic-field" data-testid="album-details-field" data-field="country">
-              <PInput
+              <PCountryRegionField
                 :model-value="albumImportDraft.metadataCountry ?? ''"
                 label="国家/地区"
-                placeholder="输入国家或地区"
+                trigger-test-id="album-details-country-input"
                 data-testid="album-details-country-input"
                 @update:model-value="updateMetadataCountry"
               />
+              <PButton v-if="albumImportDraft.metadataCountry" variant="ghost" size="sm" @click="updateMetadataCountry('')">清空国家/地区</PButton>
             </div>
+            <MusicAlbumEditionField v-if="!isEditMode && !standaloneTypeSelected" :draft="albumDetailsDraft" />
 
-            <section v-if="!isEditMode || albumImportDraft" class="album-tags-editor" data-testid="album-tags-editor" aria-label="专辑标签">
-              <div class="album-tags-editor__row" data-testid="album-genre-tags-row">
-                <span class="field-label">分类</span>
-                <div class="album-tags-editor__items">
-                  <span v-if="!genreTags.length" class="album-tags-editor__empty">暂无分类</span>
-                  <span v-for="tag in genreTags" :key="`genre-${tag.name}`" class="album-tag" :data-testid="`album-tag-${tag.name}`">
-                    {{ tag.name }}
-                  </span>
-                </div>
-              </div>
-              <div class="album-tags-editor__row" data-testid="album-style-tags-row">
-                <span class="field-label">风格</span>
-                <div class="album-tags-editor__items">
-                  <span v-if="!styleTags.length" class="album-tags-editor__empty">暂无风格标签</span>
-                  <span v-for="tag in styleTags" :key="`style-${tag.kind}-${tag.name}`" class="album-tag" :data-testid="`album-tag-${tag.name}`">
-                    {{ tag.name }}
-                    <button type="button" :aria-label="`删除标签 ${tag.name}`" @click="removeTag(tag.name)">
-                      <X :size="13" aria-hidden="true" />
-                    </button>
-                  </span>
-                </div>
-              </div>
-              <div class="album-tags-editor__row" data-testid="album-other-tags-row">
-                <span class="field-label">其他标签</span>
-                <div class="album-tags-editor__items">
-                  <span v-if="!otherTags.length" class="album-tags-editor__empty">暂无其他标签</span>
-                  <span v-for="tag in otherTags" :key="`other-${tag.kind}-${tag.name}`" class="album-tag" :data-testid="`album-tag-${tag.name}`">
-                    {{ tag.name }}
-                    <button type="button" :aria-label="`删除标签 ${tag.name}`" @click="removeTag(tag.name)">
-                      <X :size="13" aria-hidden="true" />
-                    </button>
-                  </span>
-                </div>
-              </div>
-              <div class="album-tags-editor__row album-tags-editor__row--custom">
-                <span class="field-label">添加标签</span>
-                <div class="album-tags-editor__custom-content">
-                  <PInput
-                    v-model="tagInput"
-                    class="album-tags-editor__input"
-                    label="输入后按回车确认"
-                    placeholder="例如：经典、夜晚、现场"
-                    maxlength="48"
-                    data-testid="album-tag-input"
-                    @keydown.enter.prevent="addCustomTag"
-                  />
-                </div>
-              </div>
-            </section>
           </div>
         </div>
       <div class="field-group album-details-step__cover-card" data-testid="album-details-field" data-field="cover">
@@ -728,6 +664,7 @@ watch(
       <div class="field-group" data-testid="album-details-field" data-field="source">
         <PTextarea
           v-model="albumDetailsDraft.source"
+          @update:model-value="creationFlow && (creationFlow.sourceCustomized = true)"
           data-testid="album-details-source-input"
           :rows="4"
           :placeholder="sourceFieldPlaceholder"
@@ -990,75 +927,6 @@ watch(
   container: album-details / inline-size;
   display: grid;
   gap: 1.25rem;
-}
-
-.album-tags-editor {
-  display: grid;
-  gap: 0.8rem;
-}
-
-.album-tags-editor__row {
-  display: grid;
-  grid-template-columns: 6rem minmax(0, 1fr);
-  gap: 0.75rem;
-  align-items: start;
-}
-
-.album-tags-editor__items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-  min-height: 2rem;
-  align-items: center;
-}
-
-.album-tags-editor__empty {
-  color: var(--a-color-muted);
-  font-size: 0.82rem;
-}
-
-.album-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  padding: 0.28rem 0.45rem 0.28rem 0.65rem;
-  color: var(--a-color-text);
-  background: var(--a-color-surface-muted);
-  font-size: 0.82rem;
-  line-height: 1.2;
-}
-
-.album-tag button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
-  padding: 0;
-  border: 0;
-  color: var(--a-color-muted);
-  background: transparent;
-  cursor: pointer;
-}
-
-.album-tag button:hover { color: var(--a-color-text); }
-
-.album-tags-editor__custom-content {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 0.55rem 0.75rem;
-	min-width: 0;
-}
-
-.album-tags-editor__custom-content .album-tags-editor__items {
-	min-height: 0;
-}
-
-.album-tags-editor__input {
-	width: min(100%, 30rem);
 }
 
 .album-details-step__form {

@@ -210,7 +210,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		);
 	});
 
-	it("keeps style and other tags in stable rows without source labels", () => {
+	it("创建页不展示或编辑正式标签", () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded", startStep: "albumDetails" });
 		const flow = drawers.state.value.creationFlow;
@@ -223,12 +223,9 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 
 		const wrapper = mount(MusicCreationAlbumDetailsStep);
 
-		expect(wrapper.get('[data-testid="album-tags-editor"]').findAll(".album-tags-editor__row")).toHaveLength(4);
-		expect(wrapper.get('[data-testid="album-style-tags-row"]').text()).toContain("风格");
-		expect(wrapper.get('[data-testid="album-other-tags-row"]').text()).toContain("其他标签");
-		expect(wrapper.get('[data-testid="album-tag-摇滚"]').exists()).toBe(true);
-		expect(wrapper.get('[data-testid="album-tag-民谣摇滚"]').exists()).toBe(true);
-		expect(wrapper.get('[data-testid="album-tag-input"]').element.closest(".album-tags-editor__custom-content")).not.toBeNull();
+		expect(wrapper.find('[data-testid="album-tags-editor"]').exists()).toBe(false);
+		expect(wrapper.find('[data-testid="album-tag-input"]').exists()).toBe(false);
+		expect(flow.draft.albumDetails.tags).toHaveLength(3);
 	});
 
 	it("keeps text editing separate from drag sorting", () => {
@@ -727,7 +724,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 			wrapper.get(".album-details-step__contributor-field").text(),
 		).toContain("搜索其他艺人");
 		expect(wrapper.get('[data-testid="album-details-bio-input"]').element.closest("details")).toBeNull();
-		expect(wrapper.get('[data-testid="album-tags-editor"]').element.closest("details")).toBeNull();
+		expect(wrapper.find('[data-testid="album-tags-editor"]').exists()).toBe(false);
 		expect(wrapper.get('[data-field="date"]').element.parentElement).toBe(wrapper.get('[data-field="type"]').element.parentElement);
 		expect(wrapper.get('[data-field="bio"]').element.parentElement).toBe(wrapper.get('[data-field="source"]').element.parentElement);
 
@@ -778,11 +775,11 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		const wrapper = mount(MusicCreationAlbumDetailsStep);
 
 		expect(wrapper.text()).toContain("上传专辑");
-		expect(wrapper.text()).toContain("封面*");
+		expect(wrapper.text()).not.toContain("封面*");
 		expect(wrapper.text()).toContain("专辑名*");
-		expect(wrapper.text()).toContain("日期*");
-		expect(wrapper.text()).toContain("类型*");
-		expect(wrapper.text()).toContain("信息来源/修改原因*");
+		expect(wrapper.text()).toContain("日期（可选）");
+		expect(wrapper.text()).not.toContain("类型*");
+		expect(wrapper.text()).toContain("信息来源/修改原因（可选）");
 	});
 
 	it("searches existing artists, adds contributors, and allows removing unlocked contributors", async () => {

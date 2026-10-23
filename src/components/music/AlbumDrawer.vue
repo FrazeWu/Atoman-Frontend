@@ -17,7 +17,7 @@ import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEdito
 import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
 import MusicTagList from '@/components/music/MusicTagList.vue'
 import SongRatingControl from '@/components/music/SongRatingControl.vue'
-import { ChevronDown, ChevronLeft, ChevronRight, Copy, FileText, Heart, History, Merge, MoreHorizontal, Pause, Pencil, Play, Plus, UserRound } from 'lucide-vue-next'
+import { Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, FileText, Heart, History, Merge, MoreHorizontal, Pause, Pencil, Play, Plus, UserRound } from 'lucide-vue-next'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useRequestGeneration } from '@/composables/useRequestGeneration'
@@ -877,9 +877,12 @@ watch(
               :disabled="bookmarkLoading"
               :loading="bookmarkLoading"
               :aria-busy="bookmarkLoading ? 'true' : undefined"
+              :title="isBookmarked ? '取消收藏' : '收藏'"
               data-testid="album-bookmark-toggle"
               @click="toggleAlbumBookmark"
             >
+              <Check v-if="!bookmarkLoading && isBookmarked" :size="16" aria-hidden="true" />
+              <Bookmark v-else-if="!bookmarkLoading" :size="16" aria-hidden="true" />
               {{ bookmarkLoading ? '处理中...' : isBookmarked ? '已收藏' : '收藏' }}
             </PButton>
             <PButton

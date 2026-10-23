@@ -4,7 +4,7 @@ import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { Bookmark, Clock, Pencil, MessageSquare } from 'lucide-vue-next'
+import { Bookmark, Check, Clock, Pencil, MessageSquare } from 'lucide-vue-next'
 
 import PButton from '@/components/ui/PButton.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
@@ -782,7 +782,8 @@ defineExpose({
             :aria-label="bookmarked ? '取消收藏' : '收藏'"
             @click="toggleBookmark"
           >
-            <Bookmark :size="15" aria-hidden="true" :fill="bookmarked ? 'currentColor' : 'none'" />
+            <Check v-if="bookmarked" :size="15" aria-hidden="true" />
+            <Bookmark v-else :size="15" aria-hidden="true" />
             <span>{{ bookmarked ? '已收藏' : '收藏' }}</span>
           </button>
           <button
@@ -872,7 +873,7 @@ defineExpose({
             </div>
           </template>
         </PDropdown>
-        <PButton v-else variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="toggleBookmark"><Bookmark :size="15" aria-hidden="true" />{{ bookmarked ? '取消收藏' : '收藏' }}</PButton>
+        <PButton v-else variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="toggleBookmark"><Check v-if="bookmarked" :size="15" aria-hidden="true" /><Bookmark v-else :size="15" aria-hidden="true" />{{ bookmarked ? '取消收藏' : '收藏' }}</PButton>
         <PButton variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="toggleReadingList"><Clock :size="15" aria-hidden="true" />{{ isInReadingList ? '取消稍后阅读' : '稍后阅读' }}</PButton>
         <PButton variant="secondary" size="sm" @click="sharePost">分享</PButton>
         <PButton v-if="authStore.isAuthenticated && !isOwner" variant="ghost" size="sm" @click="reportOpen = !reportOpen">举报</PButton>

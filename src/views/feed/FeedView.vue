@@ -196,7 +196,8 @@
                 :title="feedStore.bookmarkedPostIds.has(item.post.id) ? '取消收藏' : '收藏'"
                 @click="feedStore.togglePostBookmark(item.post.id)"
               >
-                <Bookmark :size="14" :fill="feedStore.bookmarkedPostIds.has(item.post.id) ? 'currentColor' : 'none'" />
+                <BookmarkCheck v-if="feedStore.bookmarkedPostIds.has(item.post.id)" :size="14" />
+                <Bookmark v-else :size="14" />
               </PClip>
               <PClip
                 v-if="authStore.isAuthenticated"
@@ -419,7 +420,7 @@ import {
   useFeedTimelinePresentation,
   type FeedSourceTypeFilter,
 } from '@/composables/feed/useFeedTimelinePresentation'
-import { ChevronDown, Star, Clock, Bookmark, ExternalLink, Play, Square } from 'lucide-vue-next'
+import { Bookmark, BookmarkCheck, ChevronDown, Clock, ExternalLink, Play, Square, Star } from 'lucide-vue-next'
 import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
 import { subscriptionDisplayTitle } from '@/utils/feedTitles'
 import { resolveMediaImageURL } from '@/utils/mediaUrl'

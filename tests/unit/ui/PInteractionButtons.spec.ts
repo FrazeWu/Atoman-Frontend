@@ -47,6 +47,7 @@ describe('Content Interaction Buttons', () => {
       })
 
       expect(wrapper.findComponent(PIcon).exists()).toBe(true)
+      expect(wrapper.findComponent(PIcon).props('name')).toBe('bookmark')
       expect(wrapper.text()).toContain('10')
       expect(wrapper.classes()).not.toContain('is-active')
 
@@ -66,6 +67,7 @@ describe('Content Interaction Buttons', () => {
       expect(wrapper.classes()).toContain('is-active')
       const icon = wrapper.findComponent(PIcon)
       expect(icon.classes()).toContain('is-filled')
+      expect(icon.props('name')).toBe('bookmark-check')
     })
   })
 })

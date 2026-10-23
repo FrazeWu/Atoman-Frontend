@@ -9,15 +9,33 @@
       :class="{ 'is-pop': animatingKey === 'bookmark' }"
       @click="handleAction('bookmark', $event)"
     >
-      <Bookmark
-        :size="iconSize"
-        class="entry-action-icon"
-        :class="{ 'is-active': bookmarked }"
-        :fill="bookmarked ? 'currentColor' : 'none'"
-      />
-      <span v-if="showLabels" class="entry-action-label">
-        {{ bookmarked ? '已收藏' : '收藏' }}
-      </span>
+      <template v-if="showLabels">
+        <Check
+          v-if="bookmarked"
+          :size="iconSize"
+          class="entry-action-icon is-active"
+        />
+        <Bookmark
+          v-else
+          :size="iconSize"
+          class="entry-action-icon"
+        />
+        <span class="entry-action-label">
+          {{ bookmarked ? '已收藏' : '收藏' }}
+        </span>
+      </template>
+      <template v-else>
+        <BookmarkCheck
+          v-if="bookmarked"
+          :size="iconSize"
+          class="entry-action-icon is-active"
+        />
+        <Bookmark
+          v-else
+          :size="iconSize"
+          class="entry-action-icon"
+        />
+      </template>
     </PClip>
 
     <!-- 2. 稍后阅读按钮 -->
@@ -64,7 +82,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Bookmark, Clock, Star } from 'lucide-vue-next'
+import { Bookmark, BookmarkCheck, Check, Clock, Star } from 'lucide-vue-next'
 import PClip from '@/components/ui/PClip.vue'
 
 const props = withDefaults(defineProps<{

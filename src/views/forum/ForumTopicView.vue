@@ -68,7 +68,12 @@
             variant="secondary"
             size="sm"
             :class="{ 'topic-action-btn-active': forumStore.currentTopic.is_bookmarked }"
-          >{{ forumStore.currentTopic.is_bookmarked ? '已收藏' : '收藏' }}</PButton>
+            :title="forumStore.currentTopic.is_bookmarked ? '取消收藏' : '收藏'"
+          >
+            <Check v-if="forumStore.currentTopic.is_bookmarked" :size="14" aria-hidden="true" />
+            <Bookmark v-else :size="14" aria-hidden="true" />
+            {{ forumStore.currentTopic.is_bookmarked ? '已收藏' : '收藏' }}
+          </PButton>
 
           <div v-if="canEditTopic || canPinTopic || canLockTopic" class="topic-action-group">
             <PButton v-if="canEditTopic" variant="secondary" size="sm" @click="editTopic">编辑</PButton>
@@ -178,6 +183,7 @@
 <script setup lang="ts">
 import { apiRequestResult } from '@/api/client'
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { Bookmark, Check } from 'lucide-vue-next'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useForumStore } from '@/stores/forum'
 import { useAuthStore } from '@/stores/auth'

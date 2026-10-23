@@ -7,7 +7,11 @@
       <PPageHeader :title="detail.title" :sub="`${detail.item_count} 本 · ${detail.visibility === 'public' ? '公开书单' : '仅自己可见'}`" />
       <p class="booklists__description">{{ detail.description }}</p>
       <div class="booklists__actions">
-        <PButton v-if="auth.isAuthenticated" :loading="busy" @click="bookmark">收藏书单</PButton>
+        <PButton v-if="auth.isAuthenticated" :loading="busy" :title="isBookmarked ? '取消收藏' : '收藏书单'" @click="bookmark">
+          <Check v-if="!busy && isBookmarked" :size="15" aria-hidden="true" />
+          <Bookmark v-else-if="!busy" :size="15" aria-hidden="true" />
+          {{ isBookmarked ? '已收藏' : '收藏书单' }}
+        </PButton>
         <PButton v-if="auth.isAuthenticated" variant="secondary" :loading="busy" @click="markRead">标记本版已读</PButton>
         <PButton v-if="auth.user?.uuid === detail.owner_id" :to="`/books/lists/${detail.id}/edit`" variant="secondary">编辑草稿</PButton>
         <RouterLink v-if="!auth.isAuthenticated" :to="{ path: '/login', query: { redirect: route.fullPath } }">登录后收藏书单</RouterLink>
@@ -30,6 +34,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { Bookmark, Check } from 'lucide-vue-next'
 import { RouterLink, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ApiErrorResponseError } from '@/api/client'
@@ -42,6 +47,7 @@ import './bookLists.css'
 const route = useRoute()
 const auth = useAuthStore()
 const detail = ref<BookListDetail | null>(null)
+const isBookmarked = ref(false)
 const loading = ref(true)
 const error = ref('')
 const notice = ref('')
@@ -49,6 +55,7 @@ const busy = ref(false)
 // 收藏与已读确认分开：查看详情不会自动消除更新提示。
 async function load() {
   loading.value = true
+  isBookmarked.value = false
   error.value = ''
   try { detail.value = await getBookList(String(route.params.listId)) }
   catch (err) { error.value = err instanceof ApiErrorResponseError && err.status === 404 ? '书单不存在、已撤下或无权访问。' : '书单加载失败，请重试。' }
@@ -62,6 +69,7 @@ async function saveBookmark(read: boolean) {
   notice.value = ''
   try {
     await saveBookListBookmark(detail.value.id, read ? detail.value.published_version : undefined)
+    isBookmarked.value = true
     notice.value = read ? '已收藏，并将当前发布版本标为已读' : '已收藏书单'
   } catch { notice.value = '操作失败，请重试。' }
   finally { busy.value = false }

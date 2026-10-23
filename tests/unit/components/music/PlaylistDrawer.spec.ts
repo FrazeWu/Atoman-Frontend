@@ -280,7 +280,7 @@ describe("PlaylistDrawer", () => {
 		expect(mocks.refreshPlaylists).toHaveBeenCalled();
 		expect(
 			wrapper.get('[data-testid="playlist-bookmark-button"]').text(),
-		).toContain("取消收藏");
+		).toContain("已收藏");
 	});
 
 	it("keeps public playlist details visible and redirects guests who bookmark", async () => {

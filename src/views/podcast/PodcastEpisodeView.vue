@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { addPodcastEpisodeBookmark, addPodcastShowBookmark, getPodcastEpisode, setPodcastRating, deletePodcastRating } from '@/api/podcast'
+import { Bookmark, Check } from 'lucide-vue-next'
 import RatingControl from '@/components/shared/RatingControl.vue'
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -29,6 +30,7 @@ const ratingLoading = ref(false)
 const ratingError = ref('')
 const commentsOpen = ref(false)
 const commentCount = ref<number | undefined>(undefined)
+const isFavorited = ref(false)
 const episodeContentAnchor = ref<HTMLElement | null>(null)
 let latestRequest = 0
 
@@ -39,6 +41,7 @@ watch(() => [route.params.id, authStore.token, authStore.user?.id] as const, ([i
 async function loadEpisode(id: string) {
   const request = ++latestRequest
   ep.value = null
+  isFavorited.value = false
   error.value = ''
   actionMessage.value = ''
   ratingLoading.value = false
@@ -144,6 +147,7 @@ async function favoriteEpisode() {
   }
   try {
     await addPodcastEpisodeBookmark(ep.value.id, 'favorite', authStore.token)
+    isFavorited.value = true
     actionMessage.value = '已收藏'
   } catch {
     actionMessage.value = '收藏失败'
@@ -208,7 +212,11 @@ function currentCommentTime() {
         <div class="pev-actions">
           <PButton label="播放" @click="playEpisode" />
           <PButton label="订阅" variant="secondary" @click="subscribeShow" />
-          <PButton label="收藏" variant="secondary" @click="favoriteEpisode" />
+          <PButton variant="secondary" :title="isFavorited ? '取消收藏' : '收藏'" @click="favoriteEpisode">
+            <Check v-if="isFavorited" :size="15" aria-hidden="true" />
+            <Bookmark v-else :size="15" aria-hidden="true" />
+            {{ isFavorited ? '已收藏' : '收藏' }}
+          </PButton>
           <PButton label="稍后听" variant="secondary" @click="listenLater" />
           <PButton
             v-if="ep.post?.visibility !== 'private'"

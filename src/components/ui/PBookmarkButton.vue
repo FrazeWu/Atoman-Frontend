@@ -15,7 +15,7 @@
     :title="bookmarked ? '取消收藏' : '收藏'"
     @click="handleClick"
   >
-    <PIcon :name="bookmarked ? 'bookmark-filled' : 'bookmark'" :size="iconSizePreset" class="p-bookmark-button__icon" :class="{ 'is-filled': bookmarked }" />
+    <PIcon :name="bookmarked ? 'bookmark-check' : 'bookmark'" :size="iconSizePreset" class="p-bookmark-button__icon" :class="{ 'is-filled': bookmarked }" />
     <span v-if="showCount && count !== undefined" class="p-bookmark-button__count">{{ count.toLocaleString() }}</span>
   </button>
 </template>
@@ -144,11 +144,7 @@ function handleClick() {
 }
 
 .p-bookmark-button__icon {
-  transition: transform 0.15s ease, fill 0.15s ease;
-}
-
-.p-bookmark-button__icon.is-filled {
-  fill: currentColor;
+  transition: transform 0.15s ease;
 }
 
 .p-bookmark-button:hover:not(:disabled) .p-bookmark-button__icon {

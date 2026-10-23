@@ -34,9 +34,14 @@
         :aria-label="isBookmarked ? '取消收藏' : '收藏'"
         @click.stop="$emit('toggle-bookmark')"
       >
-        <Bookmark
+        <BookmarkCheck
+          v-if="isBookmarked"
           :size="17"
-          :fill="isBookmarked ? 'currentColor' : 'none'"
+          aria-hidden="true"
+        />
+        <Bookmark
+          v-else
+          :size="17"
           aria-hidden="true"
         />
       </button>
@@ -58,7 +63,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Bookmark, Music2 } from 'lucide-vue-next'
+import { Bookmark, BookmarkCheck, Music2 } from 'lucide-vue-next'
 
 import PMediaCard from '@/components/ui/PMediaCard.vue'
 import { resolveMediaImageURL } from '@/utils/mediaUrl'

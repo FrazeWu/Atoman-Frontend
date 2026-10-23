@@ -2,7 +2,7 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
 import { computed, inject, ref, watch } from 'vue'
-import { Play, Disc, Music, AlertCircle } from 'lucide-vue-next'
+import { AlertCircle, Bookmark, Check, Disc, Music, Play } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
@@ -626,10 +626,13 @@ watch(
           v-if="canBookmarkPlaylist"
           variant="secondary"
           :loading="bookmarkLoading"
+          :title="isBookmarked ? '取消收藏' : '收藏歌单'"
           data-testid="playlist-bookmark-button"
           @click="toggleBookmark"
         >
-          {{ isBookmarked ? '取消收藏' : '收藏歌单' }}
+          <Check v-if="!bookmarkLoading && isBookmarked" :size="16" aria-hidden="true" />
+          <Bookmark v-else-if="!bookmarkLoading" :size="16" aria-hidden="true" />
+          {{ isBookmarked ? '已收藏' : '收藏歌单' }}
         </PButton>
       </div>
 

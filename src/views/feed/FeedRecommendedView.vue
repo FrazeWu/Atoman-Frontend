@@ -220,7 +220,8 @@
                   :title="isStarred(item) ? '取消收藏' : '收藏'"
                   @click.stop="toggleStar(item)"
                 >
-                  <Bookmark :size="14" :fill="isStarred(item) ? 'currentColor' : 'none'" />
+                  <BookmarkCheck v-if="isStarred(item)" :size="14" />
+                  <Bookmark v-else :size="14" />
                 </PClip>
                 <PClip
                   v-if="authStore.isAuthenticated"
@@ -352,7 +353,7 @@ import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Bookmark, Clock, Eye, Gauge } from 'lucide-vue-next'
+import { Bookmark, BookmarkCheck, Clock, Eye, Gauge } from 'lucide-vue-next'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'

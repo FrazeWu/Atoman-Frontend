@@ -61,7 +61,8 @@
             :aria-pressed="postBookmarked"
             @click="togglePostBookmark"
           >
-            <Bookmark :size="15" aria-hidden="true" :fill="postBookmarked ? 'currentColor' : 'none'" />
+            <Check v-if="postBookmarked" :size="15" aria-hidden="true" />
+            <Bookmark v-else :size="15" aria-hidden="true" />
             <span>{{ postBookmarked ? '已收藏' : '收藏' }}</span>
           </button>
           <button
@@ -167,7 +168,8 @@
             :aria-pressed="feedItemStarred"
             @click="toggleFeedItemStar"
           >
-            <Bookmark :size="15" aria-hidden="true" :fill="feedItemStarred ? 'currentColor' : 'none'" />
+            <Check v-if="feedItemStarred" :size="15" aria-hidden="true" />
+            <Bookmark v-else :size="15" aria-hidden="true" />
             <span>{{ feedItemStarred ? '已收藏' : '收藏' }}</span>
           </button>
           <button
@@ -225,10 +227,12 @@
               class="article-reader-star"
               data-test="feed-article-footer-star"
               :aria-pressed="feedItemStarred"
+              :title="feedItemStarred ? '取消收藏' : '收藏'"
               @click="toggleFeedItemStar"
             >
-              <Bookmark :size="16" aria-hidden="true" :fill="feedItemStarred ? 'currentColor' : 'none'" />
-              {{ feedItemStarred ? '取消收藏' : '收藏' }}
+              <Check v-if="feedItemStarred" :size="16" aria-hidden="true" />
+              <Bookmark v-else :size="16" aria-hidden="true" />
+              {{ feedItemStarred ? '已收藏' : '收藏' }}
             </button>
           </div>
           <section v-if="relatedFeedItems.length" class="article-related-reading" data-test="feed-article-related-reading">
@@ -285,7 +289,7 @@
 import '@/assets/editor.css'
 import '@/assets/feed-reader.css'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Bookmark, Clock, MessageSquare, Play } from 'lucide-vue-next'
+import { Bookmark, Check, Clock, MessageSquare, Play } from 'lucide-vue-next'
 import { apiRequestResult } from '@/api/client'
 import type { FeedArticleSource, FeedItem, FeedItemReader, FeedReaderVariant, Post, TimelineItem } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'

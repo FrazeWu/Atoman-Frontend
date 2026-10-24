@@ -2,6 +2,8 @@ import { computed, onScopeDispose, ref, watch, type Ref } from 'vue'
 import { searchApi, type SearchCapabilities, type SearchResponse, type SearchState } from '@/api/search'
 import { useAuthStore } from '@/stores/auth'
 
+const capabilityCacheTtlMs = 60_000
+
 // 结果只存于当前组件，不持久化、不跨账号复用。
 export function useUnifiedSearch(state: Ref<SearchState>, preview = false) {
   const auth = useAuthStore()
@@ -9,6 +11,7 @@ export function useUnifiedSearch(state: Ref<SearchState>, preview = false) {
   const result = ref<SearchResponse | null>(null)
   const loading = ref(false)
   const error = ref('')
+  const capabilityCache = new Map<string, { value: SearchCapabilities; expiresAt: number }>()
   let generation = 0
   let controller: AbortController | undefined
   const selectedModule = computed(() => capabilities.value?.modules.find(m => m.module === state.value.module))
@@ -23,7 +26,7 @@ export function useUnifiedSearch(state: Ref<SearchState>, preview = false) {
     loading.value = false
     error.value = ''
   }
-  async function load() {
+  async function load(refreshCapabilities = false) {
     reset()
     const current = generation
     const request = new AbortController()
@@ -35,8 +38,18 @@ export function useUnifiedSearch(state: Ref<SearchState>, preview = false) {
     }
     loading.value = true
     try {
-      const caps = await searchApi.capabilities(input.scope, request.signal)
-      if (current !== generation) return
+      const identity = auth.user?.uuid ?? 'anonymous'
+      const cacheKey = `${identity}:${auth.user?.role ?? ''}:${input.scope}`
+      const cached = capabilityCache.get(cacheKey)
+      let caps = !refreshCapabilities && cached && cached.expiresAt > Date.now()
+        ? cached.value
+        : null
+      if (!caps) {
+        capabilityCache.delete(cacheKey)
+        caps = await searchApi.capabilities(input.scope, request.signal)
+        if (current !== generation) return
+        capabilityCache.set(cacheKey, { value: caps, expiresAt: Date.now() + capabilityCacheTtlMs })
+      }
       capabilities.value = caps
       if (preview && Array.from(input.q).length < 2) return
       if (!input.q && (!input.module || !input.types.length || !capability.value?.allow_empty_query)) return
@@ -48,7 +61,7 @@ export function useUnifiedSearch(state: Ref<SearchState>, preview = false) {
       if (current === generation) loading.value = false
     }
   }
-  watch([state, () => auth.user?.uuid], () => { void load() }, { deep: true, immediate: true, flush: 'sync' })
+  watch([state, () => auth.user?.uuid, () => auth.user?.role], () => { void load() }, { deep: true, immediate: true, flush: 'sync' })
   onScopeDispose(reset)
-  return { capabilities, result, loading, error, selectedModule, selectedType, capability, reload: load, reset }
+  return { capabilities, result, loading, error, selectedModule, selectedType, capability, reload: () => load(true), reset }
 }

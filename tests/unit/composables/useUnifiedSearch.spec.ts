@@ -59,6 +59,16 @@ describe('统一搜索加载和隔离', () => {
     expect(search.capability.value?.label).toBe('作品')
     expect(searchApi.search).toHaveBeenCalledWith(expect.objectContaining({ q: '', types: ['work'] }), expect.any(AbortSignal), false)
   })
+  it('分页更新复用短时缓存的能力声明', async () => {
+    const { state } = start()
+    await flushPromises()
+
+    state.value = { ...state.value, page: 2 }
+    await flushPromises()
+
+    expect(searchApi.capabilities).toHaveBeenCalledTimes(1)
+    expect(searchApi.search).toHaveBeenCalledTimes(2)
+  })
   it('首次进入空词全站不发送结果请求', async () => {
     start({ q: '', module: '', type: '' })
     await flushPromises()

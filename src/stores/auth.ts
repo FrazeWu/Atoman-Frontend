@@ -26,8 +26,12 @@ type AuthApiError = {
 }
 
 function clearLegacyStoredAuth() {
-  localStorage.removeItem('token')
-  localStorage.removeItem('user')
+	try {
+		globalThis.localStorage.removeItem('token')
+		globalThis.localStorage.removeItem('user')
+	} catch {
+		// Cookie authentication remains available when browser storage is blocked.
+	}
 }
 
 function toAuthApiError(payload: AuthApiPayload): AuthApiError {

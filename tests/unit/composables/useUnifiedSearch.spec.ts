@@ -104,4 +104,28 @@ describe('统一搜索加载和隔离', () => {
     await vi.advanceTimersByTimeAsync(300)
     expect(searchApi.search).toHaveBeenCalledTimes(1)
   })
+  it('切换搜索分类时使用实时模块参数，并清除旧类别的预览', async () => {
+    vi.useFakeTimers()
+    const module = ref('users')
+    const scope = effectScope(); scopes.push(scope)
+    const preview = scope.run(() => useUnifiedSearchPreview(() => module.value))!
+    vi.mocked(searchApi.search).mockResolvedValue({
+      ...response('cols'), view: 'preview', items: [],
+      groups: [{ module: 'users', type: 'user', label: '用户', total: null, has_more: false, error: null,
+        items: [{ key: 'users:user:1', module: 'users', type: 'user', id: '1', title: 'colslwys', href: '/users/colslwys' }] }],
+    })
+    await preview.search('cols')
+    expect(searchApi.search).toHaveBeenLastCalledWith(
+      expect.objectContaining({ q: 'cols', module: 'users' }), expect.any(AbortSignal), true,
+    )
+    expect(preview.items.value[0]?.title).toBe('colslwys')
+    module.value = 'music'
+    preview.schedule('jazz')
+    expect(preview.items.value).toEqual([])
+    // schedule 使用当前模块，不复用上一次用户检索。
+    await vi.advanceTimersByTimeAsync(250)
+    expect(searchApi.search).toHaveBeenLastCalledWith(
+      expect.objectContaining({ q: 'jazz', module: 'music' }), expect.any(AbortSignal), true,
+    )
+  })
 })

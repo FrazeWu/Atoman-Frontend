@@ -132,6 +132,10 @@
                 </div>
               </template>
 
+              <div v-else-if="globalSearch.partial.value" class="palette-state" role="status">
+                <p class="no-result-text">部分搜索类别暂不可用，暂时无法确认是否有匹配结果</p>
+                <span class="no-result-sub">请稍后重试或查看完整搜索结果</span>
+              </div>
               <div v-else class="palette-state">
                 <p class="no-result-text">未找到与“{{ searchDraft }}”相关的内容</p>
                 <span class="no-result-sub">请尝试更换关键词或在上方切换分类</span>
@@ -180,16 +184,18 @@ const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'tes
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
 
-const filterTabs = unifiedSearchEnabled ? [
+const filterTabs = computed(() => unifiedSearchEnabled ? [
   { label: '全部', value: 'all' },
-  { label: '用户', value: 'user' },
+  ...(siteAccessStore.isModuleVisible('blog') ? [{ label: '用户', value: 'user' }] : []),
   ...Object.entries(moduleRooms).filter(([key]) => siteAccessStore.isModuleVisible(key as ModuleRoomKey)).map(([key, room]) => ({ label: room.name, value: key })),
 ] : [
   { label: '全部', value: 'all' },
   { label: '博客', value: 'blog' },
   { label: '订阅', value: 'feed' },
   { label: '音乐', value: 'music' },
-]
+])
+// 顶栏分类不仅过滤当前展示，也应让后端只查询选中的模块。
+const searchModule = computed(() => activeFilter.value === 'all' ? '' : activeFilter.value === 'user' ? 'users' : activeFilter.value)
 
 const filteredSections = computed(() => {
   if (activeFilter.value === 'all') return globalSearch.sections.value
@@ -197,7 +203,12 @@ const filteredSections = computed(() => {
 })
 const filteredItems = computed(() => filteredSections.value.flatMap(section => section.items))
 const activeItem = computed(() => filteredItems.value[globalSearch.activeIndex.value] || null)
-watch(activeFilter, () => { globalSearch.activeIndex.value = filteredItems.value.length ? 0 : -1 })
+watch(activeFilter, () => {
+  globalSearch.activeIndex.value = filteredItems.value.length ? 0 : -1
+  if (showSearch.value && searchDraft.value.trim()) {
+    globalSearch.scheduleSearch(searchDraft.value, searchModule.value)
+  }
+})
 
 const openSearch = async () => {
   window.dispatchEvent(new CustomEvent('atoman:global-overlay-open', { detail: 'search' }))
@@ -219,7 +230,7 @@ const { handleKeydown: handleDialogKeydown } = useDialogFocus(showSearch, search
 
 const handleInput = () => {
   isExpanded.value = false
-  globalSearch.scheduleSearch(searchDraft.value)
+  globalSearch.scheduleSearch(searchDraft.value, searchModule.value)
 }
 
 const expandSearch = () => {

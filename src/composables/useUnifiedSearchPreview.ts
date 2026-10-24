@@ -2,7 +2,7 @@ import { computed, onScopeDispose, ref, watch } from 'vue'
 import { searchApi, type SearchHit } from '@/api/search'
 import { useAuthStore } from '@/stores/auth'
 
-export function useUnifiedSearchPreview(module = '', types: () => readonly string[] = () => []) {
+export function useUnifiedSearchPreview(module: string | (() => string) = '', types: () => readonly string[] = () => []) {
   const auth = useAuthStore()
   const items = ref<SearchHit[]>([])
   const loading = ref(false)
@@ -31,7 +31,7 @@ export function useUnifiedSearchPreview(module = '', types: () => readonly strin
     controller = new AbortController()
     loading.value = true
     try {
-      const result = await searchApi.search({ q, scope: 'public', module, types: [...types()], sort: '', page: 1, filters: {} }, controller.signal, true)
+      const result = await searchApi.search({ q, scope: 'public', module: typeof module === 'function' ? module() : module, types: [...types()], sort: '', page: 1, filters: {} }, controller.signal, true)
       if (current !== generation) return
       items.value = (result.groups || []).flatMap(group => group.items || [])
       partial.value = result.partial

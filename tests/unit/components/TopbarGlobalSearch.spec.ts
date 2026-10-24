@@ -119,6 +119,51 @@ describe("AppTopbarGlobalSearch", () => {
       wrapper.find('[data-testid="topbar-search-dropdown"]').exists(),
     ).toBe(false);
   });
+  it("reissues a backend-scoped preview when switching from all to users and music", async () => {
+    vi.mocked(searchApi.search).mockResolvedValue({
+      view: "preview", scope: "public", query: "cols", partial: false, items: [], groups: [],
+    });
+    const { wrapper } = await mountSearch();
+    await wrapper.get('[data-testid="topbar-search-pill"]').trigger("click");
+    await wrapper.get('[data-testid="topbar-search-input"]').setValue("cols");
+    await vi.advanceTimersByTimeAsync(250);
+    await flushPromises();
+    expect(searchApi.search).toHaveBeenLastCalledWith(
+      expect.objectContaining({ q: "cols", module: "" }), expect.any(AbortSignal), true,
+    );
+
+    const userTab = wrapper.findAll(".palette-filter-pill").find(tab => tab.text().trim() === "用户");
+    expect(userTab).toBeDefined();
+    await userTab!.trigger("click");
+    await vi.advanceTimersByTimeAsync(250);
+    await flushPromises();
+    expect(searchApi.search).toHaveBeenLastCalledWith(
+      expect.objectContaining({ q: "cols", module: "users" }), expect.any(AbortSignal), true,
+    );
+
+    const musicTab = wrapper.findAll(".palette-filter-pill").find(tab => tab.text().trim() === "音乐");
+    expect(musicTab).toBeDefined();
+    await musicTab!.trigger("click");
+    await vi.advanceTimersByTimeAsync(250);
+    await flushPromises();
+    expect(searchApi.search).toHaveBeenLastCalledWith(
+      expect.objectContaining({ q: "cols", module: "music" }), expect.any(AbortSignal), true,
+    );
+  });
+
+  it("does not label partially failed search categories as no matches", async () => {
+    vi.mocked(searchApi.search).mockResolvedValue({
+      view: "preview", scope: "public", query: "cols", partial: true, items: [], groups: [],
+    });
+    const { wrapper } = await mountSearch();
+    await wrapper.get('[data-testid="topbar-search-pill"]').trigger("click");
+    await wrapper.get('[data-testid="topbar-search-input"]').setValue("cols");
+    await vi.advanceTimersByTimeAsync(250);
+    await flushPromises();
+    expect(wrapper.text()).toContain("部分搜索类别暂不可用");
+    expect(wrapper.text()).not.toContain("未找到与“cols”相关的内容");
+  });
+
   it("traps focus inside the search dialog and restores the trigger focus", async () => {
     const { wrapper } = await mountSearch();
     const trigger = wrapper.get('[data-testid="topbar-search-pill"]')

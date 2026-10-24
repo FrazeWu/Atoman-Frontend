@@ -145,7 +145,8 @@ export function useGlobalSearch(options: GlobalSearchOptions = {}) {
   const query = ref('')
   const activeIndex = ref(-1)
   const sectionLimit = ref(2)
-  const referenceSearch = unifiedSearchEnabled ? useUnifiedSearchPreview() : useReferenceSearch({
+  const searchModule = ref('')
+  const referenceSearch = unifiedSearchEnabled ? useUnifiedSearchPreview(() => searchModule.value) : useReferenceSearch({
     targetTypes: globalTargetTypes,
     limit: 2,
   })
@@ -192,14 +193,16 @@ export function useGlobalSearch(options: GlobalSearchOptions = {}) {
     activeIndex.value = -1
   }
 
-  const search = async (nextQuery: string, mode: GlobalSearchMode = 'preview') => {
+  const search = async (nextQuery: string, mode: GlobalSearchMode = 'preview', module = '') => {
+    searchModule.value = module
     query.value = nextQuery.trim()
     sectionLimit.value = mode === 'expanded' ? 6 : 2
     clearResults()
     await referenceSearch.search(query.value, sectionLimit.value)
   }
 
-  const scheduleSearch = (nextQuery: string) => {
+  const scheduleSearch = (nextQuery: string, module = '') => {
+    searchModule.value = module
     query.value = nextQuery.trim()
     sectionLimit.value = 2
     clearResults()

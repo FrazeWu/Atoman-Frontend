@@ -56,15 +56,15 @@ import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
 import { isMobileDetailRoute } from './mobileRouteMeta'
 import MobileTopbar from './components/system/MobileTopbar.vue'
 import MobileSpaceDrawer from './components/system/MobileSpaceDrawer.vue'
+import MobileBottomNavComponent from './components/system/MobileBottomNav.vue'
 import './mobileModules.css'
 import './mobileDiscovery.css'
 import './mobileSaved.css'
 import './mobileContent.css'
 
-// Pre-warm MobileBottomNav chunk so defineAsyncComponent resolves immediately
-void import('./components/system/MobileBottomNav.vue')
-
-const MobileBottomNav = defineAsyncComponent(() => import('./components/system/MobileBottomNav.vue'))
+// Direct static component binding prevents async chunk circular-deadlock on iOS WebKit
+const MobileBottomNav = MobileBottomNavComponent
+// defineAsyncComponent(() => import('./components/system/MobileBottomNav.vue'))
 const MobileAudioPlayer = defineAsyncComponent(() => import('./MobileAudioPlayer.vue'))
 
 declare global {

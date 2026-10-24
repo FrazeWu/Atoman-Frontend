@@ -74,12 +74,19 @@ watch(
   }
 )
 
-const preview = useUnifiedSearchPreview(props.module, () => props.types || [])
+const preview = useUnifiedSearchPreview(() => props.module, () => props.types || [])
+// 公开预览不能混入“我的内容”；私有搜索继续由完整结果页处理。
+const previewEnabled = computed(() => props.enablePreview && props.scope === 'public')
+watch(() => [props.module, props.types, props.scope], () => {
+  activeIndex.value = -1
+  preview.reset()
+  if (previewEnabled.value && isDropdownOpen.value) preview.schedule(query.value)
+}, { deep: true })
 
 const previewHits = computed<SearchHit[]>(() => preview.items.value || [])
 
 const hasDropdownContent = computed(() => {
-  if (!props.enablePreview) return false
+  if (!previewEnabled.value) return false
   const trimmed = query.value.trim()
   if (Array.from(trimmed).length < 2) return false
   return (
@@ -95,7 +102,7 @@ const handleQueryUpdate = (val: string) => {
   emit('update:modelValue', val)
   activeIndex.value = -1
 
-  if (!props.enablePreview) return
+  if (!previewEnabled.value) return
 
   const trimmed = val.trim()
   if (Array.from(trimmed).length >= 2) {
@@ -113,7 +120,7 @@ const handleScopeUpdate = (val: string) => {
 
 const handleFocus = () => {
   isFocused.value = true
-  if (props.enablePreview && Array.from(query.value.trim()).length >= 2) {
+  if (previewEnabled.value && Array.from(query.value.trim()).length >= 2) {
     isDropdownOpen.value = true
   }
 }
@@ -269,6 +276,9 @@ onUnmounted(() => {
           </div>
 
           <!-- Empty state -->
+          <div v-else-if="preview.partial.value && previewHits.length === 0" role="status" class="p-unified-search-dropdown__status">
+            <span>部分结果暂不可用，请重试或查看全部结果。</span>
+          </div>
           <div v-else-if="!preview.loading.value && previewHits.length === 0" class="p-unified-search-dropdown__status">
             <span>未找到相关内容</span>
           </div>

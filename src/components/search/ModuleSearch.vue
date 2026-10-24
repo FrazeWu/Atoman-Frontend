@@ -10,12 +10,13 @@
     :input-test-id="inputTestId"
     :dropdown-test-id="dropdownTestId"
     :loading="loading"
-    :empty="!loading && !error && queryLength >= 2 && !results.length ? '没有匹配的结果' : ''"
+    :empty="!loading && !error && !partial && queryLength >= 2 && !results.length ? '没有匹配的结果' : ''"
     @focus="handleFocus"
     @blur="handleBlur"
     @submit="handleSubmit"
   >
     <template #results>
+      <p v-if="partial" role="status" class="module-search__message">部分结果暂不可用，请重试或查看全部结果。</p>
       <div v-if="results.length" class="module-search__list">
         <button
           v-for="target in results"
@@ -30,7 +31,7 @@
         </button>
       </div>
       <p v-else-if="error" class="module-search__message">搜索失败，请稍后再试。</p>
-      <p v-else class="module-search__message">没有匹配的结果</p>
+      <p v-else-if="!partial" class="module-search__message">没有匹配的结果</p>
     </template>
   </SearchSurface>
 </template>
@@ -82,6 +83,7 @@ const {
   cancelPending,
 } = referenceSearch
 const results = computed(() => referenceSearch.results.value.filter((target) => target.available))
+const partial = computed(() => 'partial' in referenceSearch && referenceSearch.partial.value)
 
 const query = computed({
   get: () => props.modelValue,

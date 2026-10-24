@@ -77,6 +77,34 @@ describe('PUnifiedSearchBar.vue', () => {
     expect(input.attributes('placeholder')).toBe('全局搜索测试...')
   })
 
+  it('keeps partial failure distinct from a successful empty response', async () => {
+    mockPartial.value = true
+    const wrapper = mount(PUnifiedSearchBar, { props: { modelValue: '测试' } })
+    await wrapper.find('input').trigger('focus')
+    expect(wrapper.get('[role="status"]').text()).toContain('部分结果暂不可用')
+    expect(wrapper.text()).not.toContain('未找到相关内容')
+    wrapper.unmount()
+  })
+
+  it('refreshes an open preview after module changes', async () => {
+    const wrapper = mount(PUnifiedSearchBar, { props: { modelValue: '测试', module: 'books' } })
+    await wrapper.find('input').trigger('focus')
+    await wrapper.setProps({ module: 'music' })
+    expect(mockReset).toHaveBeenCalled()
+    expect(mockSchedule).toHaveBeenCalledWith('测试')
+    const module = vi.mocked(previewModule.useUnifiedSearchPreview).mock.calls[0]![0]
+    expect(typeof module === 'function' ? module() : module).toBe('music')
+    wrapper.unmount()
+  })
+
+  it('does not send public previews for private scope', async () => {
+    const wrapper = mount(PUnifiedSearchBar, { props: { scope: 'mine' } })
+    await wrapper.find('input').setValue('测试')
+    expect(mockSchedule).not.toHaveBeenCalled()
+    expect(wrapper.find('[role="listbox"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it('schedules preview when user types >= 2 characters', async () => {
     const wrapper = mount(PUnifiedSearchBar)
     const input = wrapper.find('input')

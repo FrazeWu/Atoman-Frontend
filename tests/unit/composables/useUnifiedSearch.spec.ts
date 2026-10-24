@@ -27,6 +27,32 @@ beforeEach(() => {
 afterEach(() => { scopes.splice(0).forEach(scope => scope.stop()); vi.useRealTimers() })
 
 describe('统一搜索加载和隔离', () => {
+  it('切换模块取消旧请求，旧结果不能覆盖，空的部分失败不是成功无结果', async () => {
+    let resolveOld!: (result: SearchResponse) => void
+    vi.mocked(searchApi.search).mockImplementationOnce(() => new Promise(resolve => { resolveOld = resolve }))
+    const module = ref('')
+    const scope = effectScope(); scopes.push(scope)
+    const preview = scope.run(() => useUnifiedSearchPreview(() => module.value))!
+    const old = preview.search('cols')
+    const signal = vi.mocked(searchApi.search).mock.calls[0]![1]
+    module.value = 'users'
+    vi.mocked(searchApi.search).mockResolvedValueOnce({ ...response('cols'), items: [], groups: [], partial: true })
+    await preview.search('cols')
+    expect(signal.aborted).toBe(true)
+    expect(searchApi.search).toHaveBeenLastCalledWith(expect.objectContaining({ module: 'users' }), expect.any(AbortSignal), true)
+    resolveOld({ ...response('old'), groups: [{ module: 'books', type: 'work', label: '作品', items: response('old').items, total: null, has_more: false, error: null }] })
+    await old
+    expect(preview.items.value).toEqual([])
+    expect(preview.partial.value).toBe(true)
+    expect(preview.failed.value).toBe(false)
+    vi.mocked(searchApi.search).mockRejectedValueOnce(new Error('offline'))
+    await preview.search('cols')
+    expect(preview.failed.value).toBe(true)
+    expect(preview.partial.value).toBe(false)
+    vi.mocked(searchApi.search).mockResolvedValueOnce({ ...response('cols'), groups: [], items: [] })
+    await preview.search('cols')
+    expect(preview.failed.value).toBe(false)
+  })
   it('先加载能力，支持空词单类型发现', async () => {
     const { search } = start({ q: '', module: 'books', type: 'work' })
     await flushPromises()

@@ -1,6 +1,48 @@
 import { expect, test, type Page } from '@playwright/test'
 
 const hit = { key: 'books:work:1', module: 'books', type: 'work', id: '1', title: '三体 <script>unsafe</script>', subtitle: '刘慈欣', snippet: '宇宙与文明', href: '/books/work/1' }
+
+test('真实用户搜索与分类重新请求', async ({ page, request }, info) => {
+  const response = await request.get('/api/v1/search?q=rating-a&module=users&type=user&view=list')
+  expect(response.status()).toBe(200)
+  const result = (await response.json()).data
+  expect(result.partial).toBe(false)
+  expect(result.items.some((item: { href: string }) => item.href === '/users/rating-a')).toBe(true)
+  await page.goto('/search?q=rating-a&module=users&type=user')
+  await expect(page.locator('.search-results a[href="/users/rating-a"]')).toBeVisible({ timeout: 20000 })
+  if (info.project.name === 'desktop') {
+    await page.keyboard.press('Control+k')
+    await page.getByTestId('topbar-search-input').fill('rating-a')
+    await expect(page.locator('.topbar-search-section__item')).not.toHaveCount(0)
+    const userRequest = page.waitForResponse(response => {
+      const url = new URL(response.url())
+      return url.pathname === '/api/v1/search' && url.searchParams.get('module') === 'users' && url.searchParams.get('view') === 'preview'
+    })
+    await page.getByTestId('topbar-search-dropdown').getByRole('button', { name: '用户', exact: true }).click()
+    expect((await userRequest).status()).toBe(200)
+    await expect(page.locator('.topbar-search-section__item')).toHaveCount(1)
+    await expect(page.locator('.topbar-search-section__subtitle')).toHaveText('@rating-a')
+    const musicRequest = page.waitForResponse(response => {
+      const url = new URL(response.url())
+      return url.pathname === '/api/v1/search' && url.searchParams.get('module') === 'music'
+    })
+    await page.getByTestId('topbar-search-dropdown').getByRole('button', { name: '音乐', exact: true }).click()
+    expect((await musicRequest).status()).toBe(200)
+    await expect(page.locator('.topbar-search-section__subtitle')).toHaveCount(0)
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
+test('部分失败且无可用结果不显示无结果', async ({ page }) => {
+  await page.route('**/api/v1/search?**', route => route.fulfill({ json: { data: {
+    view: 'grouped', scope: 'public', query: '测试', partial: true, items: [],
+    groups: [{ module: 'books', type: 'work', label: '作品', items: [], total: null, has_more: false, error: { code: 'unavailable', message: 'temporary' } }],
+  } } }))
+  await page.goto('/search?q=测试')
+  await expect(page.getByRole('status').filter({ hasText: '部分结果暂不可用' })).toBeVisible({ timeout: 20000 })
+  await expect(page.getByText('没有匹配的结果', { exact: true })).toHaveCount(0)
+})
+
 async function mockResults(page: Page) {
   // 仅模拟搜索响应来覆盖可重复的页面状态；能力及登录状态仍走本地后端。
   await page.route('**/api/v1/search?**', route => {
@@ -100,8 +142,8 @@ test('搜索入口含图书，桌面支持快捷键和键盘选择', async ({ pa
     await page.goto('/music')
     await page.getByTestId('search-button').click()
     await expect(page).toHaveURL(/\/search\?module=music/)
-    await page.getByRole('searchbox', { name: '关键词' }).fill('三体')
-    await page.getByRole('search').getByRole('button', { name: '搜索', exact: true }).click()
+    await page.getByRole('searchbox', { name: '搜索', exact: true }).fill('三体')
+    await page.getByRole('button', { name: '搜索', exact: true }).click()
     await expect(page.getByText(hit.title, { exact: true })).toBeVisible()
     return
   }

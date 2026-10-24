@@ -369,7 +369,7 @@ const hasResults = computed(
   border-radius: var(--a-radius-control, 4px);
   cursor: pointer;
   box-shadow: none !important;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .search-tab-scope-btn:hover {
@@ -398,7 +398,7 @@ const hasResults = computed(
   border-radius: var(--a-radius-control, 4px);
   cursor: pointer;
   box-shadow: none !important;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .search-tab-pill:hover {
@@ -429,7 +429,7 @@ const hasResults = computed(
   border-radius: var(--a-radius-control, 4px);
   cursor: pointer;
   box-shadow: none !important;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .search-subtab-pill:hover {
@@ -529,7 +529,7 @@ const hasResults = computed(
   border-radius: var(--a-radius-control, 4px);
   cursor: pointer;
   box-shadow: none !important;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .filter-btn--primary {
@@ -694,7 +694,7 @@ const hasResults = computed(
   color: var(--a-color-text-secondary, #64748b);
   cursor: pointer;
   box-shadow: none !important;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .pagination-btn:hover:not(:disabled) {

@@ -41,17 +41,18 @@
           </div>
         </slot>
 
-        <button
-          v-if="showSubmit"
-          class="search-btn"
-          type="button"
-          @click="$emit('submit')"
-        >
-          搜索
-        </button>
-
         <div v-if="$slots.actions" class="search-actions">
           <slot name="actions" />
+        </div>
+
+        <div v-if="showSubmit" class="search-btn-wrap">
+          <button
+            class="search-btn"
+            type="button"
+            @click="$emit('submit')"
+          >
+            搜索
+          </button>
         </div>
       </div>
 
@@ -145,9 +146,9 @@ function handleInput(event: Event) {
   border-radius: var(--a-radius-control, 4px);
   background: #ffffff;
   box-shadow: none !important;
-  padding: 0.5rem 0.75rem;
+  padding: 0;
   display: grid;
-  align-items: center;
+  align-items: stretch;
   gap: 0.4rem;
   overflow: hidden;
   box-sizing: border-box;
@@ -165,8 +166,12 @@ function handleInput(event: Event) {
 }
 
 .search-frame.is-compact {
-  padding: 0 0.75rem;
-  gap: 0.35rem;
+  padding: 0;
+  gap: 0;
+}
+
+.search-frame.is-compact .search-input-wrapper {
+  padding: 0 0.5rem;
 }
 
 .search-frame.is-compact .search-frame__eyebrow,
@@ -180,22 +185,39 @@ function handleInput(event: Event) {
 
 .search-main {
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
+  align-items: stretch;
+  gap: 0;
   width: 100%;
   box-sizing: border-box;
+  height: 100%;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+  padding: 0 0.75rem;
+}
+
+.search-btn-wrap {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  border-left: 1px solid var(--a-color-border-soft, #e2e8f0);
 }
 
 .search-btn {
   border: none;
-  border-radius: var(--a-radius-control, 4px);
+  border-radius: 0 calc(var(--a-radius-control, 4px) - 1px) calc(var(--a-radius-control, 4px) - 1px) 0;
   background: var(--a-color-primary, #0ea5e9);
   color: #ffffff;
   cursor: pointer;
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  padding: 0.35rem 0.9rem;
+  padding: 0 1.1rem;
   white-space: nowrap;
   box-shadow: none !important;
   transition: filter 0.15s ease;
@@ -228,14 +250,6 @@ function handleInput(event: Event) {
 
 .search-frame__status {
   color: var(--a-color-muted);
-}
-
-.search-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
-  flex: 1;
 }
 
 .search-icon {

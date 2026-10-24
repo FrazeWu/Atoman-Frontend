@@ -88,7 +88,10 @@ const isTabActive = (tab: NavTabItem) => {
   const targetPath = tab.path.replace(/\/$/, '') || '/'
   const hasTabQuery = Boolean(route.query?.tab)
 
-  if (hasTabQuery) return false
+  if (hasTabQuery && !tab.path.includes('?')) {
+    const isOtherTabExactMatch = tabs.value.some(t => t.path === route?.fullPath)
+    if (isOtherTabExactMatch) return false
+  }
 
   if (currentPath === targetPath) return true
 

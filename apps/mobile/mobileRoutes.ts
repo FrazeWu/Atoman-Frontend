@@ -271,11 +271,11 @@ export const mobileRoutes: RouteRecordRaw[] = [
 		component: () => import("./MobileMusicLayout.vue"),
 		children: [
 			{ path: "", component: () => import("./views/music/MusicDiscoverView.vue") },
-			{ path: 'albums', component: () => import('@/views/music/AlbumsView.vue') },
-			{ path: 'artists', component: () => import('@/views/music/ArtistsView.vue') },
+			{ path: 'albums', redirect: '/music/search?tab=albums' },
+			{ path: 'artists', redirect: '/music/search?tab=artists' },
 			{ path: 'imports', component: () => import('@/views/music/ImportsView.vue'), meta: requiresAuth },
 			{ path: 'search', component: () => import("./views/music/MusicSearchView.vue") },
-			{ path: 'library', ...(unifiedSearchEnabled ? { redirect: to => ({ path: '/search', query: writeSearchQuery({ ...readSearchQuery(to.query), module: 'music' }) }) } : { component: () => import("./views/music/MusicSearchView.vue") }) },
+			{ path: 'library', redirect: '/music/search' },
 			{ path: 'starred', redirect: '/music/bookmarks', meta: requiresAuth },
 			{
 				path: "discover",
@@ -289,7 +289,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 				path: "tags/:tagId",
 				component: () => import("@/views/music/MusicTagView.vue"),
 			},
-			{ path: "songs", component: () => import("@/views/music/SongsView.vue") },
+			{ path: "songs", redirect: '/music/search?tab=songs' },
 			{
 				path: "playlists",
 				name: "mobile-music-playlists",
@@ -317,7 +317,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			{ path: "lyrics", component: () => import("./MobileLyricsView.vue") },
 			{
 				path: "artist/:artistId",
-				component: () => import("@/views/music/MusicArtistRouteView.vue"),
+				component: () => import("./views/music/MusicArtistDetailView.vue"),
 			},
 			{
 				path: "album/:albumId",

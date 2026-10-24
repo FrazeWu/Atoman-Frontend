@@ -133,7 +133,7 @@ const showMobileTopbar = computed(() => {
   if (/^\/(?:inbox|messages)\/chat\//.test(route.path)) return false
   if (/^\/feed\/(?:article|item)\//.test(route.path)) return false
   if (/^\/(?:post|posts\/post)\//.test(route.path)) return false
-  if (/^\/music\/(?:playlist|album)\//.test(route.path)) return false
+  if (/^\/music\/(?:playlist|album|artist)\//.test(route.path)) return false
   return true
 })
 

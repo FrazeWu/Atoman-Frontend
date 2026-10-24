@@ -603,7 +603,7 @@ function playSong(song: SearchSongItem) {
     artist: song.artist,
     album: song.album || '',
     duration: song.duration || 0,
-    audio_url: song.audio_url || '',
+    audio_url: song.audio_url || '/audio/1.mp3',
     cover_url: song.cover_url || '',
   }
   player.playSong(playerSong)
@@ -633,7 +633,7 @@ onMounted(() => {
   flex-direction: column;
   min-height: 100%;
   background-color: #ffffff;
-  padding-bottom: var(--mobile-music-page-bottom, 96px);
+  padding-bottom: var(--mobile-music-page-bottom, 2rem);
 }
 
 .mobile-music-search__rec-grid {

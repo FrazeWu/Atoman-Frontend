@@ -38,7 +38,7 @@
             class="mobile-player-view__cover"
           />
           <div v-else class="mobile-player-view__cover mobile-player-view__cover--fallback">
-            {{ coverFallback }}
+            <MIcon name="note" size="lg" />
           </div>
         </div>
 

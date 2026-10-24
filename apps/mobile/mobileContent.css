@@ -1,3 +1,7 @@
+:root {
+  --mobile-music-page-bottom: 2rem;
+}
+
 .mobile-app-shell .mobile-app-main :is(.books-page, .ph-page, .forum-page) {
   --a-color-border-soft: #e4e5eb;
   --a-radius-card: 16px;

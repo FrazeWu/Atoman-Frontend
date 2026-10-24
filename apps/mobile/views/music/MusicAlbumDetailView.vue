@@ -199,7 +199,7 @@ function toPlayerSong(item: any, albumContext?: { cover_url?: string; artist?: s
     duration: typeof item.duration === 'number' && item.duration > 0
       ? item.duration
       : (item.duration_sec ?? item.duration_seconds ?? item.durationSeconds ?? 0),
-    audio_url: item.audio_url || '',
+    audio_url: item.audio_url || item.preview_url || '/audio/1.mp3',
     cover_url: extractCover(item, fallbackCover),
   }
 }
@@ -288,7 +288,7 @@ onMounted(() => {
   flex-direction: column;
   min-height: 100%;
   background-color: #ffffff;
-  padding-bottom: 96px;
+  padding-bottom: var(--mobile-music-page-bottom, 2rem);
 }
 
 .mobile-album-detail__topbar {

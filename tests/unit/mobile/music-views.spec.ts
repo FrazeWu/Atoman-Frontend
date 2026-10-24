@@ -9,6 +9,7 @@ import MusicPlaylistsView from '@mobile/views/music/MusicPlaylistsView.vue'
 import MusicSearchView from '@mobile/views/music/MusicSearchView.vue'
 import MusicPlaylistDetailView from '@mobile/views/music/MusicPlaylistDetailView.vue'
 import MusicAlbumDetailView from '@mobile/views/music/MusicAlbumDetailView.vue'
+import MusicArtistDetailView from '@mobile/views/music/MusicArtistDetailView.vue'
 import MusicMeView from '@mobile/views/music/MusicMeView.vue'
 import MobileAudioPlayer from '@mobile/MobileAudioPlayer.vue'
 import MobilePlayerView from '@mobile/MobilePlayerView.vue'
@@ -285,6 +286,36 @@ describe('Mobile Independent Music Views & Player', () => {
       expect(wrapper.text()).toContain('暂无歌单')
       expect(wrapper.find('[data-testid="create-playlist-btn"]').exists()).toBe(true)
     })
+
+    it('allows guest users to switch to curated tab and view public playlists', async () => {
+      const auth = (await import('@/stores/auth')).useAuthStore()
+      auth.user = null
+      auth.token = null
+      auth.isAuthenticated = false
+
+      const musicApi = await import('@/api/musicV1')
+      vi.mocked(musicApi.listPublicMusicPlaylists).mockResolvedValue({
+        data: [
+          { id: 'curated-test-1', name: '公开工作流歌单', song_count: 10, is_public: true },
+        ],
+        total: 1,
+      } as any)
+
+      const wrapper = mount(MusicPlaylistsView, {
+        global: {
+          plugins: [pinia, router],
+          stubs: { MIcon: true },
+        },
+      })
+      await flushPromises()
+
+      const curatedTabBtn = wrapper.find('[data-testid="tab-curated"]')
+      await curatedTabBtn.trigger('click')
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('公开工作流歌单')
+      expect(wrapper.findAll('[data-testid="curated-playlist-item"]').length).toBe(1)
+    })
   })
 
   describe('MusicSearchView.vue', () => {
@@ -456,6 +487,63 @@ describe('Mobile Independent Music Views & Player', () => {
       expect(wrapper.text()).toContain('Ye')
       expect(wrapper.text()).toContain('2026 年')
       expect(wrapper.findAll('[data-testid="album-song-item"]').length).toBe(1)
+    })
+  })
+
+  describe('MusicArtistDetailView.vue', () => {
+    const mockArtist = {
+      id: 'art-ye',
+      name: 'Ye',
+      nationality: '美国',
+      bio: '美国说唱歌手、制作人',
+    }
+    const mockSongs = [
+      { id: 's-10', title: 'Flashing Lights', artist: 'Ye', duration: 237 },
+    ]
+    const mockAlbums = [
+      { id: 'alb-grad', title: 'Graduation', year: 2007 },
+    ]
+
+    it('renders artist info, albums, and songs list', async () => {
+      const wrapper = mount(MusicArtistDetailView, {
+        props: {
+          initialArtist: mockArtist,
+          initialSongs: mockSongs,
+          initialAlbums: mockAlbums,
+        },
+        global: {
+          plugins: [pinia, router],
+        },
+      })
+
+      expect(wrapper.text()).toContain('Ye')
+      expect(wrapper.text()).toContain('美国')
+      expect(wrapper.text()).toContain('Graduation')
+      expect(wrapper.text()).toContain('Flashing Lights')
+      expect(wrapper.findAll('[data-testid="artist-album-item"]').length).toBe(1)
+      expect(wrapper.findAll('[data-testid="artist-song-item"]').length).toBe(1)
+    })
+
+    it('clicking play all triggers playback of first song', async () => {
+      const playerStore = useAudioPlayerStore()
+      const playSpy = vi.spyOn(playerStore, 'playSong').mockImplementation(async () => {})
+
+      const wrapper = mount(MusicArtistDetailView, {
+        props: {
+          initialArtist: mockArtist,
+          initialSongs: mockSongs,
+          initialAlbums: mockAlbums,
+        },
+        global: {
+          plugins: [pinia, router],
+        },
+      })
+
+      const playAllBtn = wrapper.find('[data-testid="artist-play-all-btn"]')
+      await playAllBtn.trigger('click')
+      expect(playSpy).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Flashing Lights',
+      }))
     })
   })
 

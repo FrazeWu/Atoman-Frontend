@@ -21,7 +21,7 @@
         class="mobile-mini-player__cover"
       />
       <span v-else class="mobile-mini-player__cover mobile-mini-player__cover--fallback">
-        {{ coverFallback }}
+        <MIcon name="note" size="sm" />
       </span>
       <span class="mobile-mini-player__meta">
         <strong>{{ player.currentSong?.title || '未在播放' }}</strong>

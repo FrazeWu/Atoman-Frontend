@@ -13,18 +13,19 @@
         />
       </div>
 
-      <!-- Result Filter Tabs (when searching or has results) -->
-      <div v-if="searchQuery.trim()" class="mobile-music-search__tabs">
+      <!-- Result Filter Tabs -->
+      <div class="mobile-music-search__tabs">
         <button
           v-for="tab in filterTabs"
           :key="tab.key"
           type="button"
           class="mobile-music-search__tab"
           :class="{ 'is-active': activeTab === tab.key }"
-          @click="activeTab = tab.key"
+          :data-testid="`tab-${tab.key}`"
+          @click="selectTab(tab.key)"
         >
           {{ tab.label }}
-          <span v-if="getCount(tab.key)" class="mobile-music-search__tab-count">
+          <span v-if="searchQuery.trim() && getCount(tab.key)" class="mobile-music-search__tab-count">
             {{ getCount(tab.key) }}
           </span>
         </button>
@@ -34,8 +35,8 @@
     <main class="mobile-music-search__content">
       <!-- Empty Query: Hot Searches & Recommendations -->
       <section v-if="!searchQuery.trim()" class="mobile-music-search__explore">
-        <div class="mobile-music-search__section-title">热门搜索</div>
-        <div class="mobile-music-search__tags">
+        <div v-if="activeTab === 'all'" class="mobile-music-search__section-title">热门搜索</div>
+        <div v-if="activeTab === 'all'" class="mobile-music-search__tags">
           <button
             v-for="tag in hotTags"
             :key="tag"
@@ -48,9 +49,9 @@
         </div>
 
         <!-- Recommended Songs -->
-        <div v-if="recommendedSongs.length > 0" class="mobile-music-search__rec-section">
+        <div v-if="(activeTab === 'all' || activeTab === 'songs') && recommendedSongs.length > 0" class="mobile-music-search__rec-section">
           <div class="mobile-music-search__rec-header">
-            <span class="mobile-music-search__section-title">推荐单曲</span>
+            <span class="mobile-music-search__section-title">{{ activeTab === 'songs' ? '全部推荐单曲' : '推荐单曲' }}</span>
           </div>
           <div class="mobile-music-search__song-list">
             <div
@@ -80,12 +81,19 @@
         </div>
 
         <!-- Recommended Albums -->
-        <div v-if="recommendedAlbums.length > 0" class="mobile-music-search__rec-section">
+        <div v-if="(activeTab === 'all' || activeTab === 'albums') && recommendedAlbums.length > 0" class="mobile-music-search__rec-section">
           <div class="mobile-music-search__rec-header">
-            <span class="mobile-music-search__section-title">热门专辑</span>
-            <router-link to="/music/albums" class="mobile-music-search__more-link">查看全部</router-link>
+            <span class="mobile-music-search__section-title">{{ activeTab === 'albums' ? '全部推荐专辑' : '热门专辑' }}</span>
+            <button
+              v-if="activeTab === 'all'"
+              type="button"
+              class="mobile-music-search__more-link"
+              @click="selectTab('albums')"
+            >
+              查看全部
+            </button>
           </div>
-          <div class="mobile-music-search__rec-scroll">
+          <div :class="activeTab === 'albums' ? 'mobile-music-search__rec-grid' : 'mobile-music-search__rec-scroll'">
             <div
               v-for="album in recommendedAlbums"
               :key="album.id"
@@ -107,12 +115,19 @@
         </div>
 
         <!-- Recommended Artists -->
-        <div v-if="recommendedArtists.length > 0" class="mobile-music-search__rec-section">
+        <div v-if="(activeTab === 'all' || activeTab === 'artists') && recommendedArtists.length > 0" class="mobile-music-search__rec-section">
           <div class="mobile-music-search__rec-header">
-            <span class="mobile-music-search__section-title">热门歌手</span>
-            <router-link to="/music/artists" class="mobile-music-search__more-link">查看全部</router-link>
+            <span class="mobile-music-search__section-title">{{ activeTab === 'artists' ? '全部推荐歌手' : '热门歌手' }}</span>
+            <button
+              v-if="activeTab === 'all'"
+              type="button"
+              class="mobile-music-search__more-link"
+              @click="selectTab('artists')"
+            >
+              查看全部
+            </button>
           </div>
-          <div class="mobile-music-search__rec-scroll">
+          <div :class="activeTab === 'artists' ? 'mobile-music-search__rec-grid-artists' : 'mobile-music-search__rec-scroll'">
             <div
               v-for="artist in recommendedArtists"
               :key="artist.id"
@@ -287,7 +302,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   listMusicAlbums,
   listMusicArtists,
@@ -348,6 +363,7 @@ const props = withDefaults(
   }
 )
 
+const route = useRoute()
 const router = useRouter()
 const player = useAudioPlayerStore()
 
@@ -374,6 +390,34 @@ const filterTabs = [
   { key: 'artists' as const, label: '歌手' },
   { key: 'playlists' as const, label: '歌单' },
 ]
+
+const VALID_TABS = ['all', 'songs', 'albums', 'artists', 'playlists'] as const
+type FilterTabKey = (typeof VALID_TABS)[number]
+
+const selectTab = (key: string) => {
+  if (VALID_TABS.includes(key as FilterTabKey)) {
+    activeTab.value = key as FilterTabKey
+  }
+}
+
+function syncFromQuery() {
+  const queryQ = typeof route.query?.q === 'string' ? route.query.q.trim() : ''
+  if (queryQ && queryQ !== searchQuery.value) {
+    searchQuery.value = queryQ
+    void executeSearch(queryQ)
+  }
+  const queryTab = typeof route.query?.tab === 'string' ? route.query.tab.trim() : ''
+  if (VALID_TABS.includes(queryTab as FilterTabKey)) {
+    activeTab.value = queryTab as FilterTabKey
+  }
+}
+
+watch(
+  () => [route.query?.q, route.query?.tab],
+  () => {
+    syncFromQuery()
+  }
+)
 
 const hasResults = computed(() => {
   if (activeTab.value === 'songs') return songs.value.length > 0
@@ -578,6 +622,7 @@ function openPlaylist(id: string) {
 }
 
 onMounted(() => {
+  syncFromQuery()
   void loadRecommended()
 })
 </script>
@@ -588,7 +633,19 @@ onMounted(() => {
   flex-direction: column;
   min-height: 100%;
   background-color: #ffffff;
-  padding-bottom: 96px;
+  padding-bottom: var(--mobile-music-page-bottom, 96px);
+}
+
+.mobile-music-search__rec-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.mobile-music-search__rec-grid-artists {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
 }
 
 .mobile-music-search__header {

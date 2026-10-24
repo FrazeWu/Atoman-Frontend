@@ -28,14 +28,15 @@
 
       <!-- 右侧：统一搜索栏 (Option 1A) 与添加操作 -->
       <div class="book-discover__search-area">
-        <PSearchInput
+        <PUnifiedSearchBar
           v-model="query"
           v-model:scope="searchType"
+          module="books"
+          :types="selectedTypes"
           variant="bar"
           size="md"
           :scopes="searchScopes"
           placeholder="输入书名、作者或关键词..."
-          aria-label="搜索书名、作者或关键词"
           action-button-text="搜索"
           class="book-discover__search-bar"
           @search="search"
@@ -124,7 +125,8 @@ import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
 import BookCard from '@/components/books/BookCard.vue'
 import type { BookPublicWork } from '@/api/books'
 import PButton from '@/components/ui/PButton.vue'
-import PSearchInput, { type SearchScopeOption } from '@/components/ui/PSearchInput.vue'
+import PUnifiedSearchBar from '@/components/search/PUnifiedSearchBar.vue'
+import type { SearchScopeOption } from '@/components/ui/PSearchInput.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
@@ -135,6 +137,11 @@ const router = useRouter()
 const auth = useAuthStore()
 const query = ref('')
 const searchType = ref('works')
+const selectedTypes = computed(() => {
+  if (searchType.value === 'people') return ['author']
+  if (searchType.value === 'lists') return ['book_list']
+  return ['work']
+})
 const searchScopes: SearchScopeOption[] = [
   { label: '图书', value: 'works' },
   { label: '作者', value: 'people' },

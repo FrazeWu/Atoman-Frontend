@@ -216,14 +216,16 @@ const handleSelectSpace = (spaceKey: string) => {
 }
 
 const handleSearch = () => {
+  if (currentSpace.value === 'music') {
+    void router.push('/music/search').catch(() => {})
+    return
+  }
   if (unifiedSearchEnabled) {
     void router.push(searchLocation('', ['blog', 'feed', 'music', 'books', 'debate'].includes(currentSpace.value) ? currentSpace.value : ''))
     return
   }
   if (router && typeof router.push === 'function') {
-    if (currentSpace.value === 'music') {
-      void router.push('/music/tags').catch(() => {})
-    } else if (currentSpace.value === 'books') {
+    if (currentSpace.value === 'books') {
       void router.push('/books/search').catch(() => {})
     } else if (currentSpace.value === 'debate') {
       void router.push('/debate/search').catch(() => {})

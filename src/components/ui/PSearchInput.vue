@@ -285,7 +285,7 @@ defineExpose({
 .p-search-input {
   display: inline-flex;
   align-items: stretch;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;
@@ -535,7 +535,7 @@ defineExpose({
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;

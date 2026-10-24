@@ -144,7 +144,7 @@ function handleInput(event: Event) {
   position: relative;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control, 4px);
-  background: #ffffff;
+  background: var(--a-color-bg, #ffffff);
   box-shadow: none !important;
   padding: 0;
   display: grid;
@@ -328,7 +328,7 @@ function handleInput(event: Event) {
   left: 0;
   right: 0;
   margin-top: 0;
-  background: #ffffff;
+  background: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;

@@ -392,7 +392,7 @@ const hasResults = computed(
   font-size: 13px;
   font-weight: 500;
   padding: 5px 12px;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   color: var(--a-color-text-secondary, #64748b);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control, 4px);
@@ -446,7 +446,7 @@ const hasResults = computed(
 
 /* Filters Details */
 .search-filters {
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;
@@ -480,7 +480,7 @@ const hasResults = computed(
   align-items: flex-end;
   gap: 12px;
   padding: 14px;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
 }
 
 .filter-field {
@@ -501,7 +501,7 @@ const hasResults = computed(
   height: 36px;
   padding: 0 10px;
   font-size: 13px;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   color: var(--a-color-text-primary, #0f172a);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control, 4px);
@@ -543,7 +543,7 @@ const hasResults = computed(
 }
 
 .filter-btn--secondary {
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   color: var(--a-color-text-secondary, #64748b);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
 }
@@ -559,7 +559,7 @@ const hasResults = computed(
   text-align: center;
   font-size: 14px;
   color: var(--a-color-text-secondary, #64748b);
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;
@@ -567,8 +567,8 @@ const hasResults = computed(
 
 .search-state-message.is-error {
   color: var(--a-color-danger, #ef4444);
-  background-color: #fef2f2;
-  border-color: #fecaca;
+  background-color: color-mix(in srgb, var(--a-color-danger, #ef4444) 6%, var(--a-color-bg, #ffffff));
+  border-color: color-mix(in srgb, var(--a-color-danger, #ef4444) 20%, var(--a-color-border-soft, #e2e8f0));
 }
 
 .search-notice {
@@ -589,7 +589,7 @@ const hasResults = computed(
   font-size: 12px;
   font-weight: 500;
   padding: 3px 8px;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control, 4px);
   color: var(--a-color-primary, #0ea5e9);
@@ -617,7 +617,7 @@ const hasResults = computed(
 /* Grouped Modules */
 .search-module-card {
   margin-bottom: 2rem;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;
@@ -688,7 +688,7 @@ const hasResults = computed(
   font-size: 13px;
   font-weight: 500;
   padding: 6px 14px;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control, 4px);
   color: var(--a-color-text-secondary, #64748b);

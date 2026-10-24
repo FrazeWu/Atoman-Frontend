@@ -254,13 +254,12 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   background: var(--a-color-surface);
   color: var(--a-color-muted);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  box-shadow: none !important;
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease,
     color 0.15s ease,
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
+    transform 0.15s ease;
   outline: none;
 }
 
@@ -270,7 +269,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   background: var(--a-color-surface-muted);
   color: var(--a-color-text);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+  box-shadow: none !important;
 }
 
 .shortcut-hints__trigger:active {
@@ -293,15 +292,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   border-width: 0;
 }
 
-:root.dark .shortcut-hints__trigger {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-:root.dark .shortcut-hints__trigger:hover,
-:root.dark .shortcut-hints__trigger:focus-visible {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
-}
-
 /* 弹窗全屏遮罩 */
 .shortcut-hints__backdrop {
   position: fixed;
@@ -321,8 +311,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   max-width: 500px;
   background-color: var(--a-color-surface);
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  border-radius: var(--a-radius-control, 4px);
+  box-shadow: none !important;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -437,7 +427,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   align-items: center;
   justify-content: space-between;
   padding: 0.4375rem 0.625rem;
-  border-radius: 6px;
+  border-radius: var(--a-radius-control, 4px);
   background-color: var(--a-color-surface-muted);
   transition: background-color 0.12s ease;
 }
@@ -474,7 +464,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.6875rem;
   font-weight: 600;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
   white-space: nowrap;
 }
 

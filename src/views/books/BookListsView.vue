@@ -8,7 +8,14 @@
       <PButton v-if="auth.isAuthenticated" to="/books/lists/new">创建书单</PButton>
     </div>
     <form v-if="activeTab === 'public'" class="booklists__toolbar" @submit.prevent="search">
-      <PSearchInput id="booklist-search" v-model="query" aria-label="搜索公开书单" placeholder="书单标题或简介" @search="search" />
+      <PUnifiedSearchBar
+        id="booklist-search"
+        v-model="query"
+        module="books"
+        :types="['book_list']"
+        placeholder="书单标题或简介"
+        @search="search"
+      />
     </form>
     <p v-if="activeTab !== 'public' && !auth.isAuthenticated">登录后查看{{ activeTab === 'mine' ? '我的草稿' : '收藏的书单' }}。<RouterLink :to="{ path: '/login', query: { redirect: route.fullPath } }">去登录</RouterLink></p>
     <template v-else>
@@ -41,7 +48,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import PButton from '@/components/ui/PButton.vue'
-import PSearchInput from '@/components/ui/PSearchInput.vue'
+import PUnifiedSearchBar from '@/components/search/PUnifiedSearchBar.vue'
 import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import { deleteBookListBookmark, listBookListBookmarks, listMyBookLists, searchBookLists, type BookListCard } from '@/api/bookLists'

@@ -63,12 +63,17 @@ const tabs = computed<NavTabItem[]>(() => {
   const key = props.currentSpace?.toLowerCase() || 'music'
   const map = SPACE_TABS || {}
   const items = map[key] || map.music || DEFAULT_MUSIC_TABS
-  return unifiedSearchEnabled ? items.map(tab => tab.key === 'search' ? { ...tab, path: `/search?module=${key}` } : tab) : items
+  return unifiedSearchEnabled
+    ? items.map(tab => (tab.key === 'search' && key !== 'music') ? { ...tab, path: `/search?module=${key}` } : tab)
+    : items
 })
 
 const isTabActive = (tab: NavTabItem) => {
   if (unifiedSearchEnabled && tab.key === 'search' && route?.path === '/search') {
     return route.query.module === (props.currentSpace?.toLowerCase() || 'music')
+  }
+  if (tab.key === 'search' && route?.path === '/music/search') {
+    return true
   }
   if (props.activeTab) {
     return props.activeTab === tab.key

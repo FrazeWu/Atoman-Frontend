@@ -360,6 +360,20 @@ describe('Mobile Independent Music Views & Player', () => {
         title: 'Power',
       }))
     })
+
+    it('syncs search query and active tab from route.query', async () => {
+      await router.push('/music/search?q=Kanye&tab=artists')
+      const wrapper = mount(MusicSearchView, {
+        global: {
+          plugins: [pinia, router],
+        },
+      })
+      await flushPromises()
+
+      const input = wrapper.find('[data-testid="music-search-input"]')
+      expect(input.exists()).toBe(true)
+      expect(wrapper.find('[data-testid="tab-artists"]').classes()).toContain('is-active')
+    })
   })
 
   describe('MusicPlaylistDetailView.vue', () => {

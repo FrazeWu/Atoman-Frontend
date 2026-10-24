@@ -260,8 +260,14 @@
   </main>
 </template>
 
+<script lang="ts">
+export default {
+  name: 'MobilePlayerView',
+}
+</script>
+
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onActivated, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import { usePlayerStore } from '@/stores/player'
@@ -273,6 +279,18 @@ import { modulePathUrl } from '@/router/siteUrls'
 import AudioWaveformProgress from '@/components/music/AudioWaveformProgress.vue'
 
 const player = usePlayerStore()
+
+onMounted(() => {
+  if (!player.currentSong) {
+    player.restorePlaybackState()
+  }
+})
+
+onActivated(() => {
+  if (!player.currentSong) {
+    player.restorePlaybackState()
+  }
+})
 const router = useRouter()
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()

@@ -94,7 +94,10 @@ const progressRatio = computed(() => {
 })
 
 function openPlayer() {
-  if (route.path !== '/music/player') void router.push('/music/player')
+  if (route.path !== '/music/player') {
+    player.savePlaybackState()
+    void router.push('/music/player')
+  }
 }
 
 let touchStartX = 0

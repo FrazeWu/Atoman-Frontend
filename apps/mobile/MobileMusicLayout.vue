@@ -1,7 +1,7 @@
 <template>
   <div class="mobile-music-layout">
     <RouterView v-slot="{ Component, route: viewRoute }">
-      <KeepAlive :max="2">
+      <KeepAlive :max="2" :exclude="['MobilePlayerView']">
         <component :is="Component" :key="viewRoute.path" />
       </KeepAlive>
     </RouterView>

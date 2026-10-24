@@ -162,21 +162,48 @@ const loading = ref(false)
 const playlist = ref<PlaylistDetailData | null>(props.initialPlaylist || null)
 const songs = ref<Song[]>(props.initialSongs || [])
 
-function toPlayerSong(item: any): Song {
+function extractArtist(item: any, fallback?: string): string {
+  if (typeof item?.artist === 'string' && item.artist.trim()) return item.artist.trim()
+  if (Array.isArray(item?.artist_credits) && item.artist_credits.length > 0) {
+    const names = item.artist_credits
+      .map((c: any) => c?.artist?.name || c?.name || c?.display_name)
+      .filter((n: any): n is string => typeof n === 'string' && Boolean(n.trim()))
+    if (names.length > 0) return names.join(' / ')
+  }
+  if (Array.isArray(item?.artists) && item.artists.length > 0) {
+    const names = item.artists
+      .map((a: any) => a?.name || a?.display_name)
+      .filter((n: any): n is string => typeof n === 'string' && Boolean(n.trim()))
+    if (names.length > 0) return names.join(' / ')
+  }
+  if (fallback && fallback.trim()) return fallback.trim()
+  return '未知艺术家'
+}
+
+function extractCover(item: any, fallback?: string): string {
+  const c = item?.cover_url || item?.album?.cover_url || fallback || ''
+  return typeof c === 'string' ? c.trim() : ''
+}
+
+function extractAlbumTitle(item: any, fallback?: string): string {
+  if (typeof item?.album === 'string' && item.album.trim()) return item.album.trim()
+  if (typeof item?.album?.title === 'string' && item.album.title.trim()) return item.album.title.trim()
+  if (fallback && fallback.trim()) return fallback.trim()
+  return ''
+}
+
+function toPlayerSong(item: any, playlistCover?: string): Song {
+  const fallbackCover = playlistCover || playlist.value?.cover_url || ''
   return {
     id: item.id,
     title: item.title,
-    artist: typeof item.artist === 'string'
-      ? item.artist
-      : item.artists?.map((a: any) => a.name || a.display_name).join(' / ') || '未知艺术家',
-    album: typeof item.album === 'string'
-      ? item.album
-      : item.album?.title || '',
+    artist: extractArtist(item),
+    album: extractAlbumTitle(item),
     duration: typeof item.duration === 'number' && item.duration > 0
       ? item.duration
       : (item.duration_sec ?? item.duration_seconds ?? item.durationSeconds ?? 0),
     audio_url: item.audio_url || '',
-    cover_url: item.cover_url || item.album?.cover_url || '',
+    cover_url: extractCover(item, fallbackCover),
   }
 }
 
@@ -205,7 +232,7 @@ async function loadPlaylistData() {
         creator: data.creator || { display_name: 'Atoman' },
       }
       if (data.songs && Array.isArray(data.songs)) {
-        songs.value = data.songs.map(toPlayerSong)
+        songs.value = data.songs.map((s: any) => toPlayerSong(s, playlist.value?.cover_url))
       } else {
         songs.value = []
       }
@@ -220,7 +247,7 @@ async function loadPlaylistData() {
       try {
         const songsRes = await listMusicSongs({ page: 1, page_size: 15 })
         if (songsRes?.data?.length) {
-          songs.value = songsRes.data.map(toPlayerSong)
+          songs.value = songsRes.data.map((s) => toPlayerSong(s))
         }
       } catch {}
     }
@@ -235,7 +262,7 @@ async function loadPlaylistData() {
     try {
       const songsRes = await listMusicSongs({ page: 1, page_size: 15 })
       if (songsRes?.data?.length) {
-        songs.value = songsRes.data.map(toPlayerSong)
+        songs.value = songsRes.data.map((s) => toPlayerSong(s))
       }
     } catch {}
   } finally {

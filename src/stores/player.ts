@@ -1021,6 +1021,7 @@ export const usePlayerStore = defineStore("player", () => {
 		const player = ensureAudio();
 		const generation = ++playGeneration;
 		currentSong.value = normalizedSong;
+		savePlaybackState();
 		if (normalizedSong.summary_only && isMusicSong(normalizedSong)) {
 			void fetchSongById(String(normalizedSong.id)).then((detail) => {
 				if (!detail || generation !== playGeneration || !currentSong.value || playbackItemKey(currentSong.value) !== playbackItemKey(normalizedSong)) return;
@@ -1507,6 +1508,8 @@ export const usePlayerStore = defineStore("player", () => {
 		isPinned,
 		playbackItemKey,
 		togglePinned,
+		savePlaybackState,
+		restorePlaybackState,
 	};
 });
 

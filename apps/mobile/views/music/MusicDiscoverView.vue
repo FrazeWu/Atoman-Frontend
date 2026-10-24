@@ -71,6 +71,41 @@
       </div>
     </section>
 
+    <!-- Featured Artists Section -->
+    <section v-if="artists.length > 0" class="mobile-music-discover__section" aria-label="热门艺人">
+      <div class="mobile-music-discover__section-header">
+        <h2 class="mobile-music-discover__section-title">热门艺人</h2>
+        <router-link to="/music/search?tab=artists" class="mobile-music-discover__more-link">
+          查看全部
+        </router-link>
+      </div>
+
+      <div class="mobile-music-discover__artists-scroll">
+        <div
+          v-for="artist in artists"
+          :key="artist.id"
+          class="mobile-music-discover__artist-card"
+          data-testid="artist-card"
+          @click="openArtist(artist.id)"
+        >
+          <div class="mobile-music-discover__artist-avatar">
+            <img
+              v-if="artist.avatar_url"
+              :src="artist.avatar_url"
+              :alt="artist.name"
+              class="mobile-music-discover__artist-img"
+              loading="lazy"
+            />
+            <div v-else class="mobile-music-discover__artist-art">
+              <MIcon name="person" size="md" />
+            </div>
+          </div>
+          <span class="mobile-music-discover__artist-name">{{ artist.name }}</span>
+          <span v-if="artist.nationality" class="mobile-music-discover__artist-sub">{{ artist.nationality }}</span>
+        </div>
+      </div>
+    </section>
+
     <!-- Curated Playlists Section -->
     <section class="mobile-music-discover__section" aria-label="精选歌单">
       <div class="mobile-music-discover__section-header">
@@ -158,6 +193,7 @@ import { useRouter } from 'vue-router'
 import {
   getMusicHome,
   listMusicAlbums,
+  listMusicArtists,
   listMusicSongs,
   listPublicMusicPlaylists,
   type MusicPlaylistSummary,
@@ -175,11 +211,19 @@ export interface MobileAlbumItem {
   song_count?: number
 }
 
+export interface MobileArtistItem {
+  id: string
+  name: string
+  avatar_url?: string
+  nationality?: string
+}
+
 const router = useRouter()
 const player = useAudioPlayerStore()
 
 const playlists = ref<MusicPlaylistSummary[]>([])
 const albums = ref<MobileAlbumItem[]>([])
+const artists = ref<MobileArtistItem[]>([])
 const recentTracks = ref<Song[]>([])
 const loading = ref(false)
 
@@ -194,6 +238,13 @@ const fallbackAlbums: MobileAlbumItem[] = [
   { id: 'alb-1', title: '2049', artist: 'Ye', year: 2026 },
   { id: 'alb-2', title: '12-hey-mama', artist: 'Ye', year: 2008 },
   { id: 'alb-3', title: 'Graduation', artist: 'Kanye West', year: 2007 },
+]
+
+const fallbackArtists: MobileArtistItem[] = [
+  { id: 'art-1', name: 'Ye', nationality: '美国' },
+  { id: 'art-2', name: 'Daniel Caesar', nationality: '加拿大' },
+  { id: 'art-3', name: 'Kendrick Lamar', nationality: '美国' },
+  { id: 'art-4', name: '宋冬野', nationality: '中国' },
 ]
 
 const fallbackTracks: Song[] = [
@@ -226,13 +277,28 @@ const featuredRecommendation = computed(() => {
   return null
 })
 
+function extractArtist(item: any): string {
+  if (typeof item?.artist === 'string' && item.artist.trim()) return item.artist.trim()
+  if (Array.isArray(item?.artist_credits) && item.artist_credits.length > 0) {
+    const names = item.artist_credits
+      .map((c: any) => c?.artist?.name || c?.name || c?.display_name)
+      .filter((n: any): n is string => typeof n === 'string' && Boolean(n.trim()))
+    if (names.length > 0) return names.join(' / ')
+  }
+  if (Array.isArray(item?.artists) && item.artists.length > 0) {
+    const names = item.artists
+      .map((a: any) => a?.name || a?.display_name)
+      .filter((n: any): n is string => typeof n === 'string' && Boolean(n.trim()))
+    if (names.length > 0) return names.join(' / ')
+  }
+  return '未知艺术家'
+}
+
 function toPlayerSong(item: any): Song {
   return {
     id: item.id,
     title: item.title,
-    artist: typeof item.artist === 'string'
-      ? item.artist
-      : item.artists?.map((a: any) => a.name).join(' / ') || '未知艺术家',
+    artist: extractArtist(item),
     album: typeof item.album === 'string'
       ? item.album
       : item.album?.title || '',
@@ -248,12 +314,19 @@ function toAlbumItem(item: any): MobileAlbumItem {
   return {
     id: item.id,
     title: item.title,
-    artist: typeof item.artist === 'string'
-      ? item.artist
-      : item.artists?.map((a: any) => a.name || a.display_name).join(' / ') || '未知艺术家',
+    artist: extractArtist(item),
     year: item.year || item.release_year || '',
     cover_url: item.cover_url || '',
     song_count: item.song_count || 0,
+  }
+}
+
+function toArtistItem(item: any): MobileArtistItem {
+  return {
+    id: item.id,
+    name: item.name || item.display_name || '歌手',
+    avatar_url: item.image_url || item.avatar_url || '',
+    nationality: item.nationality || '',
   }
 }
 
@@ -267,11 +340,12 @@ function formatDuration(seconds?: number): string {
 async function loadData() {
   loading.value = true
   try {
-    const [homeRes, playlistsRes, albumsRes, songsRes] = await Promise.allSettled([
+    const [homeRes, playlistsRes, albumsRes, songsRes, artistsRes] = await Promise.allSettled([
       getMusicHome(),
       listPublicMusicPlaylists({ page: 1, page_size: 4 }),
-      listMusicAlbums({ page: 1, page_size: 6 }),
-      listMusicSongs({ page: 1, page_size: 8 }),
+      listMusicAlbums({ page: 1, page_size: 10 }),
+      listMusicSongs({ page: 1, page_size: 10 }),
+      listMusicArtists({ page: 1, page_size: 10 }),
     ])
 
     if (playlistsRes.status === 'fulfilled' && playlistsRes.value?.data?.length) {
@@ -284,6 +358,12 @@ async function loadData() {
       albums.value = albumsRes.value.data.map(toAlbumItem)
     } else {
       albums.value = fallbackAlbums
+    }
+
+    if (artistsRes.status === 'fulfilled' && artistsRes.value?.data?.length) {
+      artists.value = artistsRes.value.data.map(toArtistItem)
+    } else {
+      artists.value = fallbackArtists
     }
 
     if (homeRes.status === 'fulfilled' && homeRes.value) {
@@ -303,6 +383,7 @@ async function loadData() {
   } catch {
     playlists.value = fallbackPlaylists
     albums.value = fallbackAlbums
+    artists.value = fallbackArtists
     recentTracks.value = fallbackTracks
   } finally {
     loading.value = false
@@ -315,6 +396,10 @@ function openPlaylist(id: string) {
 
 function openAlbum(id: string) {
   void router.push(`/music/album/${id}`)
+}
+
+function openArtist(id: string) {
+  void router.push(`/music/artist/${id}`)
 }
 
 function openRecommendation(rec: any) {
@@ -546,6 +631,76 @@ onMounted(() => {
   font-size: 11px;
   color: var(--a-color-text-secondary, #666666);
   margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Artists Scroll */
+.mobile-music-discover__artists-scroll {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.mobile-music-discover__artists-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-music-discover__artist-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 76px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.mobile-music-discover__artist-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #f5f5f5;
+  border: 1px solid var(--a-color-border-soft, #eeeeee);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.mobile-music-discover__artist-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mobile-music-discover__artist-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--a-color-text-muted, #999999);
+}
+
+.mobile-music-discover__artist-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--a-color-text, #111111);
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-music-discover__artist-sub {
+  font-size: 10px;
+  color: var(--a-color-text-secondary, #777777);
+  margin-top: 2px;
+  width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

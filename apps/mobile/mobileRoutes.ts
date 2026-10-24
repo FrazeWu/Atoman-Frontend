@@ -274,7 +274,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			{ path: 'albums', component: () => import('@/views/music/AlbumsView.vue') },
 			{ path: 'artists', component: () => import('@/views/music/ArtistsView.vue') },
 			{ path: 'imports', component: () => import('@/views/music/ImportsView.vue'), meta: requiresAuth },
-			{ path: 'search', ...(unifiedSearchEnabled ? { redirect: to => ({ path: '/search', query: writeSearchQuery({ ...readSearchQuery(to.query), module: 'music' }) }) } : { component: () => import("./views/music/MusicSearchView.vue") }) },
+			{ path: 'search', component: () => import("./views/music/MusicSearchView.vue") },
 			{ path: 'library', ...(unifiedSearchEnabled ? { redirect: to => ({ path: '/search', query: writeSearchQuery({ ...readSearchQuery(to.query), module: 'music' }) }) } : { component: () => import("./views/music/MusicSearchView.vue") }) },
 			{ path: 'starred', redirect: '/music/bookmarks', meta: requiresAuth },
 			{

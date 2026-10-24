@@ -89,6 +89,12 @@ describe('Mobile Independent Music Views & Player', () => {
       expect(cards.length).toBeGreaterThanOrEqual(2)
       expect(wrapper.text()).toContain('深度工作流')
       expect(wrapper.text()).toContain('午夜脉冲')
+
+      const albumCards = wrapper.findAll('[data-testid="album-card"]')
+      expect(albumCards.length).toBeGreaterThanOrEqual(1)
+
+      const artistCards = wrapper.findAll('[data-testid="artist-card"]')
+      expect(artistCards.length).toBeGreaterThanOrEqual(1)
     })
 
     it('renders recent tracks list', async () => {
@@ -306,12 +312,16 @@ describe('Mobile Independent Music Views & Player', () => {
       expect(wrapper.text()).toContain('Kanye')
     })
 
-    it('renders song, album, and playlist results when search query returns data', async () => {
+    it('renders song, album, artist, and playlist results when search query returns data', async () => {
+      const mockArtists = [
+        { id: 'art-1', name: 'Kanye West', nationality: '美国' },
+      ]
       const wrapper = mount(MusicSearchView, {
         props: {
           initialQuery: 'Kanye',
           initialSongs: mockSongs,
           initialAlbums: mockAlbums,
+          initialArtists: mockArtists,
           initialPlaylists: mockPlaylists,
         },
         global: {
@@ -322,9 +332,11 @@ describe('Mobile Independent Music Views & Player', () => {
       expect(wrapper.text()).toContain('Power')
       expect(wrapper.text()).toContain('Stronger')
       expect(wrapper.text()).toContain('Graduation')
+      expect(wrapper.text()).toContain('Kanye West')
       expect(wrapper.text()).toContain('Kanye 精选')
       expect(wrapper.findAll('[data-testid="search-song-item"]').length).toBe(2)
       expect(wrapper.findAll('[data-testid="search-album-item"]').length).toBe(1)
+      expect(wrapper.findAll('[data-testid="search-artist-item"]').length).toBe(1)
       expect(wrapper.findAll('[data-testid="search-playlist-item"]').length).toBe(1)
     })
 

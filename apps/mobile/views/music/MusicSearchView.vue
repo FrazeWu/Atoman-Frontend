@@ -32,7 +32,7 @@
     </header>
 
     <main class="mobile-music-search__content">
-      <!-- Empty Query: Hot Searches & Discover Entry -->
+      <!-- Empty Query: Hot Searches & Recommendations -->
       <section v-if="!searchQuery.trim()" class="mobile-music-search__explore">
         <div class="mobile-music-search__section-title">热门搜索</div>
         <div class="mobile-music-search__tags">
@@ -47,27 +47,88 @@
           </button>
         </div>
 
-        <div class="mobile-music-search__section-title" style="margin-top: 24px;">快速分类</div>
-        <div class="mobile-music-search__categories">
-          <router-link to="/music/playlists" class="mobile-music-search__cat-card">
-            <div class="mobile-music-search__cat-icon">
-              <MIcon name="playlists" size="md" />
+        <!-- Recommended Songs -->
+        <div v-if="recommendedSongs.length > 0" class="mobile-music-search__rec-section">
+          <div class="mobile-music-search__rec-header">
+            <span class="mobile-music-search__section-title">推荐单曲</span>
+          </div>
+          <div class="mobile-music-search__song-list">
+            <div
+              v-for="song in recommendedSongs"
+              :key="song.id"
+              class="mobile-music-search__song-item"
+              data-testid="rec-song-item"
+              @click="playSong(song)"
+            >
+              <div class="mobile-music-search__song-cover">
+                <img v-if="song.cover_url" :src="song.cover_url" :alt="song.title" />
+                <div v-else class="mobile-music-search__song-art">
+                  <MIcon name="note" size="sm" />
+                </div>
+              </div>
+              <div class="mobile-music-search__song-info">
+                <span class="mobile-music-search__song-name">{{ song.title }}</span>
+                <span class="mobile-music-search__song-meta">
+                  {{ song.artist }} · {{ song.album || '单曲' }}
+                </span>
+              </div>
+              <span v-if="formatDuration(song.duration)" class="mobile-music-search__song-dur">
+                {{ formatDuration(song.duration) }}
+              </span>
             </div>
-            <div class="mobile-music-search__cat-text">
-              <span class="mobile-music-search__cat-name">精选歌单</span>
-              <span class="mobile-music-search__cat-desc">探索专属主题集</span>
-            </div>
-          </router-link>
+          </div>
+        </div>
 
-          <router-link to="/music" class="mobile-music-search__cat-card">
-            <div class="mobile-music-search__cat-icon">
-              <MIcon name="compass" size="md" />
+        <!-- Recommended Albums -->
+        <div v-if="recommendedAlbums.length > 0" class="mobile-music-search__rec-section">
+          <div class="mobile-music-search__rec-header">
+            <span class="mobile-music-search__section-title">热门专辑</span>
+            <router-link to="/music/albums" class="mobile-music-search__more-link">查看全部</router-link>
+          </div>
+          <div class="mobile-music-search__rec-scroll">
+            <div
+              v-for="album in recommendedAlbums"
+              :key="album.id"
+              class="mobile-music-search__rec-album-card"
+              data-testid="rec-album-item"
+              @click="openAlbum(album.id)"
+            >
+              <div class="mobile-music-search__rec-album-cover">
+                <img v-if="album.cover_url" :src="album.cover_url" :alt="album.title" />
+                <div v-else class="mobile-music-search__rec-album-art">
+                  <MIcon name="note" size="md" />
+                </div>
+                <span v-if="album.year" class="mobile-music-search__rec-album-year">{{ album.year }}</span>
+              </div>
+              <span class="mobile-music-search__rec-album-title">{{ album.title }}</span>
+              <span class="mobile-music-search__rec-album-artist">{{ album.artist }}</span>
             </div>
-            <div class="mobile-music-search__cat-text">
-              <span class="mobile-music-search__cat-name">新碟与推荐</span>
-              <span class="mobile-music-search__cat-desc">今日最新发行</span>
+          </div>
+        </div>
+
+        <!-- Recommended Artists -->
+        <div v-if="recommendedArtists.length > 0" class="mobile-music-search__rec-section">
+          <div class="mobile-music-search__rec-header">
+            <span class="mobile-music-search__section-title">热门歌手</span>
+            <router-link to="/music/artists" class="mobile-music-search__more-link">查看全部</router-link>
+          </div>
+          <div class="mobile-music-search__rec-scroll">
+            <div
+              v-for="artist in recommendedArtists"
+              :key="artist.id"
+              class="mobile-music-search__rec-artist-card"
+              data-testid="rec-artist-item"
+              @click="openArtist(artist.id)"
+            >
+              <div class="mobile-music-search__rec-artist-avatar">
+                <img v-if="artist.avatar_url" :src="artist.avatar_url" :alt="artist.name" />
+                <div v-else class="mobile-music-search__rec-artist-art">
+                  <MIcon name="person" size="md" />
+                </div>
+              </div>
+              <span class="mobile-music-search__rec-artist-name">{{ artist.name }}</span>
             </div>
-          </router-link>
+          </div>
         </div>
       </section>
 
@@ -151,6 +212,36 @@
           </div>
         </section>
 
+        <!-- Artists Section -->
+        <section
+          v-if="(activeTab === 'all' || activeTab === 'artists') && artists.length > 0"
+          class="mobile-music-search__group"
+        >
+          <div v-if="activeTab === 'all'" class="mobile-music-search__group-header">
+            <h2 class="mobile-music-search__group-title">歌手 ({{ artists.length }})</h2>
+          </div>
+          <div class="mobile-music-search__artist-list">
+            <div
+              v-for="artist in artists"
+              :key="artist.id"
+              class="mobile-music-search__artist-item"
+              data-testid="search-artist-item"
+              @click="openArtist(artist.id)"
+            >
+              <div class="mobile-music-search__artist-avatar">
+                <img v-if="artist.avatar_url" :src="artist.avatar_url" :alt="artist.name" />
+                <div v-else class="mobile-music-search__artist-art">
+                  <MIcon name="person" size="md" />
+                </div>
+              </div>
+              <div class="mobile-music-search__artist-info">
+                <span class="mobile-music-search__artist-name">{{ artist.name }}</span>
+                <span v-if="artist.nationality" class="mobile-music-search__artist-sub">{{ artist.nationality }}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- Playlists Section -->
         <section
           v-if="(activeTab === 'all' || activeTab === 'playlists') && playlists.length > 0"
@@ -195,9 +286,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { searchMusic } from '@/api/musicV1'
+import {
+  listMusicAlbums,
+  listMusicArtists,
+  listMusicSongs,
+  searchMusic,
+} from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 import MIcon from '@mobile/components/ui/MIcon.vue'
@@ -221,6 +317,13 @@ export interface SearchAlbumItem {
   cover_url?: string
 }
 
+export interface SearchArtistItem {
+  id: string
+  name: string
+  avatar_url?: string
+  nationality?: string
+}
+
 export interface SearchPlaylistItem {
   id: string
   name: string
@@ -233,12 +336,14 @@ const props = withDefaults(
     initialQuery?: string
     initialSongs?: SearchSongItem[]
     initialAlbums?: SearchAlbumItem[]
+    initialArtists?: SearchArtistItem[]
     initialPlaylists?: SearchPlaylistItem[]
   }>(),
   {
     initialQuery: '',
     initialSongs: undefined,
     initialAlbums: undefined,
+    initialArtists: undefined,
     initialPlaylists: undefined,
   }
 )
@@ -247,32 +352,41 @@ const router = useRouter()
 const player = useAudioPlayerStore()
 
 const searchQuery = ref(props.initialQuery)
-const activeTab = ref<'all' | 'songs' | 'albums' | 'playlists'>('all')
+const activeTab = ref<'all' | 'songs' | 'albums' | 'artists' | 'playlists'>('all')
 const loading = ref(false)
 
 const songs = ref<SearchSongItem[]>(props.initialSongs ? [...props.initialSongs] : [])
 const albums = ref<SearchAlbumItem[]>(props.initialAlbums ? [...props.initialAlbums] : [])
+const artists = ref<SearchArtistItem[]>(props.initialArtists ? [...props.initialArtists] : [])
 const playlists = ref<SearchPlaylistItem[]>(props.initialPlaylists ? [...props.initialPlaylists] : [])
 
-const hotTags = ['Ye', 'Kanye', '2049', 'Graduation', 'Hey Mama', 'Ambient', '电子', 'Hip-Hop']
+const recommendedSongs = ref<SearchSongItem[]>([])
+const recommendedAlbums = ref<SearchAlbumItem[]>([])
+const recommendedArtists = ref<SearchArtistItem[]>([])
+const recommendedLoading = ref(false)
+
+const hotTags = ['Ye', 'Kanye', 'Daniel Caesar', 'Kendrick Lamar', '宋冬野', 'BULLY', '2049', 'Graduation', 'Hip-Hop']
 
 const filterTabs = [
   { key: 'all' as const, label: '全部' },
   { key: 'songs' as const, label: '单曲' },
   { key: 'albums' as const, label: '专辑' },
+  { key: 'artists' as const, label: '歌手' },
   { key: 'playlists' as const, label: '歌单' },
 ]
 
 const hasResults = computed(() => {
   if (activeTab.value === 'songs') return songs.value.length > 0
   if (activeTab.value === 'albums') return albums.value.length > 0
+  if (activeTab.value === 'artists') return artists.value.length > 0
   if (activeTab.value === 'playlists') return playlists.value.length > 0
-  return songs.value.length > 0 || albums.value.length > 0 || playlists.value.length > 0
+  return songs.value.length > 0 || albums.value.length > 0 || artists.value.length > 0 || playlists.value.length > 0
 })
 
 function getCount(key: string): number | null {
   if (key === 'songs') return songs.value.length || null
   if (key === 'albums') return albums.value.length || null
+  if (key === 'artists') return artists.value.length || null
   if (key === 'playlists') return playlists.value.length || null
   return null
 }
@@ -293,9 +407,27 @@ watch(searchQuery, (next) => {
   if (!next.trim()) {
     songs.value = []
     albums.value = []
+    artists.value = []
     playlists.value = []
   }
 })
+
+function extractArtist(item: any): string {
+  if (typeof item?.artist === 'string' && item.artist.trim()) return item.artist.trim()
+  if (Array.isArray(item?.artist_credits) && item.artist_credits.length > 0) {
+    const names = item.artist_credits
+      .map((c: any) => c?.artist?.name || c?.name || c?.display_name)
+      .filter((n: any): n is string => typeof n === 'string' && Boolean(n.trim()))
+    if (names.length > 0) return names.join(' / ')
+  }
+  if (Array.isArray(item?.artists) && item.artists.length > 0) {
+    const names = item.artists
+      .map((a: any) => a?.name || a?.display_name)
+      .filter((n: any): n is string => typeof n === 'string' && Boolean(n.trim()))
+    if (names.length > 0) return names.join(' / ')
+  }
+  return '未知艺术家'
+}
 
 async function executeSearch(query: string) {
   if (!query.trim()) return
@@ -310,9 +442,7 @@ async function executeSearch(query: string) {
       songs.value = data.songs.map((item: any) => ({
         id: item.id,
         title: item.title,
-        artist: typeof item.artist === 'string'
-          ? item.artist
-          : item.artists?.map((a: any) => a.name || a.display_name).join(' / ') || '未知艺术家',
+        artist: extractArtist(item),
         album: typeof item.album === 'string' ? item.album : item.album?.title || '',
         duration: item.duration_sec ?? item.duration_seconds ?? item.duration ?? 0,
         audio_url: item.audio_url || '',
@@ -327,14 +457,24 @@ async function executeSearch(query: string) {
       albums.value = data.albums.map((item: any) => ({
         id: item.id,
         title: item.title,
-        artist: typeof item.artist === 'string'
-          ? item.artist
-          : item.artists?.map((a: any) => a.name || a.display_name).join(' / ') || '未知艺术家',
+        artist: extractArtist(item),
         year: item.year || item.release_year || '',
         cover_url: item.cover_url || '',
       }))
     } else {
       albums.value = []
+    }
+
+    // Artists
+    if (data.artists && Array.isArray(data.artists)) {
+      artists.value = data.artists.map((item: any) => ({
+        id: item.id,
+        name: item.name || item.display_name || '歌手',
+        avatar_url: item.image_url || item.avatar_url || '',
+        nationality: item.nationality || '',
+      }))
+    } else {
+      artists.value = []
     }
 
     // Playlists
@@ -351,9 +491,57 @@ async function executeSearch(query: string) {
   } catch {
     songs.value = []
     albums.value = []
+    artists.value = []
     playlists.value = []
   } finally {
     loading.value = false
+  }
+}
+
+async function loadRecommended() {
+  if (props.initialSongs !== undefined || props.initialAlbums !== undefined) return
+  recommendedLoading.value = true
+  try {
+    const [songsRes, albumsRes, artistsRes] = await Promise.allSettled([
+      listMusicSongs({ page: 1, page_size: 6 }),
+      listMusicAlbums({ page: 1, page_size: 6 }),
+      listMusicArtists({ page: 1, page_size: 8 }),
+    ])
+
+    if (songsRes.status === 'fulfilled' && songsRes.value?.data?.length) {
+      recommendedSongs.value = songsRes.value.data.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        artist: extractArtist(item),
+        album: typeof item.album === 'string' ? item.album : item.album?.title || '',
+        duration: item.duration_sec ?? item.duration_seconds ?? item.duration ?? 0,
+        audio_url: item.audio_url || '',
+        cover_url: item.cover_url || item.album?.cover_url || '',
+      }))
+    }
+
+    if (albumsRes.status === 'fulfilled' && albumsRes.value?.data?.length) {
+      recommendedAlbums.value = albumsRes.value.data.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        artist: extractArtist(item),
+        year: item.year || item.release_year || '',
+        cover_url: item.cover_url || '',
+      }))
+    }
+
+    if (artistsRes.status === 'fulfilled' && artistsRes.value?.data?.length) {
+      recommendedArtists.value = artistsRes.value.data.map((item: any) => ({
+        id: item.id,
+        name: item.name || item.display_name || '歌手',
+        avatar_url: item.image_url || item.avatar_url || '',
+        nationality: item.nationality || '',
+      }))
+    }
+  } catch {
+    // Graceful fallback
+  } finally {
+    recommendedLoading.value = false
   }
 }
 
@@ -381,9 +569,17 @@ function openAlbum(id: string) {
   void router.push(`/music/album/${id}`)
 }
 
+function openArtist(id: string) {
+  void router.push(`/music/artist/${id}`)
+}
+
 function openPlaylist(id: string) {
   void router.push(`/music/playlist/${id}`)
 }
+
+onMounted(() => {
+  void loadRecommended()
+})
 </script>
 
 <style scoped>
@@ -479,6 +675,145 @@ function openPlaylist(id: string) {
 
 .mobile-music-search__tag:active {
   background: #f0f0f0;
+}
+
+.mobile-music-search__rec-section {
+  margin-top: 24px;
+}
+
+.mobile-music-search__rec-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.mobile-music-search__more-link {
+  font-size: 12px;
+  color: var(--a-color-text-secondary, #777777);
+  text-decoration: none;
+}
+
+.mobile-music-search__rec-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.mobile-music-search__rec-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-music-search__rec-album-card {
+  width: 104px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.mobile-music-search__rec-album-cover {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fbfbfb;
+  border: 1px solid var(--a-color-border-soft, #eeeeee);
+}
+
+.mobile-music-search__rec-album-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mobile-music-search__rec-album-art {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--a-color-text-muted, #999999);
+}
+
+.mobile-music-search__rec-album-year {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  font-size: 9px;
+  padding: 1px 3px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  border-radius: 2px;
+  font-family: monospace;
+}
+
+.mobile-music-search__rec-album-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--a-color-text, #111111);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-music-search__rec-album-artist {
+  font-size: 11px;
+  color: var(--a-color-text-secondary, #777777);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-music-search__rec-artist-card {
+  width: 68px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+}
+
+.mobile-music-search__rec-artist-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #f5f5f5;
+  border: 1px solid var(--a-color-border-soft, #eeeeee);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.mobile-music-search__rec-artist-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mobile-music-search__rec-artist-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--a-color-text-muted, #999999);
+}
+
+.mobile-music-search__rec-artist-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--a-color-text, #111111);
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .mobile-music-search__categories {
@@ -595,6 +930,7 @@ function openPlaylist(id: string) {
 
 .mobile-music-search__song-list,
 .mobile-music-search__album-list,
+.mobile-music-search__artist-list,
 .mobile-music-search__playlist-list {
   display: flex;
   flex-direction: column;
@@ -602,6 +938,74 @@ function openPlaylist(id: string) {
   border-radius: 4px;
   overflow: hidden;
   background: #ffffff;
+}
+
+.mobile-music-search__artist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--a-color-border-soft, #f7f7f7);
+  cursor: pointer;
+}
+
+.mobile-music-search__artist-item:last-child {
+  border-bottom: none;
+}
+
+.mobile-music-search__artist-item:active {
+  background-color: var(--a-color-surface-hover, #fafafa);
+}
+
+.mobile-music-search__artist-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #f5f5f5;
+  border: 1px solid var(--a-color-border-soft, #eeeeee);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mobile-music-search__artist-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mobile-music-search__artist-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--a-color-text-muted, #999999);
+}
+
+.mobile-music-search__artist-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mobile-music-search__artist-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--a-color-text, #111111);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-music-search__artist-sub {
+  font-size: 11px;
+  color: var(--a-color-text-secondary, #777777);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .mobile-music-search__song-item,

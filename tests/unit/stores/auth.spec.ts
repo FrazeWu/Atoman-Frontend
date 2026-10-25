@@ -26,6 +26,17 @@ describe('auth store cookie session', () => {
 	expect(localStorage.getItem('user')).toBeNull()
   })
 
+  it('initializes when browser storage is unavailable', () => {
+    vi.stubGlobal('localStorage', {
+      removeItem: () => { throw new Error('storage is disabled') },
+    })
+
+    const auth = useAuthStore()
+
+    expect(auth.isAuthenticated).toBe(false)
+    expect(auth.user).toBeNull()
+  })
+
   it('logs in from a cookie-only response without persisting credentials', async () => {
 	const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
 	  csrf_token: 'csrf-login',

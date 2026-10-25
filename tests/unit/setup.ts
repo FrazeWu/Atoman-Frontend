@@ -12,12 +12,7 @@ if (testImportMeta.env) {
 }
 
 const storage = new Map<string, string>();
-const createUnmockedFetch = () =>
-	vi.fn(async (input: RequestInfo | URL) => {
-		throw new Error(`未 mock fetch: ${String(input)}`);
-	});
-
-vi.stubGlobal("localStorage", {
+const createLocalStorage = () => ({
 	getItem: (key: string) => storage.get(key) ?? null,
 	setItem: (key: string, value: string) => {
 		storage.set(key, value);
@@ -29,6 +24,12 @@ vi.stubGlobal("localStorage", {
 		storage.clear();
 	},
 });
+const createUnmockedFetch = () =>
+	vi.fn(async (input: RequestInfo | URL) => {
+		throw new Error(`未 mock fetch: ${String(input)}`);
+	});
+
+vi.stubGlobal("localStorage", createLocalStorage());
 
 vi.stubGlobal("fetch", createUnmockedFetch());
 vi.stubGlobal("scrollTo", vi.fn());
@@ -39,5 +40,7 @@ config.global.components = {
 
 beforeEach(() => {
 	storage.clear();
+	vi.stubGlobal("localStorage", createLocalStorage());
 	vi.stubGlobal("fetch", createUnmockedFetch());
+	vi.stubGlobal("scrollTo", vi.fn());
 });

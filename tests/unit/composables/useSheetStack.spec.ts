@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
 	createSheetStack,
@@ -19,6 +19,10 @@ const layer = (kind: TestLayer["kind"], id: string): TestLayer => ({
 
 describe("createSheetStack", () => {
 	beforeEach(() => document.body.replaceChildren());
+	afterEach(() => {
+		vi.useRealTimers();
+		document.body.replaceChildren();
+	});
 
 	it("pushes, replaces, pops, and returns to a retained layer", () => {
 		const stack = createSheetStack<TestLayer>();

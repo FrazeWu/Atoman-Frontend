@@ -1,5 +1,20 @@
 <template>
   <main class="mobile-song-view">
+    <!-- Sticky Top Navigation Header -->
+    <header class="mobile-song-view__topbar">
+      <button
+        type="button"
+        class="mobile-song-view__back-btn"
+        data-testid="song-back-btn"
+        aria-label="返回"
+        @click="handleBack"
+      >
+        <MIcon name="chevron-left" size="md" :stroke-width="2" />
+      </button>
+      <span class="mobile-song-view__topbar-title">歌曲详情</span>
+      <div class="mobile-song-view__topbar-space" />
+    </header>
+
     <section v-if="loading" class="mobile-song-view__state" aria-live="polite">正在加载歌曲</section>
     <section v-else-if="error" class="mobile-song-view__state mobile-song-view__state--error" role="alert">
       <h1>歌曲无法加载</h1>
@@ -19,16 +34,16 @@
         </div>
       </div>
 
-        <div class="mobile-song-view__identity">
-          <h1>{{ song.title }}</h1>
-          <p v-if="detail.artists.length" class="mobile-song-view__artists">
-            <template v-for="(artist, index) in detail.artists" :key="artist.id">
-              <span v-if="index" aria-hidden="true"> / </span>
-              <RouterLink :to="`/music/artist/${artist.id}`">{{ artist.name }}</RouterLink>
-            </template>
-          </p>
-          <p v-else>{{ artistText }}</p>
-        </div>
+      <div class="mobile-song-view__identity">
+        <h1>{{ song.title }}</h1>
+        <p v-if="detail.artists.length" class="mobile-song-view__artists">
+          <template v-for="(artist, index) in detail.artists" :key="artist.id">
+            <span v-if="index" aria-hidden="true"> / </span>
+            <RouterLink :to="`/music/artist/${artist.id}`">{{ artist.name }}</RouterLink>
+          </template>
+        </p>
+        <p v-else>{{ artistText }}</p>
+      </div>
 
       <div class="mobile-song-view__actions" aria-label="歌曲操作">
         <button
@@ -37,7 +52,7 @@
           :disabled="!detail.playable || !song.audio_url"
           @click="playSong"
         >
-          <Play :size="18" fill="currentColor" aria-hidden="true" />
+          <MIcon name="player-play" size="sm" />
           <span>{{ detail.playable && song.audio_url ? '播放歌曲' : '暂无音频' }}</span>
         </button>
         <button
@@ -49,7 +64,7 @@
           :title="isFavorite ? '移出最爱' : '加入最爱'"
           @click="toggleFavorite"
         >
-          <Heart :size="19" :fill="isFavorite ? 'currentColor' : 'none'" aria-hidden="true" />
+          <MIcon name="heart" size="sm" />
           <span>{{ isFavorite ? '已收藏' : '收藏' }}</span>
         </button>
         <button
@@ -60,7 +75,7 @@
           title="加入播放队列"
           @click="queueSong"
         >
-          <ListPlus :size="19" aria-hidden="true" />
+          <MIcon name="queue" size="sm" />
           <span>加入队列</span>
         </button>
         <button
@@ -71,7 +86,7 @@
           title="编辑歌曲"
           @click="editSong"
         >
-          <Pencil :size="19" aria-hidden="true" />
+          <MIcon name="edit" size="sm" />
           <span>编辑</span>
         </button>
       </div>
@@ -113,7 +128,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Heart, Pencil, ListPlus, Play } from 'lucide-vue-next'
+import MIcon from '@mobile/components/ui/MIcon.vue'
 import { getMusicSongDetail, type MusicSongDetail, type MusicSongListItem } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
@@ -135,11 +150,20 @@ const loading = ref(false)
 const error = ref('')
 let loadGeneration = 0
 
+const songId = computed(() => (route.params.songId || route.params.id) as string)
 const song = computed(() => detail.value?.song as MusicSongListItem)
 const artistText = computed(() => detail.value?.artists.map((artist) => artist.name).join(' / ') || song.value?.artists?.map((artist) => artist.name).join(' / ') || '未知艺术家')
 const isFavorite = computed(() => Boolean(song.value && favoriteSongIds.value.has(String(song.value.id))))
 const actionBusy = ref('')
 const feedback = ref('')
+
+function handleBack() {
+  if (typeof window !== 'undefined' && window.history.length > 1) {
+    router.back()
+  } else {
+    void router.push('/music')
+  }
+}
 
 function formatDuration(seconds: number) {
   const total = Math.max(0, Math.floor(seconds))
@@ -161,6 +185,7 @@ function toPlayableSong(source: MusicSongListItem): Song {
     lyrics: source.lyrics || '',
     audio_url: source.audio_url || '',
     waveform_peaks: source.waveform_peaks,
+    duration: source.duration_sec || (source as any).duration || 0,
     cover_url: source.cover_url || source.album?.cover_url || '',
     track_number: source.track_number,
     disc_number: source.disc_number,
@@ -169,9 +194,9 @@ function toPlayableSong(source: MusicSongListItem): Song {
 }
 
 async function loadSong() {
-  const songId = route.params.songId
+  const currentId = songId.value
   const generation = ++loadGeneration
-  if (typeof songId !== 'string' || !songId) {
+  if (typeof currentId !== 'string' || !currentId) {
     detail.value = null
     loading.value = false
     return
@@ -179,30 +204,30 @@ async function loadSong() {
   loading.value = true
   error.value = ''
   try {
-    const nextDetail = await getMusicSongDetail(songId)
-    if (generation !== loadGeneration || route.params.songId !== songId) return
+    const nextDetail = await getMusicSongDetail(currentId)
+    if (generation !== loadGeneration || songId.value !== currentId) return
     detail.value = nextDetail
   } catch {
-    if (generation !== loadGeneration || route.params.songId !== songId) return
+    if (generation !== loadGeneration || songId.value !== currentId) return
     detail.value = null
     error.value = '请稍后重试'
   } finally {
-    if (generation === loadGeneration && route.params.songId === songId) loading.value = false
+    if (generation === loadGeneration && songId.value === currentId) loading.value = false
   }
 }
 
 watch(
   [() => detail.value?.song.id, () => authStore.isAuthenticated],
-  async ([songId, authenticated]) => {
-    if (!songId || !authenticated) {
+  async ([currentId, authenticated]) => {
+    if (!currentId || !authenticated) {
       favoriteSongIds.value = new Set()
       return
     }
     try {
-      const requestedSongId = String(songId)
+      const requestedSongId = String(currentId)
       await loadFavoriteSongs([requestedSongId], () => (
         String(detail.value?.song.id || '') === requestedSongId &&
-        String(route.params.songId || '') === requestedSongId
+        String(songId.value || '') === requestedSongId
       ))
     } catch {
       favoriteSongIds.value = new Set()
@@ -254,13 +279,50 @@ function playSong() {
   void router.push('/music/player')
 }
 
-watch(() => route.params.songId, loadSong, { immediate: true })
+watch(songId, loadSong, { immediate: true })
 </script>
 
 <style scoped>
 .mobile-song-view {
   min-width: 0;
-  padding: 1.25rem 1rem 2rem;
+  padding: 1.25rem 1rem calc(2rem + env(safe-area-inset-bottom, 24px));
+}
+
+.mobile-song-view__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: -1.25rem -1rem 1rem -1rem;
+}
+
+.mobile-song-view__back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--a-color-fg);
+  cursor: pointer;
+  padding: 0;
+}
+
+.mobile-song-view__topbar-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--a-color-fg);
+}
+
+.mobile-song-view__topbar-space {
+  width: 36px;
 }
 
 .mobile-song-view__content {
@@ -351,58 +413,48 @@ watch(() => route.params.songId, loadSong, { immediate: true })
 }
 
 .mobile-song-view__action:disabled {
-  color: var(--a-color-muted);
+  opacity: 0.45;
   cursor: default;
-  opacity: 0.55;
-}
-
-.mobile-song-view__action:focus-visible {
-  outline: 2px solid var(--a-color-primary);
-  outline-offset: 2px;
-}
-
-.mobile-song-view__feedback {
-  margin: 0;
-  padding: 0.65rem 0.75rem;
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-muted);
-  font-size: 0.8rem;
-}
-
-.mobile-song-view__identity p,
-.mobile-song-view__metadata dt,
-.mobile-song-view__lyrics p,
-.mobile-song-view__state p {
-  color: var(--a-color-muted);
 }
 
 .mobile-song-view__play {
   display: inline-flex;
-  min-height: 44px;
+  min-height: 50px;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  width: 100%;
+  padding: 0 1rem;
   border: 0;
   border-radius: 8px;
   background: var(--a-color-primary);
   color: var(--a-color-primary-contrast);
   font: inherit;
+  font-size: 0.95rem;
   font-weight: 600;
+  cursor: pointer;
 }
 
 .mobile-song-view__play:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.mobile-song-view__feedback {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
   background: var(--a-color-surface-muted);
-  color: var(--a-color-muted);
+  font-size: 0.8rem;
 }
 
 .mobile-song-view__metadata {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.65rem;
   margin: 0;
-  padding: 1rem 0;
-  border-top: 1px solid var(--a-color-border-soft);
-  border-bottom: 1px solid var(--a-color-border-soft);
+  padding: 1rem;
+  border-radius: 8px;
+  background: var(--a-color-surface);
+  border: 1px solid var(--a-color-border-soft);
 }
 
 .mobile-song-view__metadata div {
@@ -411,39 +463,56 @@ watch(() => route.params.songId, loadSong, { immediate: true })
   gap: 1rem;
 }
 
-.mobile-song-view__metadata dt,
-.mobile-song-view__metadata dd {
-  margin: 0;
+.mobile-song-view__metadata dt {
+  color: var(--a-color-muted);
+  font-size: 0.82rem;
 }
 
 .mobile-song-view__metadata dd {
+  margin: 0;
   text-align: right;
+  font-size: 0.85rem;
 }
 
 .mobile-song-view__lyrics {
   display: grid;
   gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: var(--a-color-surface);
+  border: 1px solid var(--a-color-border-soft);
+}
+
+.mobile-song-view__lyrics h2 {
+  font-size: 1rem;
 }
 
 .mobile-song-view__lyrics p {
   white-space: pre-wrap;
   line-height: 1.7;
+  color: var(--a-color-muted);
+  font-size: 0.9rem;
 }
 
 .mobile-song-view__state {
   display: grid;
-  min-height: 50dvh;
   place-content: center;
+  min-height: 40dvh;
   gap: 0.75rem;
   text-align: center;
 }
 
+.mobile-song-view__state--error {
+  color: var(--a-color-danger);
+}
+
 .mobile-song-view__state button {
-  min-height: 44px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--a-color-primary);
-  color: var(--a-color-primary-contrast);
-  font: inherit;
+  min-height: 38px;
+  padding: 0 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 6px;
+  background: var(--a-color-surface);
+  color: var(--a-color-fg);
+  cursor: pointer;
 }
 </style>

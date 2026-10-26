@@ -112,7 +112,7 @@ const subRouteTitle = computed(() => {
   if (p.startsWith('/modules')) return '功能目录'
   if (p.includes('/settings')) return '设置'
   if (p.startsWith('/music/tags')) return '标签'
-  if (p.startsWith('/music/songs')) return '单曲'
+  if (p.startsWith('/music/song')) return '歌曲详情'
   if (p.startsWith('/music/albums')) return '专辑'
   if (p.startsWith('/music/artists')) return '艺术家'
   if (p.startsWith('/music/imports')) return '导入记录'
@@ -135,21 +135,25 @@ const subRouteTitle = computed(() => {
 
 const isDetailRoute = computed(() => isMobileDetailRoute(route.path))
 
+const isFullscreenPlayerRoute = computed(() => (
+  route.path === '/music/player' || route.path === '/music/lyrics'
+))
+
 const showMobileTopbar = computed(() => {
   if (route.path === '/feed' && typeof route.query.source_id === 'string') return false
-  if (route.path === '/music/player') return false
+  if (isFullscreenPlayerRoute.value) return false
   if (/^\/books\/(?:read|public-read)\//.test(route.path)) return false
   if (/^\/(?:inbox|messages)\/chat\//.test(route.path)) return false
   if (/^\/feed\/(?:article|item)\//.test(route.path)) return false
   if (/^\/(?:post|posts\/post)\//.test(route.path)) return false
-  if (/^\/music\/(?:playlist|album|artist)\//.test(route.path)) return false
+  if (/^\/music\/(?:playlist|album|artist|song|songs)\//.test(route.path)) return false
   if (/^\/posts\/notes\/[^/]+/.test(route.path)) return false
   return true
 })
 
 const showMobileBottomNav = computed(() => {
   const p = (route.path || '/').replace(/\/$/, '') || '/'
-  if (isAuthRoute.value || p === '/music/player') return false
+  if (isAuthRoute.value || isFullscreenPlayerRoute.value) return false
   if (/^\/books\/(?:read|public-read)\//.test(p)) return false
   if (/^\/(?:inbox|messages)\/chat\//.test(p)) return false
   if (/^\/posts\/notes\/[^/]+/.test(p)) return false
@@ -157,7 +161,7 @@ const showMobileBottomNav = computed(() => {
 })
 
 const showMobilePlayer = computed(() => (
-  playerPresence.hasCurrentTrack && route.path !== '/music/player'
+  playerPresence.hasCurrentTrack && !isFullscreenPlayerRoute.value
 ))
 
 const mobilePlayerBottom = computed(() => (

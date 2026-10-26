@@ -24,12 +24,10 @@
 <script setup lang="ts">
 import { RouterLink, useRouter } from 'vue-router'
 import MusicLyricsPanel from '@/components/music/MusicLyricsPanel.vue'
-import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { usePlayerStore } from '@/stores/player'
 
 const player = usePlayerStore()
 const router = useRouter()
-const { openSong } = useMusicDrawers()
 
 function close() {
   player.showLyrics = false
@@ -41,7 +39,7 @@ function openSongDetail() {
   const songId = player.currentSong?.id
   if (!songId) return
   player.showLyrics = false
-  openSong(String(songId))
+  void router.push(`/music/song/${songId}`)
 }
 </script>
 

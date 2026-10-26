@@ -934,6 +934,13 @@ export const usePlayerStore = defineStore("player", () => {
 			queue.value = restoredQueue;
 			currentAlbum.value = null;
 			isPlaying.value = false;
+			duration.value =
+				(typeof (restoredSong as any)?.duration === "number"
+					? (restoredSong as any).duration
+					: 0) ||
+				(typeof (restoredSong as any)?.duration_seconds === "number"
+					? (restoredSong as any).duration_seconds
+					: 0);
 		} catch (error) {
 			reportError(error, "Failed to restore playback state:");
 		}

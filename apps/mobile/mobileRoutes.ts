@@ -328,6 +328,10 @@ export const mobileRoutes: RouteRecordRaw[] = [
 				component: () => import("./MobileSongView.vue"),
 			},
 			{
+				path: "songs/:songId",
+				redirect: (to) => `/music/song/${to.params.songId}`,
+			},
+			{
 				path: "playlist/:playlistId",
 				component: () => import("./views/music/MusicPlaylistDetailView.vue"),
 			},

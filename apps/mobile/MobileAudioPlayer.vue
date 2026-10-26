@@ -1,5 +1,10 @@
 <template>
-  <section class="mobile-mini-player" aria-label="正在播放">
+  <section
+    class="mobile-mini-player"
+    :class="{ 'is-dragging': isDragging }"
+    :style="miniPlayerStyle"
+    aria-label="正在播放"
+  >
     <!-- 2px Top Progress Line -->
     <div class="mobile-mini-player__progress" aria-hidden="true">
       <span :style="{ width: `${progressRatio}%` }" />
@@ -68,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, type CSSProperties } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import MIcon from '@mobile/components/ui/MIcon.vue'
@@ -76,6 +81,26 @@ import MIcon from '@mobile/components/ui/MIcon.vue'
 const player = usePlayerStore()
 const router = useRouter()
 const route = useRoute()
+
+const isDragging = ref(false)
+const dragOffsetY = ref(0)
+const hasInteracted = ref(false)
+
+const miniPlayerStyle = computed<CSSProperties>(() => {
+  if (isDragging.value && dragOffsetY.value < 0) {
+    return {
+      transform: `translateY(${dragOffsetY.value}px)`,
+      transition: 'none',
+    }
+  }
+  if (hasInteracted.value) {
+    return {
+      transform: 'translateY(0px)',
+      transition: 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+    }
+  }
+  return {}
+})
 
 const artistText = computed(() => {
   const song = player.currentSong
@@ -114,6 +139,8 @@ function handleTouchStart(e: TouchEvent) {
   touchCurrentX = touchStartX
   touchCurrentY = touchStartY
   isSwiped = false
+  isDragging.value = false
+  dragOffsetY.value = 0
 }
 
 function handleTouchMove(e: TouchEvent) {
@@ -121,6 +148,16 @@ function handleTouchMove(e: TouchEvent) {
   if (!touch) return
   touchCurrentX = touch.clientX
   touchCurrentY = touch.clientY
+
+  const deltaX = touchCurrentX - touchStartX
+  const deltaY = touchCurrentY - touchStartY
+
+  // Upward drag micro-displacement
+  if (deltaY < -4 && Math.abs(deltaY) > Math.abs(deltaX)) {
+    isDragging.value = true
+    hasInteracted.value = true
+    dragOffsetY.value = Math.max(-16, deltaY * 0.35)
+  }
 }
 
 function handleTouchEnd(e: TouchEvent) {
@@ -133,6 +170,9 @@ function handleTouchEnd(e: TouchEvent) {
   const deltaY = touchCurrentY - touchStartY
   const absX = Math.abs(deltaX)
   const absY = Math.abs(deltaY)
+
+  isDragging.value = false
+  dragOffsetY.value = 0
 
   // Swipe up to expand to full player
   if (deltaY < -40 && absY > 1.2 * absX) {

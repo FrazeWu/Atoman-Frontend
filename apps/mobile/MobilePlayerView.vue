@@ -805,7 +805,11 @@ onUnmounted(() => {
 
 <style scoped>
 .mobile-player-view {
-  min-height: 100dvh;
+  position: fixed;
+  inset: 0;
+  z-index: var(--a-z-modal, 800);
+  width: 100%;
+  height: 100dvh;
   box-sizing: border-box;
   max-width: 32rem;
   margin: 0 auto;
@@ -814,6 +818,7 @@ onUnmounted(() => {
   flex-direction: column;
   justify-content: space-between;
   background: var(--a-color-bg, #ffffff);
+  overflow-y: auto;
   touch-action: pan-y;
   will-change: transform;
 }

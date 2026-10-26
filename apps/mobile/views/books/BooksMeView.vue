@@ -23,7 +23,7 @@
         </div>
         <div class="books-profile-card__info">
           <h2 class="books-profile-card__name">{{ profile.name }}</h2>
-          <p class="books-profile-card__bio">{{ profile.bio || '在书页间旅行，在文字中呼吸。' }}</p>
+          <p class="books-profile-card__bio">{{ profile.bio || '暂无个人简介' }}</p>
         </div>
       </div>
 

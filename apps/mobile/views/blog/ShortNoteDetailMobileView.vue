@@ -127,6 +127,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getActivePinia } from 'pinia'
+import { useAuthStore } from '@/stores/auth'
+import { useApi } from '@/composables/useApi'
+import { apiRequestEnvelope } from '@/api/client'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
 import MAvatar from '@mobile/components/ui/MAvatar.vue'
@@ -147,6 +151,16 @@ export interface ShortNoteDetailItem {
   images?: string[]
 }
 
+export interface CommentItem {
+  id: string
+  author: {
+    name: string
+    avatar?: string
+  }
+  text: string
+  created_at?: string
+}
+
 const props = withDefaults(
   defineProps<{
     initialNote?: ShortNoteDetailItem
@@ -158,8 +172,12 @@ const props = withDefaults(
 
 const route = useRoute()
 const router = useRouter()
+const api = useApi()
+const authStore = getActivePinia() ? useAuthStore() : null
 
 const replyText = ref('')
+const sendingReply = ref(false)
+const loading = ref(false)
 
 const note = ref<ShortNoteDetailItem>(
   props.initialNote || {
@@ -174,7 +192,7 @@ const note = ref<ShortNoteDetailItem>(
   }
 )
 
-const comments = ref([
+const comments = ref<CommentItem[]>([
   {
     id: 'c-1',
     author: { name: '文字客', avatar: '' },
@@ -201,13 +219,19 @@ function handleShare() {
   }
 }
 
-function toggleLike() {
-  if (note.value.liked) {
-    note.value.liked = false
-    note.value.likes_count = Math.max(0, note.value.likes_count - 1)
-  } else {
-    note.value.liked = true
-    note.value.likes_count += 1
+async function toggleLike() {
+  const prevLiked = note.value.liked
+  const prevCount = note.value.likes_count
+  note.value.liked = !prevLiked
+  note.value.likes_count = prevLiked ? Math.max(0, prevCount - 1) : prevCount + 1
+
+  try {
+    await apiRequestEnvelope(api.blog.shortNoteLike(note.value.id), {
+      method: note.value.liked ? 'POST' : 'DELETE',
+    })
+  } catch {
+    note.value.liked = prevLiked
+    note.value.likes_count = prevCount
   }
 }
 
@@ -215,16 +239,40 @@ function toggleBookmark() {
   note.value.bookmarked = !note.value.bookmarked
 }
 
-function handleSendReply() {
-  if (!replyText.value.trim()) return
-  comments.value.push({
-    id: `local-c-${Date.now()}`,
-    author: { name: '我', avatar: '' },
-    text: replyText.value.trim(),
-    created_at: new Date().toISOString(),
-  })
-  replyText.value = ''
-  note.value.comments_count += 1
+async function handleSendReply() {
+  const text = replyText.value.trim()
+  if (!text || sendingReply.value) return
+  sendingReply.value = true
+
+  try {
+    const res = await apiRequestEnvelope<any>(api.blog.shortNoteComments(note.value.id), {
+      method: 'POST',
+      body: JSON.stringify({ content: text }),
+    })
+    const newComment: CommentItem = {
+      id: res?.data?.id ? String(res.data.id) : `c-${Date.now()}`,
+      author: {
+        name: authStore?.user?.display_name || authStore?.user?.username || '我',
+        avatar: authStore?.user?.avatar_url || '',
+      },
+      text,
+      created_at: new Date().toISOString(),
+    }
+    comments.value.unshift(newComment)
+    replyText.value = ''
+    note.value.comments_count = (note.value.comments_count || 0) + 1
+  } catch {
+    comments.value.unshift({
+      id: `local-c-${Date.now()}`,
+      author: { name: authStore?.user?.display_name || '我', avatar: '' },
+      text,
+      created_at: new Date().toISOString(),
+    })
+    replyText.value = ''
+    note.value.comments_count = (note.value.comments_count || 0) + 1
+  } finally {
+    sendingReply.value = false
+  }
 }
 
 function formatTime(isoString?: string): string {
@@ -233,12 +281,67 @@ function formatTime(isoString?: string): string {
     const diffSec = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000)
     if (diffSec < 60) return '刚刚'
     if (diffSec < 3600) return `${Math.floor(diffSec / 60)}分钟前`
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}小时前`
     const d = new Date(isoString)
     return `${d.getMonth() + 1}月${d.getDate()}日`
   } catch {
     return '刚刚'
   }
 }
+
+async function loadDetailData() {
+  if (props.initialNote) return
+  const id = route.params.id as string
+  if (!id) return
+
+  loading.value = true
+  try {
+    const res = await apiRequestEnvelope<any>(api.blog.shortNote(id))
+    if (res?.data) {
+      const data = res.data
+      note.value = {
+        id: String(data.id),
+        content: data.content || '',
+        author: {
+          name: data.user?.display_name || data.user?.username || '用户',
+          avatar: data.user?.avatar_url || '',
+        },
+        created_at: data.created_at,
+        likes_count: data.likes_count ?? 0,
+        comments_count: data.comments_count ?? 0,
+        liked: Boolean(data.liked),
+        bookmarked: Boolean(data.bookmarked),
+        images: Array.isArray(data.media) ? data.media.map((m: any) => m.url) : [],
+        image: Array.isArray(data.media) && data.media[0] ? data.media[0].url : undefined,
+      }
+    }
+  } catch {
+    // Keep fallback note on error
+  }
+
+  try {
+    const commentsRes = await apiRequestEnvelope<any[]>(api.blog.shortNoteComments(id))
+    if (commentsRes?.data && Array.isArray(commentsRes.data)) {
+      comments.value = commentsRes.data.map((c: any) => ({
+        id: String(c.id),
+        author: {
+          name: c.author?.display_name || c.author?.username || c.user?.display_name || c.user?.username || '用户',
+          avatar: c.author?.avatar_url || c.user?.avatar_url || '',
+        },
+        text: c.content || '',
+        created_at: c.created_at,
+      }))
+    }
+  } catch {
+    // Keep existing comments on error
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  void loadDetailData()
+})
 </script>
 
 <style scoped>

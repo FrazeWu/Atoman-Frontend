@@ -181,7 +181,10 @@ const profile = computed<FeedProfile>(() => {
 })
 
 function handleOpmlExport() {
-  // OPML export simulation or toast
+  if (typeof window !== 'undefined' && authStore?.token) {
+    const url = `${api.url}/feed/opml/export`
+    window.open(url, '_blank')
+  }
 }
 
 function clearCache() {

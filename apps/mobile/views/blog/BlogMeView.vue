@@ -155,13 +155,30 @@
 
       <!-- Panel 3: Bookmarks -->
       <div v-else class="me-panel me-panel--bookmarks">
-        <div class="me-empty-state" data-testid="bookmarks-empty">
+        <div v-if="userBookmarks.length === 0" class="me-empty-state" data-testid="bookmarks-empty">
           <MIcon name="bookmark" size="lg" custom-class="empty-icon" />
           <p class="me-empty-state__title">暂无收藏内容</p>
           <p class="me-empty-state__desc">在阅读长文或短笺时，点击书签图标即可收藏。</p>
           <router-link to="/posts">
             <MButton variant="secondary" size="sm">去发现文章</MButton>
           </router-link>
+        </div>
+
+        <div v-else class="me-items-list" data-testid="bookmarks-list">
+          <article
+            v-for="bm in userBookmarks"
+            :key="bm.id"
+            class="me-article-card"
+            @click="openArticle(bm.content_id)"
+          >
+            <h3 class="me-article-card__title">{{ bm.title }}</h3>
+            <p v-if="bm.summary" class="me-article-card__excerpt">{{ bm.summary }}</p>
+            <div class="me-article-card__meta">
+              <span v-if="bm.reading_time_minutes">{{ bm.reading_time_minutes }} 分钟阅读</span>
+              <span v-if="bm.reading_time_minutes">·</span>
+              <span>{{ formatTime(bm.published_at) }}</span>
+            </div>
+          </article>
         </div>
       </div>
     </main>
@@ -209,17 +226,28 @@ export interface UserArticleItem {
   published_at?: string
 }
 
+export interface UserBookmarkItem {
+  id: string
+  content_id: string
+  title: string
+  summary?: string
+  reading_time_minutes?: number
+  published_at?: string
+}
+
 const props = withDefaults(
   defineProps<{
     initialProfile?: AuthorProfile
     initialNotes?: UserNoteItem[]
     initialArticles?: UserArticleItem[]
+    initialBookmarks?: UserBookmarkItem[]
     initialTab?: 'notes' | 'articles' | 'bookmarks'
   }>(),
   {
     initialProfile: undefined,
     initialNotes: undefined,
     initialArticles: undefined,
+    initialBookmarks: undefined,
     initialTab: 'notes',
   }
 )
@@ -253,8 +281,26 @@ const userArticles = ref<UserArticleItem[]>(
   props.initialArticles ? [...props.initialArticles] : []
 )
 
-function deleteUserNote(id: string) {
+const userBookmarks = ref<UserBookmarkItem[]>(
+  props.initialBookmarks ? [...props.initialBookmarks] : []
+)
+
+async function deleteUserNote(id: string) {
+  const prevNotes = [...userNotes.value]
   userNotes.value = userNotes.value.filter((n) => n.id !== id)
+  if (profile.value.stats) {
+    profile.value.stats.notes = userNotes.value.length
+  }
+  try {
+    await apiRequestEnvelope(api.blog.shortNote(id), {
+      method: 'DELETE',
+    })
+  } catch {
+    userNotes.value = prevNotes
+    if (profile.value.stats) {
+      profile.value.stats.notes = userNotes.value.length
+    }
+  }
 }
 
 function openArticle(id: string) {
@@ -291,7 +337,7 @@ async function loadAuthorData() {
 
   try {
     if (!props.initialNotes) {
-      const notesRes = await apiRequestEnvelope<any[]>(`${api.blog.shortNotes}?author_id=${encodeURIComponent(String(authorId))}&page=1&page_size=30`)
+      const notesRes = await apiRequestEnvelope<any[]>(`${api.blog.shortNotes}?user_id=${encodeURIComponent(String(authorId))}&page=1&page_size=30`)
       if (notesRes?.data && Array.isArray(notesRes.data)) {
         userNotes.value = notesRes.data.map((n) => ({
           id: String(n.id),
@@ -321,6 +367,24 @@ async function loadAuthorData() {
         if (profile.value.stats) {
           profile.value.stats.articles = userArticles.value.length
         }
+      }
+    }
+
+    if (!props.initialBookmarks) {
+      const bookmarksRes = await apiRequestEnvelope<any[]>(api.blog.bookmarks)
+      if (bookmarksRes?.data && Array.isArray(bookmarksRes.data)) {
+        userBookmarks.value = bookmarksRes.data.map((b: any) => {
+          const content = b.content || {}
+          const words = (content.content || '').length
+          return {
+            id: String(b.id),
+            content_id: String(b.content_id || content.id),
+            title: content.title || '收藏文章',
+            summary: content.summary || '',
+            reading_time_minutes: Math.max(1, Math.round(words / 400)),
+            published_at: b.created_at || content.published_at,
+          }
+        })
       }
     }
   } catch {

@@ -6,10 +6,11 @@
         <div class="debate-hall-header__icon">
           <MIcon name="debate" size="md" />
         </div>
-        <h1 class="debate-hall-header__title">辩论大厅</h1>
+        <h1 class="debate-hall-header__title">{{ headerTitle }}</h1>
       </div>
 
-      <nav class="debate-hall-tabs" role="tablist">
+      <!-- Subtabs for Discover (辩题) -->
+      <nav v-if="currentMainTab === 'discover'" class="debate-hall-tabs" role="tablist">
         <button
           type="button"
           class="debate-tab"
@@ -48,16 +49,84 @@
 
     <!-- Topics Stream -->
     <main class="debate-hall-content">
-      <div v-if="filteredTopics.length === 0" class="debate-hall-empty" data-testid="debate-empty-state">
+      <!-- Guest state for Subscriptions tab -->
+      <div v-if="currentMainTab === 'subscriptions' && isGuest" class="debate-guest-wrap">
+        <MGuestCard
+          title="登录查看关注辩题"
+          description="登录后可查看参与和关注的辩题动态。"
+          action-text="立即登录"
+          icon="debate"
+        />
+      </div>
+
+      <!-- Guest state for Mine tab -->
+      <div v-else-if="currentMainTab === 'mine' && isGuest" class="debate-guest-wrap">
+        <MGuestCard
+          title="登录查看我的辩题"
+          description="登录后可查看发起的辩题与参与记录。"
+          action-text="立即登录"
+          icon="debate"
+        />
+      </div>
+
+      <!-- Mine tab authenticated view -->
+      <div v-else-if="currentMainTab === 'mine'" class="debate-mine-view">
+        <section class="debate-mine-card">
+          <div class="debate-mine-user">
+            <div class="debate-mine-avatar">
+              <span>{{ (authStore?.user?.display_name || authStore?.user?.username || '我').slice(0, 1) }}</span>
+            </div>
+            <div class="debate-mine-info">
+              <h2 class="debate-mine-name">{{ authStore?.user?.display_name || authStore?.user?.username || '辩手' }}</h2>
+              <span class="debate-mine-role">已参与 {{ participatedTopics.length }} 场讨论</span>
+            </div>
+          </div>
+          <div class="debate-mine-actions">
+            <button type="button" class="debate-action-link" @click="router?.push('/debate/rules')">
+              <MIcon name="file-text" size="xs" />
+              <span>辩论规则</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="debate-mine-section">
+          <h3 class="debate-section-title">我参与的辩题 ({{ participatedTopics.length }})</h3>
+          <div v-if="participatedTopics.length === 0" class="debate-hall-empty">
+            <p class="debate-hall-empty__title">暂无参与记录</p>
+          </div>
+          <div v-else class="debate-topics-list">
+            <article
+              v-for="topic in participatedTopics"
+              :key="topic.id"
+              class="debate-topic-card"
+              data-testid="debate-topic-card"
+              @click="openTopic(topic.id)"
+            >
+              <h2 class="debate-topic-card__title">{{ topic.title }}</h2>
+              <p class="debate-topic-card__desc">{{ topic.description }}</p>
+              <div class="debate-my-vote-badge">
+                <span>我的立场：</span>
+                <span :class="topic.userVote === 'affirmative' ? 'text-aff' : 'text-neg'">
+                  {{ topic.userVote === 'affirmative' ? '支持正方' : '支持反方' }}
+                </span>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+
+      <!-- General debate list (Discover / Opinions / Subscriptions) -->
+      <div v-else-if="displayTopics.length === 0" class="debate-hall-empty" data-testid="debate-empty-state">
         <p class="debate-hall-empty__title">暂无相关辩题</p>
       </div>
 
       <div v-else class="debate-topics-list">
         <article
-          v-for="topic in filteredTopics"
+          v-for="topic in displayTopics"
           :key="topic.id"
           class="debate-topic-card"
           data-testid="debate-topic-card"
+          @click="openTopic(topic.id)"
         >
           <h2 class="debate-topic-card__title">{{ topic.title }}</h2>
           <p class="debate-topic-card__desc">{{ topic.description }}</p>
@@ -92,7 +161,7 @@
               size="sm"
               :variant="topic.userVote === 'affirmative' ? 'primary' : 'secondary'"
               data-testid="vote-affirmative-btn"
-              @click="handleVote(topic, 'affirmative')"
+              @click.stop="handleVote(topic, 'affirmative')"
             >
               支持正方
             </MButton>
@@ -100,7 +169,7 @@
               size="sm"
               :variant="topic.userVote === 'negative' ? 'primary' : 'secondary'"
               data-testid="vote-negative-btn"
-              @click="handleVote(topic, 'negative')"
+              @click.stop="handleVote(topic, 'negative')"
             >
               支持反方
             </MButton>
@@ -113,9 +182,13 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { getActivePinia } from 'pinia'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
+import MGuestCard from '@mobile/components/ui/MGuestCard.vue'
 import { useDebateStore } from '@/stores/debate'
+import { useAuthStore } from '@/stores/auth'
 
 export interface DebateTopic {
   id: string
@@ -135,6 +208,42 @@ const props = withDefaults(
     initialTopics: undefined,
   }
 )
+
+let route: ReturnType<typeof useRoute> | null = null
+let router: ReturnType<typeof useRouter> | null = null
+try {
+  route = useRoute()
+  router = useRouter()
+} catch {
+  // Graceful fallback for non-routed tests
+}
+
+const authStore = getActivePinia() ? useAuthStore() : null
+const isGuest = computed(() => {
+  if (props.initialTopics !== undefined) return false
+  return !authStore?.isAuthenticated && !authStore?.user
+})
+
+const currentMainTab = computed<'discover' | 'opinions' | 'subscriptions' | 'mine'>(() => {
+  const tab = route?.query?.tab
+  if (tab === 'opinions') return 'opinions'
+  if (tab === 'subscriptions') return 'subscriptions'
+  if (tab === 'mine') return 'mine'
+  return 'discover'
+})
+
+const headerTitle = computed(() => {
+  switch (currentMainTab.value) {
+    case 'opinions':
+      return '核心观点'
+    case 'subscriptions':
+      return '关注辩题'
+    case 'mine':
+      return '我的'
+    default:
+      return '辩论大厅'
+  }
+})
 
 const debateStore = useDebateStore()
 const activeTab = ref<'all' | 'hot' | 'participated'>('all')
@@ -173,14 +282,28 @@ async function loadDebates() {
   }
 }
 
+const participatedTopics = computed(() => {
+  return topics.value.filter((t) => t.userVote !== null && t.userVote !== undefined)
+})
+
 const filteredTopics = computed(() => {
   if (activeTab.value === 'hot') {
     return topics.value.filter((t) => t.isHot || t.affirmativeCount + t.negativeCount > 10)
   }
   if (activeTab.value === 'participated') {
-    return topics.value.filter((t) => t.userVote !== null && t.userVote !== undefined)
+    return participatedTopics.value
   }
   return topics.value
+})
+
+const displayTopics = computed(() => {
+  if (currentMainTab.value === 'subscriptions') {
+    return participatedTopics.value
+  }
+  if (currentMainTab.value === 'opinions') {
+    return topics.value.filter((t) => t.affirmativeCount + t.negativeCount > 0)
+  }
+  return filteredTopics.value
 })
 
 function calcPercentage(aff: number, neg: number) {
@@ -190,6 +313,12 @@ function calcPercentage(aff: number, neg: number) {
   return {
     aff: affPct,
     neg: 100 - affPct,
+  }
+}
+
+function openTopic(id: string) {
+  if (router) {
+    void router.push(`/debate/${id}`)
   }
 }
 
@@ -230,6 +359,7 @@ onMounted(() => {
   min-height: 100vh;
   background-color: var(--a-color-bg, #ffffff);
   box-sizing: border-box;
+  padding-bottom: 32px;
 }
 
 .debate-hall-header {
@@ -301,6 +431,10 @@ onMounted(() => {
   padding: 16px;
 }
 
+.debate-guest-wrap {
+  padding-top: 16px;
+}
+
 .debate-topics-list {
   display: flex;
   flex-direction: column;
@@ -313,6 +447,12 @@ onMounted(() => {
   border-radius: var(--a-radius-card, 4px);
   padding: 16px;
   box-sizing: border-box;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.debate-topic-card:active {
+  background-color: var(--a-color-bg-subtle, #f8fafc);
 }
 
 .debate-topic-card__title {
@@ -376,6 +516,103 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+.debate-my-vote-badge {
+  font-size: 0.8125rem;
+  color: var(--a-color-muted, #64748b);
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.text-aff {
+  color: #0284c7;
+  font-weight: 600;
+}
+
+.text-neg {
+  color: #e11d48;
+  font-weight: 600;
+}
+
+/* Mine View styles */
+.debate-mine-view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.debate-mine-card {
+  padding: 16px;
+  background: var(--a-color-bg, #ffffff);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.debate-mine-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.debate-mine-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background: var(--a-color-primary, #0f172a);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.debate-mine-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.debate-mine-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--a-color-text, #0f172a);
+}
+
+.debate-mine-role {
+  font-size: 0.75rem;
+  color: var(--a-color-muted, #64748b);
+}
+
+.debate-mine-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.debate-action-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  font-size: 0.8125rem;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  background: #ffffff;
+  color: var(--a-color-text, #0f172a);
+  cursor: pointer;
+}
+
+.debate-section-title {
+  margin: 0 0 12px 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--a-color-text, #0f172a);
 }
 
 .debate-hall-empty {

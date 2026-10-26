@@ -92,8 +92,11 @@ const isSubRoute = computed(() => {
     isUtilityRoute.value ||
     isDetailRoute.value ||
     /^\/music\/(?:tags|songs|albums|artists|imports|more)(\/|$)/.test(route.path) ||
+    /^\/feed\/(?:sources|stats)(\/|$)/.test(route.path) ||
     /^\/posts\/subscriptions(\/|$)/.test(route.path) ||
-    /^\/(?:channel|channels|collection)(\/|$)/.test(route.path)
+    /^\/(?:channel|channels|collection)(\/|$)/.test(route.path) ||
+    /^\/debate\/(?:rules|me)(\/|$)/.test(route.path) ||
+    /^\/studio\/(?:editor|new)(\/|$)/.test(route.path)
   )
 })
 
@@ -120,7 +123,13 @@ const subRouteTitle = computed(() => {
   if (p.startsWith('/posts/subscriptions')) return '订阅'
   if (/^\/channels?(\/|$)/.test(p)) return '专栏'
   if (p.startsWith('/collection')) return '合集'
-  if (p.startsWith('/feed/stats')) return '统计'
+  if (p.startsWith('/feed/stats')) return '阅读统计'
+  if (p.startsWith('/feed/sources')) return '订阅源管理'
+  if (p.startsWith('/debate/rules')) return '辩论规则'
+  if (p.startsWith('/debate/me')) return '我的辩题'
+  if (/^\/debate\/(?!search(?:\/|$)|me(?:\/|$)|rules(?:\/|$))[^/]+/.test(p)) return '辩题详情'
+  if (p.startsWith('/studio/editor')) return '编辑内容'
+  if (p.startsWith('/studio/new')) return '新建内容'
   return ''
 })
 
@@ -134,13 +143,16 @@ const showMobileTopbar = computed(() => {
   if (/^\/feed\/(?:article|item)\//.test(route.path)) return false
   if (/^\/(?:post|posts\/post)\//.test(route.path)) return false
   if (/^\/music\/(?:playlist|album|artist)\//.test(route.path)) return false
+  if (/^\/posts\/notes\/[^/]+/.test(route.path)) return false
   return true
 })
 
 const showMobileBottomNav = computed(() => {
-  if (isAuthRoute.value || route.path === '/music/player') return false
-  if (/^\/books\/(?:read|public-read)\//.test(route.path)) return false
-  if (/^\/(?:inbox|messages)\/chat\//.test(route.path)) return false
+  const p = (route.path || '/').replace(/\/$/, '') || '/'
+  if (isAuthRoute.value || p === '/music/player') return false
+  if (/^\/books\/(?:read|public-read)\//.test(p)) return false
+  if (/^\/(?:inbox|messages)\/chat\//.test(p)) return false
+  if (/^\/posts\/notes\/[^/]+/.test(p)) return false
   return true
 })
 

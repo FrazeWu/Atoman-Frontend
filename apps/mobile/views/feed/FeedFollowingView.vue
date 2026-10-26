@@ -202,11 +202,25 @@ watch(
 )
 
 function openArticle(id: string) {
+  const item = articles.value.find((a) => a.id === id)
+  if (item) {
+    item.unread = false
+  }
+  if (feedStore?.markItemsRead) {
+    void feedStore.markItemsRead([id]).catch(() => {})
+  }
   router.push(`/feed/article/${id}`)
 }
 
-function markAllAsRead() {
+async function markAllAsRead() {
   articles.value = articles.value.map((a) => ({ ...a, unread: false }))
+  if (feedStore?.markAllFeedRead) {
+    try {
+      await feedStore.markAllFeedRead()
+    } catch {
+      // Graceful fallback
+    }
+  }
 }
 
 function formatTime(isoString?: string): string {

@@ -16,7 +16,7 @@ vi.mock('vue-router', () => ({
   },
 }))
 
-import { listLibrary, listPrivateNotes, readingStatistics, readingRecommendation } from '@/api/bookPrivate'
+import { listLibrary, listPrivateNotes, readingStatistics, readingRecommendation, deletePrivateNote } from '@/api/bookPrivate'
 import { getCloudReadingState } from '@/api/bookReading'
 
 vi.mock('@/api/bookReading', () => ({ getCloudReadingState: vi.fn() }))
@@ -24,6 +24,7 @@ vi.mock('@/api/bookReading', () => ({ getCloudReadingState: vi.fn() }))
 vi.mock('@/api/bookPrivate', () => ({
   listLibrary: vi.fn(),
   listPrivateNotes: vi.fn(),
+  deletePrivateNote: vi.fn(),
   readingStatistics: vi.fn(),
   readingRecommendation: vi.fn(),
 }))
@@ -112,6 +113,26 @@ describe('Books Mobile Real Data Wiring', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('应该设想西西弗是幸福的')
+
+    const deleteBtn = wrapper.find('[data-testid="note-delete-btn-note-real-1"]')
+    await deleteBtn.trigger('click')
+    expect(wrapper.text()).not.toContain('应该设想西西弗是幸福的')
+    expect(deletePrivateNote).toHaveBeenCalledWith({ id: 'note-real-1', version: 1 })
+  })
+
+  it('renders MGuestCard in BooksNotesView when unauthenticated', async () => {
+    const authStore = useAuthStore()
+    authStore.token = null
+    authStore.isAuthenticated = false
+    authStore.user = null
+
+    const wrapper = mount(BooksNotesView, {
+      global: { plugins: [pinia] },
+    })
+    await flushPromises()
+
+    expect(wrapper.findComponent(MGuestCard).exists()).toBe(true)
+    expect(wrapper.text()).toContain('登录查看书摘笔记')
   })
 
   it('renders MGuestCard in BooksMeView when unauthenticated', async () => {

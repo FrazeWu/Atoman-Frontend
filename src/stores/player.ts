@@ -1070,7 +1070,7 @@ export const usePlayerStore = defineStore("player", () => {
 			applySongSourceAndPlay();
 		}
 
-		duration.value = 0;
+		duration.value = normalizedSong.duration || (normalizedSong as any).duration_seconds || 0;
 		podcastTracker = null;
 
 		updateMediaSessionMetadata({

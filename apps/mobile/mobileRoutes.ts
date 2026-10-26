@@ -129,7 +129,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 		component: () => import("./MobileFeedLayout.vue"),
 		children: [
 			{ path: 'explore', component: () => import('./views/feed/FeedStreamView.vue') },
-			{ path: 'stats', component: () => import('@/views/feed/FeedStatsView.vue'), meta: requiresAuth },
+			{ path: 'stats', component: () => import('./views/feed/FeedStatsMobileView.vue'), meta: requiresAuth },
 			{
 				path: "",
 				component: () => import("./views/feed/FeedStreamView.vue"),
@@ -194,7 +194,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	},
 	{
 		path: "/posts/notes/:id/edit",
-		component: () => import("@/views/blog/ShortNoteComposerView.vue"),
+		component: () => import("./views/blog/ShortNoteEditMobileView.vue"),
 		meta: requiresAuth,
 	},
 	{
@@ -208,7 +208,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	},
 	{
 		path: "/posts/subscriptions",
-		component: () => import("@/views/blog/BlogSubscriptionsView.vue"),
+		component: () => import("./views/blog/BlogSubscriptionsMobileView.vue"),
 		meta: requiresAuth,
 	},
 	{

@@ -6,11 +6,20 @@
         <h1 class="books-notes-header__title">书摘</h1>
         <span class="books-notes-header__count">{{ notesList.length }} 条笔记</span>
       </div>
-      <p class="books-notes-header__subtitle">阅读时的吉光片羽与内在省思</p>
     </header>
 
+    <!-- Guest State -->
+    <div v-if="!props.initialNotes && authStore && !authStore.isAuthenticated" class="books-notes-guest-wrap">
+      <MGuestCard
+        title="登录查看书摘笔记"
+        description="登录后可同步阅读划线与心得记录。"
+        action-text="立即登录"
+        icon="notes"
+      />
+    </div>
+
     <!-- Notes Stream -->
-    <main class="books-notes-content">
+    <main v-else class="books-notes-content">
       <div v-if="notesList.length > 0" class="books-notes-list">
         <article
           v-for="note in notesList"
@@ -73,7 +82,7 @@
           <MIcon name="notes" size="lg" />
         </div>
         <p class="books-notes-empty__title">暂无书摘笔记</p>
-        <p class="books-notes-empty__desc">在阅读过程中划线并记录心得，留存心动瞬间。</p>
+        <p class="books-notes-empty__desc">在阅读过程中选中文本即可划线并添加书摘与随笔。</p>
       </div>
     </main>
   </div>
@@ -83,8 +92,9 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { getActivePinia } from 'pinia'
 import MIcon from '@mobile/components/ui/MIcon.vue'
+import MGuestCard from '@mobile/components/ui/MGuestCard.vue'
 import { useAuthStore } from '@/stores/auth'
-import { listPrivateNotes } from '@/api/bookPrivate'
+import { deletePrivateNote, listPrivateNotes } from '@/api/bookPrivate'
 
 export interface BookNoteItem {
   id: string
@@ -106,39 +116,8 @@ const props = withDefaults(
 
 const authStore = getActivePinia() ? useAuthStore() : null
 
-const defaultSampleNotes: BookNoteItem[] = [
-  {
-    id: 'bn-1',
-    bookTitle: '沉思录',
-    chapter: '第4卷',
-    quote: '事物的本质并不因我们对它的赞扬或贬低而发生丝毫改变。',
-    comment: '无论外界声浪如何，坚守内在的秩序与平静。',
-    created_at: '2026-10-20T10:00:00Z',
-  },
-  {
-    id: 'bn-2',
-    bookTitle: '工作的乐趣',
-    chapter: '序言',
-    quote: '真正的劳动在于将混沌的原料转化为有条理的形式。',
-    comment: '代码重构和木雕有相通的手艺人愉悦。',
-    created_at: '2026-10-21T09:00:00Z',
-  },
-  {
-    id: 'bn-3',
-    bookTitle: '瓦尔登湖',
-    chapter: '结束语',
-    quote: '不必去寻找什么，只要在自我的中心安顿下来，宇宙万物便会围绕你旋转。',
-    comment: '摆脱信息噪音的最好方式是向内审视。',
-    created_at: '2026-10-18T14:30:00Z',
-  },
-]
-
 const notesList = ref<BookNoteItem[]>(
-  props.initialNotes
-    ? [...props.initialNotes]
-    : authStore
-      ? []
-      : defaultSampleNotes
+  props.initialNotes ? [...props.initialNotes] : []
 )
 
 watch(
@@ -151,8 +130,15 @@ watch(
   { deep: true }
 )
 
-function deleteNote(id: string) {
+async function deleteNote(id: string) {
   notesList.value = notesList.value.filter((n) => n.id !== id)
+  if (authStore?.isAuthenticated) {
+    try {
+      await deletePrivateNote({ id, version: 1 } as any)
+    } catch {
+      // Graceful fallback
+    }
+  }
 }
 
 function copyQuote(note: BookNoteItem) {

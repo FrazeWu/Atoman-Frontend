@@ -77,6 +77,7 @@ import { useRouter } from 'vue-router'
 import { getActivePinia } from 'pinia'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useFeedStore } from '@/stores/feed'
 import { useApi } from '@/composables/useApi'
 import { apiRequestResult } from '@/api/client'
 
@@ -100,6 +101,7 @@ const props = withDefaults(
 const router = useRouter()
 const api = useApi()
 const authStore = getActivePinia() ? useAuthStore() : null
+const feedStore = getActivePinia() ? useFeedStore() : null
 
 const defaultSampleStarred: StarredArticleItem[] = [
   {
@@ -158,8 +160,16 @@ function openArticle(id: string) {
   router.push(`/feed/article/${id}`)
 }
 
-function unstar(id: string) {
+async function unstar(id: string) {
+  const prevArticles = [...articles.value]
   articles.value = articles.value.filter((a) => a.id !== id)
+  if (feedStore?.toggleStar) {
+    try {
+      await feedStore.toggleStar(id)
+    } catch {
+      articles.value = prevArticles
+    }
+  }
 }
 
 function formatTime(isoString?: string): string {

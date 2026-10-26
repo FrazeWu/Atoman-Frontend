@@ -113,7 +113,16 @@ const props = withDefaults(
 )
 
 const router = useRouter()
-const categories = ['全部', '技术', '思考', '随笔', '文化', '设计']
+const defaultCategories = ['全部', '技术', '思考', '随笔', '文化', '设计']
+const categories = computed(() => {
+  const dynamicSet = new Set<string>()
+  for (const a of articlesList.value) {
+    if (a.category && a.category !== '全部') {
+      dynamicSet.add(a.category)
+    }
+  }
+  return ['全部', ...Array.from(new Set([...defaultCategories.slice(1), ...dynamicSet]))]
+})
 const selectedCategory = ref('全部')
 const loading = ref(false)
 

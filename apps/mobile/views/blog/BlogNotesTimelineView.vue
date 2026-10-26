@@ -140,6 +140,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { getActivePinia } from 'pinia'
+import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import { apiRequestEnvelope } from '@/api/client'
 import MIcon from '@mobile/components/ui/MIcon.vue'
@@ -174,6 +176,7 @@ const props = withDefaults(
 
 const router = useRouter()
 const api = useApi()
+const authStore = getActivePinia() ? useAuthStore() : null
 
 const showComposer = ref(false)
 const loading = ref(false)
@@ -212,13 +215,19 @@ const notes = ref<ShortNoteFeedItem[]>(
   props.initialNotes ? [...props.initialNotes] : [...fallbackNotes]
 )
 
-function toggleLike(note: ShortNoteFeedItem) {
-  if (note.liked) {
-    note.liked = false
-    note.likes_count = Math.max(0, note.likes_count - 1)
-  } else {
-    note.liked = true
-    note.likes_count += 1
+async function toggleLike(note: ShortNoteFeedItem) {
+  const prevLiked = note.liked
+  const prevCount = note.likes_count
+  note.liked = !prevLiked
+  note.likes_count = prevLiked ? Math.max(0, prevCount - 1) : prevCount + 1
+
+  try {
+    await apiRequestEnvelope(api.blog.shortNoteLike(note.id), {
+      method: note.liked ? 'POST' : 'DELETE',
+    })
+  } catch {
+    note.liked = prevLiked
+    note.likes_count = prevCount
   }
 }
 
@@ -232,13 +241,14 @@ function openNoteDetail(id: string) {
   }
 }
 
-function handlePublishNote(payload: { content: string; image?: string }) {
-  const newNote: ShortNoteFeedItem = {
+async function handlePublishNote(payload: { content: string; image?: string }) {
+  const user = authStore?.user
+  const optimisticNote: ShortNoteFeedItem = {
     id: `local-note-${Date.now()}`,
     content: payload.content,
     author: {
-      name: '我',
-      avatar: '',
+      name: user?.display_name || user?.username || '我',
+      avatar: user?.avatar_url || '',
     },
     created_at: new Date().toISOString(),
     likes_count: 0,
@@ -246,7 +256,24 @@ function handlePublishNote(payload: { content: string; image?: string }) {
     liked: false,
     image: payload.image,
   }
-  notes.value.unshift(newNote)
+  notes.value.unshift(optimisticNote)
+
+  try {
+    const res = await apiRequestEnvelope<any>(api.blog.shortNotes, {
+      method: 'POST',
+      body: JSON.stringify({
+        content: payload.content,
+        media_urls: payload.image ? [payload.image] : [],
+      }),
+    })
+    if (res?.data) {
+      const saved = res.data
+      optimisticNote.id = String(saved.id)
+      if (saved.created_at) optimisticNote.created_at = saved.created_at
+    }
+  } catch {
+    // Keep optimistic note
+  }
 }
 
 function formatTime(isoString?: string): string {

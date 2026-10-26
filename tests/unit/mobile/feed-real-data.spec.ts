@@ -1,151 +1,198 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import FeedStatsMobileView from '@/../apps/mobile/views/feed/FeedStatsMobileView.vue'
+import BlogSubscriptionsMobileView from '@/../apps/mobile/views/blog/BlogSubscriptionsMobileView.vue'
 import FeedFollowingView from '@/../apps/mobile/views/feed/FeedFollowingView.vue'
 import FeedStarredView from '@/../apps/mobile/views/feed/FeedStarredView.vue'
-import FeedMeView from '@/../apps/mobile/views/feed/FeedMeView.vue'
-import FeedSourcesView from '@/../apps/mobile/views/feed/FeedSourcesView.vue'
-import MGuestCard from '@/../apps/mobile/components/ui/MGuestCard.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 
 const mockPush = vi.fn()
+const mockBack = vi.fn()
+
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: mockPush, replace: vi.fn(), back: vi.fn() }),
-  useRoute: () => ({ query: {} }),
+  useRouter: () => ({ push: mockPush, replace: vi.fn(), back: mockBack }),
+  useRoute: () => ({ query: {}, params: {} }),
   RouterLink: {
     template: '<a><slot /></a>',
   },
 }))
 
-describe('Feed Mobile Real Data Wiring', () => {
+const mockApiResult = vi.fn(async (url: string) => {
+  if (url.includes('/feed/stats')) {
+    return {
+      ok: true,
+      data: {
+        total_read: 48,
+        source_breakdown: [
+          { feed_source_id: 'src-1', title: 'Evan You Blog', count: 30 },
+          { feed_source_id: 'src-2', title: 'TypeScript Official', count: 18 },
+        ],
+      },
+    }
+  }
+  return { ok: true, data: { data: [] } }
+})
+
+vi.mock('@/api/client', () => ({
+  apiRequestResult: (url: string, options?: any) => mockApiResult(url),
+  apiRequestEnvelope: vi.fn().mockResolvedValue({ data: [] }),
+}))
+
+describe('Feed & Subscription Real Data Wiring', () => {
   let pinia: ReturnType<typeof createPinia>
 
   beforeEach(() => {
     pinia = createPinia()
     setActivePinia(pinia)
     mockPush.mockReset()
+    mockBack.mockReset()
+    mockApiResult.mockClear()
+  })
 
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(async (input: any) => {
-      const url = String(input?.url || input)
-      if (url.includes('/feed/stars')) {
-        return new Response(JSON.stringify({
-          code: 0,
-          data: {
-            items: [
-              {
-                id: 'star-real-1',
-                title: '实时星标文章：深入理解响应式系统',
-                source_title: '前端周刊',
-                category: '技术',
-                created_at: '2026-10-21T10:00:00Z',
-              },
-            ],
-            total: 1,
-          },
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-      }
-      if (url.includes('/feed/subscriptions')) {
-        return new Response(JSON.stringify({
-          code: 0,
-          data: [
-            { id: 'sub-1', title: 'Feed 1', url: 'https://example.com/rss1' },
-            { id: 'sub-2', title: 'Feed 2', url: 'https://example.com/rss2' },
+  describe('FeedStatsMobileView.vue', () => {
+    it('renders stats overview cards and source breakdown list', async () => {
+      const authStore = useAuthStore()
+      authStore.token = 'test-token'
+      authStore.isAuthenticated = true
+      authStore.user = { id: 1, uuid: 'user-1', username: 'tester', role: 'user' }
+
+      const wrapper = mount(FeedStatsMobileView, {
+        global: { plugins: [pinia] },
+      })
+      await flushPromises()
+
+      expect(mockApiResult).toHaveBeenCalledWith(expect.stringContaining('/feed/stats?period=week'))
+      expect(wrapper.find('[data-testid="stats-total-read"]').text()).toBe('48')
+      expect(wrapper.find('[data-testid="stats-sources-count"]').text()).toBe('2')
+      expect(wrapper.find('[data-testid="stats-top-source"]').text()).toContain('Evan You Blog')
+      expect(wrapper.find('[data-testid="stats-source-list"]').text()).toContain('TypeScript Official')
+    })
+
+    it('switches period when tapping period button', async () => {
+      const authStore = useAuthStore()
+      authStore.token = 'test-token'
+      authStore.isAuthenticated = true
+      authStore.user = { id: 1, uuid: 'user-1', username: 'tester', role: 'user' }
+
+      const wrapper = mount(FeedStatsMobileView, {
+        global: { plugins: [pinia] },
+      })
+      await flushPromises()
+
+      const monthBtn = wrapper.find('[data-testid="period-btn-month"]')
+      await monthBtn.trigger('click')
+      await flushPromises()
+
+      expect(mockApiResult).toHaveBeenCalledWith(expect.stringContaining('/feed/stats?period=month'))
+    })
+  })
+
+  describe('BlogSubscriptionsMobileView.vue', () => {
+    it('renders empty state when there are no subscribed items', async () => {
+      const authStore = useAuthStore()
+      authStore.token = 'test-token'
+      authStore.isAuthenticated = true
+      authStore.user = { id: 1, uuid: 'user-1', username: 'tester', role: 'user' }
+
+      const wrapper = mount(BlogSubscriptionsMobileView, {
+        global: { plugins: [pinia] },
+        props: { initialItems: [] },
+      })
+      await flushPromises()
+
+      expect(wrapper.find('[data-testid="subs-empty"]').exists()).toBe(true)
+      expect(wrapper.text()).toContain('暂无订阅更新')
+    })
+
+    it('renders list of subscribed posts and navigates on tap', async () => {
+      const authStore = useAuthStore()
+      authStore.token = 'test-token'
+      authStore.isAuthenticated = true
+      authStore.user = { id: 1, uuid: 'user-1', username: 'tester', role: 'user' }
+
+      const wrapper = mount(BlogSubscriptionsMobileView, {
+        global: { plugins: [pinia] },
+        props: {
+          initialItems: [
+            {
+              id: 'p-sub-1',
+              type: 'post',
+              title: '订阅作者的深度长文',
+              summary: '长文摘要内容...',
+              author: { name: '订阅作者', avatar: '' },
+              channel_name: '思考专栏',
+              published_at: '2026-10-21T10:00:00Z',
+              unread: true,
+            },
           ],
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-      }
-      return new Response(JSON.stringify({ code: 0, data: {} }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-    }))
+        },
+      })
+      await flushPromises()
+
+      expect(wrapper.find('[data-testid="subs-list"]').exists()).toBe(true)
+      expect(wrapper.text()).toContain('订阅作者的深度长文')
+      expect(wrapper.text()).toContain('思考专栏')
+
+      await wrapper.find('.blog-subs-card').trigger('click')
+      expect(mockPush).toHaveBeenCalledWith('/post/p-sub-1')
+    })
   })
 
-  it('renders real timeline articles in FeedFollowingView', async () => {
-    const authStore = useAuthStore()
-    authStore.token = 'auth-token'
-    authStore.isAuthenticated = true
+  describe('FeedFollowingView.vue persistence', () => {
+    it('calls feedStore.markAllFeedRead when tapping mark all as read', async () => {
+      const feedStore = useFeedStore()
+      const markSpy = vi.spyOn(feedStore, 'markAllFeedRead').mockResolvedValue(true)
 
-    const feedStore = useFeedStore()
-    feedStore.timeline = [
-      {
-        type: 'feed_item',
-        feed_item: {
-          id: 'item-101',
-          title: 'Vite 6 架构演进实战',
-          summary: '环境共享与通用工具链',
-          source_title: 'Vite Team',
-          published_at: '2026-10-21T10:00:00Z',
-          is_read: false,
-        } as any,
-      },
-    ]
-    feedStore.fetchTimeline = vi.fn().mockResolvedValue(undefined)
-    feedStore.fetchSubscriptions = vi.fn().mockResolvedValue(undefined)
+      const wrapper = mount(FeedFollowingView, {
+        global: { plugins: [pinia] },
+        props: {
+          initialArticles: [
+            {
+              id: 'art-un-1',
+              title: '未读文章',
+              summary: '摘要',
+              sourceName: '源',
+              unread: true,
+            },
+          ],
+        },
+      })
+      await flushPromises()
 
-    const wrapper = mount(FeedFollowingView, {
-      global: { plugins: [pinia] },
+      const markBtn = wrapper.find('[data-testid="mark-all-read-btn"]')
+      await markBtn.trigger('click')
+      await flushPromises()
+
+      expect(markSpy).toHaveBeenCalled()
     })
-    await wrapper.vm.$nextTick()
-    await new Promise((r) => setTimeout(r, 20))
-
-    expect(feedStore.fetchTimeline).toHaveBeenCalled()
-    expect(wrapper.text()).toContain('Vite 6 架构演进实战')
   })
 
-  it('renders real starred articles in FeedStarredView', async () => {
-    const authStore = useAuthStore()
-    authStore.token = 'auth-token'
-    authStore.isAuthenticated = true
+  describe('FeedStarredView.vue persistence', () => {
+    it('calls feedStore.toggleStar when unstarring article', async () => {
+      const feedStore = useFeedStore()
+      const starSpy = vi.spyOn(feedStore, 'toggleStar').mockResolvedValue(true)
 
-    const wrapper = mount(FeedStarredView, {
-      global: { plugins: [pinia] },
+      const wrapper = mount(FeedStarredView, {
+        global: { plugins: [pinia] },
+        props: {
+          initialArticles: [
+            {
+              id: 'star-1',
+              title: '收藏的文章',
+              sourceName: '源',
+            },
+          ],
+        },
+      })
+      await flushPromises()
+
+      const unstarBtn = wrapper.find('[data-testid="unstar-btn-star-1"]')
+      await unstarBtn.trigger('click')
+      await flushPromises()
+
+      expect(starSpy).toHaveBeenCalledWith('star-1')
     })
-    await wrapper.vm.$nextTick()
-    await new Promise((r) => setTimeout(r, 20))
-
-    expect(wrapper.text()).toContain('实时星标文章：深入理解响应式系统')
-  })
-
-  it('renders MGuestCard in FeedMeView when unauthenticated', async () => {
-    const authStore = useAuthStore()
-    authStore.token = null
-    authStore.isAuthenticated = false
-    authStore.user = null
-
-    const wrapper = mount(FeedMeView, {
-      global: { plugins: [pinia] },
-    })
-    await wrapper.vm.$nextTick()
-
-    expect(wrapper.findComponent(MGuestCard).exists()).toBe(true)
-    expect(wrapper.text()).toContain('登录')
-  })
-
-  it('renders real user info and stats in FeedMeView when authenticated', async () => {
-    const authStore = useAuthStore()
-    authStore.token = 'auth-token'
-    authStore.isAuthenticated = true
-    authStore.user = {
-      id: 77,
-      uuid: 'user-77',
-      username: 'rss_fan',
-      display_name: '信息守望者',
-      bio: '专注科技与设计',
-      role: 'user',
-    }
-
-    const feedStore = useFeedStore()
-    feedStore.subscriptions = [
-      { id: 'sub-1', title: 'Feed 1', url: 'https://example.com/rss1' },
-      { id: 'sub-2', title: 'Feed 2', url: 'https://example.com/rss2' },
-    ] as any
-
-    const wrapper = mount(FeedMeView, {
-      global: { plugins: [pinia] },
-    })
-    await wrapper.vm.$nextTick()
-    await new Promise((r) => setTimeout(r, 20))
-
-    expect(wrapper.findComponent(MGuestCard).exists()).toBe(false)
-    expect(wrapper.text()).toContain('信息守望者')
-    expect(wrapper.text()).toContain('2') // 2 subscriptions
   })
 })

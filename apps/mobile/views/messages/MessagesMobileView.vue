@@ -124,38 +124,8 @@ const isGuest = computed(() => {
   return !authStore?.isAuthenticated && !authStore?.user
 })
 
-const defaultSampleConversations: Conversation[] = [
-  {
-    id: 'c-1',
-    partyName: 'Alice',
-    avatar: '',
-    lastMessage: '新设计的阅读器非常轻快！',
-    unreadCount: 2,
-    updatedAt: '14:30',
-    online: true,
-  },
-  {
-    id: 'c-2',
-    partyName: 'Bob',
-    avatar: '',
-    lastMessage: '收到，今晚合并代码。',
-    unreadCount: 0,
-    updatedAt: '昨天',
-    online: false,
-  },
-  {
-    id: 'c-3',
-    partyName: 'Elena Vance',
-    avatar: '',
-    lastMessage: '排版细节整理成了一篇短笺，已发布。',
-    unreadCount: 0,
-    updatedAt: '周一',
-    online: true,
-  },
-]
-
 const conversations = ref<Conversation[]>(
-  props.initialConversations ? [...props.initialConversations] : defaultSampleConversations
+  props.initialConversations ? [...props.initialConversations] : []
 )
 
 const filteredConversations = computed(() => {

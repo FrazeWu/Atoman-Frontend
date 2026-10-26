@@ -52,7 +52,7 @@
           :audio-url="player.currentSong.audio_url || ''"
           :waveform-peaks="player.currentSong.waveform_peaks"
           :current-time="player.currentTime"
-          :duration="player.duration"
+          :duration="effectiveDuration"
           :generate-waveform="!isPodcast"
           @seek="player.seek"
         />
@@ -61,7 +61,12 @@
           <span>{{ player.playbackError }}</span>
           <button type="button" @click="player.retryPlayback">重试</button>
         </p>
-        <p v-else-if="feedback" class="mobile-player-view__feedback" role="status">{{ feedback }}</p>
+
+        <Transition name="mobile-toast-fade">
+          <div v-if="feedback" class="mobile-player-view__toast" role="status">
+            {{ feedback }}
+          </div>
+        </Transition>
 
         <div class="mobile-player-view__controls" aria-label="播放控制">
           <button
@@ -317,14 +322,24 @@ const coverFallback = computed(() => {
   const text = player.currentSong?.album || player.currentSong?.artist || player.currentSong?.title || 'P'
   return text.trim().charAt(0) || 'P'
 })
+const effectiveDuration = computed(() => {
+  return player.duration || (player.currentSong as any)?.duration || (player.currentSong as any)?.duration_seconds || 0
+})
+
 const modeLabel = computed(() => {
   if (player.playbackMode === 'random') return '随机'
   if (player.playbackMode === 'single') return '单曲循环'
   return '顺序'
 })
 
+let toastTimer: ReturnType<typeof setTimeout> | null = null
 function showToast(message: string) {
   feedback.value = message
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    feedback.value = ''
+    toastTimer = null
+  }, 2200)
 }
 
 function openLyrics() {
@@ -365,21 +380,28 @@ async function toggleFavorite() {
     const result = await toggleFavoriteSong(String(player.currentSong.id))
     showToast(result.message)
   } catch {
-    feedback.value = '收藏操作失败，请重试'
+    showToast('收藏操作失败，请重试')
   }
 }
 
 onUnmounted(() => {
   player.showQueue = false
+  if (toastTimer) {
+    clearTimeout(toastTimer)
+    toastTimer = null
+  }
 })
 </script>
 
 <style scoped>
 .mobile-player-view {
-  min-height: calc(100dvh - var(--a-topbar-height) - var(--a-mobile-nav-reserved-height));
-  max-width: 34rem;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  max-width: 32rem;
   margin: 0 auto;
-  padding: 1.25rem 1rem 2rem;
+  padding: env(safe-area-inset-top, 0.75rem) 1.25rem calc(1.75rem + env(safe-area-inset-bottom, 24px));
+  display: flex;
+  flex-direction: column;
 }
 
 .mobile-player-view__header {
@@ -388,7 +410,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .mobile-player-view__header-title {
@@ -453,12 +475,17 @@ onUnmounted(() => {
 }
 
 .mobile-player-view__content {
-  display: grid;
-  gap: 1.25rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 0;
+  gap: 0.75rem;
 }
 
 .mobile-player-view__cover-wrap {
-  width: min(78vw, 320px);
+  width: min(64vw, 240px);
+  max-height: 30vh;
   aspect-ratio: 1;
   margin: 0 auto;
 }
@@ -586,10 +613,11 @@ onUnmounted(() => {
 
 .mobile-player-view__actions {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.25rem;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  align-items: center;
   border-top: 1px solid var(--a-color-border-soft);
-  padding-top: 0.75rem;
+  padding-top: 0.5rem;
 }
 
 .mobile-player-view__action {
@@ -608,8 +636,37 @@ onUnmounted(() => {
   color: var(--a-color-primary);
 }
 
-.mobile-player-view__error,
-.mobile-player-view__feedback {
+.mobile-player-view__toast {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 64px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  max-width: 90vw;
+  padding: 0.45rem 1.125rem;
+  background: rgba(15, 23, 42, 0.92);
+  color: #ffffff;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+
+.mobile-toast-fade-enter-active,
+.mobile-toast-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mobile-toast-fade-enter-from,
+.mobile-toast-fade-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -8px);
+}
+
+.mobile-player-view__error {
   display: flex;
   min-height: 44px;
   align-items: center;
@@ -621,10 +678,6 @@ onUnmounted(() => {
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   font-size: 0.8rem;
-}
-
-.mobile-player-view__feedback {
-  border-left-color: var(--a-color-primary);
 }
 
 .mobile-player-view__error button {

@@ -1,21 +1,21 @@
 <template>
   <div class="mobile-bottom-nav">
     <nav class="mobile-bottom-nav__bar" aria-label="移动端底部导航">
-      <a
+      <button
         v-for="tab in tabs"
         :key="tab.key"
-        :href="tab.path"
+        type="button"
         class="mobile-bottom-nav__tab"
         :class="{ 'is-active': isTabActive(tab) }"
         :data-tab-key="tab.key"
         data-testid="mobile-bottom-nav-tab"
-        @click="onTabClick(tab, $event)"
+        @click="onTabClick(tab)"
       >
         <span class="mobile-bottom-nav__icon-wrapper">
           <MIcon :name="tab.icon" size="md" :stroke-width="isTabActive(tab) ? 2.1 : 1.6" />
         </span>
         <span class="mobile-bottom-nav__label">{{ tab.label }}</span>
-      </a>
+      </button>
     </nav>
   </div>
 </template>
@@ -68,55 +68,67 @@ const tabs = computed<NavTabItem[]>(() => {
     : items
 })
 
-const isTabActive = (tab: NavTabItem) => {
-  if (unifiedSearchEnabled && tab.key === 'search' && route?.path === '/search') {
-    return route.query.module === (props.currentSpace?.toLowerCase() || 'music')
-  }
-  if (tab.key === 'search' && route?.path === '/music/search') {
-    return true
-  }
+const activeTabKey = computed(() => {
   if (props.activeTab) {
-    return props.activeTab === tab.key
+    return props.activeTab
   }
   if (!route?.path) {
-    return false
-  }
-  if (tab.path.includes('?')) {
-    return route.fullPath === tab.path
+    return ''
   }
   const currentPath = route.path.replace(/\/$/, '') || '/'
-  const targetPath = tab.path.replace(/\/$/, '') || '/'
-  const hasTabQuery = Boolean(route.query?.tab)
+  const currentFullPath = route.fullPath || currentPath
 
-  if (hasTabQuery && !tab.path.includes('?')) {
-    const isOtherTabExactMatch = tabs.value.some(t => t.path === route?.fullPath)
-    if (isOtherTabExactMatch) return false
+  // Unified search check
+  if (unifiedSearchEnabled && route.path === '/search') {
+    if (route.query.module === (props.currentSpace?.toLowerCase() || 'music')) {
+      return 'search'
+    }
+  }
+  if (route.path === '/music/search') {
+    return 'search'
   }
 
-  if (currentPath === targetPath) return true
-
-  // Special case: "我的" (profile) tab can match /me or /<space>/me
-  if (tab.key === 'me' && (currentPath === '/me' || currentPath.endsWith('/me'))) {
-    return true
+  // Exact fullPath match (for query-based tabs like /debate?tab=opinions, /studio?tab=drafts)
+  const currentTabs = tabs.value
+  const queryMatch = currentTabs.find(t => t.path.includes('?') && t.path === currentFullPath)
+  if (queryMatch) {
+    return queryMatch.key
   }
 
-  // Special case: "歌单" tab matches /music/playlists and /music/playlist/:id
-  if (tab.key === 'playlists' && (currentPath === '/music/playlists' || currentPath.startsWith('/music/playlist/'))) {
-    return true
+  // Exact path match
+  const pathMatch = currentTabs.find(t => !t.path.includes('?') && (t.path.replace(/\/$/, '') || '/') === currentPath)
+  if (pathMatch) {
+    return pathMatch.key
   }
 
-  return false
+  // Special cases:
+  // "我的" tab matches /me or /<space>/me
+  if (currentPath === '/me' || currentPath.endsWith('/me')) {
+    const meTab = currentTabs.find(t => t.key === 'me')
+    if (meTab) return 'me'
+  }
+
+  // "歌单" tab matches /music/playlists and /music/playlist/:id
+  if (currentPath === '/music/playlists' || currentPath.startsWith('/music/playlist/')) {
+    const plTab = currentTabs.find(t => t.key === 'playlists')
+    if (plTab) return 'playlists'
+  }
+
+  return ''
+})
+
+const isTabActive = (tab: NavTabItem) => {
+  return activeTabKey.value === tab.key
 }
 
-const onTabClick = (tab: NavTabItem, event: MouseEvent) => {
-  if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) {
-    return
-  }
-  event.preventDefault()
+const onTabClick = (tab: NavTabItem) => {
   emit('tab-click', tab)
   emit('update:activeTab', tab.key)
 
   if (router && typeof router.push === 'function') {
+    if (route && (route.fullPath === tab.path || route.path === tab.path)) {
+      return
+    }
     void router.push(tab.path).catch(() => {})
   }
 }
@@ -124,34 +136,38 @@ const onTabClick = (tab: NavTabItem, event: MouseEvent) => {
 
 <style scoped>
 .mobile-bottom-nav {
-  position: fixed !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  width: 100% !important;
-  z-index: 1000 !important;
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: block;
+  visibility: visible;
+  opacity: 1;
+  width: 100%;
+  z-index: 1000;
   pointer-events: none;
 }
 
+.mobile-bottom-nav[style*="display: none"] {
+  display: none !important;
+}
+
 .mobile-bottom-nav__bar {
-  position: relative !important;
-  width: 100% !important;
-  max-width: 480px !important;
-  height: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
-  min-height: 56px !important;
-  margin: 0 auto !important;
-  display: grid !important;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-  background-color: #ffffff !important;
-  border-top: 1px solid var(--a-color-border-soft, #e2e8f0) !important;
-  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.04) !important;
-  pointer-events: auto !important;
-  visibility: visible !important;
-  opacity: 1 !important;
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  min-height: 56px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background-color: #ffffff;
+  border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.04);
+  pointer-events: auto;
+  visibility: visible;
+  opacity: 1;
 }
 
 .mobile-bottom-nav__tab {
@@ -164,6 +180,8 @@ const onTabClick = (tab: NavTabItem, event: MouseEvent) => {
   color: var(--a-color-muted, #64748b);
   text-decoration: none;
   background: transparent;
+  border: none;
+  font-family: inherit;
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;

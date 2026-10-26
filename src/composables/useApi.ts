@@ -113,6 +113,8 @@ export function useApi() {
 			shortNote: (id: number | string) => `${apiUrl}/short-notes/${id}`,
 			shortNoteLike: (id: number | string) => `${apiUrl}/short-notes/${id}/like`,
 			shortNoteVote: (id: number | string) => `${apiUrl}/short-notes/${id}/vote`,
+			shortNoteComments: (id: number | string) =>
+				`${apiUrl}/discussions/short_note/${encodeURIComponent(id)}/comments`,
 
 			comments: (id: number | string) =>
 				`${apiUrl}/discussions/blog_post/${encodeURIComponent(id)}/comments`,

@@ -260,8 +260,6 @@ export interface MusicCreationAlbumTagDraft {
 }
 
 export interface MusicCreationAlbumDetailsDraft {
-	editionType?: 'original' | 'reissue' | 'remaster' | 'other';
-	canonicalAlbumId?: string;
 	coverUrl: string;
 	coverAsset?: UploadAsset | null;
 	title: string;

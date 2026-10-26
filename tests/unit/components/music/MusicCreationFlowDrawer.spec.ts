@@ -1289,6 +1289,8 @@ describe("MusicCreationFlowDrawer", () => {
 			}),
 		);
 		const submittedInput = commitMusicAlbumImportMock.mock.calls[0]?.[1];
+		expect(submittedInput.album).not.toHaveProperty("edition_type");
+		expect(submittedInput.album).not.toHaveProperty("canonical_album_id");
 		expect(submittedInput).toHaveProperty("artist_sources", [
 			{ type: "url", url: "https://example.test/seeded-artist" },
 		]);

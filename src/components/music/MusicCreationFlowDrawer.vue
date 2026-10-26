@@ -773,8 +773,6 @@ function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicAp
       title: flow.draft.albumDetails.title.trim(),
       description: flow.draft.albumDetails.bio.trim(),
       album_type: flow.draft.albumDetails.type.trim() || 'album',
-      edition_type: flow.draft.albumDetails.editionType || 'original',
-      ...(flow.draft.albumDetails.canonicalAlbumId ? { canonical_album_id: flow.draft.albumDetails.canonicalAlbumId } : {}),
       ...(coverURL && !/^(blob:|data:)/i.test(coverURL) ? { cover_url: coverURL } : {}),
       ...(releaseDate ? { release_date: releaseDate } : {}),
       release_year: derivedReleaseYear || 0,

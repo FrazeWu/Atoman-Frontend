@@ -80,6 +80,16 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 
 	afterEach(() => vi.unstubAllGlobals());
 
+	it("创建表单不再显示发行版本或关联原始专辑入口", () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
+		drawers.setMusicCreationStep("albumDetails");
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+		expect(wrapper.text()).not.toContain("发行版本");
+		expect(wrapper.text()).not.toContain("查找已有专辑版本");
+		expect(wrapper.text()).not.toContain("确认关联到原始专辑");
+	});
+
 	it("wraps track actions on narrow screens without squeezing the title", () => {
 		const source = readFileSync(
 			resolve(

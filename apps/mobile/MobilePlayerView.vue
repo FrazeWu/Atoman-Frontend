@@ -1,5 +1,10 @@
 <template>
-  <main class="mobile-player-view">
+  <main
+    class="mobile-player-view"
+    :class="{ 'is-dragging': isDragging, 'is-dismissing': isDismissing }"
+    :style="playerGestureStyle"
+    @touchstart="handleTouchStart"
+  >
     <template v-if="player.currentSong">
       <!-- Top Navigation Header -->
       <header class="mobile-player-view__header">
@@ -370,7 +375,7 @@ export default {
 </script>
 
 <script setup lang="ts">
-import { computed, nextTick, onActivated, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onActivated, onMounted, onUnmounted, ref, watch, type CSSProperties } from 'vue'
 import { useRouter } from 'vue-router'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import { usePlayerStore } from '@/stores/player'
@@ -542,6 +547,10 @@ function onLyricLineClick(line: ParsedLyricLine) {
 }
 
 function toggleLyrics() {
+  if (suppressCoverClick) {
+    suppressCoverClick = false
+    return
+  }
   if (isPodcast.value) {
     const song = player.currentSong
     if (!song) return
@@ -574,6 +583,172 @@ function handleDismiss() {
     void router.push('/music')
   }
 }
+
+// --- Pull-to-Dismiss and Stage Gestures ---
+const isDragging = ref(false)
+const isDismissing = ref(false)
+const hasInteracted = ref(false)
+const dragOffsetY = ref(0)
+let startTouchX = 0
+let startTouchY = 0
+let currentTouchX = 0
+let currentTouchY = 0
+let startTouchTime = 0
+let dismissTimer: ReturnType<typeof setTimeout> | null = null
+let snapResetTimer: ReturnType<typeof setTimeout> | null = null
+let suppressCoverClick = false
+let isStageTouch = false
+
+function isInteractiveElement(target: EventTarget | null): boolean {
+  if (!target) return false
+  const element = target instanceof Element ? target : (target as Node).parentElement
+  if (!element) return false
+  return Boolean(
+    element.closest(
+      'button, a, input, select, textarea, [data-interactive], .mobile-player-scrubber, .mobile-player-view__controls, .mobile-player-view__actions, .mobile-player-view__queue-item, .mobile-player-view__queue-actions, .mobile-player-view__clear-queue'
+    )
+  )
+}
+
+function handleTouchStart(e: TouchEvent) {
+  if (isDismissing.value) return
+  const touch = e.touches[0]
+  if (!touch) return
+
+  const target = (touch.target as EventTarget | null) || e.target
+  if (isInteractiveElement(target)) return
+
+  isStageTouch = Boolean(
+    target instanceof Element && target.closest('.mobile-player-view__stage')
+  )
+
+  startTouchX = touch.clientX
+  startTouchY = touch.clientY
+  currentTouchX = touch.clientX
+  currentTouchY = touch.clientY
+  startTouchTime = Date.now()
+  suppressCoverClick = false
+
+  if (snapResetTimer) {
+    clearTimeout(snapResetTimer)
+    snapResetTimer = null
+  }
+
+  window.addEventListener('touchmove', handleTouchMove, { passive: false })
+  window.addEventListener('touchend', handleTouchEnd)
+  window.addEventListener('touchcancel', handleTouchEnd)
+}
+
+function handleTouchMove(e: TouchEvent) {
+  const touch = e.touches[0]
+  if (!touch) return
+
+  currentTouchX = touch.clientX
+  currentTouchY = touch.clientY
+
+  const deltaX = currentTouchX - startTouchX
+  const deltaY = currentTouchY - startTouchY
+  const absX = Math.abs(deltaX)
+  const absY = Math.abs(deltaY)
+
+  // Downward pull detection
+  if (deltaY > 8 && absY > absX) {
+    if (e.cancelable) {
+      e.preventDefault()
+    }
+    isDragging.value = true
+    hasInteracted.value = true
+    suppressCoverClick = true
+
+    if (deltaY <= 120) {
+      dragOffsetY.value = deltaY
+    } else {
+      dragOffsetY.value = 120 + (deltaY - 120) * 0.4
+    }
+  } else if (isStageTouch && absX > 15 && absX > absY) {
+    suppressCoverClick = true
+  }
+}
+
+function handleTouchEnd(e: TouchEvent) {
+  window.removeEventListener('touchmove', handleTouchMove)
+  window.removeEventListener('touchend', handleTouchEnd)
+  window.removeEventListener('touchcancel', handleTouchEnd)
+
+  const endTouch = e.changedTouches?.[0] || e.touches?.[0]
+  if (endTouch) {
+    currentTouchX = endTouch.clientX
+    currentTouchY = endTouch.clientY
+  }
+
+  const deltaX = currentTouchX - startTouchX
+  const deltaY = currentTouchY - startTouchY
+  const absX = Math.abs(deltaX)
+  const absY = Math.abs(deltaY)
+
+  // Stage horizontal swipe to skip track
+  if (isStageTouch && absX > 50 && absX > 1.2 * absY) {
+    suppressCoverClick = true
+    if (deltaX < -50) {
+      player.playNext()
+    } else if (deltaX > 50) {
+      player.playPrevious()
+    }
+    isDragging.value = false
+    dragOffsetY.value = 0
+    return
+  }
+
+  if (!isDragging.value) {
+    return
+  }
+
+  const elapsed = Math.max(1, Date.now() - startTouchTime)
+  const velocity = deltaY / elapsed
+
+  isDragging.value = false
+
+  const isFlick = deltaY > 50 && elapsed >= 40 && elapsed < 400 && velocity > 0.5
+  if (deltaY > 72 || isFlick) {
+    isDismissing.value = true
+    dragOffsetY.value = window.innerHeight || 800
+    if (dismissTimer) clearTimeout(dismissTimer)
+    dismissTimer = setTimeout(() => {
+      isDismissing.value = false
+      dragOffsetY.value = 0
+      hasInteracted.value = false
+      handleDismiss()
+    }, 200)
+  } else {
+    dragOffsetY.value = 0
+    snapResetTimer = setTimeout(() => {
+      hasInteracted.value = false
+      suppressCoverClick = false
+    }, 240)
+  }
+}
+
+const playerGestureStyle = computed<CSSProperties>(() => {
+  if (isDismissing.value) {
+    return {
+      transform: 'translateY(100%)',
+      transition: 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+    }
+  }
+  if (isDragging.value) {
+    return {
+      transform: `translateY(${dragOffsetY.value}px)`,
+      transition: 'none',
+    }
+  }
+  if (hasInteracted.value) {
+    return {
+      transform: `translateY(${dragOffsetY.value}px)`,
+      transition: 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+    }
+  }
+  return {}
+})
 
 // --- Toast Feedback ---
 let toastTimer: ReturnType<typeof setTimeout> | null = null
@@ -616,6 +791,11 @@ async function toggleFavorite() {
 
 onUnmounted(() => {
   player.showQueue = false
+  window.removeEventListener('touchmove', handleTouchMove)
+  window.removeEventListener('touchend', handleTouchEnd)
+  window.removeEventListener('touchcancel', handleTouchEnd)
+  if (dismissTimer) clearTimeout(dismissTimer)
+  if (snapResetTimer) clearTimeout(snapResetTimer)
   if (toastTimer) {
     clearTimeout(toastTimer)
     toastTimer = null
@@ -625,7 +805,11 @@ onUnmounted(() => {
 
 <style scoped>
 .mobile-player-view {
-  min-height: 100dvh;
+  position: fixed;
+  inset: 0;
+  z-index: var(--a-z-modal, 800);
+  width: 100%;
+  height: 100dvh;
   box-sizing: border-box;
   max-width: 32rem;
   margin: 0 auto;
@@ -633,6 +817,15 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  background: var(--a-color-bg, #ffffff);
+  overflow-y: auto;
+  touch-action: pan-y;
+  will-change: transform;
+}
+
+.mobile-player-view.is-dragging {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .mobile-player-view__header {

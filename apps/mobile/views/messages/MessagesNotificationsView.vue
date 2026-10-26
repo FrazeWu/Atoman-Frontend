@@ -99,41 +99,6 @@ const props = withDefaults(
 
 const notifStore = getActivePinia() ? useNotificationStore() : null
 
-const defaultSampleNotifications: NotificationItem[] = [
-  {
-    id: 'n-1',
-    title: 'Alice 赞了你的短笺',
-    category: 'like',
-    content: '“事物的本质并不因赞扬而改变。”',
-    time: '10分钟前',
-    read: false,
-  },
-  {
-    id: 'n-2',
-    title: 'Bob 在文章下回复了你',
-    category: 'reply',
-    content: '“同意，尤其在 TypeScript 中状态机的实现上非常优雅。”',
-    time: '35分钟前',
-    read: false,
-  },
-  {
-    id: 'n-3',
-    title: '系统公告：移动端体验升级',
-    category: 'system',
-    content: '移动端全空间纯白微圆角系统已全量上线，欢迎体验。',
-    time: '2小时前',
-    read: true,
-  },
-  {
-    id: 'n-4',
-    title: 'Elena Vance 在短笺中 @ 了你',
-    category: 'mention',
-    content: '来看看这份新的排版手稿 @Fraze',
-    time: '昨天',
-    read: true,
-  },
-]
-
 function formatNotificationTime(timeStr?: string): string {
   if (!timeStr) return ''
   try {
@@ -165,7 +130,7 @@ const notifications = ref<NotificationItem[]>(
     ? [...props.initialNotifications]
     : notifStore && notifStore.notifications.length > 0
       ? notifStore.notifications.map(mapStoreNotification)
-      : defaultSampleNotifications
+      : []
 )
 
 watch(

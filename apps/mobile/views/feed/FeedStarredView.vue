@@ -103,39 +103,8 @@ const api = useApi()
 const authStore = getActivePinia() ? useAuthStore() : null
 const feedStore = getActivePinia() ? useFeedStore() : null
 
-const defaultSampleStarred: StarredArticleItem[] = [
-  {
-    id: 's-1',
-    title: '从零构建响应式设计系统',
-    sourceName: 'Design Systems',
-    category: '设计',
-    savedAt: '2026-10-20T10:00:00Z',
-  },
-  {
-    id: 's-2',
-    title: 'Rust 高并发内存安全实战',
-    sourceName: 'Rust Magazine',
-    category: '技术',
-    savedAt: '2026-10-19T11:00:00Z',
-  },
-  {
-    id: 's-3',
-    title: '数字极简主义与深度工作流构建',
-    sourceName: '思辨日记',
-    category: '思考',
-    savedAt: '2026-10-17T15:30:00Z',
-  },
-  {
-    id: 's-4',
-    title: '前端工程化与现代打包器演进史',
-    sourceName: 'Web Infra',
-    category: '技术',
-    savedAt: '2026-10-15T09:00:00Z',
-  },
-]
-
 const articles = ref<StarredArticleItem[]>(
-  props.initialArticles ? [...props.initialArticles] : defaultSampleStarred
+  props.initialArticles ? [...props.initialArticles] : []
 )
 
 const categories = ['全部', '技术', '设计', '思考']

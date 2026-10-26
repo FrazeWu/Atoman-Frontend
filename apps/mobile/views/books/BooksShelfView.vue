@@ -119,32 +119,13 @@ const props = withDefaults(
   }
 )
 
-const defaultSampleCurrent: ShelfBook = {
-  id: 'b-current',
-  title: '工作颂歌',
-  author: '阿兰·德波顿',
-  progress: 64,
-  annotationsCount: 12,
-  format: 'EPUB',
-}
-
-const defaultSampleBooks: ShelfBook[] = [
-  { id: 'b-1', title: '艺术的慰藉', author: '阿兰·德波顿', format: 'EPUB', fileSize: '2.4 MB' },
-  { id: 'w-1', title: '沉思录', author: '马可·奥勒留', format: 'EPUB', fileSize: '1.8 MB' },
-  { id: 'w-2', title: '代码整洁之道', author: 'Robert C. Martin', format: 'EPUB', fileSize: '4.2 MB' },
-]
-
 const router = useRouter()
 const authStore = getActivePinia() ? useAuthStore() : null
 const loading = ref(false)
 const error = ref('')
 const opening = ref(false)
-const fetchedCurrentReading = ref<ShelfBook | null>(
-  authStore ? null : defaultSampleCurrent
-)
-const fetchedBooks = ref<ShelfBook[]>(
-  authStore ? [] : defaultSampleBooks
-)
+const fetchedCurrentReading = ref<ShelfBook | null>(null)
+const fetchedBooks = ref<ShelfBook[]>([])
 
 async function loadShelfData() {
   if (props.initialBooks !== undefined || props.currentReading !== undefined || props.initialCurrentBook !== undefined) return

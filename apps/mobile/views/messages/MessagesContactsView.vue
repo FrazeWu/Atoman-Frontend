@@ -90,15 +90,8 @@ const router = useRouter()
 const dmStore = getActivePinia() ? useDMStore() : null
 const searchQuery = ref('')
 
-const defaultSampleContacts: ContactItem[] = [
-  { id: 'u-1', name: 'Alice', bio: '文字创作者 · 专注哲学与深度阅读', online: true },
-  { id: 'u-2', name: 'Bob', bio: '全栈工程师 · Rust 与 TypeScript 爱好者', online: false },
-  { id: 'u-3', name: 'Elena Vance', bio: '独立排版与字体设计师', online: true },
-  { id: 'u-4', name: 'Marcus', bio: '沉思录翻译者与古典研读人', online: false },
-]
-
 const contacts = ref<ContactItem[]>(
-  props.initialContacts ? [...props.initialContacts] : defaultSampleContacts
+  props.initialContacts ? [...props.initialContacts] : []
 )
 
 watch(

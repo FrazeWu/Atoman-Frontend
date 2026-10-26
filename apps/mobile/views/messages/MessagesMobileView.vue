@@ -161,7 +161,7 @@ async function loadConversations() {
       }))
     }
   } catch {
-    // Graceful fallback to defaultSampleConversations
+    // 加载失败保持空列表
   }
 }
 

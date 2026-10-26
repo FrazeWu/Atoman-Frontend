@@ -104,45 +104,6 @@ const router = useRouter()
 const feedStore = getActivePinia() ? useFeedStore() : null
 const authStore = getActivePinia() ? useAuthStore() : null
 
-const defaultSampleArticles: FollowingArticleItem[] = [
-  {
-    id: 'f-1',
-    title: 'Vue 3.5 响应式系统深度解析',
-    summary: '内存占用减少 56%，SSR 性能大幅飞跃，重构响应式双向链表。',
-    sourceName: 'Evan You Blog',
-    sourceAvatar: '',
-    published_at: '2026-10-21T09:00:00Z',
-    unread: true,
-  },
-  {
-    id: 'f-2',
-    title: 'TypeScript 5.8 发布速览',
-    summary: '更精确的类型推导与更低的编译内存开销，模块检测行为全面优化。',
-    sourceName: 'TypeScript Official',
-    sourceAvatar: '',
-    published_at: '2026-10-20T14:00:00Z',
-    unread: true,
-  },
-  {
-    id: 'f-3',
-    title: '现代化微前端与跨端架构设计思考',
-    summary: '探讨轻量单页应用在多端多宿主环境下的边界隔离与状态解耦方案。',
-    sourceName: '前端技术周刊',
-    sourceAvatar: '',
-    published_at: '2026-10-19T16:30:00Z',
-    unread: false,
-  },
-  {
-    id: 'f-4',
-    title: '用 Rust 编写高性能网络服务的一线经验',
-    summary: '异步运行时 Tokio 的踩坑记录与内存零拷贝技术实践。',
-    sourceName: 'Rust 观察',
-    sourceAvatar: '',
-    published_at: '2026-10-18T11:00:00Z',
-    unread: false,
-  },
-]
-
 function mapTimelineItem(item: any): FollowingArticleItem {
   const fi = item.feed_item || item
   return {
@@ -161,15 +122,14 @@ const articles = ref<FollowingArticleItem[]>(
     ? [...props.initialArticles]
     : feedStore && feedStore.timeline.length > 0
       ? feedStore.timeline.map(mapTimelineItem)
-      : defaultSampleArticles
+      : []
 )
 
-const sourcesList = ref<{ id: string; name: string }[]>([
-  { id: 'src-1', name: 'Evan You Blog' },
-  { id: 'src-2', name: 'TypeScript Official' },
-  { id: 'src-3', name: '前端技术周刊' },
-  { id: 'src-4', name: 'Rust 观察' },
-])
+const sourcesList = ref<{ id: string; name: string }[]>(
+  feedStore?.subscriptions && feedStore.subscriptions.length > 0
+    ? feedStore.subscriptions.map((s) => ({ id: s.id, name: s.title || '未命名订阅源' }))
+    : []
+)
 
 watch(
   () => props.initialArticles,

@@ -110,20 +110,14 @@ const authStore = getActivePinia() ? useAuthStore() : null
 const messagesContainer = ref<HTMLElement | null>(null)
 const inputText = ref('')
 
-const defaultSampleChat: ChatSessionData = {
-  partyId: 'c-1',
-  partyName: 'Alice',
-  partyAvatar: '',
-  onlineStatus: '在线',
-  messages: [
-    { id: 'm-1', text: '你好，阅读器排版改好了吗？', time: '14:28', isMe: false },
-    { id: 'm-2', text: '已经重构完成，应用了 4px 微圆角与柔和边线！', time: '14:29', isMe: true },
-    { id: 'm-3', text: '太棒了，体验非常流畅轻快。稍后去截屏看一下效果。', time: '14:30', isMe: false },
-  ],
-}
-
 const chatData = ref<ChatSessionData>(
-  props.initialChat ? { ...props.initialChat } : defaultSampleChat
+  props.initialChat ? { ...props.initialChat } : {
+    partyId: '',
+    partyName: '私信',
+    partyAvatar: '',
+    onlineStatus: '',
+    messages: [],
+  }
 )
 
 function formatMessageTime(dateStr?: string): string {
@@ -268,15 +262,7 @@ onMounted(async () => {
         throw new Error('no dm store')
       }
     } catch {
-      // Graceful fallback for mock routes
-      if (id === 'u-1' || id === 'c-1') {
-        chatData.value.partyName = 'Alice'
-      } else if (id === 'u-2' || id === 'c-2') {
-        chatData.value.partyName = 'Bob'
-        chatData.value.messages = [
-          { id: 'mb-1', text: '收到，今晚合并代码。', time: '昨天', isMe: false },
-        ]
-      }
+      // 保持空会话状态
     }
   }
   scrollToBottom()

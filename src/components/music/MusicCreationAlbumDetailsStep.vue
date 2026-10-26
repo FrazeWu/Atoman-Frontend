@@ -76,6 +76,7 @@ const {
   unresolvedImportedCoverUrl,
   onCoverChange,
   reopenImportedCoverCrop,
+  retryImportedCoverUpload,
   confirmCoverCrop,
   clearPendingCoverCrop,
 } = useMusicAlbumCoverEditor()
@@ -618,21 +619,22 @@ watch(
             </PButton>
           </div>
         </div>
-        <p v-if="coverErrorMessage" class="state-line state-line--error">{{ coverErrorMessage }}</p>
-        <p v-else-if="coverUploading" class="state-line">正在上传封面...</p>
+        <p v-if="coverErrorMessage" class="state-line state-line--error" role="alert">{{ coverErrorMessage }}</p>
+        <p v-else-if="coverUploading" class="state-line" role="status">正在上传封面...</p>
+        <PButton v-if="coverDisplayUrl" variant="ghost" size="sm" :disabled="coverUploading" data-testid="album-details-crop-cover" @click="reopenImportedCoverCrop">裁剪封面（可选）</PButton>
         <div
-          v-if="unresolvedImportedCoverUrl"
+          v-if="unresolvedImportedCoverUrl && coverErrorMessage && !coverUploading"
           class="imported-cover-callout"
           data-testid="album-details-imported-cover-callout"
         >
-          <p class="imported-cover-callout__copy">{{ unresolvedImportedCoverUrl.startsWith('blob:') ? '已识别本地封面，请确认裁剪并上传后使用。' : '已采用识别到的封面，也可以重新裁剪或更换。' }}</p>
+          <p class="imported-cover-callout__copy">识别封面上传失败，无需重新选择文件，可以直接重试。</p>
           <PButton
             type="button"
             variant="secondary"
             data-testid="album-details-imported-cover-action"
-            @click="reopenImportedCoverCrop"
+            @click="retryImportedCoverUpload"
           >
-            继续裁剪识别封面
+            重试上传封面
           </PButton>
         </div>
       </div>

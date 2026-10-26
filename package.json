@@ -42,7 +42,7 @@
     "@vue-flow/core": "^1.48.2",
     "chart.js": "^4.5.1",
     "country-region-data": "^4.1.0",
-    "dompurify": "^3.3.3",
+    "dompurify": "^3.4.17",
     "epubjs": "^0.3.93",
     "highlight.js": "^11.11.1",
     "jszip": "^3.10.1",

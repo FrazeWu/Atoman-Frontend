@@ -218,4 +218,22 @@ describe('PUnifiedSearchBar.vue', () => {
       })
     )
   })
+
+  it('passes inputTestId and dropdownTestId to underlying elements', async () => {
+    mockItems.value = sampleHits
+    const wrapper = mount(PUnifiedSearchBar, {
+      props: {
+        modelValue: '三体',
+        inputTestId: 'custom-search-input',
+        dropdownTestId: 'custom-search-dropdown',
+      },
+    })
+
+    const input = wrapper.find('[data-testid="custom-search-input"]')
+    expect(input.exists()).toBe(true)
+
+    await input.trigger('input')
+    const dropdown = wrapper.find('[data-testid="custom-search-dropdown"]')
+    expect(dropdown.exists()).toBe(true)
+  })
 })

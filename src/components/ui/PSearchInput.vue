@@ -9,6 +9,8 @@ export interface SearchScopeOption {
 
 export interface PSearchInputProps {
   id?: string
+  inputTestId?: string
+  dropdownTestId?: string
   modelValue?: string
   variant?: 'bar' | 'inline'
   size?: 'sm' | 'md' | 'lg'
@@ -30,6 +32,9 @@ export interface PSearchInputProps {
 }
 
 const props = withDefaults(defineProps<PSearchInputProps>(), {
+  id: '',
+  inputTestId: '',
+  dropdownTestId: '',
   modelValue: '',
   variant: 'bar',
   size: undefined,
@@ -228,6 +233,7 @@ defineExpose({
         :placeholder="placeholder"
         :disabled="disabled"
         :aria-label="ariaLabel"
+        :data-testid="inputTestId || undefined"
         @input="handleInput"
         @keydown="handleKeydown"
         @keydown.enter="handleEnter"
@@ -275,6 +281,7 @@ defineExpose({
       v-if="showDropdown"
       class="p-search-input__dropdown"
       tabindex="-1"
+      :data-testid="dropdownTestId || undefined"
     >
       <slot name="dropdown" />
     </div>

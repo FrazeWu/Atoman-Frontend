@@ -57,14 +57,18 @@
     <!-- 筛选控制栏 -->
     <div class="blog-home__filters" aria-label="文章筛选">
       <div class="blog-home__filter-group blog-home__filter-group--search">
-        <ModuleSearch
+        <PUnifiedSearchBar
           v-model="blogSearchQuery"
-          :target-types="blogSearchTypes"
+          module="blog"
+          :types="[...blogSearchTypes]"
+          size="sm"
           placeholder="搜索公开文章、短笺或频道"
+          action-button-text="搜索"
           input-test-id="blog-module-search-input"
           dropdown-test-id="blog-module-search-dropdown"
-          @submit="submitBlogSearch"
-          @select="openBlogSearchTarget"
+          :auto-navigate-on-select="false"
+          @search="submitBlogSearch"
+          @select="(hit) => openBlogSearchTarget({ path: hit.href || '', type: hit.type as any, id: hit.id, label: hit.title, module: hit.module, available: true })"
         />
       </div>
       <template v-if="isSearchMode">
@@ -253,7 +257,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { EyeOff, Flame, Undo2 } from 'lucide-vue-next'
 
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
-import ModuleSearch from '@/components/search/ModuleSearch.vue'
+import PUnifiedSearchBar from '@/components/search/PUnifiedSearchBar.vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import BlogEntityCard from '@/components/blog/BlogEntityCard.vue'
 import PButton from '@/components/ui/PButton.vue'

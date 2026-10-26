@@ -34,6 +34,8 @@ export interface PUnifiedSearchBarProps {
   clearable?: boolean
   disabled?: boolean
   actionButtonText?: string
+  inputTestId?: string
+  dropdownTestId?: string
 }
 
 const props = withDefaults(defineProps<PUnifiedSearchBarProps>(), {
@@ -51,6 +53,8 @@ const props = withDefaults(defineProps<PUnifiedSearchBarProps>(), {
   clearable: true,
   disabled: false,
   actionButtonText: '搜索',
+  inputTestId: '',
+  dropdownTestId: '',
 })
 
 const emit = defineEmits<{
@@ -251,6 +255,8 @@ onUnmounted(() => {
       :clearable="clearable"
       :disabled="disabled"
       :action-button-text="actionButtonText"
+      :input-test-id="inputTestId"
+      :dropdown-test-id="dropdownTestId"
       :show-dropdown="isDropdownOpen && hasDropdownContent"
       :loading="preview.loading.value"
       :enable-global-shortcut="enableGlobalShortcut"

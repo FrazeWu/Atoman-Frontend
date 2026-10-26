@@ -422,7 +422,6 @@ const onMuteSource = (e?: MouseEvent) => {
   border-radius: 50%;
   background: var(--a-color-bg, #ffffff);
   border: 1.5px solid var(--a-color-bg, #ffffff);
-  box-shadow: var(--a-shadow-sm);
 }
 
 .card-action-badge--like {
@@ -617,7 +616,7 @@ const onMuteSource = (e?: MouseEvent) => {
   background: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
-  box-shadow: var(--a-shadow-lg);
+  box-shadow: none;
 }
 
 .card-menu-item {
@@ -718,9 +717,9 @@ const onMuteSource = (e?: MouseEvent) => {
   color: var(--a-color-border-soft);
 }
 
-/* Expanded Card Shadow */
+/* Expanded Card */
 .notification-item-card.is-expanded {
   border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 </style>

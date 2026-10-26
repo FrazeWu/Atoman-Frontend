@@ -1006,7 +1006,7 @@ defineExpose({ refresh })
 .setting-feed-panel__filter.is-active {
   border-color: var(--a-color-text);
   color: var(--a-color-text);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .setting-feed-panel__header h3,

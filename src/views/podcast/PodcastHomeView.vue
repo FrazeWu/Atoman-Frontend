@@ -12,9 +12,7 @@ import PSkeleton from '@/components/ui/PSkeleton.vue'
 import { usePlayerStore } from '@/stores/player'
 import type { PodcastEpisode } from '@/types'
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
-import ModuleSearch from '@/components/search/ModuleSearch.vue'
-import type { ReferenceTarget } from '@/api/references'
-import { modulePathUrl } from '@/router/siteUrls'
+import PUnifiedSearchBar from '@/components/search/PUnifiedSearchBar.vue'
 
 type RecommendedEpisode = {
   id: string
@@ -53,10 +51,6 @@ const recommendationOptions = [
   { label: '探索', value: 'discover' },
 ]
 let recommendationRequestSequence = 0
-
-function openPodcastSearchTarget(target: ReferenceTarget) {
-  void router.push(modulePathUrl('podcast', target.path))
-}
 
 async function loadEpisodes() {
   loading.value = true
@@ -123,13 +117,15 @@ function playEpisode(ep: PodcastEpisode) {
     <PPageHeader title="播客" mb="1.5rem">
       <template #action>
         <div class="ph-search">
-          <ModuleSearch
+          <PUnifiedSearchBar
             v-model="podcastSearchQuery"
-            :target-types="podcastSearchTypes"
+            module="podcast"
+            :types="['podcast', 'episode']"
+            size="sm"
             placeholder="搜索播客或单集"
+            action-button-text="搜索"
             input-test-id="podcast-module-search-input"
             dropdown-test-id="podcast-module-search-dropdown"
-            @select="openPodcastSearchTarget"
           />
         </div>
       </template>

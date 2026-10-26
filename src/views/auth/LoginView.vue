@@ -669,7 +669,7 @@ watch(username, (value) => {
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-modal);
-  box-shadow: var(--a-shadow-md);
+  box-shadow: none;
   padding: 2.5rem 2.25rem;
   position: relative;
 }

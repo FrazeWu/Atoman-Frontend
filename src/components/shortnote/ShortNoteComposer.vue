@@ -334,13 +334,13 @@ function submit() {
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-sm);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: none;
+  transition: border-color 0.15s ease;
 }
 
 .short-note-composer:focus-within {
   border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-md);
+  box-shadow: none;
 }
 
 .short-note-composer.is-compact {

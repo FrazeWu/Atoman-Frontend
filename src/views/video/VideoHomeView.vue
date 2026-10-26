@@ -11,12 +11,10 @@ import PaginationBar from '@/components/ui/PaginationBar.vue'
 import type { Video } from '@/types'
 import PVideoCard from '@/components/shared/PVideoCard.vue'
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
-import ModuleSearch from '@/components/search/ModuleSearch.vue'
+import PUnifiedSearchBar from '@/components/search/PUnifiedSearchBar.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import { MoreHorizontal as More } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import type { ReferenceTarget } from '@/api/references'
-import { modulePathUrl } from '@/router/siteUrls'
 
 const videos = ref<Video[]>([])
 const router = useRouter()
@@ -47,10 +45,6 @@ type RecommendedVideoPayload = {
 }
 let fetchVideosSeq = 0
 let fetchRecommendationsSeq = 0
-
-function openVideoSearchTarget(target: ReferenceTarget) {
-  void router.push(modulePathUrl('video', target.path))
-}
 
 async function fetchVideos(page = videoMeta.value.page) {
   const seq = ++fetchVideosSeq
@@ -140,13 +134,15 @@ watch(sort, () => {
     <PPageHeader title="视频" mb="1.25rem">
       <template #action>
         <div class="vh-search">
-          <ModuleSearch
+          <PUnifiedSearchBar
             v-model="videoSearchQuery"
-            :target-types="videoSearchTypes"
+            module="video"
+            :types="['video']"
+            size="sm"
             placeholder="搜索视频"
+            action-button-text="搜索"
             input-test-id="video-module-search-input"
             dropdown-test-id="video-module-search-dropdown"
-            @select="openVideoSearchTarget"
           />
         </div>
       </template>

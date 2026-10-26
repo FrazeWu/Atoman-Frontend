@@ -262,7 +262,7 @@ const handleTurnstileError = (errorCode?: string) => {
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-modal);
   background: var(--a-color-bg);
-  box-shadow: var(--a-shadow-md);
+  box-shadow: none;
 }
 
 .auth-card--register {

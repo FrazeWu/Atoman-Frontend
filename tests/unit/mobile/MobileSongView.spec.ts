@@ -93,6 +93,34 @@ describe('MobileSongView', () => {
     expect(mocks.openMusicEditor).toHaveBeenCalledWith({ entity: 'song', mode: 'edit', id: 'song-1' })
   })
 
+  it('navigates back when topbar back button is clicked', async () => {
+    mocks.getMusicSongDetail.mockResolvedValue({
+      song: { id: 'song-1', title: '夜行列车', audio_url: '/song.mp3' },
+      artists: [],
+      playable: true,
+    })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/music/song/:songId', component: MobileSongView }],
+    })
+    const pushSpy = vi.spyOn(router, 'push').mockImplementation(async () => {})
+    await router.push('/music/song/song-1')
+    await router.isReady()
+
+    const wrapper = mount(MobileSongView, {
+      global: {
+        plugins: [router],
+        stubs: { RouterLink: { template: '<a><slot /></a>' } },
+      },
+    })
+    await flushPromises()
+
+    const backBtn = wrapper.find('[data-testid="song-back-btn"]')
+    expect(backBtn.exists()).toBe(true)
+    await backBtn.trigger('click')
+    expect(pushSpy).toHaveBeenCalledWith('/music')
+  })
+
   it('ignores a stale detail response after switching songs', async () => {
     mocks.getMusicSongDetail.mockReset()
     let resolveFirst!: (value: unknown) => void

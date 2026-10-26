@@ -488,7 +488,7 @@ const forwardBlockReason = computed(() => {
 	if (!flow.draft.albumDetails.title.trim()) return ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) ? '请填写歌曲名' : '请填写专辑名'
 	const coverUrl = resolvedAlbumCoverUrl(flow)
 	const isCreation = flow.mode !== 'edit'
-	if (coverUrl && /^(blob:|data:)/i.test(coverUrl)) return '请确认并上传本地封面'
+	if (coverUrl && /^(blob:|data:)/i.test(coverUrl)) return flow.assetUploading ? '正在自动上传识别封面，请稍候' : '识别封面尚未上传成功，请在封面处重试'
 	if (!isCreation && !coverUrl) return ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase()) ? '请上传歌曲封面' : '请上传专辑封面'
 	if (!isCreation && !formatDateFromParts(flow.draft.albumDetails.releaseDateParts)) return '请填写发行日期'
 	if (!isCreation && !flow.draft.albumDetails.source.trim()) return '请填写信息来源或修改原因'

@@ -1517,7 +1517,7 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 		expect(flow.assetUploading).toBe(false);
 	});
 
-	it("识别封面在确认裁剪前保持待选状态，并可在取消后重新打开", async () => {
+	it("服务器识别封面直接采用，不重复上传，裁剪由用户主动打开", async () => {
 		const drawers = useMusicDrawers();
 		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
 		drawers.setMusicCreationStep("albumDetails");
@@ -1529,22 +1529,86 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 			"https://img.example/imported-cover.jpg";
 		await flushPromises();
 
-		expect(flow.draft.albumDetails.coverUrl).toBe("");
+		expect(flow.draft.albumDetails.coverUrl).toBe("https://img.example/imported-cover.jpg");
+		expect(uploadMusicAsset).not.toHaveBeenCalled();
 		expect(
 			wrapper.find('[data-testid="music-square-crop-sheet"]').exists(),
-		).toBe(true);
-
+		).toBe(false);
 		await wrapper
-			.get('[data-testid="music-square-crop-cancel"]')
-			.trigger("click");
-		await wrapper
-			.get('[data-testid="album-details-imported-cover-action"]')
+			.get('[data-testid="album-details-crop-cover"]')
 			.trigger("click");
 		await flushPromises();
 
 		expect(
 			wrapper.find('[data-testid="music-square-crop-sheet"]').exists(),
 		).toBe(true);
+	});
+
+	it("本地识别封面自动上传并替换全部预览地址，不要求裁剪", async () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
+		drawers.setMusicCreationStep("albumDetails");
+		const flow = drawers.state.value.creationFlow!;
+		flow.draft.albumImport.coverUrl = "blob:detected-cover";
+		flow.draft.albumImport.derivedCover = "blob:detected-cover";
+		flow.draft.albumDetails.coverUrl = "blob:detected-cover";
+		vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(["cover"], { type: "image/png" }) }));
+		let resolveUpload!: (value: unknown) => void;
+		vi.mocked(uploadMusicAsset).mockReturnValue(new Promise(resolve => { resolveUpload = resolve; }));
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+		await flushPromises();
+		expect(flow.assetUploading).toBe(true);
+		expect(wrapper.text()).toContain("正在上传封面");
+		expect(wrapper.find('[data-testid="music-square-crop-sheet"]').exists()).toBe(false);
+		expect(uploadMusicAsset).toHaveBeenCalledWith(expect.any(File), "music.cover");
+		resolveUpload({ id: "cover-asset", url: "https://img.example/detected.png" });
+		await flushPromises();
+		expect(flow.draft.albumDetails.coverAsset?.id).toBe("cover-asset");
+		expect(flow.draft.albumDetails.coverUrl).toBe("https://img.example/detected.png");
+		expect(flow.draft.albumImport.coverUrl).toBe("https://img.example/detected.png");
+		expect(flow.draft.albumImport.derivedCover).toBe("https://img.example/detected.png");
+		expect(flow.assetUploading).toBe(false);
+		expect(flow.coverCustomized).toBe(false);
+		expect(wrapper.find('[data-testid="album-details-imported-cover-callout"]').exists()).toBe(false);
+		expect(uploadMusicAsset).toHaveBeenCalledTimes(1);
+	});
+
+	it("自动上传失败可原地重试，无需重新选择封面", async () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
+		drawers.setMusicCreationStep("albumDetails");
+		const flow = drawers.state.value.creationFlow!;
+		flow.draft.albumImport.derivedCover = "blob:detected-cover";
+		vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(["cover"], { type: "image/png" }) }));
+		vi.mocked(uploadMusicAsset).mockRejectedValueOnce(new Error("网络中断")).mockResolvedValueOnce({ id: "cover", url: "https://img.example/retried.png" });
+		const wrapper = mount(MusicCreationAlbumDetailsStep);
+		await flushPromises();
+		expect(wrapper.get('[role="alert"]').text()).toContain("网络中断");
+		expect(flow.assetUploading).toBe(false);
+		await wrapper.get('[data-testid="album-details-imported-cover-action"]').trigger("click");
+		await flushPromises();
+		expect(uploadMusicAsset).toHaveBeenCalledTimes(2);
+		expect(flow.draft.albumDetails.coverUrl).toBe("https://img.example/retried.png");
+		expect(wrapper.find('[data-testid="album-details-imported-cover-callout"]').exists()).toBe(false);
+	});
+
+	it("自动封面上传的迟到结果不覆盖人工确认的封面", async () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ artistId: "artist-seeded" });
+		drawers.setMusicCreationStep("albumDetails");
+		const flow = drawers.state.value.creationFlow!;
+		flow.draft.albumImport.derivedCover = "blob:detected-cover";
+		vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, blob: async () => new Blob(["cover"], { type: "image/png" }) }));
+		let resolveUpload!: (value: unknown) => void;
+		vi.mocked(uploadMusicAsset).mockReturnValue(new Promise(resolve => { resolveUpload = resolve; }));
+		mount(MusicCreationAlbumDetailsStep);
+		await flushPromises();
+		flow.coverCustomized = true;
+		flow.draft.albumDetails.coverUrl = "https://img.example/manual.png";
+		resolveUpload({ id: "detected", url: "https://img.example/detected.png" });
+		await flushPromises();
+		expect(flow.draft.albumDetails.coverUrl).toBe("https://img.example/manual.png");
+		expect(flow.draft.albumDetails.coverAsset).toBeFalsy();
 	});
 
 	it("已有封面时不自动打开识别封面裁剪", async () => {
@@ -1571,6 +1635,6 @@ describe("MusicCreationAlbumDetailsStep.vue", () => {
 			wrapper
 				.find('[data-testid="album-details-imported-cover-callout"]')
 				.exists(),
-		).toBe(true);
+		).toBe(false);
 	});
 });

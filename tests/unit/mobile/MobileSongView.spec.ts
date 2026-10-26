@@ -101,11 +101,14 @@ describe('MobileSongView', () => {
     })
     const router = createRouter({
       history: createMemoryHistory(),
-      routes: [{ path: '/music/song/:songId', component: MobileSongView }],
+      routes: [
+        { path: '/music/song/:songId', component: MobileSongView },
+        { path: '/music', component: { template: '<div>Music</div>' } },
+      ],
     })
-    const pushSpy = vi.spyOn(router, 'push').mockImplementation(async () => {})
     await router.push('/music/song/song-1')
     await router.isReady()
+    const pushSpy = vi.spyOn(router, 'push')
 
     const wrapper = mount(MobileSongView, {
       global: {

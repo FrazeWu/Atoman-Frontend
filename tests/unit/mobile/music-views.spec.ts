@@ -821,5 +821,67 @@ describe('Mobile Independent Music Views & Player', () => {
       await dismissBtn.trigger('click')
       expect(pushSpy).toHaveBeenCalledWith('/music')
     })
+
+    it('renders touch-friendly scrubber with duration times', () => {
+      const playerStore = usePlayerStore()
+      playerStore.currentSong = {
+        id: 's-99',
+        title: 'Horizon Departure',
+        artist: 'Solaris',
+        duration: 215,
+      } as any
+      playerStore.duration = 215
+      playerStore.currentTime = 45
+
+      const wrapper = mount(MobilePlayerView, {
+        global: {
+          plugins: [pinia, router],
+          stubs: { PortalTeleport: true },
+        },
+      })
+
+      const scrubber = wrapper.find('.mobile-player-scrubber')
+      expect(scrubber.exists()).toBe(true)
+      expect(wrapper.text()).toContain('0:45')
+      expect(wrapper.text()).toContain('3:35')
+    })
+
+    it('toggles lyrics and queue without unmounting player controls', async () => {
+      const playerStore = usePlayerStore()
+      playerStore.currentSong = {
+        id: 's-99',
+        title: 'Horizon Departure',
+        artist: 'Solaris',
+        lyrics: '[00:00.00]First line\n[00:10.00]Second line',
+      } as any
+      playerStore.queue = [
+        playerStore.currentSong,
+        { id: 's-100', title: 'Next Horizon', artist: 'Solaris' } as any,
+      ]
+
+      const wrapper = mount(MobilePlayerView, {
+        global: {
+          plugins: [pinia, router],
+          stubs: { PortalTeleport: true },
+        },
+      })
+
+      // Toggle lyrics
+      const lyricsBtn = wrapper.find('[aria-label="歌词"]')
+      expect(lyricsBtn.exists()).toBe(true)
+      await lyricsBtn.trigger('click')
+      expect(wrapper.text()).toContain('First line')
+      expect(wrapper.text()).toContain('Second line')
+
+      // Toggle queue
+      const queueBtn = wrapper.find('[aria-label="打开播放队列"]')
+      expect(queueBtn.exists()).toBe(true)
+      await queueBtn.trigger('click')
+      expect(wrapper.text()).toContain('Next Horizon')
+
+      // Controls still exist when queue is active
+      expect(wrapper.find('.mobile-player-view__control--primary').exists()).toBe(true)
+      expect(wrapper.find('.mobile-player-scrubber').exists()).toBe(true)
+    })
   })
 })

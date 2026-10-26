@@ -170,13 +170,13 @@ onMounted(async () => {
   overflow-x: auto;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: #ffffff;
+  background: var(--a-color-bg);
   box-shadow: none;
 }
 .studio-calendar__weekdays, .studio-calendar__days { min-width: 48rem; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; }
 .studio-calendar__weekdays {
   border-bottom: 1px solid var(--a-color-border-soft);
-  background: #ffffff;
+  background: var(--a-color-bg);
 }
 .studio-calendar__weekdays span { padding: 0.625rem 0.75rem; color: var(--a-color-muted); font-size: 0.75rem; font-weight: 600; text-align: right; }
 .studio-calendar__days > li {
@@ -185,14 +185,14 @@ onMounted(async () => {
   padding: 0.625rem;
   border-right: 1px solid var(--a-color-border-soft);
   border-bottom: 1px solid var(--a-color-border-soft);
-  background: #ffffff;
+  background: var(--a-color-bg);
   box-sizing: border-box;
 }
 .studio-calendar__days > li:nth-child(7n) { border-right: 0; }
-.studio-calendar__days > li.is-outside { background: #f8fafc; }
+.studio-calendar__days > li.is-outside { background: var(--a-color-surface-muted); }
 .studio-calendar__days > li.is-outside > time { color: var(--a-color-disabled-fg); }
 .studio-calendar__days > li.is-today {
-  background: color-mix(in srgb, var(--a-color-primary) 3%, #ffffff);
+  background: color-mix(in srgb, var(--a-color-primary) 8%, var(--a-color-bg));
 }
 .studio-calendar__days > li.is-today > time { color: var(--a-color-primary); font-weight: 600; }
 .studio-calendar__days > li > time { display: block; color: var(--a-color-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; text-align: right; }
@@ -207,7 +207,7 @@ onMounted(async () => {
   padding: 0.35rem 0.5rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  background: #ffffff;
+  background: var(--a-color-bg);
   color: var(--a-color-text);
   text-decoration: none;
   transition: border-color var(--a-motion-micro, 140ms) ease, background-color var(--a-motion-micro, 140ms) ease;

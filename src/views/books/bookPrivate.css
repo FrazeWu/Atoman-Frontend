@@ -51,9 +51,9 @@
 
 .private-books__calendar-day {
   padding: 0.375rem 0.625rem;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   font-size: 0.6875rem;
 }
 
@@ -72,9 +72,9 @@
 
 .private-books__segmented {
   display: inline-flex;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   padding: 2px;
 }
 
@@ -95,8 +95,8 @@
 }
 
 .private-books__segmented-btn.is-active {
-  background-color: var(--a-color-text, #1c1c1e);
-  color: #ffffff;
+  background-color: var(--a-color-fg, #0f172a);
+  color: var(--a-color-bg, #ffffff);
   font-weight: 600;
 }
 
@@ -119,9 +119,9 @@
   min-height: 32px;
   padding: 0.25rem 0.5rem;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   font-size: 0.75rem;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   color: var(--a-color-text, #1c1c1e);
   outline: none;
   box-shadow: none !important;
@@ -131,9 +131,9 @@
   min-height: 32px;
   padding: 0.25rem 0.5rem;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   font-size: 0.75rem;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   color: var(--a-color-text, #1c1c1e);
   box-shadow: none !important;
 }
@@ -152,7 +152,7 @@
   display: flex;
   gap: 1rem;
   padding: 1.25rem;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-card, 4px);
   box-shadow: none !important;
@@ -160,16 +160,16 @@
 }
 
 .private-books__card:hover {
-  border-color: var(--a-color-text, #1c1c1e);
+  border-color: var(--a-color-border, #cbd5e1);
 }
 
 /* 微书脊纯白封面 */
 .private-books__cover {
   width: 104px;
   height: 146px;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -206,7 +206,7 @@
 .private-books__cover-title {
   font-family: "Songti SC", "SimSun", "STSong", "Noto Serif SC", serif;
   font-size: 0.8125rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--a-color-text, #1c1c1e);
   line-height: 1.2;
   text-align: center;
@@ -243,7 +243,7 @@
 }
 
 .private-books__title-link {
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9375rem;
   color: var(--a-color-text, #1c1c1e);
   text-decoration: none;
@@ -253,13 +253,13 @@
 }
 
 .private-books__title-link:hover {
-  color: var(--a-color-primary, #0284c7);
+  color: var(--a-color-primary, #2563eb);
 }
 
 .private-books__rating-badge {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #f59e0b;
+  color: var(--a-color-warning, #f59e0b);
   flex-shrink: 0;
 }
 
@@ -304,7 +304,7 @@
 
 .private-books__progress-bar {
   height: 100%;
-  background-color: #f59e0b;
+  background-color: var(--a-color-warning, #f59e0b);
   border-radius: 2px;
 }
 
@@ -327,9 +327,9 @@
   min-height: 32px;
   padding: 0.25rem 0.5rem;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   font-size: 0.75rem;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   color: var(--a-color-text, #1c1c1e);
   box-shadow: none !important;
 }
@@ -344,7 +344,7 @@
 }
 
 .private-books__remove-btn:hover {
-  color: #ef4444;
+  color: var(--a-color-danger, #ef4444);
 }
 
 /* 标签编辑抽屉/行 */
@@ -357,15 +357,16 @@
   min-height: 28px;
   padding: 0.2rem 0.4rem;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: 3px;
+  border-radius: var(--a-radius-control, 4px);
   font-size: 0.6875rem;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
+  color: var(--a-color-text, #1c1c1e);
   outline: none;
   box-shadow: none !important;
 }
 
 .private-books__tag-input:focus {
-  border-color: var(--a-color-text, #1c1c1e);
+  border-color: var(--a-color-primary, #2563eb);
 }
 
 /* ==========================================================================
@@ -385,7 +386,7 @@
 }
 
 .private-books__note-card {
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-card, 4px);
   padding: 1.25rem;
@@ -397,7 +398,7 @@
 }
 
 .private-books__note-card:hover {
-  border-color: var(--a-color-text, #1c1c1e);
+  border-color: var(--a-color-border, #cbd5e1);
 }
 
 .private-books__note-header {
@@ -433,14 +434,14 @@
   background-color: rgba(187, 247, 208, 0.15);
 }
 .private-books__quote.is-blue {
-  border-color: #0284c7;
+  border-color: var(--a-color-primary, #2563eb);
   background-color: rgba(224, 242, 254, 0.25);
 }
 
 .private-books__thought-box {
   background-color: var(--a-color-surface-muted, #f8fafc);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   padding: 0.75rem;
   font-size: 0.8125rem;
   line-height: 1.5;
@@ -448,7 +449,7 @@
 
 .private-books__thought-heading {
   font-size: 0.6875rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--a-color-text-secondary, #64748b);
   margin-bottom: 0.25rem;
 }
@@ -458,9 +459,9 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0.25rem 0.5rem;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
 }
 
 .private-books__color-dot {
@@ -480,9 +481,9 @@
 .private-books__share-modal {
   max-width: 440px;
   width: 90%;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: 4px;
+  border-radius: var(--a-radius-modal, 4px);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -492,9 +493,9 @@
 
 .private-books__share-card {
   padding: 1.5rem;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: 4px;
+  border-radius: var(--a-radius-card, 4px);
   display: flex;
   flex-direction: column;
   gap: 1rem;

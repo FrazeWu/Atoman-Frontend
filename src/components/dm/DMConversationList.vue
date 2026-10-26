@@ -167,13 +167,13 @@ const formatTime = (value: string | null): string => {
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  background: #ffffff;
+  background: var(--a-color-bg);
 }
 
 .dm-conversation-list__search {
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--a-color-border-soft);
-  background: #ffffff;
+  background: var(--a-color-bg);
 }
 
 .dm-conversation-list__search-wrapper {
@@ -182,8 +182,8 @@ const formatTime = (value: string | null): string => {
   align-items: center;
   width: 100%;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
-  background: #ffffff;
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-bg);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -230,7 +230,7 @@ const formatTime = (value: string | null): string => {
   padding: 0.75rem 0.875rem;
   border: none;
   border-bottom: 1px solid var(--a-color-border-soft);
-  background: #ffffff;
+  background: var(--a-color-bg);
   color: var(--a-color-text);
   text-align: left;
   cursor: pointer;
@@ -344,7 +344,7 @@ const formatTime = (value: string | null): string => {
   justify-content: center;
   border-radius: 4px;
   background: var(--a-color-primary);
-  color: #ffffff;
+  color: var(--a-color-primary-contrast, #ffffff);
   font-size: 0.6875rem;
   font-weight: 600;
   line-height: 1;
@@ -363,8 +363,8 @@ const formatTime = (value: string | null): string => {
   margin: 1rem auto;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
-  background: #ffffff;
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-bg);
   color: var(--a-color-text-secondary);
   font-size: 0.8125rem;
   cursor: pointer;

@@ -409,7 +409,7 @@ const hasResults = computed(
 
 .search-tab-pill.is-active,
 .search-tab-pill[aria-pressed='true'] {
-  color: #ffffff;
+  color: var(--a-color-primary-contrast, #ffffff);
   background-color: var(--a-color-primary, #0ea5e9);
   border-color: var(--a-color-primary, #0ea5e9);
 }
@@ -534,7 +534,7 @@ const hasResults = computed(
 
 .filter-btn--primary {
   background-color: var(--a-color-primary, #0ea5e9);
-  color: #ffffff;
+  color: var(--a-color-primary-contrast, #ffffff);
   border: 1px solid var(--a-color-primary, #0ea5e9);
 }
 

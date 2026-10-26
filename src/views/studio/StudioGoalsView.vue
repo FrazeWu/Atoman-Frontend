@@ -418,7 +418,7 @@ onMounted(() => { void load() })
   padding: 0.75rem 1rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: #ffffff;
+  background: var(--a-color-bg);
   color: var(--a-color-text);
 }
 .studio-goals__empty,
@@ -429,7 +429,7 @@ onMounted(() => { void load() })
   padding: 1.25rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: #ffffff;
+  background: var(--a-color-bg);
   box-shadow: none;
 }
 .studio-goals__empty h2,
@@ -453,7 +453,7 @@ onMounted(() => { void load() })
   padding: 1rem 1.25rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: #ffffff;
+  background: var(--a-color-bg);
   box-shadow: none;
 }
 .studio-goals__cycle-form--next :deep(.p-button) { width: max-content; }

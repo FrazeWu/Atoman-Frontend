@@ -337,7 +337,7 @@ onBeforeUnmount(() => {
   padding: 1.5rem;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control, 4px);
-  background: #ffffff;
+  background: var(--a-color-bg, #ffffff);
 }
 
 .book-catalog__upload-actions {

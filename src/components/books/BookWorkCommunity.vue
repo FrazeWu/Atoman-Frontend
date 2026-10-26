@@ -237,7 +237,7 @@ onMounted(load)
 
 .book-community__review-item {
   padding: 0.875rem 1rem;
-  background: #ffffff;
+  background: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-card, 4px);
   display: flex;
@@ -298,7 +298,7 @@ onMounted(load)
   padding: 0 0.5rem;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control, 4px);
-  background: #ffffff;
+  background: var(--a-color-bg, #ffffff);
   font-size: 0.8125rem;
 }
 

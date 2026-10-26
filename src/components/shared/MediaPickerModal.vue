@@ -346,8 +346,9 @@ onBeforeUnmount(() => {
 .media-picker-modal {
   position: relative;
   background: var(--a-color-bg, #ffffff);
-  border-radius: var(--a-radius-modal, 12px);
-  box-shadow: var(--a-shadow-modal, 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1));
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-modal, 4px);
+  box-shadow: none !important;
   width: 100%;
   max-width: 32rem;
   max-height: calc(100dvh - 2rem);

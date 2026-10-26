@@ -141,7 +141,7 @@ const submit = () => {
   gap: 0.65rem;
   border-top: 1px solid var(--a-color-border-soft);
   padding: 0.85rem 1rem;
-  background: #ffffff;
+  background: var(--a-color-bg);
 }
 
 .dm-composer textarea {
@@ -195,7 +195,7 @@ const submit = () => {
   height: 2.25rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  background: #ffffff;
+  background: var(--a-color-bg);
   color: var(--a-color-text-secondary);
   cursor: pointer;
   transition: background-color var(--a-motion-micro), color var(--a-motion-micro), border-color var(--a-motion-micro);
@@ -207,13 +207,13 @@ const submit = () => {
 }
 
 .dm-composer__btn--submit {
-  background: color-mix(in srgb, var(--a-color-primary) 10%, #ffffff);
+  background: color-mix(in srgb, var(--a-color-primary) 10%, var(--a-color-bg));
   border-color: color-mix(in srgb, var(--a-color-primary) 25%, transparent);
   color: var(--a-color-primary);
 }
 
 .dm-composer__btn--submit:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--a-color-primary) 18%, #ffffff);
+  background: color-mix(in srgb, var(--a-color-primary) 18%, var(--a-color-bg));
 }
 
 .dm-composer__btn:disabled {
@@ -246,7 +246,7 @@ const submit = () => {
   place-items: center;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  background: #ffffff;
+  background: var(--a-color-bg);
   color: var(--a-color-text-secondary);
   cursor: pointer;
   box-shadow: none;

@@ -350,7 +350,7 @@ const copyMessage = async (content?: string) => {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   height: 100%;
-  background: #ffffff;
+  background: var(--a-color-bg);
 }
 
 /* 头部栏 */
@@ -361,7 +361,7 @@ const copyMessage = async (content?: string) => {
   gap: 0.75rem;
   padding: 0 1rem;
   border-bottom: 1px solid var(--a-color-border-soft);
-  background: #ffffff;
+  background: var(--a-color-bg);
 }
 
 .dm-conversation-header h2 {
@@ -384,7 +384,7 @@ const copyMessage = async (content?: string) => {
 .dm-header-block-btn {
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  background: #ffffff;
+  background: var(--a-color-bg);
   padding: 0.25rem 0.65rem;
   font-size: 0.8rem;
   font-weight: 500;
@@ -407,7 +407,7 @@ const copyMessage = async (content?: string) => {
   padding: 0 0.5rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  background: #ffffff;
+  background: var(--a-color-bg);
   color: var(--a-color-text-secondary);
   cursor: pointer;
   font-size: 0.85rem;
@@ -432,7 +432,7 @@ const copyMessage = async (content?: string) => {
   padding: 1rem;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
+  background: var(--a-color-bg);
 }
 
 .dm-load-older-btn {
@@ -441,7 +441,7 @@ const copyMessage = async (content?: string) => {
   padding: 0.35rem 0.75rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  background: #ffffff;
+  background: var(--a-color-bg);
   color: var(--a-color-text-secondary);
   cursor: pointer;
   font-size: 0.8rem;
@@ -524,14 +524,14 @@ const copyMessage = async (content?: string) => {
   padding: 0.45rem 0.65rem;
   border-radius: var(--a-radius-card);
   word-break: break-word;
-  background: #ffffff;
+  background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   color: var(--a-color-text);
   line-height: 1.45;
 }
 
 .dm-message.self .dm-bubble {
-  background: color-mix(in srgb, var(--a-color-primary) 10%, #ffffff);
+  background: color-mix(in srgb, var(--a-color-primary) 10%, var(--a-color-bg));
   border: 1px solid color-mix(in srgb, var(--a-color-primary) 20%, transparent);
   color: var(--a-color-text);
 }
@@ -603,7 +603,7 @@ const copyMessage = async (content?: string) => {
   align-items: center;
   gap: 2px;
   padding: 2px;
-  background: #ffffff;
+  background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
   box-shadow: none;

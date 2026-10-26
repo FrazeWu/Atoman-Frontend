@@ -46,7 +46,7 @@ const selectMailbox = (event: Event) => emit('select-mailbox', (event.target as 
   display: flex;
   align-items: center;
   width: 100%;
-  background: #ffffff;
+  background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: 4px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;

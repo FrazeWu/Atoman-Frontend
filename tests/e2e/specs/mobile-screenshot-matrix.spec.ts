@@ -56,7 +56,7 @@ function detailResponse(pathname: string) {
       songs: [],
     };
   }
-  if (pathname.includes("/music/songs/")) {
+  if (pathname.includes("/music/songs/") || pathname.includes("/music/song/")) {
     return {
       song: {
         id: "song-1",
@@ -442,6 +442,10 @@ test.describe("Mobile route screenshot matrix", () => {
 
       const shouldShowBottomNav =
         !/^\/(?:login|register|forgot-password)$/.test(pathname) &&
+        !/^\/music\/(?:player|lyrics)$/.test(pathname) &&
+        !/^\/books\/(?:read|public-read)\//.test(pathname) &&
+        !/^\/(?:inbox|messages)\/chat\//.test(pathname) &&
+        !/^\/posts\/notes\/[^/]+/.test(pathname) &&
         pathname !== "/";
       if (shouldShowBottomNav) {
         await expect(

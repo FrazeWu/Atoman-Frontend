@@ -46,7 +46,10 @@ function openSongDetail() {
 <style scoped>
 .mobile-lyrics-view {
   min-width: 0;
-  padding: 0 1rem 2rem;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  padding: env(safe-area-inset-top, 1rem) 1rem calc(2rem + env(safe-area-inset-bottom, 24px));
+  background: var(--a-color-bg, #ffffff);
 }
 
 .mobile-lyrics-view__empty {

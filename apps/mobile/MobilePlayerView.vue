@@ -813,6 +813,14 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  background: var(--a-color-bg, #ffffff);
+  touch-action: pan-y;
+  will-change: transform;
+}
+
+.mobile-player-view.is-dragging {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .mobile-player-view__header {

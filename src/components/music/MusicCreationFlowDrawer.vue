@@ -35,6 +35,7 @@ const {
   refreshSong,
   openNestedAction,
   openMusicCreationFlow,
+  completeMusicContributorFlow,
   isLayerActive,
   isLayerShifted,
   isTopLayer,
@@ -65,9 +66,10 @@ const creationEntityName = computed(() => {
   const flow = creationFlow.value
   if (!flow) return ''
   if (creationEntityLabel.value === '艺术家') {
-    return flow.draft.artist.stageNames.find((item) => item.isPrimary && item.name.trim())?.name.trim()
-      || flow.draft.artist.stageNames.find((item) => item.name.trim())?.name.trim()
-      || flow.draft.artist.legalName.trim()
+    const artist = activeMusicArtistDraft(flow)
+    return artist.stageNames.find((item) => item.isPrimary && item.name.trim())?.name.trim()
+      || artist.stageNames.find((item) => item.name.trim())?.name.trim()
+      || artist.legalName.trim()
   }
   return flow.draft.albumDetails.title.trim()
 })
@@ -433,6 +435,7 @@ const finishButtonLabel = computed(() => {
     flow.draft.albumImport.metadataMatchStatus === 'matching'
     || flow.draft.albumImport.metadataMatchingStarted
   )) return '匹配中…'
+  if (flow.contributorLayer) return '完成创作者'
   if (flow.entity === 'artist' && flow.step === 'artist') {
     return flow.submitting ? '创建中…' : '创建艺术家'
   }
@@ -924,6 +927,10 @@ watch(
 async function requestClose() {
   const flow = creationFlow.value
   if (!flow) return
+  if (flow.contributorLayer) {
+    closeCurrentCreationFlow()
+    return
+  }
 
   if (flow.draft.albumImport.importId && canAutosaveImportDetails(flow)) {
     if (importAutosaveTimer) clearTimeout(importAutosaveTimer)
@@ -1046,6 +1053,10 @@ async function handlePrimaryAction(artistNextAction: 'create_album' | 'link_albu
         contributor.avatarUrl = artist.avatarUrl
         contributor.kind = artist.kind
         contributor.source = artist.source.trim()
+        if (flow.contributorLayer) {
+          completeMusicContributorFlow(flow)
+          return
+        }
         flow.editingContributorId = null
         setMusicCreationStep(flow.contributorReturnStep ?? 'albumDetails')
         return
@@ -1151,6 +1162,10 @@ function buildCreateArtistInput(flow: NonNullable<typeof creationFlow.value>): m
 function goBackStep() {
   if (!creationFlow.value) return
   if (creationFlow.value.step === 'artist' && creationFlow.value.editingContributorId) {
+    if (creationFlow.value.contributorLayer) {
+      closeCurrentCreationFlow()
+      return
+    }
     creationFlow.value.editingContributorId = null
     setMusicCreationStep(creationFlow.value.contributorReturnStep ?? 'albumDetails')
   } else if (creationFlow.value.step === 'preview') {

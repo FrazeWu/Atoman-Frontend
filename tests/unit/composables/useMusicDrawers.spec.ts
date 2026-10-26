@@ -5,6 +5,45 @@ import type { MusicSheetLayer } from "../../../src/components/music/musicSheetTy
 import type { MusicAlbumImport, MusicAlbumImportCommitInput } from "../../../src/api/musicV1";
 
 describe("useMusicDrawers", () => {
+	it.each(["album", "song"] as const)("%s 新建创作者独立成层，取消时不改变底层草稿", entity => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ entity, startStep: "albumDetails" });
+		const parent = drawers.state.value.creationFlow!;
+		const parentKey = drawers.layers.value.at(-1)!.key;
+		parent.draft.albumDetails.title = "正在填写的作品";
+		parent.draft.albumImport.importId = "existing-import";
+		const before = JSON.stringify(parent.draft);
+		const child = drawers.openMusicContributorFlow(parent, "临时艺术家")!;
+		expect(drawers.layers.value).toHaveLength(2);
+		expect(drawers.state.value.creationFlow).toBe(child);
+		expect(child.parentKey).toBe(parentKey);
+		expect(parent.step).toBe("albumDetails");
+		expect(JSON.stringify(parent.draft)).toBe(before);
+		drawers.closeMusicCreationFlow();
+		expect(drawers.layers.value).toHaveLength(1);
+		expect(drawers.state.value.creationFlow).toBe(parent);
+		expect(JSON.stringify(parent.draft)).toBe(before);
+	});
+
+	it("完成创作者仅回填当前作品，不关闭底层，也不要求完整资料", () => {
+		const drawers = useMusicDrawers();
+		drawers.openMusicCreationFlow({ startStep: "albumDetails" });
+		const parent = drawers.state.value.creationFlow!;
+		const child = drawers.openMusicContributorFlow(parent, "新艺术家")!;
+		const contributor = child.draft.albumDetails.contributors[0]!;
+		expect(contributor.roles[0]?.role).toBe("primary");
+		drawers.completeMusicContributorFlow(child);
+		expect(drawers.layers.value).toHaveLength(1);
+		expect(drawers.state.value.creationFlow).toBe(parent);
+		expect(parent.step).toBe("albumDetails");
+		expect(parent.draft.albumDetails.contributors).toEqual([contributor]);
+		const second = drawers.openMusicContributorFlow(parent, "第二位艺术家")!;
+		expect(second).not.toBe(child);
+		expect(second.draft.albumDetails.contributors[0]?.roles[0]?.role).toBe("featured");
+		drawers.returnToLayer(second.parentKey!);
+		expect(Object.values(drawers.state.value.creationFlows)).not.toContain(second);
+		expect(parent.draft.albumDetails.contributors).toHaveLength(1);
+	});
 	it("返回艺术家后继续使用原上传会话", () => {
 		const drawers = useMusicDrawers();
 		drawers.closeAll();

@@ -288,6 +288,7 @@ export interface MusicCreationFlowState {
 	entity?: "artist" | "album" | "song";
 	targetId?: string | null;
 	parentKey?: string;
+	contributorLayer?: boolean;
 	loading?: boolean;
 	step: MusicCreationFlowStep;
 	artistFirstFlow?: boolean;

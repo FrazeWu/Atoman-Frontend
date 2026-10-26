@@ -257,8 +257,6 @@ function restoreCommittedAlbumImportDraft(
 	flow.releaseDateCustomized = customization?.releaseDate ?? true;
 	flow.coverCustomized = customization?.cover ?? true;
 	flow.typeCustomized = customization?.type ?? true;
-	flow.draft.albumDetails.editionType = request.album.edition_type as 'original' | 'reissue' | 'remaster' | 'other' | undefined;
-	flow.draft.albumDetails.canonicalAlbumId = request.album.canonical_album_id;
 	flow.metadataCountryCustomized = customization?.country ?? true;
 	flow.sourceCustomized = customization?.source ?? true;
 	flow.metadataConfirmed = request.metadata_confirmed ?? false;

@@ -8,7 +8,6 @@ import { useMusicAlbumCoverEditor } from '@/composables/useMusicAlbumCoverEditor
 import { useMusicAlbumTrackEditor } from '@/composables/useMusicAlbumTrackEditor'
 import MusicSquareImageCropSheet from '@/components/music/MusicSquareImageCropSheet.vue'
 import MusicCreationContributorPicker from '@/components/music/MusicCreationContributorPicker.vue'
-import MusicAlbumEditionField from '@/components/music/MusicAlbumEditionField.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PCountryRegionField from '@/components/ui/PCountryRegionField.vue'
 import PMaskedDateInput from '@/components/ui/PMaskedDateInput.vue'
@@ -565,7 +564,6 @@ watch(
               />
               <PButton v-if="albumImportDraft.metadataCountry" variant="ghost" size="sm" @click="updateMetadataCountry('')">清空国家/地区</PButton>
             </div>
-            <MusicAlbumEditionField v-if="!isEditMode && !standaloneTypeSelected" :draft="albumDetailsDraft" />
 
           </div>
         </div>

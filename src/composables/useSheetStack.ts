@@ -9,7 +9,10 @@ export interface BaseSheetLayer {
 }
 
 const activeElement = () =>
-	document.activeElement instanceof HTMLElement ? document.activeElement : null;
+	document.activeElement instanceof HTMLElement &&
+	document.activeElement !== document.body
+		? document.activeElement
+		: null;
 
 interface SheetStackOptions<T> {
 	maxLayers?: number;

@@ -20,6 +20,7 @@ const layer = (kind: TestLayer["kind"], id: string): TestLayer => ({
 describe("createSheetStack", () => {
 	beforeEach(() => document.body.replaceChildren());
 	afterEach(() => {
+		vi.clearAllTimers();
 		vi.useRealTimers();
 		document.body.replaceChildren();
 	});

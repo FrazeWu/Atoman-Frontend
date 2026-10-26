@@ -273,7 +273,7 @@ function openBook(id: string) {
 <style scoped>
 .books-me-view {
   min-height: 100vh;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   padding: 16px 16px 96px;
   box-sizing: border-box;
   display: flex;
@@ -296,13 +296,13 @@ function openBook(id: string) {
 /* Profile Card */
 .books-profile-card {
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-card, 4px);
-  background-color: #ffffff;
+  border-radius: var(--a-radius-control, 4px);
+  background-color: var(--a-color-surface, #ffffff);
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: var(--a-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.02));
+  box-shadow: none !important;
 }
 
 .books-profile-card__user {
@@ -314,9 +314,9 @@ function openBook(id: string) {
 .books-profile-card__avatar {
   width: 44px;
   height: 44px;
-  border-radius: 4px;
-  background-color: var(--a-color-text, #0f172a);
-  color: #ffffff;
+  border-radius: var(--a-radius-control, 4px);
+  background-color: var(--a-color-primary, #0f172a);
+  color: var(--a-color-primary-contrast, #ffffff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -376,8 +376,8 @@ function openBook(id: string) {
 /* Goal Card */
 .books-goal-card {
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-card, 4px);
-  background-color: #ffffff;
+  border-radius: var(--a-radius-control, 4px);
+  background-color: var(--a-color-surface, #ffffff);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -458,9 +458,9 @@ function openBook(id: string) {
 }
 
 .books-subtab-btn.is-active {
-  background-color: var(--a-color-text, #0f172a);
-  color: #ffffff;
-  border-color: var(--a-color-text, #0f172a);
+  background-color: var(--a-color-primary, #0f172a);
+  color: var(--a-color-primary-contrast, #ffffff);
+  border-color: var(--a-color-primary, #0f172a);
 }
 
 .books-subtab-section-header {
@@ -478,8 +478,8 @@ function openBook(id: string) {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-card, 4px);
-  background-color: #ffffff;
+  border-radius: var(--a-radius-control, 4px);
+  background-color: var(--a-color-surface, #ffffff);
   overflow: hidden;
 }
 

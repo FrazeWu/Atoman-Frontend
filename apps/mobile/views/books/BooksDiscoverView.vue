@@ -351,13 +351,13 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 100%;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   padding-bottom: 96px;
 }
 
 .mobile-books-discover__header {
   padding: 16px 16px 12px;
-  background-color: #ffffff;
+  background-color: var(--a-color-surface, #ffffff);
   border-bottom: 1px solid var(--a-color-border-soft, #f0f0f0);
 }
 
@@ -384,9 +384,9 @@ onMounted(() => {
   color: var(--a-color-text-secondary, #666666);
   text-decoration: none;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   border: 1px solid var(--a-color-border-soft, #eeeeee);
-  background: #ffffff;
+  background: var(--a-color-surface, #ffffff);
 }
 
 .mobile-books-discover__search {
@@ -402,18 +402,18 @@ onMounted(() => {
   padding: 4px 12px;
   font-size: 12px;
   font-weight: 500;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   border: 1px solid var(--a-color-border-soft, #eeeeee);
-  background: #ffffff;
+  background: var(--a-color-surface, #ffffff);
   color: var(--a-color-text-secondary, #666666);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .mobile-books-discover__chip.is-active {
-  background: var(--a-color-text, #111111);
-  color: #ffffff;
-  border-color: var(--a-color-text, #111111);
+  background: var(--a-color-primary, #111111);
+  color: var(--a-color-primary-contrast, #ffffff);
+  border-color: var(--a-color-primary, #111111);
 }
 
 .mobile-books-discover__content {
@@ -427,13 +427,13 @@ onMounted(() => {
 /* Hero Book Card */
 .mobile-books-discover__hero {
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-card, 4px);
-  background-color: #ffffff;
+  border-radius: var(--a-radius-control, 4px);
+  background-color: var(--a-color-surface, #ffffff);
   padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  box-shadow: var(--a-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.03));
+  box-shadow: none !important;
 }
 
 .mobile-books-discover__hero-tag {
@@ -532,10 +532,10 @@ onMounted(() => {
   padding: 5px 12px;
   font-size: 12px;
   font-weight: 500;
-  color: #ffffff;
-  background-color: var(--a-color-text, #0f172a);
-  border: 1px solid var(--a-color-text, #0f172a);
-  border-radius: 4px;
+  color: var(--a-color-primary-contrast, #ffffff);
+  background-color: var(--a-color-primary, #0f172a);
+  border: 1px solid var(--a-color-primary, #0f172a);
+  border-radius: var(--a-radius-control, 4px);
   cursor: pointer;
   transition: opacity 0.15s ease;
 }
@@ -619,8 +619,8 @@ onMounted(() => {
   gap: 12px;
   padding: 10px 12px;
   border: 1px solid var(--a-color-border-soft, #f0f0f0);
-  border-radius: 4px;
-  background-color: #ffffff;
+  border-radius: var(--a-radius-control, 4px);
+  background-color: var(--a-color-surface, #ffffff);
   cursor: pointer;
   transition: background-color 0.15s ease;
 }
@@ -632,11 +632,11 @@ onMounted(() => {
 .mobile-books-discover__cover-wrap {
   width: 48px;
   height: 68px;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   overflow: hidden;
   flex-shrink: 0;
   border: 1px solid var(--a-color-border-soft, #eeeeee);
-  background-color: #fcfcfc;
+  background-color: var(--a-color-surface-muted, #fcfcfc);
 }
 
 .mobile-books-discover__cover-img {
@@ -692,7 +692,7 @@ onMounted(() => {
   font-size: 10px;
   font-weight: 500;
   color: var(--a-color-primary, #007aff);
-  background: color-mix(in srgb, var(--a-color-primary, #007aff) 10%, #ffffff);
+  background: color-mix(in srgb, var(--a-color-primary, #007aff) 10%, var(--a-color-surface, #ffffff));
   padding: 1px 4px;
   border-radius: 2px;
 }
@@ -725,9 +725,9 @@ onMounted(() => {
   justify-content: center;
   width: 56px;
   height: 56px;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   border: 1px solid var(--a-color-border-soft, #eeeeee);
-  background: #ffffff;
+  background: var(--a-color-surface, #ffffff);
   color: var(--a-color-text-muted, #999999);
   margin-bottom: 16px;
 }

@@ -240,7 +240,7 @@ onMounted(() => {
 <style scoped>
 .book-detail-mobile {
   min-height: 100vh;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   padding-bottom: 96px;
   box-sizing: border-box;
 }
@@ -251,7 +251,7 @@ onMounted(() => {
   justify-content: space-between;
   height: 48px;
   padding: 0 16px;
-  background-color: #ffffff;
+  background-color: var(--a-color-surface, #ffffff);
   border-bottom: 1px solid var(--a-color-border-soft, #f0f0f0);
   position: sticky;
   top: 0;
@@ -283,9 +283,9 @@ onMounted(() => {
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   border: 1px solid var(--a-color-border-soft, #eeeeee);
-  background: #ffffff;
+  background: var(--a-color-surface, #ffffff);
   color: var(--a-color-text-secondary, #666666);
   cursor: pointer;
 }
@@ -307,14 +307,14 @@ onMounted(() => {
   width: 90px;
   height: 126px;
   flex-shrink: 0;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  background-color: #f8fafc;
+  background-color: var(--a-color-surface-muted, #f8fafc);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--a-shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.04));
+  box-shadow: none !important;
 }
 
 .book-detail-mobile__cover-img {
@@ -397,9 +397,9 @@ onMounted(() => {
 }
 
 .book-detail-mobile__btn--primary {
-  background-color: var(--a-color-text, #0f172a);
-  color: #ffffff;
-  border: 1px solid var(--a-color-text, #0f172a);
+  background-color: var(--a-color-primary, #0f172a);
+  color: var(--a-color-primary-contrast, #ffffff);
+  border: 1px solid var(--a-color-primary, #0f172a);
 }
 
 .book-detail-mobile__btn--primary:active {
@@ -407,15 +407,15 @@ onMounted(() => {
 }
 
 .book-detail-mobile__btn--secondary {
-  background-color: #ffffff;
+  background-color: var(--a-color-surface, #ffffff);
   color: var(--a-color-text, #0f172a);
   border: 1px solid var(--a-color-border-soft, #cbd5e1);
 }
 
 .book-detail-mobile__btn--secondary.is-in-shelf {
-  background-color: #f8fafc;
+  background-color: var(--a-color-surface-muted, #f8fafc);
   color: var(--a-color-text-secondary, #64748b);
-  border-color: #e2e8f0;
+  border-color: var(--a-color-border-soft, #e2e8f0);
 }
 
 .book-detail-mobile__section {
@@ -446,9 +446,9 @@ onMounted(() => {
   font-size: 13px;
   line-height: 1.65;
   color: var(--a-color-text-secondary, #334155);
-  background-color: #fcfcfc;
+  background-color: var(--a-color-surface-muted, #fcfcfc);
   border: 1px solid var(--a-color-border-soft, #f1f5f9);
-  border-radius: var(--a-radius-card, 4px);
+  border-radius: var(--a-radius-control, 4px);
   padding: 12px 14px;
 }
 
@@ -461,9 +461,9 @@ onMounted(() => {
   margin: 0;
   padding: 0;
   border: 1px solid var(--a-color-border-soft, #f1f5f9);
-  border-radius: var(--a-radius-card, 4px);
+  border-radius: var(--a-radius-control, 4px);
   overflow: hidden;
-  background-color: #ffffff;
+  background-color: var(--a-color-surface, #ffffff);
 }
 
 .book-detail-mobile__chapter-item {

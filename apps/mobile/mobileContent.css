@@ -85,9 +85,9 @@
 .mobile-app-shell .mobile-app-main .books-page .books-catalog-row__link {
   min-width: 0;
   padding: 14px;
-  border: 0;
-  border-radius: 16px;
-  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface, #ffffff);
 }
 
 .mobile-app-shell .mobile-app-main .books-page .books-continue-list a {
@@ -116,9 +116,9 @@
   position: relative;
   min-width: 0;
   padding: 0 0 12px;
-  border: 0;
-  border-radius: 16px;
-  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface, #ffffff);
   overflow: hidden;
 }
 
@@ -202,9 +202,9 @@
 .mobile-app-shell .mobile-app-main .ph-page .ph-recommendation-card {
   grid-template-columns: 88px minmax(0, 1fr);
   min-height: 88px;
-  border: 0;
-  border-radius: 16px;
-  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface, #ffffff);
 }
 
 .mobile-app-shell .mobile-app-main .ph-page .ph-recommendation-content {
@@ -225,9 +225,9 @@
   gap: 10px;
   min-height: 80px;
   padding: 12px;
-  border: 0;
-  border-radius: 16px;
-  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface, #ffffff);
 }
 
 .mobile-app-shell .mobile-app-main .ph-page .ph-episode-cover {
@@ -283,9 +283,9 @@
 .mobile-app-shell .mobile-app-main .forum-page .p-entry {
   margin: 0;
   padding: 16px;
-  border: 0;
-  border-radius: 16px;
-  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface, #ffffff);
 }
 
 .mobile-app-shell .mobile-app-main .forum-page .p-entry__arrow {

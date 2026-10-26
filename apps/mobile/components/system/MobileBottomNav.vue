@@ -162,9 +162,9 @@ const onTabClick = (tab: NavTabItem) => {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  background-color: #ffffff;
+  background-color: var(--a-color-surface, #ffffff);
   border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
-  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: none !important;
   pointer-events: auto;
   visibility: visible;
   opacity: 1;

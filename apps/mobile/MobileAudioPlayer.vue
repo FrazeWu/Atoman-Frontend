@@ -220,7 +220,7 @@ function handleTrackClick() {
   min-height: var(--mobile-app-player-height, 64px);
   padding: 0.5rem 0.875rem;
   border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
-  background: #ffffff;
+  background: var(--a-color-surface, #ffffff);
   box-shadow: none !important;
 }
 

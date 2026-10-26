@@ -100,8 +100,8 @@
 
 .mobile-app-shell .mobile-app-main .mobile-saved-page .p-empty {
   padding: 24px 20px;
-  border-radius: 16px;
-  background: #ffffff;
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface, #ffffff);
 }
 
 .mobile-app-shell .mobile-app-main .mobile-saved-page :is(.feed-timeline, .bookmark-post-list) {
@@ -112,9 +112,9 @@
 .mobile-app-shell .mobile-app-main .mobile-saved-page .p-entry.content-stream-entry {
   margin: 0;
   padding: 16px;
-  border: 0;
-  border-radius: 16px;
-  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface, #ffffff);
 }
 
 .mobile-app-shell .mobile-app-main .mobile-saved-page .p-entry.content-stream-entry::before {
@@ -190,15 +190,15 @@
   flex-shrink: 0;
   min-height: 44px;
   padding: 8px 14px;
-  border: 0;
-  border-radius: 24px;
-  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface, #ffffff);
   white-space: nowrap;
 }
 
 .mobile-app-shell .mobile-app-main .mobile-saved-page :is(.star-group-button.active, .sidebar-item-active) {
-  background: var(--a-color-text);
-  color: #ffffff;
+  background: var(--a-color-primary);
+  color: var(--a-color-primary-contrast, #ffffff);
 }
 
 .mobile-app-shell .mobile-app-main .mobile-saved-page .bookmark-layout {
@@ -224,13 +224,14 @@
   flex: 1;
   min-height: 44px;
   padding: 8px 12px;
-  border-radius: 24px;
-  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface, #ffffff);
 }
 
 .mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__sort button.active {
-  background: var(--a-color-text);
-  color: #ffffff;
+  background: var(--a-color-primary);
+  color: var(--a-color-primary-contrast, #ffffff);
 }
 
 .mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__cards {
@@ -272,8 +273,9 @@
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border-radius: 16px;
-  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface, #ffffff);
 }
 
 .mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__song-cover {
@@ -286,14 +288,15 @@
   width: 64px;
   height: 64px;
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: var(--a-radius-control, 4px);
 }
 
 .mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__later-remove {
   position: static;
   grid-area: action;
-  border: 0;
-  background: #f2f2f7;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface-muted);
 }
 
 .mobile-app-shell .mobile-app-main .mobile-saved-page .music-library__song-info {
@@ -319,9 +322,9 @@
   gap: 8px 12px;
   margin: 0;
   padding: 14px;
-  border: 0;
-  border-radius: 16px;
-  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface, #ffffff);
 }
 
 .mobile-app-shell .mobile-app-main .mobile-saved-page .history-song {
@@ -373,14 +376,14 @@
 
 .mobile-app-shell .mobile-app-main .mobile-saved-page .vc-card {
   padding: 0;
-  border: 0;
-  border-radius: 16px;
-  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface, #ffffff);
 }
 
 .mobile-app-shell .mobile-app-main .mobile-saved-page .vc-thumb {
   border: 0;
-  border-radius: 16px 16px 0 0;
+  border-radius: var(--a-radius-control, 4px) var(--a-radius-control, 4px) 0 0;
 }
 
 .mobile-app-shell .mobile-app-main .mobile-saved-page .vc-info {
@@ -409,8 +412,9 @@
   min-height: 52px;
   align-items: center;
   padding: 12px 16px;
-  border-radius: 14px;
-  background: #ffffff;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface, #ffffff);
 }
 
 .mobile-app-shell .feed-article-page__navigation {

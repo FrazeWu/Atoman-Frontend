@@ -924,8 +924,8 @@ onUnmounted(() => {
   height: 100%;
   object-fit: cover;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card, 8px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-radius: var(--a-radius-control, 4px);
+  box-shadow: none !important;
 }
 
 .mobile-player-view__cover--fallback {
@@ -933,7 +933,7 @@ onUnmounted(() => {
   place-items: center;
   background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
-  border-radius: var(--a-radius-card, 8px);
+  border-radius: var(--a-radius-control, 4px);
   width: 100%;
   height: 100%;
 }
@@ -1207,7 +1207,7 @@ onUnmounted(() => {
   height: 14px;
   border-radius: 50%;
   background: var(--a-color-primary, #0f172a);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  box-shadow: none !important;
   transform: translate(-50%, -50%);
   pointer-events: none;
   transition: transform 0.1s ease;
@@ -1333,12 +1333,13 @@ onUnmounted(() => {
   z-index: 100;
   max-width: 90vw;
   padding: 0.45rem 1.125rem;
-  background: rgba(15, 23, 42, 0.92);
-  color: #ffffff;
-  border-radius: 9999px;
+  background: var(--a-color-primary, #0f172a);
+  color: var(--a-color-primary-contrast, #ffffff);
+  border-radius: var(--a-radius-control, 4px);
+  border: 1px solid var(--a-color-border-soft);
   font-size: 0.8125rem;
   font-weight: 500;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  box-shadow: none !important;
   pointer-events: none;
   backdrop-filter: blur(8px);
   white-space: nowrap;

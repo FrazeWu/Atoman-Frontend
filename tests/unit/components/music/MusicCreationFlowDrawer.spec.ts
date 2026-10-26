@@ -132,6 +132,7 @@ const drawerMocks = {
 		creationFlows: {} as Record<string, MusicCreationFlowState>,
 	}),
 	openMusicCreationFlow: vi.fn(),
+	completeMusicContributorFlow: vi.fn(),
 	closeMusicCreationFlow: vi.fn(),
 	refreshArtist: vi.fn(),
 	refreshAlbum: vi.fn(),
@@ -197,6 +198,7 @@ vi.mock("@/composables/useMusicDrawers", () => ({
 	useMusicDrawers: () => ({
 		state: drawerMocks.state,
 		openMusicCreationFlow: drawerMocks.openMusicCreationFlow,
+		completeMusicContributorFlow: drawerMocks.completeMusicContributorFlow,
 		closeMusicCreationFlow: drawerMocks.closeMusicCreationFlow,
 		refreshArtist: drawerMocks.refreshArtist,
 		refreshAlbum: drawerMocks.refreshAlbum,
@@ -1889,6 +1891,25 @@ describe("MusicCreationFlowDrawer", () => {
 				album_source: "资料来源",
 			}),
 		);
+	});
+
+	it("独立创作者层完成时回填父级而不是切换同层步骤", async () => {
+		const child = createFlowState({ step: "artist", entity: "artist", parentKey: "parent", contributorLayer: true, editingContributorId: "temp" });
+		child.draft.albumDetails.contributors = [{
+			id: "temp", artistId: null, name: "初始名字", avatarUrl: "", kind: "person", locked: false,
+			newArtistDraft: createEmptyMusicArtistDraft({ name: "新艺术家" }),
+			roles: [{ id: "primary", role: "primary", label: "" }],
+		}];
+		drawerMocks.state.value.creationFlow = child;
+		const wrapper = mount(MusicCreationFlowDrawer);
+		expect(wrapper.get('[data-testid="artist-next-button"]').text()).toBe("完成创作者");
+		await wrapper.get('[data-testid="artist-next-button"]').trigger("click");
+		await flushPromises();
+		expect(drawerMocks.completeMusicContributorFlow).toHaveBeenCalledWith(child);
+		expect(child.draft.albumDetails.contributors[0].name).toBe("新艺术家");
+		expect(child.step).toBe("artist");
+		expect(child.editingContributorId).toBe("temp");
+		expect(createMusicArtistMock).not.toHaveBeenCalled();
 	});
 
 	it("非主创作者只填写名称即可返回专辑草稿", async () => {

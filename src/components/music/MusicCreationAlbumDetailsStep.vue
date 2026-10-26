@@ -21,13 +21,12 @@ import MusicLyricEditorDrawer from '@/components/music/MusicLyricEditorDrawer.vu
 import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEditorDrawer.vue'
 import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
 import { parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
-import { createEmptyMusicArtistDraft } from './musicCreationTypes'
 import { musicCreationProgress } from '@/utils/musicCreationProgress'
 import { normalizeImportedTrackTitle } from '@/utils/musicImportPreview'
 import { musicTrackLyricsLabel } from '@/utils/musicTrackLyrics'
 import type { MusicCreationTrackDraft } from './musicCreationTypes'
 
-const { state, closeMusicCreationFlow, setMusicCreationStep } = useMusicDrawers()
+const { state, closeMusicCreationFlow, setMusicCreationStep, openMusicContributorFlow } = useMusicDrawers()
 const creationFlowFallback = computed(() => state.value.creationFlow)
 const creationFlow = useMusicCreationFlow(creationFlowFallback)
 const progress = computed(() => musicCreationProgress(creationFlow.value))
@@ -400,26 +399,7 @@ function goBack() {
 
 function createNewContributor(name: string) {
   const flow = creationFlow.value
-  const details = albumDetailsDraft.value
-  if (!flow || !details || !name.trim()) return
-
-  const hasPrimary = details.contributors.some((item) => item.roles.some((role) => role.role === 'primary'))
-  const id = `new-contributor-${Date.now()}`
-  details.contributors.push({
-    id,
-    artistId: null,
-    name: name.trim(),
-    avatarUrl: '',
-    kind: 'person',
-    locked: false,
-    newArtistDraft: createEmptyMusicArtistDraft({ name: name.trim() }),
-    roles: hasPrimary
-      ? [{ id: `role-${id}-featured`, role: 'featured', label: '' }]
-      : [primaryAlbumRole(`role-${id}-primary`)],
-  })
-  flow.editingContributorId = id
-  flow.contributorReturnStep = 'albumDetails'
-  setMusicCreationStep('artist')
+  if (flow) openMusicContributorFlow(flow, name)
 }
 
 watch(

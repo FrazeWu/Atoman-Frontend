@@ -1,6 +1,6 @@
 import { useRouter } from "vue-router";
 import { isStandaloneMobileApp } from "@/utils/appRuntime";
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, toRaw } from "vue";
 import type {
 	MusicAlbumImport,
 	MusicAlbumImportCommitInput,
@@ -451,7 +451,7 @@ export function useMusicDrawers() {
 		);
 		if (index < 0) return;
 		for (const layer of sheetStack.layers.value.slice(index + 1)) {
-			if (layer.kind === "creation" && state.value.creationFlows[layer.key]?.parentKey !== key)
+			if (layer.kind === "creation" && (state.value.creationFlows[layer.key]?.contributorLayer || state.value.creationFlows[layer.key]?.parentKey !== key))
 				delete state.value.creationFlows[layer.key];
 		}
 		sheetStack.popTo(key);
@@ -634,7 +634,7 @@ export function useMusicDrawers() {
 		options: { artistDraft?: MusicCreationDraft["artist"] } = {},
 	) => {
 		const previous = seed.parentKey && Object.entries(state.value.creationFlows)
-			.find(([, candidate]) => candidate.parentKey === seed.parentKey);
+			.find(([, candidate]) => candidate.parentKey === seed.parentKey && candidate.entity === seed.entity && !candidate.contributorLayer);
 		if (previous) {
 			const [key, flow] = previous;
 			if (options.artistDraft) flow.draft.artist = options.artistDraft;
@@ -879,6 +879,33 @@ export function useMusicDrawers() {
 		state.value.creationFlow = null;
 	};
 
+	const openMusicContributorFlow = (parent: MusicCreationFlowState, name: string) => {
+		const parentKey = Object.entries(state.value.creationFlows).find(([, flow]) => toRaw(flow) === toRaw(parent))?.[0];
+		if (!parentKey || !name.trim()) return;
+		openMusicCreationFlow({ entity: "artist", startStep: "artist", parentKey });
+		const child = state.value.creationFlow!;
+		child.contributorLayer = true;
+		const id = `new-contributor-${crypto.randomUUID()}`;
+		child.editingContributorId = id;
+		child.draft.albumDetails.contributors = [{
+			id, artistId: null, name: name.trim(), avatarUrl: "", kind: "person", locked: false,
+			newArtistDraft: createEmptyMusicArtistDraft({ name: name.trim() }),
+			roles: parent.draft.albumDetails.contributors.some(row => row.roles.some(role => role.role === "primary"))
+				? [{ id: `role-${id}-featured`, role: "featured", label: "" }]
+				: [primaryAlbumRole(`role-${id}-primary`)],
+		}];
+		return child;
+	};
+
+	const completeMusicContributorFlow = (child: MusicCreationFlowState) => {
+		const parent = child.parentKey ? state.value.creationFlows[child.parentKey] : null;
+		const contributor = child.draft.albumDetails.contributors.find(row => row.id === child.editingContributorId);
+		if (!parent || !contributor) throw new Error("原创建页面已关闭");
+		parent.draft.albumDetails.contributors.push(contributor);
+		const childKey = Object.entries(state.value.creationFlows).find(([, flow]) => toRaw(flow) === toRaw(child))?.[0];
+		if (childKey) closeMusicCreationFlow(childKey);
+	};
+
 	const closeAll = () => {
 		sheetStack.clear();
 		state.value.artistId = null;
@@ -946,6 +973,8 @@ export function useMusicDrawers() {
 		openMusicEditor,
 		closeMusicEditor,
 		openMusicCreationFlow,
+		openMusicContributorFlow,
+		completeMusicContributorFlow,
 		resumeMusicCreationFlow,
 		setMusicCreationStep,
 		closeMusicCreationFlow,

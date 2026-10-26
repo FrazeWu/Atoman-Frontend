@@ -472,14 +472,14 @@ onMounted(() => {
   bottom: 80px;
   width: 48px;
   height: 48px;
-  border-radius: var(--a-radius-card, 4px);
+  border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-primary, #10b981);
-  color: #ffffff;
-  border: none;
+  color: var(--a-color-primary-contrast, #ffffff);
+  border: 1px solid var(--a-color-border-soft);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  box-shadow: none !important;
   cursor: pointer;
   z-index: 20;
   transition: transform 0.15s ease;

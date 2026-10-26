@@ -218,7 +218,7 @@ onMounted(async () => {
 <style scoped>
 .feed-me-view {
   min-height: 100vh;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   padding: 16px 16px 96px;
   box-sizing: border-box;
   display: flex;
@@ -245,13 +245,13 @@ onMounted(async () => {
 /* Profile Card */
 .feed-profile-card {
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-card, 4px);
-  background-color: #ffffff;
+  border-radius: var(--a-radius-control, 4px);
+  background-color: var(--a-color-surface, #ffffff);
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: var(--a-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.02));
+  box-shadow: none !important;
 }
 
 .feed-profile-card__user {
@@ -263,9 +263,9 @@ onMounted(async () => {
 .feed-profile-card__avatar {
   width: 44px;
   height: 44px;
-  border-radius: 4px;
-  background-color: var(--a-color-text, #0f172a);
-  color: #ffffff;
+  border-radius: var(--a-radius-control, 4px);
+  background-color: var(--a-color-primary, #0f172a);
+  color: var(--a-color-primary-contrast, #ffffff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -340,9 +340,9 @@ onMounted(async () => {
 .feed-shortcuts-list {
   display: flex;
   flex-direction: column;
-  background-color: #ffffff;
+  background-color: var(--a-color-surface, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-card, 4px);
+  border-radius: var(--a-radius-control, 4px);
   overflow: hidden;
 }
 

@@ -390,7 +390,7 @@ onMounted(() => {
 <style scoped>
 .feed-stream-view {
   min-height: 100vh;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
 }
 
@@ -398,7 +398,7 @@ onMounted(() => {
   position: sticky;
   top: 0;
   z-index: 10;
-  background-color: #ffffff;
+  background-color: var(--a-color-surface, #ffffff);
   border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
   padding: 8px 16px;
 }
@@ -427,10 +427,11 @@ onMounted(() => {
 }
 
 .feed-stream-tab.is-active {
-  background-color: #ffffff;
+  background-color: var(--a-color-surface, #ffffff);
   color: var(--a-color-text, #0f172a);
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: none !important;
 }
 
 .feed-stream-list {

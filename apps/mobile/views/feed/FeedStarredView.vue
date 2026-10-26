@@ -187,7 +187,7 @@ onMounted(() => {
 <style scoped>
 .feed-starred-view {
   min-height: 100vh;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   padding: 16px 16px 96px;
   box-sizing: border-box;
 }
@@ -232,16 +232,16 @@ onMounted(() => {
   font-weight: 500;
   border-radius: var(--a-radius-control, 4px);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  background: #ffffff;
+  background: var(--a-color-surface, #ffffff);
   color: var(--a-color-text-secondary, #64748b);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .feed-starred-chip.is-active {
-  background-color: var(--a-color-text, #0f172a);
-  color: #ffffff;
-  border-color: var(--a-color-text, #0f172a);
+  background-color: var(--a-color-primary, #0f172a);
+  color: var(--a-color-primary-contrast, #ffffff);
+  border-color: var(--a-color-primary, #0f172a);
 }
 
 .feed-starred-content {
@@ -257,14 +257,14 @@ onMounted(() => {
 
 .feed-starred-item {
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-card, 4px);
-  background-color: #ffffff;
+  border-radius: var(--a-radius-control, 4px);
+  background-color: var(--a-color-surface, #ffffff);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   cursor: pointer;
-  box-shadow: var(--a-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.02));
+  box-shadow: none !important;
   transition: all 0.15s ease;
 }
 

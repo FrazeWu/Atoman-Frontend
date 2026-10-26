@@ -265,7 +265,8 @@ onMounted(() => {
 .period-btn.is-active {
   background: var(--a-color-bg, #ffffff);
   color: var(--a-color-text, #18181b);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: none !important;
 }
 
 .feed-stats-grid {

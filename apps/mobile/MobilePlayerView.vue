@@ -597,6 +597,7 @@ let startTouchTime = 0
 let dismissTimer: ReturnType<typeof setTimeout> | null = null
 let snapResetTimer: ReturnType<typeof setTimeout> | null = null
 let suppressCoverClick = false
+let isStageTouch = false
 
 function isInteractiveElement(target: EventTarget | null): boolean {
   if (!target) return false
@@ -616,6 +617,10 @@ function handleTouchStart(e: TouchEvent) {
 
   const target = (touch.target as EventTarget | null) || e.target
   if (isInteractiveElement(target)) return
+
+  isStageTouch = Boolean(
+    target instanceof Element && target.closest('.mobile-player-view__stage')
+  )
 
   startTouchX = touch.clientX
   startTouchY = touch.clientY
@@ -643,9 +648,11 @@ function handleTouchMove(e: TouchEvent) {
 
   const deltaX = currentTouchX - startTouchX
   const deltaY = currentTouchY - startTouchY
+  const absX = Math.abs(deltaX)
+  const absY = Math.abs(deltaY)
 
   // Downward pull detection
-  if (deltaY > 8 && Math.abs(deltaY) > Math.abs(deltaX)) {
+  if (deltaY > 8 && absY > absX) {
     if (e.cancelable) {
       e.preventDefault()
     }
@@ -658,6 +665,8 @@ function handleTouchMove(e: TouchEvent) {
     } else {
       dragOffsetY.value = 120 + (deltaY - 120) * 0.4
     }
+  } else if (isStageTouch && absX > 15 && absX > absY) {
+    suppressCoverClick = true
   }
 }
 
@@ -666,23 +675,40 @@ function handleTouchEnd(e: TouchEvent) {
   window.removeEventListener('touchend', handleTouchEnd)
   window.removeEventListener('touchcancel', handleTouchEnd)
 
-  if (!isDragging.value) {
-    return
-  }
-
   const endTouch = e.changedTouches?.[0] || e.touches?.[0]
   if (endTouch) {
     currentTouchX = endTouch.clientX
     currentTouchY = endTouch.clientY
   }
 
+  const deltaX = currentTouchX - startTouchX
   const deltaY = currentTouchY - startTouchY
+  const absX = Math.abs(deltaX)
+  const absY = Math.abs(deltaY)
+
+  // Stage horizontal swipe to skip track
+  if (isStageTouch && absX > 50 && absX > 1.2 * absY) {
+    suppressCoverClick = true
+    if (deltaX < -50) {
+      player.playNext()
+    } else if (deltaX > 50) {
+      player.playPrevious()
+    }
+    isDragging.value = false
+    dragOffsetY.value = 0
+    return
+  }
+
+  if (!isDragging.value) {
+    return
+  }
+
   const elapsed = Math.max(1, Date.now() - startTouchTime)
   const velocity = deltaY / elapsed
 
   isDragging.value = false
 
-  const isFlick = deltaY > 30 && elapsed >= 40 && elapsed < 400 && velocity > 0.4
+  const isFlick = deltaY > 50 && elapsed >= 40 && elapsed < 400 && velocity > 0.5
   if (deltaY > 72 || isFlick) {
     isDismissing.value = true
     dragOffsetY.value = window.innerHeight || 800

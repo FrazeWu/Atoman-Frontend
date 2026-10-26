@@ -162,4 +162,64 @@ describe('MobilePlayerView Gestures (Pull-to-Dismiss & Swipe-to-Skip)', () => {
     const containerStyle = wrapper.find('.mobile-player-view').attributes('style') || ''
     expect(containerStyle).not.toContain('translateY(100px)')
   })
+
+  it('swiping left on the stage triggers player.playNext()', async () => {
+    const wrapper = createWrapper()
+    const playerStore = usePlayerStore()
+    const nextSpy = vi.spyOn(playerStore, 'playNext').mockImplementation(() => {})
+    const stage = wrapper.find('.mobile-player-view__stage')
+    expect(stage.exists()).toBe(true)
+
+    await stage.trigger('touchstart', {
+      touches: [{ clientX: 250, clientY: 200 }],
+    })
+
+    window.dispatchEvent(
+      new TouchEvent('touchmove', {
+        touches: [{ clientX: 170, clientY: 205 } as any], // deltaX = -80, deltaY = 5
+        bubbles: true,
+      })
+    )
+    await wrapper.vm.$nextTick()
+
+    window.dispatchEvent(
+      new TouchEvent('touchend', {
+        changedTouches: [{ clientX: 170, clientY: 205 } as any],
+        bubbles: true,
+      })
+    )
+    await wrapper.vm.$nextTick()
+
+    expect(nextSpy).toHaveBeenCalled()
+  })
+
+  it('swiping right on the stage triggers player.playPrevious()', async () => {
+    const wrapper = createWrapper()
+    const playerStore = usePlayerStore()
+    const prevSpy = vi.spyOn(playerStore, 'playPrevious').mockImplementation(() => {})
+    const stage = wrapper.find('.mobile-player-view__stage')
+    expect(stage.exists()).toBe(true)
+
+    await stage.trigger('touchstart', {
+      touches: [{ clientX: 150, clientY: 200 }],
+    })
+
+    window.dispatchEvent(
+      new TouchEvent('touchmove', {
+        touches: [{ clientX: 230, clientY: 205 } as any], // deltaX = +80, deltaY = 5
+        bubbles: true,
+      })
+    )
+    await wrapper.vm.$nextTick()
+
+    window.dispatchEvent(
+      new TouchEvent('touchend', {
+        changedTouches: [{ clientX: 230, clientY: 205 } as any],
+        bubbles: true,
+      })
+    )
+    await wrapper.vm.$nextTick()
+
+    expect(prevSpy).toHaveBeenCalled()
+  })
 })

@@ -224,7 +224,7 @@ onMounted(() => {
 <style scoped>
 .messages-me-view {
   min-height: 100vh;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   padding: 16px 16px 96px;
   box-sizing: border-box;
   display: flex;
@@ -257,10 +257,10 @@ onMounted(() => {
 /* Stats Card */
 .messages-stats-card {
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-card, 4px);
-  background-color: #ffffff;
+  border-radius: var(--a-radius-control, 4px);
+  background-color: var(--a-color-surface, #ffffff);
   padding: 16px;
-  box-shadow: var(--a-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.02));
+  box-shadow: none !important;
 }
 
 .messages-stats-grid {
@@ -305,9 +305,9 @@ onMounted(() => {
 .messages-settings-card {
   display: flex;
   flex-direction: column;
-  background-color: #ffffff;
+  background-color: var(--a-color-surface, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-card, 4px);
+  border-radius: var(--a-radius-control, 4px);
   overflow: hidden;
 }
 
@@ -387,9 +387,10 @@ onMounted(() => {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background-color: #ffffff;
+  background-color: var(--a-color-surface, #ffffff);
+  border: 1px solid var(--a-color-border-soft);
   transition: transform 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  box-shadow: none !important;
 }
 
 .messages-switch.is-on .messages-switch__handle {

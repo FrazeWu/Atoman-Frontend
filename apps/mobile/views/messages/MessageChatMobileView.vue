@@ -274,7 +274,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   box-sizing: border-box;
 }
 
@@ -287,7 +287,7 @@ onMounted(async () => {
   padding-top: env(safe-area-inset-top, 0px);
   padding-left: 12px;
   padding-right: 16px;
-  background-color: #ffffff;
+  background-color: var(--a-color-surface, #ffffff);
   border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
   position: sticky;
   top: 0;
@@ -341,7 +341,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background-color: #ffffff;
+  background-color: var(--a-color-surface-muted, #f8fafc);
 }
 
 .message-bubble-row {
@@ -356,10 +356,10 @@ onMounted(async () => {
 .message-bubble {
   max-width: 78%;
   padding: 10px 14px;
-  border-radius: var(--a-radius-card, 4px);
-  background-color: #ffffff;
+  border-radius: var(--a-radius-control, 4px);
+  background-color: var(--a-color-surface, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  box-shadow: var(--a-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.02));
+  box-shadow: none !important;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -367,7 +367,7 @@ onMounted(async () => {
 
 /* Telegram Option A: subtle primary tint for outgoing */
 .message-bubble.is-me {
-  background-color: color-mix(in srgb, var(--a-color-primary, #007aff) 8%, #ffffff);
+  background-color: color-mix(in srgb, var(--a-color-primary, #007aff) 8%, var(--a-color-surface, #ffffff));
   border-color: color-mix(in srgb, var(--a-color-primary, #007aff) 20%, transparent);
 }
 
@@ -403,7 +403,7 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
-  background-color: #ffffff;
+  background-color: var(--a-color-surface, #ffffff);
   border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
 }
 

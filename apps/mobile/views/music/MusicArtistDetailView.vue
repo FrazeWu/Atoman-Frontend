@@ -367,7 +367,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 100%;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   padding-bottom: var(--mobile-music-page-bottom, 2rem);
 }
 
@@ -463,9 +463,9 @@ onMounted(() => {
   height: 96px;
   border-radius: 50%;
   overflow: hidden;
-  background-color: #f5f5f5;
+  background-color: var(--a-color-surface-muted, #f5f5f5);
   border: 1px solid var(--a-color-border-soft, #eeeeee);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: none !important;
   margin-bottom: 12px;
 }
 
@@ -594,8 +594,8 @@ onMounted(() => {
   bottom: 4px;
   right: 4px;
   font-size: 9px;
-  background: rgba(0, 0, 0, 0.6);
-  color: #ffffff;
+  background: var(--a-color-primary, #0f172a);
+  color: var(--a-color-primary-contrast, #ffffff);
   padding: 1px 4px;
   border-radius: 2px;
 }

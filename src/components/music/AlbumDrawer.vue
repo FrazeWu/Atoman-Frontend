@@ -4,6 +4,8 @@ import { reportError } from '@/utils/logger'
 import { computed, inject, ref, watch } from 'vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { modulePathUrl } from '@/router/siteUrls'
+import { useAuthStore } from '@/stores/auth'
+import { isAdminRole } from '@/utils/roles'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
@@ -27,6 +29,7 @@ import {
   createAlbumBookmark,
   deleteAlbumBookmark,
   getMusicAlbum,
+  archiveMusicEntry,
   listAlbumBookmarks,
   listAlbumContributors,
   listMusicPlaylists,
@@ -59,6 +62,9 @@ const queryClient = resolveQueryClient()
 const { state, closeAlbum, returnToLayer, isAlbumShifted, isLayerActive, isLayerShifted, isTopLayer, openAlbum, replaceAlbum, replaceSong, openNestedAction, openArtist, openMusicCreationFlow } = useMusicDrawers()
 const { isAuthenticated, requireLogin } = useLoginRedirect()
 const player = usePlayerStore()
+const authStore = useAuthStore()
+const canArchive = computed(() => isAdminRole(authStore.user?.role))
+const archiveBusy = ref(false)
 const albumId = computed(() => props.layer?.payload.albumId ?? state.value.albumId)
 const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : albumId.value !== null)
 const sheetIndex = computed(() => props.layer ? props.layerIndex : state.value.artistId !== null ? 1 : 0)
@@ -527,6 +533,27 @@ async function addTrackToPlaylist(playlistId: string, songId: string, close?: ()
   }
 }
 
+async function archiveCurrentAlbum() {
+  const id = albumId.value
+  if (!id || !canArchive.value || archiveBusy.value || album.value?.lifecycle_status !== 'active') return
+  if (!window.confirm('归档后此专辑及其歌曲将从公开页面隐藏，媒体文件和历史保留。确定归档？')) return
+  const reason = window.prompt('请输入归档原因（用于审计）')?.trim()
+  if (!reason) return
+  archiveBusy.value = true
+  try {
+    await archiveMusicEntry('album', id, reason)
+    moduleAlbumDetailCache.delete(id)
+    queryClient?.invalidateQueries({ queryKey: musicKeys.albums() })
+    await loadAlbum(id)
+    toastMessage.value = '专辑已归档，公开页面不可见'
+  } catch {
+    toastMessage.value = '归档失败，请重试'
+  } finally {
+    toastVisible.value = true
+    archiveBusy.value = false
+  }
+}
+
 async function loadAlbum(albumId: string | null) {
   const { isCurrent: isCurrentLoad } = albumRequests.beginRequest()
   ratingAlbumLoading.value = false
@@ -910,6 +937,9 @@ watch(
                   <button type="button" @click="close(); openNestedAction('history', { albumId, title: album?.title || '' })">
                     <History :size="16" aria-hidden="true" />
                     查看版本
+                  </button>
+                  <button v-if="canArchive && album?.lifecycle_status === 'active'" type="button" data-testid="album-archive-action" :disabled="archiveBusy" @click="close(); archiveCurrentAlbum()">
+                    归档专辑（隐藏公开内容）
                   </button>
                   <button type="button" data-testid="album-merge-action" @click="close(); mergeAlbum()">
                     <Merge :size="16" aria-hidden="true" />

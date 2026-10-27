@@ -1148,3 +1148,7 @@ export async function createMusicArtist(
 ): Promise<MusicArtistListItem> {
 	return apiPostJson<MusicArtistListItem>(musicV1Endpoints.artists(), input);
 }
+
+export async function archiveMusicEntry(entityType: "album" | "song", entityId: string, reason: string): Promise<void> {
+  await apiPostJson<void>(musicV1Endpoints.musicEntryArchive(entityType, entityId), { reason });
+}

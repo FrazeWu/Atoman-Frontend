@@ -77,6 +77,8 @@ export const musicV1Endpoints = {
 		`${apiV1Base()}/music/songs/${songId}/audio-replacements`,
 	songToAlbumConversion: (songId: string) =>
 		`${apiV1Base()}/music/songs/${songId}/convert-to-album`,
+	musicEntryArchive: (entityType: "album" | "song", entityId: string) =>
+		`${apiV1Base()}/music/entries/${entityType}/${entityId}/archive`,
 	musicEntryStateRequests: (entityType: string, entityId: string) =>
 		`${apiV1Base()}/music/entries/${entityType}/${entityId}/state-requests`,
 	musicEntryEmergencyState: (entityType: string, entityId: string) =>

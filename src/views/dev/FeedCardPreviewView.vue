@@ -772,7 +772,7 @@ const mockChannels = ref([
   padding: 1rem;
   display: grid;
   gap: 0.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: none;
 }
 .modern-note-card__header { display: flex; align-items: center; gap: 0.6rem; }
 .note-author-avatar { width: 32px; height: 32px; border-radius: 999px; background: #8b5cf6; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }

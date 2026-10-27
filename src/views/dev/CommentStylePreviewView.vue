@@ -517,7 +517,7 @@ function submitComment() {
 .preview-comment__profile-link:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .preview-comment__role { padding: 0.1rem 0.35rem; border: 1px solid var(--a-color-border); border-radius: 4px; background: var(--a-color-bg); color: var(--a-color-text-secondary) !important; font-weight: var(--a-font-weight-strong); }
 .preview-comment__menu-wrap { position: relative; margin-left: auto; }
-.preview-comment__menu { position: absolute; z-index: 1; top: calc(100% + 0.2rem); right: 0; display: grid; min-width: 6.5rem; padding: 0.25rem; border: 1px solid var(--a-color-border); border-radius: 6px; background: var(--a-color-bg); box-shadow: 0 0.5rem 1.5rem var(--a-color-overlay-soft); }
+.preview-comment__menu { position: absolute; z-index: 1; top: calc(100% + 0.2rem); right: 0; display: grid; min-width: 6.5rem; padding: 0.25rem; border: 1px solid var(--a-color-border); border-radius: 4px; background: var(--a-color-bg); box-shadow: none; }
 .preview-comment__menu button { min-height: 2.25rem; padding: 0 0.5rem; border: 0; border-radius: 4px; background: transparent; color: var(--a-color-text-secondary); cursor: pointer; font: inherit; font-size: var(--a-text-sm); text-align: left; }
 .preview-comment__menu button:hover, .preview-comment__menu button:focus-visible { background: var(--a-color-surface-muted); color: var(--a-color-text); outline: 0; }
 .preview-comment__body { color: var(--a-color-text); font-size: 0.9375rem; line-height: 1.65; }

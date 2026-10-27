@@ -12,6 +12,7 @@ const props = defineProps<{ modelValue: string; readonly?: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 const editorRoot = ref<HTMLElement | null>(null)
 let editor: EditorView | null = null
+let applyingExternalValue = false
 
 onMounted(() => {
   if (!editorRoot.value) return
@@ -28,7 +29,7 @@ onMounted(() => {
         EditorView.lineWrapping,
         EditorState.readOnly.of(Boolean(props.readonly)),
         EditorView.updateListener.of((update) => {
-          if (update.docChanged) emit('update:modelValue', update.state.doc.toString())
+          if (update.docChanged && !applyingExternalValue) emit('update:modelValue', update.state.doc.toString())
         }),
       ],
     }),
@@ -37,7 +38,12 @@ onMounted(() => {
 
 watch(() => props.modelValue, (next) => {
   if (!editor || editor.state.doc.toString() === next) return
-  editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: next } })
+  applyingExternalValue = true
+  try {
+    editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: next } })
+  } finally {
+    applyingExternalValue = false
+  }
 })
 
 onBeforeUnmount(() => {

@@ -68,22 +68,30 @@ const newFilePath = ref('')
 const saveStatus = ref('尚未打开文件')
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 let savePromise: Promise<boolean> | null = null
+let loadSerial = 0
+let fileSerial = 0
+let disposed = false
 
 async function loadProject() {
+  const serial = ++loadSerial
+  const requestedProjectId = projectId.value
   loading.value = true
   error.value = ''
   try {
     const [currentProject, currentFiles] = await Promise.all([
-      getPaperProject(projectId.value), listPaperFiles(projectId.value),
+      getPaperProject(requestedProjectId), listPaperFiles(requestedProjectId),
     ])
+    if (disposed || serial !== loadSerial || requestedProjectId !== projectId.value) return
     project.value = currentProject
     files.value = currentFiles
     const main = currentFiles.find((file) => file.id === currentProject.main_file_id) || currentFiles[0]
     if (main) await selectFile(main)
   } catch {
-    error.value = '无法打开论文。请确认项目存在且当前账号具有访问权限。'
+    if (!disposed && serial === loadSerial) {
+      error.value = '无法打开论文。请确认项目存在且当前账号具有访问权限。'
+    }
   } finally {
-    loading.value = false
+    if (!disposed && serial === loadSerial) loading.value = false
   }
 }
 
@@ -133,17 +141,21 @@ async function persist(): Promise<boolean> {
 }
 
 async function selectFile(file: PaperFile) {
+  const serial = ++fileSerial
+  const requestedProjectId = projectId.value
   if (activeFile.value?.id === file.id) return
   if (activeFile.value && !await persist()) return
+  if (disposed || serial !== fileSerial || requestedProjectId !== projectId.value) return
   fileError.value = ''
   try {
-    const content = await getPaperFile(projectId.value, file.id)
+    const content = await getPaperFile(requestedProjectId, file.id)
+    if (disposed || serial !== fileSerial || requestedProjectId !== projectId.value) return
     activeFile.value = content
     draft.value = content.content
     saveStatus.value = '已保存'
     saveError.value = ''
   } catch {
-    fileError.value = '无法读取该文件。'
+    if (!disposed && serial === fileSerial) fileError.value = '无法读取该文件。'
   }
 }
 
@@ -178,6 +190,8 @@ onBeforeRouteLeave(async () => persist())
 onBeforeRouteUpdate(async () => persist())
 
 watch(projectId, () => {
+  loadSerial++
+  fileSerial++
   activeFile.value = null
   draft.value = ''
   files.value = []
@@ -192,6 +206,9 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  disposed = true
+  loadSerial++
+  fileSerial++
   if (saveTimer) clearTimeout(saveTimer)
   window.removeEventListener('beforeunload', beforeUnload)
   if (activeFile.value && draft.value !== activeFile.value.content) void persist()

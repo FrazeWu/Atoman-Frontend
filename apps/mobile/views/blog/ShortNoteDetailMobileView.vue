@@ -562,6 +562,7 @@ onMounted(() => {
   gap: 10px;
   z-index: 20;
   transition: bottom 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: none !important;
 }
 
 .reply-input {

@@ -905,8 +905,14 @@ watch(
   { immediate: true },
 )
 
+// Worker progress, upload bytes and polling snapshots change frequently. They are
+// not user edits and must not continuously enqueue draft-only /commit requests.
 watch(
-  () => creationFlow.value?.draft,
+  () => [
+    creationFlow.value?.draft.artist,
+    creationFlow.value?.draft.albumDetails,
+    creationFlow.value?.draft.tracks,
+  ],
   () => scheduleImportAutosave(),
   { deep: true },
 )

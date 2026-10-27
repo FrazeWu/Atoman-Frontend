@@ -319,9 +319,9 @@ const logout = async () => {
   left: 0;
   top: calc(100% + 6px);
   background: var(--a-color-bg);
-  border: none;
-  border-radius: var(--a-radius-none);
-  box-shadow: var(--a-shadow-dropdown);
+  border: 1px solid var(--a-color-border);
+  border-radius: var(--a-radius-card, 4px);
+  box-shadow: none;
   z-index: var(--a-z-global-menu);
   min-width: 140px;
 }

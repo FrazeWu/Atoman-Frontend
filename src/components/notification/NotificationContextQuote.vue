@@ -44,13 +44,20 @@ const hasContent = computed(() => {
 
 <style scoped>
 .notification-context-quote {
-  padding: 0.375rem 0.625rem;
+  padding: 0.625rem 0.875rem;
   background: var(--a-color-surface-muted);
-  border-left: 2px solid var(--a-color-border);
-  border-radius: var(--a-radius-control);
+  border: 1px solid var(--a-color-border-soft);
+  border-left: 3px solid var(--a-color-text);
+  border-radius: var(--a-radius-card, 4px);
   font-size: 0.8125rem;
-  line-height: 1.4;
+  line-height: 1.5;
   color: var(--a-color-text-secondary);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.notification-context-quote:hover {
+  background: color-mix(in srgb, var(--a-color-surface-muted) 85%, var(--a-color-border-soft));
+  border-color: var(--a-color-border);
 }
 
 .quote-line {
@@ -69,7 +76,9 @@ const hasContent = computed(() => {
 }
 
 .quote-line + .quote-line {
-  margin-top: 0.25rem;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed var(--a-color-border-soft);
 }
 
 .quote-prefix {

@@ -67,7 +67,7 @@
                     class="toolbar-mark-read-btn"
                     @click="markCurrentNotificationsRead"
                   >
-                    标为已读
+                    一键已读
                   </PButton>
                 </div>
               </div>
@@ -513,7 +513,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 
 .stream-toolbar-inner {
   width: 100%;
-  max-width: 780px;
+  max-width: 820px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -522,11 +522,11 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 
 .stream-workspace-container {
   width: 100%;
-  max-width: 780px;
-  padding: 1.25rem 1.5rem;
+  max-width: 820px;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .stream-toolbar-left {
@@ -596,238 +596,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 .stream-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-}
-
-.stream-card {
-  display: flex;
-  gap: 1rem;
-  padding: 1.25rem 1.5rem;
-  border: 0;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  border-left: 3px solid transparent;
-  background: var(--a-color-bg);
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.stream-card:hover {
-  background: var(--a-color-surface-muted);
-}
-
-.stream-card.selected {
-  border-left-color: var(--a-color-text);
-  background: var(--a-color-surface-muted);
-}
-
-.stream-card.unread .card-title {
-  font-weight: 600;
-  color: var(--a-color-text);
-}
-
-.card-avatar-wrapper {
-  position: relative;
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-start;
-}
-
-.card-action-badge {
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--a-color-bg, #ffffff);
-  border: 1.5px solid var(--a-color-bg, #ffffff);
-}
-
-.card-action-badge--like {
-  color: var(--a-color-danger, #ef4444);
-}
-
-.card-action-badge--reply,
-.card-action-badge--forum {
-  color: var(--a-color-primary, #2563eb);
-}
-
-.card-action-badge--mention {
-  color: var(--a-color-success, #10b981);
-}
-
-.card-action-badge--collaboration {
-  color: var(--a-color-warning, #f59e0b);
-}
-
-.card-action-badge--system {
-  color: var(--a-color-blog, #166534);
-}
-
-.card-content-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.card-header-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.card-title-group {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
-.card-title {
-  font-size: 0.92rem;
-  font-weight: 500;
-  color: var(--a-color-text);
-}
-
-.card-separator {
-  color: var(--a-color-text-muted);
-}
-
-.card-source {
-  font-size: 0.8rem;
-  color: var(--a-color-text-secondary);
-  font-weight: 500;
-}
-
-.card-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.card-time {
-  font-size: 0.75rem;
-  color: var(--a-color-muted-soft);
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.card-unread-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--a-color-primary, #2563eb);
-  flex-shrink: 0;
-}
-
-.card-reason {
-  margin: 0;
-  color: var(--a-color-text-secondary);
-  font-size: 0.85rem;
-  line-height: 1.5;
-}
-
-.card-quote {
-  margin-top: 0.125rem;
-}
-
-.sidebar-item-body {
-  margin: 0;
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: var(--a-color-text-secondary);
-}
-
-.card-actions-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-top: 0.25rem;
-}
-
-.card-actions-left {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.card-actions-right {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-left: auto;
-}
-
-.card-action-unavailable-btn {
-  font-size: 0.75rem;
-}
-
-.card-more-menu {
-  position: relative;
-}
-
-.card-more-trigger {
-  list-style: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.25rem;
-  border-radius: var(--a-radius-control);
-  color: var(--a-color-text-muted);
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-}
-
-.card-more-trigger::-webkit-details-marker {
-  display: none;
-}
-
-.card-more-trigger:hover {
-  color: var(--a-color-text);
-  background: var(--a-color-surface-muted);
-}
-
-.card-menu-dropdown {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 4px);
-  min-width: 140px;
-  padding: 0.25rem 0;
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  box-shadow: none;
-  z-index: 10;
-}
-
-.card-menu-item {
-  display: block;
-  width: 100%;
-  padding: 0.375rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-align: left;
-  color: var(--a-color-text-secondary);
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.card-menu-item:hover {
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-text);
+  gap: 0.875rem;
 }
 
 .action-message {
@@ -836,12 +605,17 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 }
 
 .inbox-empty-state {
-  display: grid;
-  align-content: center;
-  justify-items: start;
-  gap: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   min-height: 12rem;
-  padding: 2rem 1.5rem;
+  padding: 3rem 1.5rem;
+  border: 1px dashed var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-surface-muted);
+  text-align: center;
   color: var(--a-color-text-secondary);
 }
 
@@ -852,7 +626,8 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 }
 
 .inbox-empty-state span {
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  color: var(--a-color-muted);
 }
 
 /* DM Workspace */

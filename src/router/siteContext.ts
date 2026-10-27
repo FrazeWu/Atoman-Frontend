@@ -47,7 +47,8 @@ function pathnameContext(pathname: string): SiteContext | null {
   }
 
   const [first, second] = segments
-  if (first === 'studio' || first === 'search') {
+  const portalShortPaths = new Set(['studio', 'search', 'inbox', 'messages', 'dev', 'me', 'site', 'login', 'register'])
+  if (portalShortPaths.has(first)) {
     return { type: 'portal' }
   }
 

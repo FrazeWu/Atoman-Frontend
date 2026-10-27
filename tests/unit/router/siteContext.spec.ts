@@ -18,6 +18,12 @@ describe('resolveSiteContext', () => {
   it('统一搜索属于全站，不依附订阅模块或子域名', () => {
     for (const host of ['localhost', 'www.atoman.org', 'music.atoman.org']) expect(resolveSiteContext(host, '', '/search')).toEqual({ type: 'portal' })
   })
+  it('收件箱与私信属于全站通用空间，不依附订阅模块', () => {
+    for (const path of ['/inbox', '/messages', '/dev/notification-showcase']) {
+      expect(resolveSiteContext('localhost', '', path)).toEqual({ type: 'portal' })
+      expect(resolveSiteContext('www.atoman.org', '', path)).toEqual({ type: 'portal' })
+    }
+  })
   it('maps known module paths to module context', () => {
     expect(resolveSiteContext('www.atoman.org', '', '/feed')).toEqual({ type: 'module', module: 'feed' })
     expect(resolveSiteContext('www.atoman.org', '', '/music')).toEqual({ type: 'module', module: 'music' })

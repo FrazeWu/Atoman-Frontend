@@ -3,6 +3,8 @@
     class="notif-dropdown-wrap"
     :class="{ 'is-open': activeDropdown === 'notification' }"
     data-dropdown="notification"
+    @mouseenter="handleNotificationMouseEnter"
+    @mouseleave="handleNotificationMouseLeave"
   >
     <RouterLink
       to="/inbox"
@@ -74,12 +76,17 @@ const inboxStore = useInboxStore()
 const router = useRouter()
 
 const activeDropdown = ref<string | null>(null)
+let notifHoverTimer: ReturnType<typeof setTimeout> | null = null
 const userInitial = computed(() => (authStore.user?.username || '?').charAt(0).toUpperCase())
 const avatarSrc = computed(() => authStore.user?.avatar_url ? resolveMediaURL(authStore.user.avatar_url) : '')
 const userSettingsPath = computed(() => `/users/${authStore.user?.username || ''}/settings`)
 const showSiteSettings = computed(() => isAdminRole(authStore.user?.role))
 
 const toggleDropdown = (name: string) => {
+  if (notifHoverTimer) {
+    clearTimeout(notifHoverTimer)
+    notifHoverTimer = null
+  }
   const willOpen = activeDropdown.value !== name
   if (willOpen) {
     const detail = name === 'user' ? 'user-menu' : name
@@ -89,7 +96,32 @@ const toggleDropdown = (name: string) => {
 }
 
 const closeDropdown = () => {
+  if (notifHoverTimer) {
+    clearTimeout(notifHoverTimer)
+    notifHoverTimer = null
+  }
   activeDropdown.value = null
+}
+
+const handleNotificationMouseEnter = () => {
+  if (typeof window !== 'undefined' && window.innerWidth < 720) return
+  if (notifHoverTimer) {
+    clearTimeout(notifHoverTimer)
+    notifHoverTimer = null
+  }
+  if (activeDropdown.value !== 'notification') {
+    window.dispatchEvent(new CustomEvent('atoman:global-overlay-open', { detail: 'notification' }))
+    activeDropdown.value = 'notification'
+  }
+}
+
+const handleNotificationMouseLeave = () => {
+  if (notifHoverTimer) clearTimeout(notifHoverTimer)
+  notifHoverTimer = setTimeout(() => {
+    if (activeDropdown.value === 'notification') {
+      activeDropdown.value = null
+    }
+  }, 200)
 }
 
 const handleClickOutside = (e: MouseEvent) => {
@@ -103,13 +135,8 @@ const handleGlobalOverlayOpen = (event: Event) => {
   if (detail !== currentDetail) closeDropdown()
 }
 
-const handleNotificationClick = (e: MouseEvent) => {
-  if (typeof window !== 'undefined' && window.innerWidth >= 720) {
-    e.preventDefault()
-    toggleDropdown('notification')
-  } else {
-    closeDropdown()
-  }
+const handleNotificationClick = () => {
+  closeDropdown()
 }
 
 onMounted(() => {
@@ -119,6 +146,10 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  if (notifHoverTimer) {
+    clearTimeout(notifHoverTimer)
+    notifHoverTimer = null
+  }
   document.removeEventListener('click', handleClickOutside)
   window.removeEventListener('atoman:global-overlay-open', handleGlobalOverlayOpen)
   inboxStore.disconnect()
@@ -219,6 +250,15 @@ const logout = async () => {
   top: calc(100% + 6px);
   right: 0;
   z-index: var(--a-z-global-menu);
+}
+
+.topbar-notification-popover::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
 }
 
 @media (max-width: 720px) {

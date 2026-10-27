@@ -234,15 +234,35 @@ describe("AppTopbarAuthControls", () => {
 		);
 	});
 
-	it("toggles notification popover on desktop click", async () => {
+	it("shows notification popover on hover and hides on mouseleave", async () => {
+		vi.useFakeTimers();
+		try {
+			const wrapper = await mountTopbar("/posts");
+
+			expect(wrapper.find(".topbar-notification-popover").exists()).toBe(false);
+
+			await wrapper.find(".notif-dropdown-wrap").trigger("mouseenter");
+
+			expect(wrapper.find(".notif-dropdown-wrap").classes()).toContain("is-open");
+			expect(wrapper.find(".topbar-notification-popover").exists()).toBe(true);
+
+			await wrapper.find(".notif-dropdown-wrap").trigger("mouseleave");
+			expect(wrapper.find(".notif-dropdown-wrap").classes()).toContain("is-open");
+
+			vi.advanceTimersByTime(250);
+			await flushPromises();
+
+			expect(wrapper.find(".notif-dropdown-wrap").classes()).not.toContain("is-open");
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("closes notification popover on notification link click", async () => {
 		const wrapper = await mountTopbar("/posts");
 
-		expect(wrapper.find(".topbar-notification-popover").exists()).toBe(false);
-
-		await wrapper.find('[data-testid="notification-link"]').trigger("click");
-
+		await wrapper.find(".notif-dropdown-wrap").trigger("mouseenter");
 		expect(wrapper.find(".notif-dropdown-wrap").classes()).toContain("is-open");
-		expect(wrapper.find(".topbar-notification-popover").exists()).toBe(true);
 
 		await wrapper.find('[data-testid="notification-link"]').trigger("click");
 		expect(wrapper.find(".notif-dropdown-wrap").classes()).not.toContain("is-open");

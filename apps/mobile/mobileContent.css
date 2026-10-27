@@ -1,5 +1,5 @@
 :root {
-  --mobile-music-page-bottom: 2rem;
+  --mobile-music-page-bottom: calc(56px + env(safe-area-inset-bottom, 16px) + 1.5rem);
 }
 
 .mobile-app-shell .mobile-app-main :is(.books-page, .ph-page, .forum-page) {

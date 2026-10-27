@@ -298,7 +298,7 @@ onMounted(() => {
   flex-direction: column;
   min-height: 100%;
   background-color: #ffffff;
-  padding-bottom: var(--mobile-music-page-bottom, 2rem);
+  padding-bottom: var(--mobile-music-page-bottom, calc(56px + env(safe-area-inset-bottom, 16px) + 1.5rem));
 }
 
 /* Top Sticky Navigation Bar */

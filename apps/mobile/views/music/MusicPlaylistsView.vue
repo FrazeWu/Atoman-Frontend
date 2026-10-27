@@ -306,10 +306,11 @@ onActivated(() => {
 
 <style scoped>
 .mobile-music-playlists {
-  padding: 1rem 1rem 5rem;
-  padding-bottom: var(--mobile-music-page-bottom, 5rem);
+  padding: 1rem 1rem calc(56px + env(safe-area-inset-bottom, 16px) + 1.5rem);
+  padding-bottom: var(--mobile-music-page-bottom, calc(56px + env(safe-area-inset-bottom, 16px) + 1.5rem));
   background-color: #ffffff;
   color: var(--a-color-text, #0f172a);
+  box-shadow: none !important;
 }
 
 .mobile-music-playlists__header {
@@ -341,7 +342,7 @@ onActivated(() => {
   color: var(--a-color-text-secondary, #666666);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 9999px;
+  border-radius: var(--a-radius-control, 4px);
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -358,9 +359,10 @@ onActivated(() => {
 .mobile-music-playlists__create-panel {
   background-color: var(--a-color-surface-subtle, #f8fafc);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: 0.75rem;
+  border-radius: var(--a-radius-card, 4px);
   padding: 1rem;
   margin-bottom: 1.5rem;
+  box-shadow: none !important;
 }
 
 .mobile-music-playlists__create-title {
@@ -389,8 +391,9 @@ onActivated(() => {
   padding: 0.75rem;
   background-color: #ffffff;
   border: 1px solid var(--a-color-border-soft, #f1f5f9);
-  border-radius: 0.75rem;
+  border-radius: var(--a-radius-card, 4px);
   cursor: pointer;
+  box-shadow: none !important;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
@@ -402,7 +405,7 @@ onActivated(() => {
 .mobile-music-playlists__item-cover {
   width: 3.5rem;
   height: 3.5rem;
-  border-radius: 0.5rem;
+  border-radius: var(--a-radius-control, 4px);
   overflow: hidden;
   background-color: var(--a-color-surface-subtle, #f1f5f9);
   display: flex;

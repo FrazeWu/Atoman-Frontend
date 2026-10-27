@@ -294,6 +294,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 				path: "playlists",
 				name: "mobile-music-playlists",
 				component: () => import("./views/music/MusicPlaylistsView.vue"),
+				meta: { restoreSession: true },
 			},
 			{
 				path: "bookmarks",
@@ -334,6 +335,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			{
 				path: "playlist/:playlistId",
 				component: () => import("./views/music/MusicPlaylistDetailView.vue"),
+				meta: { restoreSession: true },
 			},
 		],
 	},

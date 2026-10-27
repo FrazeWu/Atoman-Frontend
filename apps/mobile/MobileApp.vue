@@ -80,7 +80,11 @@ const authStore = useAuthStore()
 const playerPresence = usePlayerPresenceStore()
 const apiUrl = useApiUrl()
 
-const isAuthRoute = computed(() => route.matched?.some((record) => record.meta?.authLayout) ?? false)
+const isAuthRoute = computed(() => {
+  const p = (route.path || '/').replace(/\/$/, '') || '/'
+  if (/^\/(?:login|register|forgot-password|auth\/oauth)(\/|$)/.test(p)) return true
+  return route.matched?.some((record) => record.meta?.authLayout) ?? false
+})
 
 const isUtilityRoute = computed(() => {
   return /^\/(?:search|about|terms|privacy|modules|users\/[^/]+\/settings)(\/|$)/.test(route.path)
@@ -153,7 +157,9 @@ const showMobileTopbar = computed(() => {
 
 const showMobileBottomNav = computed(() => {
   const p = (route.path || '/').replace(/\/$/, '') || '/'
-  if (isAuthRoute.value || isFullscreenPlayerRoute.value) return false
+  if (isFullscreenPlayerRoute.value) return false
+  if (/^\/music(\/|$)/.test(p)) return true
+  if (isAuthRoute.value) return false
   if (/^\/books\/(?:read|public-read)\//.test(p)) return false
   if (/^\/(?:inbox|messages)\/chat\//.test(p)) return false
   if (/^\/posts\/notes\/[^/]+/.test(p)) return false

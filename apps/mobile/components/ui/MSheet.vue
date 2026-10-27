@@ -3,7 +3,11 @@
     <Transition name="m-sheet">
       <div v-if="modelValue" class="m-sheet" role="dialog" aria-modal="true" v-bind="$attrs">
         <div class="m-sheet__backdrop" @click="handleClose" />
-        <div class="m-sheet__panel">
+        <div
+          class="m-sheet__panel"
+          :class="{ 'm-sheet__panel--keyboard-open': isKeyboardOpen }"
+          :style="panelStyle"
+        >
           <div class="m-sheet__handle-wrapper">
             <div class="m-sheet__handle" />
           </div>
@@ -36,6 +40,8 @@ export default {
 </script>
 
 <script setup lang="ts">
+import { computed, effectScope, onUnmounted, ref, watch } from 'vue'
+import { useMobileKeyboard } from '@mobile/composables/useMobileKeyboard'
 import MIcon from './MIcon.vue'
 
 const props = withDefaults(
@@ -58,6 +64,60 @@ const emit = defineEmits<{
 const isTest =
   (typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test') ||
   (typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true'))
+
+const isKeyboardOpen = ref(false)
+const keyboardHeight = ref(0)
+const visualViewportHeight = ref(0)
+let activeScope: ReturnType<typeof effectScope> | null = null
+
+watch(
+  () => props.modelValue,
+  (isOpen) => {
+    if (activeScope) {
+      activeScope.stop()
+      activeScope = null
+    }
+
+    if (isOpen) {
+      activeScope = effectScope()
+      activeScope.run(() => {
+        const keyboard = useMobileKeyboard()
+        watch(keyboard.isKeyboardOpen, (val) => {
+          isKeyboardOpen.value = val
+        }, { immediate: true })
+        watch(keyboard.keyboardHeight, (val) => {
+          keyboardHeight.value = val
+        }, { immediate: true })
+        watch(keyboard.visualViewportHeight, (val) => {
+          visualViewportHeight.value = val
+        }, { immediate: true })
+      })
+    } else {
+      isKeyboardOpen.value = false
+      keyboardHeight.value = 0
+      visualViewportHeight.value = 0
+    }
+  },
+  { immediate: true }
+)
+
+onUnmounted(() => {
+  if (activeScope) {
+    activeScope.stop()
+    activeScope = null
+  }
+})
+
+const panelStyle = computed(() => {
+  const styles: Record<string, string> = {}
+  if (keyboardHeight.value > 0) {
+    styles.paddingBottom = `calc(var(--mobile-keyboard-height, ${keyboardHeight.value}px) + env(safe-area-inset-bottom, 16px))`
+  }
+  if (visualViewportHeight.value > 0) {
+    styles.maxHeight = `calc(var(--mobile-viewport-height, ${visualViewportHeight.value}px) * 0.88)`
+  }
+  return styles
+})
 
 function handleClose() {
   emit('update:modelValue', false)
@@ -86,16 +146,21 @@ function handleClose() {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-height: 85vh;
+  max-height: calc(var(--mobile-viewport-height, 100dvh) * 0.88);
   background-color: #ffffff;
   border-top-left-radius: var(--a-radius-control, 4px);
   border-top-right-radius: var(--a-radius-control, 4px);
   border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
-  box-shadow: none;
+  box-shadow: none !important;
   display: flex;
   flex-direction: column;
-  padding-bottom: env(safe-area-inset-bottom, 16px);
+  padding-bottom: calc(var(--mobile-keyboard-height, 0px) + env(safe-area-inset-bottom, 16px));
+  transition: padding-bottom 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
   overflow: hidden;
+}
+
+.m-sheet__panel--keyboard-open {
+  /* Marker hook for keyboard-open state */
 }
 
 .m-sheet__handle-wrapper {
@@ -148,6 +213,7 @@ function handleClose() {
 
 .m-sheet__content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 16px;

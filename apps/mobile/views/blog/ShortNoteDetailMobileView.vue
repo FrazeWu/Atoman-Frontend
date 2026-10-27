@@ -110,6 +110,7 @@
         type="text"
         class="reply-input"
         placeholder="写下你的回复..."
+        @focus="handleInputFocus"
         @keyup.enter="handleSendReply"
       />
       <MButton
@@ -131,6 +132,7 @@ import { getActivePinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
 import { apiRequestEnvelope } from '@/api/client'
+import { useMobileKeyboard } from '@mobile/composables/useMobileKeyboard'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
 import MAvatar from '@mobile/components/ui/MAvatar.vue'
@@ -172,6 +174,11 @@ const props = withDefaults(
 
 const route = useRoute()
 const router = useRouter()
+const { scrollFocusedElementIntoView } = useMobileKeyboard()
+
+function handleInputFocus(event: FocusEvent) {
+  scrollFocusedElementIntoView(event.target as HTMLElement)
+}
 const api = useApi()
 const authStore = getActivePinia() ? useAuthStore() : null
 
@@ -544,7 +551,7 @@ onMounted(() => {
 /* Bottom Reply Bar */
 .detail-reply-bar {
   position: fixed;
-  bottom: 0;
+  bottom: var(--mobile-keyboard-height, 0px);
   left: 0;
   right: 0;
   background: var(--a-color-bg, #ffffff);
@@ -554,6 +561,7 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   z-index: 20;
+  transition: bottom 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .reply-input {
@@ -561,7 +569,8 @@ onMounted(() => {
   border: 1px solid var(--a-color-border-soft, #e4e4e7);
   border-radius: var(--a-radius-card, 4px);
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: 16px;
+  font-size: max(16px, 1rem);
   color: var(--a-color-text, #18181b);
   background: var(--a-color-bg, #ffffff);
   outline: none;

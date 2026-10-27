@@ -905,16 +905,17 @@ watch(
   { immediate: true },
 )
 
-// Worker progress, upload bytes and polling snapshots change frequently. They are
-// not user edits and must not continuously enqueue draft-only /commit requests.
+// Track the actual persisted payload, not the entire draft. Worker polling and
+// upload progress must not enqueue redundant /commit requests, while edits to
+// metadata confirmation, credits and imported-track exclusions still autosave.
 watch(
-  () => [
-    creationFlow.value?.draft.artist,
-    creationFlow.value?.draft.albumDetails,
-    creationFlow.value?.draft.tracks,
-  ],
+  () => {
+    const flow = creationFlow.value
+    return flow && canAutosaveImportDetails(flow)
+      ? JSON.stringify(buildCommitInput(flow))
+      : null
+  },
   () => scheduleImportAutosave(),
-  { deep: true },
 )
 
 watch(

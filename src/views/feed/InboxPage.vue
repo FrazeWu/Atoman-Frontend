@@ -612,7 +612,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
   gap: 0.5rem;
   min-height: 12rem;
   padding: 3rem 1.5rem;
-  border: 1px solid var(--a-color-border-soft);
+  border: 1px dashed var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   background: var(--a-color-surface-muted);
   text-align: center;

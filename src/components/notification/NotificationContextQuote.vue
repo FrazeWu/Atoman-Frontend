@@ -78,7 +78,7 @@ const hasContent = computed(() => {
 .quote-line + .quote-line {
   margin-top: 0.35rem;
   padding-top: 0.35rem;
-  border-top: 1px solid var(--a-color-border-soft);
+  border-top: 1px dashed var(--a-color-border-soft);
 }
 
 .quote-prefix {

@@ -217,8 +217,9 @@ function handleTrackClick() {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  min-height: var(--mobile-app-player-height, 64px);
-  padding: 0.5rem 0.875rem;
+  min-height: var(--mobile-app-player-height, 56px);
+  box-sizing: border-box;
+  padding: 0.25rem 0.875rem;
   border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
   background: var(--a-color-surface, #ffffff);
   box-shadow: none !important;
@@ -243,6 +244,7 @@ function handleTrackClick() {
 .mobile-mini-player__track {
   display: flex;
   min-width: 0;
+  min-height: 44px;
   flex: 1;
   align-items: center;
   gap: 0.625rem;
@@ -255,9 +257,9 @@ function handleTrackClick() {
 }
 
 .mobile-mini-player__cover {
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
   object-fit: cover;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: var(--a-radius-control, 4px);
@@ -306,8 +308,8 @@ function handleTrackClick() {
 .mobile-mini-player__action {
   position: relative;
   display: inline-grid;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   padding: 0;
   border: 0;
@@ -323,8 +325,8 @@ function handleTrackClick() {
 }
 
 .mobile-mini-player__action--primary {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-text, #0f172a);
   color: #ffffff;

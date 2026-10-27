@@ -415,6 +415,8 @@ test.describe("Mobile route screenshot matrix", () => {
       await expect(nav).toBeVisible();
       await expect(nav).toHaveCSS('position', 'relative');
       await expect(player).toHaveCSS('position', 'relative');
+      await expect(player).toHaveCSS('height', '56px');
+      await expect(player.locator('.mobile-mini-player__action').first()).toHaveCSS('height', '44px');
       await expect.poll(() => dock.evaluate(el => {
         const p = el.querySelector('.mobile-mini-player')!.getBoundingClientRect();
         const n = el.querySelector('.mobile-bottom-nav')!.getBoundingClientRect();
@@ -428,7 +430,23 @@ test.describe("Mobile route screenshot matrix", () => {
     await page.screenshot({ path: testInfo.outputPath('playlist-player-and-nav.png') });
     await player.locator('.mobile-mini-player__track').click();
     await expect(page).toHaveURL(/\/music\/player$/);
-    await expect(dock).toHaveCount(0);
+    await expect(dock).toBeVisible();
+    await expect(nav).toBeVisible();
+    await expect(player).toHaveCount(0);
+    for (const viewport of [{ width: 428, height: 926 }, { width: 375, height: 667 }, { width: 667, height: 375 }]) {
+      await page.setViewportSize(viewport);
+      await expect.poll(() => page.evaluate(() => {
+        const nav = document.querySelector('.mobile-bottom-nav')!;
+        const n = nav.getBoundingClientRect();
+        const p = document.querySelector('.mobile-player-view')!.getBoundingClientRect();
+        const tab = nav.querySelector('[data-tab-key="playlists"]')!;
+        const t = tab.getBoundingClientRect();
+        return Math.abs(n.bottom - innerHeight) < 1 && p.bottom <= n.top + 1
+          && tab.contains(document.elementFromPoint(t.x + t.width / 2, t.y + t.height / 2));
+      })).toBe(true);
+    }
+    await page.setViewportSize({ width: 428, height: 926 });
+    await page.screenshot({ path: testInfo.outputPath('player-with-navigation.png') });
     await page.goBack();
     await expect(page).toHaveURL(/\/music\/playlists$/);
     await expect(player).toBeVisible();
@@ -521,7 +539,7 @@ test.describe("Mobile route screenshot matrix", () => {
 
       const shouldShowBottomNav =
         !/^\/(?:login|register|forgot-password)$/.test(pathname) &&
-        !/^\/music\/(?:player|lyrics)$/.test(pathname) &&
+        !/^\/music\/lyrics$/.test(pathname) &&
         !/^\/books\/(?:read|public-read)\//.test(pathname) &&
         !/^\/(?:inbox|messages)\/chat\//.test(pathname) &&
         !/^\/posts\/notes\/[^/]+/.test(pathname) &&

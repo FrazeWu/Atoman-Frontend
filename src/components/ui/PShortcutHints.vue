@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { getActivePinia } from 'pinia'
 import { Keyboard } from 'lucide-vue-next'
 import { useUIStore } from '@/stores/ui'
 import { useShortcutHints, type ShortcutHint } from '@/composables/useShortcutHints'
+import PModal from '@/components/ui/PModal.vue'
 
 export type { ShortcutHint } from '@/composables/useShortcutHints'
 
@@ -32,7 +33,6 @@ const {
   commonShortcutHints,
   moduleShortcutHints,
   moduleSectionTitle,
-  shortcutHints: contextualHints,
 } = useShortcutHints()
 
 const internalOpen = ref(false)
@@ -54,15 +54,6 @@ const open = computed({
 })
 
 const triggerRef = ref<HTMLButtonElement | null>(null)
-const panelRef = ref<HTMLDivElement | null>(null)
-
-watch(open, (isOpen) => {
-  if (isOpen) {
-    void nextTick(() => {
-      panelRef.value?.focus()
-    })
-  }
-})
 
 function close() {
   open.value = false
@@ -125,111 +116,92 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
       <span class="sr-only">快捷键</span>
     </button>
 
-    <!-- 居中视窗浮层弹窗 -->
-    <Teleport to="body" :disabled="isTeleportDisabled">
-      <div
-        v-if="open"
-        class="shortcut-hints__backdrop"
-        aria-hidden="true"
-        @click="close"
-      >
-        <div
-          ref="panelRef"
-          class="shortcut-hints__panel"
-          data-testid="shortcut-hints-panel"
-          role="dialog"
-          aria-modal="true"
-          aria-label="键盘快捷键"
-          tabindex="-1"
-          @click.stop
-          @keydown.escape.prevent="close"
-        >
-          <!-- 弹窗头部 -->
-          <header class="shortcut-hints__header">
-            <div class="shortcut-hints__title-group">
-              <span class="shortcut-hints__header-icon" aria-hidden="true">
-                <Keyboard :size="18" />
-              </span>
-              <h2 class="shortcut-hints__title">{{ title }}</h2>
-              <span class="shortcut-hints__badge">Shift + ?</span>
-            </div>
-            <button
-              type="button"
-              class="shortcut-hints__close-btn"
-              aria-label="关闭"
-              @click="close"
-            >
-              ✕
-            </button>
-          </header>
-
-          <!-- 快捷键列表内容 -->
-          <div class="shortcut-hints__body">
-            <!-- 当显式传入 hints 属性时直接展示（如测试用例或定制场景） -->
-            <template v-if="props.hints">
-              <ul class="shortcut-hints__list">
-                <li
-                  v-for="hint in props.hints"
-                  :key="`${hint.key}-${hint.label}`"
-                  class="shortcut-hints__item"
-                >
-                  <span class="shortcut-hints__label-text">{{ hint.label }}</span>
-                  <div class="shortcut-hints__keys">
-                    <kbd v-for="k in parseKeys(hint.key)" :key="k">{{ k }}</kbd>
-                  </div>
-                </li>
-              </ul>
-            </template>
-
-            <!-- 默认结构化分类展示 -->
-            <template v-else>
-              <!-- 当前模块快捷键（如果存在） -->
-              <section v-if="moduleShortcutHints.length > 0" class="shortcut-hints__section">
-                <h3 class="shortcut-hints__section-title">{{ moduleSectionTitle || '当前页面操作' }}</h3>
-                <ul class="shortcut-hints__list">
-                  <li
-                    v-for="hint in moduleShortcutHints"
-                    :key="`${hint.key}-${hint.label}`"
-                    class="shortcut-hints__item"
-                  >
-                    <span class="shortcut-hints__label-text">{{ hint.label }}</span>
-                    <div class="shortcut-hints__keys">
-                      <kbd v-for="k in parseKeys(hint.key)" :key="k">{{ k }}</kbd>
-                    </div>
-                  </li>
-                </ul>
-              </section>
-
-              <!-- 全局通用快捷键 -->
-              <section class="shortcut-hints__section">
-                <h3 class="shortcut-hints__section-title">全局导航与浏览</h3>
-                <ul class="shortcut-hints__list">
-                  <li
-                    v-for="hint in commonShortcutHints"
-                    :key="`${hint.key}-${hint.label}`"
-                    class="shortcut-hints__item"
-                  >
-                    <span class="shortcut-hints__label-text">{{ hint.label }}</span>
-                    <div class="shortcut-hints__keys">
-                      <kbd v-for="k in parseKeys(hint.key)" :key="k">{{ k }}</kbd>
-                    </div>
-                  </li>
-                </ul>
-              </section>
-            </template>
-          </div>
-
-          <!-- 弹窗底部提示 -->
-          <footer class="shortcut-hints__footer">
-            <span class="shortcut-hints__footer-tip">随时在页面按下 ? 键唤起</span>
-            <span class="shortcut-hints__esc-hint">
-              <kbd>ESC</kbd>
-              <span>退出</span>
-            </span>
-          </footer>
+    <!-- 统合标准 PModal 弹窗 -->
+    <PModal
+      :show="open"
+      size="md"
+      :title="title"
+      :teleport-disabled="isTeleportDisabled"
+      modal-class="shortcut-hints__panel"
+      backdrop-class="shortcut-hints__backdrop"
+      data-testid="shortcut-hints-panel"
+      @close="close"
+    >
+      <template #title>
+        <div class="shortcut-hints__title-group">
+          <span class="shortcut-hints__header-icon" aria-hidden="true">
+            <Keyboard :size="18" />
+          </span>
+          <h2 class="shortcut-hints__title">{{ title }}</h2>
+          <span class="shortcut-hints__badge">Shift + ?</span>
         </div>
+      </template>
+
+      <!-- 快捷键列表内容 -->
+      <div class="shortcut-hints__body">
+        <!-- 当显式传入 hints 属性时直接展示（如测试用例或定制场景） -->
+        <template v-if="props.hints">
+          <ul class="shortcut-hints__list">
+            <li
+              v-for="hint in props.hints"
+              :key="`${hint.key}-${hint.label}`"
+              class="shortcut-hints__item"
+            >
+              <span class="shortcut-hints__label-text">{{ hint.label }}</span>
+              <div class="shortcut-hints__keys">
+                <kbd v-for="k in parseKeys(hint.key)" :key="k">{{ k }}</kbd>
+              </div>
+            </li>
+          </ul>
+        </template>
+
+        <!-- 默认结构化分类展示 -->
+        <template v-else>
+          <!-- 当前模块快捷键（如果存在） -->
+          <section v-if="moduleShortcutHints.length > 0" class="shortcut-hints__section">
+            <h3 class="shortcut-hints__section-title">{{ moduleSectionTitle || '当前页面操作' }}</h3>
+            <ul class="shortcut-hints__list">
+              <li
+                v-for="hint in moduleShortcutHints"
+                :key="`${hint.key}-${hint.label}`"
+                class="shortcut-hints__item"
+              >
+                <span class="shortcut-hints__label-text">{{ hint.label }}</span>
+                <div class="shortcut-hints__keys">
+                  <kbd v-for="k in parseKeys(hint.key)" :key="k">{{ k }}</kbd>
+                </div>
+              </li>
+            </ul>
+          </section>
+
+          <!-- 全局通用快捷键 -->
+          <section class="shortcut-hints__section">
+            <h3 class="shortcut-hints__section-title">全局导航与浏览</h3>
+            <ul class="shortcut-hints__list">
+              <li
+                v-for="hint in commonShortcutHints"
+                :key="`${hint.key}-${hint.label}`"
+                class="shortcut-hints__item"
+              >
+                <span class="shortcut-hints__label-text">{{ hint.label }}</span>
+                <div class="shortcut-hints__keys">
+                  <kbd v-for="k in parseKeys(hint.key)" :key="k">{{ k }}</kbd>
+                </div>
+              </li>
+            </ul>
+          </section>
+        </template>
       </div>
-    </Teleport>
+
+      <!-- 弹窗底部提示 -->
+      <footer class="shortcut-hints__footer">
+        <span class="shortcut-hints__footer-tip">随时在页面按下 ? 键唤起</span>
+        <span class="shortcut-hints__esc-hint">
+          <kbd>ESC</kbd>
+          <span>退出</span>
+        </span>
+      </footer>
+    </PModal>
   </div>
 </template>
 
@@ -292,53 +264,14 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   border-width: 0;
 }
 
-/* 弹窗全屏遮罩 */
+/* 弹窗透传类契约与主体定制 */
 .shortcut-hints__backdrop {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(15, 23, 42, 0.45);
-  z-index: var(--a-layer-above-player-sheet-panel, 740);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-}
-
-/* 居中弹窗主体 */
-.shortcut-hints__panel {
-  position: relative;
-  width: 100%;
-  max-width: 500px;
-  background-color: var(--a-color-surface);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  outline: none;
-  animation: shortcut-modal-enter 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes shortcut-modal-enter {
-  from {
-    opacity: 0;
-    transform: scale(0.96) translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-/* 头部 */
-.shortcut-hints__header {
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: var(--a-color-surface);
+.shortcut-hints__panel {
+  max-width: 500px;
+  box-shadow: none !important;
 }
 
 .shortcut-hints__title-group {
@@ -366,28 +299,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   padding: 0.125rem 0.375rem;
   background-color: var(--a-color-surface-muted);
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   color: var(--a-color-muted);
-}
-
-.shortcut-hints__close-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border: none;
-  background: transparent;
-  border-radius: 4px;
-  color: var(--a-color-muted);
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.shortcut-hints__close-btn:hover {
-  background-color: var(--a-color-surface-muted);
-  color: var(--a-color-text);
 }
 
 /* 内容列表 */
@@ -458,13 +371,13 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
   justify-content: center;
   border: 1px solid var(--a-color-border);
   border-bottom: 2px solid var(--a-color-border);
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-surface);
   color: var(--a-color-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.6875rem;
   font-weight: 600;
-  box-shadow: none;
+  box-shadow: none !important;
   white-space: nowrap;
 }
 

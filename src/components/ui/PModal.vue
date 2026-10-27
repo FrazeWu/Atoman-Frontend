@@ -15,6 +15,7 @@
           aria-modal="true"
           :aria-label="dialogLabel"
           tabindex="-1"
+          v-bind="$attrs"
           @keydown="handleKeydown"
         >
           <button v-if="closable" class="p-modal-close-floating" :class="closeClass" type="button" aria-label="关闭" title="关闭" @click="handleClose">
@@ -74,6 +75,10 @@
 import { computed, ref, useSlots } from 'vue'
 import { X } from 'lucide-vue-next'
 import { useDialogFocus } from '@/composables/useDialogFocus'
+
+defineOptions({
+  inheritAttrs: false,
+})
 
 const props = withDefaults(defineProps<{
   size?: 'sm' | 'md' | 'lg'

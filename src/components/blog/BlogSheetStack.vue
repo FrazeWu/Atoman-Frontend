@@ -11,9 +11,9 @@ const ShortNoteSheet = defineAsyncComponent(() => import('@/components/blog/Shor
 const route = useRoute()
 const { renderLayers, closeAll } = useBlogSheets()
 
-const isBlogRoute = (path: string) => path.startsWith('/blog') || path.startsWith('/posts')
-const isBlogHomePath = (path: string) => path === '/blog' || path === '/posts'
-const isBlogPostPath = (path: string) => /^\/(?:blog|posts)\/post\/[^/]+$/.test(path)
+const isBlogRoute = (path: string) => path.startsWith('/posts')
+const isBlogHomePath = (path: string) => path === '/posts'
+const isBlogPostPath = (path: string) => /^\/posts\/post\/[^/]+$/.test(path)
 
 if (!isBlogRoute(route.path)) closeAll()
 

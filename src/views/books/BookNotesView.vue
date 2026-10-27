@@ -338,7 +338,7 @@ function handleQuoteSelect(payload: { target: 'blog_post' | 'short_note'; mode: 
   })
   quoteModalOpen.value = false
   if (payload.target === 'blog_post') {
-    void router.push('/studio/blog/editor')
+    void router.push('/studio/blog/new')
   } else {
     void router.push('/posts/notes/new')
   }

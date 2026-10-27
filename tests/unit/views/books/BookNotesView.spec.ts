@@ -56,7 +56,7 @@ describe('BookNotesView', () => {
         { path: '/books/notes', component: BookNotesView },
         { path: '/books', component: { template: '<div>Books</div>' } },
         { path: '/books/read/:assetId', component: { template: '<div>Reader</div>' } },
-        { path: '/studio/blog/editor', component: { template: '<div>Editor</div>' } },
+        { path: '/studio/blog/new', component: { template: '<div>Editor</div>' } },
         { path: '/posts/notes/new', component: { template: '<div>ShortNote</div>' } },
       ],
     })
@@ -385,6 +385,7 @@ describe('BookNotesView', () => {
     expect(draftStore.pendingQuote?.quoteText).toBe(mockNotes[0].text)
     expect(draftStore.pendingQuote?.target).toBe('blog_post')
     expect(draftStore.pendingQuote?.mode).toBe('append')
+    expect(router.currentRoute.value.path).toBe('/studio/blog/new')
 
     wrapper.unmount()
   })

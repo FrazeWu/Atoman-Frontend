@@ -1535,7 +1535,7 @@ onBeforeUnmount(() => {
     box-shadow: none;
   }
   30%, 70% {
-    box-shadow: 0 0 0 4px var(--a-color-primary, #6366f1);
+    box-shadow: 0 0 0 4px var(--a-color-primary);
   }
 }
 </style>

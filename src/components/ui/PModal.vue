@@ -1,23 +1,23 @@
 <template>
-  <Teleport to="body">
+  <Teleport to="body" :disabled="teleportDisabled">
     <Transition name="modal-fade" appear>
       <div
         v-if="visible"
         class="p-modal-backdrop"
-        :class="{ 'p-modal-backdrop--above-player': abovePlayer }"
+        :class="[{ 'p-modal-backdrop--above-player': abovePlayer }, backdropClass]"
         @click.self="handleBackdropClick"
       >
         <div
           ref="dialogRef"
           class="p-modal"
-          :class="`p-modal-${size}`"
+          :class="[`p-modal-${size}`, modalClass]"
           :role="role"
           aria-modal="true"
           :aria-label="dialogLabel"
           tabindex="-1"
           @keydown="handleKeydown"
         >
-          <button v-if="closable" class="p-modal-close-floating" type="button" aria-label="关闭" title="关闭" @click="handleClose">
+          <button v-if="closable" class="p-modal-close-floating" :class="closeClass" type="button" aria-label="关闭" title="关闭" @click="handleClose">
             <X :size="18" aria-hidden="true" />
           </button>
           <div class="p-modal-body">
@@ -85,6 +85,10 @@ const props = withDefaults(defineProps<{
   closable?: boolean
   closeOnBackdrop?: boolean
   abovePlayer?: boolean
+  teleportDisabled?: boolean
+  backdropClass?: any
+  modalClass?: any
+  closeClass?: any
 }>(), {
   size: 'md',
   title: '',
@@ -95,6 +99,10 @@ const props = withDefaults(defineProps<{
   closable: true,
   closeOnBackdrop: true,
   abovePlayer: false,
+  teleportDisabled: false,
+  backdropClass: undefined,
+  modalClass: undefined,
+  closeClass: undefined,
 })
 
 const emit = defineEmits<{

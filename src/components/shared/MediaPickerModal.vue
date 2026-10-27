@@ -1,138 +1,117 @@
 <template>
-  <Teleport to="body" :disabled="isTeleportDisabled">
-    <Transition name="modal-fade" appear>
-      <div
-        v-if="open"
-        class="p-modal-backdrop media-picker-backdrop"
-        :class="{
-          'media-picker-backdrop--above-player': abovePlayer,
-          'p-modal-backdrop--above-player': abovePlayer,
-        }"
-        @click.self="handleBackdropClick"
-      >
-        <div
-          class="p-modal p-modal-md media-picker-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-label="选择视听资源"
-          tabindex="-1"
+  <PModal
+    :show="open"
+    size="md"
+    title="选择视听资源"
+    :above-player="abovePlayer"
+    :teleport-disabled="isTeleportDisabled"
+    :backdrop-class="['media-picker-backdrop', { 'media-picker-backdrop--above-player': abovePlayer }]"
+    modal-class="media-picker-modal"
+    close-class="media-picker-close"
+    @close="handleClose"
+  >
+    <div class="media-picker-body">
+      <!-- Tabs -->
+      <div class="media-picker-tabs" role="tablist">
+        <button
+          v-for="tab in tabs"
+          :key="tab.key"
+          type="button"
+          role="tab"
+          class="media-picker-tab"
+          :class="{ 'is-active': activeTab === tab.key }"
+          :aria-selected="activeTab === tab.key"
+          @click="switchTab(tab.key)"
         >
+          {{ tab.label }}
+        </button>
+      </div>
+
+      <!-- Search input -->
+      <div class="media-picker-search-box">
+        <Search class="media-picker-search-icon" :size="16" aria-hidden="true" />
+        <input
+          ref="inputRef"
+          v-model="searchQuery"
+          type="text"
+          class="media-picker-input"
+          :placeholder="inputPlaceholder"
+          @keydown.enter.prevent="onEnter"
+        />
+        <Loader2
+          v-if="loading"
+          class="media-picker-search-spinner"
+          :size="16"
+          aria-hidden="true"
+        />
+      </div>
+
+      <!-- Results container -->
+      <div class="media-picker-content">
+        <!-- Loading state -->
+        <div v-if="loading && items.length === 0" class="media-picker-status">
+          <Loader2 class="media-picker-spinner" :size="20" aria-hidden="true" />
+          <span>正在搜索...</span>
+        </div>
+
+        <!-- Empty state after search -->
+        <div
+          v-else-if="!loading && hasSearched && items.length === 0"
+          class="media-picker-empty"
+        >
+          <span>未找到相关视听资源</span>
+        </div>
+
+        <!-- Idle hint before search -->
+        <div
+          v-else-if="!loading && !hasSearched && items.length === 0"
+          class="media-picker-hint"
+        >
+          <span>输入名称或粘贴 ID 搜索</span>
+        </div>
+
+        <!-- Items list -->
+        <div v-else class="media-picker-list" role="listbox">
           <button
-            class="media-picker-close p-modal-close-floating"
+            v-for="item in items"
+            :key="item.id"
             type="button"
-            aria-label="关闭"
-            title="关闭"
-            @click="handleClose"
+            class="media-picker-item"
+            @click="handleSelect(item)"
           >
-            <X :size="18" aria-hidden="true" />
+            <div class="media-picker-item-cover">
+              <img
+                v-if="item.cover_url"
+                :src="item.cover_url"
+                :alt="item.title"
+                class="media-picker-item-img"
+              />
+              <Music v-else-if="item.type === 'song'" :size="18" aria-hidden="true" />
+              <Disc v-else-if="item.type === 'album'" :size="18" aria-hidden="true" />
+              <Video v-else :size="18" aria-hidden="true" />
+            </div>
+
+            <div class="media-picker-item-info">
+              <div class="media-picker-item-title">{{ item.title }}</div>
+              <div v-if="item.subtitle" class="media-picker-item-subtitle">
+                {{ item.subtitle }}
+              </div>
+            </div>
+
+            <span class="media-picker-badge">
+              {{ typeLabelMap[item.type] }}
+            </span>
           </button>
-
-          <div class="p-modal-body media-picker-body">
-            <h2 class="p-modal-title-inline">选择视听资源</h2>
-
-            <!-- Tabs -->
-            <div class="media-picker-tabs" role="tablist">
-              <button
-                v-for="tab in tabs"
-                :key="tab.key"
-                type="button"
-                role="tab"
-                class="media-picker-tab"
-                :class="{ 'is-active': activeTab === tab.key }"
-                :aria-selected="activeTab === tab.key"
-                @click="switchTab(tab.key)"
-              >
-                {{ tab.label }}
-              </button>
-            </div>
-
-            <!-- Search input -->
-            <div class="media-picker-search-box">
-              <Search class="media-picker-search-icon" :size="16" aria-hidden="true" />
-              <input
-                ref="inputRef"
-                v-model="searchQuery"
-                type="text"
-                class="media-picker-input"
-                :placeholder="inputPlaceholder"
-                @keydown.enter.prevent="onEnter"
-              />
-              <Loader2
-                v-if="loading"
-                class="media-picker-search-spinner"
-                :size="16"
-                aria-hidden="true"
-              />
-            </div>
-
-            <!-- Results container -->
-            <div class="media-picker-content">
-              <!-- Loading state -->
-              <div v-if="loading && items.length === 0" class="media-picker-status">
-                <Loader2 class="media-picker-spinner" :size="20" aria-hidden="true" />
-                <span>正在搜索...</span>
-              </div>
-
-              <!-- Empty state after search -->
-              <div
-                v-else-if="!loading && hasSearched && items.length === 0"
-                class="media-picker-empty"
-              >
-                <span>未找到相关视听资源</span>
-              </div>
-
-              <!-- Idle hint before search -->
-              <div
-                v-else-if="!loading && !hasSearched && items.length === 0"
-                class="media-picker-hint"
-              >
-                <span>输入名称或粘贴 ID 搜索</span>
-              </div>
-
-              <!-- Items list -->
-              <div v-else class="media-picker-list" role="listbox">
-                <button
-                  v-for="item in items"
-                  :key="item.id"
-                  type="button"
-                  class="media-picker-item"
-                  @click="handleSelect(item)"
-                >
-                  <div class="media-picker-item-cover">
-                    <img
-                      v-if="item.cover_url"
-                      :src="item.cover_url"
-                      :alt="item.title"
-                      class="media-picker-item-img"
-                    />
-                    <Music v-else-if="item.type === 'song'" :size="18" aria-hidden="true" />
-                    <Disc v-else-if="item.type === 'album'" :size="18" aria-hidden="true" />
-                    <Video v-else :size="18" aria-hidden="true" />
-                  </div>
-
-                  <div class="media-picker-item-info">
-                    <div class="media-picker-item-title">{{ item.title }}</div>
-                    <div v-if="item.subtitle" class="media-picker-item-subtitle">
-                      {{ item.subtitle }}
-                    </div>
-                  </div>
-
-                  <span class="media-picker-badge">
-                    {{ typeLabelMap[item.type] }}
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
-    </Transition>
-  </Teleport>
+    </div>
+  </PModal>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { X, Search, Music, Disc, Video, Loader2 } from 'lucide-vue-next'
+import { Search, Music, Disc, Video, Loader2 } from 'lucide-vue-next'
+import PModal from '@/components/ui/PModal.vue'
 import { referenceApi } from '@/api/references'
 import type { MediaPickerItem, MediaPickerType } from '@/types/mediaPicker'
 
@@ -280,16 +259,6 @@ const handleClose = () => {
   emit('close')
 }
 
-const handleBackdropClick = () => {
-  emit('close')
-}
-
-const handleKeyDown = (event: KeyboardEvent) => {
-  if (props.open && event.key === 'Escape') {
-    emit('close')
-  }
-}
-
 watch(
   () => props.open,
   (isOpen) => {
@@ -309,7 +278,6 @@ watch(
 )
 
 onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown)
   if (props.open) {
     nextTick(() => {
       inputRef.value?.focus()
@@ -319,78 +287,14 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   cancelSearch()
-  window.removeEventListener('keydown', handleKeyDown)
 })
 </script>
 
 <style scoped>
-.media-picker-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: var(--a-z-modal-backdrop, 500);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--a-space-4, 1rem);
-  background: rgba(15, 23, 42, 0.2);
-}
-
-.media-picker-backdrop--above-player {
-  z-index: var(--a-z-player-modal-backdrop, 750);
-}
-
-.media-picker-backdrop--above-player .media-picker-modal {
-  z-index: var(--a-z-player-modal, 760);
-}
-
-.media-picker-modal {
-  position: relative;
-  background: var(--a-color-bg, #ffffff);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-modal, 4px);
-  box-shadow: none !important;
-  width: 100%;
-  max-width: 32rem;
-  max-height: calc(100dvh - 2rem);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.p-modal-close-floating {
-  position: absolute;
-  top: 1rem;
-  right: 1.25rem;
-  border: none;
-  background: transparent;
-  color: var(--a-color-muted, #64748b);
-  cursor: pointer;
-  padding: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.6;
-  transition: opacity 0.15s ease, color 0.15s ease;
-  z-index: 10;
-}
-
-.p-modal-close-floating:hover {
-  opacity: 1;
-  color: var(--a-color-fg, #0f172a);
-}
-
 .media-picker-body {
-  padding: 1.25rem 1.5rem 1.5rem;
   display: flex;
   flex-direction: column;
   min-height: 0;
-}
-
-.p-modal-title-inline {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--a-color-fg, #0f172a);
-  margin: 0 0 1rem;
 }
 
 .media-picker-tabs {

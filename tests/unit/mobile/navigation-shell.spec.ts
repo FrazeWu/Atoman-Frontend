@@ -309,7 +309,7 @@ describe('Mobile Navigation Shell', () => {
       expect(topbar.props('currentSpace')).toBe('messages')
     })
 
-    it('persists MobileAudioPlayer and sets --mobile-app-player-bottom correctly when navigating to route without bottom nav', async () => {
+    it('keeps the player and navigation in one dock and preserves safe area without navigation', async () => {
       const pinia = createPinia()
       setActivePinia(pinia)
       const presenceStore = usePlayerPresenceStore()
@@ -341,8 +341,10 @@ describe('Mobile Navigation Shell', () => {
 
       // On /music with bottom nav
       expect(wrapper.find('[data-testid="mobile-audio-player"]').exists()).toBe(true)
-      const shellWithNav = wrapper.find('.mobile-app-shell')
-      expect(shellWithNav.attributes('style')).toContain('--mobile-app-player-bottom: calc(56px + env(safe-area-inset-bottom, 0px))')
+      const dockWithNav = wrapper.find('.mobile-app-dock')
+      expect(dockWithNav.find('[data-testid="mobile-audio-player"]').exists()).toBe(true)
+      expect(dockWithNav.findComponent(MobileBottomNav).exists()).toBe(true)
+      expect(dockWithNav.classes()).not.toContain('mobile-app-dock--without-nav')
 
       // Navigate to /books/read/1 (no bottom nav)
       await router.push('/books/read/1')
@@ -354,9 +356,7 @@ describe('Mobile Navigation Shell', () => {
       expect(wrapper.findComponent(MobileBottomNav).exists()).toBe(false)
       // Mini player is still rendered
       expect(wrapper.find('[data-testid="mobile-audio-player"]').exists()).toBe(true)
-      // Player bottom offset adjusted to safe-area
-      const shellWithoutNav = wrapper.find('.mobile-app-shell')
-      expect(shellWithoutNav.attributes('style')).toContain('--mobile-app-player-bottom: env(safe-area-inset-bottom, 0px)')
+      expect(wrapper.find('.mobile-app-dock').classes()).toContain('mobile-app-dock--without-nav')
     })
   })
 })

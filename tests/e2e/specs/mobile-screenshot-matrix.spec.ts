@@ -398,6 +398,49 @@ test.describe("Mobile route screenshot matrix", () => {
     await expect(page.locator('.mobile-bottom-nav__bar')).toBeVisible();
   });
 
+  test('keeps navigation below the restored mini player through playlist and fullscreen player journeys', async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 428, height: 926 });
+    await mockMobileApi(page);
+    await page.addInitScript(() => {
+      const song = { id: 'song-1', title: '泪忘书', artist: '华云龙', audio_url: 'https://example.test/song.mp3', duration: 180 };
+      localStorage.setItem('playbackState', JSON.stringify({ song, queue: [song], currentTime: 12, volume: 1 }));
+    });
+    await page.goto('/music/playlists');
+    const dock = page.locator('.mobile-app-dock');
+    const nav = dock.locator('.mobile-bottom-nav');
+    const player = dock.locator('.mobile-mini-player');
+    await expect(player).toContainText('泪忘书');
+    for (const viewport of [{ width: 428, height: 926 }, { width: 428, height: 746 }, { width: 375, height: 667 }, { width: 667, height: 375 }]) {
+      await page.setViewportSize(viewport);
+      await expect(nav).toBeVisible();
+      await expect(nav).toHaveCSS('position', 'relative');
+      await expect(player).toHaveCSS('position', 'relative');
+      await expect.poll(() => dock.evaluate(el => {
+        const p = el.querySelector('.mobile-mini-player')!.getBoundingClientRect();
+        const n = el.querySelector('.mobile-bottom-nav')!.getBoundingClientRect();
+        const tab = el.querySelector('[data-tab-key="playlists"]')!;
+        const t = tab.getBoundingClientRect();
+        return Math.abs(p.bottom - n.top) < 1 && Math.abs(n.bottom - innerHeight) < 1
+          && tab.contains(document.elementFromPoint(t.x + t.width / 2, t.y + t.height / 2));
+      })).toBe(true);
+    }
+    await page.setViewportSize({ width: 428, height: 926 });
+    await page.screenshot({ path: testInfo.outputPath('playlist-player-and-nav.png') });
+    await player.locator('.mobile-mini-player__track').click();
+    await expect(page).toHaveURL(/\/music\/player$/);
+    await expect(dock).toHaveCount(0);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/music\/playlists$/);
+    await expect(player).toBeVisible();
+    await expect(nav).toBeVisible();
+    await nav.locator('[data-tab-key="search"]').click();
+    await expect(page).toHaveURL(/\/music\/search$/);
+    await nav.locator('[data-tab-key="playlists"]').click();
+    await expect(page.getByRole('heading', { name: '歌单', exact: true })).toBeVisible();
+    await expect(player).toBeVisible();
+    await expect(nav).toBeVisible();
+  });
+
   for (const pathname of mobileScreenshotRoutes) {
     test(`renders ${pathname} without mobile layout regressions`, async ({
       page,

@@ -2,7 +2,6 @@
   <div
     class="app-shell mobile-app-shell"
     :class="{ 'mobile-app-shell--with-player': showMobilePlayer }"
-    :style="{ '--mobile-app-player-bottom': mobilePlayerBottom }"
   >
     <MobileTopbar
       v-if="showMobileTopbar"
@@ -34,11 +33,17 @@
         </Transition>
       </RouterView>
     </main>
-    <MobileAudioPlayer v-if="showMobilePlayer" />
-    <MobileBottomNav
-      v-if="showMobileBottomNav"
-      :current-space="currentSpace"
-    />
+    <div
+      v-if="showMobilePlayer || showMobileBottomNav"
+      class="mobile-app-dock"
+      :class="{ 'mobile-app-dock--without-nav': !showMobileBottomNav }"
+    >
+      <MobileAudioPlayer v-if="showMobilePlayer" />
+      <MobileBottomNav
+        v-if="showMobileBottomNav"
+        :current-space="currentSpace"
+      />
+    </div>
     <PToastHost />
   </div>
 </template>
@@ -172,11 +177,6 @@ const showMobilePlayer = computed(() => (
   playerPresence.hasCurrentTrack && !isFullscreenPlayerRoute.value
 ))
 
-const mobilePlayerBottom = computed(() => (
-  showMobileBottomNav.value
-    ? 'calc(56px + env(safe-area-inset-bottom, 0px))'
-    : 'env(safe-area-inset-bottom, 0px)'
-))
 const mobileRouteTransition = ref('')
 
 const handleBack = () => {
@@ -381,6 +381,26 @@ body {
   width: 100%;
   max-width: 100%;
   padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+}
+
+/* 播放器和导航共用一个固定容器，位置由正常文档流决定，不再各自偏移。 */
+.mobile-app-dock {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: var(--a-z-navigation);
+  pointer-events: none;
+}
+
+.mobile-app-dock--without-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.mobile-app-shell .mobile-app-dock > .mobile-mini-player {
+  position: relative;
+  inset: auto;
+  pointer-events: auto;
 }
 
 .mobile-app-main--no-bottom-nav {

@@ -4,6 +4,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import BookPrivateHighlights from '@/components/books/BookPrivateHighlights.vue'
 import * as apiPrivate from '@/api/bookPrivate'
 import * as apiReading from '@/api/bookReading'
+import { useToast } from '@/composables/useToast'
 
 describe('BookPrivateHighlights', () => {
   const sampleItem = {
@@ -100,5 +101,24 @@ describe('BookPrivateHighlights', () => {
     await flushPromises()
 
     expect(deleteSpy).toHaveBeenCalledWith('rev-1', 'mark-1', 2)
+  })
+
+  it('copies highlight quote and displays success toast', async () => {
+    const toast = useToast()
+    toast.clear()
+    const writeTextSpy = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: writeTextSpy },
+    })
+
+    const wrapper = await createWrapper()
+    const copyBtn = wrapper.find('.book-private-highlights__copy-btn')
+    expect(copyBtn.exists()).toBe(true)
+    await copyBtn.trigger('click')
+    await flushPromises()
+
+    expect(writeTextSpy).toHaveBeenCalledWith('科学研究的核心在于提出可检验的问题。')
+    expect(toast.toasts.value.some((t) => t.message === '文本已复制' && t.type === 'success')).toBe(true)
   })
 })

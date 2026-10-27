@@ -171,6 +171,7 @@ import { resourceReaderPath } from '@/api/bookResources'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import BookHighlightEditor from './BookHighlightEditor.vue'
+import { useToast } from '@/composables/useToast'
 
 interface Item extends ReadingMark {
   work_id: string
@@ -189,6 +190,7 @@ const busy = ref(false)
 const conflict = ref(false)
 const draft = ref<Item | null>(null)
 const copiedId = ref('')
+const toast = useToast()
 
 let sequence = 0
 
@@ -297,8 +299,14 @@ async function exportMarks() {
   }
 }
 
-function copyText(text: string) {
-  navigator.clipboard?.writeText(text)
+async function copyText(text: string) {
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
+    await navigator.clipboard.writeText(text)
+    toast.success('文本已复制')
+  } catch {
+    toast.error('复制失败，请手动选中复制')
+  }
 }
 
 function formatTime(iso: string) {

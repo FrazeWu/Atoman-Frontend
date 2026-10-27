@@ -98,7 +98,7 @@ test("导入中心在四个状态分组中保持列表和详情边界", async ({
 	await expect(layout).toBeVisible({ timeout: 15_000 });
 
 	for (const testCase of [
-		{ label: "进行中", title: `${longTitle} 进行中`, action: "继续导入" },
+		{ label: "进行中", title: `${longTitle} 进行中`, action: "取消导入" },
 		{ label: "需处理", title: `${longTitle} 需处理`, action: "处理问题" },
 		{ label: "已发布", title: `${longTitle} 已发布`, action: "修复资料" },
 		{ label: "已取消", title: `${longTitle} 已取消`, action: "删除记录" },

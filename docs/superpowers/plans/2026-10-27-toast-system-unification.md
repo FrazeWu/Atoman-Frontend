@@ -32,7 +32,7 @@
   - `useToast(): { show, success, error, warning, info, dismiss, clear, pause, resume, toasts }`
   - `ToastOptions`, `ToastItem`, `ToastType`
 
-- [ ] **Step 1: Write the failing test for `useToast`**
+- [x] **Step 1: Write the failing test for `useToast`**
 
 ```ts
 // tests/unit/composables/useToast.spec.ts
@@ -102,21 +102,21 @@ describe('useToast', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
 
 Run: `bun run test:unit tests/unit/composables/useToast.spec.ts`
 Expected: Module `@/composables/useToast` not found.
 
-- [ ] **Step 3: Implement `src/composables/useToast.ts`**
+- [x] **Step 3: Implement `src/composables/useToast.ts`**
 
 Implement `useToast` with `activeToasts` ref, timer management Map, `pause`, `resume`, `show`, `success`, `error`, `warning`, `info`, `dismiss`, `clear`.
 
-- [ ] **Step 4: Run test to confirm pass**
+- [x] **Step 4: Run test to confirm pass**
 
 Run: `bun run test:unit tests/unit/composables/useToast.spec.ts`
 Expected: 5/5 tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run: `git add src/composables/useToast.ts tests/unit/composables/useToast.spec.ts && git commit -m "feat(ui): implement useToast composable with timer and queue governance"`
 
@@ -134,7 +134,7 @@ Run: `git add src/composables/useToast.ts tests/unit/composables/useToast.spec.t
 - Consumes: `useToast()` from `src/composables/useToast.ts`
 - Produces: `<PToastHost />` component
 
-- [ ] **Step 1: Write the failing test for `PToastHost`**
+- [x] **Step 1: Write the failing test for `PToastHost`**
 
 ```ts
 // tests/unit/components/PToastHost.spec.ts
@@ -169,23 +169,23 @@ describe('PToastHost', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to confirm failure**
+- [x] **Step 2: Run test to confirm failure**
 
 Run: `bun run test:unit tests/unit/components/PToastHost.spec.ts`
 Expected: Component not found.
 
-- [ ] **Step 3: Implement `PToastHost.vue` and mount in root apps**
+- [x] **Step 3: Implement `PToastHost.vue` and mount in root apps**
 
 1. Create `src/components/ui/PToastHost.vue` with Teleport to body, TransitionGroup, 52px vertical stacking, pointerenter/leave pause/resume.
 2. Mount `<PToastHost />` in `src/App.vue`.
 3. Mount `<PToastHost />` in `apps/mobile/MobileApp.vue`.
 
-- [ ] **Step 4: Run test to confirm pass**
+- [x] **Step 4: Run test to confirm pass**
 
 Run: `bun run test:unit tests/unit/components/PToastHost.spec.ts`
 Expected: All tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run: `git add src/components/ui/PToastHost.vue src/App.vue apps/mobile/MobileApp.vue tests/unit/components/PToastHost.spec.ts && git commit -m "feat(ui): add PToastHost root container to desktop and mobile app roots"`
 
@@ -201,16 +201,16 @@ Run: `git add src/components/ui/PToastHost.vue src/App.vue apps/mobile/MobileApp
 - Consumes: `useToast()`
 - Produces: `<PToast v-model="visible" :message="message" />`
 
-- [ ] **Step 1: Check existing `PToast.spec.ts` or create contract test**
+- [x] **Step 1: Check existing `PToast.spec.ts` or create contract test**
 
 Verify existing behavior with `v-model` and `:message`.
-- [ ] **Step 2: Update `PToast.vue` if needed to clean up single-instance limitation while keeping exact props & emits intact**
-- [ ] **Step 3: Run unit tests**
+- [x] **Step 2: Update `PToast.vue` if needed to clean up single-instance limitation while keeping exact props & emits intact**
+- [x] **Step 3: Run unit tests**
 
 Run: `bun run test:unit tests/unit/components/PToast.spec.ts`
 Expected: All pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Run: `git add src/components/ui/PToast.vue tests/unit/components/PToast.spec.ts && git commit -m "refactor(ui): ensure PToast remains 100% backward compatible"`
 
@@ -226,23 +226,23 @@ Run: `git add src/components/ui/PToast.vue tests/unit/components/PToast.spec.ts 
 - Test: `tests/unit/views/books/BookNotesView.spec.ts`
 - Test: `tests/unit/views/studio/StudioContentView.spec.ts` (or relevant)
 
-- [ ] **Step 1: Update unit tests for target views**
+- [x] **Step 1: Update unit tests for target views**
 
 Add assertions checking that `useToast().success` is called when copying citations, highlights, or sharing content.
 
-- [ ] **Step 2: Wire `useToast()` into target views**
+- [x] **Step 2: Wire `useToast()` into target views**
 
 1. `BookNotesView.vue`: In `copyCitation`, call `toast.success('引用已复制')` on success and `toast.error('复制失败')` on error.
 2. `BookPrivateHighlights.vue`: In `copyText`, call `toast.success('文本已复制')`.
 3. `DMConversationPane.vue`: In `copyMessage`, call `toast.success('消息已复制')`.
 4. `StudioContentView.vue`: In `shareContent`, call `toast.success('分享地址已复制')`.
 
-- [ ] **Step 3: Run unit tests**
+- [x] **Step 3: Run unit tests**
 
 Run: `bun run test:unit tests/unit/views/books/BookNotesView.spec.ts tests/unit/views/studio/StudioContentView.spec.ts`
 Expected: All pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Run: `git add src/views/books/BookNotesView.vue src/components/books/BookPrivateHighlights.vue src/components/dm/DMConversationPane.vue src/views/studio/StudioContentView.vue tests/unit/ && git commit -m "feat(feedback): connect useToast to zero-feedback clipboard actions and studio sharing"`
 
@@ -254,25 +254,25 @@ Run: `git add src/views/books/BookNotesView.vue src/components/books/BookPrivate
 - Documentation: `docs/superpowers/plans/2026-10-27-toast-system-unification.md`
 - Kanban: `<appDataDir>/brain/72e9f847-045b-4790-a46f-1fe17ce2f1c1/frontend-refactor-status.md`
 
-- [ ] **Step 1: Run TypeScript strict check**
+- [x] **Step 1: Run TypeScript strict check**
 
 Run: `cd Atoman-Frontend && bun run type-check`
 Expected: 0 errors.
 
-- [ ] **Step 2: Run full unit test suite**
+- [x] **Step 2: Run full unit test suite**
 
 Run: `cd Atoman-Frontend && bun run test:unit`
 Expected: 100% pass across all 549+ suites.
 
-- [ ] **Step 3: Run desktop and mobile production builds**
+- [x] **Step 3: Run desktop and mobile production builds**
 
 Run: `cd Atoman-Frontend && bun run build && bun run build:mobile`
 Expected: Both builds succeed with 0 errors.
 
-- [ ] **Step 4: Update plan and kanban status**
+- [x] **Step 4: Update plan and kanban status**
 
 Mark all tasks as completed in plan and update status board.
 
-- [ ] **Step 5: Final commit & push**
+- [x] **Step 5: Final commit & push**
 
 Run: `git commit -am "chore: complete toast system unification and verification" && git push origin main`

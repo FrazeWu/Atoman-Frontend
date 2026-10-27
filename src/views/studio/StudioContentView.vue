@@ -132,6 +132,7 @@ import { studioModules } from '@/config/studioModules'
 import { useStudioStore } from '@/stores/studio'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useContentLifecycle } from '@/composables/useContentLifecycle'
+import { useToast } from '@/composables/useToast'
 import type { StudioContentFilters, StudioContentItem, StudioModule, StudioPublishStatus } from '@/types'
 
 const route = useRoute()
@@ -139,6 +140,7 @@ const router = useRouter()
 const studio = useStudioStore()
 const siteAccess = useSiteAccessStore()
 const lifecycle = useContentLifecycle()
+const toast = useToast()
 const module = computed(() => (route.params.module ?? route.meta.studioModule) as StudioModule)
 const config = computed(() => studioModules[module.value])
 const publishingFeature = { blog: 'post.create', podcast: 'podcast.publish', video: 'video.publish' } as const
@@ -291,8 +293,11 @@ async function shareContent(item: StudioContentItem) {
     if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
     await navigator.clipboard.writeText(url)
     actionMessage.value = '分享地址已复制'
+    toast.success('分享地址已复制')
   } catch (cause) {
-    actionError.value = cause instanceof Error ? cause.message : '分享失败'
+    const errMsg = cause instanceof Error ? cause.message : '分享失败'
+    actionError.value = errMsg
+    toast.error(errMsg)
   }
 }
 

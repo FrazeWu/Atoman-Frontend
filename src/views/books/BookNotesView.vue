@@ -276,6 +276,7 @@ import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import BookQuoteActionModal from '@/components/books/BookQuoteActionModal.vue'
 import { useDraftStagingStore } from '@/stores/draftStaging'
+import { useToast } from '@/composables/useToast'
 import {
   listBookNotes,
   deleteBookAnnotation,
@@ -312,6 +313,7 @@ const editingNoteText = ref('')
 const isSavingNote = ref(false)
 
 const router = useRouter()
+const toast = useToast()
 const draftStagingStore = useDraftStagingStore()
 const quoteModalOpen = ref(false)
 const activeQuoteItem = ref<BookAnnotation | null>(null)
@@ -419,11 +421,11 @@ async function copyCitation(item: BookAnnotation) {
   const bookName = item.book_title ? `《${item.book_title}》` : ''
   const citation = `“${item.text}”${bookName ? ` —— ${bookName}` : ''}`
   try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(citation)
-    }
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
+    await navigator.clipboard.writeText(citation)
+    toast.success('引用已复制')
   } catch {
-    // Clipboard permission denied or insecure context fallback
+    toast.error('复制失败，请手动选中复制')
   }
 }
 

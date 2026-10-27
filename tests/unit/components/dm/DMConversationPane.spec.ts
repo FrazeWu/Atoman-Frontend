@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import DMConversationPane from '@/components/dm/DMConversationPane.vue'
 import type { DMConversation, DMMessage } from '@/api/dm'
+import { useToast } from '@/composables/useToast'
 
 const mockConversation: DMConversation = {
   id: 'c1',
@@ -199,6 +200,18 @@ describe('DMConversationPane', () => {
 
     const copyBtn = incomingMsg.find('[data-testid="dm-copy-message"]')
     expect(copyBtn.exists()).toBe(true)
+
+    const toast = useToast()
+    toast.clear()
+    const writeTextSpy = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: writeTextSpy },
+    })
+
+    await copyBtn.trigger('click')
+    expect(writeTextSpy).toHaveBeenCalledWith('违规内容')
+    expect(toast.toasts.value.some((t) => t.message === '消息已复制' && t.type === 'success')).toBe(true)
 
     // Outgoing messages should not have report button
     const outgoingMsg = wrapper.find('.dm-message.self')

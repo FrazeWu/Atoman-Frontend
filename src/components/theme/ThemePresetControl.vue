@@ -171,8 +171,8 @@ function selectFont(font: FontFamily) {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 9999px;
-  background-color: #ffffff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  background-color: var(--a-color-primary-contrast);
+  box-shadow: none;
 }
 
 .radius-grid {

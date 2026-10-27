@@ -72,7 +72,9 @@ defineEmits<{
 
 .editor-textarea:focus {
   border-color: var(--a-color-primary);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+  box-shadow: none;
 }
 
 .tokens-sheet {

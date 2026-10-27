@@ -233,8 +233,9 @@ function handleKeydown(e: KeyboardEvent) {
   max-width: 90vw;
   max-height: 85vh;
   object-fit: contain;
-  border-radius: var(--a-radius-control, 0.5rem);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border-radius: var(--a-radius-card, 4px);
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: none;
 }
 
 .lightbox-fade-enter-active {

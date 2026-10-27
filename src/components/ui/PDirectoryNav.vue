@@ -250,7 +250,7 @@ function selectItem(id: string, mobile: boolean) {
   overflow-y: auto;
   padding: 1rem 0.75rem 2rem;
   border-top: 1px solid var(--a-color-border);
-  box-shadow: 0 -12px 28px color-mix(in srgb, var(--a-color-text) 12%, transparent);
+  box-shadow: none;
 }
 
 .p-directory-sheet.p-sheet-mobile-page.is-right {
@@ -263,7 +263,7 @@ function selectItem(id: string, mobile: boolean) {
   border-top: 0;
   border-right: 0;
   border-left: 1px solid var(--a-color-border);
-  box-shadow: -12px 0 28px color-mix(in srgb, var(--a-color-text) 12%, transparent);
+  box-shadow: none;
 }
 
 .p-directory-sheet.p-sheet-mobile-page .p-sheet-mobile-page__header {

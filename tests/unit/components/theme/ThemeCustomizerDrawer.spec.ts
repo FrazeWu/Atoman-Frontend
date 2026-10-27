@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, config } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import ThemeCustomizerDrawer from '@/components/theme/ThemeCustomizerDrawer.vue'
+
+const pinia = createPinia()
+config.global.plugins = [pinia]
 import ThemePresetControl from '@/components/theme/ThemePresetControl.vue'
 import ThemeCssEditor from '@/components/theme/ThemeCssEditor.vue'
 import { themeApi } from '@/api/theme'
@@ -24,6 +28,7 @@ describe('ThemeCustomizerDrawer', () => {
   }
 
   beforeEach(() => {
+    setActivePinia(createPinia())
     resetCreatorThemeState()
     vi.restoreAllMocks()
     vi.spyOn(themeApi, 'update').mockResolvedValue(mockTheme)

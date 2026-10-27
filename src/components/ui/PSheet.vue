@@ -4,6 +4,7 @@
     <div
       v-if="isMobile && show && showBackdrop && isTopLayer"
       class="p-sheet-mobile-backdrop"
+      :class="backdropClass"
       aria-hidden="true"
       @click="$emit('close')"
     />
@@ -54,6 +55,7 @@
         <div
           v-if="show && showBackdrop && isTopLayer"
           class="p-sheet-backdrop"
+          :class="backdropClass"
           :style="{ top: backdropTop, zIndex: backdropZIndex }"
           @click="$emit('close')"
         />
@@ -219,6 +221,7 @@ const props = withDefaults(defineProps<{
   maxWidth?: string
   height?: string
   panelClass?: string
+  backdropClass?: string
   top?: string
   side?: 'left' | 'right' | 'bottom'
   closeType?: 'bookmark' | 'header' | 'both'
@@ -249,6 +252,8 @@ const props = withDefaults(defineProps<{
   partialTopAnchor: null,
   partialWidth: 'var(--a-comment-sheet-width)',
   width: '100%',
+  panelClass: '',
+  backdropClass: '',
   top: 'var(--a-topbar-height)',
   side: 'right',
   closeType: 'bookmark',
@@ -456,7 +461,7 @@ const updatePartialBounds = () => {
 }
 
 const handlePartialEscape = (event: KeyboardEvent) => {
-  if (!isPartial.value || !props.isTopLayer || event.defaultPrevented || event.key !== 'Escape') return
+  if (!props.show || !props.isTopLayer || event.defaultPrevented || event.key !== 'Escape') return
   event.preventDefault()
   event.stopPropagation()
   emit('close')

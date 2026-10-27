@@ -1,136 +1,122 @@
 <template>
-  <div v-if="open" class="theme-customizer-root">
-      <!-- 遮罩背景 -->
-      <Transition name="drawer-backdrop" appear>
-        <div
-          class="theme-customizer-backdrop"
-          aria-hidden="true"
-          @click="cancel"
-        />
-      </Transition>
+  <PSheet
+    :show="open"
+    side="right"
+    mode="partial"
+    partial-width="420px"
+    title="装扮空间"
+    close-type="header"
+    :above-player="true"
+    panel-class="theme-customizer-drawer"
+    backdrop-class="theme-customizer-backdrop"
+    @close="cancel"
+  >
+    <!-- 头部扩展信息（启用开关） -->
+    <template #header>
+      <div class="drawer-header-inner">
+        <h2 id="theme-customizer-title" class="drawer-title">
+          装扮空间
+        </h2>
+        <label class="drawer-switch-label">
+          <input
+            v-model="isEnabled"
+            type="checkbox"
+            role="switch"
+            aria-label="启用装扮"
+            class="drawer-switch-input"
+            @change="updateLivePreview"
+          />
+          <span class="drawer-switch-text">启用</span>
+        </label>
+      </div>
+    </template>
 
-      <!-- 侧边定制抽屉 -->
-      <Transition name="drawer-slide" appear>
-        <aside
-          class="theme-customizer-drawer"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="theme-customizer-title"
+    <!-- 模式切换标签 -->
+    <div class="drawer-tabs-wrapper">
+      <div role="tablist" class="drawer-tabs">
+        <button
+          type="button"
+          role="tab"
+          :aria-selected="mode === 'preset'"
+          class="drawer-tab-btn"
+          :class="{ 'is-active': mode === 'preset' }"
+          @click="switchMode('preset')"
         >
-          <!-- 头部 -->
-          <header class="drawer-header">
-            <div class="drawer-title-group">
-              <h2 id="theme-customizer-title" class="drawer-title">
-                装扮空间
-              </h2>
-              <label class="drawer-switch-label">
-                <input
-                  v-model="isEnabled"
-                  type="checkbox"
-                  role="switch"
-                  aria-label="启用装扮"
-                  class="drawer-switch-input"
-                  @change="updateLivePreview"
-                />
-                <span class="drawer-switch-text">启用</span>
-              </label>
-            </div>
-
-            <button
-              type="button"
-              class="drawer-close-btn"
-              aria-label="关闭"
-              @click="cancel"
-            >
-              ✕
-            </button>
-          </header>
-
-          <!-- 模式切换标签 -->
-          <div class="drawer-tabs-wrapper">
-            <div role="tablist" class="drawer-tabs">
-              <button
-                type="button"
-                role="tab"
-                :aria-selected="mode === 'preset'"
-                class="drawer-tab-btn"
-                :class="{ 'is-active': mode === 'preset' }"
-                @click="switchMode('preset')"
-              >
-                基础装扮
-              </button>
-              <button
-                type="button"
-                role="tab"
-                :aria-selected="mode === 'custom_css'"
-                class="drawer-tab-btn"
-                :class="{ 'is-active': mode === 'custom_css' }"
-                @click="switchMode('custom_css')"
-              >
-                高级 CSS
-              </button>
-            </div>
-          </div>
-
-          <!-- 内容面板 -->
-          <main class="drawer-content">
-            <div v-if="saveError" class="drawer-error" role="alert">
-              {{ saveError }}
-            </div>
-
-            <div v-if="mode === 'preset'" role="tabpanel" aria-label="基础装扮">
-              <ThemePresetControl
-                :config="presetConfig"
-                @update:config="onPresetUpdate"
-              />
-            </div>
-
-            <div v-else-if="mode === 'custom_css'" role="tabpanel" aria-label="高级 CSS" class="drawer-editor-panel">
-              <ThemeCssEditor
-                :model-value="customCss"
-                @update:model-value="onCssUpdate"
-              />
-            </div>
-          </main>
-
-          <!-- 底部操作栏 -->
-          <footer class="drawer-footer">
-            <button
-              type="button"
-              class="btn-reset"
-              :disabled="saving || resetting"
-              @click="handleReset"
-            >
-              {{ resetting ? '恢复中...' : '恢复默认' }}
-            </button>
-
-            <div class="drawer-footer-actions">
-              <button
-                type="button"
-                class="btn-cancel"
-                :disabled="saving"
-                @click="cancel"
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                class="btn-save"
-                :disabled="saving"
-                @click="handleSave"
-              >
-                {{ saving ? '保存中...' : '保存并生效' }}
-              </button>
-            </div>
-          </footer>
-        </aside>
-      </Transition>
+          基础装扮
+        </button>
+        <button
+          type="button"
+          role="tab"
+          :aria-selected="mode === 'custom_css'"
+          class="drawer-tab-btn"
+          :class="{ 'is-active': mode === 'custom_css' }"
+          @click="switchMode('custom_css')"
+        >
+          高级 CSS
+        </button>
+      </div>
     </div>
+
+    <!-- 内容面板 -->
+    <main class="drawer-content">
+      <div v-if="saveError" class="drawer-error" role="alert">
+        {{ saveError }}
+      </div>
+
+      <div v-if="mode === 'preset'" role="tabpanel" aria-label="基础装扮">
+        <ThemePresetControl
+          :config="presetConfig"
+          @update:config="onPresetUpdate"
+        />
+      </div>
+
+      <div v-else-if="mode === 'custom_css'" role="tabpanel" aria-label="高级 CSS" class="drawer-editor-panel">
+        <ThemeCssEditor
+          :model-value="customCss"
+          @update:model-value="onCssUpdate"
+        />
+      </div>
+    </main>
+
+    <!-- 底部操作栏 -->
+    <template #footer>
+      <div class="drawer-footer-inner">
+        <button
+          type="button"
+          class="btn-reset"
+          :disabled="saving || resetting"
+          @click="handleReset"
+        >
+          {{ resetting ? '恢复中...' : '恢复默认' }}
+        </button>
+
+        <div class="drawer-footer-actions">
+          <button
+            type="button"
+            class="btn-cancel"
+            :disabled="saving"
+            @click="cancel"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            class="btn-save"
+            :disabled="saving"
+            @click="handleSave"
+          >
+            {{ saving ? '保存中...' : '保存并生效' }}
+          </button>
+        </div>
+      </div>
+    </template>
+  </PSheet>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import type { UserTheme, ThemeMode, ThemePresetConfig } from '@/types/theme'
+import PSheet from '@/components/ui/PSheet.vue'
 import ThemePresetControl from '@/components/theme/ThemePresetControl.vue'
 import ThemeCssEditor from '@/components/theme/ThemeCssEditor.vue'
 import { themeApi } from '@/api/theme'
@@ -311,64 +297,26 @@ async function handleSave() {
   }
 }
 
-function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape' && props.open) {
-    cancel()
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('keydown', onKeydown)
-})
-
 onUnmounted(() => {
-  window.removeEventListener('keydown', onKeydown)
   clearLivePreview()
 })
 </script>
 
 <style scoped>
-.theme-customizer-root {
-  position: relative;
-  z-index: var(--a-layer-above-player-sheet-panel, 740);
-}
-
-.theme-customizer-backdrop {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(15, 23, 42, 0.45);
-  z-index: var(--a-layer-above-player-sheet-backdrop, 730);
-}
-
 .theme-customizer-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  max-width: 420px;
-  background-color: var(--a-color-surface);
-  border-left: 1px solid var(--a-color-border-soft);
-  box-shadow: var(--a-shadow-lg);
-  z-index: var(--a-layer-above-player-sheet-panel, 740);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  box-shadow: none !important;
 }
 
-.drawer-header {
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
+.theme-customizer-drawer :deep(.p-sheet-footer) {
+  padding: 0.875rem 1.25rem;
+  background-color: var(--a-color-surface);
+}
+
+.drawer-header-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: var(--a-color-surface);
-}
-
-.drawer-title-group {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  width: 100%;
 }
 
 .drawer-title {
@@ -397,22 +345,6 @@ onUnmounted(() => {
 
 .drawer-switch-text {
   font-weight: 500;
-}
-
-.drawer-close-btn {
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--a-radius-control, 4px);
-  color: var(--a-color-muted);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: color 0.15s ease, background-color 0.15s ease;
-}
-
-.drawer-close-btn:hover {
-  color: var(--a-color-text);
-  background-color: var(--a-color-surface-muted);
 }
 
 .drawer-tabs-wrapper {
@@ -473,13 +405,11 @@ onUnmounted(() => {
   min-height: 380px;
 }
 
-.drawer-footer {
-  padding: 0.875rem 1.25rem;
-  border-top: 1px solid var(--a-color-border-soft);
-  background-color: var(--a-color-surface);
+.drawer-footer-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
 }
 
 .btn-reset {
@@ -544,26 +474,5 @@ onUnmounted(() => {
 .btn-save:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-/* Transitions */
-.drawer-backdrop-enter-active,
-.drawer-backdrop-leave-active {
-  transition: opacity 0.25s ease;
-}
-
-.drawer-backdrop-enter-from,
-.drawer-backdrop-leave-to {
-  opacity: 0;
-}
-
-.drawer-slide-enter-active,
-.drawer-slide-leave-active {
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.drawer-slide-enter-from,
-.drawer-slide-leave-to {
-  transform: translateX(100%);
 }
 </style>

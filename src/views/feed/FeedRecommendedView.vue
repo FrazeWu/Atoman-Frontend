@@ -345,6 +345,26 @@
       :message="subscriptionToastMessage"
       :type="subscriptionToastType"
     />
+
+    <!-- 推荐依据弹窗 -->
+    <PModal
+      :show="Boolean(activeReasonItem)"
+      size="sm"
+      title="推荐依据"
+      @close="activeReasonItem = null"
+    >
+      <div class="recommendation-reason-dialog">
+        <p class="recommendation-reason-title">{{ activeReasonItem?.title }}</p>
+        <p class="recommendation-reason-body">
+          {{ activeReasonItem?.score_label ? `依据：${activeReasonItem.score_label}` : '综合你的关注、收藏、评分与内容新鲜度推荐。' }}
+        </p>
+      </div>
+      <template #footer>
+        <div class="recommendation-reason-footer">
+          <PButton variant="primary" label="知道了" @click="activeReasonItem = null" />
+        </div>
+      </template>
+    </PModal>
   </div>
 </template>
 
@@ -364,6 +384,7 @@ import PEmpty from '@/components/ui/PEmpty.vue'
 import PContentCard from '@/components/ui/PContentCard.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
+import PModal from '@/components/ui/PModal.vue'
 import PToast from '@/components/ui/PToast.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import ModuleSearch from '@/components/search/ModuleSearch.vue'
@@ -500,8 +521,10 @@ async function submitRecommendationFeedback(item: RecommendationItem, action: 'h
   }
 }
 
+const activeReasonItem = ref<RecommendationItem | null>(null)
+
 function showRecommendationReason(item: RecommendationItem) {
-  window.alert(item.score_label ? `推荐依据：${item.score_label}` : '推荐依据：综合你的关注、收藏、评分和内容新鲜度')
+  activeReasonItem.value = item
 }
 
 function normalizeMode(raw: unknown): RecommendationMode {
@@ -1791,5 +1814,32 @@ onUnmounted(() => { recommendationRequest++ })
     flex: 1 1 0;
     padding-inline: 0.5rem;
   }
+}
+
+.recommendation-reason-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.recommendation-reason-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--a-color-text);
+  margin: 0;
+}
+
+.recommendation-reason-body {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--a-color-muted);
+  margin: 0;
+}
+
+.recommendation-reason-footer {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
 }
 </style>

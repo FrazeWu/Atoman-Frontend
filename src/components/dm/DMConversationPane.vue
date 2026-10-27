@@ -143,6 +143,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { Check, CheckCheck, Copy, Flag, Info } from 'lucide-vue-next'
 import { isUUID, type DMConversation, type DMMessage, type DMParty } from '@/api/dm'
+import { useToast } from '@/composables/useToast'
 
 const props = withDefaults(
   defineProps<{
@@ -170,6 +171,7 @@ const emit = defineEmits<{
 }>()
 
 const scroller = ref<HTMLElement | null>(null)
+const toast = useToast()
 let previousHeight: number | null = null
 let previousMessageCount = 0
 
@@ -335,11 +337,11 @@ const groupedMessages = computed<MessageGroup[]>(() => {
 const copyMessage = async (content?: string) => {
   if (!content) return
   try {
-    if (navigator?.clipboard?.writeText) {
-      await navigator.clipboard.writeText(content)
-    }
+    if (!navigator?.clipboard?.writeText) throw new Error('clipboard unavailable')
+    await navigator.clipboard.writeText(content)
+    toast.success('消息已复制')
   } catch {
-    // ignore
+    toast.error('复制失败，请手动选中复制')
   }
 }
 </script>

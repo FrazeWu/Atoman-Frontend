@@ -4,6 +4,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import * as booksApi from '@/api/books'
 import { useDraftStagingStore } from '@/stores/draftStaging'
+import { useToast } from '@/composables/useToast'
 import BookNotesView from '@/views/books/BookNotesView.vue'
 import type { BookAnnotation } from '@/api/books'
 
@@ -206,6 +207,8 @@ describe('BookNotesView', () => {
 
     const expectedCitation = '“多年以后，面对行刑队，奥雷里亚诺·布恩迪亚上校将会回想起父亲带他去见识冰块的那个遥远的下午。” —— 《百年孤独》'
     expect(writeTextMock).toHaveBeenCalledWith(expectedCitation)
+    const toast = useToast()
+    expect(toast.toasts.value.some((t) => t.message === '引用已复制' && t.type === 'success')).toBe(true)
 
     wrapper.unmount()
   })
@@ -382,6 +385,36 @@ describe('BookNotesView', () => {
     expect(draftStore.pendingQuote?.quoteText).toBe(mockNotes[0].text)
     expect(draftStore.pendingQuote?.target).toBe('blog_post')
     expect(draftStore.pendingQuote?.mode).toBe('append')
+
+    wrapper.unmount()
+  })
+
+  it('shows error toast when copy citation fails', async () => {
+    const toast = useToast()
+    toast.clear()
+
+    const writeTextSpy = vi.fn().mockRejectedValue(new Error('Permission denied'))
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: writeTextSpy },
+    })
+
+    vi.spyOn(booksApi, 'listBookNotes').mockResolvedValue({
+      items: mockNotes,
+      total: 2,
+    })
+
+    await router.push('/books/notes')
+    await router.isReady()
+    const wrapper = mountView()
+    await flushPromises()
+
+    const copyBtn = wrapper.find('[data-testid="copy-citation-ann-1"]')
+    expect(copyBtn.exists()).toBe(true)
+    await copyBtn.trigger('click')
+    await flushPromises()
+
+    expect(toast.toasts.value.some((t) => t.message === '复制失败，请手动选中复制' && t.type === 'error')).toBe(true)
 
     wrapper.unmount()
   })

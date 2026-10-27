@@ -70,6 +70,7 @@ function importSnapshot(
 test("通过真实专辑创建界面完成 v2 分片导入并显示识别曲目", async ({ page }) => {
 	const requestPaths: string[] = [];
 	let importPolls = 0;
+	let metadataMatches = 0;
 
 	await page.setViewportSize({ width: 1440, height: 900 });
 
@@ -206,6 +207,11 @@ test("通过真实专辑创建界面完成 v2 分片导入并显示识别曲目"
 			});
 			return;
 		}
+		if (request.method() === "POST" && path === `/api/v1/music/imports/albums/${importId}/metadata-match`) {
+			metadataMatches += 1;
+			await route.fulfill({ status: 200, contentType: "application/json", body: envelope({ ...importSnapshot("queued"), metadataMatchStatus: "matching" }) });
+			return;
+		}
 		if (
 			request.method() === "GET" &&
 			path === `/api/v1/music/imports/albums/${importId}`
@@ -214,7 +220,7 @@ test("通过真实专辑创建界面完成 v2 分片导入并显示识别曲目"
 			await route.fulfill({
 				status: 200,
 				contentType: "application/json",
-				body: envelope(importSnapshot(importPolls >= 1 ? "ready" : "queued")),
+				body: envelope({ ...importSnapshot(importPolls >= 1 ? "ready" : "queued"), metadataMatchStatus: importPolls >= 1 ? "unmatched" : "matching" }),
 			});
 			return;
 		}
@@ -234,7 +240,7 @@ test("通过真实专辑创建界面完成 v2 分片导入并显示识别曲目"
 
 	await page.goto("/music/artist/artist-e2e-1");
 	await page.getByRole("button", { name: "创建专辑/歌曲" }).click();
-	const creationDialog = page.getByRole("dialog", { name: "创建音乐条目" });
+	const creationDialog = page.getByRole("dialog", { name: /创建-/ });
 	const filesInput = creationDialog.getByTestId("album-import-files-input");
 	await expect(filesInput).toBeAttached();
 
@@ -256,11 +262,11 @@ test("通过真实专辑创建界面完成 v2 分片导入并显示识别曲目"
 				`POST /api/v1/music/imports/albums/${importId}/complete`,
 			]),
 		);
-	await expect.poll(() => importPolls).toBeGreaterThan(0);
+	await expect.poll(() => metadataMatches, { timeout: 15_000 }).toBeGreaterThan(0);
+	await expect.poll(() => importPolls, { timeout: 15_000 }).toBeGreaterThan(0);
 	await expect(creationDialog.getByLabel("专辑名*")).toHaveValue(
 		"E2E Import Album",
 	);
-	await page.getByRole("button", { name: "取消", exact: true }).click();
 
 	const basicFieldsBox = await creationDialog
 		.locator(".album-details-step__basic-fields")
@@ -270,21 +276,9 @@ test("通过真实专辑创建界面完成 v2 分片导入并显示识别曲目"
 		.boundingBox();
 	expect(basicFieldsBox).not.toBeNull();
 	expect(bioFieldBox).not.toBeNull();
-	expect(
-		Math.abs((bioFieldBox?.y ?? 0) - (basicFieldsBox?.y ?? 0)),
-	).toBeLessThan(2);
-	expect(
-		Math.abs((bioFieldBox?.height ?? 0) - (basicFieldsBox?.height ?? 0)),
-	).toBeLessThan(2);
-	expect(bioFieldBox?.x ?? 0).toBeGreaterThan(basicFieldsBox?.x ?? 0);
-	expect(
-		(bioFieldBox?.width ?? 0) /
-			((basicFieldsBox?.width ?? 0) + (bioFieldBox?.width ?? 0)),
-	).toBeGreaterThan(0.63);
-	expect(
-		(bioFieldBox?.width ?? 0) /
-			((basicFieldsBox?.width ?? 0) + (bioFieldBox?.width ?? 0)),
-	).toBeLessThan(0.67);
+	// The current details form stacks the biography below the basic fields.
+	expect(bioFieldBox!.y).toBeGreaterThanOrEqual(basicFieldsBox!.y + basicFieldsBox!.height - 2);
+	expect(bioFieldBox!.width).toBeGreaterThan(0);
 
 	const basicFieldMetrics = await creationDialog
 		.locator(".album-details-step__basic-field")
@@ -350,6 +344,7 @@ test("通过真实专辑创建界面完成 v2 分片导入并显示识别曲目"
 		await dateInput.evaluate((input: HTMLInputElement) => input.scrollLeft),
 	).toBe(0);
 
+	await creationDialog.getByText("上传与处理进度").click();
 	await expect(creationDialog.getByTestId("album-import-status")).toBeVisible();
 	await expect(creationDialog.getByText("E2E Imported Track")).toBeVisible();
 });

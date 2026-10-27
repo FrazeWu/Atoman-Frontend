@@ -281,9 +281,6 @@ describe('BookNotesView', () => {
       deleted: true,
     })
 
-    // Mock confirm dialog
-    window.confirm = vi.fn().mockReturnValue(true)
-
     await router.push('/books/notes')
     await router.isReady()
     const wrapper = mountView()
@@ -295,11 +292,44 @@ describe('BookNotesView', () => {
     await deleteBtn.trigger('click')
     await flushPromises()
 
+    const confirmBtn = wrapper.findAll('button').find(b => b.text().trim() === '删除' && b.classes().includes('p-button--danger'))
+    expect(confirmBtn).toBeDefined()
+    await confirmBtn!.trigger('click')
+    await flushPromises()
+
     expect(deleteSpy).toHaveBeenCalledWith('ann-1')
     expect(wrapper.findAll('.book-note-card')).toHaveLength(1)
     expect(wrapper.text()).not.toContain('百年孤独')
     expect(wrapper.text()).toContain('三体')
 
+    wrapper.unmount()
+  })
+
+  it('does not delete note when clicking "取消" in confirmation dialog', async () => {
+    vi.spyOn(booksApi, 'listBookNotes').mockResolvedValue({
+      items: [...mockNotes],
+      total: 2,
+    })
+    const deleteSpy = vi.spyOn(booksApi, 'deleteBookAnnotation').mockResolvedValue({
+      deleted: true,
+    })
+
+    await router.push('/books/notes')
+    await router.isReady()
+    const wrapper = mountView()
+    await flushPromises()
+
+    const deleteBtn = wrapper.find('[data-testid="delete-note-ann-1"]')
+    await deleteBtn.trigger('click')
+    await flushPromises()
+
+    const cancelBtn = wrapper.findAll('button').find(b => b.text().trim() === '取消' && b.classes().includes('p-button--secondary'))
+    expect(cancelBtn).toBeDefined()
+    await cancelBtn!.trigger('click')
+    await flushPromises()
+
+    expect(deleteSpy).not.toHaveBeenCalled()
+    expect(wrapper.findAll('.book-note-card')).toHaveLength(2)
     wrapper.unmount()
   })
 

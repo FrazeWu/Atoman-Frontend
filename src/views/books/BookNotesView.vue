@@ -240,6 +240,18 @@
       @close="quoteModalOpen = false"
       @select="handleQuoteSelect"
     />
+
+    <PConfirm
+      :show="Boolean(deletingNote)"
+      title="删除读书笔记"
+      message="确定要删除该读书笔记吗？此操作不可撤销。"
+      :danger="true"
+      confirm-text="删除"
+      cancel-text="取消"
+      :loading="isDeletingNote"
+      @confirm="executeDeleteNote"
+      @cancel="deletingNote = null"
+    />
   </section>
 </template>
 
@@ -261,6 +273,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import BookQuoteActionModal from '@/components/books/BookQuoteActionModal.vue'
 import { useDraftStagingStore } from '@/stores/draftStaging'
 import {
@@ -475,16 +488,26 @@ async function saveEditNote(item: BookAnnotation) {
   }
 }
 
-async function handleDeleteNote(item: BookAnnotation) {
-  if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
-    if (!window.confirm('确定删除该读书笔记吗？')) return
-  }
+const deletingNote = ref<BookAnnotation | null>(null)
+const isDeletingNote = ref(false)
+
+function handleDeleteNote(item: BookAnnotation) {
+  deletingNote.value = item
+}
+
+async function executeDeleteNote() {
+  if (!deletingNote.value || isDeletingNote.value) return
+  const noteId = deletingNote.value.id
+  isDeletingNote.value = true
   try {
-    await deleteBookAnnotation(item.id)
-    notes.value = notes.value.filter((n) => n.id !== item.id)
+    await deleteBookAnnotation(noteId)
+    notes.value = notes.value.filter((n) => n.id !== noteId)
     totalNotes.value = Math.max(0, totalNotes.value - 1)
+    deletingNote.value = null
   } catch (err: unknown) {
     errorMessage.value = err instanceof Error ? err.message : '删除笔记失败'
+  } finally {
+    isDeletingNote.value = false
   }
 }
 

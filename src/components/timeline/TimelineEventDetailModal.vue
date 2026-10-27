@@ -1,9 +1,5 @@
 <template>
-  <PModal size="lg" @close="emit('close')">
-    <div class="a-modal-header">
-      <h2 class="a-modal-title">{{ event.title }}</h2>
-      <button class="a-modal-close" @click="emit('close')">✕</button>
-    </div>
+  <PModal size="lg" :title="event.title" @close="emit('close')">
     <div class="a-modal-body">
       <div class="tl-detail-meta">
         <span>{{ formatDatetime(event.event_date) }}</span>
@@ -44,9 +40,6 @@ const emit = defineEmits<{ close: []; edit: []; history: []; delete: []; decided
 </script>
 
 <style scoped>
-.a-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--a-color-border-soft); }
-.a-modal-title { margin: 0; font-size: 1.1rem; font-weight: 500; }
-.a-modal-close { border: none; background: none; color: var(--a-color-muted); cursor: pointer; font-size: 1.1rem; line-height: 1; }
 .a-modal-body { padding: 1.5rem; }
 .a-modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.5rem; border-top: 1px solid var(--a-color-border-soft); }
 .tl-detail-meta { font-size: 0.8rem; font-weight: 500; color: var(--a-color-muted); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }

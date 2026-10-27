@@ -250,11 +250,7 @@
       @decided="refreshDecidedEvent"
     />
 
-    <PModal v-if="showForm" size="lg" @close="closeForm">
-      <div class="a-modal-header">
-        <h2 class="a-modal-title">{{ editingEvent ? '编辑事件' : '新建事件' }}</h2>
-        <button class="a-modal-close" @click="closeForm">✕</button>
-      </div>
+    <PModal v-if="showForm" size="lg" :title="editingEvent ? '编辑事件' : '新建事件'" @close="closeForm">
       <div class="a-modal-body">
         <TimelineEventFormSection v-model:form="form" v-model:tags-input="tagsInput" />
         <p class="tl-field-help">纬度范围 -90 到 90，经度范围 -180 到 180；不确定时可留空。</p>
@@ -270,11 +266,7 @@
       </template>
     </PModal>
 
-    <PModal v-if="showPersonForm" size="md" @close="showPersonForm = false">
-      <div class="a-modal-header">
-        <h2 class="a-modal-title">新建人物</h2>
-        <button class="a-modal-close" @click="showPersonForm = false">✕</button>
-      </div>
+    <PModal v-if="showPersonForm" size="md" title="新建人物" @close="showPersonForm = false">
       <div class="a-modal-body">
         <div class="form-group">
           <label class="form-label">姓名 *</label>
@@ -319,11 +311,7 @@
     />
 
     <!-- History Modal -->
-    <PModal v-if="historyEvent" @close="closeHistory">
-      <div class="a-modal-header">
-        <h2 class="a-modal-title">历史版本 — {{ historyEvent.title }}</h2>
-        <button class="a-modal-close" @click="closeHistory">✕</button>
-      </div>
+    <PModal v-if="historyEvent" :title="`历史版本 — ${historyEvent.title}`" @close="closeHistory">
       <div class="a-modal-body">
         <div v-if="loadingHistory" style="color:var(--a-color-muted);font-size:.85rem">加载中...</div>
         <div v-else-if="historyRevisions.length === 0" style="color:var(--a-color-muted);font-size:.85rem">暂无历史版本</div>

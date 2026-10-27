@@ -13,7 +13,11 @@ describe('TimelineEventDetailModal', () => {
       props: { event, canEdit: true, formatDatetime: () => '2026-01-01' },
       global: {
         stubs: {
-          PModal: { template: '<div><slot /><slot name="footer" /></div>' },
+          PModal: {
+            props: ['title'],
+            emits: ['close'],
+            template: '<div><h2>{{ title }}</h2><button type="button" @click="$emit(\'close\')">✕</button><slot /><slot name="footer" /></div>',
+          },
           TimelineRevisionProposal: true,
         },
       },

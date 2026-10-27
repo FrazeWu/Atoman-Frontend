@@ -46,7 +46,10 @@ describe('TimelineHomeView resource link', () => {
       global: {
         plugins: [router],
         stubs: {
-          PModal: { template: '<div data-testid="event-detail"><slot /></div>' },
+          PModal: {
+            props: ['title'],
+            template: '<div data-testid="event-detail"><h2>{{ title }}</h2><slot /></div>',
+          },
           TimelineRevisionProposal: true,
           PDiscussionFAB: true,
           TimelineLocationEditor: true,

@@ -85,11 +85,7 @@
     </main>
 
     <!-- Add/Edit Location Modal -->
-    <PModal v-if="showLocationForm" size="md" @close="closeLocationForm">
-      <div class="a-modal-header">
-        <h2 class="a-modal-title">{{ editingLocation ? '编辑地点' : '添加地点' }}</h2>
-        <button class="a-modal-close" @click="closeLocationForm">✕</button>
-      </div>
+    <PModal v-if="showLocationForm" size="md" :title="editingLocation ? '编辑地点' : '添加地点'" @close="closeLocationForm">
       <div class="a-modal-body">
         <div class="form-group">
           <label class="form-label">时间 *</label>
@@ -166,11 +162,7 @@
     </PModal>
 
     <!-- Edit Person Modal -->
-    <PModal v-if="showPersonForm" size="md" @close="showPersonForm = false">
-      <div class="a-modal-header">
-        <h2 class="a-modal-title">编辑人物</h2>
-        <button class="a-modal-close" @click="showPersonForm = false">✕</button>
-      </div>
+    <PModal v-if="showPersonForm" size="md" title="编辑人物" @close="showPersonForm = false">
       <div class="a-modal-body">
         <div class="form-group">
           <label class="form-label">姓名 *</label>

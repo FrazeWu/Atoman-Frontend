@@ -7,7 +7,7 @@ const runtimeAliases = {
 	'@codemirror/state': path.resolve(__dirname, 'node_modules/@codemirror/state/dist/index.js'),
 	'@codemirror/view': path.resolve(__dirname, 'node_modules/@codemirror/view/dist/index.js'),
 	'@codemirror/language': path.resolve(__dirname, 'node_modules/@codemirror/language/dist/index.js'),
-	'pdfjs-dist/build/pdf.worker.mjs?url': path.resolve(__dirname, 'tests/unit/fixtures/pdfWorkerUrl.ts'),
+	'pdfjs-dist/legacy/build/pdf.worker.mjs?url': path.resolve(__dirname, 'tests/unit/fixtures/pdfWorkerUrl.ts'),
 };
 
 // Test workers must not inherit a production Vue runtime from the shell.

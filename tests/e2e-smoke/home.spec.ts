@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 test("home shell renders without a backend dependency", async ({ page }) => {
+  await page.route("**/api/v1/**", route => {
+    if (new URL(route.request().url()).pathname.endsWith("/auth/session")) {
+      return route.fulfill({ status: 204 });
+    }
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { items: [], total: 0 } }) });
+  });
   const response = await page.goto("/");
 
   expect(response?.status()).toBe(200);

@@ -13,7 +13,7 @@ test-results/
 .playwright-mcp/
 .codegraph/
 .superpowers/
-tests/e2e/.auth/music-isolated.json
+tests/e2e/.auth/
 /topbar-default.png
 .claude/
 .gstack/
@@ -22,3 +22,6 @@ tests/e2e/.auth/music-isolated.json
 # Local show-me preview artifacts
 .pi/show-me/blog-editor-ui-preview.html
 .pi/show-me/blog-publication-ui-preview.html
+
+# Browser storage state contains session credentials.
+playwright/.auth/

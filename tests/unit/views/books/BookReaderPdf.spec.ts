@@ -2,10 +2,10 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, expect, it, vi } from 'vitest'
-import { getDocument } from 'pdfjs-dist'
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import BookPublicReaderView from '@/components/books/BookPublicReaderView.vue'
 
-vi.mock('pdfjs-dist', () => ({ GlobalWorkerOptions: {}, getDocument: vi.fn() }))
+vi.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({ GlobalWorkerOptions: {}, getDocument: vi.fn() }))
 afterEach(() => vi.restoreAllMocks())
 
 it('云端 PDF 精确页码优先于百分比，翻页提交对应页码', async () => {

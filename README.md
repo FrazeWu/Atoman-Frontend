@@ -26,10 +26,10 @@ Atoman 的 Web 客户端，提供内容创作、订阅阅读、社区讨论和�
 
 ## 开发
 
-需要 Bun 1.3+，本地 Backend 默认运行在 `http://localhost:8080`。
+需要 Node.js 24 LTS (`nvm use`) / Bun 1.3.14，本地 Backend 默认运行在 `http://localhost:8080`。
 
 ```bash
-cp .env.example .env.dev
+cp .env.example .env.development
 bun install
 # 仅在需要浏览器或视觉验证时启动；完成后关闭。
 bun run dev
@@ -53,7 +53,7 @@ bun run test:unit
 bun run build
 ```
 
-开发环境读取 `.env.dev`，生产构建读取 `.env.production`。
+开发环境读取 `.env.development`，生产构建读取 `.env.production`。
 
 ## 部署
 

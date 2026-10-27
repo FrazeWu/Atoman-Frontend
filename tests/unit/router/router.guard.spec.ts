@@ -16,6 +16,17 @@ import { useAuthStore } from "../../../src/stores/auth";
 import { useOnboardingStore } from "../../../src/stores/onboarding";
 import { useSiteAccessStore } from "../../../src/stores/siteAccess";
 
+// These tests exercise real lazy route registration and guards, not Studio rendering.
+// Loading the whole editor/player tree here made the first guard case time out.
+vi.mock("@/views/studio/StudioLayout.vue", () => ({
+  __esModule: true,
+  default: { template: "<router-view />" },
+}));
+vi.mock("@/views/studio/StudioDashboardView.vue", () => ({
+  __esModule: true,
+  default: { template: "<main data-test-studio-dashboard />" },
+}));
+
 const RouteStub = { template: "<main data-test-route-stub />" };
 
 function stubRouteComponents(routes: RouteRecordRaw[]): RouteRecordRaw[] {

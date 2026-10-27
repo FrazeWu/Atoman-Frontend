@@ -436,7 +436,7 @@ export const usePlayerStore = defineStore("player", () => {
 			audio.pause();
 			isPlaying.value = false;
 			pauseListening();
-			if ("mediaSession" in navigator) {
+			if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
 				navigator.mediaSession.playbackState = "paused";
 			}
 		}
@@ -656,7 +656,7 @@ export const usePlayerStore = defineStore("player", () => {
 		savePodcastProgress();
 		saveMusicProgress(false, true);
 		saveMusicSession(true);
-		if ("mediaSession" in navigator) {
+		if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
 			navigator.mediaSession.playbackState = "paused";
 		}
 	};
@@ -689,7 +689,7 @@ export const usePlayerStore = defineStore("player", () => {
 			isPlaying.value = false;
 			isLoading.value = false;
 			pauseListening();
-			if ("mediaSession" in navigator) {
+			if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
 				navigator.mediaSession.playbackState = "paused";
 			}
 		});
@@ -700,7 +700,7 @@ export const usePlayerStore = defineStore("player", () => {
 			isPlaying.value = false;
 			playbackError.value = "音频加载失败，请重试";
 			pauseListening();
-			if ("mediaSession" in navigator) {
+			if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
 				try {
 					navigator.mediaSession.playbackState = "paused";
 				} catch {
@@ -851,7 +851,7 @@ export const usePlayerStore = defineStore("player", () => {
 				} catch {
 					// Ignore listening tracker error
 				}
-				if ("mediaSession" in navigator) {
+				if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
 					try {
 						navigator.mediaSession.playbackState = "playing";
 					} catch {
@@ -866,7 +866,7 @@ export const usePlayerStore = defineStore("player", () => {
 				playbackError.value = "无法播放此音频，请重试";
 				isPlaying.value = false;
 				pauseListening();
-				if ("mediaSession" in navigator) {
+				if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
 					try {
 						navigator.mediaSession.playbackState = "paused";
 					} catch {

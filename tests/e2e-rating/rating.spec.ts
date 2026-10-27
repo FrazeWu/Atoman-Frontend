@@ -22,7 +22,7 @@ test('真实评分链路：冷启动、个人评分、五人门槛、权限、�
   const detailURL = `/podcasts/episode/${fixture.episodes.first}`
   const secondURL = `/podcasts/episode/${fixture.episodes.second}`
   expect((await context.request.delete(path, { headers })).status()).toBe(200)
-  const bookPath = `/api/v1/books/catalog/works/${fixture.book_id}/rating`
+  const bookPath = `/api/v1/books/works/${fixture.book_id}/rating`
   expect((await context.request.delete(bookPath, { headers })).status()).toBe(200)
 
   // 不是后端 mock：五位用户都通过真实 Cookie/CSRF 登录及真实评分接口写入。

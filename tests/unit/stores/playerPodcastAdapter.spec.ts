@@ -1,5 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
 import { usePlayerStore } from '@/stores/player'
 import { recordMusicSongPlay } from '@/api/musicV1'
 import type { PodcastEpisode } from '@/types'
@@ -21,6 +22,8 @@ class MockAudio {
   play = vi.fn().mockResolvedValue(undefined)
   pause = vi.fn()
   addEventListener = vi.fn()
+  removeAttribute = vi.fn()
+  load = vi.fn()
 }
 
 global.Audio = MockAudio as any
@@ -61,6 +64,10 @@ describe('player podcast adapter', () => {
     vi.mocked(recordMusicSongPlay).mockClear()
   })
 
+  afterEach(() => {
+    usePlayerStore().$dispose()
+  })
+
   it('creates podcast player item with podcast source metadata', () => {
     const player = usePlayerStore()
     const song = player.createPodcastEpisodeSong(podcastEpisode())
@@ -90,12 +97,29 @@ describe('player podcast adapter', () => {
     expect(song.cover_url).toBe('http://localhost:8081/uploads/podcast/covers/smoke.jpg')
   })
 
-  it('does not record music play for podcast source', () => {
+  it('does not record music play for podcast source', async () => {
     const player = usePlayerStore()
     const song = player.createPodcastEpisodeSong(podcastEpisode())
 
     player.playQueuedSong(song)
+    await flushPromises()
 
     expect(recordMusicSongPlay).not.toHaveBeenCalled()
   })
+})
+
+it('keeps successful playback when navigator is unavailable', async () => {
+  setActivePinia(createPinia())
+  const originalNavigator = globalThis.navigator
+  vi.stubGlobal('navigator', undefined)
+  const player = usePlayerStore()
+  try {
+    player.playQueuedSong(player.createPodcastEpisodeSong(podcastEpisode()))
+    await flushPromises()
+    expect(player.isPlaying).toBe(true)
+    expect(player.playbackError).toBe('')
+  } finally {
+    player.$dispose()
+    vi.stubGlobal('navigator', originalNavigator)
+  }
 })

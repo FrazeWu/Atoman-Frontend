@@ -61,6 +61,7 @@ const moduleDescriptions: Record<ModuleRoomKey, string> = {
   timeline: '人物与事件时间线',
   podcast: '音频节目与单集',
   video: '视频发布与播放',
+  papers: '私人 LaTeX 论文项目',
 }
 const moduleIcons: Record<ModuleRoomKey, Component> = {
   feed: Rss,
@@ -72,6 +73,7 @@ const moduleIcons: Record<ModuleRoomKey, Component> = {
   timeline: Book,
   podcast: Microphone,
   video: Video,
+  papers: Book,
 }
 </script>
 

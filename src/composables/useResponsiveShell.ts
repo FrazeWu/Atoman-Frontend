@@ -106,6 +106,7 @@ const MOBILE_PRIMARY_TABS: Record<ModuleRoomKey, MobilePrimaryTab[]> = {
 		["subscriptions", "订阅", "/subscriptions", Rss],
 		["favorites", "收藏", "/favorites", Bookmark],
 	]),
+	papers: tabs("papers", [["projects", "论文", "/", BookOpen]]),
 };
 
 const MORE_ITEMS: MobileMoreItem[] = [

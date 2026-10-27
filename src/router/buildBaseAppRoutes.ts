@@ -42,6 +42,7 @@ export function buildBaseAppRoutes(extraRoutes: RouteRecordRaw[] = []): RouteRec
     ...scopedModuleRoutes('timeline'),
     ...scopedModuleRoutes('blog'),
     ...scopedModuleRoutes('books'),
+    ...scopedModuleRoutes('papers'),
     ...scopedModuleRoutes('podcast'),
     ...scopedModuleRoutes('video'),
     ...extraRoutes,

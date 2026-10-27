@@ -7,7 +7,8 @@ export type ModuleRoomKey =
 	| "debate"
 	| "timeline"
 	| "podcast"
-	| "video";
+	| "video"
+	| "papers";
 
 export type ModuleRoom = {
 	key: ModuleRoomKey;
@@ -90,6 +91,14 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
 		name: "视频",
 		helper: "内容视图",
 		homepageSub: "",
+	},
+	papers: {
+		key: "papers",
+		homePath: "/",
+		publicPathSegment: "papers",
+		name: "论文",
+		helper: "私有 LaTeX 写作",
+		homepageSub: "在线管理与编辑个人论文项目。",
 	},
 };
 

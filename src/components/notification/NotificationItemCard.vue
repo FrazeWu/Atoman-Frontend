@@ -442,8 +442,6 @@ const onMuteSource = (e?: MouseEvent) => {
 .notification-item-card--unread {
   background: var(--a-color-surface);
   border-color: var(--a-color-border);
-  border-left: 3px solid var(--a-color-text);
-  box-shadow: var(--a-shadow-sm);
 }
 
 .notification-item-card--unread:hover {
@@ -454,7 +452,6 @@ const onMuteSource = (e?: MouseEvent) => {
 .notification-item-card--active {
   border-color: var(--a-color-text);
   background: var(--a-color-surface-muted);
-  box-shadow: var(--a-shadow-sm);
 }
 
 /* 突出块卡片顶栏 (Kicker Row) */
@@ -463,8 +460,6 @@ const onMuteSource = (e?: MouseEvent) => {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .card-kicker-group {

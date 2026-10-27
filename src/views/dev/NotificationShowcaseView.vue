@@ -327,7 +327,7 @@ const filteredNotifications = computed(() => {
 .notification-showcase {
   padding-top: 2rem;
   padding-bottom: 4rem;
-  max-width: 82rem;
+  max-width: 72rem;
   margin: 0 auto;
 }
 
@@ -383,25 +383,28 @@ const filteredNotifications = computed(() => {
   box-shadow: var(--a-shadow-sm);
 }
 
-/* 布局 */
+/* 布局：外层无边框，左侧一个框，右侧一个框 */
 .showcase-layout {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  background: var(--a-color-bg);
-  box-shadow: var(--a-shadow-md);
-  overflow: hidden;
+  gap: 1.25rem;
   min-height: 40rem;
+  align-items: start;
 }
 
-/* 导航侧栏 */
+/* 导航侧栏：左侧框，吸顶固定 */
 .inbox-nav-pane {
   background: var(--a-color-bg);
-  border-right: 1px solid var(--a-color-border-soft);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
   padding: 1.25rem 0;
   display: flex;
   flex-direction: column;
+  position: sticky;
+  top: calc(var(--a-topbar-height, 3.5rem) + 1rem);
+  max-height: calc(100dvh - var(--a-topbar-height, 3.5rem) - 2rem);
+  overflow-y: auto;
+  align-self: start;
 }
 
 .nav-section-title {
@@ -420,21 +423,23 @@ const filteredNotifications = computed(() => {
 }
 
 .nav-list {
+  padding: 0 0.5rem;
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1.25rem;
+  padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--a-color-text-secondary);
-  border-left: 3px solid transparent;
+  border-radius: var(--a-radius-control);
   cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .nav-item:hover {
@@ -446,7 +451,6 @@ const filteredNotifications = computed(() => {
   background: var(--a-color-surface-muted);
   color: var(--a-color-text);
   font-weight: 600;
-  border-left-color: var(--a-color-text);
 }
 
 .nav-item--dm {
@@ -480,10 +484,14 @@ const filteredNotifications = computed(() => {
   color: #ffffff;
 }
 
-/* 主流区 */
+/* 主流区：右侧框 */
 .inbox-main-stream {
   display: flex;
   flex-direction: column;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  min-height: 40rem;
 }
 
 .stream-toolbar {
@@ -494,6 +502,11 @@ const filteredNotifications = computed(() => {
   min-height: 3.5rem;
   border-bottom: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
+  border-top-left-radius: var(--a-radius-card);
+  border-top-right-radius: var(--a-radius-card);
+  position: sticky;
+  top: var(--a-topbar-height, 3.5rem);
+  z-index: 5;
 }
 
 .toolbar-left {
@@ -580,6 +593,6 @@ const filteredNotifications = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
-  max-width: 820px;
+  width: 100%;
 }
 </style>

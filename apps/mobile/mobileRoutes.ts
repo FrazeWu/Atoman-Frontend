@@ -102,6 +102,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	{
 		path: "/books/notes",
 		component: () => import("./views/books/BooksNotesView.vue"),
+		meta: { restoreSession: true },
 	},
 	{
 		path: "/books/me",
@@ -111,6 +112,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	{
 		path: "/books/work/:id",
 		component: () => import("./views/books/BookDetailMobileView.vue"),
+		meta: { restoreSession: true },
 	},
 	{
 		path: "/books/read/:assetId",

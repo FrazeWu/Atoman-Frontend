@@ -29,12 +29,12 @@ import { useMusicRouteSelection } from '@/composables/useMusicRouteSelection'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useAuthStore } from '@/stores/auth'
 import { MUSIC_RECOMMENDATION_MODE_OPTIONS } from '@/utils/musicRecommendations'
-import { isStandaloneMobileApp } from '@/utils/appRuntime'
 
 type ArtistFilterTab = 'all' | 'subscribed'
 const activeTab = ref<ArtistFilterTab>('all')
 const recommendationMode = ref<MusicRecommendationMode>('hot')
-const canCreateMusic = !isStandaloneMobileApp()
+// Creation now uses the same responsive sheet flow in mobile web and app shells.
+const canCreateMusic = true
 
 const tabOptions = [
   { label: '全部', value: 'all' },

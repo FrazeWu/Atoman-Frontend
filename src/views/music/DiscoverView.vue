@@ -45,7 +45,6 @@ import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 import { getMountedPinia } from '@/utils/pinia'
 import { hasPlayableMusicAudio } from '@/utils/musicMedia'
-import { isStandaloneMobileApp } from '@/utils/appRuntime'
 import {
   claimMusicRecommendationImpression,
   getMusicRecommendationAlbumContext,
@@ -59,7 +58,8 @@ const props = withDefaults(defineProps<{
   pageTitle: '发现',
   contentMode: 'discover',
 })
-const canCreateMusic = !isStandaloneMobileApp()
+// Creation now uses the same responsive sheet flow in mobile web and app shells.
+const canCreateMusic = true
 
 const authStore = getMountedPinia() ? useAuthStore() : null
 const router = useRouter()

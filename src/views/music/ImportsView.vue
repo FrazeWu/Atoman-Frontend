@@ -11,6 +11,7 @@ import {
   listMusicAlbumImports,
   repairMusicAlbumImport,
   replaceAndUploadMusicAlbumImportFile,
+  resumeMusicAlbumImportFile,
   retryMusicAlbumImportFile,
   type MusicAlbumImport,
   type MusicSource,
@@ -42,6 +43,8 @@ const importsMeta = ref({ page: 1, page_size: importPageSize, total: 0, has_more
 const activeGroup = ref<MusicImportGroup>('in_progress')
 const searchQuery = ref('')
 const replacementInputs = ref<Record<string, HTMLInputElement | null>>({})
+const resumeInputs = ref<Record<string, HTMLInputElement | null>>({})
+const uploadProgress = ref<Record<string, number>>({})
 const { resumeMusicCreationFlow } = useMusicDrawers()
 const importRequests = useRequestGeneration()
 let pollTimer: ReturnType<typeof setTimeout> | null = null
@@ -299,6 +302,28 @@ async function deleteFile(fileId: string) {
   pendingConfirmation.value = { kind: 'file', importId: selectedImport.value.importId, fileId }
 }
 
+function chooseResume(fileId: string) { resumeInputs.value[fileId]?.click() }
+async function resumeFile(fileId: string, event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  const selected = selectedImport.value
+  if (!selected || !file || actionBusy.value) return
+  const importId = selected.importId
+  actionBusy.value = fileId
+  errorMessage.value = ''
+  try {
+    await resumeMusicAlbumImportFile(importId, fileId, file, (loaded, total) => {
+      uploadProgress.value = { ...uploadProgress.value, [fileId]: Math.round(loaded / Math.max(total, 1) * 100) }
+    })
+    await loadImports(true)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '继续上传失败，请重试'
+  } finally {
+    actionBusy.value = null
+    input.value = ''
+  }
+}
+
 function chooseReplacement(fileId: string) { replacementInputs.value[fileId]?.click() }
 async function replaceFile(fileId: string, event: Event) {
   const input = event.target as HTMLInputElement
@@ -514,11 +539,14 @@ function continueImport() {
           <p v-if="selectedImport.hasCommitRequest && musicImportGroupForStatus(selectedImport.status) === 'in_progress'" class="status-hint" role="status">
             已提交，正在自动处理，无需操作。
           </p>
-          <p v-else-if="['pending_upload', 'uploading'].includes(selectedImport.status)" class="status-hint">
-            上传尚未完成，可继续填写资料。
+          <p v-else-if="selectedImport.status === 'pending_upload'" class="status-hint">
+            上传尚未开始，可继续填写资料。
           </p>
           <p v-else-if="selectedImport.status === 'needs_attention' && selectedImport.stage === 'ready'" class="status-hint">
             媒体处理已完成，请补充艺术家和专辑资料后提交。
+          </p>
+          <p v-else-if="selectedImport.status === 'uploading' && selectedImport.files.some(f => ['uploading', 'completing'].includes(f.uploadStatus))" class="status-hint">
+            若上传因刷新或网络中断而停止，请为未完成文件重新选择原文件，系统将跳过已上传分片。
           </p>
           <p v-else-if="selectedImport.status === 'needs_attention'" class="status-hint">
             请替换或重试未完成的源文件恢复处理。
@@ -574,11 +602,20 @@ function continueImport() {
           >
             <li v-for="file in selectedImport.files" :key="file.fileId">
               <input :ref="node => replacementInputs[file.fileId] = node as HTMLInputElement | null" class="music-imports-view__file-input" type="file" @change="replaceFile(file.fileId, $event)" />
+              <input :ref="node => resumeInputs[file.fileId] = node as HTMLInputElement | null" class="music-imports-view__file-input" type="file" data-testid="music-import-resume-input" @change="resumeFile(file.fileId, $event)" />
               <div class="file-name-cell">
                 <span class="file-title">{{ file.title || file.fileName }}</span>
                 <small v-if="file.errorMessage" class="file-err">{{ file.errorMessage }}</small>
+                <small v-if="actionBusy === file.fileId && uploadProgress[file.fileId] !== undefined">已上传 {{ uploadProgress[file.fileId] }}%</small>
               </div>
               <div class="file-actions">
+                <PButton
+                  v-if="selectedImport.status === 'uploading' && ['uploading', 'completing'].includes(file.uploadStatus)"
+                  variant="secondary"
+                  data-testid="music-import-resume-action"
+                  :disabled="actionBusy !== null"
+                  @click="chooseResume(file.fileId)"
+                >继续上传</PButton>
                 <PButton
                   v-if="file.processingStatus === 'failed'"
                   variant="secondary"

@@ -168,6 +168,11 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 					meta: { requiresAuth: true },
 				},
 				{
+					path: "archive",
+					component: () => import("@/views/music/MusicArchiveAdminView.vue"),
+					meta: { requiresAuth: true },
+				},
+				{
 					path: "more",
 					component: () => import("@/views/music/MusicMoreView.vue"),
 				},

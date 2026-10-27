@@ -1,3 +1,4 @@
+import { verifyMusicUploadFingerprint } from "@/utils/musicImportUploadFingerprint";
 import { apiFetch } from "@/api/transport";
 import {
 	clearMusicUploadResume,
@@ -808,6 +809,51 @@ export async function replaceMusicAlbumImportFile(
 		musicV1Endpoints.albumImportFileReplace(importId, fileId),
 		input,
 	);
+}
+
+/** Continue an existing multipart upload, skipping parts persisted on the server.
+ * The caller must verify the reselected File against the saved fingerprint.
+ */
+export async function resumeMusicAlbumImportFile(
+    importId: string,
+    fileId: string,
+    file: File,
+    onProgress?: (loaded: number, total: number) => void,
+): Promise<MusicAlbumImport> {
+    const snapshot = await getMusicAlbumImport(importId);
+    const record = snapshot.files.find((item) => item.fileId === fileId);
+    if (snapshot.status !== 'uploading' || !record || !['uploading', 'completing'].includes(record.uploadStatus)) {
+        throw new Error('该文件已不在可继续上传状态，请刷新导入记录');
+    }
+    if (record.fileName !== file.name || record.size !== file.size || file.size <= 0) {
+        throw new Error('文件名称或大小与原上传不符，请选择原文件');
+    }
+    await verifyMusicUploadFingerprint(importId, fileId, file);
+    const partSize = record.partSize || 16 * 1024 * 1024;
+    const totalParts = Math.ceil(file.size / partSize);
+    const completed = new Set((record.completedParts || []).map((part) => part.partNumber));
+    let loaded = [...completed].reduce((sum, partNumber) =>
+        sum + Math.max(0, Math.min(partSize, file.size - (partNumber - 1) * partSize)), 0);
+    onProgress?.(loaded, file.size);
+    if (record.uploadStatus === 'uploading') {
+        for (let partNumber = 1; partNumber <= totalParts; partNumber += 1) {
+            if (completed.has(partNumber)) continue;
+            const chunk = file.slice((partNumber - 1) * partSize, Math.min(partNumber * partSize, file.size));
+            await retry(async () => {
+                const upload = await createMusicAlbumImportFilePartUpload(importId, fileId, partNumber, chunk.size);
+                const etag = await uploadAlbumArchivePart(upload.uploadUrl, chunk);
+                await completeMusicAlbumImportFilePart(importId, fileId, partNumber, etag, chunk.size);
+            }, 2);
+            loaded += chunk.size;
+            onProgress?.(loaded, file.size);
+        }
+    }
+    await completeMusicAlbumImportFile(importId, fileId);
+    const latest = await getMusicAlbumImport(importId);
+    if (latest.status === 'uploading' && latest.files.length > 0 && latest.files.every((part) => part.uploadStatus === 'uploaded')) {
+        return completeMusicAlbumImportSession(importId);
+    }
+    return latest;
 }
 
 export async function replaceAndUploadMusicAlbumImportFile(

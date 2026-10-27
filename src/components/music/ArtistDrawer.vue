@@ -35,7 +35,6 @@ import {
 } from '@/api/musicV1'
 import { formatStoredPartialDate } from '@/components/music/birthDateMask'
 import { formatAlbumTypeLabel } from '@/utils/musicMedia'
-import { isStandaloneMobileApp } from '@/utils/appRuntime'
 import { VUE_QUERY_CLIENT, type QueryClient } from '@tanstack/vue-query'
 import { musicKeys } from '@/entities/music'
 
@@ -56,7 +55,8 @@ const artistId = computed(() => props.layer?.payload.artistId ?? state.value.art
 const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : artistId.value !== null)
 const shifted = computed(() => props.layer ? isLayerShifted(props.layer.key) : isArtistShifted.value)
 const topLayer = computed(() => props.layer ? isTopLayer(props.layer.key) : true)
-const canCreateMusic = !isStandaloneMobileApp()
+// Creation now uses the same responsive sheet flow in mobile web and app shells.
+const canCreateMusic = true
 const { navigation, loading: navigationLoading, direction: navigationDirection, navigate } = useMusicSheetNavigation('artist', artistId, replaceArtist, topLayer)
 const closeCurrentArtist = () => closeArtist(props.layer?.key)
 const artist = ref<MusicArtistListItem | null>(null)

@@ -22,6 +22,7 @@ import {
 } from "@/api/musicV1";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
 import { runMultipartUpload } from "@/api/multipartUpload";
+import { rememberMusicUploadFingerprint } from "@/utils/musicImportUploadFingerprint";
 import {
 	readAlbumImportPreview,
 	readAlbumImportFilesPreview,
@@ -601,6 +602,13 @@ export function useAlbumImportUpload() {
 		fileRecord?: MusicAlbumImportFile,
 	): Promise<void> {
 		const isCurrent = () => generation === uploadState.operationGeneration;
+        // Save a reusable identity check before the first part is sent.
+        // Uploads still work if local storage is unavailable, but they cannot
+        // be resumed safely after closing the browser in that case.
+        // Fingerprinting is independent from the upload request. Starting it
+        // without blocking keeps the multipart retry UI responsive; an upload
+        // cannot be resumed after reload until the digest is safely persisted.
+        void rememberMusicUploadFingerprint(importId, fileId, file).catch(() => {});
 		const partSize =
 			fileRecord?.partSize && fileRecord.partSize > 0
 				? fileRecord.partSize

@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
 	getMusicAlbum: vi.fn(),
 	getMusicArtist: vi.fn(),
 	resumeMusicCreationFlow: vi.fn(),
+	resumeMusicAlbumImportFile: vi.fn(),
 }));
 
 vi.mock("@/api/musicV1", () => ({
@@ -21,6 +22,7 @@ vi.mock("@/api/musicV1", () => ({
 	getMusicArtist: mocks.getMusicArtist,
 	repairMusicAlbumImport: vi.fn(),
 	replaceAndUploadMusicAlbumImportFile: vi.fn(),
+	resumeMusicAlbumImportFile: mocks.resumeMusicAlbumImportFile,
 	retryMusicAlbumImportFile: vi.fn(),
 }));
 
@@ -89,11 +91,35 @@ describe("Music ImportsView", () => {
 		mocks.getMusicAlbum.mockReset();
 		mocks.getMusicArtist.mockReset();
 		mocks.resumeMusicCreationFlow.mockReset();
+		mocks.resumeMusicAlbumImportFile.mockReset();
 	});
 
 	afterEach(() => {
 		vi.useRealTimers();
 	});
+
+	it("offers resumable upload only for an unfinished multipart file", async () => {
+        const pending = {
+            ...importRecord("uploaded"),
+            status: "uploading",
+            stage: "upload",
+            files: [{ fileId: "file-1", fileName: "first.mp3", size: 8, uploadStatus: "uploading", processingStatus: "pending", completedParts: [] }],
+        };
+        mocks.listMusicAlbumImports.mockResolvedValue({ data: [pending], meta: { page: 1, page_size: 50, total: 1, has_more: false } });
+        mocks.getMusicAlbumImport.mockResolvedValue(pending);
+        mocks.resumeMusicAlbumImportFile.mockResolvedValue({ ...pending, status: "queued" });
+        const wrapper = mount(ImportsView);
+        await flushPromises();
+        expect(wrapper.text()).toContain("继续上传");
+        expect(wrapper.text()).toContain("重新选择原文件");
+        const fileInput = wrapper.get('[data-testid="music-import-resume-input"]');
+        const file = new File(["original"], "first.mp3", { type: "audio/mpeg" });
+        Object.defineProperty(fileInput.element, "files", { configurable: true, value: [file] });
+        await fileInput.trigger("change");
+        await flushPromises();
+        expect(mocks.resumeMusicAlbumImportFile).toHaveBeenCalledWith("import-1", "file-1", file, expect.any(Function));
+        wrapper.unmount();
+    });
 
 	it("opens a ready import before its artist source lookup finishes", async () => {
 		const pendingImport = {

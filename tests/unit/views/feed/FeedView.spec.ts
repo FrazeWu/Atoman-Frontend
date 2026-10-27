@@ -3826,7 +3826,6 @@ describe("FeedView", () => {
   });
 
   it("creates a rule then confirms and applies it to existing subscriptions", async () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     const feedStore = useFeedStore();
 
     const wrapper = mount(FeedView, {
@@ -3866,6 +3865,12 @@ describe("FeedView", () => {
     await wrapper.get('[data-test="manage-sheet"]').trigger("click");
     await flushPromises();
 
+    const confirmDialog = wrapper.findComponent({ name: "PConfirm" });
+    expect(confirmDialog.exists()).toBe(true);
+    expect(confirmDialog.props("show")).toBe(true);
+    await confirmDialog.vm.$emit("confirm");
+    await flushPromises();
+
     expect(feedStore.createSubscriptionRule).toHaveBeenCalledWith({
       name: "播客归档",
       enabled: true,
@@ -3879,8 +3884,6 @@ describe("FeedView", () => {
     expect(feedStore.applySubscriptionRules).toHaveBeenCalledWith({
       rule_id: "rule-1",
     });
-
-    confirm.mockRestore();
   });
 
   it("updates subscription flags from the management sheet", async () => {

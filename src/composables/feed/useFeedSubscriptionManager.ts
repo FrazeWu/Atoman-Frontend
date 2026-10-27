@@ -565,10 +565,25 @@ export function useFeedSubscriptionManager({
 		return matchedRules[matchedRules.length - 1]?.id || null;
 	};
 
-	const confirmApplySavedRule = async (ruleId: string | null) => {
-		if (!ruleId || !window.confirm("规则已保存，是否立即应用到已有订阅？"))
-			return;
-		await feedStore.applySubscriptionRules({ rule_id: ruleId });
+	const pendingRuleToApply = ref<{ id: string } | null>(null);
+
+	const confirmApplySavedRule = (ruleId: string | null) => {
+		if (!ruleId) return;
+		pendingRuleToApply.value = { id: ruleId };
+	};
+
+	const executeApplySavedRule = async () => {
+		if (!pendingRuleToApply.value) return;
+		const ruleId = pendingRuleToApply.value.id;
+		pendingRuleToApply.value = null;
+		await withManageBusy(async () => {
+			await feedStore.applySubscriptionRules({ rule_id: ruleId });
+			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
+		});
+	};
+
+	const cancelApplySavedRule = () => {
+		pendingRuleToApply.value = null;
 	};
 
 	const saveSubscriptionRule = async (saved: SubscriptionRuleSavePayload) => {
@@ -582,7 +597,7 @@ export function useFeedSubscriptionManager({
 				setManageError(feedStore.error || "保存失败", 'rule');
 				return;
 			}
-			await confirmApplySavedRule(findSavedRuleId(saved));
+			confirmApplySavedRule(findSavedRuleId(saved));
 			await Promise.all([refreshSubscriptionState(), refreshTimeline()]);
 		});
 	};
@@ -731,6 +746,9 @@ export function useFeedSubscriptionManager({
 		setSubscriptionPaused,
 		reorderSubscriptionGroups,
 		reorderSubscriptions,
+		pendingRuleToApply,
+		executeApplySavedRule,
+		cancelApplySavedRule,
 		saveSubscriptionRule,
 		moveSubscriptionRuleUp,
 		moveSubscriptionRuleDown,

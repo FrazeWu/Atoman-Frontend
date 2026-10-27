@@ -87,6 +87,15 @@
       @update-filter-rules="updateFilterRules"
       @update-automation-rules="updateAutomationRules"
     />
+    <PConfirm
+      :show="Boolean(pendingRuleToApply)"
+      title="应用规则"
+      message="规则已保存，是否立即应用到已有订阅？"
+      confirm-text="立即应用"
+      cancel-text="暂不应用"
+      @confirm="executeApplySavedRule"
+      @cancel="cancelApplySavedRule"
+    />
     <p v-if="onboardingMessage" class="feed-onboarding-message" role="status">{{ onboardingMessage }}</p>
     <OnboardingFeedRecommendations
       v-if="showOnboardingRecommendations"
@@ -392,6 +401,7 @@ import PSelect from '@/components/ui/PSelect.vue'
 import PField from '@/components/ui/PField.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 
 const sourceTypeFilterOptions: Array<{ label: string; value: FeedSourceTypeFilter; test: string }> = [
   { label: '全部', value: 'all', test: 'source-type-filter-all' },
@@ -644,6 +654,9 @@ const {
   setSubscriptionPaused,
   reorderSubscriptionGroups,
   reorderSubscriptions,
+  pendingRuleToApply,
+  executeApplySavedRule,
+  cancelApplySavedRule,
   saveSubscriptionChanges,
   saveSubscriptionRule,
   moveSubscriptionRuleUp,

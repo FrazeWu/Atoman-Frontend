@@ -1,6 +1,6 @@
 # 全站原生弹窗 (window.alert / window.confirm) 淘汰实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 彻底清理全站源码中仅存的 3 处阻塞式原生 `window.alert` 与 `window.confirm`，分别收敛至标准 `<PModal>` 与 `<PConfirm>`，并创建全站静态扫描防回退契约测试。
 
@@ -29,14 +29,14 @@
 **Interfaces:**
 - Produces: Failing test verifying that `src/` and `apps/mobile/` contain 0 occurrences of `window.alert` and `window.confirm`.
 
-- [ ] **Step 1: Write native dialog contract test**
+- [x] **Step 1: Write native dialog contract test**
   Create `tests/unit/system/native-dialog-contract.spec.ts` scanning `.vue` and `.ts` files in `src/` and `apps/mobile/` for `window.alert` and `window.confirm`.
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
   Run `cd Atoman-Frontend && bun run test:unit tests/unit/system/native-dialog-contract.spec.ts`.
   Verify it reports exactly the 3 known violations.
 
-- [ ] **Step 3: Commit initial test**
+- [x] **Step 3: Commit initial test**
   Commit with message `test: add contract test against window.alert and window.confirm usages`.
 
 ---
@@ -51,16 +51,16 @@
 - Consumes: `<PModal>` (`size="sm"`, `title="推荐依据"`)
 - Produces: Clean accessible modal showing score reason and dismiss button.
 
-- [ ] **Step 1: Update `FeedRecommendedView.vue`**
+- [x] **Step 1: Update `FeedRecommendedView.vue`**
   - Add `activeReasonItem = ref<RecommendationItem | null>(null)`.
   - In `showRecommendationReason(item)`: set `activeReasonItem.value = item`.
   - Add `<PModal :show="Boolean(activeReasonItem)" size="sm" title="推荐依据" @close="activeReasonItem = null">` to template.
   - Remove `window.alert`.
 
-- [ ] **Step 2: Verify tests**
+- [x] **Step 2: Verify tests**
   Run `cd Atoman-Frontend && bun run test:unit tests/unit/views/feed/FeedRecommendedView.spec.ts`.
 
-- [ ] **Step 3: Commit changes**
+- [x] **Step 3: Commit changes**
   Commit with message `refactor(feed): replace window.alert with standard PModal for recommendation reason`.
 
 ---
@@ -75,18 +75,18 @@
 - Consumes: `<PConfirm>` (`title="删除读书笔记"`, `:danger="true"`, `confirm-text="删除"`)
 - Produces: Asynchronous confirm dialog with full keyboard accessibility.
 
-- [ ] **Step 1: Update `BookNotesView.vue`**
+- [x] **Step 1: Update `BookNotesView.vue`**
   - Import `PConfirm` from `@/components/ui/PConfirm.vue`.
   - Replace `window.confirm` with `deletingNote` ref and `executeDeleteNote` function.
   - Render `<PConfirm>` bound to `deletingNote`.
 
-- [ ] **Step 2: Update unit tests in `BookNotesView.spec.ts`**
+- [x] **Step 2: Update unit tests in `BookNotesView.spec.ts`**
   - Update delete test to interact with `PConfirm` instead of stubbing `window.confirm`.
 
-- [ ] **Step 3: Run unit tests to verify passing**
+- [x] **Step 3: Run unit tests to verify passing**
   Run `cd Atoman-Frontend && bun run test:unit tests/unit/views/books/BookNotesView.spec.ts`.
 
-- [ ] **Step 4: Commit changes**
+- [x] **Step 4: Commit changes**
   Commit with message `refactor(books): replace window.confirm with standard PConfirm dialog in BookNotesView`.
 
 ---
@@ -101,19 +101,19 @@
 - Exposes: `pendingRuleToApply`, `executeApplySavedRule`, `cancelApplySavedRule`
 - Consumes: `<PConfirm>` in `FeedView.vue`
 
-- [ ] **Step 1: Refactor `useFeedSubscriptionManager.ts`**
+- [x] **Step 1: Refactor `useFeedSubscriptionManager.ts`**
   - Replace `window.confirm` with `pendingRuleToApply = ref<{ id: string } | null>(null)`.
   - Provide `executeApplySavedRule` and `cancelApplySavedRule`.
   - Export them in the returned manager object.
 
-- [ ] **Step 2: Mount `<PConfirm>` in `FeedView.vue`**
+- [x] **Step 2: Mount `<PConfirm>` in `FeedView.vue`**
   - Render `<PConfirm>` when `pendingRuleToApply` is present.
   - Bind `@confirm="executeApplySavedRule"` and `@cancel="cancelApplySavedRule"`.
 
-- [ ] **Step 3: Run feed subscription unit tests**
+- [x] **Step 3: Run feed subscription unit tests**
   Run `cd Atoman-Frontend && bun run test:unit tests/unit/composables/useFeedSubscriptionManager.spec.ts tests/unit/components/feed/SubscriptionManageSheet.spec.ts`.
 
-- [ ] **Step 4: Commit changes**
+- [x] **Step 4: Commit changes**
   Commit with message `refactor(feed): eliminate window.confirm in useFeedSubscriptionManager using PConfirm`.
 
 ---
@@ -123,18 +123,18 @@
 **Files:**
 - Verify: Full codebase
 
-- [ ] **Step 1: Run native dialog contract test**
+- [x] **Step 1: Run native dialog contract test**
   Run `cd Atoman-Frontend && bun run test:unit tests/unit/system/native-dialog-contract.spec.ts`.
   Verify 0 violations across codebase.
 
-- [ ] **Step 2: Run TypeScript type check**
+- [x] **Step 2: Run TypeScript type check**
   Run `cd Atoman-Frontend && bun run type-check`.
 
-- [ ] **Step 3: Run full Vitest suite**
+- [x] **Step 3: Run full Vitest suite**
   Run `cd Atoman-Frontend && bun run test:unit`.
 
-- [ ] **Step 4: Run production builds**
+- [x] **Step 4: Run production builds**
   Run `cd Atoman-Frontend && bun run build` (desktop) and `cd Atoman-Frontend && bun run build:mobile` (mobile).
 
-- [ ] **Step 5: Commit, update board, and push**
+- [x] **Step 5: Commit, update board, and push**
   Push all commits to `origin/main`.

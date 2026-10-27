@@ -148,7 +148,7 @@ describe('Mobile Playlist Navigation Robustness', () => {
     expect(wrapper.findComponent(MobileTopbar).exists()).toBe(true)
   })
 
-  it('hides bottom nav and topbar only on fullscreen player or auth pages', async () => {
+  it('keeps bottom nav on the player while hiding its topbar, and hides nav on lyrics and auth pages', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
     const router = setupTestRouter()
@@ -173,8 +173,12 @@ describe('Mobile Playlist Navigation Robustness', () => {
     await router.isReady()
     await wrapper.vm.$nextTick()
     await flushPromises()
-    expect(wrapper.findComponent(MobileBottomNav).exists()).toBe(false)
+    expect(wrapper.findComponent(MobileBottomNav).exists()).toBe(true)
     expect(wrapper.findComponent(MobileTopbar).exists()).toBe(false)
+
+    await router.push('/music/lyrics')
+    await flushPromises()
+    expect(wrapper.findComponent(MobileBottomNav).exists()).toBe(false)
 
     // Back to playlist
     await router.push('/music/playlists')

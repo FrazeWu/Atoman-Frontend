@@ -806,14 +806,14 @@ onUnmounted(() => {
 <style scoped>
 .mobile-player-view {
   position: fixed;
-  inset: 0;
+  inset: 0 0 calc(56px + env(safe-area-inset-bottom, 0px));
   z-index: var(--a-z-modal, 800);
   width: 100%;
-  height: 100dvh;
+  height: calc(100dvh - 56px - env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
   max-width: 32rem;
   margin: 0 auto;
-  padding: env(safe-area-inset-top, 0.75rem) 1.25rem calc(1rem + env(safe-area-inset-bottom, 24px));
+  padding: env(safe-area-inset-top, 0.75rem) 1.25rem 1rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;

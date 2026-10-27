@@ -164,7 +164,7 @@ const showMobileTopbar = computed(() => {
 
 const showMobileBottomNav = computed(() => {
   const p = (route.path || '/').replace(/\/$/, '') || '/'
-  if (isFullscreenPlayerRoute.value) return false
+  if (p === '/music/lyrics') return false
   if (/^\/music(\/|$)/.test(p)) return true
   if (isAuthRoute.value) return false
   if (/^\/books\/(?:read|public-read)\//.test(p)) return false
@@ -345,7 +345,7 @@ body {
   /* hidden 会将 overflow-y 计算为 auto，避免在固定底栏外再创建滚动容器。 */
   overflow-x: clip;
   overscroll-behavior-x: none;
-  --mobile-app-player-height: 76px;
+  --mobile-app-player-height: 56px;
   --mobile-app-player-reserved-height: 0px;
   --a-z-navigation: 1000;
   --a-color-bg: #ffffff;

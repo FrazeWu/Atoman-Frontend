@@ -434,7 +434,7 @@ const filteredNotifications = computed(() => {
   color: var(--a-color-text-secondary);
   border-left: 3px solid transparent;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color var(--a-motion-micro) ease, background-color var(--a-motion-micro) ease, border-color var(--a-motion-micro) ease;
 }
 
 .nav-item:hover {
@@ -541,7 +541,7 @@ const filteredNotifications = computed(() => {
   color: var(--a-color-muted);
   cursor: pointer;
   border-radius: var(--a-radius-control);
-  transition: all 0.15s ease;
+  transition: color var(--a-motion-micro) ease, background-color var(--a-motion-micro) ease, border-color var(--a-motion-micro) ease;
 }
 
 .filter-btn:hover {
@@ -566,7 +566,7 @@ const filteredNotifications = computed(() => {
   border-radius: var(--a-radius-control);
   padding: 0.35rem 0.75rem;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color var(--a-motion-micro) ease, background-color var(--a-motion-micro) ease, border-color var(--a-motion-micro) ease;
 }
 
 .btn-mark-all:hover {

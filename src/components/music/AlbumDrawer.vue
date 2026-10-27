@@ -939,7 +939,7 @@ watch(
                     查看版本
                   </button>
                   <button v-if="canArchive && album?.lifecycle_status === 'active'" type="button" data-testid="album-archive-action" :disabled="archiveBusy" @click="close(); archiveCurrentAlbum()">
-                    归档专辑（隐藏公开内容）
+                    归档
                   </button>
                   <button type="button" data-testid="album-merge-action" @click="close(); mergeAlbum()">
                     <Merge :size="16" aria-hidden="true" />

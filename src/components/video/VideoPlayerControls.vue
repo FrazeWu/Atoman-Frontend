@@ -468,9 +468,9 @@ watch(() => props.videoElement, (video, previousVideo) => {
 .vpc-scrubber-handle {
   width: 12px;
   height: 12px;
-  background: #ffffff;
+  background: var(--a-color-surface, #ffffff);
   border-radius: 50%;
-  box-shadow: var(--a-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.25));
+  box-shadow: none;
   transform: scale(0);
   transition: transform 150ms ease;
   margin-right: -6px;
@@ -492,7 +492,7 @@ watch(() => props.videoElement, (video, previousVideo) => {
   background: rgba(18, 18, 20, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--a-radius-control);
-  box-shadow: var(--a-shadow-md);
+  box-shadow: none;
   transform: translateX(-50%);
   z-index: 60;
 }
@@ -593,7 +593,7 @@ watch(() => props.videoElement, (video, previousVideo) => {
   background: rgba(18, 18, 20, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: var(--a-radius-control);
-  box-shadow: var(--a-shadow-md);
+  box-shadow: none;
   transform: translate(-50%, 0.25rem);
   opacity: 0;
   transition: opacity 160ms ease, transform 160ms ease;

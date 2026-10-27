@@ -146,9 +146,9 @@ const handleWheel = (e: WheelEvent) => {
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--a-color-surface);
   border: 1.5px solid var(--a-color-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  box-shadow: none;
   cursor: pointer;
   opacity: 0;
   transform: scale(0.6);
@@ -168,9 +168,9 @@ const handleWheel = (e: WheelEvent) => {
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--a-color-surface);
   border: 1.5px solid var(--a-color-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  box-shadow: none;
   cursor: pointer;
   opacity: 0;
   transform: scale(0.6);

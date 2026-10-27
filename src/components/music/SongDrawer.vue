@@ -16,6 +16,7 @@ import AppleMusicPreview from '@/components/music/AppleMusicPreview.vue'
 import MusicTagList from '@/components/music/MusicTagList.vue'
 import SongRatingControl from '@/components/music/SongRatingControl.vue'
 import PButton from '@/components/ui/PButton.vue'
+import MusicArchiveConfirm from '@/components/music/MusicArchiveConfirm.vue'
 import PLink from '@/components/ui/PLink.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
@@ -85,6 +86,8 @@ const ratingLoading = ref(false)
 const toastVisible = ref(false)
 const toastMessage = ref('')
 const archiveBusy = ref(false)
+const archiveTargetId = ref('')
+const archiveError = ref('')
 const canArchive = computed(() => isAdminRole(authStore.user?.role))
 const detailRequests = useRequestGeneration()
 const {
@@ -467,20 +470,27 @@ function clearRebindState() {
   rebindingAnnotation.value = null
 }
 
-async function archiveCurrentSong() {
+function requestArchiveSong() {
   const id = String(detail.value?.song.id || '')
   if (!id || !canArchive.value || archiveBusy.value || detail.value?.song.lifecycle_status !== 'active') return
-  if (!window.confirm('归档后此歌曲将从公开页面隐藏，音频和历史保留。确定归档？')) return
-  const reason = window.prompt('请输入归档原因（用于审计）')?.trim()
-  if (!reason) return
+  archiveError.value = ''
+  archiveTargetId.value = id
+}
+
+async function archiveCurrentSong(reason: string) {
+  const id = String(detail.value?.song.id || '')
+  if (!id || id !== archiveTargetId.value || !canArchive.value || archiveBusy.value || detail.value?.song.lifecycle_status !== 'active') return
+  if (!reason.trim()) return
   archiveBusy.value = true
   try {
     await archiveMusicEntry('song', id, reason)
+    archiveTargetId.value = ''
     moduleSongDetailCache.delete(id)
     await queryClient?.invalidateQueries({ queryKey: musicKeys.songs() })
     await loadDetail(id)
     showToast('歌曲已归档，公开页面不可见')
   } catch {
+    archiveError.value = "\u5f52\u6863\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5"
     showToast('归档失败，请重试')
   } finally {
     archiveBusy.value = false
@@ -637,7 +647,7 @@ watch(
           </div>
           <div class="song-detail__actions song-detail__actions--primary">
             <PButton class="song-detail__play" data-testid="song-detail-play" :disabled="!detail.playable" @click="player.playSong(playable(detail.song))"><Play :size="16" aria-hidden="true" />播放</PButton>
-            <PButton v-if="canArchive && detail.song.lifecycle_status === 'active'" data-testid="song-detail-archive" variant="secondary" :disabled="archiveBusy" @click="archiveCurrentSong">归档</PButton>
+            <PButton v-if="canArchive && detail.song.lifecycle_status === 'active'" data-testid="song-detail-archive" variant="secondary" :disabled="archiveBusy" @click="requestArchiveSong">归档</PButton>
             <PButton data-testid="song-detail-edit" variant="secondary" :disabled="detail.song.edit_status !== undefined && (detail.song.edit_status !== 'development' || detail.song.album?.edit_status === 'closed')" aria-label="编辑歌曲" title="编辑歌曲" @click="editSong"><Pencil :size="16" aria-hidden="true" />编辑</PButton>
             <PButton variant="secondary" :loading="actionBusy === 'favorite'" :aria-label="favoriteSongIds.has(String(detail.song.id)) ? '移出最爱' : '加入最爱'" :title="favoriteSongIds.has(String(detail.song.id)) ? '移出最爱' : '加入最爱'" @click="toggleFavorite"><Heart :size="16" :fill="favoriteSongIds.has(String(detail.song.id)) ? 'currentColor' : 'none'" aria-hidden="true" /></PButton>
             <PDropdown position="right">
@@ -779,6 +789,7 @@ watch(
       <PToast v-model="toastVisible" :message="toastMessage" type="success" />
     </main>
   </PSheet>
+  <MusicArchiveConfirm :show="Boolean(archiveTargetId)" title="归档歌曲" :loading="archiveBusy" :error="archiveError" @confirm="archiveCurrentSong" @cancel="archiveTargetId = ''" />
 </template>
 
 <style scoped>

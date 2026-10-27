@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import MusicArchiveConfirm from '@/components/music/MusicArchiveConfirm.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
@@ -65,6 +66,8 @@ const player = usePlayerStore()
 const authStore = useAuthStore()
 const canArchive = computed(() => isAdminRole(authStore.user?.role))
 const archiveBusy = ref(false)
+const archiveTargetId = ref('')
+const archiveError = ref('')
 const albumId = computed(() => props.layer?.payload.albumId ?? state.value.albumId)
 const isOpen = computed(() => props.layer ? isLayerActive(props.layer.key) : albumId.value !== null)
 const sheetIndex = computed(() => props.layer ? props.layerIndex : state.value.artistId !== null ? 1 : 0)
@@ -533,20 +536,27 @@ async function addTrackToPlaylist(playlistId: string, songId: string, close?: ()
   }
 }
 
-async function archiveCurrentAlbum() {
+function requestArchiveAlbum() {
   const id = albumId.value
   if (!id || !canArchive.value || archiveBusy.value || album.value?.lifecycle_status !== 'active') return
-  if (!window.confirm('归档后此专辑及其歌曲将从公开页面隐藏，媒体文件和历史保留。确定归档？')) return
-  const reason = window.prompt('请输入归档原因（用于审计）')?.trim()
-  if (!reason) return
+  archiveError.value = ''
+  archiveTargetId.value = id
+}
+
+async function archiveCurrentAlbum(reason: string) {
+  const id = albumId.value
+  if (!id || id !== archiveTargetId.value || !canArchive.value || archiveBusy.value || album.value?.lifecycle_status !== 'active') return
+  if (!reason.trim()) return
   archiveBusy.value = true
   try {
     await archiveMusicEntry('album', id, reason)
+    archiveTargetId.value = ''
     moduleAlbumDetailCache.delete(id)
     queryClient?.invalidateQueries({ queryKey: musicKeys.albums() })
     await loadAlbum(id)
     toastMessage.value = '专辑已归档，公开页面不可见'
   } catch {
+    archiveError.value = "\u5f52\u6863\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5"
     toastMessage.value = '归档失败，请重试'
   } finally {
     toastVisible.value = true
@@ -938,7 +948,7 @@ watch(
                     <History :size="16" aria-hidden="true" />
                     查看版本
                   </button>
-                  <button v-if="canArchive && album?.lifecycle_status === 'active'" type="button" data-testid="album-archive-action" :disabled="archiveBusy" @click="close(); archiveCurrentAlbum()">
+                  <button v-if="canArchive && album?.lifecycle_status === 'active'" type="button" data-testid="album-archive-action" :disabled="archiveBusy" @click="close(); requestArchiveAlbum()">
                     归档
                   </button>
                   <button type="button" data-testid="album-merge-action" @click="close(); mergeAlbum()">
@@ -1162,6 +1172,7 @@ watch(
     @mode-change="commentSheetMode = $event"
     @count-change="handleCommentCountChange"
   />
+  <MusicArchiveConfirm :show="Boolean(archiveTargetId)" title="归档专辑" :loading="archiveBusy" :error="archiveError" @confirm="archiveCurrentAlbum" @cancel="archiveTargetId = ''" />
 </template>
 
 <style scoped>

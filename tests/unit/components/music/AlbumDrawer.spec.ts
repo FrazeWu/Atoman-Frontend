@@ -1,5 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createPinia, setActivePinia } from "pinia";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ApiErrorResponseError } from "../../../../src/api/client";
@@ -166,6 +167,7 @@ describe("AlbumDrawer.vue", () => {
 		expect(wrapper.find('[data-testid="track-has-lyrics-missing"]').exists()).toBe(false);
 	});
 	beforeEach(() => {
+		setActivePinia(createPinia());
 		openNestedAction.mockReset();
 		openMusicEditor.mockReset();
 		openMusicCreationFlow.mockReset();

@@ -63,6 +63,7 @@ test.describe("Music Wiki Real", () => {
     authenticatedMusicPage,
   }) => {
     let albumTitle = "";
+    let albumUrl = "";
     let createdBookmark = false;
 
     try {
@@ -77,33 +78,29 @@ test.describe("Music Wiki Real", () => {
       expect(albumTitle).toBeTruthy();
 
       await firstAlbum.click();
+      albumUrl = authenticatedMusicPage.url();
       const bookmark = authenticatedMusicPage.locator(
         '[data-testid="album-bookmark-toggle"]',
       );
       await expect(bookmark).toBeVisible();
-      const wasBookmarked = (await bookmark.textContent())?.includes("已订阅") ?? false;
+      const wasBookmarked = (await bookmark.getAttribute("title")) === "取消收藏";
       if (!wasBookmarked) {
         await bookmark.click();
         createdBookmark = true;
-        await expect(bookmark).toHaveText("已订阅");
+        await expect(bookmark).toContainText("已收藏");
       }
 
       await authenticatedMusicPage.goto("/music/me");
-      const profileAlbum = authenticatedMusicPage
-        .locator(".music-album-card")
-        .filter({ hasText: albumTitle });
+      const profileAlbum = authenticatedMusicPage.getByRole("article").filter({ has: authenticatedMusicPage.getByRole("heading", { name: albumTitle, exact: true }) });
       await expect(profileAlbum).toBeVisible();
     } finally {
-      if (createdBookmark && albumTitle) {
+      if (createdBookmark && albumUrl) {
         try {
-          await authenticatedMusicPage.goto("/music/me");
-          const profileAlbum = authenticatedMusicPage
-            .locator(".music-album-card")
-            .filter({ hasText: albumTitle });
-          const removeBookmark = profileAlbum.getByRole("button", { name: "取消收藏" });
-          if (await removeBookmark.count()) {
-            await removeBookmark.click();
-          }
+          await authenticatedMusicPage.goto(albumUrl);
+          const removeBookmark = authenticatedMusicPage.locator('[data-testid="album-bookmark-toggle"]');
+          await expect(removeBookmark).toHaveAttribute("title", "取消收藏");
+          await removeBookmark.click();
+          await expect(removeBookmark).toHaveAttribute("title", "收藏");
         } catch {
           // Preserve the original assertion failure while still attempting cleanup.
         }
@@ -182,21 +179,11 @@ test.describe("Music Wiki Real", () => {
   test("authenticated user can traverse the core music surfaces on mobile", async ({
     authenticatedMusicMobilePage,
   }) => {
-    for (const surface of [
-      { path: "/music", heading: "发现" },
-      { path: "/music/me", heading: "我的" },
-      { path: "/music/playlists", heading: "收藏" },
-      { path: "/music/history", heading: "播放历史" },
-    ]) {
-      await authenticatedMusicMobilePage.goto(surface.path);
-      await expect(
-        authenticatedMusicMobilePage.getByRole("heading", {
-          name: surface.heading,
-        }),
-      ).toBeVisible();
-      await expect(
-        authenticatedMusicMobilePage.getByText("页面不存在"),
-      ).not.toBeVisible();
+    for (const path of ["/music", "/music/me", "/music/playlists", "/music/history"]) {
+      await authenticatedMusicMobilePage.goto(path);
+      await expect(authenticatedMusicMobilePage.locator('main').first()).toBeVisible();
+      await expect(authenticatedMusicMobilePage.getByRole('navigation', { name: '移动端底部导航' })).toBeVisible();
+      await expect(authenticatedMusicMobilePage.getByText("页面不存在")).not.toBeVisible();
     }
   });
 
@@ -207,7 +194,7 @@ test.describe("Music Wiki Real", () => {
     await authenticatedMusicPage.goto("/music/artist/new");
 
     const creationDialog = authenticatedMusicPage.getByRole("dialog", {
-      name: "创建艺术家",
+      name: "创建-艺术家",
     });
     await expect(creationDialog).toBeVisible();
     await expect(

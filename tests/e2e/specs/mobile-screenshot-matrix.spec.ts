@@ -362,6 +362,42 @@ test.describe("Mobile route screenshot matrix", () => {
   test.describe.configure({ timeout: 90_000 });
   test.use({ actionTimeout: 20_000 });
 
+  test('keeps short authenticated playlists inside the viewport without a nested scroll container', async ({ page }) => {
+    await page.setViewportSize({ width: 428, height: 926 });
+    await mockMobileApi(page);
+    await page.route('**/api/v1/music/playlists?*', route => route.fulfill({
+      json: listResponse([
+        { id: 'playlist-favorite', name: '最爱', kind: 'favorite', song_count: 2 },
+        { id: 'playlist-own', name: '日常', kind: 'user', song_count: 0 },
+      ]),
+    }));
+    await page.route('**/api/v1/music/bookmarks/playlists?*', route => route.fulfill({ json: listResponse() }));
+    await page.goto('/music/playlists');
+    await expect(page.getByTestId('playlist-item')).toHaveCount(2);
+
+    // 短页面、Safari 工具栏展开/收起与横屏时，固定底栏都不能依赖列表高度。
+    for (const viewport of [{ width: 428, height: 926 }, { width: 428, height: 746 }, { width: 375, height: 667 }, { width: 667, height: 375 }]) {
+      await page.setViewportSize(viewport);
+      const shell = page.locator('.mobile-app-shell');
+      await expect.poll(() => shell.evaluate(el => el.getBoundingClientRect().height >= innerHeight)).toBe(true);
+      for (const selector of ['html', 'body', '.mobile-app-shell']) {
+        await expect(page.locator(selector)).toHaveCSS('overflow-y', 'visible');
+      }
+      const nav = page.locator('.mobile-bottom-nav__bar');
+      await expect(nav).toBeVisible();
+      const activeTab = nav.locator('[data-tab-key="playlists"]');
+      await expect(activeTab).toHaveClass(/is-active/);
+      expect(await activeTab.evaluate(el => {
+        const bounds = el.getBoundingClientRect();
+        return bounds.bottom <= innerHeight && bounds.top >= 0
+          && el.contains(document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2));
+      })).toBe(true);
+    }
+    await page.locator('[data-tab-key="search"]').click();
+    await expect(page).toHaveURL(/\/music\/search$/);
+    await expect(page.locator('.mobile-bottom-nav__bar')).toBeVisible();
+  });
+
   for (const pathname of mobileScreenshotRoutes) {
     test(`renders ${pathname} without mobile layout regressions`, async ({
       page,
@@ -495,7 +531,9 @@ test.describe("Mobile route screenshot matrix", () => {
 
       if (/^\/music\/(?:artist|album|playlist)\//.test(pathname)) {
         await expect(page.locator(".mobile-bottom-nav__bar")).toBeVisible();
-        const sheetContent = page.locator(".p-sheet-mobile-page__content");
+        const sheetContent = page.locator(pathname.startsWith('/music/playlist/')
+          ? '.mobile-playlist-detail__content'
+          : '.p-sheet-mobile-page__content');
         const sheetMetrics = await sheetContent.evaluate((element) => ({
           scrollWidth: element.scrollWidth,
           clientWidth: element.clientWidth,

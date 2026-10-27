@@ -56,6 +56,19 @@ export function buildBaseAppRoutes(extraRoutes: RouteRecordRaw[] = []): RouteRec
       }),
     },
     { path: '/notes', redirect: '/posts/notes' },
+    { path: '/blog', redirect: '/posts' },
+    {
+      path: '/blog/:pathMatch(.*)*',
+      redirect: to => {
+        const rest = Array.isArray(to.params.pathMatch) ? to.params.pathMatch.join('/') : to.params.pathMatch
+        return {
+          path: `/posts/${rest || ''}`,
+          query: to.query,
+          hash: to.hash,
+        }
+      },
+    },
+    { path: '/modules', redirect: '/' },
     { path: '/me', component: () => import('@/views/user/MySpaceView.vue'), meta: { requiresAuth: true } },
     { path: '/inbox', component: () => import('@/views/feed/InboxPage.vue'), meta: { requiresAuth: true } },
     { path: '/messages', component: () => import('@/views/messages/MessagesWorkspaceView.vue'), meta: { requiresAuth: true } },

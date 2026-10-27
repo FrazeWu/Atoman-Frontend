@@ -106,6 +106,10 @@ export const studioRoutes: RouteRecordRaw[] = [
 						},
 					},
 					{
+						path: "editor",
+						redirect: (to) => `/studio/${String(to.params.module)}/new`,
+					},
+					{
 						path: ":id/edit",
 						name: "studio-content-edit",
 						components: {

@@ -24,6 +24,7 @@
       <SiteFooter v-if="showDeferredShell && !isAuthRoute" />
       <AudioPlayer v-if="hasActiveTrack" />
       <PShortcutHints v-if="!isAuthRoute" />
+      <PToastHost />
   </div>
 </template>
 
@@ -34,6 +35,7 @@ import { apiRequest } from '@/api/client'
 import { useApiUrl } from '@/composables/useApiUrl'
 import AppTopbar from '@/components/system/AppTopbar.vue'
 import PShortcutHints from '@/components/ui/PShortcutHints.vue'
+import PToastHost from '@/components/ui/PToastHost.vue'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'

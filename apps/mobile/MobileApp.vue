@@ -39,6 +39,7 @@
       v-if="showMobileBottomNav"
       :current-space="currentSpace"
     />
+    <PToastHost />
   </div>
 </template>
 
@@ -57,6 +58,7 @@ import { isMobileDetailRoute } from './mobileRouteMeta'
 import MobileTopbar from './components/system/MobileTopbar.vue'
 import MobileSpaceDrawer from './components/system/MobileSpaceDrawer.vue'
 import MobileBottomNavComponent from './components/system/MobileBottomNav.vue'
+import PToastHost from '@/components/ui/PToastHost.vue'
 import './mobileModules.css'
 import './mobileDiscovery.css'
 import './mobileSaved.css'

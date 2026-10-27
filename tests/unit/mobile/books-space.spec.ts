@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { useAuthStore } from '@/stores/auth'
+import { saveLibrary } from '@/api/bookPrivate'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import BooksDiscoverView from '@mobile/views/books/BooksDiscoverView.vue'
 import BooksShelfView from '@mobile/views/books/BooksShelfView.vue'
@@ -8,8 +11,12 @@ import BooksMeView from '@mobile/views/books/BooksMeView.vue'
 import BookDetailMobileView from '@mobile/views/books/BookDetailMobileView.vue'
 vi.mock('@/api/bookPrivate', async importOriginal => ({
   ...await importOriginal<typeof import('@/api/bookPrivate')>(),
+  listLibrary: vi.fn(async () => ({ items: [], total: 0 })),
+  saveLibrary: vi.fn(async (workId: string, status: string, tags: string[]) => ({ id: 'library-1', work_id: workId, work_title: 'Book', status, tags, version: 1 })),
   readingRecommendation: vi.fn(async (workId: string) => ({ available: true, work_id: workId, asset: { id: 'asset-1' }, revision_id: 'rev-1' })),
 }))
+
+vi.mock('@/components/books/BookWorkCommunity.vue', () => ({ default: { props: ['workId', 'authenticated'], template: '<section data-testid="book-community" />' } }))
 
 vi.mock('@mobile/components/ui/MIcon.vue', () => ({
   default: {
@@ -21,8 +28,15 @@ vi.mock('@mobile/components/ui/MIcon.vue', () => ({
 
 describe('Mobile Books Space Overhaul', () => {
   let router: any
+  let pinia: ReturnType<typeof createPinia>
 
   beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.isAuthenticated = true
+    auth.user = { uuid: 'reader', username: 'reader' } as typeof auth.user
+    vi.mocked(saveLibrary).mockClear()
     router = createRouter({
       history: createMemoryHistory(),
       routes: [
@@ -31,7 +45,7 @@ describe('Mobile Books Space Overhaul', () => {
         { path: '/books/notes', component: BooksNotesView },
         { path: '/books/me', component: BooksMeView },
         { path: '/books/work/:id', component: BookDetailMobileView },
-        { path: '/books/read/:id', component: { template: '<div>Book Reader</div>' } },
+        { path: '/books/read/:id/:asset/:revision', component: { template: '<div>Book Reader</div>' } },
       ],
     })
   })
@@ -58,7 +72,7 @@ describe('Mobile Books Space Overhaul', () => {
 
     it('renders search input, category chips, and hero book card', () => {
       const wrapper = mount(BooksDiscoverView, {
-        global: { plugins: [router] },
+        global: { plugins: [router, pinia] },
         props: { initialWorks: mockWorks },
       })
 
@@ -70,7 +84,7 @@ describe('Mobile Books Space Overhaul', () => {
 
     it('filters works when typing in search input', async () => {
       const wrapper = mount(BooksDiscoverView, {
-        global: { plugins: [router] },
+        global: { plugins: [router, pinia] },
         props: { initialWorks: mockWorks },
       })
 
@@ -85,7 +99,7 @@ describe('Mobile Books Space Overhaul', () => {
     it('clicking hero book action navigates to book detail', async () => {
       const pushSpy = vi.spyOn(router, 'push')
       const wrapper = mount(BooksDiscoverView, {
-        global: { plugins: [router] },
+        global: { plugins: [router, pinia] },
         props: { initialWorks: mockWorks },
       })
 
@@ -111,7 +125,7 @@ describe('Mobile Books Space Overhaul', () => {
 
     it('renders book details, synopsis, and chapters', () => {
       const wrapper = mount(BookDetailMobileView, {
-        global: { plugins: [router] },
+        global: { plugins: [router, pinia] },
         props: { initialBook: mockDetail },
       })
 
@@ -122,29 +136,30 @@ describe('Mobile Books Space Overhaul', () => {
       expect(wrapper.text()).toContain('第1卷：来自祖先的德行')
     })
 
-    it('toggles "加入书架" button state', async () => {
+    it('persists the shelf state through the canonical shelf controller', async () => {
       const wrapper = mount(BookDetailMobileView, {
-        global: { plugins: [router] },
-        props: { initialBook: mockDetail },
+        global: { plugins: [router, pinia] }, props: { initialBook: mockDetail },
       })
-
-      const shelfBtn = wrapper.find('[data-testid="toggle-shelf-btn"]')
-      expect(shelfBtn.text()).toContain('加入书架')
-
-      await shelfBtn.trigger('click')
-      expect(shelfBtn.text()).toContain('已在书架')
+      await flushPromises()
+      const shelf = wrapper.get('[aria-label="我的阅读状态"]')
+      await shelf.get('button').trigger('click')
+      await flushPromises()
+      expect(saveLibrary).toHaveBeenCalledWith('w-1', 'want_to_read', [], undefined)
+      expect(shelf.text()).toContain('书架状态已保存')
+      wrapper.unmount()
     })
 
     it('navigates to reader when clicking "开始阅读"', async () => {
       const pushSpy = vi.spyOn(router, 'push')
       const wrapper = mount(BookDetailMobileView, {
-        global: { plugins: [router] },
+        global: { plugins: [router, pinia] },
         props: { initialBook: mockDetail },
       })
 
       const startReadBtn = wrapper.find('[data-testid="start-reading-btn"]')
       await startReadBtn.trigger('click')
-      expect(pushSpy).toHaveBeenCalledWith('/books/read/w-1')
+      await flushPromises()
+      expect(pushSpy).toHaveBeenCalledWith('/books/read/w-1/asset-1/rev-1')
     })
   })
 
@@ -163,7 +178,7 @@ describe('Mobile Books Space Overhaul', () => {
 
     it('renders current reading card and bookshelf items', () => {
       const wrapper = mount(BooksShelfView, {
-        global: { plugins: [router] },
+        global: { plugins: [router, pinia] },
         props: {
           initialCurrentBook: mockCurrent,
           initialBooks: mockBooks,
@@ -180,7 +195,7 @@ describe('Mobile Books Space Overhaul', () => {
     it('clicking reading card navigates to reader', async () => {
       const pushSpy = vi.spyOn(router, 'push')
       const wrapper = mount(BooksShelfView, {
-        global: { plugins: [router] },
+        global: { plugins: [router, pinia] },
         props: {
           initialCurrentBook: mockCurrent,
           initialBooks: mockBooks,
@@ -216,7 +231,7 @@ describe('Mobile Books Space Overhaul', () => {
 
     it('renders list of quotes with book badge and commentary', () => {
       const wrapper = mount(BooksNotesView, {
-        global: { plugins: [router] },
+        global: { plugins: [router, pinia] },
         props: { initialNotes: mockNotes },
       })
 
@@ -228,7 +243,7 @@ describe('Mobile Books Space Overhaul', () => {
 
     it('deleting a quote removes it from stream', async () => {
       const wrapper = mount(BooksNotesView, {
-        global: { plugins: [router] },
+        global: { plugins: [router, pinia] },
         props: { initialNotes: mockNotes },
       })
 
@@ -259,7 +274,7 @@ describe('Mobile Books Space Overhaul', () => {
 
     it('renders reader stats and annual reading target', () => {
       const wrapper = mount(BooksMeView, {
-        global: { plugins: [router] },
+        global: { plugins: [router, pinia] },
         props: { initialProfile: mockReaderProfile },
       })
 
@@ -273,7 +288,7 @@ describe('Mobile Books Space Overhaul', () => {
 
     it('switches between "在读书籍" and "已读书单" subtabs', async () => {
       const wrapper = mount(BooksMeView, {
-        global: { plugins: [router] },
+        global: { plugins: [router, pinia] },
         props: { initialProfile: mockReaderProfile },
       })
 

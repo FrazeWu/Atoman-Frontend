@@ -8,6 +8,10 @@
       </div>
     </header>
 
+    <div v-if="operationError" role="alert">
+      <p>{{ operationError }}</p>
+      <button type="button" @click="loadPrivateNotes">重新加载</button>
+    </div>
     <!-- Guest State -->
     <div v-if="!props.initialNotes && authStore && !authStore.isAuthenticated" class="books-notes-guest-wrap">
       <MGuestCard
@@ -65,6 +69,7 @@
                 type="button"
                 class="books-note-card__action-btn books-note-card__action-btn--delete"
                 :data-testid="`note-delete-btn-${note.id}`"
+                :disabled="Boolean(deletingId)"
                 title="删除书摘"
                 @click="deleteNote(note.id)"
               >
@@ -89,12 +94,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { getActivePinia } from 'pinia'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MGuestCard from '@mobile/components/ui/MGuestCard.vue'
 import { useAuthStore } from '@/stores/auth'
-import { deletePrivateNote, listPrivateNotes } from '@/api/bookPrivate'
+import { deletePrivateNote, listPrivateNotes, type PrivateNote } from '@/api/bookPrivate'
 
 export interface BookNoteItem {
   id: string
@@ -115,6 +120,10 @@ const props = withDefaults(
 )
 
 const authStore = getActivePinia() ? useAuthStore() : null
+const operationError = ref('')
+const deletingId = ref('')
+const sourceNotes = new Map<string, PrivateNote>()
+let loadGeneration = 0
 
 const notesList = ref<BookNoteItem[]>(
   props.initialNotes ? [...props.initialNotes] : []
@@ -131,13 +140,26 @@ watch(
 )
 
 async function deleteNote(id: string) {
-  notesList.value = notesList.value.filter((n) => n.id !== id)
-  if (authStore?.isAuthenticated) {
-    try {
-      await deletePrivateNote({ id, version: 1 } as any)
-    } catch {
-      // Graceful fallback
-    }
+  if (deletingId.value) return
+  // Explicit preview data is local-only; real notes require the server version.
+  if (props.initialNotes) {
+    notesList.value = notesList.value.filter(note => note.id !== id)
+    return
+  }
+  const note = sourceNotes.get(id)
+  if (!authStore?.isAuthenticated || !note) return
+  const generation = loadGeneration
+  deletingId.value = id
+  operationError.value = ''
+  try {
+    await deletePrivateNote(note)
+    if (generation !== loadGeneration) return
+    sourceNotes.delete(id)
+    notesList.value = notesList.value.filter(item => item.id !== id)
+  } catch {
+    if (generation === loadGeneration) operationError.value = '删除失败或笔记已更新，请重新加载后重试。'
+  } finally {
+    if (generation === loadGeneration) deletingId.value = ''
   }
 }
 
@@ -161,29 +183,28 @@ function formatTime(isoString?: string): string {
 }
 
 async function loadPrivateNotes() {
-  if (props.initialNotes || !authStore?.isAuthenticated) return
+  const generation = ++loadGeneration
+  if (props.initialNotes) return
+  notesList.value = []
+  sourceNotes.clear()
+  deletingId.value = ''
+  operationError.value = ''
+  if (!authStore?.isAuthenticated) return
   try {
-    const res = await listPrivateNotes()
-    if (res?.items && Array.isArray(res.items) && res.items.length > 0) {
-      notesList.value = res.items.map((n) => ({
-        id: String(n.id),
-        bookTitle: n.title || '读书笔记',
-        chapter: '',
-        quote: n.body || '',
-        comment: '',
-        created_at: (n as any).created_at || '',
-      }))
-    } else if (authStore.isAuthenticated) {
-      notesList.value = []
-    }
+    const result = await listPrivateNotes()
+    if (generation !== loadGeneration) return
+    for (const note of result.items) sourceNotes.set(String(note.id), note)
+    notesList.value = result.items.map(note => ({
+      id: String(note.id), bookTitle: note.title || '读书笔记',
+      chapter: '', quote: note.body || '', comment: '',
+      created_at: (note as PrivateNote & { created_at?: string }).created_at || '',
+    }))
   } catch {
-    // Graceful fallback
+    if (generation === loadGeneration) operationError.value = '笔记加载失败，请重试。'
   }
 }
-
-onMounted(() => {
-  void loadPrivateNotes()
-})
+watch(() => [authStore?.user?.uuid, authStore?.isAuthenticated], () => { void loadPrivateNotes() }, { immediate: true })
+onBeforeUnmount(() => { loadGeneration += 1 })
 </script>
 
 <style scoped>

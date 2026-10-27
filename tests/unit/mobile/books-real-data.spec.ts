@@ -116,8 +116,9 @@ describe('Books Mobile Real Data Wiring', () => {
 
     const deleteBtn = wrapper.find('[data-testid="note-delete-btn-note-real-1"]')
     await deleteBtn.trigger('click')
+    await flushPromises()
     expect(wrapper.text()).not.toContain('应该设想西西弗是幸福的')
-    expect(deletePrivateNote).toHaveBeenCalledWith({ id: 'note-real-1', version: 1 })
+    expect(deletePrivateNote).toHaveBeenCalledWith(expect.objectContaining({ id: 'note-real-1', version: 1 }))
   })
 
   it('renders MGuestCard in BooksNotesView when unauthenticated', async () => {

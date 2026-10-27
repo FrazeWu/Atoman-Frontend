@@ -14,8 +14,12 @@
       <span v-else-if="normalizedRatingCount === 0" class="rating-control__insufficient">
         暂无评分<span v-if="size !== 'compact'">，成为第一个评分者</span>
       </span>
+      <span v-else-if="normalizedRatingCount >= normalizedMinimumCount" class="rating-control__insufficient">评分暂未生效</span>
       <span v-else class="rating-control__insufficient">
-        评分人数不足（{{ normalizedRatingCount }}/{{ PUBLIC_RATING_MIN_COUNT }}）
+        评分人数不足（{{ normalizedRatingCount }}/{{ normalizedMinimumCount }}）
+      </span>
+      <span v-if="showReferenceScore && normalizedRatingCount > 0 && !publicRatingVisible" class="rating-control__reference-score">
+        参考均分 {{ normalizedPublicScore.toFixed(1) }} / 10（未达正式评分条件）
       </span>
     </div>
 
@@ -97,13 +101,15 @@ import { Star as StarFilled, X } from 'lucide-vue-next'
 import {
   PUBLIC_RATING_MIN_COUNT,
   formatViewerRating,
-  hasPublicRating,
   scoreToStars,
 } from '@/utils/rating'
 
 const props = withDefaults(defineProps<{
   ratingScore?: number | null
   ratingCount?: number | null
+  minimumRatingCount?: number
+  showReferenceScore?: boolean
+  ratingActive?: boolean | null
   viewerRating?: number | null
   disabled?: boolean
   loading?: boolean
@@ -113,6 +119,9 @@ const props = withDefaults(defineProps<{
 }>(), {
   ratingScore: 0,
   ratingCount: 0,
+  minimumRatingCount: PUBLIC_RATING_MIN_COUNT,
+  showReferenceScore: false,
+  ratingActive: null,
   viewerRating: null,
   disabled: false,
   loading: false,
@@ -130,7 +139,8 @@ const hoverScore = ref<number | null>(null)
 const activeScore = computed(() => hoverScore.value ?? props.viewerRating ?? 0)
 const normalizedRatingCount = computed(() => Math.max(0, Number(props.ratingCount || 0)))
 const normalizedPublicScore = computed(() => Math.max(0, Math.min(10, Number(props.ratingScore || 0))))
-const publicRatingVisible = computed(() => hasPublicRating(normalizedRatingCount.value))
+const normalizedMinimumCount = computed(() => Number.isInteger(props.minimumRatingCount) && props.minimumRatingCount > 0 ? props.minimumRatingCount : PUBLIC_RATING_MIN_COUNT)
+const publicRatingVisible = computed(() => props.ratingActive !== false && normalizedRatingCount.value >= normalizedMinimumCount.value)
 const iconSize = computed(() => props.size === 'compact' ? 16 : 22)
 
 watch(() => props.loading, (loading) => {

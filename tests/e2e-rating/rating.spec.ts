@@ -99,20 +99,25 @@ test('真实评分链路：冷启动、个人评分、五人门槛、权限、�
     }
 
     await page.goto(`/books/work/${fixture.book_id}`)
-    const bookRating = page.locator('.rating-control')
+    const bookRating = page.getByRole('region', { name: '图书评分', exact: true })
+    await expect(bookRating).toBeVisible({ timeout: 15000 })
     await expect(bookRating).toContainText('暂无评分')
     await bookRating.locator('[data-score="8"]').click()
     await expect(bookRating).toContainText('我的评分：8/10')
 
-    // Drawer 是尚未挂到页面路由的复用组件，使用测试专用入口挂载真实组件。
-    await page.goto(`/tests/e2e-rating/drawer.html?workId=${fixture.book_id}`)
-    const drawer = page.locator('.book-work-drawer')
-    await expect(drawer).toContainText('我的评分：8/10')
-    await drawer.locator('[data-score="9"]').click()
-    await expect(drawer).toContainText('我的评分：9/10')
-    await drawer.getByRole('button', { name: '清除评分' }).click()
-    await expect(drawer).toContainText('暂无评分')
-    await page.screenshot({ path: info.outputPath('book-drawer.png'), fullPage: true })
+    // Exercise the current real detail route, not the removed legacy drawer fixture.
+    if (info.project.name === 'desktop') {
+      const headerRating = page.getByRole('region', { name: 'Rating acceptance book 评分', exact: true })
+      await expect(headerRating).toContainText('我的评分：8/10')
+    }
+    await page.reload()
+    await expect(bookRating).toContainText('我的评分：8/10', { timeout: 15000 })
+    await bookRating.locator('[data-score="9"]').click()
+    await expect(bookRating).toContainText('我的评分：9/10')
+    await bookRating.getByRole('button', { name: '清除评分' }).click()
+    await expect(bookRating).toContainText('暂无评分')
+    expect((await (await context.request.get(bookPath)).json()).data.rating_count).toBe(0)
+    await page.screenshot({ path: info.outputPath('book-rating-detail.png'), fullPage: true })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 
     await context.clearCookies()

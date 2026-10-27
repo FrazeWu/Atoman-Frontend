@@ -59,22 +59,17 @@
           type="button"
           class="book-detail-mobile__btn book-detail-mobile__btn--primary"
           data-testid="start-reading-btn"
+          :disabled="readingBusy"
           @click="startReading"
         >
           <MIcon name="books" size="sm" />
           <span>开始阅读</span>
         </button>
-        <button
-          type="button"
-          class="book-detail-mobile__btn book-detail-mobile__btn--secondary"
-          :class="{ 'is-in-shelf': inShelfState }"
-          data-testid="toggle-shelf-btn"
-          @click="toggleShelf"
-        >
-          <MIcon :name="inShelfState ? 'shelf' : 'plus'" size="sm" />
-          <span>{{ inShelfState ? '已在书架' : '加入书架' }}</span>
-        </button>
       </section>
+
+      <p v-if="actionError" role="alert">{{ actionError }}</p>
+      <BookShelfAction v-if="auth.isAuthenticated" :key="`${book.id}:${auth.user?.uuid}`" :work-id="book.id" />
+      <BookWorkCommunity :key="`${book.id}:${auth.user?.uuid || 'guest'}`" :work-id="book.id" :authenticated="auth.isAuthenticated" />
 
       <!-- Synopsis / Introduction -->
       <section class="book-detail-mobile__section">
@@ -103,6 +98,10 @@
       </section>
     </main>
 
+    <div v-else-if="loadError" role="alert" class="book-detail-mobile__loading">
+      <p>{{ loadError }}</p>
+      <button type="button" @click="loadBookData">重试</button>
+    </div>
     <!-- Loading State -->
     <div v-else class="book-detail-mobile__loading">
       <div class="book-detail-mobile__spinner" />
@@ -112,9 +111,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getCatalogWork } from '@/api/bookCatalog'
+import { readingRecommendation } from '@/api/bookPrivate'
+import { useAuthStore } from '@/stores/auth'
+import BookShelfAction from '@/components/books/BookShelfAction.vue'
+import BookWorkCommunity from '@/components/books/BookWorkCommunity.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 
 export interface BookDetailData {
@@ -129,112 +132,77 @@ export interface BookDetailData {
   inShelf?: boolean
   chapters?: string[]
 }
-
-const props = withDefaults(
-  defineProps<{
-    initialBook?: BookDetailData
-  }>(),
-  {
-    initialBook: undefined,
-  }
-)
-
+const props = defineProps<{ initialBook?: BookDetailData }>()
 const route = useRoute()
 const router = useRouter()
-
-const book = ref<BookDetailData | null>(props.initialBook ? { ...props.initialBook } : null)
-const inShelfState = ref(props.initialBook?.inShelf ?? false)
-
-watch(
-  () => props.initialBook,
-  (newVal) => {
-    if (newVal) {
-      book.value = { ...newVal }
-      inShelfState.value = newVal.inShelf ?? false
-    }
-  },
-  { deep: true }
-)
+const auth = useAuthStore()
+const book = ref<BookDetailData | null>(null)
+const loadError = ref('')
+const actionError = ref('')
+const readingBusy = ref(false)
+let loadGeneration = 0
 
 function goBack() {
-  if (window.history.length > 1) {
-    router.back()
-  } else {
-    router.push('/books')
-  }
+  if (window.history.length > 1) router.back()
+  else void router.push('/books')
 }
-
 function shareBook() {
   if (navigator.share && book.value) {
-    navigator.share({
-      title: book.value.title,
-      text: `${book.value.title} - ${book.value.author}`,
-      url: window.location.href,
-    }).catch(() => {})
+    void navigator.share({ title: book.value.title, text: `${book.value.title} - ${book.value.author}`, url: window.location.href }).catch(() => {})
   }
 }
-
-function toggleShelf() {
-  inShelfState.value = !inShelfState.value
-}
-
-function startReading() {
-  if (book.value?.id) {
-    router.push(`/books/read/${book.value.id}`)
-  }
-}
-
-async function loadBookData() {
-  if (props.initialBook) return
-  const id = String(route.params.id || '')
-  if (!id) return
-
+async function startReading() {
+  if (!book.value || readingBusy.value) return
+  const id = book.value.id
+  const generation = loadGeneration
+  readingBusy.value = true
+  actionError.value = ''
   try {
-    const res = await getCatalogWork(id)
-    if (res) {
-      book.value = {
-        id: res.id,
-        title: res.title,
-        author: res.authors?.map((a) => a.name).join(' / ') || '未知作者',
-        publisher: res.editions?.[0]?.publisher,
-        rating: res.rating_score ?? undefined,
-        year: (res.editions?.[0] as any)?.edition_year ?? (res.editions?.[0] as any)?.year ?? undefined,
-        cover: res.editions?.[0]?.cover_url,
-        synopsis: res.description || '暂无内容简介。',
-        inShelf: false,
-        chapters: ['第1卷：来自祖先的德行', '第2卷：清晨的自我告诫', '第3卷：自然的和谐法则'],
-      }
+    const next = await readingRecommendation(id)
+    if (generation !== loadGeneration) return
+    if (!next.available || !next.asset?.id || !next.revision_id) {
+      actionError.value = '该图书暂无可阅读的电子书文件。'
       return
     }
+    await router.push(`/books/read/${encodeURIComponent(next.work_id || id)}/${encodeURIComponent(next.asset.id)}/${encodeURIComponent(next.revision_id)}`)
   } catch {
-    // Fallback to sample book
-  }
-
-  // Fallback demo data
-  book.value = {
-    id,
-    title: '沉思录',
-    author: '马可·奥勒留',
-    publisher: '中央编译出版社',
-    rating: 9.3,
-    year: '2015',
-    synopsis: '古罗马唯一一位哲学家皇帝马可·奥勒留写给自己的私人对话记录。面对动荡的帝国战事与繁复的宫廷政务，他在军营帐篷中借由哲学省思，审视人性的弱点、生死的无常以及内在理性的力量。',
-    inShelf: false,
-    chapters: [
-      '第1卷：来自祖先与师长的德行',
-      '第2卷：清晨的自我告诫',
-      '第3卷：自然的和谐法则',
-      '第4卷：内在心灵的避难所',
-      '第5卷：清晨起身与工作之责',
-    ],
+    if (generation === loadGeneration) actionError.value = '阅读文件加载失败，请重试。'
+  } finally {
+    if (generation === loadGeneration) readingBusy.value = false
   }
 }
-
-onMounted(() => {
-  if (!props.initialBook) {
-    void loadBookData()
+async function loadBookData() {
+  const generation = ++loadGeneration
+  book.value = null
+  loadError.value = ''
+  actionError.value = ''
+  readingBusy.value = false
+  if (props.initialBook) {
+    book.value = { ...props.initialBook }
+    return
   }
-})
+  const id = String(route.params.id || route.params.workId || '')
+  if (!id) { loadError.value = '图书标识缺失。'; return }
+  try {
+    const result = await getCatalogWork(id)
+    if (generation !== loadGeneration) return
+    if (result.id !== id) {
+      await router.replace({ path: `/books/work/${result.id}`, query: route.query })
+      return
+    }
+    book.value = {
+      id: result.id, title: result.title,
+      author: result.authors?.map(author => author.name).join(' / ') || '未知作者',
+      publisher: result.editions?.[0]?.publisher,
+      cover: result.cover_url || result.editions?.[0]?.cover_url,
+      synopsis: result.description || '暂无内容简介。',
+    }
+  } catch {
+    if (generation === loadGeneration) loadError.value = '图书加载失败或已下架，请重试。'
+  }
+}
+watch(() => [route.params.id, route.params.workId, props.initialBook], () => { void loadBookData() }, { immediate: true })
+onBeforeUnmount(() => { loadGeneration += 1 })
 </script>
 
 <style scoped>

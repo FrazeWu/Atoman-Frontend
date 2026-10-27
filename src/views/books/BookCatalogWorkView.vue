@@ -36,11 +36,14 @@
           <div class="book-catalog__rating-wrapper">
             <RatingControl
               :aria-label="`${work.title} 评分`"
-              :rating-score="workRating?.rating_score ?? work.rating_score"
+              :rating-score="workRating?.rating_active ? (workRating.weighted_rating_score ?? workRating.rating_score) : (workRating?.rating_score ?? work.rating_score)"
+              show-reference-score
+              :minimum-rating-count="workRating?.minimum_rating_count ?? 6"
+              :rating-active="workRating?.rating_active"
               :rating-count="workRating?.rating_count ?? work.rating_count"
               :viewer-rating="workRating?.viewer_rating"
               :disabled="!auth.isAuthenticated"
-              :loading="ratingBusy"
+              :loading="ratingBusy || !workRating"
               :error-message="ratingError"
               @rate="handleRate"
               @clear="handleClearRate"
@@ -156,7 +159,7 @@
 
       <!-- 读者研讨与社区 -->
       <section class="book-catalog__section">
-        <BookWorkCommunity :key="`${work.id}:${auth.user?.uuid || 'guest'}`" :work-id="work.id" :authenticated="auth.isAuthenticated" />
+        <BookWorkCommunity v-model:rating-state="workRating" :key="`${work.id}:${auth.user?.uuid || 'guest'}`" :work-id="work.id" :authenticated="auth.isAuthenticated" />
       </section>
 
       <!-- 开放 Wiki 词条 -->
@@ -188,7 +191,7 @@ import RatingControl from '@/components/shared/RatingControl.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { getCatalogWork, listCatalogResources, type CatalogResource, type CatalogWork } from '@/api/bookCatalog'
 import { resourceReaderPath } from '@/api/bookResources'
-import { getWorkRating, setWorkRating, removeWorkRating, type WorkRating } from '@/api/bookCommunity'
+import { setWorkRating, removeWorkRating, type WorkRating } from '@/api/bookCommunity'
 import './bookCatalog.css'
 import './bookPrivate.css'
 
@@ -219,14 +222,6 @@ async function refreshWork() {
     if (err instanceof ApiErrorResponseError && err.status === 404) {
       error.value = '图书不存在或已下架'
     }
-  }
-}
-
-async function loadRating(workId: string) {
-  try {
-    workRating.value = await getWorkRating(workId)
-  } catch {
-    workRating.value = null
   }
 }
 
@@ -288,17 +283,17 @@ async function load() {
   }
 
   loading.value = true
+  workRating.value = null
   error.value = ''
   try {
     const result = await getCatalogWork(id)
-    if (!alive) return
+    if (!alive || String(route.params.workId || '') !== id) return
     if (result.id !== id) {
       await router.replace({ path: `/books/work/${result.id}`, query: route.query })
       return
     }
     work.value = result
     loading.value = false
-    void loadRating(id)
     void loadResources()
   } catch (err) {
     if (!alive) return
@@ -316,6 +311,11 @@ watch(
   },
   { immediate: true }
 )
+
+watch(() => auth.user?.uuid, () => {
+  workRating.value = null
+  ratingError.value = ''
+})
 
 onBeforeUnmount(() => {
   alive = false

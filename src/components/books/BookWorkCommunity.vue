@@ -11,7 +11,10 @@
     <div class="book-community__rating-box">
       <RatingControl
         :aria-label="`图书评分`"
-        :rating-score="rating?.rating_score"
+        :rating-score="rating?.rating_active ? (rating.weighted_rating_score ?? rating.rating_score) : rating?.rating_score"
+        show-reference-score
+        :minimum-rating-count="rating?.minimum_rating_count ?? 6"
+        :rating-active="rating?.rating_active"
         :rating-count="rating?.rating_count"
         :viewer-rating="rating?.viewer_rating"
         :disabled="!authenticated"
@@ -72,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -89,9 +92,15 @@ import PButton from '@/components/ui/PButton.vue'
 import RatingControl from '@/components/shared/RatingControl.vue'
 import CommentSection from '@/components/comment/CommentSection.vue'
 
-const props = defineProps<{ workId: string; authenticated: boolean }>()
+const props = defineProps<{ workId: string; authenticated: boolean; ratingState?: WorkRating | null }>()
+const emit = defineEmits<{ 'update:ratingState': [rating: WorkRating] }>()
 const auth = useAuthStore()
-const rating = ref<WorkRating>()
+const localRating = ref<WorkRating>()
+const rating = computed(() => props.ratingState ?? localRating.value)
+function acceptRating(value: WorkRating) {
+  localRating.value = value
+  emit('update:ratingState', value)
+}
 const reviews = ref<BookReviewLink[]>([])
 const total = ref(0)
 const busy = ref(false)
@@ -102,7 +111,7 @@ const spoiler = ref(false)
 async function load() {
   error.value = ''
   try {
-    rating.value = await getWorkRating(props.workId)
+    acceptRating(await getWorkRating(props.workId))
     const page = await listWorkReviews(props.workId)
     reviews.value = page.items
     total.value = page.total
@@ -112,10 +121,11 @@ async function load() {
 }
 
 async function handleRate(score: number) {
+  if (!props.authenticated || busy.value) return
   busy.value = true
   error.value = ''
   try {
-    rating.value = await setWorkRating(props.workId, score)
+    acceptRating(await setWorkRating(props.workId, score))
   } catch {
     error.value = '评分保存失败，请重试。'
   } finally {
@@ -124,10 +134,11 @@ async function handleRate(score: number) {
 }
 
 async function handleClear() {
+  if (!props.authenticated || busy.value) return
   busy.value = true
   error.value = ''
   try {
-    rating.value = await removeWorkRating(props.workId)
+    acceptRating(await removeWorkRating(props.workId))
   } catch {
     error.value = '评分清除失败，请重试。'
   } finally {

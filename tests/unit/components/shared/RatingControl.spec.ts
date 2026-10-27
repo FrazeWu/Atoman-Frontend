@@ -190,3 +190,24 @@ describe('RatingControl.vue', () => {
     wrapper.unmount()
   })
 })
+
+
+it('honors the six-reader book policy and explicit inactive aggregates', async () => {
+  const wrapper = mount(RatingControl, { props: { ratingScore: 8, ratingCount: 5, minimumRatingCount: 6 } })
+  expect(wrapper.find('.rating-control__public-score').exists()).toBe(false)
+  expect(wrapper.text()).toContain('5/6')
+  await wrapper.setProps({ ratingCount: 6, ratingActive: false })
+  expect(wrapper.find('.rating-control__public-score').exists()).toBe(false)
+  await wrapper.setProps({ ratingActive: true })
+  expect(wrapper.get('.rating-control__public-score').text()).toBe('8.0 / 10')
+  wrapper.unmount()
+})
+
+
+it('shows an optional reference mean without activating the official score', () => {
+  const wrapper = mount(RatingControl, { props: { ratingScore: 9, ratingCount: 2, minimumRatingCount: 6, showReferenceScore: true, ratingActive: false } })
+  expect(wrapper.find('.rating-control__public-score').exists()).toBe(false)
+  expect(wrapper.get('.rating-control__reference-score').text()).toContain('9.0 / 10')
+  expect(wrapper.text()).toContain('2/6')
+  wrapper.unmount()
+})

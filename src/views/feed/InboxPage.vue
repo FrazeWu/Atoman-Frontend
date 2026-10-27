@@ -493,15 +493,11 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
   line-height: 1;
 }
 
-/* 右侧框 */
+/* 右侧通知流区（去外层大边框，通知卡片直接作为独立实体展示） */
 .inbox-main-pane {
   min-width: 0;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  background: var(--a-color-bg);
   display: flex;
   flex-direction: column;
-  min-height: 36rem;
 }
 
 /* Notification Stream Workspace */
@@ -515,14 +511,11 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
   position: sticky;
   top: var(--a-topbar-height, 3.5rem);
   z-index: 5;
-  min-height: 3.5rem;
+  min-height: 3rem;
   display: flex;
   align-items: center;
-  padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  padding: 0 0 0.875rem 0;
   background: var(--a-color-bg);
-  border-top-left-radius: var(--a-radius-card);
-  border-top-right-radius: var(--a-radius-card);
 }
 
 .stream-toolbar-inner {
@@ -535,7 +528,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 
 .stream-workspace-container {
   width: 100%;
-  padding: 1.5rem;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 1rem;

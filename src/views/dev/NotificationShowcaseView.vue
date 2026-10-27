@@ -484,26 +484,19 @@ const filteredNotifications = computed(() => {
   color: #ffffff;
 }
 
-/* 主流区：右侧框 */
+/* 主流区：去外层边框，卡片直接平铺展开 */
 .inbox-main-stream {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  background: var(--a-color-bg);
-  min-height: 40rem;
 }
 
 .stream-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.875rem 1.75rem;
-  min-height: 3.5rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  padding: 0 0 0.875rem 0;
+  min-height: 3rem;
   background: var(--a-color-bg);
-  border-top-left-radius: var(--a-radius-card);
-  border-top-right-radius: var(--a-radius-card);
   position: sticky;
   top: var(--a-topbar-height, 3.5rem);
   z-index: 5;
@@ -589,7 +582,7 @@ const filteredNotifications = computed(() => {
 }
 
 .cards-container {
-  padding: 1.75rem;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 0.875rem;

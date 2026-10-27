@@ -326,23 +326,24 @@ body,
 }
 
 html {
-  overflow-x: hidden;
+  overflow-x: clip;
   overscroll-behavior-x: none;
 }
 
 body {
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   overscroll-behavior-x: none;
-  -webkit-overflow-scrolling: touch;
 }
 
 .mobile-app-shell {
   min-width: 0;
+  min-height: 100dvh;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  /* hidden 会将 overflow-y 计算为 auto，避免在固定底栏外再创建滚动容器。 */
+  overflow-x: clip;
   overscroll-behavior-x: none;
   --mobile-app-player-height: 76px;
   --mobile-app-player-reserved-height: 0px;

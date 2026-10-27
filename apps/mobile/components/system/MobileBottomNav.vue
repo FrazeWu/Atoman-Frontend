@@ -146,6 +146,8 @@ const onTabClick = (tab: NavTabItem) => {
   width: 100%;
   z-index: 1000;
   pointer-events: none;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .mobile-bottom-nav[style*="display: none"] {

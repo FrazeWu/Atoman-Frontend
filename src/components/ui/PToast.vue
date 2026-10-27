@@ -121,7 +121,7 @@ onUnmounted(() => {
   background: var(--a-color-bg);
   color: var(--a-color-text);
   border: 1px solid var(--a-color-border);
-  box-shadow: var(--a-shadow-dropdown);
+  box-shadow: none !important;
   transition: top var(--a-motion-state) var(--a-motion-ease-enter);
 }
 

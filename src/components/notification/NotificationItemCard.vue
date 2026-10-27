@@ -15,157 +15,188 @@
     @keydown.enter="onClickCard"
     @keydown.space.prevent="onClickCard"
   >
-    <!-- Avatar and Action Badge -->
-    <div class="card-avatar-wrapper">
-      <div v-if="isSystemNotification && !actorAvatar" class="card-system-avatar" title="系统通知">
-        <ShieldAlert :size="compact ? 14 : 18" stroke-width="2" />
+    <!-- Standout Kicker Header Row (Non-compact only) -->
+    <div v-if="!compact" class="card-kicker-row">
+      <div class="card-kicker-group">
+        <span class="card-kicker">{{ kickerText }}</span>
+        <span v-if="isCollaborationNotification" class="card-badge-collab">待处理</span>
       </div>
-      <PAvatar
-        v-else
-        :src="actorAvatar"
-        :name="actorName"
-        :size="compact ? 'xs' : 'sm'"
-        class="card-avatar"
-      />
-      <div
-        class="card-action-badge"
-        :class="`card-action-badge--${actionType}`"
-        :data-test="`badge-${actionType}`"
-        :title="badgeTitle"
-      >
-        <component :is="badgeIcon" :size="compact ? 10 : 12" stroke-width="2.5" />
+      <div class="card-meta">
+        <time class="card-time sidebar-item-time detail-time">{{ timeAgo }}</time>
+        <span
+          v-if="!notification.read_at"
+          class="card-unread-dot"
+          data-test="unread-dot"
+          aria-label="未读"
+        />
+        <button
+          type="button"
+          class="card-expand-btn"
+          :aria-expanded="isExpanded"
+          aria-label="展开或收起详情"
+          @click.stop="toggleExpand"
+        >
+          <ChevronDown
+            :size="15"
+            class="card-chevron-icon"
+            :class="{ 'card-chevron-icon--rotated': isExpanded }"
+          />
+        </button>
       </div>
     </div>
 
-    <!-- Main Content Area -->
-    <div class="card-content">
-      <div class="card-header-row">
-        <div class="card-title-group">
-          <span class="card-title sidebar-item-title">{{ title }}</span>
-          <template v-if="sourceLabel">
-            <span class="card-separator">·</span>
-            <span class="card-source-label sidebar-item-source detail-source">{{ sourceLabel }}</span>
-          </template>
-          <span v-if="isCollaborationNotification" class="card-badge-collab">待处理</span>
+    <!-- Main Row: Avatar + Content -->
+    <div class="card-main-row">
+      <!-- Avatar and Action Badge -->
+      <div class="card-avatar-wrapper">
+        <div v-if="isSystemNotification && !actorAvatar" class="card-system-avatar" title="系统通知">
+          <ShieldAlert :size="compact ? 14 : 18" stroke-width="2" />
         </div>
-        <div class="card-meta">
-          <time class="card-time sidebar-item-time detail-time">{{ timeAgo }}</time>
-          <span
-            v-if="!notification.read_at"
-            class="card-unread-dot"
-            data-test="unread-dot"
-            aria-label="未读"
-          />
-          <button
-            v-if="!compact"
-            type="button"
-            class="card-expand-btn"
-            :aria-expanded="isExpanded"
-            aria-label="展开或收起详情"
-            @click.stop="toggleExpand"
-          >
-            <ChevronDown
-              :size="15"
-              class="card-chevron-icon"
-              :class="{ 'card-chevron-icon--rotated': isExpanded }"
+        <PAvatar
+          v-else
+          :src="actorAvatar"
+          :name="actorName"
+          :size="compact ? 'xs' : 'sm'"
+          class="card-avatar"
+        />
+        <div
+          class="card-action-badge"
+          :class="`card-action-badge--${actionType}`"
+          :data-test="`badge-${actionType}`"
+          :title="badgeTitle"
+        >
+          <component :is="badgeIcon" :size="compact ? 10 : 12" stroke-width="2.5" />
+        </div>
+      </div>
+
+      <!-- Main Content Area -->
+      <div class="card-content">
+        <!-- Compact Header Row (Title alongside meta) -->
+        <div v-if="compact" class="card-header-row">
+          <div class="card-title-group">
+            <span class="card-title sidebar-item-title">{{ title }}</span>
+            <template v-if="sourceLabel">
+              <span class="card-separator">·</span>
+              <span class="card-source-label sidebar-item-source detail-source">{{ sourceLabel }}</span>
+            </template>
+            <span v-if="isCollaborationNotification" class="card-badge-collab">待处理</span>
+          </div>
+          <div class="card-meta">
+            <time class="card-time sidebar-item-time detail-time">{{ timeAgo }}</time>
+            <span
+              v-if="!notification.read_at"
+              class="card-unread-dot"
+              data-test="unread-dot"
+              aria-label="未读"
             />
-          </button>
-        </div>
-      </div>
-
-      <!-- Context Quote Block (Non-compact only) -->
-      <NotificationContextQuote
-        v-if="!compact && hasQuote"
-        :reply-excerpt="replyExcerpt"
-        :original-excerpt="originalExcerpt"
-        :text="quoteText"
-        :expanded="isExpanded"
-        class="card-quote"
-      />
-
-      <!-- Reason text if distinct from quote -->
-      <p
-        v-if="!compact && notification.reason && notification.reason !== quoteText"
-        class="card-reason detail-reason"
-      >
-        {{ notification.reason }}
-      </p>
-
-      <!-- Body text if distinct from reason and quote -->
-      <p
-        v-if="!compact && notificationBody && notificationBody !== notification.reason && notificationBody !== quoteText"
-        class="sidebar-item-body a-muted"
-      >
-        {{ notificationBody }}
-      </p>
-
-      <!-- Extended Meta Row (Non-compact expanded only) -->
-      <div v-if="!compact && isExpanded" class="card-meta-extended">
-        <span class="card-meta-full-time">{{ fullDateTime }}</span>
-        <span class="card-meta-separator">·</span>
-        <span class="card-meta-type">{{ sourceTypeLabel }}</span>
-      </div>
-
-      <!-- Action Row (Non-compact only) -->
-      <div v-if="!compact" class="card-actions-row detail-actions" @click.stop @keydown.stop>
-        <div class="card-actions-left">
-          <PButton
-            v-if="targetPath"
-            variant="secondary"
-            size="sm"
-            class="card-action-btn"
-            data-test="action-jump"
-            @click="onJump"
-          >
-            前往来源内容
-          </PButton>
-          <PButton
-            v-else
-            variant="secondary"
-            size="sm"
-            disabled
-            class="card-action-unavailable-btn detail-source"
-          >
-            来源已不可用
-          </PButton>
+          </div>
         </div>
 
-        <div class="card-actions-right">
-          <button
-            v-if="!notification.read_at"
-            type="button"
-            class="card-btn card-btn--mark-read"
-            data-test="action-mark-read"
-            title="标为已读"
-            @click.stop="onMarkRead"
-          >
-            <Check :size="14" />
-            <span>已读</span>
-          </button>
+        <!-- Non-compact Title Row -->
+        <div v-else class="card-title-row">
+          <div class="card-title-group">
+            <span class="card-title sidebar-item-title">{{ title }}</span>
+            <template v-if="sourceLabel">
+              <span class="card-separator">·</span>
+              <span class="card-source-label sidebar-item-source detail-source">{{ sourceLabel }}</span>
+            </template>
+          </div>
+        </div>
 
-          <details class="card-more-menu" data-test="action-more" @click.stop>
-            <summary class="card-btn card-btn--icon" aria-label="更多操作">
-              <Ellipsis :size="16" />
-            </summary>
-            <div class="card-menu-dropdown" role="menu">
-              <button
-                type="button"
-                class="card-menu-item"
-                data-test="action-mute-type"
-                @click="onMuteType"
-              >
-                不再提醒此类动态
-              </button>
-              <button
-                type="button"
-                class="card-menu-item"
-                data-test="action-mute-source"
-                @click="onMuteSource"
-              >
-                不再提醒此内容
-              </button>
-            </div>
-          </details>
+        <!-- Context Quote Block (Non-compact only) -->
+        <NotificationContextQuote
+          v-if="!compact && hasQuote"
+          :reply-excerpt="replyExcerpt"
+          :original-excerpt="originalExcerpt"
+          :text="quoteText"
+          :expanded="isExpanded"
+          class="card-quote"
+        />
+
+        <!-- Reason text if distinct from quote -->
+        <p
+          v-if="!compact && notification.reason && notification.reason !== quoteText"
+          class="card-reason detail-reason"
+        >
+          {{ notification.reason }}
+        </p>
+
+        <!-- Body text if distinct from reason and quote -->
+        <p
+          v-if="!compact && notificationBody && notificationBody !== notification.reason && notificationBody !== quoteText"
+          class="sidebar-item-body a-muted"
+        >
+          {{ notificationBody }}
+        </p>
+
+        <!-- Extended Meta Row (Non-compact expanded only) -->
+        <div v-if="!compact && isExpanded" class="card-meta-extended">
+          <span class="card-meta-full-time">{{ fullDateTime }}</span>
+          <span class="card-meta-separator">·</span>
+          <span class="card-meta-type">{{ sourceTypeLabel }}</span>
+        </div>
+
+        <!-- Action Row (Non-compact only) -->
+        <div v-if="!compact" class="card-actions-row detail-actions" @click.stop @keydown.stop>
+          <div class="card-actions-left">
+            <PButton
+              v-if="targetPath"
+              variant="secondary"
+              size="sm"
+              class="card-action-btn"
+              data-test="action-jump"
+              @click="onJump"
+            >
+              前往来源内容
+            </PButton>
+            <PButton
+              v-else
+              variant="secondary"
+              size="sm"
+              disabled
+              class="card-action-unavailable-btn detail-source"
+            >
+              来源已不可用
+            </PButton>
+          </div>
+
+          <div class="card-actions-right">
+            <button
+              v-if="!notification.read_at"
+              type="button"
+              class="card-btn card-btn--mark-read"
+              data-test="action-mark-read"
+              title="标为已读"
+              @click.stop="onMarkRead"
+            >
+              <Check :size="14" />
+              <span>已读</span>
+            </button>
+
+            <details class="card-more-menu" data-test="action-more" @click.stop>
+              <summary class="card-btn card-btn--icon" aria-label="更多操作">
+                <Ellipsis :size="16" />
+              </summary>
+              <div class="card-menu-dropdown" role="menu">
+                <button
+                  type="button"
+                  class="card-menu-item"
+                  data-test="action-mute-type"
+                  @click="onMuteType"
+                >
+                  不再提醒此类动态
+                </button>
+                <button
+                  type="button"
+                  class="card-menu-item"
+                  data-test="action-mute-source"
+                  @click="onMuteSource"
+                >
+                  不再提醒此内容
+                </button>
+              </div>
+            </details>
+          </div>
         </div>
       </div>
     </div>
@@ -255,6 +286,18 @@ const sourceTypeLabel = computed(() => {
     case 'collaboration': return '协作任务'
     case 'system': return '系统通知'
     default: return '系统通知'
+  }
+})
+
+const kickerText = computed(() => {
+  switch (actionType.value) {
+    case 'like': return '互动 · 点赞'
+    case 'reply': return '互动 · 回复'
+    case 'mention': return '互动 · 提及'
+    case 'forum': return '讨论动态'
+    case 'collaboration': return '协作任务'
+    case 'system': return '动态提醒'
+    default: return '通知提醒'
   }
 })
 
@@ -377,29 +420,94 @@ const onMuteSource = (e?: MouseEvent) => {
 .notification-item-card {
   position: relative;
   display: flex;
+  flex-direction: column;
   gap: 0.75rem;
-  padding: 0.875rem 1rem;
+  padding: 1.15rem 1.25rem;
   background: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card, 4px);
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
 }
 
 .notification-item-card:hover {
   border-color: var(--a-color-border);
+  background: var(--a-color-surface);
 }
 
+/* 突出块卡片：未读状态 */
+.notification-item-card--unread {
+  background: var(--a-color-surface);
+  border-color: var(--a-color-border);
+  border-left: 3px solid var(--a-color-text);
+  box-shadow: var(--a-shadow-sm);
+}
+
+.notification-item-card--unread:hover {
+  border-color: var(--a-color-text);
+}
+
+/* 突出块卡片：选中激活状态 */
 .notification-item-card--active {
-  border-color: var(--a-color-primary);
-  background: var(--a-color-bg);
+  border-color: var(--a-color-text);
+  background: var(--a-color-surface-muted);
+  box-shadow: var(--a-shadow-sm);
 }
 
+/* 突出块卡片顶栏 (Kicker Row) */
+.card-kicker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.card-kicker-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-kicker {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* 主行容器 */
+.card-main-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+/* Compact 兼容 (如顶栏浮窗 Popover) */
 .notification-item-card--compact {
+  flex-direction: row;
   padding: 0.5rem 0.75rem;
   gap: 0.625rem;
   border-radius: var(--a-radius-card, 4px);
+  box-shadow: none;
+}
+
+.notification-item-card--compact .card-main-row {
+  flex: 1;
+  gap: 0.625rem;
+}
+
+.notification-item-card--compact.notification-item-card--unread {
+  border-left-width: 2px;
+  box-shadow: none;
 }
 
 /* Avatar & Badge */

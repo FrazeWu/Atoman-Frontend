@@ -79,4 +79,35 @@ describe("PToast", () => {
     expect(renderedToast()).toBeNull();
     wrapper.unmount();
   });
+
+  it("emits update:modelValue when duration elapses", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(PToast, {
+      props: {
+        message: "受控提示",
+        modelValue: true,
+        duration: 100,
+      },
+    });
+
+    expect(renderedToast()).not.toBeNull();
+    vi.advanceTimersByTime(100);
+    await nextTick();
+    expect(wrapper.emitted("update:modelValue")?.[0]).toEqual([false]);
+    wrapper.unmount();
+  });
+
+  it("renders title when provided", () => {
+    const wrapper = mount(PToast, {
+      props: {
+        title: "提示标题",
+        message: "提示内容",
+        modelValue: true,
+      },
+    });
+
+    expect(renderedToast()?.querySelector(".p-toast-title")?.textContent).toBe("提示标题");
+    expect(renderedToast()?.querySelector(".p-toast-message")?.textContent).toBe("提示内容");
+    wrapper.unmount();
+  });
 });

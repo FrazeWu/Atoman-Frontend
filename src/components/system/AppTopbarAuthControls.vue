@@ -10,13 +10,13 @@
       to="/inbox"
       class="notif-btn"
       data-testid="notification-link"
-      :title="notificationRoom.helper"
-      :aria-label="inboxStore.totalUnread > 0 ? `${notificationRoom.name}，${inboxStore.totalUnread} 条未读` : notificationRoom.name"
+      title="通知中心"
+      :aria-label="notificationUnreadCount > 0 ? `通知中心，${notificationUnreadCount} 条未读` : '通知中心'"
       :aria-expanded="activeDropdown === 'notification'"
       @click="handleNotificationClick"
     >
-      <PIcon name="mail" size="md" class="notif-btn__icon" aria-hidden="true" />
-      <span v-if="inboxStore.totalUnread > 0" class="notif-count">{{ inboxStore.totalUnread }}</span>
+      <PIcon name="bell" size="md" class="notif-btn__icon" aria-hidden="true" />
+      <span v-if="notificationUnreadCount > 0" class="notif-count">{{ notificationUnreadCount }}</span>
     </RouterLink>
     <Transition name="notification-menu">
       <NotificationPopover
@@ -26,6 +26,18 @@
       />
     </Transition>
   </div>
+
+  <RouterLink
+    to="/messages"
+    class="notif-btn dm-btn"
+    data-testid="topbar-dm-link"
+    title="私信"
+    :aria-label="dmUnreadCount > 0 ? `私信，${dmUnreadCount} 条未读` : '私信'"
+    @click="closeDropdown"
+  >
+    <PIcon name="messages" size="md" class="notif-btn__icon" aria-hidden="true" />
+    <span v-if="dmUnreadCount > 0" class="notif-count notif-count--dm" data-testid="dm-unread-badge">{{ dmUnreadCount }}</span>
+  </RouterLink>
 
   <RouterLink
     to="/studio"
@@ -64,6 +76,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useInboxStore } from '@/stores/inbox'
+import { useNotificationStore } from '@/stores/notification'
+import { useDMStore } from '@/stores/dm'
 import { notificationRoom } from '@/config/moduleRooms'
 import { isAdminRole } from '@/utils/roles'
 import { resolveMediaURL } from '@/utils/mediaUrl'
@@ -73,7 +87,21 @@ import NotificationPopover from '@/components/system/NotificationPopover.vue'
 
 const authStore = useAuthStore()
 const inboxStore = useInboxStore()
+const notificationStore = useNotificationStore()
+const dmStore = useDMStore()
 const router = useRouter()
+
+const dmUnreadCount = computed(() => {
+  if (dmStore.dmUnread > 0) return dmStore.dmUnread
+  return notificationStore.unreadCounts.dm || 0
+})
+
+const notificationUnreadCount = computed(() => {
+  const c = notificationStore.unreadCounts
+  const notifTotal = (c.like || 0) + (c.interaction || 0) + (c.mention || 0) + (c.reply || 0) + (c.collaboration || 0) + (c.system || 0)
+  if (notifTotal > 0) return notifTotal
+  return Math.max(0, (inboxStore.totalUnread || 0) - dmUnreadCount.value)
+})
 
 const activeDropdown = ref<string | null>(null)
 let notifHoverTimer: ReturnType<typeof setTimeout> | null = null
@@ -284,6 +312,10 @@ const logout = async () => {
   font-weight: var(--a-font-weight-strong, 600);
   line-height: 1;
   font-variant-numeric: tabular-nums;
+}
+
+.notif-count--dm {
+  background: var(--a-color-primary, #2563eb);
 }
 
 .dropdown-wrap {

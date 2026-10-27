@@ -117,6 +117,9 @@ describe("AppTopbarAuthControls", () => {
 			wrapper.find('[data-testid="notification-link"]').attributes("href"),
 		).toBe("/inbox");
 		expect(
+			wrapper.find('[data-testid="topbar-dm-link"]').attributes("href"),
+		).toBe("/messages");
+		expect(
 			wrapper.find('[data-testid="notification-menu-button"]').exists(),
 		).toBe(false);
 		expect(
@@ -266,5 +269,18 @@ describe("AppTopbarAuthControls", () => {
 
 		await wrapper.find('[data-testid="notification-link"]').trigger("click");
 		expect(wrapper.find(".notif-dropdown-wrap").classes()).not.toContain("is-open");
+	});
+
+	it("renders independent topbar dm entry with direct link and unread count", async () => {
+		const { useDMStore } = await import("../../../src/stores/dm");
+		const dmStore = useDMStore();
+		dmStore.dmUnread = 3;
+
+		const wrapper = await mountTopbar("/posts");
+
+		const dmLink = wrapper.find('[data-testid="topbar-dm-link"]');
+		expect(dmLink.exists()).toBe(true);
+		expect(dmLink.attributes("href")).toBe("/messages");
+		expect(wrapper.find('[data-testid="dm-unread-badge"]').text()).toBe("3");
 	});
 });

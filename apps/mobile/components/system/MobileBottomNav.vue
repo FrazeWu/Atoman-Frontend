@@ -136,18 +136,12 @@ const onTabClick = (tab: NavTabItem) => {
 
 <style scoped>
 .mobile-bottom-nav {
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  position: relative;
   display: block;
   visibility: visible;
   opacity: 1;
   width: 100%;
-  z-index: 1000;
   pointer-events: none;
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
 }
 
 .mobile-bottom-nav[style*="display: none"] {

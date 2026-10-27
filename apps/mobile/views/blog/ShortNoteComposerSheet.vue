@@ -124,7 +124,8 @@ function handleSubmit() {
   border: 1px solid var(--a-color-border-soft, #e4e4e7);
   border-radius: var(--a-radius-card, 4px);
   padding: 12px;
-  font-size: 14px;
+  font-size: 16px;
+  font-size: max(16px, 1rem);
   line-height: 1.6;
   color: var(--a-color-text, #18181b);
   background: var(--a-color-bg, #ffffff);
@@ -210,5 +211,9 @@ function handleSubmit() {
   justify-content: flex-end;
   gap: 8px;
   padding-top: 8px;
+  position: sticky;
+  bottom: 0;
+  background: var(--a-color-bg, #ffffff);
+  z-index: 2;
 }
 </style>

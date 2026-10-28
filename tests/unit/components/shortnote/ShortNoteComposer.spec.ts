@@ -144,3 +144,147 @@ describe('ShortNoteComposer - 视听附件挂载', () => {
     })
   })
 })
+
+describe('ShortNoteComposer - 自动防抖暂存与草稿恢复', () => {
+  let pinia: ReturnType<typeof createPinia>
+  const mountedWrappers: VueWrapper[] = []
+  const DRAFT_KEY = 'atoman:short_note_composer_draft'
+
+  beforeEach(() => {
+    pinia = createPinia()
+    setActivePinia(pinia)
+    localStorage.clear()
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    mountedWrappers.splice(0).forEach((w) => w.unmount())
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+    localStorage.clear()
+  })
+
+  function createWrapper(props: Record<string, unknown> = {}) {
+    const wrapper = mount(ShortNoteComposer, {
+      props: {
+        ...props,
+      },
+      global: {
+        plugins: [pinia],
+      },
+    })
+    mountedWrappers.push(wrapper)
+    return wrapper
+  }
+
+  it('输入内容后防抖 500ms 暂存到 localStorage', async () => {
+    const wrapper = createWrapper()
+    await wrapper.get('textarea').setValue('正在输入短笺草稿…')
+    await nextTick()
+
+    // 尚未达到 500ms，不应写入
+    expect(localStorage.getItem(DRAFT_KEY)).toBeNull()
+
+    // 前进 500ms 触发防抖存储
+    await vi.advanceTimersByTimeAsync(500)
+
+    const stored = localStorage.getItem(DRAFT_KEY)
+    expect(stored).not.toBeNull()
+    const parsed = JSON.parse(stored!)
+    expect(parsed.payload).toEqual({
+      content: '正在输入短笺草稿…',
+      mediaUrls: [],
+    })
+  })
+
+  it('挂载时若存在本地草稿且无初始内容，自动回填内容与图片', async () => {
+    localStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        payload: {
+          content: '恢复的草稿内容',
+          mediaUrls: ['https://example.test/pic1.jpg'],
+        },
+        saved_at: Date.now(),
+      })
+    )
+
+    const wrapper = createWrapper()
+    await nextTick()
+
+    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('恢复的草稿内容')
+    expect(wrapper.findAll('[data-testid="short-note-media"] img').length).toBe(1)
+  })
+
+  it('挂载时若已有 props.initialContent 则不被草稿覆盖', async () => {
+    localStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        payload: {
+          content: '本地遗留草稿',
+          mediaUrls: [],
+        },
+        saved_at: Date.now(),
+      })
+    )
+
+    const wrapper = createWrapper({ initialContent: '页面指定初始内容' })
+    await nextTick()
+
+    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('页面指定初始内容')
+  })
+
+  it('发布成功（表单提交）后自动清理本地草稿', async () => {
+    const wrapper = createWrapper()
+    await wrapper.get('textarea').setValue('准备发布的短笺')
+    await vi.advanceTimersByTimeAsync(500)
+
+    expect(localStorage.getItem(DRAFT_KEY)).not.toBeNull()
+
+    await wrapper.get('form').trigger('submit')
+    await nextTick()
+
+    expect(localStorage.getItem(DRAFT_KEY)).toBeNull()
+  })
+
+  it('内容与图片被清空后防抖从 localStorage 中移除草稿', async () => {
+    const wrapper = createWrapper()
+    await wrapper.get('textarea').setValue('初始草稿')
+    await vi.advanceTimersByTimeAsync(500)
+    expect(localStorage.getItem(DRAFT_KEY)).not.toBeNull()
+
+    await wrapper.get('textarea').setValue('   ')
+    await vi.advanceTimersByTimeAsync(500)
+    expect(localStorage.getItem(DRAFT_KEY)).toBeNull()
+  })
+
+  it('图片列表变化时亦触发防抖暂存', async () => {
+    localStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        payload: {
+          content: '',
+          mediaUrls: ['https://example.test/img1.jpg', 'https://example.test/img2.jpg'],
+        },
+        saved_at: Date.now(),
+      })
+    )
+
+    const wrapper = createWrapper()
+    await nextTick()
+
+    expect(wrapper.findAll('.short-note-composer__preview').length).toBe(2)
+
+    // 点击移除第一张图片
+    const removeBtns = wrapper.findAll('.short-note-composer__remove-btn')
+    await removeBtns[0].trigger('click')
+    await nextTick()
+
+    await vi.advanceTimersByTimeAsync(500)
+
+    const stored = localStorage.getItem(DRAFT_KEY)
+    expect(stored).not.toBeNull()
+    const parsed = JSON.parse(stored!)
+    expect(parsed.payload.mediaUrls).toEqual(['https://example.test/img2.jpg'])
+  })
+})

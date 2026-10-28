@@ -131,6 +131,7 @@ import MediaPickerModal from '@/components/shared/MediaPickerModal.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import { useApi } from '@/composables/useApi'
+import { useAutoSave } from '@/composables/useAutoSave'
 import { useAuthStore } from '@/stores/auth'
 import type { MediaPickerItem, MediaPickerType } from '@/types/mediaPicker'
 import type { ShortNoteMediaAttachment } from '@/types'
@@ -171,6 +172,20 @@ const api = useApi()
 const authStore = useAuthStore()
 const content = ref(props.initialContent)
 const mediaUrls = ref([...props.initialMediaUrls])
+
+interface ShortNoteDraftPayload {
+  content: string
+  mediaUrls: string[]
+}
+
+const { autoSaveState, triggerAutoSave, loadDraft, clearDraft } = useAutoSave<ShortNoteDraftPayload>({
+  getDraftKey: () => 'atoman:short_note_composer_draft',
+  getPayload: () => ({
+    content: content.value,
+    mediaUrls: mediaUrls.value,
+  }),
+  shouldPersist: (payload) => Boolean(payload.content.trim() || payload.mediaUrls.length > 0),
+})
 const attachedMedia = ref<MediaPickerItem | null>(
   props.initialMediaAttachment
     ? {
@@ -238,6 +253,13 @@ watch(
   { deep: true }
 )
 watch(mediaUrls, () => void nextTick(syncSortable), { deep: true, flush: 'post' })
+watch(
+  [content, mediaUrls],
+  () => {
+    triggerAutoSave()
+  },
+  { deep: true }
+)
 
 function syncSortable() {
   if (mediaUrls.value.length < 2 || !mediaElement.value) {
@@ -259,7 +281,18 @@ function syncSortable() {
   })
 }
 
-onMounted(() => void nextTick(syncSortable))
+onMounted(() => {
+  const saved = loadDraft()
+  if (saved?.payload) {
+    if (saved.payload.content && !content.value) {
+      content.value = saved.payload.content
+    }
+    if (Array.isArray(saved.payload.mediaUrls) && saved.payload.mediaUrls.length > 0 && mediaUrls.value.length === 0) {
+      mediaUrls.value = [...saved.payload.mediaUrls]
+    }
+  }
+  void nextTick(syncSortable)
+})
 onBeforeUnmount(() => sortable?.destroy())
 
 function removeImage(index: number) { mediaUrls.value.splice(index, 1) }
@@ -322,7 +355,13 @@ function submit() {
     payload.media_attachment_id = attachedMedia.value.id
   }
   emit('submit', payload)
+  clearDraft()
 }
+
+defineExpose({
+  clearDraft,
+  autoSaveState,
+})
 </script>
 
 <style scoped>

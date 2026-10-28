@@ -76,11 +76,25 @@
       <Check :size="16" aria-hidden="true" />
       确认所选合集（{{ selectedConflictIDs.size }}）
     </PButton>
+    <div v-if="selectedIDs.size > 0" class="studio-content__batch-bar" role="toolbar" aria-label="批量操作">
+      <span class="studio-content__batch-count">已选择 {{ selectedIDs.size }} 项</span>
+      <div class="studio-content__batch-actions">
+        <PButton variant="danger" size="sm" :disabled="mutationBusy" @click="batchDeleteConfirmVisible = true">
+          批量删除
+        </PButton>
+        <PButton variant="ghost" size="sm" @click="clearSelection">
+          取消
+        </PButton>
+      </div>
+    </div>
     <StudioContentTable
       :items="studio.contents[module]"
       :module="module"
       :pagination="studio.contentPagination[module]"
       :can-reorder="canReorder"
+      :selected-ids="[...selectedIDs]"
+      @toggle-select="handleToggleSelect"
+      @toggle-select-all="handleToggleSelectAll"
       @page="changePage"
 	  @reorder="reorderContent"
 	  @status="updateStatus"
@@ -113,6 +127,17 @@
 	  :loading="mutationBusy"
 	  @confirm="confirmDelete"
 	  @cancel="pendingDelete = null"
+	/>
+
+	<PConfirm
+	  :show="batchDeleteConfirmVisible"
+	  title="批量删除内容"
+	  :message="`确定删除选中的 ${selectedIDs.size} 项内容吗？此操作不可恢复。`"
+	  confirm-text="删除"
+	  danger
+	  :loading="mutationBusy"
+	  @confirm="confirmBatchDelete"
+	  @cancel="batchDeleteConfirmVisible = false"
 	/>
   </section>
 </template>
@@ -152,11 +177,32 @@ const ready = ref(false)
 let latestPageRequest = 0
 const mutationBusy = ref(false)
 const pendingDelete = ref<StudioContentItem | null>(null)
+const selectedIDs = ref(new Set<string>())
+const batchDeleteConfirmVisible = ref(false)
 const actionMessage = ref('')
 const actionError = ref('')
 const selectedConflictIDs = ref(new Set<string>())
 const conflictCandidates = ref(new Map<string, string>())
 const canResolveSelected = computed(() => [...selectedConflictIDs.value].every(id => conflictCandidates.value.has(id)))
+
+function handleToggleSelect(id: string) {
+  const next = new Set(selectedIDs.value)
+  next.has(id) ? next.delete(id) : next.add(id)
+  selectedIDs.value = next
+}
+
+function handleToggleSelectAll(selectAll: boolean) {
+  if (selectAll) {
+    const ids = (studio.contents[module.value] ?? []).map(item => item.id)
+    selectedIDs.value = new Set(ids)
+  } else {
+    selectedIDs.value = new Set()
+  }
+}
+
+function clearSelection() {
+  selectedIDs.value = new Set()
+}
 
 function queryString(value: unknown) {
   return typeof value === 'string' ? value : ''
@@ -202,6 +248,7 @@ async function replaceQuery(values: Record<string, string | number>) {
 function clearConflictSelection() {
   selectedConflictIDs.value = new Set()
   conflictCandidates.value = new Map()
+  clearSelection()
 }
 
 async function updateFilter(key: 'status' | 'visibility' | 'collection_id', value: string) {
@@ -308,6 +355,21 @@ async function confirmDelete() {
   pendingDelete.value = null
 }
 
+async function confirmBatchDelete() {
+  const idsToDelete = [...selectedIDs.value]
+  if (idsToDelete.length === 0) return
+  await runMutation(async () => {
+    for (const id of idsToDelete) {
+      await studio.deleteContent(module.value, id)
+    }
+  }, `已删除 ${idsToDelete.length} 项内容`)
+  if (!actionError.value) {
+    toast.success(`已删除 ${idsToDelete.length} 项内容`)
+  }
+  selectedIDs.value = new Set()
+  batchDeleteConfirmVisible.value = false
+}
+
 async function openReupload(item: StudioContentItem) {
   await router.push({ path: `/studio/${module.value}/${item.id}/edit`, query: { replace: module.value === 'podcast' ? 'audio' : 'video' } })
 }
@@ -366,6 +428,7 @@ watch(
 )
 
 watch(() => studio.currentChannel?.id, (channelID, previousChannelID) => {
+  clearSelection()
   if (ready.value && channelID && channelID !== previousChannelID) void loadPage(true)
 })
 </script>
@@ -390,6 +453,27 @@ watch(() => studio.currentChannel?.id, (channelID, previousChannelID) => {
 .studio-content__filter-select :deep(.p-select-trigger) { min-height: 44px; }
 .studio-content__conflict-action { justify-self: start; }
 .studio-content__conflict-action :deep(svg) { flex: 0 0 auto; }
+.studio-content__batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  box-shadow: none !important;
+  gap: 0.75rem;
+}
+.studio-content__batch-count {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--a-color-text);
+}
+.studio-content__batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
 .studio-content__empty-action { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2.75rem; padding: 0 0.875rem; border: 1px solid var(--a-color-primary); border-radius: var(--a-radius-control); background: var(--a-color-primary); color: var(--a-color-primary-contrast); text-decoration: none; }
 .studio-content__empty-action:hover { background: var(--a-color-primary-hover); }
 .studio-content__message { color: var(--a-color-muted); padding: 2rem 0; }

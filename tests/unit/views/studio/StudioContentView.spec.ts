@@ -7,8 +7,13 @@ import { describe, expect, it, vi } from "vitest";
 import StudioContentView from "../../../../src/views/studio/StudioContentView.vue";
 // @ts-expect-error Vue SFC modules are resolved by the Vitest Vite plugin.
 import StudioModuleLayout from "../../../../src/views/studio/StudioModuleLayout.vue";
+// @ts-expect-error Vue SFC modules are resolved by the Vitest Vite plugin.
+import StudioContentTable from "../../../../src/components/studio/StudioContentTable.vue";
+// @ts-expect-error Vue SFC modules are resolved by the Vitest Vite plugin.
+import PConfirm from "../../../../src/components/ui/PConfirm.vue";
 import { useStudioStore } from "../../../../src/stores/studio";
 import { useSiteAccessStore } from "../../../../src/stores/siteAccess";
+import { useToast } from "../../../../src/composables/useToast";
 
 async function selectOption(
 	wrapper: ReturnType<typeof mount>,
@@ -444,5 +449,216 @@ describe("StudioContentView", () => {
 		});
 		await flushPromises();
 		expect(wrapper.find('[data-testid="create-content"]').exists()).toBe(false);
+	});
+
+	describe("batch operations", () => {
+		async function setupBatchTest() {
+			const router = createRouter({ history: createMemoryHistory(), routes });
+			await router.push("/studio/blog/content");
+			await router.isReady();
+			const pinia = createTestingPinia({ createSpy: vi.fn, stubActions: true });
+			const store = useStudioStore(pinia);
+			useSiteAccessStore(pinia).isFeatureEnabled = vi.fn().mockReturnValue(true);
+			store.loaded = true;
+			store.currentChannel = {
+				id: "channel-1",
+				name: "主频道",
+				slug: "main",
+				description: "",
+				cover_url: "",
+			};
+			store.contents.blog = [
+				{
+					id: "post-1",
+					module: "blog",
+					channel_id: "channel-1",
+					title: "文章 1",
+					summary: "",
+					cover_url: "",
+					status: "published",
+					visibility: "public",
+					collections: [],
+					view_count: 0,
+					metrics: {},
+					created_at: "2026-07-18T00:00:00Z",
+					updated_at: "2026-07-18T00:00:00Z",
+				},
+				{
+					id: "post-2",
+					module: "blog",
+					channel_id: "channel-1",
+					title: "文章 2",
+					summary: "",
+					cover_url: "",
+					status: "draft",
+					visibility: "public",
+					collections: [],
+					view_count: 0,
+					metrics: {},
+					created_at: "2026-07-18T00:00:00Z",
+					updated_at: "2026-07-18T00:00:00Z",
+				},
+			];
+			const deleteContent = vi.fn().mockResolvedValue(undefined);
+			(store as any).deleteContent = deleteContent;
+
+			const wrapper = mount(StudioModuleLayout, {
+				global: { plugins: [pinia, router] },
+			});
+			await flushPromises();
+			return { wrapper, router, store, deleteContent };
+		}
+
+		it("displays the batch toolbar with accurate count when items are selected via toggle-select or toggle-select-all", async () => {
+			const { wrapper } = await setupBatchTest();
+			expect(
+				wrapper.find('[role="toolbar"][aria-label="批量操作"]').exists(),
+			).toBe(false);
+
+			const table = wrapper.findComponent(StudioContentTable);
+			expect(table.exists()).toBe(true);
+
+			await table.vm.$emit("toggleSelect", "post-1");
+			await flushPromises();
+
+			expect(
+				wrapper.find('[role="toolbar"][aria-label="批量操作"]').exists(),
+			).toBe(true);
+			expect(wrapper.find(".studio-content__batch-count").text()).toContain(
+				"已选择 1 项",
+			);
+
+			await table.vm.$emit("toggleSelect", "post-2");
+			await flushPromises();
+			expect(wrapper.find(".studio-content__batch-count").text()).toContain(
+				"已选择 2 项",
+			);
+
+			await table.vm.$emit("toggleSelectAll", false);
+			await flushPromises();
+			expect(
+				wrapper.find('[role="toolbar"][aria-label="批量操作"]').exists(),
+			).toBe(false);
+
+			await table.vm.$emit("toggleSelectAll", true);
+			await flushPromises();
+			expect(
+				wrapper.find('[role="toolbar"][aria-label="批量操作"]').exists(),
+			).toBe(true);
+			expect(wrapper.find(".studio-content__batch-count").text()).toContain(
+				"已选择 2 项",
+			);
+		});
+
+		it("clears selection and hides toolbar when clicking 取消", async () => {
+			const { wrapper } = await setupBatchTest();
+			const table = wrapper.findComponent(StudioContentTable);
+
+			await table.vm.$emit("toggleSelect", "post-1");
+			await flushPromises();
+			expect(
+				wrapper.find('[role="toolbar"][aria-label="批量操作"]').exists(),
+			).toBe(true);
+
+			const cancelBtn = wrapper
+				.findAll(".studio-content__batch-actions button")
+				.find((btn) => btn.text().includes("取消"));
+			expect(cancelBtn?.exists()).toBe(true);
+			await cancelBtn!.trigger("click");
+			await flushPromises();
+
+			expect(
+				wrapper.find('[role="toolbar"][aria-label="批量操作"]').exists(),
+			).toBe(false);
+			expect(table.props("selectedIds")).toEqual([]);
+		});
+
+		it("opens PConfirm with message containing count when clicking 批量删除", async () => {
+			const { wrapper } = await setupBatchTest();
+			const table = wrapper.findComponent(StudioContentTable);
+
+			await table.vm.$emit("toggleSelect", "post-1");
+			await table.vm.$emit("toggleSelect", "post-2");
+			await flushPromises();
+
+			const batchDeleteBtn = wrapper
+				.findAll(".studio-content__batch-actions button")
+				.find((btn) => btn.text().includes("批量删除"));
+			expect(batchDeleteBtn?.exists()).toBe(true);
+			await batchDeleteBtn!.trigger("click");
+			await flushPromises();
+
+			const batchConfirm = wrapper
+				.findAllComponents(PConfirm)
+				.find((c) => c.props("title") === "批量删除内容");
+			expect(batchConfirm).toBeDefined();
+			expect(batchConfirm!.props("show")).toBe(true);
+			expect(batchConfirm!.props("message")).toBe(
+				"确定删除选中的 2 项内容吗？此操作不可恢复。",
+			);
+
+			await batchConfirm!.vm.$emit("cancel");
+			await flushPromises();
+			expect(batchConfirm!.props("show")).toBe(false);
+		});
+
+		it("calls studio.deleteContent for each selected item, resets selectedIDs, and displays Toast", async () => {
+			const { wrapper, deleteContent } = await setupBatchTest();
+			const toast = useToast();
+			toast.clear();
+
+			const table = wrapper.findComponent(StudioContentTable);
+			await table.vm.$emit("toggleSelect", "post-1");
+			await table.vm.$emit("toggleSelect", "post-2");
+			await flushPromises();
+
+			const batchDeleteBtn = wrapper
+				.findAll(".studio-content__batch-actions button")
+				.find((btn) => btn.text().includes("批量删除"));
+			await batchDeleteBtn!.trigger("click");
+			await flushPromises();
+
+			const batchConfirm = wrapper
+				.findAllComponents(PConfirm)
+				.find((c) => c.props("title") === "批量删除内容");
+			expect(batchConfirm).toBeDefined();
+
+			await batchConfirm!.vm.$emit("confirm");
+			await flushPromises();
+
+			expect(deleteContent).toHaveBeenCalledWith("blog", "post-1");
+			expect(deleteContent).toHaveBeenCalledWith("blog", "post-2");
+			expect(deleteContent).toHaveBeenCalledTimes(2);
+
+			expect(
+				toast.toasts.value.some(
+					(t) => t.message === "已删除 2 项内容" && t.type === "success",
+				),
+			).toBe(true);
+			expect(
+				wrapper.find('[role="toolbar"][aria-label="批量操作"]').exists(),
+			).toBe(false);
+			expect(table.props("selectedIds")).toEqual([]);
+			expect(batchConfirm!.props("show")).toBe(false);
+		});
+
+		it("resets selectedIDs when filters or search query change", async () => {
+			const { wrapper } = await setupBatchTest();
+			const table = wrapper.findComponent(StudioContentTable);
+
+			await table.vm.$emit("toggleSelect", "post-1");
+			await flushPromises();
+			expect(
+				wrapper.find('[role="toolbar"][aria-label="批量操作"]').exists(),
+			).toBe(true);
+
+			await selectOption(wrapper, "status-filter", "已发布");
+			await flushPromises();
+
+			expect(
+				wrapper.find('[role="toolbar"][aria-label="批量操作"]').exists(),
+			).toBe(false);
+			expect(table.props("selectedIds")).toEqual([]);
+		});
 	});
 });

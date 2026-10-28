@@ -256,29 +256,29 @@ Run: `git add src/views/books/BooksDiscoverView.vue src/views/books/BookListsVie
 - Modify: `src/components/music/AlbumDrawer.vue`
 - Modify: `src/components/music/PlaylistDrawer.vue`
 
-- [ ] **Step 1: Update `InboxPage.vue` & `MessagesWorkspaceView.vue`**
+- [x] **Step 1: Update `InboxPage.vue` & `MessagesWorkspaceView.vue`**
 
 1. In `InboxPage.vue`: Replace `.inbox-empty-state` with `<PEmpty title="收件箱暂无通知" description="新收到的互动与动态将显示在这里" align="center" />`;
 2. In `MessagesWorkspaceView.vue`: Replace `.dm-empty-placeholder` with `<PEmpty title="未选择会话" description="从左侧列表中选择联系人开始交流" align="center" />`.
 
-- [ ] **Step 2: Update `SearchResultsView.vue`**
+- [x] **Step 2: Update `SearchResultsView.vue`**
 
 Replace `.search-state-message.is-empty` with `<PEmpty title="未找到匹配结果" description="请检查关键词拼写或尝试其他搜索词" align="center" />`.
 
-- [ ] **Step 3: Update `TimelineHomeView.vue`**
+- [x] **Step 3: Update `TimelineHomeView.vue`**
 
 Replace `.tl-panel-empty` and `.tl-stage-empty` raw text blocks with semantic `<PEmpty title="对比池为空" description="从时间线添加事件以开始对比" align="center" />` and `<PEmpty title="还没有动态" description="关注创作者或去发现广场探索精彩内容" align="center" />`.
 
-- [ ] **Step 4: Update `AlbumDrawer.vue` & `PlaylistDrawer.vue`**
+- [x] **Step 4: Update `AlbumDrawer.vue` & `PlaylistDrawer.vue`**
 
 In `AlbumDrawer.vue` and `PlaylistDrawer.vue`: Replace `.track-empty` with `<PEmpty compact title="曲目库为空" description="尚未添加音频曲目" />`.
 
-- [ ] **Step 5: Run unit tests**
+- [x] **Step 5: Run unit tests**
 
 Run: `bun run test:unit tests/unit/views/feed/InboxPage.spec.ts tests/unit/components/music/AlbumDrawer.spec.ts` (and related test suites)
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Run: `git add src/views/feed/InboxPage.vue src/views/messages/MessagesWorkspaceView.vue src/views/search/SearchResultsView.vue src/views/timeline/TimelineHomeView.vue src/components/music/AlbumDrawer.vue src/components/music/PlaylistDrawer.vue && git commit -m "refactor(ui): standardize empty states across inbox, messages, search, timeline and music drawers"`
 
@@ -289,7 +289,7 @@ Run: `git add src/views/feed/InboxPage.vue src/views/messages/MessagesWorkspaceV
 **Files:**
 - Create: `tests/unit/ui/skeleton-empty-contract.spec.ts`
 
-- [ ] **Step 1: Write static contract test**
+- [x] **Step 1: Write static contract test**
 
 ```ts
 // tests/unit/ui/skeleton-empty-contract.spec.ts
@@ -332,12 +332,12 @@ describe('skeleton-empty-contract', () => {
 })
 ```
 
-- [ ] **Step 2: Run contract test**
+- [x] **Step 2: Run contract test**
 
 Run: `bun run test:unit tests/unit/ui/skeleton-empty-contract.spec.ts`
 Expected: PASS (all contract rules pass).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 Run: `git add tests/unit/ui/skeleton-empty-contract.spec.ts && git commit -m "test(contract): add skeleton and empty state contract tests"`
 
@@ -349,25 +349,25 @@ Run: `git add tests/unit/ui/skeleton-empty-contract.spec.ts && git commit -m "te
 - Documentation: `docs/superpowers/plans/2026-10-28-skeleton-empty-state-standardization.md`
 - Kanban: `<appDataDir>/brain/72e9f847-045b-4790-a46f-1fe17ce2f1c1/frontend-refactor-status.md`
 
-- [ ] **Step 1: Run TypeScript strict check**
+- [x] **Step 1: Run TypeScript strict check**
 
 Run: `cd Atoman-Frontend && bun run type-check`
 Expected: 0 errors.
 
-- [ ] **Step 2: Run full unit test suite**
+- [x] **Step 2: Run full unit test suite**
 
 Run: `cd Atoman-Frontend && bun run test:unit`
 Expected: 100% pass across all 554+ test suites.
 
-- [ ] **Step 3: Run desktop and mobile production builds**
+- [x] **Step 3: Run desktop and mobile production builds**
 
 Run: `cd Atoman-Frontend && bun run build && bun run build:mobile`
 Expected: Both builds succeed with 0 errors.
 
-- [ ] **Step 4: Update plan and kanban status**
+- [x] **Step 4: Update plan and kanban status**
 
 Mark all tasks as completed in plan and update status board.
 
-- [ ] **Step 5: Final commit & push**
+- [x] **Step 5: Final commit & push**
 
 Run: `git commit -am "chore: complete skeleton and empty state standardization" && git push origin main`

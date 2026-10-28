@@ -22,7 +22,7 @@ const busy = ref(false)
 const actionError = ref('')
 let requestId = 0
 
-const filtered = computed(() => filter.value === 'all' ? entries.value : entries.value.filter(item => item.entity_type === filter.value))
+const filtered = computed(() => entries.value)
 const hasPrevious = computed(() => page.value > 1)
 const hasNext = computed(() => page.value * pageSize < total.value)
 
@@ -32,7 +32,7 @@ async function load() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const result = await listArchivedMusicEntries(page.value, pageSize)
+    const result = await listArchivedMusicEntries(page.value, pageSize, filter.value)
     if (current !== requestId) return
     entries.value = result.data
     total.value = result.meta.total
@@ -65,7 +65,7 @@ async function restore(reason: string) {
   }
 }
 
-watch(allowed, () => { page.value = 1; void load() })
+watch([allowed, filter], () => { page.value = 1; void load() })
 onMounted(() => { void load() })
 </script>
 
@@ -76,7 +76,7 @@ onMounted(() => { void load() })
     <template v-else>
       <p class="music-archived-admin__hint">已归档条目不会出现在公开搜索、推荐或歌单中。归档保留媒体文件及修订记录。</p>
       <div class="music-archived-admin__toolbar">
-        <label for="music-archive-filter">当前页筛选</label>
+        <label for="music-archive-filter">类型筛选</label>
         <select id="music-archive-filter" v-model="filter" data-testid="music-archive-filter">
           <option value="all">全部</option>
           <option value="album">专辑</option>

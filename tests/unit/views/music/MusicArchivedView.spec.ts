@@ -30,6 +30,15 @@ describe('music archived admin view', () => {
     expect(mocks.list).not.toHaveBeenCalled()
     wrapper.unmount()
   })
+  it('requests type-filtered pagination from the server, not only current-page items', async () => {
+    const wrapper = mount(MusicArchivedView)
+    await flushPromises()
+    const select = wrapper.get('[data-testid="music-archive-filter"]')
+    await select.setValue('song')
+    await flushPromises()
+    expect(mocks.list).toHaveBeenLastCalledWith(1, 20, 'song')
+    wrapper.unmount()
+  })
   it('loads the admin list and restores with an audit reason', async () => {
     const wrapper = mount(MusicArchivedView)
     await flushPromises()

@@ -1161,9 +1161,9 @@ export type MusicArchivedEntry = {
   reason: string;
 };
 
-export async function listArchivedMusicEntries(page = 1, pageSize = 20): Promise<MusicListResponse<MusicArchivedEntry>> {
+export async function listArchivedMusicEntries(page = 1, pageSize = 20, entityType: 'all' | 'album' | 'song' = 'all'): Promise<MusicListResponse<MusicArchivedEntry>> {
   const response = await apiGetEnvelope<MusicArchivedEntry[], PaginationMeta>(
-    `${musicV1Endpoints.musicArchivedEntries()}${queryString({ page, page_size: pageSize })}`,
+    `${musicV1Endpoints.musicArchivedEntries()}${queryString({ page, page_size: pageSize, entity_type: entityType })}`,
   );
   return listResponseWithPaginationFallback(response, { page, page_size: pageSize });
 }

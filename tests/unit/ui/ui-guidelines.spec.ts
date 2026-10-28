@@ -57,7 +57,7 @@ describe("UI 准则", () => {
 	});
 
 	it("空状态和管理界面不暴露英文内部文案", () => {
-		expect(read("src/components/ui/PEmpty.vue")).toContain("kicker: '暂无内容'");
+		expect(read("src/components/ui/PEmpty.vue")).toContain("kicker: ''");
 		expect(read("src/components/music/MusicSidebarPlaylists.vue")).not.toContain(
 			"PLAYLISTS",
 		);

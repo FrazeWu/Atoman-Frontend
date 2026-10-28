@@ -37,7 +37,7 @@ const props = withDefaults(defineProps<{
   text: '',
   sub: '',
   message: '',
-  kicker: '暂无内容',
+  kicker: '',
   align: 'start',
   compact: false,
 })
@@ -45,7 +45,7 @@ const props = withDefaults(defineProps<{
 const computedTitle = computed(() => props.title || props.text || props.message)
 const computedDescription = computed(() => props.description || props.sub || (props.title ? props.message : ''))
 const computedKicker = computed(() => {
-  if (!props.kicker || props.kicker === '暂无内容') return ''
+  if (!props.kicker) return ''
   return (computedTitle.value || computedDescription.value) ? props.kicker : ''
 })
 </script>

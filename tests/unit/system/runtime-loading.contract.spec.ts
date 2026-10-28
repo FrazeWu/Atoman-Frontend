@@ -77,10 +77,11 @@ describe("runtime loading boundaries", () => {
 		);
 	});
 
-	it("defers non-critical shell work and portal content until after the initial paint", () => {
+	it("defers non-critical shell work but loads portal content without an artificial delay", () => {
 		expect(readSource("src/App.vue")).toContain("scheduleIdleTask");
 		const portalSource = readSource("src/views/portal/PortalView.vue");
-		expect(portalSource).toContain("scheduleIdleTask(loadHotContent, 5000, 2000)");
+		expect(portalSource).not.toContain("scheduleIdleTask(loadHotContent, 5000, 2000)");
+		expect(portalSource).toContain("void loadHotContent()");
 		expect(portalSource).not.toContain("onMounted(loadHotContent)");
 		const topbarSource = readSource("src/components/system/AppTopbar.vue");
 		expect(topbarSource).toContain('v-if="!isAuthRoute" class="topbar-search-slot"');

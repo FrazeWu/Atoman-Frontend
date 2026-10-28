@@ -38,7 +38,7 @@
 - `PEmpty` Props:
   - `kicker?: string` (default: `""`, eliminate implicit `'暂无内容'`)
 
-- [ ] **Step 1: Write failing test for `PSkeletonCard`**
+- [x] **Step 1: Write failing test for `PSkeletonCard`**
 
 ```ts
 // tests/unit/components/PSkeletonCard.spec.ts
@@ -70,12 +70,12 @@ describe('PSkeletonCard', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun run test:unit tests/unit/components/PSkeletonCard.spec.ts`
 Expected: FAIL with component not found.
 
-- [ ] **Step 3: Implement `PSkeletonCard.vue` and update `PEmpty.vue`**
+- [x] **Step 3: Implement `PSkeletonCard.vue` and update `PEmpty.vue`**
 
 ```vue
 <!-- src/components/ui/PSkeletonCard.vue -->
@@ -186,12 +186,12 @@ const computedKicker = computed(() => {
 })
 ```
 
-- [ ] **Step 4: Update `tests/unit/components/PEmpty.spec.ts` and run tests**
+- [x] **Step 4: Update `tests/unit/components/PEmpty.spec.ts` and run tests**
 
 Run: `bun run test:unit tests/unit/components/PSkeletonCard.spec.ts tests/unit/components/PEmpty.spec.ts`
 Expected: PASS (all tests pass).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run: `git add src/components/ui/PSkeletonCard.vue tests/unit/components/PSkeletonCard.spec.ts src/components/ui/PEmpty.vue tests/unit/components/PEmpty.spec.ts && git commit -m "feat(ui): add PSkeletonCard component and clean PEmpty implicit kicker default"`
 
@@ -205,13 +205,13 @@ Run: `git add src/components/ui/PSkeletonCard.vue tests/unit/components/PSkeleto
 - Modify: `src/views/books/BookNotesView.vue`
 - Modify: `tests/unit/views/books/BooksDiscoverView.spec.ts` (if exists) or create
 
-- [ ] **Step 1: Inspect and update `BooksDiscoverView.vue`**
+- [x] **Step 1: Inspect and update `BooksDiscoverView.vue`**
 
 1. Replace loading indicators for rankings and catalog with grid of `<PSkeletonCard aspect="3/4" />`;
 2. Replace `<p class="book-catalog__empty-hint">暂无满足门槛的图书。</p>` with `<PEmpty title="未找到相关书籍" description="尝试更换分类或调整筛选条件" />`;
 3. Replace `<p class="book-catalog__empty-hint">没有找到作者，试试其他姓名。</p>` with `<PEmpty title="未找到作者" description="试试输入其他姓名或关键词" />`.
 
-- [ ] **Step 2: Inspect and update `BookListsView.vue`**
+- [x] **Step 2: Inspect and update `BookListsView.vue`**
 
 Replace `<p v-else-if="!cards.length" class="booklists__empty">...` with `<PEmpty>`:
 ```vue
@@ -223,7 +223,7 @@ Replace `<p v-else-if="!cards.length" class="booklists__empty">...` with `<PEmpt
 />
 ```
 
-- [ ] **Step 3: Inspect and update `BookNotesView.vue`**
+- [x] **Step 3: Inspect and update `BookNotesView.vue`**
 
 Replace `<p v-else-if="!isLoading && notes.length === 0" class="books-notes-empty">` with `<PEmpty>`:
 ```vue
@@ -235,12 +235,12 @@ Replace `<p v-else-if="!isLoading && notes.length === 0" class="books-notes-empt
 />
 ```
 
-- [ ] **Step 4: Run unit tests**
+- [x] **Step 4: Run unit tests**
 
 Run: `bun run test:unit tests/unit/views/books/`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run: `git add src/views/books/BooksDiscoverView.vue src/views/books/BookListsView.vue src/views/books/BookNotesView.vue && git commit -m "refactor(books): standardize loading skeletons and empty states"`
 

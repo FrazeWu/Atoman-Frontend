@@ -21,7 +21,12 @@
     <template v-else>
       <div v-if="error" role="alert"><p>{{ error }}</p><PButton variant="secondary" @click="load">重试</PButton></div>
       <p v-else-if="loading" role="status">正在加载书单…</p>
-      <p v-else-if="!cards.length" class="booklists__empty">{{ activeTab === 'mine' ? '还没有书单，创建一份开始整理。' : activeTab === 'saved' ? '还没有收藏书单，去公开书单中看看。' : '没有找到公开书单，试试其他关键词或创建一份。' }}</p>
+      <PEmpty
+        v-else-if="!cards.length"
+        :title="activeTab === 'mine' ? '还没有书单' : activeTab === 'saved' ? '没有收藏的书单' : '没有找到公开书单'"
+        :description="activeTab === 'mine' ? '创建一份书单开始整理藏书。' : activeTab === 'saved' ? '浏览公开书单收藏感兴趣的专题。' : '试试其他关键词或创建一份。'"
+        align="center"
+      />
       <ul v-else class="booklists__list">
         <li v-for="card in cards" :key="card.id" class="booklists__row">
           <div class="booklists__row-main">
@@ -51,6 +56,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PUnifiedSearchBar from '@/components/search/PUnifiedSearchBar.vue'
 import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import { deleteBookListBookmark, listBookListBookmarks, listMyBookLists, searchBookLists, type BookListCard } from '@/api/bookLists'
 import './bookLists.css'
 

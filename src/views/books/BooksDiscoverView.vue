@@ -57,14 +57,16 @@
     </div>
 
     <!-- 加载中状态 -->
-    <p v-else-if="loading" role="status" class="book-catalog__loading-status">正在加载图书…</p>
+    <div v-else-if="loading" class="book-catalog__grid" role="status" aria-label="正在加载图书">
+      <PSkeletonCard v-for="n in 12" :key="n" aspect="3/4" />
+    </div>
 
     <!-- 主体内容 -->
     <template v-else>
       <!-- 高分榜单视图 -->
       <template v-if="ranked">
         <p class="book-discover__meta-note">按加权评分与读者研读热度综合排序。</p>
-        <p v-if="!rankings.length" class="book-catalog__empty-hint">暂无满足门槛的图书。</p>
+        <PEmpty v-if="!rankings.length" title="未找到相关书籍" description="尝试更换分类或调整筛选条件" />
         <ul v-else class="book-catalog__list">
           <li v-for="item in rankings" :key="item.work_id" class="book-catalog__row">
             <RouterLink :to="`/books/work/${item.work_id}`">{{ item.title }}</RouterLink>
@@ -76,7 +78,7 @@
       <!-- 作者检索视图 -->
       <template v-else-if="route.query.type === 'people'">
         <p class="book-discover__meta-note">{{ total }} 位作者</p>
-        <p v-if="!people.length" class="book-catalog__empty-hint">没有找到作者，试试其他姓名。</p>
+        <PEmpty v-if="!people.length" title="未找到作者" description="试试输入其他姓名或关键词" />
         <ul v-else class="book-catalog__list">
           <li v-for="person in people" :key="person.id" class="book-catalog__row">
             <strong>{{ person.name }}</strong>
@@ -129,6 +131,7 @@ import PUnifiedSearchBar from '@/components/search/PUnifiedSearchBar.vue'
 import type { SearchScopeOption } from '@/components/ui/PSearchInput.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PSkeletonCard from '@/components/ui/PSkeletonCard.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
 import './bookCatalog.css'
 

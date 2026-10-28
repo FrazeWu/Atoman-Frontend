@@ -90,9 +90,12 @@
       <PSkeleton v-for="index in 4" :key="index" height="8rem" />
     </div>
 
-    <p v-else-if="!isLoading && notes.length === 0" class="books-notes-empty">
-      暂无读书笔记，<RouterLink to="/books">前往书架或阅读器开始划线 →</RouterLink>
-    </p>
+    <PEmpty
+      v-else-if="!isLoading && notes.length === 0"
+      title="尚未记录笔记"
+      description="在阅读过程中选中文本即可添加划线与想法"
+      align="center"
+    />
 
     <div v-else class="books-notes-stream" role="feed" aria-label="读书笔记流">
       <article
@@ -273,6 +276,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import BookQuoteActionModal from '@/components/books/BookQuoteActionModal.vue'
 import { useDraftStagingStore } from '@/stores/draftStaging'

@@ -6,6 +6,7 @@ import * as booksApi from '@/api/books'
 import { useDraftStagingStore } from '@/stores/draftStaging'
 import { useToast } from '@/composables/useToast'
 import BookNotesView from '@/views/books/BookNotesView.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import type { BookAnnotation } from '@/api/books'
 
 const mockNotes: BookAnnotation[] = [
@@ -347,13 +348,10 @@ describe('BookNotesView', () => {
     const wrapper = mountView()
     await flushPromises()
 
-    const empty = wrapper.find('.books-notes-empty')
+    const empty = wrapper.findComponent(PEmpty)
     expect(empty.exists()).toBe(true)
-    expect(empty.text()).toContain('暂无读书笔记，前往书架或阅读器开始划线 →')
-
-    const link = empty.find('a')
-    expect(link.exists()).toBe(true)
-    expect(link.attributes('href')).toBe('/books')
+    expect(empty.text()).toContain('尚未记录笔记')
+    expect(empty.text()).toContain('在阅读过程中选中文本即可添加划线与想法')
 
     wrapper.unmount()
   })

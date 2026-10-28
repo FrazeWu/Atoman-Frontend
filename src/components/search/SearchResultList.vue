@@ -43,28 +43,27 @@ function getModuleLabel(mod: string): string {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
 }
 
 .search-result-item {
-  background-color: #ffffff;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background-color: transparent;
+  border: none;
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: background-color 0.15s ease;
   overflow: hidden;
 }
 
 .search-result-item:hover {
-  border-color: var(--a-color-border, #cbd5e1);
-  background-color: var(--a-color-bg-subtle, #f8fafc);
+  background-color: var(--a-color-surface-muted, #f8fafc);
 }
 
 .search-result-link {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 12px 16px;
+  padding: 10px 12px;
   color: inherit;
   text-decoration: none;
   overflow-wrap: anywhere;
@@ -94,10 +93,10 @@ function getModuleLabel(mod: string): string {
   font-size: 11px;
   font-weight: 500;
   color: var(--a-color-text-secondary, #64748b);
-  background-color: var(--a-color-bg-muted, #f1f5f9);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background-color: var(--a-color-surface-muted, #f1f5f9);
+  border: none;
   border-radius: var(--a-radius-control, 4px);
-  padding: 1px 6px;
+  padding: 2px 7px;
   flex-shrink: 0;
 }
 

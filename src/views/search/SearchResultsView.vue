@@ -354,9 +354,7 @@ const hasResults = computed(
 }
 
 .search-tabs--scopes {
-  margin-bottom: 1rem;
-  border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
-  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .search-tab-scope-btn {
@@ -365,23 +363,23 @@ const hasResults = computed(
   padding: 6px 14px;
   background-color: transparent;
   color: var(--a-color-text-secondary, #64748b);
-  border: 1px solid transparent;
+  border: none;
   border-radius: var(--a-radius-control, 4px);
   cursor: pointer;
   box-shadow: none !important;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .search-tab-scope-btn:hover {
   color: var(--a-color-text-primary, #0f172a);
-  background-color: var(--a-color-bg-subtle, #f8fafc);
+  background-color: var(--a-color-surface-muted, #f8fafc);
 }
 
 .search-tab-scope-btn.is-active,
 .search-tab-scope-btn[aria-pressed='true'] {
   color: var(--a-color-primary, #0ea5e9);
-  background-color: var(--a-color-bg-subtle, #f0f9ff);
-  border-color: var(--a-color-border-soft, #e2e8f0);
+  background-color: var(--a-color-surface-muted, #f0f9ff);
+  font-weight: 600;
 }
 
 .search-tabs--modules {
@@ -392,26 +390,24 @@ const hasResults = computed(
   font-size: 13px;
   font-weight: 500;
   padding: 5px 12px;
-  background-color: var(--a-color-bg, #ffffff);
+  background-color: transparent;
   color: var(--a-color-text-secondary, #64748b);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: none;
   border-radius: var(--a-radius-control, 4px);
   cursor: pointer;
   box-shadow: none !important;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .search-tab-pill:hover {
   color: var(--a-color-text-primary, #0f172a);
-  border-color: var(--a-color-border, #cbd5e1);
-  background-color: var(--a-color-bg-subtle, #f8fafc);
+  background-color: var(--a-color-surface-muted, #f8fafc);
 }
 
 .search-tab-pill.is-active,
 .search-tab-pill[aria-pressed='true'] {
   color: var(--a-color-primary-contrast, #ffffff);
-  background-color: var(--a-color-primary, #0ea5e9);
-  border-color: var(--a-color-primary, #0ea5e9);
+  background-color: var(--a-color-text-primary, #0f172a);
 }
 
 .search-tabs--types {
@@ -422,52 +418,54 @@ const hasResults = computed(
 .search-subtab-pill {
   font-size: 12px;
   font-weight: 500;
-  padding: 3px 10px;
-  background-color: var(--a-color-bg-subtle, #f8fafc);
+  padding: 4px 10px;
+  background-color: transparent;
   color: var(--a-color-text-secondary, #64748b);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: none;
   border-radius: var(--a-radius-control, 4px);
   cursor: pointer;
   box-shadow: none !important;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .search-subtab-pill:hover {
   color: var(--a-color-text-primary, #0f172a);
-  border-color: var(--a-color-border, #cbd5e1);
+  background-color: var(--a-color-surface-muted, #f8fafc);
 }
 
 .search-subtab-pill.is-active,
 .search-subtab-pill[aria-pressed='true'] {
   color: var(--a-color-text-primary, #0f172a);
-  background-color: var(--a-color-bg-muted, #e2e8f0);
-  border-color: var(--a-color-border, #cbd5e1);
+  background-color: var(--a-color-surface-muted, #e2e8f0);
+  font-weight: 600;
 }
 
 /* Filters Details */
 .search-filters {
-  background-color: var(--a-color-bg, #ffffff);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background-color: transparent;
+  border: none;
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;
   margin-bottom: 1.5rem;
-  overflow: hidden;
 }
 
 .search-filters__summary {
-  font-size: 13.5px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
   font-weight: 500;
   color: var(--a-color-text-secondary, #64748b);
-  padding: 10px 14px;
+  padding: 6px 12px;
   cursor: pointer;
   user-select: none;
-  background-color: var(--a-color-bg-subtle, #f8fafc);
-  border-bottom: 1px solid transparent;
-  transition: background-color 0.15s ease;
+  background-color: var(--a-color-surface-muted, #f8fafc);
+  border: none;
+  border-radius: var(--a-radius-control, 4px);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .search-filters[open] .search-filters__summary {
-  border-bottom-color: var(--a-color-border-soft, #e2e8f0);
+  margin-bottom: 8px;
 }
 
 .search-filters__summary:hover {
@@ -480,7 +478,8 @@ const hasResults = computed(
   align-items: flex-end;
   gap: 12px;
   padding: 14px;
-  background-color: var(--a-color-bg, #ffffff);
+  background-color: var(--a-color-surface-muted, #f8fafc);
+  border-radius: var(--a-radius-control, 4px);
 }
 
 .filter-field {
@@ -559,16 +558,16 @@ const hasResults = computed(
   text-align: center;
   font-size: 14px;
   color: var(--a-color-text-secondary, #64748b);
-  background-color: var(--a-color-bg, #ffffff);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-control, 4px);
+  background-color: transparent;
+  border: none;
   box-shadow: none !important;
 }
 
 .search-state-message.is-error {
   color: var(--a-color-danger, #ef4444);
   background-color: color-mix(in srgb, var(--a-color-danger, #ef4444) 6%, var(--a-color-bg, #ffffff));
-  border-color: color-mix(in srgb, var(--a-color-danger, #ef4444) 20%, var(--a-color-border-soft, #e2e8f0));
+  border: 1px solid color-mix(in srgb, var(--a-color-danger, #ef4444) 20%, var(--a-color-border-soft, #e2e8f0));
+  border-radius: var(--a-radius-control, 4px);
 }
 
 .search-notice {
@@ -616,12 +615,11 @@ const hasResults = computed(
 
 /* Grouped Modules */
 .search-module-card {
-  margin-bottom: 2rem;
-  background-color: var(--a-color-bg, #ffffff);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-control, 4px);
+  margin-bottom: 2.25rem;
+  background-color: transparent;
+  border: none;
   box-shadow: none !important;
-  padding: 18px 20px;
+  padding: 0;
 }
 
 .search-module-card__title {
@@ -643,9 +641,8 @@ const hasResults = computed(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 8px;
-  margin-bottom: 8px;
-  border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
+  padding: 4px 0;
+  margin-bottom: 6px;
 }
 
 .search-group__title {

@@ -339,25 +339,25 @@ Run: `git commit -am "feat(studio): implement batch action toolbar and PConfirm 
 - Documentation: `docs/superpowers/plans/2026-10-28-studio-draft-autosave-and-batch-operations.md`
 - Kanban: `<appDataDir>/brain/72e9f847-045b-4790-a46f-1fe17ce2f1c1/frontend-refactor-status.md`
 
-- [ ] **Step 1: Run TypeScript strict check**
+- [x] **Step 1: Run TypeScript strict check**
 
 Run: `cd Atoman-Frontend && bun run type-check`
 Expected: 0 errors.
 
-- [ ] **Step 2: Run affected and full test suites**
+- [x] **Step 2: Run affected and full test suites**
 
 Run: `cd Atoman-Frontend && bun run test:unit`
 Expected: 100% pass across all test suites.
 
-- [ ] **Step 3: Run desktop and mobile production builds**
+- [x] **Step 3: Run desktop and mobile production builds**
 
 Run: `cd Atoman-Frontend && bun run build && bun run build:mobile`
 Expected: Both builds succeed with 0 errors.
 
-- [ ] **Step 4: Update plan and kanban status**
+- [x] **Step 4: Update plan and kanban status**
 
 Mark all tasks as completed in plan and update status board.
 
-- [ ] **Step 5: Final commit & push**
+- [x] **Step 5: Final commit & push**
 
 Run: `git commit -am "chore: complete studio draft autosave and batch operations standardization" && git push origin main`

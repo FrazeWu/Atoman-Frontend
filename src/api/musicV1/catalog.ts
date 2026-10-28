@@ -1152,3 +1152,22 @@ export async function createMusicArtist(
 export async function archiveMusicEntry(entityType: "album" | "song", entityId: string, reason: string): Promise<void> {
   await apiPostJson<void>(musicV1Endpoints.musicEntryArchive(entityType, entityId), { reason });
 }
+
+export type MusicArchivedEntry = {
+  id: string;
+  entity_type: 'album' | 'song';
+  title: string;
+  archived_at: string;
+  reason: string;
+};
+
+export async function listArchivedMusicEntries(page = 1, pageSize = 20): Promise<MusicListResponse<MusicArchivedEntry>> {
+  const response = await apiGetEnvelope<MusicArchivedEntry[], PaginationMeta>(
+    `${musicV1Endpoints.musicArchivedEntries()}${queryString({ page, page_size: pageSize })}`,
+  );
+  return listResponseWithPaginationFallback(response, { page, page_size: pageSize });
+}
+
+export async function restoreArchivedMusicEntry(entityType: 'album' | 'song', entityId: string, reason: string): Promise<void> {
+  await apiPostJson<void>(musicV1Endpoints.musicEntryRestore(entityType, entityId), { reason });
+}

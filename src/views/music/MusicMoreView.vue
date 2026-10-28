@@ -23,6 +23,11 @@
         <span>播放历史</span>
         <ChevronRight :size="18" aria-hidden="true" />
       </RouterLink>
+      <RouterLink v-if="isAdmin" to="/music/archived" class="music-more-view__link" data-testid="music-archived-admin-link">
+        <Archive :size="20" aria-hidden="true" />
+        <span>归档管理</span>
+        <ChevronRight :size="18" aria-hidden="true" />
+      </RouterLink>
       <RouterLink to="/music/imports" class="music-more-view__link">
         <Archive :size="20" aria-hidden="true" />
         <span>导入中心</span>
@@ -40,6 +45,12 @@
 <script setup lang="ts">
 import { Archive, Bookmark, ChevronRight, Disc3, History, ListMusic, Users } from 'lucide-vue-next'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import { computed } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { getMountedPinia } from '@/utils/pinia'
+import { isAdminRole } from '@/utils/roles'
+const authStore = getMountedPinia() ? useAuthStore() : null
+const isAdmin = computed(() => isAdminRole(authStore?.user?.role))
 </script>
 
 <style scoped>

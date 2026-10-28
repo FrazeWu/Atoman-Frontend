@@ -3,6 +3,7 @@
     <!-- Header Title -->
     <header class="mobile-music-discover__header">
       <h1 class="mobile-music-discover__title">发现音乐</h1>
+      <button type="button" class="mobile-music-discover__add-album" data-testid="add-album" @click="startAlbumCreation">添加专辑</button>
     </header>
 
     <!-- Featured Recommendation Card -->
@@ -190,6 +191,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useMusicDrawers } from '@/composables/useMusicDrawers'
+import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import {
   getMusicHome,
   listMusicAlbums,
@@ -219,6 +222,12 @@ export interface MobileArtistItem {
 }
 
 const router = useRouter()
+const { openMusicCreationFlow } = useMusicDrawers()
+const { requireLogin } = useLoginRedirect()
+function startAlbumCreation() {
+  if (!requireLogin()) return
+  openMusicCreationFlow({ startStep: 'albumImport' })
+}
 const player = useAudioPlayerStore()
 
 const playlists = ref<MusicPlaylistSummary[]>([])
@@ -430,6 +439,22 @@ onMounted(() => {
 
 .mobile-music-discover__header {
   padding: 16px 16px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.mobile-music-discover__add-album {
+  border: 0;
+  border-radius: 4px;
+  background: var(--a-color-primary, #111111);
+  color: white;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .mobile-music-discover__title {

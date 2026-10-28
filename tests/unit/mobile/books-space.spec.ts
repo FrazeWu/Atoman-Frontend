@@ -157,6 +157,8 @@ describe('Mobile Books Space Overhaul', () => {
       })
 
       const startReadBtn = wrapper.find('[data-testid="start-reading-btn"]')
+      await flushPromises()
+      expect(startReadBtn.attributes('disabled')).toBeUndefined()
       await startReadBtn.trigger('click')
       await flushPromises()
       expect(pushSpy).toHaveBeenCalledWith('/books/read/w-1/asset-1/rev-1')

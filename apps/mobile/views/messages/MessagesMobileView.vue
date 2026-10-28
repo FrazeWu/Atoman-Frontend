@@ -4,14 +4,14 @@
     <header class="messages-header">
       <div class="messages-header__top">
         <h1 class="messages-header__title">私信</h1>
-        <router-link to="/inbox/contacts" class="messages-header__new-btn" title="发起私信">
+        <router-link v-if="!isGuest" to="/inbox/contacts" class="messages-header__new-btn" title="发起私信">
           <MIcon name="edit" size="xs" />
           <span>新私信</span>
         </router-link>
       </div>
 
       <!-- Search Bar -->
-      <div class="messages-header__search">
+      <div v-if="!isGuest" class="messages-header__search">
         <MInput
           v-model="searchQuery"
           placeholder="搜索联系人或聊天记录..."

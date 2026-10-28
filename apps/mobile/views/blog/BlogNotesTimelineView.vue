@@ -19,10 +19,17 @@
     </header>
 
     <!-- Content Stream -->
+    <p v-if="publishError" class="blog-notes-publish-error" role="alert">{{ publishError }}</p>
     <main class="blog-notes-content">
       <!-- Loading Skeleton -->
       <div v-if="loading" class="blog-notes-loading">
         <div v-for="n in 3" :key="n" class="note-card-skeleton" />
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="loadError" class="blog-notes-empty" role="alert">
+        <p class="blog-notes-empty__title">{{ loadError }}</p>
+        <button type="button" class="blog-notes-empty__retry" @click="loadData">重新加载</button>
       </div>
 
       <!-- Empty State -->
@@ -169,41 +176,11 @@ const api = useApi()
 const authStore = getActivePinia() ? useAuthStore() : null
 
 const showComposer = ref(false)
-const loading = ref(false)
+const loading = ref(props.initialNotes === undefined)
+const loadError = ref('')
+const publishError = ref('')
 
-const fallbackNotes: ShortNoteFeedItem[] = [
-  {
-    id: 'n-1',
-    content: '今天阅读了阿兰·德波顿的《工作颂歌》，对于现代劳动的异化有了新的领悟。在自动化加速的今天，保留纯粹的手艺感知格外珍贵。',
-    author: { name: '思绪记录者', avatar: '' },
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-    likes_count: 12,
-    comments_count: 3,
-    liked: false,
-  },
-  {
-    id: 'n-2',
-    content: '纯白微圆角设计系统的核心在于克制与呼吸感，而不是无节制的大圆角。4px 的轻微钝化能同时兼顾机械感与人文触觉。',
-    author: { name: 'UI琢磨者', avatar: '' },
-    created_at: new Date(Date.now() - 7200000).toISOString(),
-    likes_count: 45,
-    comments_count: 8,
-    liked: true,
-  },
-  {
-    id: 'n-3',
-    content: '雨天的午后很适合把手机调成静音，翻出巴赫的平均律键盘曲集，听着琴声敲下几行散漫的笔记。',
-    author: { name: '墨客', avatar: '' },
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    likes_count: 28,
-    comments_count: 5,
-    liked: false,
-  },
-]
-
-const notes = ref<ShortNoteFeedItem[]>(
-  props.initialNotes ? [...props.initialNotes] : [...fallbackNotes]
-)
+const notes = ref<ShortNoteFeedItem[]>(props.initialNotes ? [...props.initialNotes] : [])
 
 async function toggleLike(note: ShortNoteFeedItem) {
   const prevLiked = note.liked
@@ -247,6 +224,7 @@ async function handlePublishNote(payload: { content: string; image?: string }) {
     image: payload.image,
   }
   notes.value.unshift(optimisticNote)
+  publishError.value = ''
 
   try {
     const res = await apiRequestEnvelope<any>(api.blog.shortNotes, {
@@ -262,7 +240,8 @@ async function handlePublishNote(payload: { content: string; image?: string }) {
       if (saved.created_at) optimisticNote.created_at = saved.created_at
     }
   } catch {
-    // Keep optimistic note
+    notes.value = notes.value.filter((note) => note !== optimisticNote)
+    publishError.value = '短笺发布失败，请重试。'
   }
 }
 
@@ -283,9 +262,10 @@ function formatTime(isoString?: string): string {
 async function loadData() {
   if (props.initialNotes) return
   loading.value = true
+  loadError.value = ''
   try {
     const res = await apiRequestEnvelope<any[], { has_more?: boolean }>(`${api.blog.shortNotes}?page=1&page_size=20`)
-    if (res?.data && res.data.length > 0) {
+    if (Array.isArray(res?.data)) {
       notes.value = res.data.map((item: any) => ({
         id: String(item.id),
         content: item.content || '',
@@ -299,9 +279,11 @@ async function loadData() {
         liked: Boolean(item.liked),
         images: item.images || (item.image_url ? [item.image_url] : []),
       }))
+    } else {
+      throw new Error('Invalid notes response')
     }
   } catch {
-    // Keep fallback
+    loadError.value = '短笺加载失败，请检查网络后重试。'
   } finally {
     loading.value = false
   }
@@ -315,6 +297,14 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.blog-notes-publish-error {
+  margin: 12px 16px 0;
+  padding: 12px 16px;
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
+  color: var(--a-color-text);
+  font-size: 13px;
+}
 .blog-notes-timeline {
   display: flex;
   flex-direction: column;

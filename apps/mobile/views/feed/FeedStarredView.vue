@@ -4,12 +4,12 @@
     <header class="feed-starred-header">
       <div class="feed-starred-header__top">
         <h1 class="feed-starred-header__title">我的收藏</h1>
-        <span class="feed-starred-header__count">{{ filteredArticles.length }} 篇</span>
+        <span v-if="!isGuest" class="feed-starred-header__count">{{ filteredArticles.length }} 篇</span>
       </div>
       <p class="feed-starred-header__subtitle">随时重温的高价值深度文章</p>
 
       <!-- Category Filter Chips -->
-      <div v-if="articles.length > 0" class="feed-starred-chips">
+      <div v-if="!isGuest && articles.length > 0" class="feed-starred-chips">
         <button
           v-for="cat in categories"
           :key="cat"
@@ -25,7 +25,13 @@
 
     <!-- Starred List -->
     <main class="feed-starred-content">
-      <div v-if="filteredArticles.length > 0" class="feed-starred-list">
+      <div v-if="isGuest" class="feed-starred-empty" data-testid="feed-starred-guest-state">
+        <div class="feed-starred-empty__icon"><MIcon name="bookmark" size="lg" /></div>
+        <p class="feed-starred-empty__title">登录查看收藏</p>
+        <p class="feed-starred-empty__desc">登录后可同步稍后阅读的文章。</p>
+        <RouterLink class="feed-starred-empty__action" to="/login?redirect=/feed/starred">立即登录</RouterLink>
+      </div>
+      <div v-else-if="filteredArticles.length > 0" class="feed-starred-list">
         <article
           v-for="article in filteredArticles"
           :key="article.id"
@@ -101,6 +107,7 @@ const props = withDefaults(
 const router = useRouter()
 const api = useApi()
 const authStore = getActivePinia() ? useAuthStore() : null
+const isGuest = computed(() => props.initialArticles === undefined && !authStore?.isAuthenticated)
 const feedStore = getActivePinia() ? useFeedStore() : null
 
 const articles = ref<StarredArticleItem[]>(
@@ -185,6 +192,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.feed-starred-empty__action {
+  display: inline-flex; min-height: 44px; padding: 0 18px; margin-top: 12px;
+  align-items: center; justify-content: center; text-decoration: none;
+  background: var(--a-color-primary); color: #fff; border-radius: var(--a-radius-control);
+}
 .feed-starred-view {
   min-height: 100vh;
   background-color: var(--a-color-bg, #ffffff);

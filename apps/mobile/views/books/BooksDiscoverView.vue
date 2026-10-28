@@ -46,11 +46,11 @@
     <main class="mobile-books-discover__content">
       <!-- Hero Featured Book Card -->
       <section
-        v-if="heroBook"
+        v-if="!loading && !loadError && heroBook"
         class="mobile-books-discover__hero"
         data-testid="books-hero-card"
       >
-        <div class="mobile-books-discover__hero-tag">今日力荐</div>
+        <div class="mobile-books-discover__hero-tag">作品速览</div>
         <div class="mobile-books-discover__hero-body">
           <div class="mobile-books-discover__hero-cover">
             <img
@@ -87,11 +87,11 @@
       </section>
 
       <!-- Section Title for List -->
-      <div v-if="filteredWorks.length > 0" class="mobile-books-discover__section-header">
+      <div v-if="!loading && !loadError && listWorks.length > 0" class="mobile-books-discover__section-header">
         <h3 class="mobile-books-discover__section-title">
-          {{ activeFilter === 'ranked' ? '高分作品榜' : '热门图书' }}
+          {{ activeFilter === 'ranked' ? '高分作品榜' : '其他收录作品' }}
         </h3>
-        <span class="mobile-books-discover__section-count">{{ filteredWorks.length }} 本</span>
+        <span class="mobile-books-discover__section-count">{{ listWorks.length }} 本</span>
       </div>
 
       <!-- Loading Skeleton -->
@@ -106,13 +106,13 @@
       </div>
 
       <!-- Book List -->
-      <div v-else-if="filteredWorks.length > 0" class="mobile-books-discover__list">
-        <article
-          v-for="work in filteredWorks"
+      <div v-else-if="listWorks.length > 0 && !loadError" class="mobile-books-discover__list">
+        <RouterLink
+          v-for="work in listWorks"
           :key="work.id"
           class="mobile-books-discover__item"
           data-testid="book-catalog-item"
-          @click="openWork(work.id)"
+          :to="'/books/work/' + work.id"
         >
           <!-- Cover (48x68) -->
           <div class="mobile-books-discover__cover-wrap">
@@ -145,7 +145,12 @@
           <div class="mobile-books-discover__arrow">
             <MIcon name="chevron-down" size="xs" class="mobile-books-discover__arrow-icon" />
           </div>
-        </article>
+        </RouterLink>
+      </div>
+
+      <div v-else-if="loadError" class="mobile-books-discover__empty" role="alert">
+        <p class="mobile-books-discover__empty-title">{{ loadError }}</p>
+        <button type="button" class="mobile-books-discover__hero-btn" @click="loadCatalog">重新加载</button>
       </div>
 
       <!-- Empty State -->
@@ -157,11 +162,9 @@
           {{ searchQuery ? '未找到相关图书' : '暂无收录图书' }}
         </p>
         <p class="mobile-books-discover__empty-desc">
-          {{ searchQuery ? '换个关键词搜搜看，或前往书架阅读本地文件。' : '可以在书架中导入本地电子书，或稍后再来看看。' }}
+          {{ searchQuery ? '试试其他关键词，或清除筛选条件。' : '目前没有公开收录的作品，可稍后再来查看。' }}
         </p>
-        <router-link to="/books/shelf" class="mobile-books-discover__empty-action">
-          <MButton size="sm" variant="secondary">前往我的书架</MButton>
-        </router-link>
+        <router-link to="/modules" class="mobile-books-discover__empty-action">浏览其他模块</router-link>
       </div>
     </main>
   </div>
@@ -198,49 +201,19 @@ const props = withDefaults(
   }
 )
 
-const defaultCuratedWorks: DiscoverWorkItem[] = [
-  {
-    id: 'w-1',
-    title: '沉思录',
-    authors: [{ name: '马可·奥勒留' }],
-    rating_score: 9.3,
-    publisher: '中央编译出版社',
-  },
-  {
-    id: 'w-2',
-    title: '代码整洁之道',
-    authors: [{ name: 'Robert C. Martin' }],
-    rating_score: 9.1,
-    publisher: '人民邮电出版社',
-  },
-  {
-    id: 'w-3',
-    title: '瓦尔登湖',
-    authors: [{ name: '亨利·戴维·梭罗' }],
-    rating_score: 8.9,
-    publisher: '译林出版社',
-  },
-  {
-    id: 'w-4',
-    title: '工作颂歌',
-    authors: [{ name: '阿兰·德波顿' }],
-    rating_score: 8.7,
-    publisher: '上海译文出版社',
-  },
-]
-
 const router = useRouter()
 const searchQuery = ref('')
 const activeFilter = ref<'all' | 'ranked'>('all')
-const loading = ref(false)
-const worksList = ref<DiscoverWorkItem[]>(props.initialWorks ? [...props.initialWorks] : [...defaultCuratedWorks])
+const loading = ref(props.initialWorks === undefined)
+const loadError = ref('')
+const worksList = ref<DiscoverWorkItem[]>(props.initialWorks ? [...props.initialWorks] : [])
 const rankedWorks = ref<RankedItem[]>([])
 
 const filteredWorks = computed<DiscoverWorkItem[]>(() => {
   const query = searchQuery.value.trim().toLowerCase()
   let list = props.initialWorks ? props.initialWorks : worksList.value
 
-  if (!props.initialWorks && activeFilter.value === 'ranked' && rankedWorks.value.length > 0) {
+  if (!props.initialWorks && activeFilter.value === 'ranked') {
     list = rankedWorks.value.map((r) => ({
       id: r.work_id,
       title: r.title,
@@ -258,11 +231,8 @@ const filteredWorks = computed<DiscoverWorkItem[]>(() => {
   })
 })
 
-const heroBook = computed<DiscoverWorkItem | null>(() => {
-  if (filteredWorks.value.length > 0) return filteredWorks.value[0]
-  if (worksList.value.length > 0) return worksList.value[0]
-  return null
-})
+const heroBook = computed<DiscoverWorkItem | null>(() => filteredWorks.value[0] || null)
+const listWorks = computed(() => filteredWorks.value.filter((work) => work.id !== heroBook.value?.id))
 
 function getCoverUrl(work: DiscoverWorkItem): string | undefined {
   return work.cover_url
@@ -301,9 +271,10 @@ function openWork(id: string) {
 async function loadCatalog() {
   if (props.initialWorks) return
   loading.value = true
+  loadError.value = ''
   try {
     const res = await searchCatalogWorks(searchQuery.value.trim(), 30, 0)
-    if (res?.items && res.items.length > 0) {
+    if (Array.isArray(res?.items)) {
       worksList.value = res.items.map((item: BookPublicWork) => ({
         id: item.id,
         title: item.title,
@@ -312,17 +283,12 @@ async function loadCatalog() {
         cover_url: item.editions?.[0]?.cover_url,
         publisher: item.editions?.[0]?.publisher,
       }))
-    } else if (!searchQuery.value.trim()) {
-      worksList.value = [...defaultCuratedWorks]
     } else {
-      worksList.value = []
+      throw new Error('Invalid catalog response')
     }
   } catch {
-    if (!searchQuery.value.trim()) {
-      worksList.value = [...defaultCuratedWorks]
-    } else {
-      worksList.value = []
-    }
+    worksList.value = []
+    loadError.value = '图书目录加载失败，请检查网络后重试。'
   } finally {
     loading.value = false
   }
@@ -528,8 +494,9 @@ onMounted(() => {
 
 .mobile-books-discover__hero-btn {
   align-self: flex-start;
+  min-height: 44px;
   margin-top: auto;
-  padding: 5px 12px;
+  padding: 8px 12px;
   font-size: 12px;
   font-weight: 500;
   color: var(--a-color-primary-contrast, #ffffff);
@@ -614,6 +581,8 @@ onMounted(() => {
 }
 
 .mobile-books-discover__item {
+  color: inherit;
+  text-decoration: none;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -625,6 +594,10 @@ onMounted(() => {
   transition: background-color 0.15s ease;
 }
 
+.mobile-books-discover__item:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
+}
 .mobile-books-discover__item:active {
   background-color: var(--a-color-surface-hover, #fafafa);
 }

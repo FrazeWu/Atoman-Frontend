@@ -16,7 +16,12 @@
 
     <!-- Track List -->
     <section class="mobile-music-library__section" aria-label="歌曲列表">
-      <div v-if="filteredTracks.length > 0" class="mobile-music-library__tracks">
+      <div v-if="loading" class="mobile-music-library__empty" role="status">正在加载歌曲…</div>
+      <div v-else-if="loadError" class="mobile-music-library__empty" role="alert">
+        <p>{{ loadError }}</p>
+        <button type="button" class="mobile-music-library__retry" @click="loadTracks">重新加载</button>
+      </div>
+      <div v-else-if="filteredTracks.length > 0" class="mobile-music-library__tracks">
         <div
           v-for="(track, index) in filteredTracks"
           :key="track.id || index"
@@ -73,13 +78,8 @@ import MInput from '@mobile/components/ui/MInput.vue'
 const player = useAudioPlayerStore()
 const searchQuery = ref('')
 const tracks = ref<Song[]>([])
-const loading = ref(false)
-
-const fallbackTracks: Song[] = [
-  { id: 'lib-1', title: 'Echoes of Silence', artist: 'Lumine', album: 'Abyssal', duration: 215, audio_url: '/audio/1.mp3' },
-  { id: 'lib-2', title: 'Quantum Drift', artist: 'Aethel', album: 'Synapse', duration: 184, audio_url: '/audio/2.mp3' },
-  { id: 'lib-3', title: 'Midnight City Lights', artist: 'Lumine', album: 'Abyssal', duration: 240, audio_url: '/audio/3.mp3' },
-]
+const loading = ref(true)
+const loadError = ref('')
 
 function toPlayerSong(item: any): Song {
   return {
@@ -119,15 +119,14 @@ const filteredTracks = computed(() => {
 
 async function loadTracks() {
   loading.value = true
+  loadError.value = ''
   try {
     const res = await listMusicSongs({ page: 1, page_size: 50 })
-    if (res?.data && res.data.length > 0) {
-      tracks.value = res.data.map(toPlayerSong)
-    } else {
-      tracks.value = fallbackTracks
-    }
+    if (!Array.isArray(res?.data)) throw new Error('Invalid songs response')
+    tracks.value = res.data.map(toPlayerSong)
   } catch {
-    tracks.value = fallbackTracks
+    tracks.value = []
+    loadError.value = '歌曲加载失败，请检查网络后重试。'
   } finally {
     loading.value = false
   }

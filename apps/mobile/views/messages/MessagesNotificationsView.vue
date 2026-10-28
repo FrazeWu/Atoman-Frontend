@@ -8,6 +8,7 @@
           <p class="notifications-header__subtitle">互动提醒、提及与系统消息</p>
         </div>
         <button
+          v-if="!isGuest"
           type="button"
           class="notifications-header__mark-btn"
           :disabled="!notifications.some(item => !item.read)"
@@ -21,7 +22,7 @@
       </div>
 
       <!-- Category Filter Chips -->
-      <div class="notifications-chips">
+      <div v-if="!isGuest" class="notifications-chips">
         <button
           v-for="cat in categories"
           :key="cat.key"
@@ -37,7 +38,13 @@
 
     <!-- Content -->
     <main class="notifications-content">
-      <div v-if="filteredNotifications.length > 0" class="notifications-list">
+      <div v-if="isGuest" class="notifications-empty" data-testid="notifications-guest-state">
+        <div class="notifications-empty__icon"><MIcon name="bell" size="lg" /></div>
+        <p class="notifications-empty__title">登录查看通知</p>
+        <p class="notifications-empty__desc">登录后可同步查看回复、点赞和系统消息。</p>
+        <RouterLink class="notifications-empty__action" to="/login?redirect=/inbox/notifications">立即登录</RouterLink>
+      </div>
+      <div v-else-if="filteredNotifications.length > 0" class="notifications-list">
         <article
           v-for="item in filteredNotifications"
           :key="item.id"
@@ -79,6 +86,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { getActivePinia } from 'pinia'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import { useNotificationStore } from '@/stores/notification'
+import { useAuthStore } from '@/stores/auth'
 
 export interface NotificationItem {
   id: string
@@ -99,6 +107,8 @@ const props = withDefaults(
 )
 
 const notifStore = getActivePinia() ? useNotificationStore() : null
+const authStore = getActivePinia() ? useAuthStore() : null
+const isGuest = computed(() => props.initialNotifications === undefined && !authStore?.isAuthenticated)
 
 function formatNotificationTime(timeStr?: string): string {
   if (!timeStr) return ''
@@ -199,7 +209,7 @@ function handleNotificationClick(item: NotificationItem) {
 }
 
 onMounted(() => {
-  if (!props.initialNotifications && notifStore) {
+  if (!isGuest.value && !props.initialNotifications && notifStore) {
     if (typeof notifStore.fetchNotifications === 'function') {
       void notifStore.fetchNotifications()
     } else if (typeof (notifStore as any).loadNotifications === 'function') {
@@ -216,6 +226,11 @@ function getIconName(cat: string): string {
 </script>
 
 <style scoped>
+.notifications-empty__action {
+  display: inline-flex; min-height: 44px; padding: 0 18px; margin-top: 12px;
+  align-items: center; justify-content: center; text-decoration: none;
+  background: var(--a-color-primary); color: #fff; border-radius: var(--a-radius-control);
+}
 .messages-notifications-view {
   min-height: 100vh;
   background-color: #ffffff;

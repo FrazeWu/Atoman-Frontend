@@ -7,8 +7,14 @@
 
     <p v-if="loading" role="status">正在加载书架…</p>
     <p v-if="error" role="alert">{{ error }} <button type="button" @click="loadShelfData">重试</button></p>
+    <div v-if="!loading && guest" class="books-shelf-empty" data-testid="books-guest-state">
+      <div class="books-shelf-empty__icon"><MIcon name="books" size="lg" /></div>
+      <p class="books-shelf-empty__title">登录查看我的书架</p>
+      <p class="books-shelf-empty__desc">登录后可同步在读作品、书架与阅读进度。</p>
+      <RouterLink class="books-shelf-empty__action" to="/login?redirect=/books/shelf">登录查看书架</RouterLink>
+    </div>
     <!-- Empty State if no books -->
-    <div v-if="!loading && !error && !currentReadingBook && booksList.length === 0" class="books-shelf-empty" data-testid="books-empty-state">
+    <div v-else-if="!loading && !error && !currentReadingBook && booksList.length === 0" class="books-shelf-empty" data-testid="books-empty-state">
       <div class="books-shelf-empty__icon">
         <MIcon name="books" size="lg" />
       </div>
@@ -122,6 +128,7 @@ const props = withDefaults(
 const router = useRouter()
 const authStore = getActivePinia() ? useAuthStore() : null
 const loading = ref(false)
+const guest = ref(false)
 const error = ref('')
 const opening = ref(false)
 const fetchedCurrentReading = ref<ShelfBook | null>(null)
@@ -131,8 +138,12 @@ async function loadShelfData() {
   if (props.initialBooks !== undefined || props.currentReading !== undefined || props.initialCurrentBook !== undefined) return
   loading.value = true
   error.value = ''
+  guest.value = false
   try {
-    if (authStore && !await authStore.restoreSession()) return
+    if (!authStore || !await authStore.restoreSession()) {
+      guest.value = true
+      return
+    }
     const entries: LibraryEntry[] = []
     let page
     do {
@@ -195,6 +206,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.books-shelf-empty__action {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; margin-top: 12px; padding: 0 18px; text-decoration: none;
+  color: var(--a-color-primary-contrast, #fff); background: var(--a-color-primary); border-radius: var(--a-radius-control);
+}
 .books-shelf-view {
   min-height: 100vh;
   background-color: var(--a-color-bg, #ffffff);

@@ -68,7 +68,9 @@ describe('Mobile Feed Space Overhaul (Option B)', () => {
       expect(wrapper.find('[data-testid="feed-article-item"]').exists()).toBe(true)
       expect(wrapper.text()).toContain('纯白极简系统设计探索')
 
-      await wrapper.find('[data-testid="feed-article-item"]').trigger('click')
+      const cardLink = wrapper.get('[data-testid="feed-article-item"] .feed-article-item__link')
+      expect(cardLink.attributes('href')).toBe('/feed/article/art-1')
+      await cardLink.trigger('click')
       expect(pushSpy).toHaveBeenCalledWith('/feed/article/art-1')
     })
   })

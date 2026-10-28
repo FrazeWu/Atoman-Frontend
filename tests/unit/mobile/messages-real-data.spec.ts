@@ -92,6 +92,9 @@ describe('Messages Mobile Real Data Wiring', () => {
   })
 
   it('renders real notifications and marks all read in MessagesNotificationsView', async () => {
+    const authStore = useAuthStore()
+    authStore.isAuthenticated = true
+    authStore.token = 'test-token'
     const notifStore = useNotificationStore()
     notifStore.notifications = [
       {
@@ -104,6 +107,7 @@ describe('Messages Mobile Real Data Wiring', () => {
       },
     ] as any
     notifStore.markAllRead = vi.fn().mockResolvedValue(undefined)
+    notifStore.fetchNotifications = vi.fn().mockResolvedValue(undefined)
 
     const wrapper = mount(MessagesNotificationsView, {
       global: { plugins: [pinia] },

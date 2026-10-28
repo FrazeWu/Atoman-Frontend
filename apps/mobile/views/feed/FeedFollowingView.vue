@@ -8,6 +8,7 @@
           <p class="feed-following-header__subtitle">{{ authStore?.isAuthenticated ? '聚合关注源的最新时间线更新' : '探索公开 RSS 时间线更新' }}</p>
         </div>
         <button
+          v-if="authStore?.isAuthenticated || props.initialArticles"
           type="button"
           class="feed-following-header__action-btn"
           data-testid="mark-all-read-btn"
@@ -29,7 +30,15 @@
 
     <!-- Articles Stream -->
     <main class="feed-following-content">
-      <div v-if="articles.length > 0" class="feed-following-list">
+      <div v-if="loading" class="feed-following-loading" role="status">
+        <div v-for="n in 4" :key="n" class="feed-following-loading__row" aria-hidden="true" />
+        <span class="feed-following-loading__label">正在加载动态…</span>
+      </div>
+      <div v-else-if="loadError" class="feed-following-empty" role="alert">
+        <p class="feed-following-empty__title">{{ loadError }}</p>
+        <button type="button" class="feed-following-empty__btn" @click="loadTimeline">重新加载</button>
+      </div>
+      <div v-else-if="articles.length > 0" class="feed-following-list">
         <article
           v-for="article in articles"
           :key="article.id"
@@ -63,9 +72,9 @@
         <div class="feed-following-empty__icon">
           <MIcon name="antenna" size="lg" />
         </div>
-        <p class="feed-following-empty__title">暂无关注动态</p>
+        <p class="feed-following-empty__title">{{ authStore?.isAuthenticated ? '暂无关注动态' : '暂无公开动态' }}</p>
         <p class="feed-following-empty__desc">前往订阅源添加你感兴趣的 RSS 订阅源或博主。</p>
-        <router-link to="/feed/sources" class="feed-following-empty__btn">
+        <router-link :to="authStore?.isAuthenticated ? '/feed/sources' : '/login?redirect=/feed/sources'" class="feed-following-empty__btn">
           发现与管理订阅
         </router-link>
       </div>
@@ -124,6 +133,9 @@ const articles = ref<FollowingArticleItem[]>(
       ? feedStore.timeline.map(mapTimelineItem)
       : []
 )
+
+const loading = ref(props.initialArticles === undefined && !feedStore?.timeline.length)
+const loadError = ref('')
 
 const sourcesList = ref<{ id: string; name: string }[]>(
   feedStore?.subscriptions && feedStore.subscriptions.length > 0
@@ -197,26 +209,34 @@ function formatTime(isoString?: string): string {
   }
 }
 
-onMounted(async () => {
-  if (!props.initialArticles && feedStore) {
-    try {
-      await Promise.allSettled([
-        feedStore.fetchTimeline?.(),
-        feedStore.fetchSubscriptions?.(),
-      ])
-      if (feedStore.timeline?.length) {
-        articles.value = feedStore.timeline.map(mapTimelineItem)
-      } else if (authStore?.isAuthenticated) {
-        articles.value = []
-      }
-    } catch {
-      // Graceful fallback
+async function loadTimeline() {
+  if (props.initialArticles || !feedStore) return
+  loading.value = true
+  loadError.value = ''
+  try {
+    const results = await Promise.allSettled([
+      feedStore.fetchTimeline?.(),
+      feedStore.fetchSubscriptions?.(),
+    ])
+    if (results[0]?.status === 'rejected') {
+      loadError.value = '动态加载失败，请检查网络后重试。'
+      return
     }
+    articles.value = (feedStore.timeline || []).map(mapTimelineItem)
+  } catch {
+    loadError.value = '动态加载失败，请检查网络后重试。'
+  } finally {
+    loading.value = false
   }
-})
+}
+onMounted(() => { void loadTimeline() })
+
 </script>
 
 <style scoped>
+.feed-following-loading { display: grid; gap: 12px; padding: 12px 0; }
+.feed-following-loading__row { height: 76px; border-radius: 4px; background: var(--a-color-surface-muted, #f1f5f9); }
+.feed-following-loading__label { font-size: 13px; color: var(--a-color-muted); text-align: center; }
 .feed-following-view {
   min-height: 100vh;
   background-color: var(--a-color-bg, #ffffff);

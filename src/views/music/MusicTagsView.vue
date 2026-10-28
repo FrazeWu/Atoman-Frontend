@@ -188,6 +188,8 @@ onBeforeUnmount(() => {
       mb="1rem"
     />
 
+    <p class="music-tags-view__mobile-sub">按风格、情绪和场景发现歌曲与专辑。</p>
+
     <div class="music-tags-view__toolbar">
       <div class="music-tags-view__search">
         <PInput
@@ -219,14 +221,14 @@ onBeforeUnmount(() => {
     </nav>
 
     <section class="music-tags-view__directory" aria-labelledby="music-tags-directory-title">
-      <header class="music-tags-view__directory-head">
+      <header v-if="parentTag" class="music-tags-view__directory-head">
         <div>
           <h2 id="music-tags-directory-title">{{ parentTag?.name || scopeLabel }}</h2>
         </div>
         <RouterLink v-if="parentTag" :to="tagRoute(parentTag)" class="music-tags-view__all-content">查看全部内容 <ArrowRight :size="16" aria-hidden="true" /></RouterLink>
       </header>
 
-      <div class="music-tags-view__breadcrumb" aria-label="当前层级">
+      <div v-if="parentTag" class="music-tags-view__breadcrumb" aria-label="当前层级">
         <button v-if="parentTag" type="button" class="music-tags-view__breadcrumb-link" @click="goParent">标签</button>
         <span v-else>标签</span>
         <ArrowRight :size="14" aria-hidden="true" />
@@ -297,6 +299,8 @@ onBeforeUnmount(() => {
   min-width: 0;
   padding-bottom: 3rem;
 }
+
+.music-tags-view__mobile-sub { display: none; }
 
 .music-tags-view__toolbar {
   display: flex;
@@ -514,6 +518,23 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 720px) {
+  .music-tags-view > .p-page-header {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .music-tags-view__mobile-sub {
+    display: block;
+    margin: 0;
+    padding: 0 16px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--a-color-text-secondary);
+  }
   .music-tags-view {
     gap: 1rem;
     padding-bottom: 3rem;

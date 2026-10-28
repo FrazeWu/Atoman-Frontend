@@ -44,12 +44,12 @@
         正在加载精选歌单…
       </div>
       <div v-else-if="curatedPlaylists.length > 0" class="mobile-music-playlists__list">
-        <div
+        <RouterLink
           v-for="pl in curatedPlaylists"
           :key="pl.id"
           class="mobile-music-playlists__item"
           data-testid="curated-playlist-item"
-          @click="openPlaylist(pl.id)"
+          :to="'/music/playlist/' + pl.id"
         >
           <div class="mobile-music-playlists__item-cover">
             <img
@@ -71,7 +71,7 @@
           <div class="mobile-music-playlists__item-arrow">
             <MIcon name="chevron-down" size="sm" class="mobile-music-playlists__arrow-icon" />
           </div>
-        </div>
+        </RouterLink>
       </div>
 
       <!-- Loading / Empty Curated -->
@@ -115,12 +115,12 @@
         <!-- Playlists Content -->
         <section class="mobile-music-playlists__content" aria-label="歌单列表">
           <div v-if="playlists.length > 0" class="mobile-music-playlists__list">
-            <div
+            <RouterLink
               v-for="playlist in playlists"
               :key="playlist.id"
               class="mobile-music-playlists__item"
               data-testid="playlist-item"
-              @click="openPlaylist(playlist.id)"
+              :to="'/music/playlist/' + playlist.id"
             >
               <div class="mobile-music-playlists__item-cover">
                 <img
@@ -142,7 +142,7 @@
               <div class="mobile-music-playlists__item-arrow">
                 <MIcon name="chevron-down" size="sm" class="mobile-music-playlists__arrow-icon" />
               </div>
-            </div>
+            </RouterLink>
           </div>
 
           <!-- Empty State -->
@@ -386,6 +386,8 @@ onActivated(() => {
 }
 
 .mobile-music-playlists__item {
+  color: inherit;
+  text-decoration: none;
   display: flex;
   align-items: center;
   gap: 0.875rem;
@@ -398,6 +400,7 @@ onActivated(() => {
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
+.mobile-music-playlists__item:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .mobile-music-playlists__item:active {
   background-color: var(--a-color-surface-hover, #f8fafc);
   border-color: var(--a-color-border, #cbd5e1);

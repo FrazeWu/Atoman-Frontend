@@ -121,8 +121,9 @@ describe('Mobile Independent Feed & Blog Views', () => {
       })
       await wrapper.vm.$nextTick()
 
-      const firstItem = wrapper.find('[data-testid="feed-article-item"]')
-      await firstItem.trigger('click')
+      const firstLink = wrapper.get('[data-testid="feed-article-item"] .feed-article-item__link')
+      expect(firstLink.attributes('href')).toBe('/feed/article/art-1')
+      await firstLink.trigger('click')
 
       expect(pushSpy).toHaveBeenCalledWith('/feed/article/art-1')
     })

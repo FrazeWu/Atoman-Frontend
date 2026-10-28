@@ -971,6 +971,8 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
+  .portal-hot :deep(.p-content-progress__content) { padding-top: 1.5rem; }
+  .portal-hot__sections { gap: 24px; }
   .portal-hot {
     padding-bottom: 1.5rem;
   }

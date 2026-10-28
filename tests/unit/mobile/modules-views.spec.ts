@@ -76,7 +76,8 @@ describe('Mobile Independent Module Views (Task 5)', () => {
       })
 
       const items = wrapper.findAll('[data-testid="book-catalog-item"]')
-      expect(items.length).toBe(2)
+      expect(items.length).toBe(1)
+      expect(wrapper.find('[data-testid="books-hero-card"]').exists()).toBe(true)
       expect(wrapper.text()).toContain('设计心理学')
       expect(wrapper.text()).toContain('唐·诺曼')
       expect(wrapper.text()).toContain('8.8')
@@ -89,8 +90,9 @@ describe('Mobile Independent Module Views (Task 5)', () => {
         global: { plugins: [pinia, router] },
       })
 
-      const item = wrapper.find('[data-testid="book-catalog-item"]')
-      await item.trigger('click')
+      const item = wrapper.get('[data-testid="book-catalog-item"]')
+      expect(item.text()).toContain('计算机程序的构造和解释')
+      await wrapper.get('[data-testid="hero-detail-btn"]').trigger('click')
       expect(pushSpy).toHaveBeenCalledWith('/books/work/work-1')
     })
 

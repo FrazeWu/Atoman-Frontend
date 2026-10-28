@@ -4,11 +4,11 @@
     <header class="contacts-header">
       <div class="contacts-header__top">
         <h1 class="contacts-header__title">联系人</h1>
-        <span class="contacts-header__count">{{ filteredContacts.length }} 位好友</span>
+        <span v-if="!isGuest" class="contacts-header__count">{{ filteredContacts.length }} 位好友</span>
       </div>
       <p class="contacts-header__subtitle">关注的创作者与互关好友名录</p>
 
-      <div class="contacts-header__search">
+      <div v-if="!isGuest" class="contacts-header__search">
         <MInput
           v-model="searchQuery"
           placeholder="搜索好友姓名或简介..."
@@ -19,7 +19,13 @@
 
     <!-- Content -->
     <main class="contacts-content">
-      <div v-if="filteredContacts.length > 0" class="contacts-list">
+      <div v-if="isGuest" class="contacts-empty" data-testid="contacts-guest-state">
+        <div class="contacts-empty__icon"><MIcon name="person" size="lg" /></div>
+        <p class="contacts-empty__title">登录查看联系人</p>
+        <p class="contacts-empty__desc">登录后可查找互关好友并开始私信。</p>
+        <RouterLink class="contacts-empty__action" to="/login?redirect=/inbox/contacts">立即登录</RouterLink>
+      </div>
+      <div v-else-if="filteredContacts.length > 0" class="contacts-list">
         <article
           v-for="contact in filteredContacts"
           :key="contact.id"
@@ -68,6 +74,7 @@ import MAvatar from '@mobile/components/ui/MAvatar.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MInput from '@mobile/components/ui/MInput.vue'
 import { useDMStore } from '@/stores/dm'
+import { useAuthStore } from '@/stores/auth'
 
 export interface ContactItem {
   id: string
@@ -88,6 +95,8 @@ const props = withDefaults(
 
 const router = useRouter()
 const dmStore = getActivePinia() ? useDMStore() : null
+const authStore = getActivePinia() ? useAuthStore() : null
+const isGuest = computed(() => props.initialContacts === undefined && !authStore?.isAuthenticated)
 const searchQuery = ref('')
 
 const contacts = ref<ContactItem[]>(
@@ -140,13 +149,18 @@ function startChat(id: string) {
 }
 
 onMounted(() => {
-  if (!props.initialContacts && dmStore) {
+  if (!isGuest.value && !props.initialContacts && dmStore) {
     void dmStore.reconcileFromServer?.().catch(() => {})
   }
 })
 </script>
 
 <style scoped>
+.contacts-empty__action {
+  display: inline-flex; min-height: 44px; padding: 0 18px; margin-top: 12px;
+  align-items: center; justify-content: center; text-decoration: none;
+  background: var(--a-color-primary); color: #fff; border-radius: var(--a-radius-control);
+}
 .messages-contacts-view {
   min-height: 100vh;
   background-color: #ffffff;

@@ -40,6 +40,11 @@
       </div>
     </div>
 
+    <div v-else-if="loadError" class="feed-stream-empty" role="alert">
+      <p class="feed-stream-empty__title">{{ loadError }}</p>
+      <button type="button" class="feed-stream-empty__retry" @click="fetchArticles">重新加载</button>
+    </div>
+
     <div v-else-if="articles.length === 0" class="feed-stream-empty">
       <p class="feed-stream-empty__title">{{ activeTab === 'subscriptions' ? '暂无订阅更新' : '暂无推荐内容' }}</p>
       <p class="feed-stream-empty__desc">{{ activeTab === 'subscriptions' ? '前往订阅源添加你感兴趣的 RSS 源或博主。' : '稍后再来看看吧。' }}</p>
@@ -51,8 +56,10 @@
         :key="article.id"
         class="feed-article-item"
         data-testid="feed-article-item"
-        @click="openArticle(article)"
       >
+        <a class="feed-article-item__link" :href="articleLink(article)"
+          :target="articleLink(article).startsWith('http') ? '_blank' : undefined"
+          rel="noopener noreferrer" @click="handleArticleClick($event, article)">
         <!-- Author Row -->
         <div class="feed-article-item__header">
           <MAvatar
@@ -79,6 +86,7 @@
         <!-- Article Title & Summary -->
         <h2 class="feed-article-item__title">{{ decodeHtmlEntities(article.title) }}</h2>
         <p v-if="article.summary" class="feed-article-item__summary">{{ decodeHtmlEntities(article.summary) }}</p>
+        </a>
 
         <!-- Bottom Action Row -->
         <div class="feed-article-item__meta" @click.stop>
@@ -166,45 +174,11 @@ const router = useRouter()
 const api = useApi()
 const feedStore = useFeedStore()
 
-const defaultCuratedFeed: FeedArticleItem[] = [
-  {
-    id: 'art-1',
-    title: '构建现代化纯白极简阅读体验',
-    summary: '探索移动端纯白卡片流排版与 SF Symbols 图标设计系统在内容型应用中的实践。',
-    author: { name: 'Alex' },
-    source_title: '设计随笔',
-    published_at: '2026-10-21T08:00:00Z',
-    likes_count: 42,
-    comments_count: 9,
-    bookmarked: false,
-  },
-  {
-    id: 'art-2',
-    title: 'Swift 与 TypeScript 中的单向数据流实践',
-    summary: '深入探讨移动端与桌面端共享核心状态模型的设计原则与事件派发机制。',
-    author: { name: 'Sarah' },
-    source_title: '工程架构',
-    published_at: '2026-10-20T14:30:00Z',
-    likes_count: 28,
-    comments_count: 4,
-    bookmarked: true,
-  },
-  {
-    id: 'art-3',
-    title: '数字极简主义与深度专注力重构',
-    summary: '在海量碎片化信息中建立属于自己的宁静阅读避难所与思考仪式。',
-    author: { name: '墨客' },
-    source_title: '思辨日记',
-    published_at: '2026-10-19T10:15:00Z',
-    likes_count: 65,
-    comments_count: 12,
-    bookmarked: false,
-  },
-]
-
 const activeTab = ref<'recommend' | 'subscriptions'>(props.initialTab)
-const articlesList = ref<FeedArticleItem[]>(props.initialArticles ? [...props.initialArticles] : [...defaultCuratedFeed])
-const loading = ref(false)
+const articlesList = ref<FeedArticleItem[]>(props.initialArticles ? [...props.initialArticles] : [])
+const loading = ref(props.initialArticles === undefined)
+const loadError = ref('')
+let requestGeneration = 0
 
 const articles = computed(() => {
   if (props.initialArticles) return props.initialArticles
@@ -225,17 +199,22 @@ function selectTab(tab: 'recommend' | 'subscriptions') {
   }
 }
 
-function openArticle(article: FeedArticleItem) {
-  emit('select', article)
-  if (article.target_path) {
-    if (article.target_path.startsWith('http://') || article.target_path.startsWith('https://')) {
-      if (typeof window !== 'undefined') window.open(article.target_path, '_blank', 'noopener,noreferrer')
-      return
-    }
-    void router.push(article.target_path)
+function articleLink(article: FeedArticleItem): string {
+  const path = article.target_path || ('/feed/article/' + encodeURIComponent(article.id))
+  return (path.startsWith('/') && !path.startsWith('//')) || /^https?:\/\//i.test(path)
+    ? path
+    : '/feed/article/' + encodeURIComponent(article.id)
+}
+function handleArticleClick(event: MouseEvent, article: FeedArticleItem) {
+  if (event.button !== 0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
+  const path = articleLink(article)
+  if (/^https?:\/\//i.test(path)) {
+    emit('select', article)
     return
   }
-  void router.push(`/feed/article/${article.id}`)
+  event.preventDefault()
+  emit('select', article)
+  void router.push(path)
 }
 
 function toggleLike(article: FeedArticleItem) {
@@ -292,10 +271,14 @@ function formatTime(isoString?: string): string {
 
 async function fetchArticles() {
   if (props.initialArticles) return
+  const generation = ++requestGeneration
   loading.value = true
+  loadError.value = ''
+  articlesList.value = []
   try {
     if (activeTab.value === 'subscriptions') {
       await feedStore.fetchTimeline()
+      if (generation !== requestGeneration) return
       const timeline = feedStore.timeline || []
       articlesList.value = timeline
         .map((item) => {
@@ -321,6 +304,7 @@ async function fetchArticles() {
     } else {
       // Primary: recommended articles API
       const recRes = await apiRequestResult(`${api.url}/feed/recommend/articles?page=1&page_size=20&mode=hot`)
+      if (generation !== requestGeneration) return
       const recItems = recRes.ok && Array.isArray(recRes.data?.data) ? recRes.data.data : []
       if (recItems.length > 0) {
         articlesList.value = recItems
@@ -343,6 +327,8 @@ async function fetchArticles() {
       } else {
         // Fallback: explore feed API
         const exploreRes = await apiRequestResult(`${api.url}/feed/explore?limit=20`)
+        if (generation !== requestGeneration) return
+        if (!exploreRes.ok && !recRes.ok) throw new Error('Feed unavailable')
         const exploreItems = exploreRes.ok && Array.isArray(exploreRes.data?.data) ? exploreRes.data.data : []
         articlesList.value = exploreItems
           .map((raw: any) => {
@@ -367,16 +353,12 @@ async function fetchArticles() {
       }
     }
   } catch {
-    if (!props.initialArticles) {
-      articlesList.value = [...defaultCuratedFeed]
-    } else {
+    if (generation === requestGeneration) {
       articlesList.value = []
+      loadError.value = '内容加载失败，请检查网络后重试。'
     }
   } finally {
-    if (!props.initialArticles && articlesList.value.length === 0) {
-      articlesList.value = [...defaultCuratedFeed]
-    }
-    loading.value = false
+    if (generation === requestGeneration) loading.value = false
   }
 }
 
@@ -388,6 +370,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.feed-article-item__link { display: block; color: inherit; text-decoration: none; }
+.feed-article-item__link:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 3px; }
+.feed-stream-empty__retry { min-height: 44px; padding: 0 16px; border: 1px solid var(--a-color-border); background: var(--a-color-surface); cursor: pointer; }
 .feed-stream-view {
   min-height: 100vh;
   background-color: var(--a-color-bg, #ffffff);

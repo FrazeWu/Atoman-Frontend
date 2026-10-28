@@ -718,6 +718,24 @@ const hasResults = computed(
   .unified-search {
     padding: 1.25rem 1rem 3rem;
   }
+  .search-tabs--modules, .search-tabs--types {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: 100%;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .search-tabs--modules::-webkit-scrollbar, .search-tabs--types::-webkit-scrollbar { display: none; }
+  .search-tabs--modules > button, .search-tabs--types > button {
+    flex: 0 0 auto;
+    min-height: 44px;
+    white-space: nowrap;
+  }
+  .search-tab-scope-btn { min-height: 44px; }
+  .search-filters__summary { min-height: 44px; }
   .filter-field {
     flex-basis: 100%;
   }

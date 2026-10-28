@@ -70,8 +70,10 @@
     </main>
 
     <!-- Empty State -->
-    <div v-else class="feed-reader-empty">
-      <p>未找到文章内容</p>
+    <div v-else class="feed-reader-empty" role="alert">
+      <p>{{ loadError || '未找到文章内容' }}</p>
+      <button v-if="loadError && !loadError.includes('不存在')" type="button" @click="fetchArticleById(String(route.params.id || ''))">重新加载</button>
+      <RouterLink to="/feed">返回精选</RouterLink>
     </div>
   </div>
 </template>
@@ -114,7 +116,9 @@ const api = useApi()
 const feedStore = useFeedStore()
 
 const loadedArticle = ref<ArticleDetailData | null>(null)
-const loading = ref(false)
+const loading = ref(!props.article)
+const loadError = ref('')
+let loadGeneration = 0
 const localBookmarked = ref(Boolean(props.article?.bookmarked))
 
 function decodeHtmlEntities(text?: string): string {
@@ -190,46 +194,38 @@ function formatDate(isoString?: string): string {
 
 async function fetchArticleById(id: string) {
   if (props.article) return
+  const generation = ++loadGeneration
   loading.value = true
+  loadError.value = ''
+  loadedArticle.value = null
   try {
-    const res = await apiRequestResult(`${api.url}/feed/items/${id}`)
-    if (res.ok && res.data?.data) {
-      const item = res.data.data.item || res.data.data
-      const reader = res.data.data.reader
-      loadedArticle.value = {
-        id: String(item.id),
-        title: item.title || '',
-        content: reader?.content || item.content || item.summary || '',
-        author_name: item.author || item.feed_source?.title || '',
-        source_title: item.feed_source?.title,
-        published_at: item.published_at,
-        bookmarked: Boolean(item.bookmarked),
-      }
-      localBookmarked.value = Boolean(item.bookmarked)
+    const res = await apiRequestResult(api.url + '/feed/items/' + encodeURIComponent(id))
+    if (generation !== loadGeneration) return
+    const payload = res.data?.data
+    const item = payload?.item || payload
+    if (!res.ok) {
+      loadError.value = res.status === 404 || res.status === 400 ? '文章不存在或已下架。' : '文章加载失败，请稍后重试。'
+      return
     }
-    if (!loadedArticle.value) {
-      loadedArticle.value = {
-        id,
-        title: '构建现代化纯白极简阅读体验',
-        content: '<p>在移动界面设计中，行高、段落间距与字体渲染清晰度决定了长时间阅读的舒适度与信息获取效率。</p><p>纯白画布通过减去杂色边框与不必要的大阴影，让读者视线自然汇聚于字符的呼吸节奏之间。配合 4px 微小圆角与柔和分界线，可以在现代手机屏幕上呈现如若高级纸质读物的阅读质感。</p><p>本文探讨了在 Atoman 跨端生态中，如何统一 TypeScript 与 Swift 客户端的排版规范与无干扰阅读交互。</p>',
-        author_name: 'Alex',
-        source_title: '设计随笔',
-        published_at: '2026-10-21T08:00:00Z',
-        bookmarked: false,
-      }
+    if (!item || String(item.id) !== id || !item.title) {
+      loadError.value = '文章不存在或已下架。'
+      return
     }
-  } catch {
+    const reader = payload?.reader
     loadedArticle.value = {
-      id,
-      title: '构建现代化纯白极简阅读体验',
-      content: '<p>在移动界面设计中，行高、段落间距与字体渲染清晰度决定了长时间阅读的舒适度与信息获取效率。</p><p>纯白画布通过减去杂色边框与不必要的大阴影，让读者视线自然汇聚于字符的呼吸节奏之间。配合 4px 微小圆角与柔和分界线，可以在现代手机屏幕上呈现如若高级纸质读物的阅读质感。</p><p>本文探讨了在 Atoman 跨端生态中，如何统一 TypeScript 与 Swift 客户端的排版规范与无干扰阅读交互。</p>',
-      author_name: 'Alex',
-      source_title: '设计随笔',
-      published_at: '2026-10-21T08:00:00Z',
-      bookmarked: false,
+      id: String(item.id),
+      title: item.title,
+      content: reader?.content || item.content || item.summary || '',
+      author_name: item.author || item.feed_source?.title || '',
+      source_title: item.feed_source?.title,
+      published_at: item.published_at,
+      bookmarked: Boolean(item.bookmarked),
     }
+    localBookmarked.value = Boolean(item.bookmarked)
+  } catch {
+    if (generation === loadGeneration) loadError.value = '文章加载失败，请检查网络后重试。'
   } finally {
-    loading.value = false
+    if (generation === loadGeneration) loading.value = false
   }
 }
 
@@ -267,8 +263,8 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   background: transparent;
   border: none;
   border-radius: var(--a-radius-control, 4px);

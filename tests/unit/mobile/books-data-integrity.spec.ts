@@ -47,9 +47,11 @@ it('does not invent a sample book when the API fails and supports retry', async 
 it('does not navigate to a nonexistent reader when no approved resource exists', async () => {
   vi.mocked(readingRecommendation).mockResolvedValue({ available: false, work_id: 'book-1', source: 'none' })
   wrapper = mount(BookDetail, { global: { plugins: [router, pinia] } }); await flushPromises()
-  await wrapper.get('[data-testid="start-reading-btn"]').trigger('click'); await flushPromises()
+  const cta = wrapper.get('[data-testid="start-reading-btn"]')
+  expect(cta.attributes('disabled')).toBeDefined()
+  expect(cta.text()).toContain('暂无电子版')
   expect(router.currentRoute.value.path).toBe('/books/work/book-1')
-  expect(wrapper.find('[role="alert"]').exists()).toBe(true)
+  expect(wrapper.text()).toContain('没有可阅读的电子书')
 })
 
 it('ignores stale work responses after route changes', async () => {

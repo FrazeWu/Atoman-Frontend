@@ -74,7 +74,8 @@
             <h3 class="section-title">浏览主题</h3>
           </div>
           <div class="channels-scroll-row">
-            <div
+            <button
+              type="button"
               v-for="ch in channels"
               :key="ch.id"
               class="channel-mini-card"
@@ -82,7 +83,7 @@
             >
               <span class="channel-mini-card__tag">#{{ ch.name }}</span>
 
-            </div>
+            </button>
           </div>
         </section>
 
@@ -100,11 +101,11 @@
           </div>
 
           <div v-else class="blog-articles-list">
-            <article
+            <RouterLink
               v-for="post in streamPosts"
               :key="post.id"
               class="blog-stream-card"
-              @click="openPost(post.id)"
+              :to="'/post/' + post.id"
             >
               <div class="blog-stream-card__meta">
                 <MAvatar
@@ -125,7 +126,7 @@
               <div v-if="post.tags && post.tags.length > 0" class="blog-stream-card__tags">
                 <span v-for="t in post.tags" :key="t" class="blog-stream-tag">#{{ t }}</span>
               </div>
-            </article>
+            </RouterLink>
           </div>
         </section>
       </template>
@@ -429,6 +430,8 @@ onMounted(() => {
 }
 
 .blog-stream-card {
+  color: inherit;
+  text-decoration: none;
   background: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #ebebeb);
   border-radius: var(--a-radius-card, 4px);
@@ -440,6 +443,7 @@ onMounted(() => {
   transition: background-color 0.15s ease;
 }
 
+.blog-stream-card:focus-visible, .channel-mini-card:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .blog-stream-card:active {
   background: var(--a-color-surface-hover, #fafafa);
 }

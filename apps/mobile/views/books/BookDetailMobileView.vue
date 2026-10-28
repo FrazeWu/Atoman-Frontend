@@ -59,18 +59,18 @@
           type="button"
           class="book-detail-mobile__btn book-detail-mobile__btn--primary"
           data-testid="start-reading-btn"
-          :disabled="readingBusy"
+          :disabled="readingBusy || readingStatus === 'checking' || readingStatus === 'unavailable'"
+          :aria-busy="readingBusy || readingStatus === 'checking'"
           @click="startReading"
         >
           <MIcon name="books" size="sm" />
-          <span>开始阅读</span>
+          <span>{{ readingStatus === 'checking' ? '正在检查电子书…' : readingStatus === 'unavailable' ? '暂无电子版' : readingStatus === 'error' ? '重新检查电子书' : '开始阅读' }}</span>
         </button>
       </section>
+      <p v-if="readingStatus === 'unavailable'" class="book-detail-mobile__asset-hint" role="status">该作品目前没有可阅读的电子书，可先查看作品信息与读者讨论。</p>
+      <p v-else-if="readingStatus === 'error'" class="book-detail-mobile__asset-hint" role="status">暂时无法确认阅读资源，请点击上方按钮重试。</p>
 
       <p v-if="actionError" role="alert">{{ actionError }}</p>
-      <BookShelfAction v-if="auth.isAuthenticated" :key="`${book.id}:${auth.user?.uuid}`" :work-id="book.id" />
-      <BookWorkCommunity :key="`${book.id}:${auth.user?.uuid || 'guest'}`" :work-id="book.id" :authenticated="auth.isAuthenticated" />
-
       <!-- Synopsis / Introduction -->
       <section class="book-detail-mobile__section">
         <h2 class="book-detail-mobile__section-title">内容简介</h2>
@@ -96,6 +96,10 @@
           </li>
         </ul>
       </section>
+
+      <BookShelfAction v-if="auth.isAuthenticated" :key="`${book.id}:${auth.user?.uuid}`" :work-id="book.id" />
+      <BookWorkCommunity :key="`${book.id}:${auth.user?.uuid || 'guest'}`" :work-id="book.id" :authenticated="auth.isAuthenticated" />
+
     </main>
 
     <div v-else-if="loadError" role="alert" class="book-detail-mobile__loading">
@@ -114,7 +118,7 @@
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getCatalogWork } from '@/api/bookCatalog'
-import { readingRecommendation } from '@/api/bookPrivate'
+import { readingRecommendation, type ReadingRecommendation } from '@/api/bookPrivate'
 import { useAuthStore } from '@/stores/auth'
 import BookShelfAction from '@/components/books/BookShelfAction.vue'
 import BookWorkCommunity from '@/components/books/BookWorkCommunity.vue'
@@ -140,6 +144,8 @@ const book = ref<BookDetailData | null>(null)
 const loadError = ref('')
 const actionError = ref('')
 const readingBusy = ref(false)
+const readingStatus = ref<'checking' | 'available' | 'unavailable' | 'error'>('checking')
+const cachedReading = ref<ReadingRecommendation | null>(null)
 let loadGeneration = 0
 
 function goBack() {
@@ -151,24 +157,41 @@ function shareBook() {
     void navigator.share({ title: book.value.title, text: `${book.value.title} - ${book.value.author}`, url: window.location.href }).catch(() => {})
   }
 }
+async function checkReadingAvailability(workId: string, generation: number) {
+  readingStatus.value = 'checking'
+  cachedReading.value = null
+  try {
+    const result = await readingRecommendation(workId)
+    if (generation !== loadGeneration) return
+    if (result?.available && result.asset?.id && result.revision_id) {
+      cachedReading.value = result
+      readingStatus.value = 'available'
+    } else {
+      readingStatus.value = 'unavailable'
+    }
+  } catch {
+    if (generation === loadGeneration) readingStatus.value = 'error'
+  }
+}
 async function startReading() {
-  if (!book.value || readingBusy.value) return
-  const id = book.value.id
-  const generation = loadGeneration
+  if (!book.value || readingBusy.value || readingStatus.value === 'checking' || readingStatus.value === 'unavailable') return
+  if (readingStatus.value === 'error') {
+    await checkReadingAvailability(book.value.id, loadGeneration)
+    return
+  }
+  const next = cachedReading.value
+  if (!next?.asset?.id || !next.revision_id) return
   readingBusy.value = true
   actionError.value = ''
   try {
-    const next = await readingRecommendation(id)
-    if (generation !== loadGeneration) return
-    if (!next.available || !next.asset?.id || !next.revision_id) {
-      actionError.value = '该图书暂无可阅读的电子书文件。'
-      return
-    }
-    await router.push(`/books/read/${encodeURIComponent(next.work_id || id)}/${encodeURIComponent(next.asset.id)}/${encodeURIComponent(next.revision_id)}`)
+    await router.push('/books/read/' +
+      encodeURIComponent(next.work_id || book.value.id) + '/' +
+      encodeURIComponent(next.asset.id) + '/' +
+      encodeURIComponent(next.revision_id))
   } catch {
-    if (generation === loadGeneration) actionError.value = '阅读文件加载失败，请重试。'
+    actionError.value = '阅读器打开失败，请重试。'
   } finally {
-    if (generation === loadGeneration) readingBusy.value = false
+    readingBusy.value = false
   }
 }
 async function loadBookData() {
@@ -177,8 +200,11 @@ async function loadBookData() {
   loadError.value = ''
   actionError.value = ''
   readingBusy.value = false
+  readingStatus.value = 'checking'
+  cachedReading.value = null
   if (props.initialBook) {
     book.value = { ...props.initialBook }
+    void checkReadingAvailability(book.value.id, generation)
     return
   }
   const id = String(route.params.id || route.params.workId || '')
@@ -197,6 +223,7 @@ async function loadBookData() {
       cover: result.cover_url || result.editions?.[0]?.cover_url,
       synopsis: result.description || '暂无内容简介。',
     }
+    void checkReadingAvailability(result.id, generation)
   } catch {
     if (generation === loadGeneration) loadError.value = '图书加载失败或已下架，请重试。'
   }
@@ -206,6 +233,8 @@ onBeforeUnmount(() => { loadGeneration += 1 })
 </script>
 
 <style scoped>
+.book-detail-mobile__asset-hint { margin: -12px 0 0; font-size: 13px; color: var(--a-color-muted); line-height: 1.6; }
+.book-detail-mobile__btn:disabled { opacity: 0.66; cursor: not-allowed; }
 .book-detail-mobile {
   min-height: 100vh;
   background-color: var(--a-color-bg, #ffffff);
@@ -249,8 +278,8 @@ onBeforeUnmount(() => { loadGeneration += 1 })
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--a-radius-control, 4px);
   border: 1px solid var(--a-color-border-soft, #eeeeee);
   background: var(--a-color-surface, #ffffff);
@@ -356,7 +385,7 @@ onBeforeUnmount(() => { loadGeneration += 1 })
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 40px;
+  min-height: 44px;
   border-radius: var(--a-radius-control, 4px);
   font-size: 14px;
   font-weight: 500;

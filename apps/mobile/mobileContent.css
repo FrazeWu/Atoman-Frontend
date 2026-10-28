@@ -171,7 +171,17 @@
 
 .mobile-app-shell .mobile-app-main .ph-page .ph-search {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
+.mobile-app-shell .mobile-app-main .ph-page :is(.p-page-header, .p-page-header__action, .p-unified-search-bar, .p-search-input) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.mobile-app-shell .mobile-app-main .ph-page .p-page-header { flex: 1 1 auto; }
+.mobile-app-shell .mobile-app-main .ph-page .p-search-input__input { min-width: 0; flex: 1 1 0%; }
 
 .mobile-app-shell .mobile-app-main .ph-page :is(.ph-recommendations, .ph-latest) {
   gap: 16px;

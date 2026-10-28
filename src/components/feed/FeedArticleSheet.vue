@@ -82,7 +82,7 @@
       </div>
       
       <p v-if="article.post.summary" class="article-summary">{{ article.post.summary }}</p>
-      <div class="prose-blog article-body" v-html="renderedContent"></div>
+      <div class="prose-blog article-body" v-html="renderedContent" @click="handleSafeLinkClick"></div>
       <PostRatingControl
         :rating-score="article.post.rating_score"
         :rating-count="article.post.rating_count"
@@ -235,7 +235,7 @@
               {{ feedItemStarred ? '已收藏' : '收藏' }}
             </button>
           </div>
-          <section v-if="relatedFeedItems.length" class="article-related-reading" data-test="feed-article-related-reading">
+          <section v-if="relatedFeedItems.length" class="article-related-reading" data-test="feed-article-related-reading" @click="handleSafeLinkClick">
             <h2>推荐阅读</h2>
             <a
               v-for="item in relatedFeedItems"
@@ -309,6 +309,7 @@ import { hasFeedReaderImage } from '@/utils/feedReader'
 import { resolveMediaURL } from '@/utils/mediaUrl'
 import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
 import { safeExternalUrl } from '@/utils/safeExternalUrl'
+import { useSafeLink } from '@/composables/useSafeLink'
 import { useAuthStore } from '@/stores/auth'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useFeedStore } from '@/stores/feed'
@@ -346,6 +347,7 @@ const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
 const api = useApi()
 const feedStore = useFeedStore()
+const { handleSafeLinkClick } = useSafeLink()
 const ratingLoading = ref(false)
 let ratingRequestSequence = 0
 const ratingError = ref('')

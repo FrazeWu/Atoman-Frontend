@@ -4,6 +4,7 @@
     class="feed-reader-content"
     :class="{ 'feed-reader-content--empty': !sanitizedHTML }"
     v-html="sanitizedHTML"
+    @click="handleSafeLinkClick"
   />
 </template>
 
@@ -11,11 +12,14 @@
 import '@/assets/feed-reader.css'
 import DOMPurify from 'dompurify'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useSafeLink } from '@/composables/useSafeLink'
 
 const props = defineProps<{
   html: string
   baseUrl?: string
 }>()
+
+const { handleSafeLinkClick } = useSafeLink()
 
 const rootRef = ref<HTMLElement | null>(null)
 const cleanups: Array<() => void> = []

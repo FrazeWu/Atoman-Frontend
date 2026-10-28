@@ -7,7 +7,7 @@
     :href="isAnchor ? safeHref : undefined"
     :target="isAnchor ? resolvedTarget : undefined"
     :rel="isAnchor ? computedRel : undefined"
-    @click="emit('click', $event)"
+    @click="handleClick"
   >
     <span class="p-link__label"><slot>{{ label }}</slot></span>
     <span class="p-link__arrow" aria-hidden="true">{{ linkKind === 'external' ? '↗' : '→' }}</span>
@@ -18,6 +18,7 @@
 import { computed } from 'vue'
 import { RouterLink, type RouteLocationRaw } from 'vue-router'
 import { safeExternalUrl } from '@/utils/safeExternalUrl'
+import { useSafeLink } from '@/composables/useSafeLink'
 
 const props = withDefaults(defineProps<{
   label?: string
@@ -40,6 +41,16 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   click: [MouseEvent]
 }>()
+
+const { openSafeLink } = useSafeLink()
+
+function handleClick(event: MouseEvent) {
+  if (isExternal.value && safeHref.value) {
+    event.preventDefault()
+    openSafeLink(safeHref.value)
+  }
+  emit('click', event)
+}
 
 const isInternalHref = (value: string) => {
   const href = value.trim()

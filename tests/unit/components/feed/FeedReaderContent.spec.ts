@@ -1,6 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { describe, expect, it, vi } from "vitest";
+import { useSafeLink } from "@/composables/useSafeLink";
 
 // @ts-expect-error Isolated TypeScript diagnostics do not load the Vue SFC module resolver.
 import FeedReaderContent from "../../../../src/components/feed/FeedReaderContent.vue";
@@ -82,6 +83,31 @@ describe("FeedReaderContent", () => {
 		expect(wrapper.text()).toContain("图片无法加载：示例图");
 		expect(image.classes()).toContain("feed-reader-image--failed");
 
+		wrapper.unmount();
+	});
+
+	it("intercepts external link clicks and opens safe link dialog", async () => {
+		const { safeLinkState, closeSafeLink } = useSafeLink();
+		closeSafeLink();
+
+		const wrapper = mount(FeedReaderContent, {
+			props: {
+				html: '<p><a href="https://outside.example/article" class="ext-link">外部文章</a><a href="/internal/path" class="int-link">内部链接</a></p>',
+			},
+		});
+		await nextTick();
+
+		// Click internal link - should not open safe link dialog
+		await wrapper.get(".int-link").trigger("click");
+		expect(safeLinkState.value.isOpen).toBe(false);
+
+		// Click external link - should open safe link dialog
+		await wrapper.get(".ext-link").trigger("click");
+		expect(safeLinkState.value.isOpen).toBe(true);
+		expect(safeLinkState.value.targetUrl).toBe("https://outside.example/article");
+		expect(safeLinkState.value.targetHostname).toBe("outside.example");
+
+		closeSafeLink();
 		wrapper.unmount();
 	});
 });

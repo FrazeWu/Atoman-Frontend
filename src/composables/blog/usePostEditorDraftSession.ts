@@ -48,7 +48,11 @@ type DraftCandidate = {
 	payload: EditorDraftPayload;
 	savedAt: number;
 };
-type DraftStatus = { text: string; tone: "ok" | "warn" | "muted" };
+export type DraftTone = "ok" | "warn" | "muted";
+export interface DraftStatus {
+	text: string;
+	tone: DraftTone;
+}
 
 interface PostEditorDraftSessionOptions {
 	isEdit: ComputedRef<boolean>;
@@ -145,33 +149,30 @@ export function usePostEditorDraftSession({
 	);
 	const draftStatus = computed<DraftStatus>(() => {
 		if (saving.value === "published") return { tone: "warn", text: "发布中…" };
-		if (saving.value === "draft") return { tone: "warn", text: "草稿保存中…" };
+		if (saving.value === "draft") return { tone: "warn", text: "保存中…" };
 		if (serverDraftState.value === "error") {
-			return { tone: "warn", text: "云端草稿同步失败，当前仅保存在本地" };
+			return { tone: "warn", text: "仅保存在本地" };
 		}
 		if (autoSaveState.value === "error") {
-			return {
-				tone: "warn",
-				text: "本地草稿保存失败，请手动保存或检查浏览器存储权限",
-			};
+			return { tone: "warn", text: "保存失败" };
 		}
 		if (
 			autoSaveState.value === "saving" ||
 			serverDraftState.value === "syncing"
 		) {
-			return { tone: "warn", text: "草稿同步中…" };
+			return { tone: "warn", text: "保存中…" };
 		}
-		if (deferredDraftCandidate.value)
-			return { tone: "warn", text: "检测到可恢复草稿" };
+		if (deferredDraftCandidate.value) {
+			return { tone: "warn", text: "检测到未保存草稿" };
+		}
 		if (lastSavedAt.value || serverDraftSavedAt.value) {
-			const labels = [];
-			if (lastSavedAt.value)
-				labels.push(`本地 ${formatSavedTime(lastSavedAt.value)}`);
-			if (serverDraftSavedAt.value)
-				labels.push(`云端 ${formatSavedTime(serverDraftSavedAt.value)}`);
-			return { tone: "ok", text: `草稿已保存 · ${labels.join(" · ")}` };
+			const latestTime = Math.max(
+				lastSavedAt.value || 0,
+				serverDraftSavedAt.value || 0,
+			);
+			return { tone: "ok", text: `已保存 ${formatSavedTime(latestTime)}` };
 		}
-		return { tone: "muted", text: "开始写作后会自动保存草稿" };
+		return { tone: "muted", text: "自动保存" };
 	});
 
 	const draftPreview = (candidate: DraftCandidate | null) => {
@@ -637,6 +638,7 @@ export function usePostEditorDraftSession({
 		draftManagerVisible,
 		leaveConfirmVisible,
 		serverDraftState,
+		serverDraftSavedAt,
 		draftStatus,
 		draftRecoveryPreview,
 		deferredDraftSummary,

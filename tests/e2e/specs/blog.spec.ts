@@ -134,7 +134,7 @@ test.describe("Blog", () => {
 		const editor = page.locator(".cm-content");
 		await editor.click();
 		await page.keyboard.insertText("更新");
-		await expect(page.getByText("云端草稿同步失败，当前仅保存在本地")).toBeVisible({ timeout: 5_000 });
+		await expect(page.getByText("仅保存在本地")).toBeVisible({ timeout: 5_000 });
 	});
 
 	test("bookmark page accessible as authenticated user", async ({

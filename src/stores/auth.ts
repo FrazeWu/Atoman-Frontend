@@ -155,8 +155,8 @@ export const useAuthStore = defineStore('auth', () => {
     setCSRFToken(session.csrfToken)
   }
 
-  const clearSessionState = () => {
-    const hadSession = isAuthenticated.value || Boolean(user.value) || Boolean(token.value)
+  const clearSessionState = (forceDependentReset = false) => {
+    const hadSession = forceDependentReset || isAuthenticated.value || Boolean(user.value) || Boolean(token.value)
     if (hadSession) {
       clearDependentState()
       clearQueryCache()
@@ -233,7 +233,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (logoutGeneration !== sessionActionGeneration) return
     invalidatePendingRestore()
     invalidatePendingCredentials()
-    clearSessionState()
+    clearSessionState(true)
     lastAuthError.value = null
   }
 

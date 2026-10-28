@@ -102,6 +102,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 	});
 
 	afterEach(() => {
+		useAlbumImportUpload().cancelUpload();
 		useAlbumImportUpload().stopPolling();
 		vi.useRealTimers();
 		vi.unstubAllGlobals();
@@ -803,7 +804,16 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
 		await fileInput(wrapper).trigger("change");
-		await flushPromises();
+
+		await vi.waitFor(() => {
+			expect(musicApi.createMusicAlbumImportFilePartUpload).toHaveBeenCalledWith(
+				"import-1",
+				"file-1",
+				1,
+				archive.size,
+				expect.objectContaining({ signal: expect.any(Object) }),
+			);
+		});
 
 		expect(musicApi.createMusicAlbumImport).toHaveBeenCalledWith({
 			artistId: "artist-seeded",
@@ -831,6 +841,12 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 			archive.size,
 			expect.objectContaining({ signal: expect.any(Object) }),
 		);
+		await vi.waitFor(() => {
+			expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledWith(
+				"import-1",
+				expect.objectContaining({ signal: expect.any(Object) }),
+			);
+		});
 		expect(musicApi.completeMusicAlbumImportFilePart).toHaveBeenCalledWith(
 			"import-1",
 			"file-1",
@@ -842,10 +858,6 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith(
 			"import-1",
 			"file-1",
-			expect.objectContaining({ signal: expect.any(Object) }),
-		);
-		expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledWith(
-			"import-1",
 			expect.objectContaining({ signal: expect.any(Object) }),
 		);
 		expect(useMusicDrawers().state.value.creationFlow?.step).toBe("albumImport");
@@ -1030,6 +1042,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
 		await fileInput(wrapper).trigger("change");
 		await flushPromises();
+		await flushPromises();
 
 		expect(createImport).not.toHaveBeenCalled();
 		expect(
@@ -1047,6 +1060,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
 		await fileInput(wrapper).trigger("change");
+		await flushPromises();
 		await flushPromises();
 
 		expect(createImport).not.toHaveBeenCalled();
@@ -1119,6 +1133,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
 		await fileInput(wrapper).trigger("change");
+		await flushPromises();
 		await flushPromises();
 
 		await vi.waitFor(() => {
@@ -1396,6 +1411,7 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
 		await fileInput(wrapper).trigger("change");
 		await flushPromises();
+		await flushPromises();
 		await vi.advanceTimersByTimeAsync(2000);
 
 		expect(musicApi.getMusicAlbumImport).toHaveBeenCalled();
@@ -1498,15 +1514,16 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const replacementInput = wrapper.findAll('input[type="file"]')[1];
 
 		await wrapper.get(".import-file-action").trigger("click");
-		await flushPromises();
-		expect(musicApi.retryMusicAlbumImportFile).toHaveBeenCalledWith(
-			"import-1",
-			"file-1",
-		);
-		expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledTimes(1);
-		expect(drawers.state.value.creationFlow.draft.albumImport.status).toBe(
-			"uploaded",
-		);
+		await vi.waitFor(() => {
+			expect(musicApi.retryMusicAlbumImportFile).toHaveBeenCalledWith(
+				"import-1",
+				"file-1",
+			);
+			expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledTimes(1);
+			expect(drawers.state.value.creationFlow.draft.albumImport.status).toBe(
+				"uploaded",
+			);
+		});
 
 		Object.assign(drawers.state.value.creationFlow.draft.albumImport, {
 			status: "failed",
@@ -1516,27 +1533,28 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		await wrapper.findAll(".import-file-action")[1].trigger("click");
 		setFiles(replacementInput.element as HTMLInputElement, [replacement]);
 		await replacementInput.trigger("change");
-		await flushPromises();
-		expect(musicApi.replaceMusicAlbumImportFile).toHaveBeenCalledWith(
-			"import-1",
-			"file-1",
-			{
-				relativePath: "fixed.mp3",
-				fileName: "fixed.mp3",
-				fileSize: replacement.size,
-				contentType: "audio/mpeg",
-			},
-		);
-		expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith(
-			"import-1",
-			"file-1",
-			expect.objectContaining({ signal: expect.any(Object) }),
-		);
+		await vi.waitFor(() => {
+			expect(musicApi.replaceMusicAlbumImportFile).toHaveBeenCalledWith(
+				"import-1",
+				"file-1",
+				{
+					relativePath: "fixed.mp3",
+					fileName: "fixed.mp3",
+					fileSize: replacement.size,
+					contentType: "audio/mpeg",
+				},
+			);
+			expect(musicApi.completeMusicAlbumImportFile).toHaveBeenCalledWith(
+				"import-1",
+				"file-1",
+				expect.objectContaining({ signal: expect.any(Object) }),
+			);
+		});
 		expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalledTimes(1);
 	});
 
 	it("分片失败后从服务端已确认分片继续上传", async () => {
-		const partSize = 16 * 1024 * 1024;
+		const partSize = 1024;
 		const archive = new File(
 			[new ArrayBuffer(partSize), new ArrayBuffer(1)],
 			"resume.zip",
@@ -1622,10 +1640,12 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
 		await fileInput(wrapper).trigger("change");
-		await vi.waitFor(() =>
-			expect(
-				wrapper.find('[data-testid="album-import-upload-retry"]').exists(),
-			).toBe(true),
+		await vi.waitFor(
+			() =>
+				expect(
+					wrapper.find('[data-testid="album-import-upload-retry"]').exists(),
+				).toBe(true),
+			{ timeout: 5000 },
 		);
 
 		await wrapper

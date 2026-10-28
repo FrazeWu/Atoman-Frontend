@@ -47,3 +47,56 @@ export const savePaperFile = (projectId: string, fileId: string, content: string
     content,
     base_revision: baseRevision,
   })
+
+
+export interface PaperCompileCapability {
+  enabled: boolean
+  pdf_available: boolean
+}
+
+export type PaperCompileStatus =
+  | 'queued' | 'running' | 'recovering' | 'succeeded' | 'failed' | 'canceled' | 'blocked'
+
+export interface PaperCompileJob {
+  id: string
+  project_id: string
+  source_revision: number
+  status: PaperCompileStatus
+  attempts: number
+  max_attempts: number
+  cancel_requested: boolean
+  failure_code?: string
+  created_at: string
+  started_at?: string
+  finished_at?: string
+}
+
+const compilePrefix = (projectId: string) =>
+  '/projects/' + encodeURIComponent(projectId) + '/compiles'
+
+export const getPaperCompileCapability = (projectId: string) =>
+  papersRequest<PaperCompileCapability>(
+    '/projects/' + encodeURIComponent(projectId) + '/compile-capability'
+  )
+
+export const listPaperCompileJobs = (projectId: string) =>
+  papersRequest<PaperCompileJob[]>(compilePrefix(projectId))
+
+export const submitPaperCompile = (projectId: string, baseRevision: number, idempotencyKey: string) =>
+  papersRequest<PaperCompileJob>(compilePrefix(projectId), 'POST', {
+    base_revision: baseRevision,
+    idempotency_key: idempotencyKey,
+  })
+
+export const getPaperCompileJob = (projectId: string, jobId: string) =>
+  papersRequest<PaperCompileJob>(
+    `${compilePrefix(projectId)}/${encodeURIComponent(jobId)}`
+  )
+
+export const cancelPaperCompile = (projectId: string, jobId: string) =>
+  papersRequest<PaperCompileJob>(
+    `${compilePrefix(projectId)}/${encodeURIComponent(jobId)}`,
+    'DELETE'
+  )
+// Intentionally no PDF blob/preview helper until verified, private,
+// owner-bound artifacts have been persisted by a trusted Worker.

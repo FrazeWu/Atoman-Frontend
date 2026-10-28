@@ -2,15 +2,15 @@
   <div class="tl-toolbar">
     <div class="tl-filter-group">
       <label class="filter-label">起始年份</label>
-      <PInput :model-value="yearStartValue ?? ''" type="number" placeholder="如 1800" style="width:120px" @update:model-value="updateYearStart" />
+      <PInput :model-value="yearStartValue ?? ''" type="number" placeholder="如 1800" class="tl-toolbar-input" @update:model-value="updateYearStart" />
     </div>
     <div class="tl-filter-group">
       <label class="filter-label">结束年份</label>
-      <PInput :model-value="yearEndValue ?? ''" type="number" placeholder="如 2000" style="width:120px" @update:model-value="updateYearEnd" />
+      <PInput :model-value="yearEndValue ?? ''" type="number" placeholder="如 2000" class="tl-toolbar-input" @update:model-value="updateYearEnd" />
     </div>
     <div class="tl-filter-group">
       <label class="filter-label">分类</label>
-      <PInput :model-value="categoryValue" placeholder="政治 / 文化 / 科技…" style="width:160px" @update:model-value="updateCategory" />
+      <PInput :model-value="categoryValue" placeholder="政治 / 文化 / 科技…" class="tl-toolbar-input" @update:model-value="updateCategory" />
     </div>
     <PButton variant="secondary" @click="emit('apply')">筛选</PButton>
     <PButton variant="secondary" @click="emit('reset')">重置</PButton>
@@ -87,7 +87,11 @@ const updateCategory = (value: string) => emit('update:category', value)
   color: var(--a-color-muted);
 }
 
+.tl-filter-group:nth-child(-n+2) .tl-toolbar-input { width: 120px; }
+.tl-filter-group:nth-child(3) .tl-toolbar-input { width: 160px; }
+
 .tl-filter-group {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -115,4 +119,29 @@ const updateCategory = (value: string) => emit('update:category', value)
 .tl-action-btn-secondary {
   color: var(--a-color-fg);
 }
+@media (max-width: 480px) {
+  .tl-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    padding: 12px;
+    gap: 12px;
+  }
+  .tl-filter-group:nth-child(3), .tl-toolbar-batch, .tl-toolbar-mode {
+    grid-column: 1 / -1;
+  }
+  .tl-filter-group .tl-toolbar-input {
+    width: 100%;
+    min-width: 0;
+  }
+  .tl-toolbar > button, .tl-toolbar > :deep(.p-button) {
+    width: 100%;
+    min-height: 44px;
+  }
+  .tl-toolbar-mode {
+    margin-left: 0 !important;
+    min-width: 0;
+  }
+}
+
 </style>

@@ -62,7 +62,7 @@ const props = withDefaults(
     hideActions?: boolean
   }>(),
   {
-    currentSpace: 'music',
+    currentSpace: 'global',
     title: undefined,
     showBack: false,
     hideActions: false,
@@ -83,7 +83,7 @@ const route = hasRouter ? useRoute() : undefined
 const displayLabel = computed(() => {
   if (props.title) return props.title
   if (route?.path === '/me') return '个人中心'
-  const key = props.currentSpace?.toLowerCase() || 'music'
+  const key = props.currentSpace?.toLowerCase() || 'global'
   return SPACE_LABELS[key] || props.currentSpace || 'Atoman'
 })
 </script>
@@ -113,6 +113,7 @@ const displayLabel = computed(() => {
 }
 
 .mobile-topbar__back {
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -130,6 +131,7 @@ const displayLabel = computed(() => {
 }
 
 .mobile-topbar__trigger {
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -165,8 +167,8 @@ const displayLabel = computed(() => {
 }
 
 .mobile-topbar__action {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

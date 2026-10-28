@@ -10,6 +10,7 @@
         <button
           type="button"
           class="notifications-header__mark-btn"
+          :disabled="!notifications.some(item => !item.read)"
           data-testid="notifications-mark-read-btn"
           data-test="notifications-mark-read-btn"
           @click="markAllAsRead"

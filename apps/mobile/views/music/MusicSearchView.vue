@@ -35,7 +35,7 @@
     <main class="mobile-music-search__content">
       <!-- Empty Query: Hot Searches & Recommendations -->
       <section v-if="!searchQuery.trim()" class="mobile-music-search__explore">
-        <div v-if="activeTab === 'all'" class="mobile-music-search__section-title">热门搜索</div>
+        <div v-if="activeTab === 'all'" class="mobile-music-search__section-title">推荐关键词</div>
         <div v-if="activeTab === 'all'" class="mobile-music-search__tags">
           <button
             v-for="tag in hotTags"

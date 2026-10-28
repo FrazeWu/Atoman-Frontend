@@ -292,7 +292,7 @@ function playEpisode(ep: PodcastEpisode) {
   gap: 1rem;
 }
 
-.ph-recommendations-content { min-height: 15rem; }
+.ph-recommendations-content { min-height: 0; }
 
 .ph-recommendation-card {
   position: relative;

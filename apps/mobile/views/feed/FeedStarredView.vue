@@ -9,7 +9,7 @@
       <p class="feed-starred-header__subtitle">随时重温的高价值深度文章</p>
 
       <!-- Category Filter Chips -->
-      <div class="feed-starred-chips">
+      <div v-if="articles.length > 0" class="feed-starred-chips">
         <button
           v-for="cat in categories"
           :key="cat"

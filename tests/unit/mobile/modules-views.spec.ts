@@ -409,7 +409,7 @@ describe('Mobile Independent Module Views (Task 5)', () => {
 
       expect(wrapper.text()).toContain('发布短记')
       expect(wrapper.text()).toContain('撰写长文')
-      expect(wrapper.text()).toContain('上传单曲/播客')
+      expect(wrapper.text()).not.toContain('上传单曲/播客') // Mobile Studio intentionally has no upload action
       expect(wrapper.text()).toContain('移动端手势与纯白极简规范')
       expect(wrapper.findAll('[data-testid="draft-item"]').length).toBe(2)
     })

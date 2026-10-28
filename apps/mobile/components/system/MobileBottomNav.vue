@@ -27,20 +27,13 @@ import MIcon from '@mobile/components/ui/MIcon.vue'
 import { SPACE_TABS, type NavTabItem } from './bottomNavConstants'
 import { unifiedSearchEnabled } from '@/utils/searchUrl'
 
-const DEFAULT_MUSIC_TABS: NavTabItem[] = [
-  { key: 'discover', label: '发现', icon: 'compass', path: '/music' },
-  { key: 'search', label: '搜索', icon: 'search', path: '/music/search' },
-  { key: 'playlists', label: '歌单', icon: 'playlists', path: '/music/playlists' },
-  { key: 'me', label: '我的', icon: 'person', path: '/music/me' },
-]
-
 const props = withDefaults(
   defineProps<{
     currentSpace?: string
     activeTab?: string
   }>(),
   {
-    currentSpace: 'music',
+    currentSpace: 'global',
     activeTab: undefined,
   }
 )
@@ -60,11 +53,10 @@ try {
 }
 
 const tabs = computed<NavTabItem[]>(() => {
-  const key = props.currentSpace?.toLowerCase() || 'music'
-  const map = SPACE_TABS || {}
-  const items = map[key] || map.music || DEFAULT_MUSIC_TABS
+  const key = props.currentSpace?.toLowerCase() || 'global'
+  const items = SPACE_TABS[key] || SPACE_TABS.global || []
   return unifiedSearchEnabled
-    ? items.map(tab => (tab.key === 'search' && key !== 'music') ? { ...tab, path: `/search?module=${key}` } : tab)
+    ? items.map(tab => (tab.key === 'search' && key !== 'music' && key !== 'global') ? { ...tab, path: `/search?module=${key}` } : tab)
     : items
 })
 
@@ -80,7 +72,7 @@ const activeTabKey = computed(() => {
 
   // Unified search check
   if (unifiedSearchEnabled && route.path === '/search') {
-    if (route.query.module === (props.currentSpace?.toLowerCase() || 'music')) {
+    if (route.query.module === (props.currentSpace?.toLowerCase() || 'global')) {
       return 'search'
     }
   }

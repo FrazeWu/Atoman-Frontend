@@ -131,8 +131,12 @@
           <h2 class="debate-topic-card__title">{{ topic.title }}</h2>
           <p class="debate-topic-card__desc">{{ topic.description }}</p>
 
+          <!-- Do not invent a 50/50 vote split when neither side has a vote. -->
+          <p v-if="topic.affirmativeCount + topic.negativeCount === 0" class="debate-meter-empty">
+            尚无立场投票，欢迎发表观点
+          </p>
           <!-- Dual Stance Meter -->
-          <div class="debate-meter-wrap">
+          <div v-else class="debate-meter-wrap">
             <div class="debate-meter-labels">
               <span class="debate-meter-label debate-meter-label--aff">
                 正方 {{ calcPercentage(topic.affirmativeCount, topic.negativeCount).aff }}% ({{ topic.affirmativeCount }})
@@ -160,6 +164,7 @@
             <MButton
               size="sm"
               :variant="topic.userVote === 'affirmative' ? 'primary' : 'secondary'"
+              class="debate-vote-btn"
               data-testid="vote-affirmative-btn"
               @click.stop="handleVote(topic, 'affirmative')"
             >
@@ -168,6 +173,7 @@
             <MButton
               size="sm"
               :variant="topic.userVote === 'negative' ? 'primary' : 'secondary'"
+              class="debate-vote-btn"
               data-testid="vote-negative-btn"
               @click.stop="handleVote(topic, 'negative')"
             >
@@ -308,7 +314,7 @@ const displayTopics = computed(() => {
 
 function calcPercentage(aff: number, neg: number) {
   const total = aff + neg
-  if (total === 0) return { aff: 50, neg: 50 }
+  if (total === 0) return { aff: 0, neg: 0 }
   const affPct = Math.round((aff / total) * 100)
   return {
     aff: affPct,
@@ -511,11 +517,22 @@ onMounted(() => {
   transition: width 0.2s ease;
 }
 
+.debate-meter-empty {
+  margin: 0 0 12px;
+  padding: 8px 0;
+  color: var(--a-color-muted, #64748b);
+  font-size: 0.8125rem;
+}
+
 /* Actions */
 .debate-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+.debate-actions :deep(.debate-vote-btn) {
+  min-height: 44px;
 }
 
 .debate-my-vote-badge {

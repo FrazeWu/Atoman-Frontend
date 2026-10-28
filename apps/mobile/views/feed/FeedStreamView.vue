@@ -521,7 +521,10 @@ onMounted(() => {
   gap: 4px;
   background: transparent;
   border: none;
-  padding: 4px 6px;
+  padding: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  justify-content: center;
   border-radius: 4px;
   font-size: 12px;
   color: var(--a-color-muted, #64748b);

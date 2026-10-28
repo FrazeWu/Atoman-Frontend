@@ -6,6 +6,36 @@ export interface NavTabItem {
 }
 
 export const SPACE_TABS: Record<string, NavTabItem[]> = {
+  global: [
+    { key: 'home', label: '首页', icon: 'compass', path: '/' },
+    { key: 'modules', label: '模块', icon: 'library', path: '/modules' },
+    { key: 'search', label: '搜索', icon: 'search', path: '/search' },
+    { key: 'me', label: '我的', icon: 'person', path: '/me' },
+  ],
+  podcast: [
+    { key: 'discover', label: '发现', icon: 'mic', path: '/podcasts' },
+    { key: 'subscriptions', label: '订阅', icon: 'antenna', path: '/podcasts/subscriptions' },
+    { key: 'favorites', label: '收藏', icon: 'bookmark', path: '/podcasts/favorites' },
+    { key: 'me', label: '我的', icon: 'person', path: '/podcasts/me' },
+  ],
+  video: [
+    { key: 'discover', label: '发现', icon: 'play', path: '/videos' },
+    { key: 'search', label: '搜索', icon: 'search', path: '/videos/search' },
+    { key: 'subscriptions', label: '订阅', icon: 'antenna', path: '/videos/subscriptions' },
+    { key: 'favorites', label: '收藏', icon: 'bookmark', path: '/videos/favorites' },
+  ],
+  forum: [
+    { key: 'topics', label: '话题', icon: 'messages', path: '/forum' },
+    { key: 'categories', label: '分类', icon: 'library', path: '/forum/categories' },
+    { key: 'search', label: '搜索', icon: 'search', path: '/forum/search' },
+    { key: 'me', label: '我的', icon: 'person', path: '/forum/me' },
+  ],
+  timeline: [
+    { key: 'home', label: '时间线', icon: 'clock', path: '/timeline' },
+    { key: 'persons', label: '人物', icon: 'person', path: '/timeline/persons' },
+    { key: 'search', label: '搜索', icon: 'search', path: '/timeline/search' },
+    { key: 'me', label: '我的', icon: 'person', path: '/timeline/me' },
+  ],
   music: [
     { key: 'discover', label: '发现', icon: 'compass', path: '/music' },
     { key: 'search', label: '搜索', icon: 'search', path: '/music/search' },

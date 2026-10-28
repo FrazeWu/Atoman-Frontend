@@ -15,6 +15,7 @@ import MobileAudioPlayer from '@mobile/MobileAudioPlayer.vue'
 import MobilePlayerView from '@mobile/MobilePlayerView.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MInput from '@mobile/components/ui/MInput.vue'
+import * as musicApi from '@/api/musicV1'
 
 vi.mock('@/api/client', () => ({
   apiRequest: vi.fn().mockResolvedValue({}),
@@ -26,6 +27,8 @@ vi.mock('@/api/musicV1', () => ({
   listMusicPlaylists: vi.fn(),
   listPlaylistBookmarks: vi.fn().mockResolvedValue({ data: [], total: 0 }),
   listMusicSongs: vi.fn(),
+  listMusicAlbums: vi.fn(),
+  listMusicArtists: vi.fn(),
   searchMusicSongs: vi.fn(),
   createMusicPlaylist: vi.fn(),
 }))
@@ -62,6 +65,12 @@ describe('Mobile Independent Music Views & Player', () => {
       ],
     })
     vi.clearAllMocks()
+    vi.mocked(musicApi.listMusicAlbums).mockResolvedValue({
+      data: [{ id: 'album-real-1', title: '测试专辑', artist: '测试歌手', year: 2026 }],
+    } as any)
+    vi.mocked(musicApi.listMusicArtists).mockResolvedValue({
+      data: [{ id: 'artist-real-1', name: '测试歌手', nationality: '中国' }],
+    } as any)
   })
 
   describe('MusicDiscoverView.vue', () => {
@@ -164,6 +173,24 @@ describe('Mobile Independent Music Views & Player', () => {
     })
   })
 
+  describe('Music API error behavior', () => {
+    it('shows a recoverable error rather than fake albums, artists, playlists, or playable audio', async () => {
+      vi.mocked(musicApi.getMusicHome).mockRejectedValue(new Error('offline'))
+      vi.mocked(musicApi.listPublicMusicPlaylists).mockRejectedValue(new Error('offline'))
+      vi.mocked(musicApi.listMusicAlbums).mockRejectedValue(new Error('offline'))
+      vi.mocked(musicApi.listMusicArtists).mockRejectedValue(new Error('offline'))
+      vi.mocked(musicApi.listMusicSongs).mockRejectedValue(new Error('offline'))
+      const wrapper = mount(MusicDiscoverView, {
+        global: { plugins: [pinia, router], stubs: { MIcon: true } },
+      })
+      await flushPromises()
+      expect(wrapper.text()).toContain('音乐加载失败')
+      expect(wrapper.findAll('[data-testid="playlist-card"]')).toHaveLength(0)
+      expect(wrapper.findAll('[data-testid="track-item"]')).toHaveLength(0)
+      expect(wrapper.text()).not.toContain('深度工作流')
+    })
+  })
+
   describe('MusicLibraryView.vue', () => {
     it('renders search input (MInput) and track list', async () => {
       const musicApi = await import('@/api/musicV1')
@@ -231,9 +258,12 @@ describe('Mobile Independent Music Views & Player', () => {
       })
       await flushPromises()
 
+      expect(wrapper.find('[data-testid="tab-curated"]').classes()).toContain('is-active')
+      expect(wrapper.find('[data-testid="guest-card"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="create-playlist-btn"]').exists()).toBe(false)
+      await wrapper.find('[data-testid="tab-mine"]').trigger('click')
       expect(wrapper.find('[data-testid="guest-card"]').exists()).toBe(true)
       expect(wrapper.text()).toContain('登录开启自建歌单')
-      expect(wrapper.find('[data-testid="create-playlist-btn"]').exists()).toBe(false)
     })
 
     it('renders playlists list when authenticated and playlists exist', async () => {
@@ -330,7 +360,7 @@ describe('Mobile Independent Music Views & Player', () => {
       { id: 'pl-1', name: 'Kanye 精选', song_count: 25 },
     ]
 
-    it('renders search input and hot search tags when query is empty', async () => {
+    it('renders search input and recommendation keyword tags when query is empty', async () => {
       const wrapper = mount(MusicSearchView, {
         global: {
           plugins: [pinia, router],
@@ -338,7 +368,7 @@ describe('Mobile Independent Music Views & Player', () => {
       })
 
       expect(wrapper.find('[data-testid="music-search-input"]').exists()).toBe(true)
-      expect(wrapper.text()).toContain('热门搜索')
+      expect(wrapper.text()).toContain('推荐关键词')
       expect(wrapper.text()).toContain('Ye')
       expect(wrapper.text()).toContain('Kanye')
     })

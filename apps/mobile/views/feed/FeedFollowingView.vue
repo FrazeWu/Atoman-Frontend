@@ -4,8 +4,8 @@
     <header class="feed-following-header">
       <div class="feed-following-header__row">
         <div>
-          <h1 class="feed-following-header__title">关注动态</h1>
-          <p class="feed-following-header__subtitle">聚合关注源的最新时间线更新</p>
+          <h1 class="feed-following-header__title">{{ authStore?.isAuthenticated ? '关注动态' : '公开动态' }}</h1>
+          <p class="feed-following-header__subtitle">{{ authStore?.isAuthenticated ? '聚合关注源的最新时间线更新' : '探索公开 RSS 时间线更新' }}</p>
         </div>
         <button
           type="button"
@@ -20,9 +20,9 @@
 
       <!-- Sources Quick Bar -->
       <div class="feed-following-sources-bar">
-        <router-link to="/feed/sources" class="feed-following-manage-link">
+        <router-link :to="authStore?.isAuthenticated ? '/feed/sources' : '/login?redirect=/feed/sources'" class="feed-following-manage-link">
           <MIcon name="antenna" size="xs" />
-          <span>管理订阅 ({{ sourcesList.length }})</span>
+          <span>{{ authStore?.isAuthenticated ? '管理我的订阅 (' + sourcesList.length + ')' : '登录管理订阅' }}</span>
         </router-link>
       </div>
     </header>

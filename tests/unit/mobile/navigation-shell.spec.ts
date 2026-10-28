@@ -74,7 +74,7 @@ describe('Mobile Navigation Shell', () => {
   })
 
   describe('MobileSpaceDrawer.vue', () => {
-    it('renders when open is true, renders backdrop and 7 space items', () => {
+    it('renders when open is true, renders backdrop and all module items', () => {
       const wrapper = mount(MobileSpaceDrawer, {
         props: {
           open: true,
@@ -84,10 +84,10 @@ describe('Mobile Navigation Shell', () => {
 
       expect(wrapper.find('[data-testid="drawer-backdrop"]').exists()).toBe(true)
       const items = wrapper.findAll('[data-testid="space-item"]')
-      expect(items).toHaveLength(7)
+      expect(items).toHaveLength(12)
 
       const keys = items.map((el) => el.attributes('data-space-key'))
-      expect(keys).toEqual(['feed', 'music', 'books', 'blog', 'debate', 'messages', 'studio'])
+      expect(keys).toEqual(['global', 'feed', 'music', 'podcast', 'video', 'forum', 'timeline', 'books', 'blog', 'debate', 'messages', 'studio'])
     })
 
     it('does not render content or drawer when open is false', () => {

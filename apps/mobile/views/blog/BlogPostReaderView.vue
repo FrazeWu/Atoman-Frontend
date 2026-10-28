@@ -74,8 +74,10 @@
     </main>
 
     <!-- Empty State -->
-    <div v-else class="blog-reader-empty">
-      <p>文章不存在或已被删除</p>
+    <div v-else class="blog-reader-empty" role="alert">
+      <p>{{ loadError || '文章不存在或已被删除' }}</p>
+      <button v-if="canRetry" type="button" @click="loadPostById(String(route.params.id || ''))">重新加载</button>
+      <button type="button" @click="handleBack">返回文章列表</button>
     </div>
   </div>
 </template>
@@ -88,6 +90,7 @@ import DOMPurify from 'dompurify'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MAvatar from '@mobile/components/ui/MAvatar.vue'
 import { getPostById } from '@/entities/post/api/postApi'
+import { ApiErrorResponseError } from '@/api/client'
 
 export interface BlogPostDetailData {
   id: string
@@ -115,6 +118,8 @@ const router = useRouter()
 
 const loadedPost = ref<BlogPostDetailData | null>(null)
 const loading = ref(false)
+const loadError = ref('')
+const canRetry = ref(false)
 const progressPercent = ref(0)
 
 const currentPost = computed(() => props.post || loadedPost.value)
@@ -169,6 +174,8 @@ function updateScrollProgress() {
 async function loadPostById(id: string) {
   if (props.post) return
   loading.value = true
+  loadError.value = ''
+  canRetry.value = false
   try {
     const res = await getPostById(id)
     if (res) {
@@ -186,8 +193,11 @@ async function loadPostById(id: string) {
         reading_time_minutes: mins,
       }
     }
-  } catch {
-    // Graceful fallback
+  } catch (error) {
+    loadedPost.value = null
+    const notFound = error instanceof ApiErrorResponseError && error.status === 404
+    loadError.value = notFound ? '文章不存在或已被删除' : '文章加载失败，请检查网络后重试'
+    canRetry.value = !notFound
   } finally {
     loading.value = false
   }

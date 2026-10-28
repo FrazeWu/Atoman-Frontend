@@ -21,6 +21,12 @@
         <div v-for="n in 3" :key="n" class="blog-item-skeleton" />
       </div>
 
+      <div v-else-if="loadError" class="blog-empty-state" role="alert">
+        <p class="blog-empty-state__title">文章加载失败</p>
+        <p class="blog-empty-state__desc">{{ loadError }}</p>
+        <button type="button" class="blog-empty-state__retry" @click="loadData">重新加载</button>
+      </div>
+
       <template v-else>
         <!-- Hero Featured Card (Only show if not searching or if search matches hero) -->
         <section
@@ -29,7 +35,7 @@
         >
           <article class="blog-hero-card" data-testid="blog-hero-card">
             <div class="blog-hero-card__badge-row">
-              <span class="blog-hero-badge">今日精选</span>
+              <span class="blog-hero-badge">最新文章</span>
               <span v-if="featuredPost.reading_time_minutes" class="blog-hero-reading-time">
                 {{ featuredPost.reading_time_minutes }} 分钟阅读
               </span>
@@ -63,9 +69,9 @@
         </section>
 
         <!-- Trending Channels (Only show when not searching) -->
-        <section v-if="!searchQuery" class="mobile-blog-discover__channels">
+        <section v-if="!searchQuery && channels.length > 0" class="mobile-blog-discover__channels">
           <div class="mobile-blog-discover__section-header">
-            <h3 class="section-title">精选专栏</h3>
+            <h3 class="section-title">浏览主题</h3>
           </div>
           <div class="channels-scroll-row">
             <div
@@ -75,7 +81,7 @@
               @click="filterByTag(ch.tag)"
             >
               <span class="channel-mini-card__tag">#{{ ch.name }}</span>
-              <span class="channel-mini-card__desc">{{ ch.desc }}</span>
+
             </div>
           </div>
         </section>
@@ -163,49 +169,17 @@ import { unifiedSearchEnabled } from '@/utils/searchUrl'
 const router = useRouter()
 const searchQuery = ref('')
 const loading = ref(false)
+const loadError = ref('')
 const rawPosts = ref<BlogPostItem[]>(props.initialPosts ? [...props.initialPosts] : [])
 
-const channels = [
-  { id: 'c1', name: '深度思考', tag: '思考', desc: '本质洞察与认知迭代' },
-  { id: 'c2', name: '技术前沿', tag: '技术', desc: '架构演进与代码工匠' },
-  { id: 'c3', name: '现代随笔', tag: '随笔', desc: '观察生活与日常片段' },
-  { id: 'c4', name: '设计哲学', tag: '设计', desc: '极简主义与触觉体验' },
-]
-
-const fallbackPosts: BlogPostItem[] = [
-  {
-    id: 'fp-1',
-    title: '深度工作：如何在高干扰时代专注创造',
-    excerpt: '在现代碎片化信息的冲击下，深度专注成为了极为罕见且价值巨大的核心能力。',
-    author: { name: '林克', avatar: '' },
-    reading_time_minutes: 8,
-    tags: ['思考', '生产力'],
-    published_at: '2026-10-20T10:00:00Z',
-  },
-  {
-    id: 'fp-2',
-    title: 'TypeScript 5.8 核心特性解析',
-    excerpt: '本次更新在类型检查性能与模块解析方面带来了质的飞跃。',
-    author: { name: '代码工匠', avatar: '' },
-    reading_time_minutes: 5,
-    tags: ['技术'],
-    published_at: '2026-10-21T08:00:00Z',
-  },
-  {
-    id: 'fp-3',
-    title: '纯白微圆角：关于界面秩序与呼吸感',
-    excerpt: '去掉花哨的大渐变和浮夸投影，让内容本身重新成为舞台的主角。',
-    author: { name: '墨客', avatar: '' },
-    reading_time_minutes: 6,
-    tags: ['设计'],
-    published_at: '2026-10-19T14:00:00Z',
-  },
-]
+const channels = computed(() => {
+  const tags = rawPosts.value.flatMap(post => post.tags || [])
+  return [...new Set(tags)].slice(0, 6).map(tag => ({ id: tag, name: tag, tag }))
+})
 
 const allPosts = computed<BlogPostItem[]>(() => {
   if (props.initialPosts) return props.initialPosts
-  if (rawPosts.value.length > 0) return rawPosts.value
-  return fallbackPosts
+  return rawPosts.value
 })
 
 const featuredPost = computed<BlogPostItem | null>(() => {
@@ -256,6 +230,7 @@ function formatDate(isoString?: string): string {
 async function loadData() {
   if (props.initialPosts) return
   loading.value = true
+  loadError.value = ''
   try {
     const res = await fetchPostList({ limit: 20 })
     if (res?.posts && res.posts.length > 0) {
@@ -277,7 +252,8 @@ async function loadData() {
       })
     }
   } catch {
-    // Keep fallback
+    rawPosts.value = []
+    loadError.value = '请检查网络连接后重试。'
   } finally {
     loading.value = false
   }

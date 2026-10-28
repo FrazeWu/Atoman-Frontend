@@ -40,7 +40,10 @@
 
     <!-- Curated Tab -->
     <section v-if="activeTab === 'curated'" class="mobile-music-playlists__content" aria-label="精选歌单">
-      <div v-if="curatedPlaylists.length > 0" class="mobile-music-playlists__list">
+      <div v-if="curatedLoading" class="mobile-music-playlists__empty" role="status">
+        正在加载精选歌单…
+      </div>
+      <div v-else-if="curatedPlaylists.length > 0" class="mobile-music-playlists__list">
         <div
           v-for="pl in curatedPlaylists"
           :key="pl.id"
@@ -72,9 +75,11 @@
       </div>
 
       <!-- Loading / Empty Curated -->
-      <div v-else-if="!loading" class="mobile-music-playlists__empty">
+      <div v-else class="mobile-music-playlists__empty">
+        <p v-if="curatedError" role="alert">歌单加载失败，请检查网络连接。</p>
         <MIcon name="playlists" size="lg" class="mobile-music-playlists__empty-icon" />
-        <p class="mobile-music-playlists__empty-title">暂无精选歌单</p>
+        <p v-if="!curatedError" class="mobile-music-playlists__empty-title">暂无精选歌单</p>
+        <button v-else type="button" @click="loadCuratedPlaylists">重新加载</button>
       </div>
     </section>
 
@@ -189,30 +194,26 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-const activeTab = ref<'mine' | 'curated'>(props.initialTab)
+const activeTab = ref<'mine' | 'curated'>(!authStore.isAuthenticated && props.initialTab === 'mine' ? 'curated' : props.initialTab)
 const playlists = ref<MusicPlaylistSummary[]>([])
 const curatedPlaylists = ref<MusicPlaylistSummary[]>([])
 const loading = ref(false)
+const curatedLoading = ref(false)
+const curatedError = ref(false)
 const showCreateModal = ref(false)
 const newPlaylistName = ref('')
 
-const fallbackCurated: MusicPlaylistSummary[] = [
-  { id: 'curated-1', name: '深度工作流', song_count: 18, is_public: true },
-  { id: 'curated-2', name: '午夜脉冲', song_count: 24, is_public: true },
-  { id: 'curated-3', name: '极简专注音', song_count: 15, is_public: true },
-  { id: 'curated-4', name: '环境氛围志', song_count: 20, is_public: true },
-]
-
 async function loadCuratedPlaylists() {
+  curatedLoading.value = true
+  curatedError.value = false
   try {
     const res = await listPublicMusicPlaylists({ page: 1, page_size: 30 })
-    if (res?.data?.length) {
-      curatedPlaylists.value = res.data
-    } else {
-      curatedPlaylists.value = fallbackCurated
-    }
+    curatedPlaylists.value = res?.data || []
   } catch {
-    curatedPlaylists.value = fallbackCurated
+    curatedPlaylists.value = []
+    curatedError.value = true
+  } finally {
+    curatedLoading.value = false
   }
 }
 

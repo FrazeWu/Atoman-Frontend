@@ -60,6 +60,8 @@ import { useApiUrl } from '@/composables/useApiUrl'
 import { scheduleGoogleAnalytics } from '@/utils/analytics'
 import { scheduleIdleTask } from '@/utils/scheduleIdleTask'
 import { isMobileDetailRoute } from './mobileRouteMeta'
+import { resolveMobileSpace, type MobileSpace } from './mobileSpace'
+import { SPACE_PATHS } from './components/system/spaceConstants'
 import MobileTopbar from './components/system/MobileTopbar.vue'
 import MobileSpaceDrawer from './components/system/MobileSpaceDrawer.vue'
 import MobileBottomNavComponent from './components/system/MobileBottomNav.vue'
@@ -158,6 +160,8 @@ const showMobileTopbar = computed(() => {
   if (/^\/feed\/(?:article|item)\//.test(route.path)) return false
   if (/^\/(?:post|posts\/post)\//.test(route.path)) return false
   if (/^\/music\/(?:playlist|album|artist|song|songs)\//.test(route.path)) return false
+  // The book detail already renders a local back/share toolbar.
+  if (/^\/books\/work\//.test(route.path)) return false
   if (/^\/posts\/notes\/[^/]+/.test(route.path)) return false
   return true
 })
@@ -183,57 +187,31 @@ const handleBack = () => {
   if (typeof window !== 'undefined' && window.history.length > 1) {
     router.back()
   } else {
-    const spacePath = SPACE_PATHS[currentSpace.value] || '/music'
+    const spacePath = SPACE_PATHS[currentSpace.value] || '/'
     void router.push(spacePath)
   }
 }
 
 const isDrawerOpen = ref(false)
 
-const lastActiveSpace = ref<string>('music')
+const lastActiveSpace = ref<MobileSpace>('global')
 
-const currentSpace = computed<string>(() => {
-  const p = route.path || '/'
-  if (p === '/search' && typeof route.query.module === 'string' && ['feed', 'blog', 'books', 'music', 'debate'].includes(route.query.module)) return route.query.module
-  if (/^\/music(\/|$)/.test(p)) return 'music'
-  if (/^\/feed(\/|$)/.test(p)) return 'feed'
-  if (/^\/books(\/|$)/.test(p)) return 'books'
-  if (/^\/(?:posts|post|channel|channels|collection|users)(\/|$)/.test(p)) return 'blog'
-  if (/^\/debate(\/|$)/.test(p)) return 'debate'
-  if (/^\/(?:inbox|messages|notifications)(\/|$)/.test(p)) return 'messages'
-  if (/^\/studio(\/|$)/.test(p)) return 'studio'
-  if (/^\/me(\/|$)/.test(p)) return lastActiveSpace.value
-  return lastActiveSpace.value || 'feed'
-})
+const currentSpace = computed<MobileSpace>(() =>
+  resolveMobileSpace(route.path || '/', route.query.module, lastActiveSpace.value)
+)
 
 watch(
   () => route.path,
   (path) => {
-    const p = path || '/'
-    if (/^\/music(\/|$)/.test(p)) lastActiveSpace.value = 'music'
-    else if (/^\/feed(\/|$)/.test(p)) lastActiveSpace.value = 'feed'
-    else if (/^\/books(\/|$)/.test(p)) lastActiveSpace.value = 'books'
-    else if (/^\/(?:posts|post|channel|channels|collection|users)(\/|$)/.test(p)) lastActiveSpace.value = 'blog'
-    else if (/^\/debate(\/|$)/.test(p)) lastActiveSpace.value = 'debate'
-    else if (/^\/(?:inbox|messages|notifications)(\/|$)/.test(p)) lastActiveSpace.value = 'messages'
-    else if (/^\/studio(\/|$)/.test(p)) lastActiveSpace.value = 'studio'
+    const next = resolveMobileSpace(path || '/')
+    if (next !== 'global') lastActiveSpace.value = next
   },
   { immediate: true }
 )
 
-const SPACE_PATHS: Record<string, string> = {
-  feed: '/feed',
-  music: '/music',
-  books: '/books',
-  blog: '/posts',
-  debate: '/debate',
-  messages: '/inbox',
-  studio: '/studio',
-}
-
 const handleSelectSpace = (spaceKey: string) => {
   isDrawerOpen.value = false
-  const targetPath = SPACE_PATHS[spaceKey] || `/${spaceKey}`
+  const targetPath = SPACE_PATHS[spaceKey] || '/'
   if (router && typeof router.push === 'function') {
     void router.push(targetPath).catch(() => {})
   }
@@ -245,7 +223,7 @@ const handleSearch = () => {
     return
   }
   if (unifiedSearchEnabled) {
-    void router.push(searchLocation('', ['blog', 'feed', 'music', 'books', 'debate'].includes(currentSpace.value) ? currentSpace.value : ''))
+    void router.push(searchLocation('', currentSpace.value === 'global' ? '' : currentSpace.value))
     return
   }
   if (router && typeof router.push === 'function') {

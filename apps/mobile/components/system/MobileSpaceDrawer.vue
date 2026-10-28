@@ -68,7 +68,7 @@ const props = withDefaults(
     spaces?: SpaceDefinition[]
   }>(),
   {
-    currentSpace: 'music',
+    currentSpace: 'global',
     teleport: false,
     spaces: () => ATOMAN_SPACES,
   }

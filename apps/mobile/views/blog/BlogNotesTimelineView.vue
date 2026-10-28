@@ -119,16 +119,6 @@
       </div>
     </main>
 
-    <!-- Floating Action Button for quick compose -->
-    <button
-      type="button"
-      class="blog-notes-fab"
-      aria-label="发布短笺"
-      @click="showComposer = true"
-    >
-      <MIcon name="plus" size="md" />
-    </button>
-
     <!-- Composer Sheet -->
     <ShortNoteComposerSheet
       v-model="showComposer"
@@ -356,6 +346,10 @@ onMounted(() => {
   margin: 0;
 }
 
+.blog-notes-header :deep([data-testid="compose-note-btn"]) {
+  min-height: 44px;
+}
+
 .blog-notes-header__sub {
   font-size: 11px;
   color: var(--a-color-text-secondary, #71717a);
@@ -448,9 +442,12 @@ onMounted(() => {
 .note-action-btn {
   background: transparent;
   border: none;
-  padding: 4px 0;
+  padding: 6px;
+  min-width: 44px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   font-size: 12px;
   color: var(--a-color-text-secondary, #71717a);
@@ -463,30 +460,6 @@ onMounted(() => {
 
 .note-action-btn.is-saved {
   color: var(--a-color-primary, #10b981);
-}
-
-/* Floating Action Button */
-.blog-notes-fab {
-  position: fixed;
-  right: 20px;
-  bottom: 80px;
-  width: 48px;
-  height: 48px;
-  border-radius: var(--a-radius-control, 4px);
-  background: var(--a-color-primary, #10b981);
-  color: var(--a-color-primary-contrast, #ffffff);
-  border: 1px solid var(--a-color-border-soft);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: none !important;
-  cursor: pointer;
-  z-index: 20;
-  transition: transform 0.15s ease;
-}
-
-.blog-notes-fab:active {
-  transform: scale(0.95);
 }
 
 /* Empty State */

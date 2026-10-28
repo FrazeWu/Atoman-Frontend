@@ -32,6 +32,13 @@
         <div v-for="n in 3" :key="n" class="article-skeleton" />
       </div>
 
+      <!-- API failures are distinct from empty article lists. -->
+      <div v-else-if="loadError" class="blog-articles-empty" role="alert">
+        <p class="blog-articles-empty__title">长文加载失败</p>
+        <p class="blog-articles-empty__desc">{{ loadError }}</p>
+        <button type="button" @click="loadData">重新加载</button>
+      </div>
+
       <!-- Empty State -->
       <div v-else-if="filteredArticles.length === 0" class="blog-articles-empty" data-testid="articles-empty-state">
         <p class="blog-articles-empty__title">暂无该分类的长文</p>
@@ -113,64 +120,16 @@ const props = withDefaults(
 )
 
 const router = useRouter()
-const defaultCategories = ['全部', '技术', '思考', '随笔', '文化', '设计']
-const categories = computed(() => {
-  const dynamicSet = new Set<string>()
-  for (const a of articlesList.value) {
-    if (a.category && a.category !== '全部') {
-      dynamicSet.add(a.category)
-    }
-  }
-  return ['全部', ...Array.from(new Set([...defaultCategories.slice(1), ...dynamicSet]))]
-})
+const categories = computed(() => [
+  '全部',
+  ...new Set(articlesList.value.map(article => article.category).filter((cat): cat is string => Boolean(cat))),
+])
 const selectedCategory = ref('全部')
 const loading = ref(false)
-
-const fallbackArticles: ArticleItem[] = [
-  {
-    id: 'a-1',
-    title: '现代前端工程化全景思考',
-    excerpt: '从 Vite、Turbopack 到基于 Rust 的底层工具链，现代前端架构正迎来范式转移。',
-    author: { name: '前端老兵', avatar: '' },
-    reading_time_minutes: 10,
-    category: '技术',
-    tags: ['前端', '架构'],
-    published_at: '2026-10-18T10:00:00Z',
-  },
-  {
-    id: 'a-2',
-    title: '古典音乐与心流状态的科学解释',
-    excerpt: '脑电波研究表明，巴赫与莫扎特的复调音乐能够在脑内诱发稳定的 Alpha 节律。',
-    author: { name: '神经学乐迷', avatar: '' },
-    reading_time_minutes: 6,
-    category: '思考',
-    tags: ['脑科学', '音乐'],
-    published_at: '2026-10-19T10:00:00Z',
-  },
-  {
-    id: 'a-3',
-    title: '在快节奏城市中重建私人书房',
-    excerpt: '一盏柔光、一张实木书桌与安静的书脊，构筑起抵御信息洪流的最后防线。',
-    author: { name: '墨客', avatar: '' },
-    reading_time_minutes: 7,
-    category: '随笔',
-    tags: ['阅读', '生活'],
-    published_at: '2026-10-20T14:00:00Z',
-  },
-  {
-    id: 'a-4',
-    title: '触觉与微交互：论纯白微圆角的美学逻辑',
-    excerpt: '为什么 4px 微圆角能够消除刺眼锐角的同时，保留精准的机械秩序感？',
-    author: { name: 'UI琢磨者', avatar: '' },
-    reading_time_minutes: 8,
-    category: '设计',
-    tags: ['UI', '极简'],
-    published_at: '2026-10-21T09:00:00Z',
-  },
-]
+const loadError = ref('')
 
 const articlesList = ref<ArticleItem[]>(
-  props.initialArticles ? [...props.initialArticles] : [...fallbackArticles]
+  props.initialArticles ? [...props.initialArticles] : []
 )
 
 const filteredArticles = computed<ArticleItem[]>(() => {
@@ -205,13 +164,14 @@ function formatDate(isoString?: string): string {
 async function loadData() {
   if (props.initialArticles) return
   loading.value = true
+  loadError.value = ''
   try {
     const res = await fetchPostList({ limit: 30 })
     if (res?.posts && res.posts.length > 0) {
       articlesList.value = res.posts.map((p) => {
         const words = (p.content || '').length
         const mins = Math.max(1, Math.round(words / 400))
-        const catName = typeof p.category === 'string' ? p.category : (p.category as any)?.name || (p.tags?.[0] ? p.tags[0] : '随笔')
+        const catName = typeof p.category === 'string' ? p.category : (p.category as any)?.name || p.tags?.[0] || ''
         return {
           id: String(p.id),
           title: p.title,
@@ -228,7 +188,8 @@ async function loadData() {
       })
     }
   } catch {
-    // Keep fallback
+    articlesList.value = []
+    loadError.value = '请检查网络连接后重试。'
   } finally {
     loading.value = false
   }

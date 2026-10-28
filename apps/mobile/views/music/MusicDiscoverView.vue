@@ -5,6 +5,12 @@
       <h1 class="mobile-music-discover__title">发现音乐</h1>
     </header>
 
+    <div v-if="!loading && !hasContent" class="mobile-music-discover__empty" role="status">
+      <p>{{ loadError ? '音乐加载失败' : '暂时没有可展示的音乐' }}</p>
+      <button v-if="loadError" type="button" @click="loadData">重新加载</button>
+      <router-link v-else to="/music/search">前往音乐搜索</router-link>
+    </div>
+
     <!-- Featured Recommendation Card -->
     <section
       v-if="featuredRecommendation"
@@ -107,7 +113,7 @@
     </section>
 
     <!-- Curated Playlists Section -->
-    <section class="mobile-music-discover__section" aria-label="精选歌单">
+    <section v-if="playlists.length > 0" class="mobile-music-discover__section" aria-label="精选歌单">
       <div class="mobile-music-discover__section-header">
         <h2 class="mobile-music-discover__section-title">精选歌单</h2>
         <router-link to="/music/playlists" class="mobile-music-discover__more-link">
@@ -145,7 +151,7 @@
     </section>
 
     <!-- Recent Tracks Section -->
-    <section class="mobile-music-discover__section" aria-label="最近在听">
+    <section v-if="recentTracks.length > 0" class="mobile-music-discover__section" aria-label="最近在听">
       <div class="mobile-music-discover__section-header">
         <h2 class="mobile-music-discover__section-title">新曲上架</h2>
       </div>
@@ -226,32 +232,9 @@ const albums = ref<MobileAlbumItem[]>([])
 const artists = ref<MobileArtistItem[]>([])
 const recentTracks = ref<Song[]>([])
 const loading = ref(false)
-
-const fallbackPlaylists: MusicPlaylistSummary[] = [
-  { id: 'curated-1', name: '深度工作流', song_count: 18, is_public: true },
-  { id: 'curated-2', name: '午夜脉冲', song_count: 24, is_public: true },
-  { id: 'curated-3', name: '极简专注音', song_count: 15, is_public: true },
-  { id: 'curated-4', name: '环境氛围志', song_count: 20, is_public: true },
-]
-
-const fallbackAlbums: MobileAlbumItem[] = [
-  { id: 'alb-1', title: '2049', artist: 'Ye', year: 2026 },
-  { id: 'alb-2', title: '12-hey-mama', artist: 'Ye', year: 2008 },
-  { id: 'alb-3', title: 'Graduation', artist: 'Kanye West', year: 2007 },
-]
-
-const fallbackArtists: MobileArtistItem[] = [
-  { id: 'art-1', name: 'Ye', nationality: '美国' },
-  { id: 'art-2', name: 'Daniel Caesar', nationality: '加拿大' },
-  { id: 'art-3', name: 'Kendrick Lamar', nationality: '美国' },
-  { id: 'art-4', name: '宋冬野', nationality: '中国' },
-]
-
-const fallbackTracks: Song[] = [
-  { id: 'fb-1', title: 'Echoes of Silence', artist: 'Lumine', album: 'Abyssal', duration: 215, audio_url: '/audio/1.mp3' },
-  { id: 'fb-2', title: 'Quantum Drift', artist: 'Aethel', album: 'Synapse', duration: 184, audio_url: '/audio/2.mp3' },
-  { id: 'fb-3', title: 'Midnight City Lights', artist: 'Lumine', album: 'Abyssal', duration: 240, audio_url: '/audio/3.mp3' },
-]
+const loadError = ref(false)
+const hasContent = computed(() => albums.value.length > 0 || artists.value.length > 0
+  || playlists.value.length > 0 || recentTracks.value.length > 0)
 
 const featuredRecommendation = computed(() => {
   if (albums.value.length > 0) {
@@ -339,6 +322,7 @@ function formatDuration(seconds?: number): string {
 
 async function loadData() {
   loading.value = true
+  loadError.value = false
   try {
     const [homeRes, playlistsRes, albumsRes, songsRes, artistsRes] = await Promise.allSettled([
       getMusicHome(),
@@ -348,22 +332,24 @@ async function loadData() {
       listMusicArtists({ page: 1, page_size: 10 }),
     ])
 
+    loadError.value = [homeRes, playlistsRes, albumsRes, songsRes, artistsRes]
+      .every(result => result.status === 'rejected')
     if (playlistsRes.status === 'fulfilled' && playlistsRes.value?.data?.length) {
       playlists.value = playlistsRes.value.data
     } else {
-      playlists.value = fallbackPlaylists
+      playlists.value = []
     }
 
     if (albumsRes.status === 'fulfilled' && albumsRes.value?.data?.length) {
       albums.value = albumsRes.value.data.map(toAlbumItem)
     } else {
-      albums.value = fallbackAlbums
+      albums.value = []
     }
 
     if (artistsRes.status === 'fulfilled' && artistsRes.value?.data?.length) {
       artists.value = artistsRes.value.data.map(toArtistItem)
     } else {
-      artists.value = fallbackArtists
+      artists.value = []
     }
 
     if (homeRes.status === 'fulfilled' && homeRes.value) {
@@ -373,18 +359,19 @@ async function loadData() {
       } else if (songsRes.status === 'fulfilled' && songsRes.value?.data?.length) {
         recentTracks.value = songsRes.value.data.map(toPlayerSong)
       } else {
-        recentTracks.value = fallbackTracks
+        recentTracks.value = []
       }
     } else if (songsRes.status === 'fulfilled' && songsRes.value?.data?.length) {
       recentTracks.value = songsRes.value.data.map(toPlayerSong)
     } else {
-      recentTracks.value = fallbackTracks
+      recentTracks.value = []
     }
   } catch {
-    playlists.value = fallbackPlaylists
-    albums.value = fallbackAlbums
-    artists.value = fallbackArtists
-    recentTracks.value = fallbackTracks
+    playlists.value = []
+    albums.value = []
+    artists.value = []
+    recentTracks.value = []
+    loadError.value = true
   } finally {
     loading.value = false
   }
@@ -886,5 +873,23 @@ onMounted(() => {
   font-size: 11px;
   font-family: monospace;
   color: var(--a-color-text-muted, #999999);
+}
+.mobile-music-discover__empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--a-color-muted, #64748b);
+}
+.mobile-music-discover__empty button,
+.mobile-music-discover__empty a {
+  display: inline-flex;
+  margin-top: 8px;
+  min-height: 44px;
+  padding: 10px 16px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-bg, #fff);
+  color: var(--a-color-fg, #0f172a);
 }
 </style>

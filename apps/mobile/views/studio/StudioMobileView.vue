@@ -14,7 +14,7 @@
     <div v-if="isGuest" class="studio-guest-wrap">
       <MGuestCard
         title="登录进入 Studio"
-        description="登录后可创作长文、发布短记、上传单曲并管理您的内容草稿。"
+        description="登录后可创作长文、发布短记、管理您的内容草稿。"
         action-text="立即登录"
         icon="studio"
       />
@@ -51,17 +51,6 @@
               <span class="studio-action-card__label">撰写长文</span>
             </button>
 
-            <button
-              type="button"
-              class="studio-action-card"
-              data-testid="studio-action-audio"
-              @click="handleAction('audio')"
-            >
-              <div class="studio-action-card__icon">
-                <MIcon name="music" size="md" />
-              </div>
-              <span class="studio-action-card__label">上传单曲/播客</span>
-            </button>
           </div>
         </section>
 
@@ -336,13 +325,11 @@ function formatDraftType(type: string) {
   return '文章'
 }
 
-function handleAction(action: 'note' | 'post' | 'audio') {
+function handleAction(action: 'note' | 'post') {
   if (action === 'note' && router) {
     void router.push('/posts/notes/new')
   } else if (action === 'post' && router) {
     void router.push('/posts/new')
-  } else if (action === 'audio' && router) {
-    void router.push('/music/imports')
   }
 }
 

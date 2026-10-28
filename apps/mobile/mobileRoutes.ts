@@ -275,7 +275,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			{ path: "", component: () => import("./views/music/MusicDiscoverView.vue") },
 			{ path: 'albums', redirect: '/music/search?tab=albums' },
 			{ path: 'artists', redirect: '/music/search?tab=artists' },
-			{ path: 'imports', component: () => import('@/views/music/ImportsView.vue'), meta: requiresAuth },
+			{ path: 'imports', redirect: '/music' },
 			{ path: 'search', component: () => import("./views/music/MusicSearchView.vue") },
 			{ path: 'library', redirect: '/music/search' },
 			{ path: 'starred', redirect: '/music/bookmarks', meta: requiresAuth },

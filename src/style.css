@@ -385,27 +385,32 @@ body:has(.app-shell.has-sidebar) {
 	display: grid;
 	gap: 0.3rem;
 	width: 100%;
-	padding: 0.9rem 1rem;
-	color: var(--a-color-text);
+	padding: 0.75rem 0.875rem;
+	color: var(--a-color-text-secondary);
 	text-align: left;
 	text-decoration: none;
-	border: 1px solid var(--a-color-border-soft);
-	background: var(--a-color-bg);
+	border: none;
+	border-radius: var(--a-radius-control, 4px);
+	background: transparent;
 	cursor: pointer;
+	transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .settings-center__nav-item:hover {
-	border-color: var(--a-color-text);
+	color: var(--a-color-text);
+	background: var(--a-color-surface-muted);
 }
 
 .settings-center__nav-item--active,
 .settings-center__nav-item.is-active {
-	border-color: var(--a-color-text);
+	color: var(--a-color-text);
+	background: var(--a-color-surface-muted);
+	font-weight: 500;
 }
 
 .settings-center__nav-item--active strong,
 .settings-center__nav-item.is-active strong {
-	text-decoration: underline;
+	color: var(--a-color-text);
 }
 
 .settings-center__kicker {

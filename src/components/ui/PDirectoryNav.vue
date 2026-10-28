@@ -124,10 +124,9 @@ function selectItem(id: string, mobile: boolean) {
   width: 13.75rem;
   max-height: calc(100dvh - var(--a-topbar-height) - 2rem);
   overflow: hidden;
-  border: 1px solid var(--a-color-border);
-  border-radius: var(--a-radius-card, 4px);
-  background: var(--a-color-bg);
-  box-shadow: var(--a-shadow-dropdown);
+  border: none;
+  background: transparent;
+  box-shadow: none;
   transition: width 0.2s ease;
 }
 .p-directory-panel.is-collapsed {
@@ -135,12 +134,12 @@ function selectItem(id: string, mobile: boolean) {
 }
 .p-directory-header {
   display: flex;
-  min-height: 3.375rem;
+  min-height: 2.75rem;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0 0.5rem 0 1rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  padding: 0 0.5rem 0.25rem 0.875rem;
+  border-bottom: none;
 }
 .p-directory-header strong {
   font-size: var(--a-text-sm);
@@ -186,7 +185,7 @@ function selectItem(id: string, mobile: boolean) {
   display: grid;
   max-height: calc(100dvh - var(--a-topbar-height) - 6.375rem);
   overflow-y: auto;
-  padding: 0.5rem;
+  padding: 0.25rem 0;
 }
 .p-directory-item {
   position: relative;

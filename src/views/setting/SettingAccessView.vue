@@ -503,15 +503,14 @@ onMounted(async () => {
   max-height: calc(100dvh - var(--a-topbar-height) - 5rem);
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--a-color-border);
-  border-radius: var(--a-radius-card);
-  background: var(--a-color-bg);
+  border: none;
+  background: transparent;
 }
 
 .setting-access__detail-directory header {
-  min-height: 3.375rem;
-  padding: 1rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  border-bottom: none;
   font-size: var(--a-text-sm);
   font-weight: var(--a-font-weight-strong);
 }
@@ -520,7 +519,7 @@ onMounted(async () => {
   display: grid;
   gap: 0.125rem;
   overflow-y: auto;
-  padding: 0.5rem;
+  padding: 0.25rem 0;
 }
 
 .setting-access__detail-directory button {

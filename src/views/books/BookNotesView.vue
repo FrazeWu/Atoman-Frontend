@@ -575,14 +575,15 @@ onBeforeUnmount(() => {
 
 .books-notes-search-input {
   width: 100%;
-  height: 2rem;
-  padding: 0.25rem 0.6rem 0.25rem 2rem;
+  height: var(--a-control-height-sm, 2.25rem);
+  padding: 0 0.6rem 0 2rem;
   font-size: 0.8125rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   outline: none;
+  box-sizing: border-box;
   transition: border-color var(--a-motion-micro);
 }
 
@@ -594,12 +595,24 @@ onBeforeUnmount(() => {
   min-width: 8rem;
 }
 
+.books-notes-select-wrapper :deep(.p-field) {
+  gap: 0;
+}
+
+.books-notes-select-wrapper :deep(.p-select-trigger) {
+  height: var(--a-control-height-sm, 2.25rem);
+  min-height: var(--a-control-height-sm, 2.25rem);
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
+  box-sizing: border-box;
+}
+
 .books-notes-toggle {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  height: 2rem;
-  padding: 0.25rem 0.65rem;
+  height: var(--a-control-height-sm, 2.25rem);
+  padding: 0 0.75rem;
   border: 1px solid transparent;
   border-radius: var(--a-radius-control);
   background: var(--a-color-surface-muted);
@@ -607,6 +620,7 @@ onBeforeUnmount(() => {
   font-weight: 500;
   color: var(--a-color-muted);
   cursor: pointer;
+  box-sizing: border-box;
   transition: color var(--a-motion-micro), border-color var(--a-motion-micro), background-color var(--a-motion-micro);
 }
 
@@ -637,12 +651,16 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  height: var(--a-control-height-sm, 2.25rem);
   padding-left: 0.25rem;
 }
 
 .books-notes-color-chip {
-  height: 2rem;
-  padding: 0 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--a-control-height-sm, 2.25rem);
+  padding: 0 0.65rem;
   font-size: 0.75rem;
   font-weight: 500;
   border: 1px solid transparent;
@@ -650,6 +668,7 @@ onBeforeUnmount(() => {
   background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
   cursor: pointer;
+  box-sizing: border-box;
   transition: color var(--a-motion-micro), border-color var(--a-motion-micro), background-color var(--a-motion-micro);
 }
 

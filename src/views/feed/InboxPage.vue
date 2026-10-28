@@ -3,9 +3,8 @@
     <div class="a-section-header inbox-header">
       <div>
         <h1 class="a-title">通知</h1>
-        <p class="a-muted">查看互动、协作提醒和私信。</p>
+        <p class="a-muted">查看互动与协作提醒。</p>
       </div>
-      <PButton v-if="activeTab !== 'dm'" variant="secondary" @click="markCurrentNotificationsRead" label="标为已读" />
     </div>
 
     <div class="inbox-shell">
@@ -185,7 +184,6 @@ const tabs: Array<{ key: InboxPageTab; label: string }> = [
   { key: 'forum', label: '论坛' },
   { key: 'collaboration', label: '协作' },
   { key: 'system', label: '通知' },
-  { key: 'dm', label: '私信' },
 ]
 
 const forumNotificationTypes: Notification['type'][] = ['forum_topic_comment', 'forum_follow']

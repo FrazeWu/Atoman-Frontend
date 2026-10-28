@@ -57,19 +57,6 @@
             <span>系统通知</span>
           </div>
         </nav>
-
-        <div class="nav-divider" />
-
-        <div class="nav-section-title">会话沟通</div>
-        <nav class="nav-list">
-          <div class="nav-item nav-item--dm">
-            <div class="nav-dm-label">
-              <span class="nav-dm-dot" />
-              <span>私信会话</span>
-            </div>
-            <span class="nav-badge nav-badge--primary">1</span>
-          </div>
-        </nav>
       </aside>
 
       <!-- 右侧通知流工作区 -->

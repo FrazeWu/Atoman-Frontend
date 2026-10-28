@@ -12,8 +12,8 @@
       <label class="filter-label">分类</label>
       <PInput :model-value="categoryValue" placeholder="政治 / 文化 / 科技…" class="tl-toolbar-input" @update:model-value="updateCategory" />
     </div>
-    <PButton variant="secondary" @click="emit('apply')">筛选</PButton>
-    <PButton variant="secondary" @click="emit('reset')">重置</PButton>
+    <PButton variant="secondary" size="sm" @click="emit('apply')">筛选</PButton>
+    <PButton variant="secondary" size="sm" @click="emit('reset')">重置</PButton>
 
     <div v-if="batchSelectedCount" class="tl-toolbar-batch">
       <span class="tl-toolbar-batch-count">已勾选 {{ batchSelectedCount }} 条</span>
@@ -70,14 +70,11 @@ const updateCategory = (value: string) => emit('update:category', value)
 <style scoped>
 .tl-toolbar {
   display: flex;
-  gap: 0.85rem;
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
   align-items: flex-end;
-  padding: 1rem 1.15rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  background: var(--a-color-bg);
+  padding: 0.5rem 0;
 }
 
 .filter-label {
@@ -89,6 +86,17 @@ const updateCategory = (value: string) => emit('update:category', value)
 
 .tl-filter-group:nth-child(-n+2) .tl-toolbar-input { width: 120px; }
 .tl-filter-group:nth-child(3) .tl-toolbar-input { width: 160px; }
+
+.tl-toolbar-input :deep(.p-input) {
+  height: var(--a-control-height-sm, 2.25rem);
+  min-height: var(--a-control-height-sm, 2.25rem);
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.tl-toolbar-input :deep(.p-field) {
+  gap: 0;
+}
 
 .tl-filter-group {
   min-width: 0;
@@ -105,6 +113,12 @@ const updateCategory = (value: string) => emit('update:category', value)
 }
 
 .tl-toolbar-batch-count {
+  display: inline-flex;
+  align-items: center;
+  height: var(--a-control-height-sm, 2.25rem);
+  padding: 0 0.6rem;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
   font-size: 0.72rem;
   font-weight: 500;
   color: var(--a-color-muted);

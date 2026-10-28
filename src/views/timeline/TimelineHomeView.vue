@@ -35,7 +35,7 @@
 
     <div v-else class="tl-shell">
       <aside class="tl-source-panel">
-        <section class="a-card tl-panel-card">
+        <section class="tl-panel-card">
           <div class="tl-panel-head">
             <div>
               <div class="tl-panel-kicker">对比</div>
@@ -84,7 +84,7 @@
           </div>
         </section>
 
-        <section class="a-card tl-panel-card">
+        <section class="tl-panel-card">
           <div class="tl-panel-head">
             <div>
               <div class="tl-panel-kicker">来源</div>
@@ -606,7 +606,12 @@ watch(
   gap: 1.15rem;
 }
 
-.tl-panel-card,
+.tl-panel-card {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .tl-lane-board,
 .tl-map-stage-card,
 .tl-stage-empty {
@@ -649,14 +654,13 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2rem;
-  padding: 0.2rem 0.7rem;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  font-size: 0.7rem;
+  height: 1.6rem;
+  padding: 0 0.6rem;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
+  font-size: 0.72rem;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0;
   white-space: nowrap;
 }
 
@@ -688,14 +692,20 @@ watch(
 
 .tl-action-btn,
 .tl-mini-btn {
-  border: 1px solid var(--a-color-border-soft);
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-fg);
   color: var(--a-color-bg);
   cursor: pointer;
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0;
-  padding: 0.55rem 0.8rem;
+  padding: 0.4rem 0.75rem;
+  transition: opacity var(--a-motion-micro), background-color var(--a-motion-micro);
+}
+
+.tl-action-btn:hover {
+  opacity: 0.9;
 }
 
 .tl-mini-btn {
@@ -704,8 +714,14 @@ watch(
 
 .tl-action-btn-secondary,
 .tl-mini-btn:not(.danger) {
-  background: var(--a-color-bg);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
+  border-color: transparent;
+}
+
+.tl-action-btn-secondary:hover,
+.tl-mini-btn:not(.danger):hover {
+  background: color-mix(in srgb, var(--a-color-surface-muted) 80%, var(--a-color-fg));
 }
 
 .tl-action-btn.danger,
@@ -733,13 +749,15 @@ watch(
   gap: 0.9rem;
   padding: 1rem;
   border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
   box-shadow: none;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition: border-color var(--a-motion-micro), transform 0.18s ease;
 }
 
 .tl-compare-item:hover,
 .tl-source-item:hover {
+  border-color: color-mix(in srgb, var(--a-color-border-soft) 60%, var(--a-color-fg));
   box-shadow: none;
 }
 
@@ -753,6 +771,7 @@ watch(
 .tl-compare-item-active {
   background: var(--a-color-fg);
   color: var(--a-color-bg);
+  border-color: var(--a-color-fg);
 }
 
 .tl-source-item-compared .tl-card-date,
@@ -760,13 +779,18 @@ watch(
 .tl-source-item-compared .tl-card-loc,
 .tl-source-item-compared .tl-source-duration,
 .tl-compare-item-active .tl-compare-range {
-  color: var(--a-color-bg);
+  color: color-mix(in srgb, var(--a-color-bg) 85%, transparent);
 }
 
 .tl-source-item-compared .tl-card-category,
 .tl-source-item-compared .tl-inline-chip,
 .tl-compare-item-active .tl-inline-chip {
-  border-color: var(--a-color-bg);
+  background: color-mix(in srgb, var(--a-color-bg) 20%, transparent);
+  color: var(--a-color-bg);
+}
+
+.tl-source-item-compared .tl-compare-order {
+  background: color-mix(in srgb, var(--a-color-bg) 25%, transparent);
   color: var(--a-color-bg);
 }
 
@@ -776,20 +800,21 @@ watch(
 }
 
 .tl-source-item-compared .tl-action-btn-secondary {
-  background: transparent;
+  background: color-mix(in srgb, var(--a-color-bg) 20%, transparent);
   color: var(--a-color-bg);
-  border-color: var(--a-color-bg);
 }
 
 .tl-compare-order {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border: 1px solid var(--a-color-border-soft);
-  font-size: 0.8rem;
-  font-weight: 500;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+  font-size: 0.75rem;
+  font-weight: 600;
   flex-shrink: 0;
 }
 
@@ -900,12 +925,12 @@ watch(
 
 .tl-card-category {
   display: inline-block;
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0;
-  border: 1px solid var(--a-color-border-soft);
-  padding: 2px 6px;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
+  padding: 2px 7px;
 }
 
 .tl-card-loc {
@@ -918,13 +943,12 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.15rem 0.45rem;
-  border: 1px solid var(--a-color-fg);
-  font-size: 0.62rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  font-size: 0.68rem;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0;
-  color: var(--a-color-fg);
+  color: var(--a-color-muted);
 }
 
 .tl-stage-pane {

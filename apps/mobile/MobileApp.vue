@@ -72,6 +72,7 @@ import './mobileModules.css'
 import './mobileDiscovery.css'
 import './mobileSaved.css'
 import './mobileContent.css'
+import './mobileVisualRefinement.css'
 
 // Direct static component binding prevents async chunk circular-deadlock on iOS WebKit
 const MobileBottomNav = MobileBottomNavComponent

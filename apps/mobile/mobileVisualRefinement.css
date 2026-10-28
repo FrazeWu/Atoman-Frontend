@@ -1,0 +1,329 @@
+/*
+ * Mobile visual refinement, 2026-10-28.
+ * Presentation-only rules. Keep media aspect ratios and each module's
+ * information model intact; never alter data, routes, authentication or API.
+ */
+.mobile-app-shell {
+  --mobile-ui-page-inset: 16px;
+  --mobile-ui-section-gap: 24px;
+  --mobile-ui-card-gap: 12px;
+  --mobile-ui-card-radius: 12px;
+  --mobile-ui-control-radius: 9px;
+  --mobile-ui-border: #e5e7eb;
+  --mobile-ui-soft-surface: #f8fafc;
+}
+
+/* Consistent canvas across modules: distinguish cards with quiet borders,
+   rather than changing the page background from white to grey by module. */
+.mobile-app-shell .mobile-app-main,
+.mobile-app-shell .mobile-app-main:has(:is(.feed-recommended-view, .music-explore-view, .vh-wrap)),
+.mobile-app-shell .feed-module-layout:has(.feed-recommended-view) :is(.a-main-content, .a-content-frame) {
+  background: #fff;
+}
+
+/* Equal reading sizes for equivalent section titles. */
+.mobile-app-shell .mobile-app-main .mobile-blog-discover .section-title,
+.mobile-app-shell .mobile-app-main .mobile-books-discover__section-title,
+.mobile-app-shell .mobile-app-main .mobile-music-discover__section-title,
+.mobile-app-shell .mobile-app-main .vh-wrap .vh-recommendations__title,
+.mobile-app-shell .mobile-app-main .ph-page .ph-section-header h2 {
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+}
+
+/* Blog: maintain a flat editorial layout with consistently sized cards. */
+.mobile-app-shell .mobile-app-main .mobile-blog-discover__content {
+  gap: var(--mobile-ui-section-gap);
+}
+.mobile-app-shell .mobile-app-main :is(.blog-hero-card, .blog-stream-card, .channel-mini-card) {
+  border-color: var(--mobile-ui-border);
+  border-radius: var(--mobile-ui-card-radius);
+}
+.mobile-app-shell .mobile-app-main .blog-hero-card {
+  padding: 16px;
+}
+.mobile-app-shell .mobile-app-main .blog-hero-card__title {
+  font-size: 18px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.mobile-app-shell .mobile-app-main .blog-stream-card {
+  gap: 8px;
+  padding: 14px 16px;
+}
+.mobile-app-shell .mobile-app-main .blog-stream-card__title {
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.mobile-app-shell .mobile-app-main :is(.blog-hero-card__excerpt, .blog-stream-card__excerpt) {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.mobile-app-shell .mobile-app-main .blog-articles-list {
+  gap: 10px;
+}
+
+/* Book covers are editorial objects, not album-cover squares. */
+.mobile-app-shell .mobile-app-main :is(.mobile-books-discover__hero, .mobile-books-discover__item, .mobile-books-discover__skeleton) {
+  border-color: var(--mobile-ui-border);
+  border-radius: var(--mobile-ui-card-radius);
+}
+.mobile-app-shell .mobile-app-main .mobile-books-discover__content {
+  gap: 16px;
+}
+.mobile-app-shell .mobile-app-main .mobile-books-discover__hero {
+  padding: 16px;
+}
+.mobile-app-shell .mobile-app-main .mobile-books-discover__section-header {
+  margin-top: 2px;
+}
+.mobile-app-shell .mobile-app-main .mobile-books-discover__item {
+  padding: 12px;
+}
+.mobile-app-shell .mobile-app-main .mobile-books-discover__hero-title {
+  font-size: 16px;
+  white-space: normal;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.mobile-app-shell .mobile-app-main .mobile-books-discover__work-title {
+  font-size: 15px;
+  line-height: 1.45;
+}
+.mobile-app-shell .mobile-app-main :is(.mobile-books-discover__hero-cover, .mobile-books-discover__cover-wrap) {
+  border-radius: 4px;
+  border-color: #dbe1e9;
+}
+.mobile-app-shell .mobile-app-main :is(.mobile-books-discover__hero-placeholder, .mobile-books-discover__cover-placeholder) {
+  height: 100%;
+  width: 100%;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 9px 6px 7px 8px;
+  border-left: 3px solid #dbe4ef;
+  color: #334155;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.mobile-app-shell .mobile-app-main .mobile-books-discover__cover-placeholder {
+  padding: 5px 3px 5px 5px;
+  border-left-width: 2px;
+}
+.mobile-app-shell .mobile-app-main .mobile-books-discover__placeholder-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 650;
+}
+.mobile-app-shell .mobile-app-main .mobile-books-discover__placeholder-author {
+  font-size: 8px;
+  line-height: 1.2;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #64748b;
+}
+.mobile-app-shell .mobile-app-main .mobile-books-discover__cover-placeholder .mobile-books-discover__placeholder-title {
+  font-size: 9px;
+  -webkit-line-clamp: 4;
+}
+
+/* Music is cover-led. Preserve 1:1 covers but use a list for curated
+   playlists so a single playlist does not leave a half-empty two-column grid. */
+.mobile-app-shell .mobile-app-main .mobile-music-discover__section-title {
+  font-size: 17px;
+}
+.mobile-app-shell .mobile-app-main .mobile-music-discover__albums-scroll,
+.mobile-app-shell .mobile-app-main .mobile-music-discover__artists-scroll {
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x proximity;
+}
+.mobile-app-shell .mobile-app-main :is(.mobile-music-discover__album-card, .mobile-music-discover__artist-card) {
+  scroll-snap-align: start;
+}
+.mobile-app-shell .mobile-app-main .mobile-music-discover__album-name,
+.mobile-app-shell .mobile-app-main .mobile-music-discover__card-name {
+  font-size: 14px;
+  line-height: 1.45;
+}
+.mobile-app-shell .mobile-app-main .mobile-music-discover__album-artist,
+.mobile-app-shell .mobile-app-main :is(.mobile-music-discover__card-count, .mobile-music-discover__track-artist) {
+  font-size: 12px;
+  line-height: 1.45;
+}
+.mobile-app-shell .mobile-app-main .mobile-music-discover__more-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 44px;
+  padding-left: 12px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.mobile-app-shell .mobile-app-main .mobile-music-discover__section-header {
+  margin-bottom: 8px;
+}
+.mobile-app-shell .mobile-app-main .mobile-music-discover__grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+.mobile-app-shell .mobile-app-main .mobile-music-discover__card {
+  flex-direction: row;
+  align-items: center;
+  min-width: 0;
+  min-height: 96px;
+  padding: 8px;
+  gap: 12px;
+  border-color: var(--mobile-ui-border);
+  border-radius: var(--mobile-ui-card-radius);
+}
+.mobile-app-shell .mobile-app-main .mobile-music-discover__card-cover {
+  width: 80px;
+  height: 80px;
+  aspect-ratio: 1;
+  flex: 0 0 80px;
+  overflow: hidden;
+  border-radius: var(--mobile-ui-control-radius);
+}
+.mobile-app-shell .mobile-app-main .mobile-music-discover__card-info {
+  flex: 1;
+  min-width: 0;
+  padding: 0 6px 0 0;
+  gap: 5px;
+}
+.mobile-app-shell .mobile-app-main .mobile-music-discover__tag {
+  display: none; /* Hide unconditional quality label: not a real track property. */
+}
+.mobile-app-shell .mobile-app-main :is(.mobile-music-discover__featured, .mobile-music-discover__tracks) {
+  border-color: var(--mobile-ui-border);
+  border-radius: var(--mobile-ui-card-radius);
+}
+
+/* Video: the existing 16:9 thumbnail stays prominent, with clear separation
+   against the unified white canvas. */
+.mobile-app-shell .mobile-app-main .vh-wrap .vc-card {
+  border: 1px solid var(--mobile-ui-border);
+  border-radius: var(--mobile-ui-card-radius);
+}
+.mobile-app-shell .mobile-app-main .vh-wrap .vc-thumb {
+  border-radius: 11px 11px 0 0;
+}
+.mobile-app-shell .mobile-app-main .vh-wrap .vc-info {
+  padding: 12px 14px 14px;
+  gap: 8px;
+}
+.mobile-app-shell .mobile-app-main .vh-wrap .vh-grid {
+  gap: 14px;
+}
+.mobile-app-shell .mobile-app-main .vh-wrap .vh-recommendations__header {
+  gap: 8px;
+}
+
+/* Related lightweight document and community cards. */
+.mobile-app-shell .mobile-app-main .ph-page :is(.ph-recommendation-card, .ph-episode-row),
+.mobile-app-shell .mobile-app-main .forum-page .p-entry,
+.mobile-app-shell .mobile-app-main .forum-categories__item {
+  border-color: var(--mobile-ui-border);
+  border-radius: var(--mobile-ui-card-radius);
+}
+.mobile-app-shell .mobile-app-main .ph-page .ph-episode-list {
+  gap: 10px;
+}
+.mobile-app-shell .mobile-app-main .forum-page .topic-list {
+  gap: 10px;
+}
+.mobile-app-shell .mobile-app-main .forum-page .p-empty {
+  justify-items: center;
+  text-align: center;
+  border: 1px solid var(--mobile-ui-border);
+  border-radius: var(--mobile-ui-card-radius);
+  padding: 26px 14px;
+  margin-top: 6px;
+  background: #fff;
+}
+
+/* Empty and guest presentations are visually consistent without changing
+   authentication or access semantics. */
+.mobile-app-shell .mobile-app-main :is(.m-guest-card, .books-shelf-empty, .notifications-empty, .contacts-empty, .feed-starred-empty) {
+  border: 1px solid var(--mobile-ui-border);
+  border-radius: var(--mobile-ui-card-radius);
+  background: #fff;
+}
+.mobile-app-shell .mobile-app-main :is(.books-shelf-empty, .notifications-empty, .contacts-empty, .feed-starred-empty) {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 420px;
+  margin: 16px auto 0;
+  padding: 28px 16px 24px;
+}
+.mobile-app-shell .mobile-app-main .m-guest-card {
+  padding: 28px 18px 24px;
+}
+.mobile-app-shell .mobile-app-main :is(.m-guest-card__icon-box, .books-shelf-empty__icon, .notifications-empty__icon, .contacts-empty__icon, .feed-starred-empty__icon) {
+  border-radius: var(--mobile-ui-control-radius);
+}
+
+/* Empty-state actions are a mobile-only progressive disclosure. */
+.mobile-app-shell .mobile-app-main :is(.ph-empty-explore-link, .forum-categories__back-link) {
+  display: inline-flex;
+}
+
+/* Compact real content on the portal instead of huge reserved blank areas
+   after a loaded section with only a few records. Loading placeholders retain
+   their own reserved space, so this does not alter fetching or skeletons. */
+@media (max-width: 720px) {
+  .mobile-app-shell .portal-hot__section:not(.portal-hot__loading-section) > .portal-hot__section-body {
+    min-height: 0 !important;
+  }
+  .mobile-app-shell .portal-hot__sections {
+    gap: var(--mobile-ui-section-gap);
+  }
+  .mobile-app-shell .portal-hot__section-head {
+    margin-bottom: 12px;
+  }
+  .mobile-app-shell .portal-hot__module-link {
+    min-height: 44px;
+    padding-left: 10px;
+  }
+  .mobile-app-shell .mobile-app-main .ph-page {
+    gap: 20px;
+  }
+  .mobile-app-shell .mobile-app-main .ph-page .p-page-header {
+    gap: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-bottom: 0 !important;
+  }
+  .mobile-app-shell .mobile-app-main .forum-categories__search {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 360px) {
+  .mobile-app-shell { --mobile-ui-page-inset: 12px; }
+  .mobile-app-shell .mobile-app-main .mobile-music-discover__card-cover {
+    width: 72px;
+    height: 72px;
+    flex-basis: 72px;
+  }
+  .mobile-app-shell .mobile-app-main .mobile-music-discover__card {
+    min-height: 88px;
+  }
+}

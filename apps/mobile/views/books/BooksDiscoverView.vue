@@ -59,8 +59,9 @@
               :alt="heroBook.title"
               class="mobile-books-discover__hero-img"
             />
-            <div v-else class="mobile-books-discover__hero-placeholder">
-              <MIcon name="books" size="md" />
+            <div v-else class="mobile-books-discover__hero-placeholder" aria-hidden="true">
+              <span class="mobile-books-discover__placeholder-title">{{ heroBook.title }}</span>
+              <span class="mobile-books-discover__placeholder-author">{{ getAuthors(heroBook) }}</span>
             </div>
           </div>
           <div class="mobile-books-discover__hero-info">
@@ -123,8 +124,8 @@
               class="mobile-books-discover__cover-img"
               loading="lazy"
             />
-            <div v-else class="mobile-books-discover__cover-placeholder">
-              <MIcon name="books" size="md" />
+            <div v-else class="mobile-books-discover__cover-placeholder" aria-hidden="true">
+              <span class="mobile-books-discover__placeholder-title">{{ work.title }}</span>
             </div>
           </div>
 

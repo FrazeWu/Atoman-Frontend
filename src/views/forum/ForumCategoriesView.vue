@@ -22,7 +22,11 @@ onMounted(() => {
     </PPageHeader>
 
     <div v-if="!forumStore.categoriesLoaded" class="forum-categories__state">加载中...</div>
-    <PEmpty v-else-if="!categories.length" title="暂无分类" />
+    <PEmpty v-else-if="!categories.length" title="暂无分类" description="分类创建后会在这里显示。">
+      <template #action>
+        <RouterLink class="forum-categories__back-link" to="/forum">返回论坛话题</RouterLink>
+      </template>
+    </PEmpty>
     <nav v-else class="forum-categories__list" aria-label="论坛分类目录">
       <RouterLink
         v-for="category in categories"
@@ -42,6 +46,14 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.forum-categories__back-link {
+  display: none; /* desktop unchanged; mobile shell re-enables the action */
+  align-items: center; justify-content: center;
+  min-height: 44px; padding: 0 16px; font-size: 14px;
+  color: var(--a-color-text); text-decoration: none;
+  border: 1px solid var(--a-color-border); border-radius: 8px;
+}
+.forum-categories__back-link:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .forum-categories-view { min-height: 100%; padding-bottom: 3rem; }
 .forum-categories__search { display: inline-flex; min-width: 40px; min-height: 40px; align-items: center; justify-content: center; color: var(--a-color-fg); }
 .forum-categories__list { display: grid; gap: 0.5rem; }

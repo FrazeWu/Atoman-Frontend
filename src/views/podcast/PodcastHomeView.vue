@@ -162,7 +162,11 @@ function playEpisode(ep: PodcastEpisode) {
             </div>
           </div>
         </template>
-        <PEmpty v-if="recommendedEpisodes.length === 0" title="暂无推荐" description="探索更多播客频道以接收个性化单集推荐。" />
+        <PEmpty v-if="recommendedEpisodes.length === 0" title="暂无推荐" description="试试搜索感兴趣的节目或单集。">
+          <template #action>
+            <RouterLink class="ph-empty-explore-link" to="/search?module=podcast">搜索播客</RouterLink>
+          </template>
+        </PEmpty>
         <div v-else class="ph-recommendation-grid">
           <RouterLink
             v-for="item in recommendedEpisodes"
@@ -244,6 +248,21 @@ function playEpisode(ep: PodcastEpisode) {
 </template>
 
 <style scoped>
+.ph-empty-explore-link {
+  display: none; /* desktop unchanged; mobile shell re-enables the action */
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 8px);
+  background: var(--a-color-surface);
+  color: var(--a-color-text);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.ph-empty-explore-link:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .ph-page {
   padding-bottom: 5rem;
 }

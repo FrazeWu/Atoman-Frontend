@@ -1178,4 +1178,17 @@ describe("AlbumDrawer.vue", () => {
 
 		expect(document.body.textContent).toContain("收藏失败");
 	});
+
+	it("renders empty state when album has no tracks", async () => {
+		getMusicAlbum.mockResolvedValueOnce({
+			id: "album-empty",
+			title: "Empty Album",
+			tracks: [],
+		});
+		const wrapper = mount(AlbumDrawer);
+		await flushPromises();
+
+		expect(wrapper.text()).toContain("曲目库为空");
+		expect(wrapper.text()).toContain("尚未添加音频曲目");
+	});
 });

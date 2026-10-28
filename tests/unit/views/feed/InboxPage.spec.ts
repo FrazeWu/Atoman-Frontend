@@ -121,9 +121,8 @@ describe("InboxPage modern dual-pane stream", () => {
     const wrapper = mount(InboxPage, { global: { stubs } });
     await flushPromises();
 
-    expect(wrapper.find(".inbox-empty-state").exists()).toBe(true);
-    expect(wrapper.text()).toContain("暂无通知");
-    expect(wrapper.text()).toContain("当前分类没有新内容。");
+    expect(wrapper.text()).toContain("收件箱暂无通知");
+    expect(wrapper.text()).toContain("新收到的互动与动态将显示在这里");
   });
 
   it("triggers markAllRead from stream toolbar button", async () => {

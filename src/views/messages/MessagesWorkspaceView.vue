@@ -62,21 +62,15 @@
         </DMConversationPane>
       </template>
 
-      <!-- 极简 Telegram 风格空状态占位 -->
-      <div
+      <!-- 空状态占位 -->
+      <PEmpty
         v-else
         class="dm-empty-placeholder"
         data-testid="dm-empty-placeholder"
-      >
-        <div class="dm-empty-placeholder__badge">
-          <MessageCircle
-            :size="36"
-            class="dm-empty-placeholder__icon"
-            aria-hidden="true"
-          />
-          <p class="dm-empty-placeholder__text">选择一个会话开始聊天</p>
-        </div>
-      </div>
+        title="未选择会话"
+        description="从左侧列表中选择联系人开始交流"
+        align="center"
+      />
     </main>
 
     <!-- 右栏：桌面端联系人名片抽屉 (280px) -->
@@ -132,13 +126,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { MessageCircle } from 'lucide-vue-next'
 import DMMailboxSelector from '@/components/dm/DMMailboxSelector.vue'
 import DMConversationList from '@/components/dm/DMConversationList.vue'
 import DMConversationPane from '@/components/dm/DMConversationPane.vue'
 import DMComposer from '@/components/dm/DMComposer.vue'
 import DMPartyProfileDrawer from '@/components/dm/DMPartyProfileDrawer.vue'
 import DMReportModal from '@/components/dm/DMReportModal.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import { useDMStore } from '@/stores/dm'
 import type { DMImage, DMParty } from '@/api/dm'
@@ -410,27 +404,6 @@ defineExpose({
   height: 100%;
   background: var(--a-color-bg, #ffffff);
   user-select: none;
-}
-
-.dm-empty-placeholder__badge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1.5rem 2rem;
-  border-radius: 4px;
-}
-
-.dm-empty-placeholder__icon {
-  color: var(--a-color-muted);
-  opacity: 0.5;
-}
-
-.dm-empty-placeholder__text {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--a-color-muted);
 }
 
 /* 移动端响应式断点 (< 768px) */

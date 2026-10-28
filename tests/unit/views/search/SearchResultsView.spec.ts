@@ -243,4 +243,25 @@ describe('SearchResultsView.vue', () => {
       })
     )
   })
+
+  it('displays empty state when search returns no results', () => {
+    mockResult.value = {
+      view: 'list',
+      scope: 'public',
+      query: '无结果关键词',
+      partial: false,
+      items: [],
+      groups: [],
+      pagination: {
+        page: 1,
+        page_size: 20,
+        total: 0,
+        has_more: false,
+      },
+    }
+    const wrapper = createWrapper()
+
+    expect(wrapper.text()).toContain('未找到匹配结果')
+    expect(wrapper.text()).toContain('请检查关键词拼写或尝试其他搜索词')
+  })
 })

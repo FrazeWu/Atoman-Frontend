@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import MusicArchiveConfirm from '@/components/music/MusicArchiveConfirm.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
@@ -977,7 +978,7 @@ watch(
             <span>{{ albumMatchBadge.status }}</span>
           </span>
         </h3>
-        <div v-if="!tracks.length" class="track-empty">暂无曲目。</div>
+        <PEmpty v-if="!tracks.length" compact title="曲目库为空" description="尚未添加音频曲目" />
         <div v-for="track in tracks" :key="track.id" class="track">
           <button
             class="track-play-btn"
@@ -1727,7 +1728,6 @@ watch(
   color: var(--a-color-muted);
   text-transform: uppercase;
 }
-.track-empty { color: var(--a-color-muted); font-family: var(--a-font-sans); font-size: 0.875rem; }
 .track-time {
   font-family: monospace;
   font-size: 11px;

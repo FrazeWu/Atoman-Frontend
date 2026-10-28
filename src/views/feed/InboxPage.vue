@@ -93,10 +93,12 @@
               </div>
 
               <!-- Empty State -->
-              <div v-if="!notificationStore.loading && filteredNotifications.length === 0" class="inbox-empty-state">
-                <strong>暂无通知</strong>
-                <span>{{ filterMode === 'unread' ? '当前分类没有未读通知。' : '当前分类没有新内容。' }}</span>
-              </div>
+              <PEmpty
+                v-if="!notificationStore.loading && filteredNotifications.length === 0"
+                title="收件箱暂无通知"
+                description="新收到的互动与动态将显示在这里"
+                align="center"
+              />
             </div>
           </div>
 
@@ -152,6 +154,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import NotificationItemCard from '@/components/notification/NotificationItemCard.vue'
 import DMMailboxSelector from '@/components/dm/DMMailboxSelector.vue'
@@ -606,32 +609,6 @@ onBeforeUnmount(() => window.removeEventListener('resize', updateViewport))
 .action-message {
   margin: 0.25rem 0 0;
   font-size: 0.8rem;
-}
-
-.inbox-empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  min-height: 12rem;
-  padding: 3rem 1.5rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  background: var(--a-color-surface-muted);
-  text-align: center;
-  color: var(--a-color-text-secondary);
-}
-
-.inbox-empty-state strong {
-  color: var(--a-color-text);
-  font-size: 1.05rem;
-  font-weight: 500;
-}
-
-.inbox-empty-state span {
-  font-size: 0.875rem;
-  color: var(--a-color-muted);
 }
 
 /* DM Workspace */

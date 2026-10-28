@@ -204,9 +204,12 @@
         </section>
 
         <!-- No results -->
-        <div v-if="!hasResults && !search.result.value.partial" class="search-state-message is-empty">
-          <span>没有匹配的结果，请更换关键词或清空筛选。</span>
-        </div>
+        <PEmpty
+          v-if="!hasResults && !search.result.value.partial"
+          title="未找到匹配结果"
+          description="请检查关键词拼写或尝试其他搜索词"
+          align="center"
+        />
       </template>
 
       <!-- Initial empty state -->
@@ -221,6 +224,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Loader2 } from 'lucide-vue-next'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import type { SearchScope, SearchState } from '@/api/search'
 import { useUnifiedSearch } from '@/composables/useUnifiedSearch'
 import { readSearchQuery, writeSearchQuery } from '@/utils/searchUrl'

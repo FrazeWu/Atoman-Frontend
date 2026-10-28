@@ -78,7 +78,8 @@ describe('MessagesWorkspaceView', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="dm-empty-placeholder"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('选择一个会话开始聊天')
+    expect(wrapper.text()).toContain('未选择会话')
+    expect(wrapper.text()).toContain('从左侧列表中选择联系人开始交流')
     expect(wrapper.find('[data-testid="dm-conversation-pane"]').exists()).toBe(false)
   })
 

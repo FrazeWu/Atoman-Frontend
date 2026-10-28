@@ -814,4 +814,33 @@ describe("PlaylistDrawer", () => {
 		await flushPromises();
 		expect(wrapper.text()).toContain("缓存歌单测试更新");
 	});
+
+	it("renders empty state when playlist has no songs", async () => {
+		mocks.getMusicPlaylist.mockResolvedValueOnce({
+			id: "playlist-empty",
+			user_id: "user-1",
+			name: "空歌单",
+			description: "暂无歌曲",
+			cover_url: "",
+			is_public: true,
+			song_count: 0,
+			owner_username: "alice",
+			songs: [],
+		});
+
+		const wrapper = mount(PlaylistDrawer, {
+			props: {
+				layer: {
+					key: "playlist-empty",
+					kind: "playlist",
+					title: "歌单详情",
+					payload: { playlistId: "playlist-empty" },
+				},
+			},
+		});
+		await flushPromises();
+
+		expect(wrapper.text()).toContain("曲目库为空");
+		expect(wrapper.text()).toContain("尚未添加音频曲目");
+	});
 });

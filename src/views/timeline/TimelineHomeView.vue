@@ -71,9 +71,13 @@
               </div>
             </article>
           </div>
-          <div v-else class="tl-panel-empty">
-            还没有对比事件。你可以从下方来源列表或地图标记中添加。
-          </div>
+          <PEmpty
+            v-else
+            compact
+            title="对比池为空"
+            description="从时间线添加事件以开始对比"
+            align="center"
+          />
 
           <div v-if="compareIds.length" class="tl-panel-actions">
             <button class="tl-action-btn tl-action-btn-secondary" @click="clearComparePool">清空对比池</button>
@@ -91,9 +95,13 @@
 
           <p class="tl-panel-note">可逐条加入，也可先勾选多条再一次性加入对比池。</p>
 
-          <div v-if="!sortedEvents.length" class="tl-panel-empty">
-            当前筛选条件下没有可用事件。
-          </div>
+          <PEmpty
+            v-if="!sortedEvents.length"
+            compact
+            title="还没有动态"
+            description="关注创作者或去发现广场探索精彩内容"
+            align="center"
+          />
           <div v-else class="tl-source-list">
             <article
               v-for="event in sortedEvents"
@@ -157,8 +165,11 @@
             <p>URL 中的事件正在加载，稍后就会生成泳道。</p>
           </div>
           <div v-else-if="!compareEvents.length" class="a-card tl-stage-empty">
-            <div class="tl-empty-title">对比池还是空的</div>
-            <p>从左侧事件来源中自由加入你想比较的事件。带结束时间的事件会显示持续条，单点事件只显示发生时刻。</p>
+            <PEmpty
+              title="对比池为空"
+              description="从时间线添加事件以开始对比"
+              align="center"
+            />
           </div>
           <div v-else class="a-card tl-lane-board">
             <div class="tl-lane-ruler">

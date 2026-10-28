@@ -2,9 +2,10 @@
 <script setup lang="ts">
 import { reportError } from '@/utils/logger'
 import { computed, inject, ref, watch } from 'vue'
-import { AlertCircle, Bookmark, Check, Disc, Music, Play } from 'lucide-vue-next'
+import { AlertCircle, Bookmark, Check, Disc, Play } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PEmpty from '@/components/ui/PEmpty.vue'
 import PaginationBar from '@/components/ui/PaginationBar.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PlaylistEditSheet from '@/components/music/PlaylistEditSheet.vue'
@@ -649,10 +650,12 @@ watch(
           <AlertCircle :size="16" /> {{ errorMessage }}
         </p>
         <p v-else-if="loading" class="state-line loading">正在加载歌单内容...</p>
-        <div v-else-if="!playlist?.songs?.length" class="track-empty">
-          <Music :size="28" />
-          <p>此歌单暂无曲目</p>
-        </div>
+        <PEmpty
+          v-else-if="!playlist?.songs?.length"
+          compact
+          title="曲目库为空"
+          description="尚未添加音频曲目"
+        />
         
         <div
           v-else
@@ -1115,19 +1118,6 @@ button.album-name:hover {
 
 .state-line.error {
   color: var(--a-color-danger);
-}
-
-.track-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 3rem 0;
-  color: var(--a-color-muted);
-  opacity: 0.6;
-  font-family: var(--a-font-sans);
-  font-size: 0.82rem;
-  font-weight: 500;
 }
 
 @media (max-width: 640px) {

@@ -41,7 +41,7 @@
   - `copySafeLink(): Promise<void>`
   - `handleSafeLinkClick(event: MouseEvent): void`
 
-- [ ] **Step 1: Write failing tests for `useSafeLink`**
+- [x] **Step 1: Write failing tests for `useSafeLink`**
 
 ```ts
 // tests/unit/composables/useSafeLink.spec.ts
@@ -94,12 +94,12 @@ describe('useSafeLink', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `bun run test:unit tests/unit/composables/useSafeLink.spec.ts`
 Expected: FAIL with module not found.
 
-- [ ] **Step 3: Implement `src/composables/useSafeLink.ts`**
+- [x] **Step 3: Implement `src/composables/useSafeLink.ts`**
 
 ```ts
 // src/composables/useSafeLink.ts
@@ -212,12 +212,12 @@ export function useSafeLink() {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify pass**
+- [x] **Step 4: Run tests to verify pass**
 
 Run: `bun run test:unit tests/unit/composables/useSafeLink.spec.ts`
 Expected: PASS (4/4 tests pass).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run: `git add src/composables/useSafeLink.ts tests/unit/composables/useSafeLink.spec.ts && git commit -m "feat(security): implement useSafeLink composable with external url validation and toast integration"`
 
@@ -235,7 +235,7 @@ Run: `git add src/composables/useSafeLink.ts tests/unit/composables/useSafeLink.
 - Consumes: `useSafeLink()`
 - Produces: `PSafeLinkModal.vue` component
 
-- [ ] **Step 1: Write failing test for `PSafeLinkModal.vue`**
+- [x] **Step 1: Write failing test for `PSafeLinkModal.vue`**
 
 ```ts
 // tests/unit/components/PSafeLinkModal.spec.ts
@@ -277,12 +277,12 @@ describe('PSafeLinkModal', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 Run: `bun run test:unit tests/unit/components/PSafeLinkModal.spec.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Implement `PSafeLinkModal.vue`**
+- [x] **Step 3: Implement `PSafeLinkModal.vue`**
 
 ```vue
 <!-- src/components/ui/PSafeLinkModal.vue -->
@@ -522,7 +522,7 @@ const { safeLinkState, closeSafeLink, proceedToSafeLink, copySafeLink } = useSaf
 </style>
 ```
 
-- [ ] **Step 4: Mount `PSafeLinkModal.vue` in `App.vue` and `apps/mobile/MobileApp.vue`**
+- [x] **Step 4: Mount `PSafeLinkModal.vue` in `App.vue` and `apps/mobile/MobileApp.vue`**
 
 In `src/App.vue`:
 Import `PSafeLinkModal from '@/components/ui/PSafeLinkModal.vue'` and add `<PSafeLinkModal />` next to `<PToastHost />`.
@@ -530,12 +530,12 @@ Import `PSafeLinkModal from '@/components/ui/PSafeLinkModal.vue'` and add `<PSaf
 In `apps/mobile/MobileApp.vue`:
 Import `PSafeLinkModal from '@/components/ui/PSafeLinkModal.vue'` and add `<PSafeLinkModal />` next to `<PToastHost />`.
 
-- [ ] **Step 5: Run tests to verify pass**
+- [x] **Step 5: Run tests to verify pass**
 
 Run: `bun run test:unit tests/unit/components/PSafeLinkModal.spec.ts`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Run: `git add src/components/ui/PSafeLinkModal.vue tests/unit/components/PSafeLinkModal.spec.ts src/App.vue apps/mobile/MobileApp.vue && git commit -m "feat(ui): add PSafeLinkModal component and mount in desktop and mobile app roots"`
 

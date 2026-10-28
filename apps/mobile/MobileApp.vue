@@ -45,6 +45,7 @@
       />
     </div>
     <PToastHost />
+    <PSafeLinkModal />
   </div>
 </template>
 
@@ -66,6 +67,7 @@ import MobileTopbar from './components/system/MobileTopbar.vue'
 import MobileSpaceDrawer from './components/system/MobileSpaceDrawer.vue'
 import MobileBottomNavComponent from './components/system/MobileBottomNav.vue'
 import PToastHost from '@/components/ui/PToastHost.vue'
+import PSafeLinkModal from '@/components/ui/PSafeLinkModal.vue'
 import './mobileModules.css'
 import './mobileDiscovery.css'
 import './mobileSaved.css'

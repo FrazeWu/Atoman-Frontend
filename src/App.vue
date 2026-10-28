@@ -25,6 +25,7 @@
       <AudioPlayer v-if="hasActiveTrack" />
       <PShortcutHints v-if="!isAuthRoute" />
       <PToastHost />
+      <PSafeLinkModal />
   </div>
 </template>
 
@@ -36,6 +37,7 @@ import { useApiUrl } from '@/composables/useApiUrl'
 import AppTopbar from '@/components/system/AppTopbar.vue'
 import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import PToastHost from '@/components/ui/PToastHost.vue'
+import PSafeLinkModal from '@/components/ui/PSafeLinkModal.vue'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'

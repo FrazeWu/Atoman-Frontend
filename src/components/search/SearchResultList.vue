@@ -43,27 +43,28 @@ function getModuleLabel(mod: string): string {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 10px;
 }
 
 .search-result-item {
-  background-color: transparent;
-  border: none;
-  border-radius: var(--a-radius-control, 4px);
+  background-color: var(--a-color-bg, #ffffff);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
   box-shadow: none !important;
-  transition: background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
   overflow: hidden;
 }
 
 .search-result-item:hover {
-  background-color: var(--a-color-surface-muted, #f8fafc);
+  border-color: var(--a-color-border, #cbd5e1);
+  background-color: var(--a-color-surface, #f8fafc);
 }
 
 .search-result-link {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
+  gap: 5px;
+  padding: 12px 16px;
   color: inherit;
   text-decoration: none;
   overflow-wrap: anywhere;

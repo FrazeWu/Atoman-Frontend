@@ -39,18 +39,53 @@
         <ChevronRight :size="18" aria-hidden="true" />
       </RouterLink>
     </nav>
+    <section v-if="isAdmin" class="music-more-view__archive-preview" aria-label="最近归档内容" data-testid="music-archive-preview">
+      <div class="music-more-view__archive-heading">
+        <h2>最近归档内容</h2>
+        <RouterLink to="/music/archived">查看全部与恢复</RouterLink>
+      </div>
+      <p v-if="archiveLoading" role="status">正在加载归档内容…</p>
+      <p v-else-if="archiveError" role="alert">{{ archiveError }}</p>
+      <p v-else-if="!archiveEntries.length">暂无归档记录</p>
+      <ul v-else>
+        <li v-for="entry in archiveEntries" :key="`${entry.entity_type}:${entry.id}`">
+          <strong>{{ entry.title || entry.id }}</strong>
+          <span>{{ entry.entity_type === 'album' ? '专辑' : '歌曲' }} · {{ entry.archived_at ? new Date(entry.archived_at).toLocaleString() : '时间未知' }}</span>
+        </li>
+      </ul>
+    </section>
   </main>
 </template>
 
 <script setup lang="ts">
 import { Archive, Bookmark, ChevronRight, Disc3, History, ListMusic, Users } from 'lucide-vue-next'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { listArchivedMusicEntries, type MusicArchivedEntry } from '@/api/musicV1'
 import { useAuthStore } from '@/stores/auth'
 import { getMountedPinia } from '@/utils/pinia'
 import { isAdminRole } from '@/utils/roles'
 const authStore = getMountedPinia() ? useAuthStore() : null
-const isAdmin = computed(() => isAdminRole(authStore?.user?.role))
+const isAdmin = computed(() => Boolean(authStore?.isAuthenticated && isAdminRole(authStore?.user?.role)))
+const archiveEntries = ref<MusicArchivedEntry[]>([])
+const archiveLoading = ref(false)
+const archiveError = ref('')
+let archiveRequest = 0
+watch(isAdmin, async (allowed) => {
+  const request = ++archiveRequest
+  archiveEntries.value = []
+  archiveError.value = ''
+  if (!allowed) { archiveLoading.value = false; return }
+  archiveLoading.value = true
+  try {
+    const response = await listArchivedMusicEntries(1, 5)
+    if (request === archiveRequest) archiveEntries.value = response.data
+  } catch {
+    if (request === archiveRequest) archiveError.value = '归档内容加载失败，请进入归档管理重试'
+  } finally {
+    if (request === archiveRequest) archiveLoading.value = false
+  }
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -92,6 +127,13 @@ const isAdmin = computed(() => isAdminRole(authStore?.user?.role))
   color: var(--a-color-muted);
 }
 
+.music-more-view__archive-preview { margin-top: 2rem; border-top: 1px solid var(--a-color-border-soft); padding: 1rem .75rem; }
+.music-more-view__archive-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.music-more-view__archive-heading h2 { font-size: 1rem; margin: 0; }
+.music-more-view__archive-preview p, .music-more-view__archive-preview span { color: var(--a-color-muted); font-size: .875rem; }
+.music-more-view__archive-preview ul { list-style: none; padding: 0; margin: .75rem 0 0; }
+.music-more-view__archive-preview li { display: flex; justify-content: space-between; gap: 1rem; padding: .75rem 0; border-bottom: 1px solid var(--a-color-border-soft); }
+.music-more-view__archive-preview strong { overflow-wrap: anywhere; }
 @media (max-width: 720px) {
   .music-more-view {
     padding: 1.25rem 1rem 3rem;

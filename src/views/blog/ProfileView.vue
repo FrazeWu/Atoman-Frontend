@@ -932,18 +932,18 @@ onUnmounted(() => { clearTheme() })
   display: grid;
   gap: 0.1rem;
   min-width: 0;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--a-color-border-soft);
+  padding: 0.5rem 0.65rem;
+  border: 1px solid transparent;
   border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
+  background: transparent;
   color: inherit;
   cursor: pointer;
   font: inherit;
   text-align: left;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: background-color 0.15s ease;
 }
-.profile-header__relation-stat:hover { border-color: var(--a-color-border); background: var(--a-color-surface-muted); }
-.profile-header__relation-stat:focus-within { border-color: var(--a-color-primary); background: var(--a-color-surface-muted); }
+.profile-header__relation-stat:hover { background: var(--a-color-surface-muted); }
+.profile-header__relation-stat:focus-within { background: var(--a-color-surface-muted); outline: 2px solid var(--a-color-primary); outline-offset: 1px; }
 .profile-header__relation-stat strong {
   color: var(--a-color-text);
   font-size: 1.1rem;
@@ -978,7 +978,7 @@ onUnmounted(() => { clearTheme() })
 }
 
 .profile-section { margin-top: 2rem; }
-.profile-section__heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; padding-bottom: 0.9rem; border-bottom: 1px solid var(--a-color-border-soft); }
+.profile-section__heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 .profile-section__kicker { margin: 0 0 0.2rem; color: var(--a-color-primary); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; }
 .profile-section__title { margin: 0; color: var(--a-color-text); font-size: 1.15rem; font-weight: 500; line-height: 1.3; }
 .profile-section__note { margin: 0; color: var(--a-color-muted); font-size: 0.78rem; line-height: 1.45; text-align: right; }
@@ -994,7 +994,7 @@ onUnmounted(() => { clearTheme() })
 .profile-channel-card__cover { display: grid; flex: 0 0 2.75rem; width: 2.75rem; height: 2.75rem; place-items: center; overflow: hidden; border-radius: var(--a-radius-control); background: var(--a-color-text); color: var(--a-color-bg); font-size: 1rem; font-weight: 600; }
 .profile-channel-card__cover img { width: 100%; height: 100%; object-fit: cover; }
 .profile-channel-card__description { display: -webkit-box; margin: 0; overflow: hidden; color: var(--a-color-text-secondary); font-size: 0.82rem; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
-.profile-channel-card__footer { display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; margin-top: 0.85rem; padding-top: 0.7rem; border-top: 1px solid var(--a-color-border-soft); color: var(--a-color-muted); font-size: 0.72rem; }
+.profile-channel-card__footer { display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; margin-top: 0.85rem; color: var(--a-color-muted); font-size: 0.72rem; }
 .profile-channel-card__actions { display: inline-flex; align-items: center; gap: 0.45rem; margin-left: auto; }
 .profile-channel-card__view { color: var(--a-color-primary); font-size: 0.78rem; text-decoration: none; }
 .profile-channel-card__view:hover { text-decoration: underline; text-underline-offset: 0.15rem; }
@@ -1073,23 +1073,25 @@ onUnmounted(() => { clearTheme() })
 .profile-relations-modal__state--error { color: var(--a-color-danger); }
 .profile-relations-modal__list {
   display: grid;
+  gap: 0.25rem;
   max-height: min(26rem, 55vh);
   margin: 0;
   padding: 0;
   overflow-y: auto;
   list-style: none;
 }
-.profile-relation-item { border-bottom: 1px solid var(--a-color-border-soft); }
-.profile-relation-item:last-child { border-bottom: 0; }
+.profile-relation-item { border: 0; }
 .profile-relation-item__link {
   display: grid;
   grid-template-columns: 3rem minmax(0, 1fr) auto auto;
   gap: 0.75rem;
   align-items: center;
   min-width: 0;
-  padding: 0.7rem 0.2rem;
+  padding: 0.5rem 0.5rem;
+  border-radius: var(--a-radius-control);
   color: inherit;
   text-decoration: none;
+  transition: background-color 0.15s ease;
 }
 .profile-relation-item__link:hover { background: var(--a-color-surface-muted); }
 .profile-relation-item__identity { display: grid; min-width: 0; gap: 0.1rem; }

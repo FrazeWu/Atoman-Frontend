@@ -21,7 +21,7 @@ export function useSafeLink() {
     if (!url) return false
     const trimmed = url.trim()
     if (
-      trimmed.startsWith('/') ||
+      (trimmed.startsWith('/') && !trimmed.startsWith('//')) ||
       trimmed.startsWith('#') ||
       trimmed.startsWith('./') ||
       trimmed.startsWith('../') ||

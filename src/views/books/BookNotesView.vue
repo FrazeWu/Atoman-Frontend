@@ -540,10 +540,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: wrap;
-  padding: 0.75rem 1rem;
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
+  padding: 0.5rem 0;
 }
 
 .books-notes-toolbar__left {
@@ -603,9 +600,9 @@ onBeforeUnmount(() => {
   gap: 0.4rem;
   height: 2rem;
   padding: 0.25rem 0.65rem;
-  border: 1px solid var(--a-color-border-soft);
+  border: 1px solid transparent;
   border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
+  background: var(--a-color-surface-muted);
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--a-color-muted);
@@ -615,13 +612,13 @@ onBeforeUnmount(() => {
 
 .books-notes-toggle:hover {
   color: var(--a-color-fg);
-  border-color: var(--a-color-fg);
+  background: color-mix(in srgb, var(--a-color-surface-muted) 80%, var(--a-color-fg));
 }
 
 .books-notes-toggle.is-active {
-  border-color: var(--a-color-primary);
+  border-color: transparent;
   color: var(--a-color-primary);
-  background: color-mix(in srgb, var(--a-color-primary) 8%, var(--a-color-bg));
+  background: color-mix(in srgb, var(--a-color-primary) 12%, var(--a-color-surface-muted));
 }
 
 .books-notes-toggle__indicator {
@@ -648,18 +645,23 @@ onBeforeUnmount(() => {
   padding: 0 0.55rem;
   font-size: 0.75rem;
   font-weight: 500;
-  border: 1px solid var(--a-color-border-soft);
+  border: 1px solid transparent;
   border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
   cursor: pointer;
   transition: color var(--a-motion-micro), border-color var(--a-motion-micro), background-color var(--a-motion-micro);
 }
 
+.books-notes-color-chip:hover {
+  color: var(--a-color-fg);
+  background: color-mix(in srgb, var(--a-color-surface-muted) 80%, var(--a-color-fg));
+}
+
 .books-notes-color-chip.is-active {
-  border-color: var(--a-color-primary);
+  border-color: transparent;
   color: var(--a-color-primary);
-  background: color-mix(in srgb, var(--a-color-primary) 8%, var(--a-color-bg));
+  background: color-mix(in srgb, var(--a-color-primary) 12%, var(--a-color-surface-muted));
 }
 
 .books-notes-color-dot {
@@ -938,9 +940,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-top: 0.2rem;
-  padding-top: 0.4rem;
-  border-top: 1px solid var(--a-color-border-soft);
+  margin-top: 0.25rem;
 }
 
 .book-note-card__time {

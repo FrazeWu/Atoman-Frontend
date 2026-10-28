@@ -188,15 +188,10 @@ test.describe("Music Wiki Real", () => {
   });
 
 
-  test("mobile user can open music creation without publishing", async ({
-    authenticatedMusicMobilePage,
-  }) => {
+  test("mobile discover does not offer album upload", async ({ authenticatedMusicMobilePage }) => {
     await authenticatedMusicMobilePage.goto('/music')
-    const addAlbum = authenticatedMusicMobilePage.getByRole('button', { name: '添加专辑' })
-    await expect(addAlbum).toBeVisible()
-    await addAlbum.click()
-    await expect(authenticatedMusicMobilePage.getByRole('dialog', { name: /创建-专辑/ })).toBeVisible()
-    await expect(authenticatedMusicMobilePage.locator('[data-testid="album-import-files-input"]')).toHaveCount(1)
+    await expect(authenticatedMusicMobilePage.getByRole('heading', { name: '发现音乐' })).toBeVisible()
+    await expect(authenticatedMusicMobilePage.getByTestId('add-album')).toHaveCount(0)
   })
 
   test("authenticated user can open the music contribute flow against real backend", async ({

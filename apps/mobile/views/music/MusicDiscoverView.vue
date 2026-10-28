@@ -193,6 +193,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
+import { useAuthStore } from '@/stores/auth'
 import {
   getMusicHome,
   listMusicAlbums,
@@ -224,9 +225,19 @@ export interface MobileArtistItem {
 const router = useRouter()
 const { openMusicCreationFlow } = useMusicDrawers()
 const { requireLogin } = useLoginRedirect()
-function startAlbumCreation() {
-  if (!requireLogin()) return
-  openMusicCreationFlow({ startStep: 'albumImport' })
+const authStore = useAuthStore()
+let openingAlbumCreation = false
+async function startAlbumCreation() {
+  if (openingAlbumCreation) return
+  openingAlbumCreation = true
+  try {
+    // The mobile landing page can render before its cookie session has restored.
+    if (!authStore.isAuthenticated) await authStore.restoreSession()
+    if (!requireLogin()) return
+    openMusicCreationFlow({ startStep: 'albumImport' })
+  } finally {
+    openingAlbumCreation = false
+  }
 }
 const player = useAudioPlayerStore()
 

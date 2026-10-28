@@ -156,8 +156,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const clearSessionState = () => {
-    clearDependentState()
-    clearQueryCache()
+    const hadSession = isAuthenticated.value || Boolean(user.value) || Boolean(token.value)
+    if (hadSession) {
+      clearDependentState()
+      clearQueryCache()
+    }
     token.value = null
     user.value = null
     isAuthenticated.value = false

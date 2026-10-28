@@ -731,11 +731,14 @@ const submitCategoryRequest = async () => {
 }
 
 .tr-badge-pin {
-  color: var(--a-color-fg);
+  border: 1px solid transparent;
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
 }
 
 .tr-badge-closed {
-  border-color: var(--a-color-disabled-border);
+  border: 1px solid transparent;
+  background: var(--a-color-surface-muted);
   color: var(--a-color-muted-soft);
 }
 
@@ -750,15 +753,17 @@ const submitCategoryRequest = async () => {
 }
 
 .tr-badge-tag {
-  border-color: var(--a-color-disabled-border);
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
   cursor: pointer;
-  transition: color 0.1s, background-color 0.1s, border-color 0.1s, opacity 0.1s, transform 0.1s, box-shadow 0.1s;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .tr-badge-tag:hover {
-  border-color: var(--a-color-fg);
-  color: var(--a-color-fg);
+  background: var(--a-color-border-soft);
+  color: var(--a-color-text);
 }
 
 .tr-title {

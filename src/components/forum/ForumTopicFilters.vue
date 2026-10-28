@@ -83,8 +83,7 @@ defineEmits<{
   display: grid;
   gap: 1rem;
   margin-bottom: 1.25rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  padding-bottom: 1rem;
+  padding-bottom: 0.25rem;
 }
 
 .tab-bar,

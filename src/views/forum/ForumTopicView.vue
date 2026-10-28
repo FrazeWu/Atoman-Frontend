@@ -398,9 +398,8 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 }
 
 .topic-header {
-  margin-bottom: 2rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  padding-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0;
 }
 
 .topic-title {
@@ -424,21 +423,23 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
   font-size: 0.7rem;
   font-weight: 500;
   letter-spacing: 0;
-  padding: 0.15rem 0.4rem;
-  border: var(--a-border);
-  border-color: var(--a-color-muted);
+  padding: 0.15rem 0.45rem;
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
 }
 
 .topic-status-muted {
-  border-color: var(--a-color-disabled-border);
+  border-color: transparent;
+  background: var(--a-color-surface-muted);
   color: var(--a-color-muted-soft);
 }
 
 .topic-status-solved {
-  border-color: var(--a-color-success);
-  background: var(--a-color-success);
-  color: var(--a-color-bg);
+  border-color: transparent;
+  background: var(--a-color-success-bg, rgba(16, 185, 129, 0.12));
+  color: var(--a-color-success);
 }
 
 .topic-meta {
@@ -654,7 +655,9 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 
 .tag-pill {
   font-weight: 500;
-  border-color: var(--a-color-disabled-border);
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
 }
 

@@ -605,10 +605,12 @@ export function useAlbumImportUpload() {
         // Save a reusable identity check before the first part is sent.
         // Uploads still work if local storage is unavailable, but they cannot
         // be resumed safely after closing the browser in that case.
-        // Fingerprinting is independent from the upload request. Starting it
-        // without blocking keeps the multipart retry UI responsive; an upload
-        // cannot be resumed after reload until the digest is safely persisted.
-        void rememberMusicUploadFingerprint(importId, fileId, file).catch(() => {});
+        // Persist the identity check before starting the first multipart part.
+        // Otherwise a quick reload can leave server-side parts without the
+        // local fingerprint required to safely resume them. A browser without
+        // crypto/storage may still upload normally, but cannot safely resume.
+        await rememberMusicUploadFingerprint(importId, fileId, file).catch(() => {});
+        if (!isCurrent()) return;
 		const partSize =
 			fileRecord?.partSize && fileRecord.partSize > 0
 				? fileRecord.partSize

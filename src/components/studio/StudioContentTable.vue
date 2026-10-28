@@ -9,7 +9,15 @@
       <table>
         <thead>
           <tr>
-            <th>选择</th>
+            <th class="studio-content-table__col-select">
+              <input
+                type="checkbox"
+                :checked="isAllSelected"
+                :indeterminate="isIndeterminate"
+                aria-label="全选本页内容"
+                @change="emit('toggleSelectAll', !isAllSelected)"
+              />
+            </th>
             <th>标题</th>
             <th>状态</th>
             <th>可见范围</th>
@@ -24,7 +32,14 @@
         </thead>
         <tbody>
           <tr v-for="item in items" :key="item.id">
-            <td data-label="选择" :class="{ 'is-empty-selection': !item.collection_conflict }"><input v-if="item.collection_conflict" type="checkbox" :aria-label="`选择${item.title || config.itemLabel}`" @change="emit('selectConflict', item, ($event.target as HTMLInputElement).checked)" /></td>
+            <td data-label="选择" class="studio-content-table__col-select">
+              <input
+                type="checkbox"
+                :checked="selectedIds?.includes(item.id)"
+                :aria-label="`选择《${item.title || config.itemLabel}》`"
+                @change="handleRowSelect(item, ($event.target as HTMLInputElement).checked)"
+              />
+            </td>
             <td data-label="标题">
               <strong>{{ item.title || `未命名${config.itemLabel}` }}</strong>
               <span v-if="item.processing_status && item.processing_status !== 'ready'">{{ item.processing_status }}</span>
@@ -188,7 +203,11 @@ const props = withDefaults(defineProps<{
   module: StudioModule
   pagination: StudioPagination | null
   canReorder?: boolean
-}>(), { canReorder: false })
+  selectedIds?: string[]
+}>(), {
+  canReorder: false,
+  selectedIds: () => [],
+})
 
 const emit = defineEmits<{
   page: [page: number]
@@ -202,7 +221,22 @@ const emit = defineEmits<{
   selectConflict: [item: StudioContentItem, selected: boolean]
   candidate: [item: StudioContentItem, collectionID: string]
   reorder: [item: StudioContentItem, direction: -1 | 1]
+  toggleSelect: [id: string]
+  toggleSelectAll: [selectAll: boolean]
 }>()
+
+const isAllSelected = computed(() => props.items.length > 0 && props.items.every(item => props.selectedIds?.includes(item.id)))
+const isIndeterminate = computed(() => {
+  if (isAllSelected.value) return false
+  return props.items.some(item => props.selectedIds?.includes(item.id))
+})
+
+function handleRowSelect(item: StudioContentItem, checked: boolean) {
+  emit('toggleSelect', item.id)
+  if (item.collection_conflict) {
+    emit('selectConflict', item, checked)
+  }
+}
 
 function selectCandidate(item: StudioContentItem, event: Event) {
   const collectionID = (event.target as HTMLSelectElement).value
@@ -262,6 +296,8 @@ th { background: var(--a-color-bg); color: var(--a-color-muted); font-size: 0.75
 td { font-size: 0.875rem; }
 tbody tr:hover { background: var(--a-color-surface-muted); }
 td:first-child { min-width: 3.5rem; }
+.studio-content-table__col-select { width: 3rem; text-align: center; }
+.studio-content-table__col-select input[type="checkbox"] { cursor: pointer; }
 td strong, td span { display: block; }
 td span { margin-top: 0.2rem; color: var(--a-color-muted); font-size: 0.75rem; }
 td .studio-content-table__schedule-status--failed, .studio-content-table__schedule-error { color: var(--a-color-danger); }
@@ -295,7 +331,6 @@ td .studio-content-table__schedule-status--failed, .studio-content-table__schedu
   }
   td { min-width: 0; padding: 0; border: 0; overflow-wrap: anywhere; }
   td:first-child, td:last-child { grid-column: 1 / -1; }
-  td.is-empty-selection { display: none; }
   td::before {
     content: attr(data-label);
     display: block;

@@ -43,7 +43,7 @@ describe("StudioContentTable", () => {
 	it("renders blog metrics and emits lifecycle actions", async () => {
 		const wrapper = mountTable("blog");
 		expect(wrapper.get("tbody td:first-child").classes()).toContain(
-			"is-empty-selection",
+			"studio-content-table__col-select",
 		);
 
 		for (const label of ["阅读", "评论", "点赞", "收藏", "分享", "发布时间"]) {
@@ -114,10 +114,100 @@ describe("StudioContentTable", () => {
 			],
 		};
 		const wrapper = mountTable("video", conflicted);
-		expect(wrapper.get("tbody td:first-child").classes()).not.toContain(
-			"is-empty-selection",
+		expect(wrapper.get("tbody td:first-child").classes()).toContain(
+			"studio-content-table__col-select",
 		);
 		expect(wrapper.text()).toContain("待确认：默认合集、专题合集");
+	});
+
+	it("renders selection column and header checkbox states", async () => {
+		const item1 = { ...item("blog"), id: "blog-1" };
+		const item2 = { ...item("blog"), id: "blog-2" };
+
+		// None selected
+		const wrapperNone = mount(StudioContentTable, {
+			props: { module: "blog", items: [item1, item2], pagination: null, selectedIds: [] },
+			global: { stubs: { RouterLink } },
+		});
+		const headerCheckboxNone = wrapperNone.get<HTMLInputElement>("th.studio-content-table__col-select input[type=\"checkbox\"]");
+		expect(headerCheckboxNone.element.checked).toBe(false);
+		expect(headerCheckboxNone.element.indeterminate).toBe(false);
+
+		// Partially selected (indeterminate)
+		const wrapperPartial = mount(StudioContentTable, {
+			props: { module: "blog", items: [item1, item2], pagination: null, selectedIds: ["blog-1"] },
+			global: { stubs: { RouterLink } },
+		});
+		const headerCheckboxPartial = wrapperPartial.get<HTMLInputElement>("th.studio-content-table__col-select input[type=\"checkbox\"]");
+		expect(headerCheckboxPartial.element.checked).toBe(false);
+		expect(headerCheckboxPartial.element.indeterminate).toBe(true);
+
+		// All selected
+		const wrapperAll = mount(StudioContentTable, {
+			props: { module: "blog", items: [item1, item2], pagination: null, selectedIds: ["blog-1", "blog-2"] },
+			global: { stubs: { RouterLink } },
+		});
+		const headerCheckboxAll = wrapperAll.get<HTMLInputElement>("th.studio-content-table__col-select input[type=\"checkbox\"]");
+		expect(headerCheckboxAll.element.checked).toBe(true);
+		expect(headerCheckboxAll.element.indeterminate).toBe(false);
+	});
+
+	it("emits toggleSelectAll when header checkbox changes", async () => {
+		const item1 = { ...item("blog"), id: "blog-1" };
+		const item2 = { ...item("blog"), id: "blog-2" };
+
+		// When not all selected, clicking header checkbox emits toggleSelectAll(true)
+		const wrapper = mount(StudioContentTable, {
+			props: { module: "blog", items: [item1, item2], pagination: null, selectedIds: ["blog-1"] },
+			global: { stubs: { RouterLink } },
+		});
+		const headerCheckbox = wrapper.get("th.studio-content-table__col-select input[type=\"checkbox\"]");
+		await headerCheckbox.trigger("change");
+		expect(wrapper.emitted("toggleSelectAll")?.[0]).toEqual([true]);
+
+		// When all selected, clicking header checkbox emits toggleSelectAll(false)
+		const wrapperAll = mount(StudioContentTable, {
+			props: { module: "blog", items: [item1, item2], pagination: null, selectedIds: ["blog-1", "blog-2"] },
+			global: { stubs: { RouterLink } },
+		});
+		const headerCheckboxAll = wrapperAll.get("th.studio-content-table__col-select input[type=\"checkbox\"]");
+		await headerCheckboxAll.trigger("change");
+		expect(wrapperAll.emitted("toggleSelectAll")?.[0]).toEqual([false]);
+	});
+
+	it("emits toggleSelect when row checkbox changes", async () => {
+		const item1 = { ...item("blog"), id: "blog-1", title: "第一篇文章" };
+		const wrapper = mount(StudioContentTable, {
+			props: { module: "blog", items: [item1], pagination: null, selectedIds: [] },
+			global: { stubs: { RouterLink } },
+		});
+		const rowCheckbox = wrapper.get<HTMLInputElement>("tbody td.studio-content-table__col-select input[type=\"checkbox\"]");
+		expect(rowCheckbox.attributes("aria-label")).toBe("选择《第一篇文章》");
+		expect(rowCheckbox.element.checked).toBe(false);
+
+		await rowCheckbox.setValue(true);
+		expect(wrapper.emitted("toggleSelect")?.[0]).toEqual(["blog-1"]);
+	});
+
+	it("emits both toggleSelect and selectConflict when a conflicted row is selected", async () => {
+		const conflicted = {
+			...item("video"),
+			id: "video-conflicted",
+			collection_conflict: true,
+			collections: [
+				{ id: "collection-1", name: "默认合集" },
+				{ id: "collection-2", name: "专题合集" },
+			],
+		};
+		const wrapper = mount(StudioContentTable, {
+			props: { module: "video", items: [conflicted], pagination: null, selectedIds: [] },
+			global: { stubs: { RouterLink } },
+		});
+		const rowCheckbox = wrapper.get("tbody td.studio-content-table__col-select input[type=\"checkbox\"]");
+		await rowCheckbox.setValue(true);
+
+		expect(wrapper.emitted("toggleSelect")?.[0]).toEqual(["video-conflicted"]);
+		expect(wrapper.emitted("selectConflict")?.[0]).toEqual([conflicted, true]);
 	});
 
 	it("does not show sharing for private content", () => {

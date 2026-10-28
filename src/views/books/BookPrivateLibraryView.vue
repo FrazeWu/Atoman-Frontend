@@ -93,7 +93,7 @@
             />
           </label>
 
-          <PButton to="/books">发现图书</PButton>
+          <PButton to="/books" size="sm">发现图书</PButton>
         </div>
       </div>
 

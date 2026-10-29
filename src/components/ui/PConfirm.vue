@@ -8,12 +8,15 @@
     role="alertdialog"
     :above-player="abovePlayer"
     :close-on-backdrop="false"
+    :aria-describedby="confirmMessageId"
+    :initial-focus="resolveInitialFocus"
     @update:show="(value) => { if (!value) cancel() }"
   >
-    <p class="p-confirm__message">{{ message }}</p>
+    <p :id="confirmMessageId" class="p-confirm__message">{{ message }}</p>
     <template #footer>
-      <PButton variant="secondary" :label="cancelText" :disabled="loading" @click="cancel" />
+      <PButton ref="cancelBtnRef" variant="secondary" :label="cancelText" :disabled="loading" @click="cancel" />
       <PButton
+        ref="confirmBtnRef"
         :variant="danger ? 'danger' : 'primary'"
         :label="confirmText"
         :disabled="loading"
@@ -36,10 +39,11 @@
     :above-player="abovePlayer"
     @close="cancel"
   >
-    <p class="p-confirm__message">{{ message }}</p>
+    <p :id="confirmMessageId" class="p-confirm__message">{{ message }}</p>
     <div class="p-confirm__actions">
-      <PButton variant="secondary" :label="cancelText" :disabled="loading" @click="cancel" />
+      <PButton ref="cancelBtnRef" variant="secondary" :label="cancelText" :disabled="loading" @click="cancel" />
       <PButton
+        ref="confirmBtnRef"
         :variant="danger ? 'danger' : 'primary'"
         :label="confirmText"
         :disabled="loading"
@@ -53,6 +57,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, useId } from 'vue'
 import PButton from './PButton.vue'
 import PActionFeedback from './PActionFeedback.vue'
 import PModal from './PModal.vue'
@@ -87,6 +92,17 @@ const emit = defineEmits<{
   confirm: []
   cancel: []
 }>()
+
+const confirmMessageId = `confirm-message-${useId()}`
+
+const cancelBtnRef = ref<any>(null)
+const confirmBtnRef = ref<any>(null)
+
+const resolveInitialFocus = () => {
+  const cancelEl = (cancelBtnRef.value?.$el ?? cancelBtnRef.value) as HTMLElement | undefined
+  const confirmEl = (confirmBtnRef.value?.$el ?? confirmBtnRef.value) as HTMLElement | undefined
+  return props.danger ? (cancelEl || null) : (confirmEl || null)
+}
 
 const confirm = () => {
   if (!props.loading) emit('confirm')

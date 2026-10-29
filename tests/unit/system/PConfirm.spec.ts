@@ -57,4 +57,64 @@ describe("PConfirm.vue", () => {
     expect(alert!.textContent).toContain("删除失败，请重试");
     expect(alert!.parentElement?.classList.contains("p-modal-footer")).toBe(true);
   });
+
+  it("lands initial focus on the cancel button when danger is true", async () => {
+    const wrapper = mount(PConfirm, {
+      props: {
+        show: true,
+        danger: true,
+        title: "危险操作",
+        message: "确认删除吗？",
+      },
+    });
+    await nextTick();
+
+    const buttons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>(".p-modal-footer button"),
+    );
+    const cancelButton = buttons.find((btn) => btn.textContent?.includes("取消"));
+    expect(cancelButton).toBeDefined();
+    expect(document.activeElement).toBe(cancelButton);
+
+    wrapper.unmount();
+  });
+
+  it("lands initial focus on the confirm button when danger is false", async () => {
+    const wrapper = mount(PConfirm, {
+      props: {
+        show: true,
+        danger: false,
+        title: "正常操作",
+        message: "确认发布吗？",
+      },
+    });
+    await nextTick();
+
+    const buttons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>(".p-modal-footer button"),
+    );
+    const confirmButton = buttons.find((btn) => btn.textContent?.includes("确认"));
+    expect(confirmButton).toBeDefined();
+    expect(document.activeElement).toBe(confirmButton);
+
+    wrapper.unmount();
+  });
+
+  it("binds aria-describedby on the modal matching the message element id", async () => {
+    const wrapper = mount(PConfirm, {
+      props: {
+        show: true,
+        title: "无障碍确认",
+        message: "详细确认说明文本",
+      },
+    });
+    await nextTick();
+
+    const dialog = document.querySelector(".p-modal");
+    const messageEl = document.querySelector(".p-confirm__message");
+    expect(messageEl?.id).toBeTruthy();
+    expect(dialog?.getAttribute("aria-describedby")).toBe(messageEl?.id);
+
+    wrapper.unmount();
+  });
 });

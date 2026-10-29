@@ -9,18 +9,24 @@
       <slot />
     </div>
     
-    <div v-if="error" class="p-field-error-msg">{{ error }}</div>
-    <div v-if="hint" class="p-field-hint">{{ hint }}</div>
+    <div v-if="error" :id="errorId" class="p-field-error-msg" role="alert" aria-live="polite">{{ error }}</div>
+    <div v-if="hint" :id="hintId" class="p-field-hint">{{ hint }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed, useId } from 'vue'
+
+const props = defineProps<{
   label?: string
   required?: boolean
   error?: string
   hint?: string
 }>()
+
+const fieldId = useId()
+const errorId = computed(() => (props.error ? `${fieldId}-error` : undefined))
+const hintId = computed(() => (props.hint && !props.error ? `${fieldId}-hint` : undefined))
 </script>
 
 <style scoped>

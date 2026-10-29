@@ -16,6 +16,9 @@
         aria-haspopup="listbox"
         :aria-expanded="open"
         :aria-controls="listboxId"
+        :aria-invalid="error ? 'true' : undefined"
+        :aria-describedby="describedBy"
+        :aria-errormessage="errorId"
         @click="toggleOpen"
         @keydown.down.prevent="openFromKeyboard('first')"
         @keydown.up.prevent="openFromKeyboard('last')"
@@ -49,13 +52,13 @@
         <div v-if="normalizedOptions.length === 0" class="p-select-empty">暂无选项</div>
       </div>
     </div>
-    <div v-if="error" class="p-field-error">{{ error }}</div>
-    <div v-else-if="hint" class="p-field-hint">{{ hint }}</div>
+    <div v-if="error" :id="errorId" class="p-field-error" role="alert" aria-live="polite">{{ error }}</div>
+    <div v-else-if="hint" :id="hintId" class="p-field-hint">{{ hint }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from 'vue'
 
 interface SelectOption {
   label: string
@@ -85,9 +88,12 @@ const emit = defineEmits<{
   'update:modelValue': [value: string | number]
 }>()
 
-const instanceId = `p-select-${getCurrentInstance()?.uid ?? 0}`
-const triggerId = `${instanceId}-trigger`
-const listboxId = `${instanceId}-listbox`
+const instanceId = useId()
+const triggerId = computed(() => `${instanceId}-trigger`)
+const listboxId = computed(() => `${instanceId}-listbox`)
+const errorId = computed(() => (props.error ? `${instanceId}-error` : undefined))
+const hintId = computed(() => (props.hint && !props.error ? `${instanceId}-hint` : undefined))
+const describedBy = computed(() => errorId.value || hintId.value || undefined)
 const open = ref(false)
 const rootRef = ref<HTMLElement | null>(null)
 const triggerRef = ref<HTMLButtonElement | null>(null)
@@ -225,6 +231,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   font: inherit;
   text-align: left;
   cursor: pointer;
+  box-shadow: none !important;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -239,7 +246,14 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 }
 
 .p-select-trigger--error {
-  border-bottom-color: var(--a-color-danger);
+  border-color: var(--a-color-danger) !important;
+  box-shadow: none !important;
+}
+
+.p-select-trigger--error:focus {
+  outline: 2px solid color-mix(in srgb, var(--a-color-danger) 24%, transparent) !important;
+  outline-offset: 1px;
+  border-color: var(--a-color-danger) !important;
 }
 
 .p-select-value--placeholder,
@@ -259,7 +273,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   border-radius: var(--a-radius-control);
   background: var(--a-color-surface);
   border: 1px solid var(--a-color-border-soft);
-  box-shadow: var(--a-shadow-dropdown);
+  box-shadow: none !important;
 }
 
 .p-select-option {

@@ -1,6 +1,6 @@
 # 全局统一搜索（Unified Search）键盘快捷交互与无障碍（a11y）标准化 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 为顶栏 Command Palette 全局搜索及页面级独立搜索条（`PUnifiedSearchBar`）全面建立符合 WAI-ARIA 1.2 Combobox 标准的无障碍契约，并实现平滑的键盘快捷导航（`⌘K` / `Ctrl+K` / `/`、`↑`/`↓` 循环巡航、可视区域吸附与 `Enter` 智能跳转）。
 
@@ -40,19 +40,19 @@
   ```
 - Output: Attributes properly mapped to `<input>` element inside `PSearchInput`.
 
-- [ ] **Step 1: Write unit tests for combobox a11y props mapping**
+- [x] **Step 1: Write unit tests for combobox a11y props mapping**
 
 In `tests/unit/components/ui/PSearchInput.spec.ts`:
 1. Test that passing `role="combobox"` correctly sets `role="combobox"` on the input element;
 2. Test that passing `ariaExpanded`, `ariaControls`, `ariaActiveDescendant`, and `ariaAutocomplete` reflects onto the `<input>` element;
 3. Test that default usage maintains normal search behavior without unnecessary ARIA attributes.
 
-- [ ] **Step 2: Run test to observe failure**
+- [x] **Step 2: Run test to observe failure**
 
 Run: `bun run test:unit tests/unit/components/ui/PSearchInput.spec.ts`
 Expected: FAIL since props are not yet defined on `PSearchInput`.
 
-- [ ] **Step 3: Update `src/components/ui/PSearchInput.vue`**
+- [x] **Step 3: Update `src/components/ui/PSearchInput.vue`**
 
 Add props to `PSearchInputProps`:
 ```ts
@@ -82,12 +82,12 @@ Bind to `<input>`:
 />
 ```
 
-- [ ] **Step 4: Run test to verify pass**
+- [x] **Step 4: Run test to verify pass**
 
 Run: `bun run test:unit tests/unit/components/ui/PSearchInput.spec.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run: `git commit -am "feat(ui): add combobox a11y attributes support to PSearchInput"`
 
@@ -104,7 +104,7 @@ Run: `git commit -am "feat(ui): add combobox a11y attributes support to PSearchI
 - Input: `role="combobox"`, `aria-controls="topbar-search-results-listbox"`, `:aria-activedescendant="activeOptionId"`, `:aria-expanded="showSearch"`.
 - Output: Listbox container with `id="topbar-search-results-listbox"` and `role="listbox"`, sections with `role="group"`, items with `role="option"`, `:id="search-option-${item.id}"`, `:aria-selected="activeId === item.id"`.
 
-- [ ] **Step 1: Write unit tests for Command Palette a11y & keynav**
+- [x] **Step 1: Write unit tests for Command Palette a11y & keynav**
 
 In `tests/unit/components/system/AppTopbarGlobalSearch.spec.ts`:
 1. Assert input has `role="combobox"`, `aria-autocomplete="list"`, `aria-controls="topbar-search-results-listbox"`, and `:aria-expanded="showSearch"`;
@@ -113,12 +113,12 @@ In `tests/unit/components/system/AppTopbarGlobalSearch.spec.ts`:
 4. Assert pressing Enter on active item invokes router navigation;
 5. Assert typing `/` inside input/textarea does not trigger search open.
 
-- [ ] **Step 2: Run test to observe failure**
+- [x] **Step 2: Run test to observe failure**
 
 Run: `bun run test:unit tests/unit/components/system/AppTopbarGlobalSearch.spec.ts`
 Expected: FAIL due to missing combobox/option ARIA attributes.
 
-- [ ] **Step 3: Update `TopbarSearchSection.vue`**
+- [x] **Step 3: Update `TopbarSearchSection.vue`**
 
 Add listbox/group/option attributes:
 ```html
@@ -149,7 +149,7 @@ Add listbox/group/option attributes:
 </section>
 ```
 
-- [ ] **Step 4: Update `AppTopbarGlobalSearch.vue`**
+- [x] **Step 4: Update `AppTopbarGlobalSearch.vue`**
 
 1. Set `role="combobox"`, `aria-autocomplete="list"`, `aria-haspopup="listbox"`, `:aria-expanded="showSearch"`, `aria-controls="topbar-search-results-listbox"`, and `:aria-activedescendant="activeOptionId"` on `<input class="palette-input">`;
 2. Add computed:
@@ -165,12 +165,12 @@ Add listbox/group/option attributes:
    })
    ```
 
-- [ ] **Step 5: Run tests to verify pass**
+- [x] **Step 5: Run tests to verify pass**
 
 Run: `bun run test:unit tests/unit/components/system/AppTopbarGlobalSearch.spec.ts`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Run: `git commit -am "feat(search): standardize Command Palette combobox a11y and keyboard navigation"`
 
@@ -186,7 +186,7 @@ Run: `git commit -am "feat(search): standardize Command Palette combobox a11y an
 - Input: `role="combobox"`, `aria-controls="unified-search-preview-listbox"`, `:aria-activedescendant="activeOptionId"`, `:aria-expanded="isDropdownOpen && hasDropdownContent"`.
 - Output: Listbox container with `id="unified-search-preview-listbox"` and `role="listbox"`, options with `role="option"`, `:id="unified-search-option-${idx}"`, `:aria-selected="activeIndex === idx"`.
 
-- [ ] **Step 1: Write unit tests for PUnifiedSearchBar a11y & keynav**
+- [x] **Step 1: Write unit tests for PUnifiedSearchBar a11y & keynav**
 
 In `tests/unit/components/search/PUnifiedSearchBar.spec.ts`:
 1. Assert `PSearchInput` receives `role="combobox"`, `aria-controls="unified-search-preview-listbox"`, `aria-expanded`, and `aria-activedescendant`;
@@ -194,12 +194,12 @@ In `tests/unit/components/search/PUnifiedSearchBar.spec.ts`:
 3. Assert preview dropdown items have `role="option"`, `:id="unified-search-option-${idx}"`, and `:aria-selected="activeIndex === idx"`;
 4. Assert ArrowDown/ArrowUp cycle through items and Enter selects active item.
 
-- [ ] **Step 2: Run test to observe failure**
+- [x] **Step 2: Run test to observe failure**
 
 Run: `bun run test:unit tests/unit/components/search/PUnifiedSearchBar.spec.ts`
 Expected: FAIL due to missing combobox/option ARIA attributes.
 
-- [ ] **Step 3: Update `src/components/search/PUnifiedSearchBar.vue`**
+- [x] **Step 3: Update `src/components/search/PUnifiedSearchBar.vue`**
 
 1. Pass a11y props to `<PSearchInput>`:
    ```html
@@ -244,12 +244,12 @@ Expected: FAIL due to missing combobox/option ARIA attributes.
    })
    ```
 
-- [ ] **Step 4: Run unit tests**
+- [x] **Step 4: Run unit tests**
 
 Run: `bun run test:unit tests/unit/components/search/PUnifiedSearchBar.spec.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run: `git commit -am "feat(search): standardize PUnifiedSearchBar combobox a11y and dropdown keyboard navigation"`
 
@@ -260,7 +260,7 @@ Run: `git commit -am "feat(search): standardize PUnifiedSearchBar combobox a11y 
 **Files:**
 - Create: `tests/unit/ui/search-a11y-contract.spec.ts`
 
-- [ ] **Step 1: Write static contract test**
+- [x] **Step 1: Write static contract test**
 
 ```ts
 import { describe, expect, it } from 'vitest'
@@ -312,12 +312,12 @@ describe('search-a11y-contract', () => {
 })
 ```
 
-- [ ] **Step 2: Run contract test**
+- [x] **Step 2: Run contract test**
 
 Run: `bun run test:unit tests/unit/ui/search-a11y-contract.spec.ts`
 Expected: PASS.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 Run: `git commit -am "test(contract): add search a11y combobox contract tests"`
 
@@ -329,25 +329,25 @@ Run: `git commit -am "test(contract): add search a11y combobox contract tests"`
 - Documentation: `docs/superpowers/plans/2026-10-28-unified-search-keyboard-and-a11y.md`
 - Kanban: `<appDataDir>/brain/72e9f847-045b-4790-a46f-1fe17ce2f1c1/frontend-refactor-status.md`
 
-- [ ] **Step 1: Run TypeScript strict check**
+- [x] **Step 1: Run TypeScript strict check**
 
 Run: `cd Atoman-Frontend && bun run type-check`
 Expected: 0 errors.
 
-- [ ] **Step 2: Run all affected and full unit test suites**
+- [x] **Step 2: Run all affected and full unit test suites**
 
 Run: `cd Atoman-Frontend && bun run test:unit`
 Expected: 100% pass across all test suites.
 
-- [ ] **Step 3: Run desktop and mobile production builds**
+- [x] **Step 3: Run desktop and mobile production builds**
 
 Run: `cd Atoman-Frontend && bun run build && bun run build:mobile`
 Expected: Both builds succeed with 0 errors.
 
-- [ ] **Step 4: Update plan and kanban status**
+- [x] **Step 4: Update plan and kanban status**
 
 Mark all tasks as completed in plan and update status board.
 
-- [ ] **Step 5: Final commit & push**
+- [x] **Step 5: Final commit & push**
 
 Run: `git commit -am "chore: complete unified search keyboard interaction and a11y standardization" && git push origin main`

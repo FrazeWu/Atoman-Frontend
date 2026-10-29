@@ -45,16 +45,43 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.continue-section { margin: 0 0 2rem; border-block: 1px solid var(--a-color-border-soft); padding: 1rem 0; }
-.continue-section h2 { margin: 0 0 0.75rem; font-size: 1rem; font-weight: 500; }
+.continue-section { margin: 0 0 1.5rem; padding: 0; }
+.continue-section h2 { margin: 0 0 0.85rem; font-size: 1.05rem; font-weight: 600; color: var(--a-color-fg); }
 .continue-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
-.continue-item { min-width: 0; display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: 0.75rem; align-items: center; color: var(--a-color-fg); text-decoration: none; }
-.continue-cover { width: 3rem; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); }
+.continue-item {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  text-decoration: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+.continue-item:hover, .continue-item:focus-visible {
+  border-color: var(--a-color-border-hover, var(--a-color-fg));
+  background-color: var(--a-color-surface-subtle);
+  transform: translateY(-1px);
+}
+.continue-cover {
+  width: 3rem;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
+}
 .continue-cover img { width: 100%; height: 100%; object-fit: cover; }
 .continue-copy { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.35rem 0.5rem; }
 .continue-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem; font-weight: 500; }
 .continue-copy span { color: var(--a-color-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
-.continue-track { grid-column: 1 / -1; height: 2px; overflow: hidden; background: var(--a-color-border-soft); }
+.continue-track { grid-column: 1 / -1; height: 3px; overflow: hidden; border-radius: 9999px; background: var(--a-color-border-soft); }
 .continue-track div { width: 100%; height: 100%; transform-origin: left; background: var(--a-color-fg); }
 .continue-item:focus-visible { outline: 2px solid var(--a-color-fg); outline-offset: 3px; }
 @media (max-width: 768px) { .continue-list { grid-template-columns: 1fr; } }

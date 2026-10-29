@@ -81,10 +81,10 @@ watch(
 .my-space__eyebrow { margin: 0 0 0.35rem; color: var(--a-color-muted); font-size: 0.7rem; letter-spacing: 0.08em; }
 .my-space h1 { margin: 0; font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 500; }
 .my-space__subtitle { margin: 0.4rem 0 0; color: var(--a-color-muted); }
-.my-space__tabs { display: flex; gap: 0.25rem; flex-shrink: 0; }
+.my-space__tabs { display: flex; gap: 0.5rem; flex-shrink: 0; margin-bottom: -1px; }
 .my-space__tab {
   display: inline-flex;
-  min-height: 2.5rem;
+  min-height: var(--a-control-height-sm, 2.25rem);
   align-items: center;
   padding: 0 0.8rem;
   border-bottom: 2px solid transparent;
@@ -92,6 +92,7 @@ watch(
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 500;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 .my-space__tab:hover, .my-space__tab:focus-visible { color: var(--a-color-fg); }
 .my-space__tab.is-active { border-bottom-color: var(--a-color-fg); color: var(--a-color-fg); }

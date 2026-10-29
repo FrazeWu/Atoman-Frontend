@@ -10,8 +10,8 @@
         </div>
       </div>
       <div class="my-hub__header-actions">
-        <PButton variant="secondary" :to="profilePath">打开公开主页</PButton>
-        <PButton variant="ghost" :to="settingsPath">账号设置</PButton>
+        <PButton variant="secondary" size="sm" :to="profilePath">打开公开主页</PButton>
+        <PButton variant="ghost" size="sm" :to="settingsPath">账号设置</PButton>
       </div>
     </header>
 
@@ -332,7 +332,7 @@ onMounted(() => {
 
 <style scoped>
 .my-hub { padding-bottom: 8rem; }
-.my-hub__header { display: flex; justify-content: space-between; gap: 2rem; align-items: center; padding: 1.5rem 0 2rem; border-bottom: 1px solid var(--a-color-border-soft); }
+.my-hub__header { display: flex; justify-content: space-between; gap: 2rem; align-items: center; padding: 1.5rem 0 1.25rem; }
 .my-hub__identity { display: flex; min-width: 0; align-items: center; gap: 1rem; }
 .my-hub__identity > div { min-width: 0; }
 .my-hub__eyebrow { margin: 0 0 0.35rem; color: var(--a-color-muted); font-size: 0.7rem; letter-spacing: 0.08em; }
@@ -340,15 +340,44 @@ onMounted(() => {
 .my-hub h1 { font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 500; }
 .my-hub__name { margin: 0.2rem 0 0; font-weight: 600; }
 .my-hub__subtitle { margin: 0.4rem 0 0; color: var(--a-color-muted); }
-.my-hub__header-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
-.my-hub__shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; padding: 1.5rem 0 2rem; }
-.my-hub__shortcut { display: flex; min-width: 0; align-items: center; gap: 0.75rem; padding: 0.9rem 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); color: var(--a-color-fg); text-decoration: none; }
-.my-hub__shortcut:hover, .my-hub__shortcut:focus-visible { border-color: var(--a-color-fg); }
+.my-hub__header-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; align-items: center; }
+.my-hub__shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; padding: 0.75rem 0 1.5rem; }
+.my-hub__shortcut {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  text-decoration: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+.my-hub__shortcut:hover, .my-hub__shortcut:focus-visible {
+  border-color: var(--a-color-border-hover, var(--a-color-fg));
+  background: var(--a-color-surface-subtle);
+  transform: translateY(-1px);
+}
 .my-hub__shortcut-copy { display: grid; min-width: 0; gap: 0.2rem; }
 .my-hub__shortcut-copy strong { font-size: 0.9rem; font-weight: 500; }
 .my-hub__shortcut-copy small { overflow: hidden; color: var(--a-color-muted); text-overflow: ellipsis; white-space: nowrap; }
-.my-hub__shortcut-badge { display: grid; min-width: 1.35rem; height: 1.35rem; margin-left: auto; place-items: center; border-radius: var(--a-radius-control); background: var(--a-color-fg); color: var(--a-color-bg); font-size: 0.7rem; }
-.my-hub__continue :deep(.continue-section) { margin-bottom: 1rem; }
+.my-hub__shortcut-badge {
+  display: inline-flex;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.35rem;
+  margin-left: auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--a-radius-control, 9999px);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.my-hub__continue :deep(.continue-section) { margin-bottom: 1.5rem; }
 @media (max-width: 900px) { .my-hub__shortcuts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) {
   .my-hub__header { align-items: flex-start; flex-direction: column; }

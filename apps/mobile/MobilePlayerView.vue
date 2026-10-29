@@ -197,6 +197,9 @@
         </div>
 
         <!-- Playback Error / Toast Notification -->
+        <p v-if="player.audioRecoveryNotice" class="mobile-player-view__recovery" role="status" data-testid="audio-recovery-status">
+          {{ player.audioRecoveryNotice }}
+        </p>
         <p v-if="player.playbackError" class="mobile-player-view__error" role="alert">
           <span>{{ player.playbackError }}</span>
           <button type="button" @click="player.retryPlayback">重试</button>
@@ -1366,6 +1369,14 @@ onUnmounted(() => {
 .mobile-toast-fade-leave-to {
   opacity: 0;
   transform: translate(-50%, -8px);
+}
+
+.mobile-player-view__recovery {
+  font-size: 12px;
+  color: var(--a-color-text-muted, #666666);
+  padding: 8px 12px;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .mobile-player-view__error {

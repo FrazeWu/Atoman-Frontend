@@ -116,6 +116,7 @@ export const usePlayerStore = defineStore("player", () => {
 	const isLoading = ref(false);
 	const isCurrentAudioCached = ref(false);
 	const playbackError = ref("");
+	const audioRecoveryNotice = ref("");
 	const songLibraryLoading = ref(false);
 	const songLibraryBootstrapped = ref(false);
 	const songLibraryLoaded = ref(false);
@@ -229,6 +230,22 @@ export const usePlayerStore = defineStore("player", () => {
 	let cachedAudioObjectUrl = "";
 	let playGeneration = 0;
 	let playRequested = false;
+	// Automatic recovery applies ONLY to HTMLAudioElement media-source failures
+	// in multi-song music queues; a play() rejection (e.g. gesture restriction)
+	// is deliberately not treated as a corrupt audio file.
+	let recoveryTimer: ReturnType<typeof setTimeout> | null = null;
+	const recoveryRetried = new Set<string>();
+	const recoveryFailed = new Set<string>();
+	const clearRecoveryTimer = () => {
+		if (recoveryTimer !== null) clearTimeout(recoveryTimer);
+		recoveryTimer = null;
+	};
+	const resetAudioRecovery = () => {
+		clearRecoveryTimer();
+		recoveryRetried.clear();
+		recoveryFailed.clear();
+		audioRecoveryNotice.value = "";
+	};
 	let currentSongStartCached = false;
 	const audioPrefetcher = new AudioPrefetcher();
 	let audioStartPrefetchKey: string | null = null;
@@ -533,6 +550,7 @@ export const usePlayerStore = defineStore("player", () => {
 	};
 
 	const resetPlaybackForSession = () => {
+		resetAudioRecovery();
 		musicAccountGeneration += 1;
 		playGeneration += 1;
 		resetAudioStartPrefetch();
@@ -654,6 +672,7 @@ export const usePlayerStore = defineStore("player", () => {
 	}
 
 	const pauseCurrentAudio = (player: HTMLAudioElement) => {
+		resetAudioRecovery();
 		playGeneration += 1;
 		playRequested = false;
 		player.pause();
@@ -666,6 +685,51 @@ export const usePlayerStore = defineStore("player", () => {
 		if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
 			navigator.mediaSession.playbackState = "paused";
 		}
+	};
+
+	const recoverFromMediaError = (player: HTMLAudioElement): boolean => {
+		const failed = currentSong.value;
+		const list = getActiveList();
+		if (!failed || !isMusicSong(failed) || list.length < 2) return false;
+		// Browsers may fire multiple error events for the same failed source.
+		if (recoveryTimer !== null) return true;
+
+		const failedKey = playbackItemKey(failed);
+		const generation = playGeneration;
+		const schedule = (callback: () => void, delay: number) => {
+			recoveryTimer = setTimeout(() => {
+				recoveryTimer = null;
+				if (generation !== playGeneration || audio !== player ||
+					!currentSong.value || playbackItemKey(currentSong.value) !== failedKey) return;
+				callback();
+			}, delay);
+		};
+		if (!recoveryRetried.has(failedKey)) {
+			recoveryRetried.add(failedKey);
+			playbackError.value = "";
+			audioRecoveryNotice.value = "音源加载失败，正在自动重试一次…";
+			schedule(() => reloadCurrentAudio(true), 450);
+			return true;
+		}
+
+		// Never revisit a failed track until playback genuinely succeeds or the
+		// listener manually starts a new playback session.
+		recoveryFailed.add(failedKey);
+		const index = list.findIndex((item) => playbackItemKey(item) === failedKey);
+		const next = Array.from({ length: list.length - 1 }, (_, step) =>
+			list[(Math.max(0, index) + step + 1) % list.length],
+		).find((item) => item && isMusicSong(item) &&
+			!recoveryFailed.has(playbackItemKey(item)));
+
+		if (!next) {
+			audioRecoveryNotice.value = "";
+			playbackError.value = "队列音源均无法播放，请检查网络后手动重试";
+			return true;
+		}
+		playbackError.value = "";
+		audioRecoveryNotice.value = "已跳过无法加载的歌曲：" + failed.title;
+		schedule(() => startSong(next, undefined, false, true), 180);
+		return true;
 	};
 
 	const ensureAudio = () => {
@@ -702,11 +766,16 @@ export const usePlayerStore = defineStore("player", () => {
 		});
 		nextAudio.addEventListener("error", () => {
 			if (audio !== nextAudio) return;
+			// Repeated browser error events after all queue candidates failed
+			// must not replace the actionable terminal error message.
+			if (playbackError.value.startsWith("队列音源均无法播放")) return;
+			const wasActive = playRequested || isPlaying.value || isLoading.value;
 			playRequested = false;
 			isLoading.value = false;
 			isPlaying.value = false;
-			playbackError.value = "音频加载失败，请重试";
 			pauseListening();
+			if (recoveryTimer !== null || (wasActive && recoverFromMediaError(nextAudio))) return;
+			playbackError.value = "音频加载失败，请重试";
 			if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
 				try {
 					navigator.mediaSession.playbackState = "paused";
@@ -740,6 +809,12 @@ export const usePlayerStore = defineStore("player", () => {
 		nextAudio.addEventListener("timeupdate", () => {
 			if (audio !== nextAudio) return;
 			currentTime.value = nextAudio.currentTime;
+			// A brief playable prefix is not proof of a healthy song: keep the
+			// failed-track guard until a full song completes, preventing loops
+			// through sources that each fail after a few seconds.
+			if (!nextAudio.paused && currentTime.value >= 1) {
+				audioRecoveryNotice.value = "";
+			}
 			if (playbackError.value && !nextAudio.paused) {
 				playbackError.value = "";
 			}
@@ -766,6 +841,7 @@ export const usePlayerStore = defineStore("player", () => {
 			});
 		});
 		nextAudio.addEventListener("ended", () => {
+			resetAudioRecovery();
 			savePodcastProgress(true);
 			saveMusicProgress(true, true);
 			saveMusicSession(true);
@@ -1018,7 +1094,9 @@ export const usePlayerStore = defineStore("player", () => {
 		return songsRequest;
 	};
 
-	const startSong = (song: Song, startAt?: number, persistPrevious = true) => {
+	const startSong = (song: Song, startAt?: number, persistPrevious = true, fromRecovery = false) => {
+		if (!fromRecovery) resetAudioRecovery();
+		else clearRecoveryTimer();
 		const normalizedSong = normalizePlaybackSong(song, resolvePlaybackAudioUrl);
 		if (!hasPlayableAudio(normalizedSong)) {
 			currentSong.value = null;
@@ -1205,6 +1283,7 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const togglePlay = () => {
 		if (!currentSong.value) return;
+		resetAudioRecovery();
 		if (!hasPlayableAudio(currentSong.value)) {
 			playbackError.value = "当前曲目没有可用音频源";
 			return;
@@ -1424,8 +1503,9 @@ export const usePlayerStore = defineStore("player", () => {
 		seek(Math.max(0, newTime));
 	};
 
-	const retryPlayback = () => {
+	const reloadCurrentAudio = (automatic: boolean) => {
 		if (!currentSong.value) return;
+		if (!automatic) resetAudioRecovery();
 		const player = ensureAudio();
 		const resumePosition = currentTime.value;
 		playbackError.value = "";
@@ -1448,6 +1528,10 @@ export const usePlayerStore = defineStore("player", () => {
 		}
 		attemptPlay(player);
 	};
+
+	// Deliberately no parameters: Vue @click may pass MouseEvent, which must
+	// never turn a manual retry into an automatic recovery attempt.
+	const retryPlayback = () => reloadCurrentAudio(false);
 
 	const toggleLyrics = () => {
 		showLyrics.value = !showLyrics.value;
@@ -1482,6 +1566,7 @@ export const usePlayerStore = defineStore("player", () => {
 		duration,
 		isLoading,
 		playbackError,
+		audioRecoveryNotice,
 		songLibraryLoading,
 		songLibraryBootstrapped,
 		queue,

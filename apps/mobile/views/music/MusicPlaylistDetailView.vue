@@ -118,9 +118,27 @@
           <MIcon name="note" size="lg" class="mobile-playlist-detail__empty-icon" />
           <p class="mobile-playlist-detail__empty-text">歌单内暂无歌曲</p>
         </div>
-        <p v-if="playlistCount > songs.length" class="mobile-playlist-detail__queue-status">
-          当前展示前 {{ songs.length }} 首，播放全部可加入完整歌单。
-        </p>
+        <div v-if="listHasMore || listLoading || listError" class="mobile-playlist-detail__list-pagination">
+          <p v-if="playlistCount > songs.length" class="mobile-playlist-detail__queue-status">
+            当前展示前 {{ songs.length }} 首，播放全部可加入完整歌单。
+          </p>
+          <p class="mobile-playlist-detail__list-progress" role="status">
+            已展示 {{ songs.length }} / {{ playlistCount }} 首歌曲
+          </p>
+          <p v-if="listError" class="mobile-playlist-detail__queue-error" role="alert" data-testid="playlist-list-error">
+            {{ listError }}
+          </p>
+          <MButton
+            v-if="listHasMore"
+            size="sm"
+            variant="secondary"
+            :disabled="listLoading"
+            data-testid="playlist-load-more-btn"
+            @click="loadMoreSongs"
+          >
+            {{ listLoading ? '正在加载更多歌曲…' : listError ? '重试加载' : '加载更多歌曲' }}
+          </MButton>
+        </div>
       </section>
     </main>
 
@@ -177,6 +195,11 @@ const loading = ref(false)
 const loadError = ref('')
 const playlist = ref<PlaylistDetailData | null>(props.initialPlaylist || null)
 const songs = ref<Song[]>(props.initialSongs || [])
+const listLoading = ref(false)
+const listError = ref('')
+const listPage = ref(1)
+const listHasMore = ref(Boolean(props.initialPlaylist?.song_count &&
+  props.initialPlaylist.song_count > (props.initialSongs?.length || 0)))
 const playlistCount = computed(() => Math.max(songs.value.length, playlist.value?.song_count || 0))
 const queueLoading = ref(false)
 const queueError = ref('')
@@ -184,6 +207,7 @@ let fullQueueCache: { playlistId: string; songs: Song[] } | null = null
 let queueGeneration = 0
 let unmounted = false
 let detailGeneration = 0
+let listGeneration = 0
 
 function extractArtist(item: any, fallback?: string): string {
   if (typeof item?.artist === 'string' && item.artist.trim()) return item.artist.trim()
@@ -245,9 +269,14 @@ async function loadPlaylistData() {
   const id = String(route.params.playlistId || '')
   if (!id) { loadError.value = '歌单标识缺失。'; return }
   queueGeneration += 1
+  listGeneration += 1
   fullQueueCache = null
   queueLoading.value = false
   queueError.value = ''
+  listLoading.value = false
+  listError.value = ''
+  listPage.value = 1
+  listHasMore.value = false
   loading.value = true
   loadError.value = ''
   playlist.value = null
@@ -267,6 +296,7 @@ async function loadPlaylistData() {
     songs.value = Array.isArray(data.songs)
       ? data.songs.map((song) => toPlayerSong(song, playlist.value?.cover_url))
       : []
+    listHasMore.value = Boolean(playlist.value.song_count && playlist.value.song_count > songs.value.length)
   } catch {
     if (generation === detailGeneration) loadError.value = '歌单加载失败，请检查网络后重试。'
   } finally {
@@ -279,6 +309,57 @@ function handleBack() {
     router.back()
   } else {
     void router.push('/music/playlists')
+  }
+}
+
+const LIST_PAGE_SIZE = 20
+
+async function loadMoreSongs() {
+  const current = playlist.value
+  if (!current || !listHasMore.value || listLoading.value || unmounted) return
+  const playlistId = String(current.id)
+  const requestedPage = listPage.value + 1
+  const generation = ++listGeneration
+  listLoading.value = true
+  listError.value = ''
+
+  try {
+    let nextSongs: Song[]
+    let hasMore: boolean
+    if (fullQueueCache?.playlistId === playlistId) {
+      // Clicking Play All already loaded every page. Reuse the same ordered
+      // snapshot rather than duplicating network traffic for visual paging.
+      const start = (requestedPage - 1) * LIST_PAGE_SIZE
+      nextSongs = fullQueueCache.songs.slice(start, start + LIST_PAGE_SIZE)
+      hasMore = start + nextSongs.length < fullQueueCache.songs.length
+    } else {
+      const page = await listMusicPlaylistSongs(playlistId, {
+        page: requestedPage, page_size: LIST_PAGE_SIZE,
+      })
+      if (!Array.isArray(page?.data) || typeof page.meta?.has_more !== 'boolean') {
+        throw new Error('Invalid playlist page')
+      }
+      nextSongs = page.data.map((song) => toPlayerSong(song, current.cover_url))
+      hasMore = page.meta.has_more
+    }
+    if (generation !== listGeneration || unmounted ||
+      String(playlist.value?.id) !== playlistId ||
+      (!props.initialPlaylist && String(route.params.playlistId || '') !== playlistId)) return
+    if (!nextSongs.length && hasMore) throw new Error('Playlist page made no progress')
+
+    songs.value = [...songs.value, ...nextSongs]
+    listPage.value = requestedPage
+    listHasMore.value = hasMore
+    if (!hasMore && playlist.value && playlist.value.song_count !== songs.value.length) {
+      // Song count may have changed since the overview was requested.
+      playlist.value.song_count = songs.value.length
+    }
+  } catch {
+    if (generation === listGeneration && !unmounted) {
+      listError.value = '后续歌曲加载失败，已加载的曲目不会丢失，请重试。'
+    }
+  } finally {
+    if (generation === listGeneration && !unmounted) listLoading.value = false
   }
 }
 
@@ -348,22 +429,42 @@ onMounted(() => {
 watch(() => route.params.playlistId, (id, previous) => {
   detailGeneration += 1
   queueGeneration += 1
+  listGeneration += 1
   queueLoading.value = false
+  listLoading.value = false
   if (id && id !== previous) void loadPlaylistData()
 })
 onDeactivated(() => {
-  // KeepAlive retains views after leaving the page; do not let an old click
-  // start audio in a different section once its network request resolves.
+  // A hidden KeepAlive view must ignore stale playlist pages and queue requests.
   queueGeneration += 1
   queueLoading.value = false
+  listGeneration += 1
+  listLoading.value = false
 })
 onBeforeUnmount(() => {
   unmounted = true
   queueGeneration += 1
+  listGeneration += 1
 })
 </script>
 
 <style scoped>
+.mobile-playlist-detail__list-pagination {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px;
+}
+.mobile-playlist-detail__list-progress {
+  margin: 0;
+  font-size: 12px;
+  color: var(--a-color-text-secondary, #666666);
+}
+.mobile-playlist-detail__list-pagination button {
+  min-height: 44px;
+  min-width: 144px;
+}
 .mobile-playlist-detail__queue-status {
   padding: 8px 0;
   color: var(--a-color-muted, #64748b);

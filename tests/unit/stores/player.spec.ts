@@ -1090,6 +1090,128 @@ describe("player store", () => {
 		expect(player.isPlaying).toBe(false);
 	});
 
+	it("retries a failed music source once and skips it without corrupting the queue", async () => {
+		vi.useFakeTimers();
+		try {
+			const player = usePlayerStore();
+			const items = [1, 2, 3].map((id) => ({
+				id: "source-" + id, title: "Source " + id, audio_url: "source-" + id + ".mp3",
+			})) as Song[];
+			player.playAlbum(items);
+			const audio = audioInstances[0];
+			audio.emit("error");
+			audio.emit("error"); // Duplicate events must not schedule two retries.
+			expect(player.currentSong?.id).toBe("source-1");
+			expect(player.audioRecoveryNotice).toContain("正在自动重试");
+			expect(player.playbackError).toBe("");
+			await vi.advanceTimersByTimeAsync(450);
+			expect(audio.load).toHaveBeenCalledTimes(1);
+			audio.emit("error");
+			expect(player.audioRecoveryNotice).toContain("已跳过");
+			await vi.advanceTimersByTimeAsync(180);
+			expect(player.currentSong?.id).toBe("source-2");
+			expect(player.queue.map((item) => item.id)).toEqual(items.map((item) => item.id));
+			expect(player.playbackError).toBe("");
+			audio.paused = false;
+			audio.currentTime = 2;
+			audio.emit("playing");
+			audio.emit("timeupdate");
+			expect(player.audioRecoveryNotice).toBe("");
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("stops after a whole failed music queue and offers manual retry", async () => {
+		vi.useFakeTimers();
+		try {
+			const player = usePlayerStore();
+			const list = [1, 2, 3].map((id) => ({
+				id: "bad-" + id, title: "Bad " + id, audio_url: "bad-" + id + ".mp3",
+			})) as Song[];
+			player.playAlbum(list);
+			const audio = audioInstances[0];
+			for (let i = 0; i < 3; i++) {
+				audio.emit("error");
+				await vi.advanceTimersByTimeAsync(450);
+				audio.emit("error");
+				await vi.advanceTimersByTimeAsync(180);
+			}
+			expect(player.currentSong?.id).toBe("bad-3");
+			expect(player.isPlaying).toBe(false);
+			expect(player.playbackError).toContain("队列音源均无法播放");
+			expect(audio.load).toHaveBeenCalledTimes(3);
+			audio.emit("error");
+			expect(player.playbackError).toContain("队列音源均无法播放");
+			await vi.advanceTimersByTimeAsync(6000);
+			expect(player.currentSong?.id).toBe("bad-3");
+			player.retryPlayback();
+			expect(player.playbackError).toBe("");
+			expect(player.audioRecoveryNotice).toBe("");
+			expect(audio.load).toHaveBeenCalledTimes(4);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("manual navigation cancels the queued recovery timer", async () => {
+		vi.useFakeTimers();
+		try {
+			const player = usePlayerStore();
+			player.playAlbum([
+				{ id: "a", title: "A", audio_url: "a.mp3" },
+				{ id: "b", title: "B", audio_url: "b.mp3" },
+			] as Song[]);
+			const audio = audioInstances[0];
+			audio.emit("error");
+			player.playNext();
+			expect(player.currentSong?.id).toBe("b");
+			await vi.advanceTimersByTimeAsync(800);
+			expect(audio.load).not.toHaveBeenCalled();
+			expect(player.currentSong?.id).toBe("b");
+			expect(player.audioRecoveryNotice).toBe("");
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("single-song and podcast errors remain manual and do not auto-skip", async () => {
+		vi.useFakeTimers();
+		try {
+			const player = usePlayerStore();
+			player.playSong({ id: "single", title: "Single", audio_url: "single.mp3" } as Song);
+			const audio = audioInstances[0];
+			audio.emit("error");
+			expect(player.playbackError).toBe("音频加载失败，请重试");
+			player.playAlbum([
+				{ id: "pod", title: "Podcast", audio_url: "pod.mp3", source_type: "podcast_episode" },
+				{ id: "music", title: "Music", audio_url: "music.mp3" },
+			] as Song[]);
+			audio.emit("error");
+			expect(player.currentSong?.id).toBe("pod");
+			expect(player.playbackError).toBe("音频加载失败，请重试");
+			await vi.advanceTimersByTimeAsync(1000);
+			expect(audio.load).not.toHaveBeenCalled();
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("a rejected play promise cannot automatically skip the source", async () => {
+		const player = usePlayerStore();
+		player.playAlbum([
+			{ id: "permission-first", title: "Permission", audio_url: "a.mp3" },
+			{ id: "permission-second", title: "Other", audio_url: "b.mp3" },
+		] as Song[]);
+		await audioInstances[0].play.mock.results.at(-1)?.value;
+		audioInstances[0].play.mockRejectedValueOnce(new DOMException("Permission denied", "NotAllowedError"));
+		player.retryPlayback();
+		await audioInstances[0].play.mock.results.at(-1)?.value.catch(() => undefined);
+		expect(player.currentSong?.id).toBe("permission-first");
+		expect(player.playbackError).toBe("无法播放此音频，请重试");
+		expect(player.audioRecoveryNotice).toBe("");
+	});
+
 	it("exposes playback errors and retries the current audio", async () => {
 		const player = usePlayerStore();
 		player.playSong({

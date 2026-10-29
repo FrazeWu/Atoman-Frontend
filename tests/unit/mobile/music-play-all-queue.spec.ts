@@ -357,4 +357,143 @@ describe('mobile complete music queues', () => {
     wrapper.unmount()
   })
 
+
+  it('incrementally loads a 47-track playlist in ordered 20-track pages', async () => {
+    const queue = spyQueue()
+    const full = Array.from({ length: 47 }, (_, i) => song('page-' + String(i + 1).padStart(3, '0')))
+    await router.push('/music/playlist/paged')
+    vi.mocked(api.getMusicPlaylist).mockResolvedValue({
+      id: 'paged', name: '多页歌单', song_count: 47, songs: full.slice(0, 20),
+    } as never)
+    vi.mocked(api.listMusicPlaylistSongs).mockImplementation(async (_id, opts) => {
+      const page = opts?.page ?? 1
+      const size = opts?.page_size ?? 20
+      return {
+        data: full.slice((page - 1) * size, page * size),
+        meta: { page, page_size: size, total: 47, has_more: page * size < 47 },
+      } as never
+    })
+    const wrapper = mount(MusicPlaylistDetailView, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    expect(wrapper.findAll('[data-testid="playlist-song-item"]')).toHaveLength(20)
+    expect(wrapper.get('[data-testid="playlist-load-more-btn"]').text()).toContain('加载更多歌曲')
+    await wrapper.get('[data-testid="playlist-load-more-btn"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('[data-testid="playlist-song-item"]')).toHaveLength(40)
+    expect(api.listMusicPlaylistSongs).toHaveBeenNthCalledWith(1, 'paged', { page: 2, page_size: 20 })
+    await wrapper.get('[data-testid="playlist-load-more-btn"]').trigger('click')
+    await flushPromises()
+    const rows = wrapper.findAll('[data-testid="playlist-song-item"]')
+    expect(rows).toHaveLength(47)
+    expect(rows[0].text()).toContain('page-001')
+    expect(rows[46].text()).toContain('page-047')
+    expect(api.listMusicPlaylistSongs).toHaveBeenNthCalledWith(2, 'paged', { page: 3, page_size: 20 })
+    expect(wrapper.find('[data-testid="playlist-load-more-btn"]').exists()).toBe(false)
+
+    // Tapping a newly visible track starts at its global index in the complete queue.
+    await rows[40].trigger('click')
+    await flushPromises()
+    expect(queue).toHaveBeenCalledOnce()
+    expect(queue.mock.calls[0][0]).toHaveLength(47)
+    expect(queue.mock.calls[0][1]).toBe(40)
+    wrapper.unmount()
+  })
+
+  it('preserves the first page and retries the same page after an error', async () => {
+    const full = Array.from({ length: 32 }, (_, i) => song('retry-' + (i + 1)))
+    await router.push('/music/playlist/retry-pages')
+    vi.mocked(api.getMusicPlaylist).mockResolvedValue({
+      id: 'retry-pages', name: '网络断开', song_count: 32, songs: full.slice(0, 20),
+    } as never)
+    vi.mocked(api.listMusicPlaylistSongs)
+      .mockRejectedValueOnce(new Error('timeout'))
+      .mockResolvedValueOnce({
+        data: full.slice(20), meta: { page: 2, page_size: 20, total: 32, has_more: false },
+      } as never)
+    const wrapper = mount(MusicPlaylistDetailView, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    await wrapper.get('[data-testid="playlist-load-more-btn"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('[data-testid="playlist-song-item"]')).toHaveLength(20)
+    expect(wrapper.get('[data-testid="playlist-list-error"]').text()).toContain('已加载的曲目不会丢失')
+    expect(wrapper.get('[data-testid="playlist-load-more-btn"]').text()).toContain('重试加载')
+    await wrapper.get('[data-testid="playlist-load-more-btn"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('[data-testid="playlist-song-item"]')).toHaveLength(32)
+    expect(api.listMusicPlaylistSongs).toHaveBeenCalledTimes(2)
+    expect(api.listMusicPlaylistSongs).toHaveBeenNthCalledWith(2, 'retry-pages', {
+      page: 2, page_size: 20,
+    })
+    expect(wrapper.find('[data-testid="playlist-list-error"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('blocks duplicate pagination clicks and ignores an old response after navigation', async () => {
+    const first = Array.from({ length: 25 }, (_, i) => song('old-' + (i + 1)))
+    await router.push('/music/playlist/old')
+    vi.mocked(api.getMusicPlaylist).mockImplementation(async (id) => ({
+      id, name: '歌单-' + id, song_count: id === 'old' ? 25 : 1,
+      songs: id === 'old' ? first.slice(0, 20) : [song('new-1')],
+    }) as never)
+    let resolvePage!: (value: unknown) => void
+    vi.mocked(api.listMusicPlaylistSongs).mockReturnValue(
+      new Promise(resolve => { resolvePage = resolve }) as never,
+    )
+    const wrapper = mount(MusicPlaylistDetailView, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    await wrapper.get('[data-testid="playlist-load-more-btn"]').trigger('click')
+    expect(wrapper.get('[data-testid="playlist-load-more-btn"]').attributes('disabled')).toBeDefined()
+    await wrapper.get('[data-testid="playlist-load-more-btn"]').trigger('click')
+    expect(api.listMusicPlaylistSongs).toHaveBeenCalledOnce()
+    await router.push('/music/playlist/new')
+    await flushPromises()
+    resolvePage({ data: first.slice(20), meta: { has_more: false } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('歌单-new')
+    expect(wrapper.findAll('[data-testid="playlist-song-item"]')).toHaveLength(1)
+    expect(wrapper.findAll('[data-testid="playlist-song-item"]')[0].text()).toContain('new-1')
+    expect(wrapper.find('[data-testid="playlist-load-more-btn"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('reuses the full cached queue for pagination instead of making extra API calls', async () => {
+    const full = Array.from({ length: 55 }, (_, i) => song('cache-' + (i + 1)))
+    const play = spyQueue()
+    await router.push('/music/playlist/cached')
+    vi.mocked(api.getMusicPlaylist).mockResolvedValue({
+      id: 'cached', name: '缓存歌单', song_count: 55, songs: full.slice(0, 20),
+    } as never)
+    vi.mocked(api.listMusicPlaylistSongs).mockResolvedValue({
+      data: full, meta: { page: 1, page_size: 100, total: 55, has_more: false },
+    } as never)
+    const wrapper = mount(MusicPlaylistDetailView, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    await wrapper.get('[data-testid="play-all-btn"]').trigger('click')
+    await flushPromises()
+    expect(play.mock.calls[0][0]).toHaveLength(55)
+    expect(api.listMusicPlaylistSongs).toHaveBeenCalledTimes(1)
+    await wrapper.get('[data-testid="playlist-load-more-btn"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('[data-testid="playlist-song-item"]')).toHaveLength(40)
+    await wrapper.get('[data-testid="playlist-load-more-btn"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('[data-testid="playlist-song-item"]')).toHaveLength(55)
+    expect(api.listMusicPlaylistSongs).toHaveBeenCalledTimes(1)
+    wrapper.unmount()
+  })
+
+  it('does not offer load-more on a complete 20-song playlist', async () => {
+    const exact = Array.from({ length: 20 }, (_, i) => song('exact-' + i))
+    await router.push('/music/playlist/exact')
+    vi.mocked(api.getMusicPlaylist).mockResolvedValue({
+      id: 'exact', name: '刚好二十首', song_count: 20, songs: exact,
+    } as never)
+    const wrapper = mount(MusicPlaylistDetailView, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    expect(wrapper.findAll('[data-testid="playlist-song-item"]')).toHaveLength(20)
+    expect(wrapper.find('[data-testid="playlist-load-more-btn"]').exists()).toBe(false)
+    expect(api.listMusicPlaylistSongs).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
 })

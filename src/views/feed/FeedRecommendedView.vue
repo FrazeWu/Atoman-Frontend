@@ -84,6 +84,7 @@
         <PButton
           v-if="authStore.isAuthenticated"
           variant="primary"
+          size="sm"
           class="discovery-add-btn"
           data-test="open-discovery-add-subscription"
           :label="showAddModal ? '取消添加' : '添加订阅'"
@@ -1458,6 +1459,23 @@ onUnmounted(() => { recommendationRequest++ })
 .discovery-search-box {
   flex: 1 1 auto;
   min-width: 0;
+  height: var(--a-control-height-sm, 2.25rem);
+}
+
+.discovery-search-box :deep(.search-surface) {
+  height: var(--a-control-height-sm, 2.25rem);
+}
+
+.discovery-search-box :deep(.search-frame) {
+  height: var(--a-control-height-sm, 2.25rem);
+}
+
+.discovery-search-box :deep(.search-main) {
+  height: var(--a-control-height-sm, 2.25rem);
+}
+
+.discovery-search-box :deep(.search-btn) {
+  height: 100%;
 }
 
 .discovery-top-actions {
@@ -1465,14 +1483,17 @@ onUnmounted(() => { recommendationRequest++ })
   align-items: center;
   gap: 0.6rem;
   flex-shrink: 0;
+  height: var(--a-control-height-sm, 2.25rem);
 }
 
 .discovery-lang-select {
   width: 7.5rem;
+  height: var(--a-control-height-sm, 2.25rem);
 }
 
 .discovery-add-btn {
   white-space: nowrap;
+  height: var(--a-control-height-sm, 2.25rem);
 }
 
 /* 搜索结果下拉 */
@@ -1522,29 +1543,28 @@ onUnmounted(() => { recommendationRequest++ })
 }
 
 .topic-pill {
-  padding: 0.3rem 0.75rem;
-  border: 1px solid var(--a-color-border-soft);
+  padding: 0.35rem 0.75rem;
+  border: none;
   border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
   font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
 }
 .topic-pill:hover {
   color: var(--a-color-fg);
-  border-color: var(--a-color-border);
+  background: color-mix(in srgb, var(--a-color-surface-muted) 80%, var(--a-color-border-soft));
 }
 .topic-pill.is-active {
   background: var(--a-color-text);
   color: var(--a-color-bg);
-  border-color: var(--a-color-text);
 }
 
 .topic-pill-divider {
   color: var(--a-color-border-soft);
-  padding: 0 0.2rem;
+  padding: 0 0.25rem;
   font-size: 0.8rem;
 }
 
@@ -1586,8 +1606,8 @@ onUnmounted(() => { recommendationRequest++ })
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  padding-bottom: 0.5rem;
+  border-bottom: none;
+  padding-bottom: 0.25rem;
 }
 
 .stream-column__title-group {

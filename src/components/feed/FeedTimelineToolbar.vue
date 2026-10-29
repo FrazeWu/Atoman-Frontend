@@ -11,8 +11,8 @@
   <div class="feed-actions">
     <form class="feed-search" data-test="feed-search-form" @submit.prevent="emit('search')">
       <input v-model="searchValue" data-test="feed-search-input" class="feed-search__input" type="search" placeholder="搜索标题、来源、摘要" aria-label="搜索订阅内容" />
-      <PButton type="submit" label="搜索" />
-      <PButton v-if="activeSearchLabel" variant="secondary" data-test="feed-search-clear" label="清空" @click="emit('clear-search')" />
+      <PButton type="submit" size="sm" label="搜索" />
+      <PButton v-if="activeSearchLabel" variant="secondary" size="sm" data-test="feed-search-clear" label="清空" @click="emit('clear-search')" />
     </form>
     <div class="source-type-filters" aria-label="来源类型筛选"><PSegmentedControl v-model="sourceTypeValue" :options="sourceTypeFilterOptions" /></div>
     <div v-if="authenticated" class="timeline-mode" aria-label="订阅时间线模式"><PSegmentedControl v-model="timelineModeValue" :options="timelineModeOptions" /></div>
@@ -23,9 +23,9 @@
     <div v-if="themeFilters.length" class="theme-filters" aria-label="主题筛选">
       <button v-for="theme in themeFilters" :key="theme" type="button" class="theme-filter-btn" :class="{ active: activeTheme === theme }" :data-test="`theme-filter-${theme.toLowerCase()}`" @click="emit('update:activeTheme', activeTheme === theme ? '' : theme)">{{ theme }}</button>
     </div>
-    <button v-if="authenticated && timelineMode === 'chronological'" class="filter-toggle-btn" :class="{ active: unreadOnly }" :title="unreadOnly ? '显示全部' : '只看未读'" @click="emit('toggle-unread')"><Filter :size="20" aria-hidden="true" /></button>
-    <div v-if="authenticated && timelineMode === 'chronological'" style="width: 2rem" />
-    <PButton v-if="authenticated && timelineMode === 'chronological'" variant="secondary" :loading="markingAllRead" loading-text="处理中..." :label="bulkReadLabel" @click="emit('toggle-all-read')" />
+    <button v-if="authenticated && timelineMode === 'chronological'" class="filter-toggle-btn" :class="{ active: unreadOnly }" :title="unreadOnly ? '显示全部' : '只看未读'" @click="emit('toggle-unread')"><Filter :size="18" aria-hidden="true" /></button>
+    <div v-if="authenticated && timelineMode === 'chronological'" style="width: 1.5rem" />
+    <PButton v-if="authenticated && timelineMode === 'chronological'" variant="secondary" size="sm" :loading="markingAllRead" loading-text="处理中..." :label="bulkReadLabel" @click="emit('toggle-all-read')" />
   </div>
 
   <div v-if="hasNewTimelineContent" class="feed-new-content-region" aria-live="polite">
@@ -89,10 +89,40 @@ const mergeDuplicatesValue = computed({ get: () => props.mergeDuplicates, set: v
 </script>
 
 <style scoped>
-.source-type-filters, .timeline-mode, .theme-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.theme-filter-btn { border: 1px solid var(--a-color-border-soft); background: transparent; color: var(--a-color-text); padding: 0.45rem 0.7rem; font-size: 0.72rem; font-weight: 500; cursor: pointer; }
-.theme-filter-btn.active { border-style: solid; background: var(--a-color-surface-muted); }
-.feed-current-source { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid var(--a-color-border-soft); padding: 0.7rem 0.85rem; margin-bottom: 1rem; background: var(--a-color-surface-muted); }
+.source-type-filters, .timeline-mode, .theme-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.theme-filter-btn {
+  border: none;
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
+  padding: 0 0.65rem;
+  height: var(--a-control-height-sm, 2.25rem);
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--a-radius-control, 4px);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color var(--a-motion-micro), background-color var(--a-motion-micro);
+}
+.theme-filter-btn:hover {
+  color: var(--a-color-text);
+  background: color-mix(in srgb, var(--a-color-surface-muted) 80%, var(--a-color-border-soft));
+}
+.theme-filter-btn.active {
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+}
+.feed-current-source {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: none;
+  border-radius: var(--a-radius-control, 4px);
+  padding: 0.5rem 0.85rem;
+  margin-bottom: 1rem;
+  background: var(--a-color-surface-muted);
+}
 .feed-current-source__main { display: flex; min-width: 0; align-items: center; gap: 0.65rem; }
 .feed-current-source__main strong { min-width: 0; overflow: hidden; font-size: 0.95rem; text-overflow: ellipsis; white-space: nowrap; }
 .feed-current-source__count { flex-shrink: 0; color: var(--a-color-muted); }
@@ -100,15 +130,57 @@ const mergeDuplicatesValue = computed({ get: () => props.mergeDuplicates, set: v
 .feed-current-source__clear:hover { text-decoration: underline; text-underline-offset: 0.18em; }
 .feed-actions { display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
 .feed-search { display: grid; grid-template-columns: minmax(12rem, 22rem) auto auto; align-items: center; gap: 0.5rem; margin-right: auto; }
-.feed-search__input { min-width: 0; height: 40px; border: 0; border-bottom: 2px solid var(--a-color-text); border-radius: 0; background: var(--a-color-bg); color: var(--a-color-text); font: inherit; padding: 0 0.75rem; outline: none; box-sizing: border-box; }
-.feed-search__input:focus { border-bottom-color: var(--a-color-primary); }
-.feed-merge-duplicates { display: inline-flex; align-items: center; gap: 0.45rem; min-height: 2.5rem; color: var(--a-color-muted); font-size: 0.8rem; white-space: nowrap; }
+.feed-search__input {
+  min-width: 0;
+  height: var(--a-control-height-sm, 2.25rem);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  font: inherit;
+  font-size: 0.8125rem;
+  padding: 0 0.75rem;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--a-motion-micro);
+}
+.feed-search__input:focus { border-color: var(--a-color-primary); }
+.feed-merge-duplicates { display: inline-flex; align-items: center; gap: 0.45rem; min-height: var(--a-control-height-sm, 2.25rem); color: var(--a-color-muted); font-size: 0.8rem; white-space: nowrap; }
 .feed-merge-duplicates input { width: 1rem; height: 1rem; accent-color: var(--a-color-text); }
-.filter-toggle-btn { display: flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border: none; background: transparent; color: var(--a-color-muted); cursor: pointer; border-radius: var(--a-radius-none, 4px); transition: color 0.2s, background-color 0.2s, border-color 0.2s, opacity 0.2s, transform 0.2s, box-shadow 0.2s; }
+.filter-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--a-control-height-sm, 2.25rem);
+  height: var(--a-control-height-sm, 2.25rem);
+  border: none;
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  border-radius: var(--a-radius-control, 4px);
+  transition: color 0.2s, background-color 0.2s;
+}
 .filter-toggle-btn:hover, .filter-toggle-btn.active { background: var(--a-color-surface-muted); color: var(--a-color-text); }
 .filter-toggle-btn.active { font-weight: 600; }
 .feed-new-content-region { margin-bottom: 0.75rem; }
-.feed-new-content { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; min-height: 2.75rem; padding: 0.5rem 0.875rem; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-none, 4px); background: var(--a-color-surface-muted); color: var(--a-color-fg); cursor: pointer; font: inherit; font-size: 0.875rem; font-weight: 600; transition: background-color 0.15s ease, color 0.15s ease; }
+.feed-new-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: var(--a-control-height-sm, 2.25rem);
+  padding: 0.4rem 0.875rem;
+  border: none;
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
 .feed-new-content:hover { background: var(--a-color-text); color: var(--a-color-bg); }
 .feed-new-content:focus-visible { outline: 2px solid var(--a-color-text); outline-offset: 2px; }
 </style>

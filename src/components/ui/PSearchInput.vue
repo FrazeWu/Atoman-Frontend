@@ -29,6 +29,11 @@ export interface PSearchInputProps {
   disabled?: boolean
   ariaLabel?: string
   showDropdown?: boolean
+  role?: string
+  ariaExpanded?: boolean
+  ariaControls?: string
+  ariaActiveDescendant?: string
+  ariaAutocomplete?: 'list' | 'both' | 'inline' | 'none'
 }
 
 const props = withDefaults(defineProps<PSearchInputProps>(), {
@@ -229,6 +234,12 @@ defineExpose({
         ref="inputRef"
         type="search"
         class="p-search-input__input"
+        :role="role === 'combobox' ? 'combobox' : undefined"
+        :aria-expanded="role === 'combobox' ? ariaExpanded : undefined"
+        :aria-controls="ariaControls"
+        :aria-activedescendant="ariaActiveDescendant"
+        :aria-autocomplete="ariaAutocomplete || (role === 'combobox' ? 'list' : undefined)"
+        :aria-haspopup="role === 'combobox' ? 'listbox' : undefined"
         :value="innerValue"
         :placeholder="placeholder"
         :disabled="disabled"

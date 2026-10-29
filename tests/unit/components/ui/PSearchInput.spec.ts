@@ -233,4 +233,52 @@ describe('PSearchInput.vue', () => {
     expect(wrapper.emitted('keydown')).toBeTruthy()
     expect((wrapper.emitted('keydown')?.[0]?.[0] as KeyboardEvent).key).toBe('ArrowDown')
   })
+
+  describe('a11y & combobox support', () => {
+    it('does not add combobox a11y attributes on input with default props', () => {
+      const wrapper = mount(PSearchInput)
+      const input = wrapper.find('input')
+
+      expect(input.attributes('role')).toBeUndefined()
+      expect(input.attributes('aria-haspopup')).toBeUndefined()
+      expect(input.attributes('aria-expanded')).toBeUndefined()
+      expect(input.attributes('aria-controls')).toBeUndefined()
+      expect(input.attributes('aria-activedescendant')).toBeUndefined()
+      expect(input.attributes('aria-autocomplete')).toBeUndefined()
+    })
+
+    it('sets role and aria-haspopup when role is combobox', () => {
+      const wrapper = mount(PSearchInput, {
+        props: {
+          role: 'combobox',
+        },
+      })
+      const input = wrapper.find('input')
+
+      expect(input.attributes('role')).toBe('combobox')
+      expect(input.attributes('aria-haspopup')).toBe('listbox')
+      expect(input.attributes('aria-autocomplete')).toBe('list')
+      expect(input.attributes('aria-expanded')).toBe('false')
+    })
+
+    it('reflects combobox a11y attributes when specified', () => {
+      const wrapper = mount(PSearchInput, {
+        props: {
+          role: 'combobox',
+          ariaExpanded: true,
+          ariaControls: 'search-results-listbox',
+          ariaActiveDescendant: 'search-opt-2',
+          ariaAutocomplete: 'both',
+        },
+      })
+      const input = wrapper.find('input')
+
+      expect(input.attributes('role')).toBe('combobox')
+      expect(input.attributes('aria-haspopup')).toBe('listbox')
+      expect(input.attributes('aria-expanded')).toBe('true')
+      expect(input.attributes('aria-controls')).toBe('search-results-listbox')
+      expect(input.attributes('aria-activedescendant')).toBe('search-opt-2')
+      expect(input.attributes('aria-autocomplete')).toBe('both')
+    })
+  })
 })

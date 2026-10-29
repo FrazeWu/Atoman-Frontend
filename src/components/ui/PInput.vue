@@ -11,24 +11,27 @@
         v-bind="$attrs"
         :value="modelValue"
         :disabled="disabled"
+        :aria-invalid="error ? 'true' : undefined"
+        :aria-describedby="describedBy"
+        :aria-errormessage="errorId"
         @input="handleInput"
       />
       <div v-if="$slots.suffix" class="p-input-suffix">
         <slot name="suffix" />
       </div>
     </div>
-    <div v-if="error" class="p-field-error">{{ error }}</div>
-    <div v-else-if="hint" class="p-field-hint">{{ hint }}</div>
+    <div v-if="error" :id="errorId" class="p-field-error" role="alert" aria-live="polite">{{ error }}</div>
+    <div v-else-if="hint" :id="hintId" class="p-field-hint">{{ hint }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, useAttrs } from 'vue'
+import { computed, useAttrs, useId } from 'vue'
 
 defineOptions({ inheritAttrs: false })
 
 const attrs = useAttrs() as Record<string, unknown>
-const generatedId = `p-input-${Math.random().toString(36).slice(2, 10)}`
+const defaultId = useId()
 
 const props = withDefaults(defineProps<{
   modelValue?: string | number
@@ -49,7 +52,10 @@ const emit = defineEmits<{
   input: [Event]
 }>()
 
-const inputId = computed(() => (typeof attrs.id === 'string' && attrs.id.length > 0 ? attrs.id : generatedId))
+const inputId = computed(() => (typeof attrs.id === 'string' && attrs.id.length > 0 ? attrs.id : defaultId))
+const errorId = computed(() => (props.error ? `${inputId.value}-error` : undefined))
+const hintId = computed(() => (props.hint && !props.error ? `${inputId.value}-hint` : undefined))
+const describedBy = computed(() => errorId.value || hintId.value || undefined)
 
 const handleInput = (event: Event) => {
   emit('update:modelValue', (event.target as HTMLInputElement).value)
@@ -90,6 +96,7 @@ const handleInput = (event: Event) => {
   font-size: 1rem;
   font-family: inherit;
   box-sizing: border-box;
+  box-shadow: none !important;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -111,7 +118,14 @@ const handleInput = (event: Event) => {
 }
 
 .p-input--error {
-  border-bottom-color: var(--a-color-danger);
+  border-color: var(--a-color-danger) !important;
+  box-shadow: none !important;
+}
+
+.p-input--error:focus {
+  outline: 2px solid color-mix(in srgb, var(--a-color-danger) 24%, transparent) !important;
+  outline-offset: 1px;
+  border-color: var(--a-color-danger) !important;
 }
 
 .p-field-error {

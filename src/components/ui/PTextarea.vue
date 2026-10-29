@@ -3,29 +3,33 @@
     <label v-if="label" class="p-field-label" :for="textareaId">{{ label }}</label>
     <div class="p-textarea-wrapper" :class="{ 'p-textarea-wrapper--with-suffix': $slots.suffix }">
       <textarea
+        :id="textareaId"
         class="p-textarea"
         :class="error ? 'p-textarea--error' : ''"
         v-bind="$attrs"
-        :id="textareaId"
         :value="modelValue"
         :rows="rows"
         :disabled="disabled"
+        :aria-invalid="error ? 'true' : undefined"
+        :aria-describedby="describedBy"
+        :aria-errormessage="errorId"
         @input="handleInput"
       />
       <div v-if="$slots.suffix" class="p-textarea-suffix">
         <slot name="suffix" />
       </div>
     </div>
-    <div v-if="error" class="p-field-error">{{ error }}</div>
-    <div v-else-if="hint" class="p-field-hint">{{ hint }}</div>
+    <div v-if="error" :id="errorId" class="p-field-error" role="alert" aria-live="polite">{{ error }}</div>
+    <div v-else-if="hint" :id="hintId" class="p-field-hint">{{ hint }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed, useId } from 'vue'
 
 defineOptions({ inheritAttrs: false })
 
-let textareaIDSequence = 0
+const defaultId = useId()
 
 const props = withDefaults(defineProps<{
   modelValue?: string
@@ -44,12 +48,15 @@ const props = withDefaults(defineProps<{
   rows: 4,
 })
 
-const textareaId = props.id || `p-textarea-${++textareaIDSequence}`
-
 const emit = defineEmits<{
   'update:modelValue': [string]
   input: [Event]
 }>()
+
+const textareaId = computed(() => props.id || defaultId)
+const errorId = computed(() => (props.error ? `${textareaId.value}-error` : undefined))
+const hintId = computed(() => (props.hint && !props.error ? `${textareaId.value}-hint` : undefined))
+const describedBy = computed(() => errorId.value || hintId.value || undefined)
 
 const handleInput = (event: Event) => {
   emit('update:modelValue', (event.target as HTMLTextAreaElement).value)
@@ -90,6 +97,7 @@ const handleInput = (event: Event) => {
   padding: 0.75rem 0.85rem;
   resize: vertical;
   box-sizing: border-box;
+  box-shadow: none !important;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -111,7 +119,14 @@ const handleInput = (event: Event) => {
 }
 
 .p-textarea--error {
-  border-color: var(--a-color-danger);
+  border-color: var(--a-color-danger) !important;
+  box-shadow: none !important;
+}
+
+.p-textarea--error:focus {
+  outline: 2px solid color-mix(in srgb, var(--a-color-danger) 24%, transparent) !important;
+  outline-offset: 1px;
+  border-color: var(--a-color-danger) !important;
 }
 
 .p-field-error {

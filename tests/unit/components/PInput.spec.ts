@@ -36,7 +36,7 @@ describe('PInput', () => {
     expect(wrapper.find('input').classes()).toContain('p-input')
   })
 
-  it('renders error state when error prop is provided', () => {
+  it('renders error state when error prop is provided with accessibility attributes', () => {
     const wrapper = mount(PInput, {
       props: {
         modelValue: '',
@@ -46,10 +46,39 @@ describe('PInput', () => {
     })
 
     const input = wrapper.get('input')
+    const inputId = input.attributes('id')
     expect(input.classes()).toContain('p-input--error')
+    expect(input.attributes('aria-invalid')).toBe('true')
+    expect(input.attributes('aria-describedby')).toBe(`${inputId}-error`)
+    expect(input.attributes('aria-errormessage')).toBe(`${inputId}-error`)
 
     const errorDiv = wrapper.find('.p-field-error')
     expect(errorDiv.exists()).toBe(true)
     expect(errorDiv.text()).toBe('此字段必填')
+    expect(errorDiv.attributes('id')).toBe(`${inputId}-error`)
+    expect(errorDiv.attributes('role')).toBe('alert')
+    expect(errorDiv.attributes('aria-live')).toBe('polite')
+  })
+
+  it('renders hint state with accessibility attributes when hint prop is provided and no error', () => {
+    const wrapper = mount(PInput, {
+      props: {
+        modelValue: '',
+        label: '标题',
+        hint: '请输入最多20个字符',
+      },
+    })
+
+    const input = wrapper.get('input')
+    const inputId = input.attributes('id')
+    expect(input.attributes('aria-invalid')).toBeUndefined()
+    expect(input.attributes('aria-errormessage')).toBeUndefined()
+    expect(input.attributes('aria-describedby')).toBe(`${inputId}-hint`)
+
+    const hintDiv = wrapper.find('.p-field-hint')
+    expect(hintDiv.exists()).toBe(true)
+    expect(hintDiv.text()).toBe('请输入最多20个字符')
+    expect(hintDiv.attributes('id')).toBe(`${inputId}-hint`)
+    expect(wrapper.find('.p-field-error').exists()).toBe(false)
   })
 })

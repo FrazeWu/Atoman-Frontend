@@ -291,9 +291,9 @@ watch(sort, () => {
   font-size: 0.85rem;
 }
 .vh-recommendation-item { position: relative; min-width: 0; }
-.vh-recommendation-feedback { position: absolute; top: .5rem; right: .5rem; display: grid; width: 2rem; height: 2rem; place-items: center; border: 0; background: rgba(0,0,0,.7); color: #fff; cursor: pointer; }
-.vh-recommendation-menu { display: grid; min-width: 10rem; padding: .25rem; background: var(--a-color-bg); border: 1px solid var(--a-color-border); border-radius: var(--a-radius-card); }
-.vh-recommendation-menu button { min-height: 2.25rem; border: 0; background: transparent; color: var(--a-color-fg); text-align: left; cursor: pointer; }
+.vh-recommendation-feedback { position: absolute; top: .5rem; right: .5rem; display: grid; width: 2rem; height: 2rem; place-items: center; border: 0; border-radius: var(--a-radius-control); background: rgba(0,0,0,.7); color: #fff; cursor: pointer; }
+.vh-recommendation-menu { display: grid; min-width: 10rem; padding: .25rem; background: var(--a-color-bg); border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); }
+.vh-recommendation-menu button { min-height: 2.25rem; border: 0; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-fg); text-align: left; padding: 0 0.75rem; cursor: pointer; }
 .vh-recommendation-menu button:hover { background: var(--a-color-surface-muted); }
 
 
@@ -306,7 +306,7 @@ watch(sort, () => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 1rem 0;
+  padding: 0.75rem 0;
   margin-bottom: 2rem;
 }
 .vh-bar-inner {
@@ -320,26 +320,28 @@ watch(sort, () => {
 
 .vh-chip {
   flex-shrink: 0;
-  padding: 0.35rem 0.85rem;
+  height: var(--a-control-height-sm, 2.25rem);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.85rem;
   font-size: 0.82rem;
   font-weight: 500;
-  border: 1px solid var(--a-color-border-soft);
+  border: none;
   border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
+  background: var(--a-color-surface-muted);
   cursor: pointer;
   color: var(--a-color-muted);
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
   white-space: nowrap;
 }
 
 .vh-chip:hover {
-  border-color: var(--a-color-border);
+  background: color-mix(in srgb, var(--a-color-surface-muted) 80%, var(--a-color-border-soft));
   color: var(--a-color-fg);
-  background: var(--a-color-surface-muted);
 }
 
 .vh-chip--active {
-  border-color: var(--a-color-text);
   background: var(--a-color-text);
   color: var(--a-color-bg);
 }

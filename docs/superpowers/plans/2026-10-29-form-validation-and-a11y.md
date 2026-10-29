@@ -36,32 +36,32 @@
   - 错误提示：`<div v-if="error" :id="errorId" class="p-field-error" role="alert" aria-live="polite">{{ error }}</div>`；
   - 样式：`box-shadow: none !important;`，错误时 `border-color: var(--a-color-danger) !important;`。
 
-- [ ] **Step 1: Write/Update unit tests for PInput & PTextarea a11y**
+- [x] **Step 1: Write/Update unit tests for PInput & PTextarea a11y**
   - 在 `tests/unit/components/PInput.spec.ts` 中新增：
     - 验证当有 `error` 时，`<input>` 拥有 `aria-invalid="true"`、`aria-describedby="[inputId]-error"`、`aria-errormessage="[inputId]-error"`；
     - 验证错误信息具有 `id="[inputId]-error"`、`role="alert"`、`aria-live="polite"`；
     - 验证当无 `error` 且有 `hint` 时，`<input>` 拥有 `aria-describedby="[inputId]-hint"` 且无 `aria-invalid`。
   - 在 `tests/unit/components/PTextarea.spec.ts` 中补充相同断言。
 
-- [ ] **Step 2: Run tests to observe failure (RED)**
+- [x] **Step 2: Run tests to observe failure (RED)**
   - 运行: `bun run test:unit tests/unit/components/PInput.spec.ts tests/unit/components/PTextarea.spec.ts`
   - 预期: FAIL。
 
-- [ ] **Step 3: Implement changes in `PInput.vue` and `PTextarea.vue`**
+- [x] **Step 3: Implement changes in `PInput.vue` and `PTextarea.vue`**
   - 采用 Vue 原生 `useId()`；
   - 计算 `errorId`、`hintId`、`describedBy`；
   - 模板中绑定 `aria-invalid`、`aria-describedby`、`aria-errormessage`、`role="alert"`、`aria-live="polite"`；
   - 纯平 0 阴影与全边框错误样式。
 
-- [ ] **Step 4: Run tests to verify pass (GREEN)**
+- [x] **Step 4: Run tests to verify pass (GREEN)**
   - 运行: `bun run test:unit tests/unit/components/PInput.spec.ts tests/unit/components/PTextarea.spec.ts`
   - 预期: PASS。
 
-- [ ] **Step 5: Run type-check**
+- [x] **Step 5: Run type-check**
   - 运行: `bun run type-check`
   - 预期: 0 errors。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   - 运行: `git commit -am "feat(ui): standardize PInput and PTextarea a11y error validation and 0-shadow styling"`
 
 ---
@@ -83,30 +83,30 @@
   - `useId()` 生成唯一 ID；
   - 错误提示：`<div v-if="error" :id="errorId" class="p-field-error-msg" role="alert" aria-live="polite">{{ error }}</div>`。
 
-- [ ] **Step 1: Write/Update unit tests for PSelect a11y**
+- [x] **Step 1: Write/Update unit tests for PSelect a11y**
   - 在 `tests/unit/components/PSelect.spec.ts` 中新增：
     - 验证当有 `error` 时，触发按钮拥有 `aria-invalid="true"`、`aria-describedby` 关联错误信息；
     - 验证错误信息具有 `id`、`role="alert"`、`aria-live="polite"`；
     - 验证当无 `error` 且有 `hint` 时正确关联 `hintId`。
 
-- [ ] **Step 2: Run tests to observe failure (RED)**
+- [x] **Step 2: Run tests to observe failure (RED)**
   - 运行: `bun run test:unit tests/unit/components/PSelect.spec.ts`
   - 预期: FAIL。
 
-- [ ] **Step 3: Implement changes in `PSelect.vue` and `PField.vue`**
+- [x] **Step 3: Implement changes in `PSelect.vue` and `PField.vue`**
   - 采用 `useId()`；
   - 绑定 `aria-invalid`、`aria-describedby`、`aria-errormessage`、`role="alert"`、`aria-live="polite"`；
   - 0 阴影与全边框错误高亮样式。
 
-- [ ] **Step 4: Run tests to verify pass (GREEN)**
+- [x] **Step 4: Run tests to verify pass (GREEN)**
   - 运行: `bun run test:unit tests/unit/components/PSelect.spec.ts`
   - 预期: PASS。
 
-- [ ] **Step 5: Run type-check**
+- [x] **Step 5: Run type-check**
   - 运行: `bun run type-check`
   - 预期: 0 errors。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   - 运行: `git commit -am "feat(ui): standardize PSelect and PField a11y error validation and styling"`
 
 ---
@@ -133,29 +133,29 @@ export function useFormFocusError(): {
 }
 ```
 
-- [ ] **Step 1: Write unit tests in `tests/unit/composables/useFormFocusError.spec.ts`**
+- [x] **Step 1: Write unit tests in `tests/unit/composables/useFormFocusError.spec.ts`**
   - 测试在包含多个 `aria-invalid="true"` 输入框的容器中，成功定位并聚焦首个错误控件；
   - 测试调用 `scrollIntoView` 居中平滑吸附；
   - 测试跳过处于 `disabled` 状态的错误字段；
   - 测试容器无错误时返回 `false`，不抛出异常；
   - 测试异步 `focusError` 等待 Vue `nextTick()` 后正确聚焦刚出现的报错字段。
 
-- [ ] **Step 2: Run test to observe failure (RED)**
+- [x] **Step 2: Run test to observe failure (RED)**
   - 运行: `bun run test:unit tests/unit/composables/useFormFocusError.spec.ts`
   - 预期: FAIL。
 
-- [ ] **Step 3: Implement `src/composables/useFormFocusError.ts`**
+- [x] **Step 3: Implement `src/composables/useFormFocusError.ts`**
   - 编写 `focusFirstInvalidField` 与 `useFormFocusError` 逻辑。
 
-- [ ] **Step 4: Run test to verify pass (GREEN)**
+- [x] **Step 4: Run test to verify pass (GREEN)**
   - 运行: `bun run test:unit tests/unit/composables/useFormFocusError.spec.ts`
   - 预期: PASS。
 
-- [ ] **Step 5: Run type-check**
+- [x] **Step 5: Run type-check**
   - 运行: `bun run type-check`
   - 预期: 0 errors。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   - 运行: `git commit -am "feat(composables): add useFormFocusError for smooth scrolling and autofocusing invalid fields"`
 
 ---
@@ -165,7 +165,7 @@ export function useFormFocusError(): {
 **Files:**
 - Create: `tests/unit/ui/form-a11y-contract.spec.ts`
 
-- [ ] **Step 1: Write static contract tests**
+- [x] **Step 1: Write static contract tests**
   - 静态断言 `PInput.vue`:
     - `useId()`
     - `:aria-invalid=`
@@ -194,11 +194,11 @@ export function useFormFocusError(): {
     - `[aria-invalid="true"]`
     - `scrollIntoView`
 
-- [ ] **Step 2: Run contract test**
+- [x] **Step 2: Run contract test**
   - 运行: `bun run test:unit tests/unit/ui/form-a11y-contract.spec.ts`
   - 预期: PASS。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
   - 运行: `git commit -am "test(contract): add form validation a11y and 0-shadow contract tests"`
 
 ---
@@ -209,21 +209,21 @@ export function useFormFocusError(): {
 - Documentation: `docs/superpowers/plans/2026-10-29-form-validation-and-a11y.md`
 - Kanban: `<appDataDir>/brain/72e9f847-045b-4790-a46f-1fe17ce2f1c1/frontend-refactor-status.md`
 
-- [ ] **Step 1: Run TypeScript strict check**
+- [x] **Step 1: Run TypeScript strict check**
   - 运行: `bun run type-check`
   - 预期: 0 errors。
 
-- [ ] **Step 2: Run all full unit test suites**
+- [x] **Step 2: Run all full unit test suites**
   - 运行: `bun run test:unit`
   - 预期: 100% 全部通过。
 
-- [ ] **Step 3: Run dual-bundle production build**
+- [x] **Step 3: Run dual-bundle production build**
   - 运行: `bun run build && bun run build:mobile`
   - 预期: 双端构建成功 0 errors。
 
-- [ ] **Step 4: Update kanban status**
+- [x] **Step 4: Update kanban status**
   - 更新看板并记录本阶段成果。
 
-- [ ] **Step 5: Commit and push**
+- [x] **Step 5: Commit and push**
   - 运行: `git push origin main`
   - 向用户汇报交付成果，并明确告知下一阶段建议处理内容。

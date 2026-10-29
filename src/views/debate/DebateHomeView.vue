@@ -23,7 +23,7 @@
         class="debate-filter-tag"
       />
 
-      <PButton variant="secondary" @click="loadDebates">筛选</PButton>
+      <PButton variant="secondary" size="sm" @click="loadDebates">筛选</PButton>
     </div>
 
     <!-- Debate List with PContentProgress -->
@@ -312,10 +312,17 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 
 .debate-filter-status {
   max-width: 180px;
+  height: var(--a-control-height-sm, 2.25rem);
 }
 
 .debate-filter-tag {
   max-width: 260px;
+  height: var(--a-control-height-sm, 2.25rem);
+}
+
+.debate-filter-tag :deep(.p-input) {
+  height: var(--a-control-height-sm, 2.25rem);
+  box-sizing: border-box;
 }
 
 .debate-list {
@@ -369,11 +376,11 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 .debate-status-badge {
   font-size: 0.68rem;
   font-weight: 500;
-  padding: 0.15em 0.5em;
+  padding: 0.15em 0.55em;
   border-radius: var(--a-radius-control);
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
-  border: 1px solid var(--a-color-border-soft);
+  border: none;
 }
 
 .debate-status-badge.is-archived {
@@ -406,10 +413,10 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 .debate-card__stance-box {
   display: grid;
   gap: 0.45rem;
-  padding: 0.75rem 0.85rem;
-  background: var(--a-color-bg);
-  border-radius: var(--a-radius-card);
-  border: 1px solid var(--a-color-border-soft);
+  padding: 0.5rem 0;
+  background: transparent;
+  border-radius: 0;
+  border: none;
 }
 
 .stance-bar {
@@ -491,7 +498,7 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 }
 
 .debate-conclusion-stamp--no {
-  border: 1px solid var(--a-color-border);
+  border: none;
   background: var(--a-color-surface-muted);
   color: var(--a-color-text-secondary);
 }

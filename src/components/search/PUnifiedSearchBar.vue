@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Loader2, ArrowRight } from 'lucide-vue-next'
 import PSearchInput, { type SearchScopeOption } from '@/components/ui/PSearchInput.vue'
@@ -220,6 +220,12 @@ const handleKeydown = (e: KeyboardEvent) => {
   }
 }
 
+watch(activeIndex, async (idx) => {
+  if (idx < 0) return
+  await nextTick()
+  rootRef.value?.querySelector('.p-unified-search-dropdown__item.is-active')?.scrollIntoView?.({ block: 'nearest' })
+})
+
 const handleClear = () => {
   query.value = ''
   preview.reset()
@@ -260,6 +266,10 @@ onUnmounted(() => {
       :show-dropdown="isDropdownOpen && hasDropdownContent"
       :loading="preview.loading.value"
       :enable-global-shortcut="enableGlobalShortcut"
+      role="combobox"
+      :aria-expanded="isDropdownOpen && hasDropdownContent"
+      aria-controls="unified-search-preview-listbox"
+      :aria-active-descendant="activeIndex >= 0 ? `unified-search-option-${activeIndex}` : undefined"
       @update:model-value="handleQueryUpdate"
       @update:scope="handleScopeUpdate"
       @search="handleSearch"
@@ -269,7 +279,12 @@ onUnmounted(() => {
       @keydown="handleKeydown"
     >
       <template #dropdown>
-        <div class="p-unified-search-dropdown" role="listbox">
+        <div
+          id="unified-search-preview-listbox"
+          class="p-unified-search-dropdown"
+          role="listbox"
+          aria-label="搜索候选项"
+        >
           <!-- Loading state -->
           <div v-if="preview.loading.value && previewHits.length === 0" class="p-unified-search-dropdown__status">
             <Loader2 class="p-unified-search-dropdown__spinner animate-spin" />
@@ -298,6 +313,7 @@ onUnmounted(() => {
             <div class="p-unified-search-dropdown__list">
               <div
                 v-for="(item, idx) in previewHits"
+                :id="`unified-search-option-${idx}`"
                 :key="item.key || `${item.module}-${item.type}-${item.id}`"
                 class="p-unified-search-dropdown__item"
                 :class="{ 'is-active': idx === activeIndex }"

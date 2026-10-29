@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import PUnifiedSearchBar from '@/components/search/PUnifiedSearchBar.vue'
 import * as previewModule from '@/composables/useUnifiedSearchPreview'
 import type { SearchHit } from '@/api/search'
@@ -235,5 +235,73 @@ describe('PUnifiedSearchBar.vue', () => {
     await input.trigger('input')
     const dropdown = wrapper.find('[data-testid="custom-search-dropdown"]')
     expect(dropdown.exists()).toBe(true)
+  })
+
+  describe('combobox a11y & visual scroll', () => {
+    it('sets combobox roles and aria attributes on input and listbox', async () => {
+      mockItems.value = sampleHits
+      const wrapper = mount(PUnifiedSearchBar, {
+        props: {
+          modelValue: '三体',
+        },
+      })
+
+      const input = wrapper.find('input')
+      expect(input.attributes('role')).toBe('combobox')
+      expect(input.attributes('aria-expanded')).toBe('false')
+      expect(input.attributes('aria-controls')).toBe('unified-search-preview-listbox')
+      expect(input.attributes('aria-activedescendant')).toBeUndefined()
+
+      // Focus to open dropdown
+      await input.trigger('focus')
+
+      expect(input.attributes('aria-expanded')).toBe('true')
+      const listbox = wrapper.find('#unified-search-preview-listbox')
+      expect(listbox.exists()).toBe(true)
+      expect(listbox.attributes('role')).toBe('listbox')
+      expect(listbox.attributes('aria-label')).toBe('搜索候选项')
+
+      const options = wrapper.findAll('.p-unified-search-dropdown__item')
+      expect(options).toHaveLength(2)
+      expect(options[0].attributes('role')).toBe('option')
+      expect(options[0].attributes('id')).toBe('unified-search-option-0')
+      expect(options[0].attributes('aria-selected')).toBe('false')
+      expect(options[1].attributes('role')).toBe('option')
+      expect(options[1].attributes('id')).toBe('unified-search-option-1')
+      expect(options[1].attributes('aria-selected')).toBe('false')
+
+      // Navigate down to first item
+      await input.trigger('keydown', { key: 'ArrowDown' })
+      expect(input.attributes('aria-activedescendant')).toBe('unified-search-option-0')
+      expect(options[0].attributes('aria-selected')).toBe('true')
+      expect(options[1].attributes('aria-selected')).toBe('false')
+
+      // Navigate down to second item
+      await input.trigger('keydown', { key: 'ArrowDown' })
+      expect(input.attributes('aria-activedescendant')).toBe('unified-search-option-1')
+      expect(options[0].attributes('aria-selected')).toBe('false')
+      expect(options[1].attributes('aria-selected')).toBe('true')
+    })
+
+    it('scrolls active item into view when activeIndex changes', async () => {
+      mockItems.value = sampleHits
+      const scrollIntoViewMock = vi.fn()
+      window.Element.prototype.scrollIntoView = scrollIntoViewMock
+
+      const wrapper = mount(PUnifiedSearchBar, {
+        props: {
+          modelValue: '三体',
+        },
+      })
+
+      const input = wrapper.find('input')
+      await input.trigger('focus')
+
+      await input.trigger('keydown', { key: 'ArrowDown' })
+      await nextTick()
+
+      expect(scrollIntoViewMock).toHaveBeenCalledWith({ block: 'nearest' })
+      wrapper.unmount()
+    })
   })
 })

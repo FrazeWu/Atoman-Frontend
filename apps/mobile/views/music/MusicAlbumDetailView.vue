@@ -130,12 +130,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getMusicAlbum } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
-import { musicAudioFromApi, canPlayMusicSong, firstPlayableMusicSong } from '@mobile/mobileMusicPlayback'
+import { musicAudioFromApi, canPlayMusicSong, startMobileMusicQueue } from '@mobile/mobileMusicPlayback'
+import { compareAlbumTracks } from '@/utils/musicMedia'
 import MButton from '@mobile/components/ui/MButton.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 
@@ -165,7 +166,8 @@ const player = useAudioPlayerStore()
 const loading = ref(false)
 const loadError = ref('')
 const album = ref<AlbumDetailData | null>(props.initialAlbum || null)
-const songs = ref<Song[]>(props.initialSongs || [])
+const songs = ref<Song[]>([...(props.initialSongs || [])].sort(compareAlbumTracks))
+let detailGeneration = 0
 
 function extractArtist(item: any, fallback?: string): string {
   if (typeof item?.artist === 'string' && item.artist.trim()) return item.artist.trim()
@@ -210,6 +212,9 @@ function toPlayerSong(item: any, albumContext?: { cover_url?: string; artist?: s
     duration: typeof item.duration === 'number' && item.duration > 0
       ? item.duration
       : (item.duration_sec ?? item.duration_seconds ?? item.durationSeconds ?? 0),
+    disc_number: item.disc_number,
+    track_number: item.track_number,
+    album_id: item.album_id || album.value?.id || undefined,
     ...musicAudioFromApi(item),
     cover_url: extractCover(item, fallbackCover),
   }
@@ -224,6 +229,7 @@ function formatDuration(seconds?: number): string {
 
 async function loadAlbumData(force = false) {
   if (props.initialAlbum) return
+  const generation = ++detailGeneration
   const id = String(route.params.albumId || '')
   if (!id) { loadError.value = '专辑标识缺失。'; return }
   loading.value = true
@@ -232,6 +238,7 @@ async function loadAlbumData(force = false) {
   songs.value = []
   try {
     const data = await getMusicAlbum(id, { force })
+    if (generation !== detailGeneration || String(route.params.albumId || '') !== id) return
     if (!data?.id) { loadError.value = '未找到专辑信息。'; return }
     const albumArtist = extractArtist(data, '')
     album.value = {
@@ -242,16 +249,16 @@ async function loadAlbumData(force = false) {
       cover_url: data.cover_url || '',
     }
     songs.value = Array.isArray(data.songs)
-      ? data.songs.map((song) => toPlayerSong(song, {
+      ? [...data.songs].sort(compareAlbumTracks).map((song) => toPlayerSong(song, {
           cover_url: album.value?.cover_url,
           artist: albumArtist,
           title: album.value?.title,
         }))
       : []
   } catch {
-    loadError.value = '专辑加载失败，请检查网络后重试。'
+    if (generation === detailGeneration) loadError.value = '专辑加载失败，请检查网络后重试。'
   } finally {
-    loading.value = false
+    if (generation === detailGeneration) loading.value = false
   }
 }
 
@@ -265,17 +272,19 @@ function handleBack() {
 
 function playSong(song: Song) {
   if (!canPlayMusicSong(song)) return
-  player.playSong(song)
+  startMobileMusicQueue(player, songs.value, song.id)
 }
 
 function handlePlayAll() {
-  const first = firstPlayableMusicSong(songs.value)
-  if (!first) return
-  player.playSong(first)
+  startMobileMusicQueue(player, songs.value)
 }
 
 onMounted(() => {
   void loadAlbumData()
+})
+watch(() => route.params.albumId, (id, previous) => {
+  detailGeneration += 1
+  if (id && id !== previous) void loadAlbumData()
 })
 </script>
 

@@ -62,6 +62,9 @@ beforeEach(async () => {
 function spyPlayer() {
   return vi.spyOn(useAudioPlayerStore(), 'playSong').mockImplementation(() => undefined)
 }
+function spyQueue() {
+  return vi.spyOn(useAudioPlayerStore(), 'playAlbum').mockImplementation(() => undefined)
+}
 
 describe('mobile music playback integrity', () => {
   it('keeps only actual API audio URLs and rejects missing / processing assets', () => {
@@ -78,8 +81,8 @@ describe('mobile music playback integrity', () => {
     expect(firstPlayableMusicSong([missing, processing, available])).toEqual(available)
   })
 
-  it('album keeps unavailable tracks visible but plays only the first ready source', async () => {
-    const play = spyPlayer()
+  it('album keeps unavailable tracks visible but queues only ready sources', async () => {
+    const play = spyQueue()
     const wrapper = mount(MusicAlbumDetailView, {
       props: { initialAlbum: { id: 'a', title: '真实专辑', artist: '艺人' }, initialSongs: [missing, processing, available] },
       global: { plugins: [pinia, router] },
@@ -95,12 +98,12 @@ describe('mobile music playback integrity', () => {
     expect(play).not.toHaveBeenCalled()
     await wrapper.get('[data-testid="play-all-btn"]').trigger('click')
     expect(play).toHaveBeenCalledOnce()
-    expect(play).toHaveBeenCalledWith(available)
+    expect(play).toHaveBeenCalledWith([available], 0)
     wrapper.unmount()
   })
 
   it('playlist play-all is unavailable with no actual audio', async () => {
-    const play = spyPlayer()
+    const play = spyQueue()
     const wrapper = mount(MusicPlaylistDetailView, {
       props: { initialPlaylist: { id: 'p', name: '公开歌单' }, initialSongs: [missing, processing] },
       global: { plugins: [pinia, router] },
@@ -113,8 +116,8 @@ describe('mobile music playback integrity', () => {
     wrapper.unmount()
   })
 
-  it('artist play-all skips missing audio and keeps real songs in the proper order', async () => {
-    const play = spyPlayer()
+  it('artist play-all skips missing audio and preserves the real song order', async () => {
+    const play = spyQueue()
     const wrapper = mount(MusicArtistDetailView, {
       props: {
         initialArtist: { id: 'art', name: '艺人' },
@@ -126,7 +129,7 @@ describe('mobile music playback integrity', () => {
     expect(wrapper.get('[data-testid="artist-song-item"]').attributes('disabled')).toBeDefined()
     await wrapper.get('[data-testid="artist-play-all-btn"]').trigger('click')
     expect(play).toHaveBeenCalledOnce()
-    expect(play).toHaveBeenCalledWith(available)
+    expect(play).toHaveBeenCalledWith([available], 0)
     wrapper.unmount()
   })
 

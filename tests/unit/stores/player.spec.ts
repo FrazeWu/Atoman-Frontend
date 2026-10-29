@@ -7,6 +7,7 @@ import { usePlayerStore, computeActualVolume, fadeOutAudio } from "../../../src/
 import { useAuthStore } from "../../../src/stores/auth";
 import { writePodcastProgress } from "../../../src/composables/usePodcastProgress";
 import type { Song } from "../../../src/types";
+import { startMobileMusicQueue } from "../../../apps/mobile/mobileMusicPlayback";
 
 const mocks = vi.hoisted(() => ({
 	getMusicSongDetail: vi.fn(),
@@ -540,7 +541,32 @@ describe("player store", () => {
 		expect(player.currentSong?.id).toBe(3);
 	});
 
-	it("advances to next song in an album queue with uuid ids", () => {
+	it("automatically advances through a complete mobile queue after audio ends", () => {
+    const player = usePlayerStore();
+    const tracks = [
+      { id: "missing", title: "Missing", audio_url: "" },
+      ...Array.from({ length: 26 }, (_, index) => ({
+        id: "mobile-" + (index + 1),
+        title: "Track " + (index + 1),
+        audio_url: "/audio/mobile-" + (index + 1) + ".mp3",
+        audio_status: "ready",
+      })),
+      { id: "processing", title: "Processing", audio_url: "/processing.mp3", audio_status: "processing" },
+    ] as Song[];
+
+    expect(startMobileMusicQueue(player, tracks)).toBe(true);
+    expect(player.currentSong?.id).toBe("mobile-1");
+    expect(player.queue).toHaveLength(26);
+    audioInstances[0].emit("ended");
+    expect(player.currentSong?.id).toBe("mobile-2");
+    player.playNext();
+    expect(player.currentSong?.id).toBe("mobile-3");
+    player.playPrevious();
+    expect(player.currentSong?.id).toBe("mobile-2");
+    expect(player.queue).toHaveLength(26);
+  });
+
+  it("advances to next song in an album queue with uuid ids", () => {
 		const player = usePlayerStore();
 		const firstSong = {
 			id: "song-uuid-1",

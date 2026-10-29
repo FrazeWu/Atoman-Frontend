@@ -16,11 +16,20 @@ export function buildPrefetchCandidates(
   canPlay: (song: Song) => boolean,
   prefetchedURLs: ReadonlySet<string>,
 ) {
+  // A full playlist can contain hundreds of songs: only fetch a few upcoming
+  // audio prefixes, beginning AFTER the current song, instead of the entire queue.
+  const itemKey = (song: Song) =>
+    String(song.source_type || 'music') + ':' + String(song.source_id || song.id)
+  const currentIndex = queue.findIndex((song) => itemKey(song) === currentKey)
+  const upcoming = currentIndex < 0
+    ? queue
+    : [...queue.slice(currentIndex + 1), ...queue.slice(0, currentIndex)]
+
   return [...new Set(
-    queue
-      .filter((song) => song.source_type ? `${song.source_type}:${song.source_id || song.id}` !== currentKey : `music:${song.source_id || song.id}` !== currentKey)
+    upcoming
+      .filter((song) => itemKey(song) !== currentKey)
       .filter(canPlay)
       .map((song) => resolveAudioURL(song.audio_url))
       .filter((url) => !prefetchedURLs.has(url)),
-  )]
+  )].slice(0, 3)
 }

@@ -52,21 +52,23 @@
             <span v-if="playlist.creator?.display_name" class="mobile-playlist-detail__creator">
               创建者：{{ playlist.creator.display_name }}
             </span>
-            <span class="mobile-playlist-detail__count">{{ songs.length }} 首歌曲</span>
+            <span class="mobile-playlist-detail__count">{{ playlistCount }} 首歌曲</span>
           </div>
 
           <div class="mobile-playlist-detail__actions">
             <MButton
               size="sm"
               variant="primary"
-              :disabled="!songs.some(canPlayMusicSong)"
+              :disabled="queueLoading || !(songs.some(canPlayMusicSong) || playlistCount > songs.length)"
               data-testid="play-all-btn"
               @click="handlePlayAll"
             >
               <MIcon name="player-play" size="xs" />
-              <span>播放全部</span>
+              <span>{{ queueLoading ? '正在加载完整歌单…' : '播放全部' }}</span>
             </MButton>
           </div>
+          <p v-if="queueLoading" class="mobile-playlist-detail__queue-status" role="status" data-testid="playlist-queue-loading">正在读取完整播放队列…</p>
+          <p v-if="queueError" class="mobile-playlist-detail__queue-error" role="alert" data-testid="playlist-queue-error">{{ queueError }}</p>
         </div>
       </section>
 
@@ -83,7 +85,7 @@
             type="button"
             class="mobile-playlist-detail__song-item"
             data-testid="playlist-song-item"
-            :disabled="!canPlayMusicSong(song)"
+            :disabled="queueLoading || !canPlayMusicSong(song)"
             :aria-label="canPlayMusicSong(song) ? '播放' + song.title : song.title + '，暂无可播放音源'"
             @click="playSong(song)"
           >
@@ -111,12 +113,14 @@
             </span>
           </button>
         </div>
-
         <!-- Empty State -->
         <div v-else class="mobile-playlist-detail__empty" data-testid="playlist-empty">
           <MIcon name="note" size="lg" class="mobile-playlist-detail__empty-icon" />
           <p class="mobile-playlist-detail__empty-text">歌单内暂无歌曲</p>
         </div>
+        <p v-if="playlistCount > songs.length" class="mobile-playlist-detail__queue-status">
+          当前展示前 {{ songs.length }} 首，播放全部可加入完整歌单。
+        </p>
       </section>
     </main>
 
@@ -135,12 +139,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onBeforeUnmount, onDeactivated, onMounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getMusicPlaylist } from '@/api/musicV1'
+import { getMusicPlaylist, listMusicPlaylistSongs } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
-import { musicAudioFromApi, canPlayMusicSong, firstPlayableMusicSong } from '@mobile/mobileMusicPlayback'
+import { musicAudioFromApi, canPlayMusicSong, fetchFullMobilePlaylist, startMobileMusicQueue } from '@mobile/mobileMusicPlayback'
 import MButton from '@mobile/components/ui/MButton.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 
@@ -150,6 +154,7 @@ export interface PlaylistDetailData {
   description?: string
   cover_url?: string
   creator?: { display_name?: string }
+  song_count?: number
   songs?: any[]
 }
 
@@ -172,6 +177,13 @@ const loading = ref(false)
 const loadError = ref('')
 const playlist = ref<PlaylistDetailData | null>(props.initialPlaylist || null)
 const songs = ref<Song[]>(props.initialSongs || [])
+const playlistCount = computed(() => Math.max(songs.value.length, playlist.value?.song_count || 0))
+const queueLoading = ref(false)
+const queueError = ref('')
+let fullQueueCache: { playlistId: string; songs: Song[] } | null = null
+let queueGeneration = 0
+let unmounted = false
+let detailGeneration = 0
 
 function extractArtist(item: any, fallback?: string): string {
   if (typeof item?.artist === 'string' && item.artist.trim()) return item.artist.trim()
@@ -214,6 +226,7 @@ function toPlayerSong(item: any, playlistCover?: string): Song {
       ? item.duration
       : (item.duration_sec ?? item.duration_seconds ?? item.durationSeconds ?? 0),
     ...musicAudioFromApi(item),
+    playlist_id: playlist.value?.id,
     cover_url: extractCover(item, fallbackCover),
   }
 }
@@ -227,29 +240,36 @@ function formatDuration(seconds?: number): string {
 
 async function loadPlaylistData() {
   if (props.initialPlaylist) return
+  const generation = ++detailGeneration
   const id = String(route.params.playlistId || '')
   if (!id) { loadError.value = '歌单标识缺失。'; return }
+  queueGeneration += 1
+  fullQueueCache = null
+  queueLoading.value = false
+  queueError.value = ''
   loading.value = true
   loadError.value = ''
   playlist.value = null
   songs.value = []
   try {
     const data = await getMusicPlaylist(id)
+    if (generation !== detailGeneration || String(route.params.playlistId || '') !== id) return
     if (!data?.id) { loadError.value = '未找到歌单信息。'; return }
     playlist.value = {
       id: data.id,
       name: data.name || '歌单',
       description: data.description || '',
       cover_url: data.cover_url || '',
+      song_count: data.song_count,
       creator: data.owner_username ? { display_name: data.owner_username } : undefined,
     }
     songs.value = Array.isArray(data.songs)
       ? data.songs.map((song) => toPlayerSong(song, playlist.value?.cover_url))
       : []
   } catch {
-    loadError.value = '歌单加载失败，请检查网络后重试。'
+    if (generation === detailGeneration) loadError.value = '歌单加载失败，请检查网络后重试。'
   } finally {
-    loading.value = false
+    if (generation === detailGeneration) loading.value = false
   }
 }
 
@@ -261,23 +281,100 @@ function handleBack() {
   }
 }
 
+async function startPlaylistPlayback(startSongId?: Song['id']) {
+  const currentPlaylist = playlist.value
+  if (!currentPlaylist || queueLoading.value || unmounted) return
+
+  const playlistId = String(currentPlaylist.id)
+  const generation = ++queueGeneration
+  queueLoading.value = true
+  queueError.value = ''
+
+  try {
+    let allSongs: Song[]
+    if (props.initialSongs !== undefined) {
+      // Injected complete lists (tests / consumers) do not need a remote fetch.
+      allSongs = songs.value
+    } else if (fullQueueCache?.playlistId === playlistId) {
+      allSongs = fullQueueCache.songs
+    } else {
+      const remoteSongs = await fetchFullMobilePlaylist(
+        playlistId,
+        listMusicPlaylistSongs,
+        () => generation === queueGeneration
+          && !unmounted
+          && String(playlist.value?.id) === playlistId
+          && String(route.params.playlistId || '') === playlistId,
+      )
+      if (generation !== queueGeneration || unmounted
+          || String(playlist.value?.id) !== playlistId
+          || String(route.params.playlistId || '') !== playlistId) return
+
+      allSongs = remoteSongs.map((song) => toPlayerSong(song, currentPlaylist.cover_url))
+      fullQueueCache = { playlistId, songs: allSongs }
+    }
+
+    if (generation !== queueGeneration || unmounted
+        || String(playlist.value?.id) !== playlistId
+        || (!props.initialPlaylist && String(route.params.playlistId || '') !== playlistId)) return
+
+    if (!startMobileMusicQueue(player, allSongs, startSongId)) {
+      queueError.value = startSongId === undefined
+        ? '当前歌单暂无可播放的歌曲。'
+        : '选中的歌曲已不可播放，请重试。'
+    }
+  } catch {
+    if (generation === queueGeneration && !unmounted) {
+      queueError.value = '完整歌单加载失败，请检查网络后重试。'
+    }
+  } finally {
+    if (generation === queueGeneration && !unmounted) queueLoading.value = false
+  }
+}
+
 function playSong(song: Song) {
   if (!canPlayMusicSong(song)) return
-  player.playSong(song)
+  void startPlaylistPlayback(song.id)
 }
 
 function handlePlayAll() {
-  const first = firstPlayableMusicSong(songs.value)
-  if (!first) return
-  player.playSong(first)
+  void startPlaylistPlayback()
 }
 
 onMounted(() => {
   void loadPlaylistData()
 })
+watch(() => route.params.playlistId, (id, previous) => {
+  detailGeneration += 1
+  queueGeneration += 1
+  queueLoading.value = false
+  if (id && id !== previous) void loadPlaylistData()
+})
+onDeactivated(() => {
+  // KeepAlive retains views after leaving the page; do not let an old click
+  // start audio in a different section once its network request resolves.
+  queueGeneration += 1
+  queueLoading.value = false
+})
+onBeforeUnmount(() => {
+  unmounted = true
+  queueGeneration += 1
+})
 </script>
 
 <style scoped>
+.mobile-playlist-detail__queue-status {
+  padding: 8px 0;
+  color: var(--a-color-muted, #64748b);
+  font-size: 12px;
+}
+.mobile-playlist-detail__queue-error {
+  padding: 8px 0;
+  color: #b42318;
+  font-size: 13px;
+}
+
+
 .mobile-playlist-detail {
   display: flex;
   flex-direction: column;

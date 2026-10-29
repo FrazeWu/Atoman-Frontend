@@ -163,7 +163,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getMusicArtist,
@@ -171,7 +171,7 @@ import {
 } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
-import { musicAudioFromApi, canPlayMusicSong, firstPlayableMusicSong } from '@mobile/mobileMusicPlayback'
+import { musicAudioFromApi, canPlayMusicSong, startMobileMusicQueue } from '@mobile/mobileMusicPlayback'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
 
@@ -213,6 +213,7 @@ const songsError = ref('')
 const artist = ref<MobileArtistDetailData | null>(props.initialArtist || null)
 const songs = ref<Song[]>(props.initialSongs || [])
 const albums = ref<MobileArtistAlbumItem[]>(props.initialAlbums || [])
+let detailGeneration = 0
 
 function extractArtist(item: any, fallback?: string): string {
   if (typeof item?.artist === 'string' && item.artist.trim()) return item.artist.trim()
@@ -270,6 +271,7 @@ function formatDuration(seconds?: number): string {
 
 async function loadArtistData(force = false) {
   if (props.initialArtist) return
+  const generation = ++detailGeneration
   const id = String(route.params.artistId || '')
   if (!id) { loadError.value = '歌手标识缺失。'; return }
   loading.value = true
@@ -280,6 +282,7 @@ async function loadArtistData(force = false) {
   albums.value = []
   try {
     const data = await getMusicArtist(id, { force })
+    if (generation !== detailGeneration || String(route.params.artistId || '') !== id) return
     if (!data?.id) { loadError.value = '未找到歌手信息。'; return }
     artist.value = {
       id: data.id,
@@ -298,17 +301,18 @@ async function loadArtistData(force = false) {
       : []
     try {
       const result = await listMusicSongs({ artist_id: id, page: 1, page_size: 20 }, { force })
+      if (generation !== detailGeneration || String(route.params.artistId || '') !== id) return
       songs.value = (result?.data || []).map((song) => toPlayerSong(song, {
         avatar_url: artist.value?.avatar_url,
         name: artist.value?.name,
       }))
     } catch {
-      songsError.value = '该歌手曲目加载失败，请重试。'
+      if (generation === detailGeneration) songsError.value = '该歌手曲目加载失败，请重试。'
     }
   } catch {
-    loadError.value = '歌手加载失败，请检查网络后重试。'
+    if (generation === detailGeneration) loadError.value = '歌手加载失败，请检查网络后重试。'
   } finally {
-    loading.value = false
+    if (generation === detailGeneration) loading.value = false
   }
 }
 
@@ -322,13 +326,11 @@ function handleBack() {
 
 function playSong(song: Song) {
   if (!canPlayMusicSong(song)) return
-  player.playSong(song)
+  startMobileMusicQueue(player, songs.value, song.id)
 }
 
 function handlePlayAll() {
-  const first = firstPlayableMusicSong(songs.value)
-  if (!first) return
-  player.playSong(first)
+  startMobileMusicQueue(player, songs.value)
 }
 
 function openAlbum(id: string) {
@@ -337,6 +339,10 @@ function openAlbum(id: string) {
 
 onMounted(() => {
   void loadArtistData()
+})
+watch(() => route.params.artistId, (id, previous) => {
+  detailGeneration += 1
+  if (id && id !== previous) void loadArtistData()
 })
 </script>
 

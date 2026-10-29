@@ -477,7 +477,7 @@ describe('Mobile Independent Music Views & Player', () => {
 
     it('clicking play all triggers playback of first song', async () => {
       const playerStore = useAudioPlayerStore()
-      const playSpy = vi.spyOn(playerStore, 'playSong').mockImplementation(async () => {})
+      const playSpy = vi.spyOn(playerStore, 'playAlbum').mockImplementation(() => undefined)
 
       const wrapper = mount(MusicPlaylistDetailView, {
         props: {
@@ -491,9 +491,9 @@ describe('Mobile Independent Music Views & Player', () => {
 
       const playAllBtn = wrapper.find('[data-testid="play-all-btn"]')
       await playAllBtn.trigger('click')
-      expect(playSpy).toHaveBeenCalledWith(expect.objectContaining({
+      expect(playSpy).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({
         title: 'Focus Track 1',
-      }))
+      })]), 0)
     })
   })
 
@@ -562,7 +562,7 @@ describe('Mobile Independent Music Views & Player', () => {
 
     it('clicking play all triggers playback of first song', async () => {
       const playerStore = useAudioPlayerStore()
-      const playSpy = vi.spyOn(playerStore, 'playSong').mockImplementation(async () => {})
+      const playSpy = vi.spyOn(playerStore, 'playAlbum').mockImplementation(() => undefined)
 
       const wrapper = mount(MusicArtistDetailView, {
         props: {
@@ -577,9 +577,9 @@ describe('Mobile Independent Music Views & Player', () => {
 
       const playAllBtn = wrapper.find('[data-testid="artist-play-all-btn"]')
       await playAllBtn.trigger('click')
-      expect(playSpy).toHaveBeenCalledWith(expect.objectContaining({
+      expect(playSpy).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({
         title: 'Flashing Lights',
-      }))
+      })]), 0)
     })
   })
 

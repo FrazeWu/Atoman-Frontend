@@ -92,10 +92,10 @@
         <div v-else class="mobile-player-view__queue-wrap"
           ref="queueScrollRef"
           @scroll.passive="onQueueScroll">
+          <p v-if="player.activeQueue.length && player.isShuffled" class="mobile-player-view__queue-hint" role="status">
+            当前显示随机播放顺序；关闭随机模式后可调整队列顺序。
+          </p>
           <div v-if="player.activeQueue.length" class="mobile-player-view__queue-list">
-            <p v-if="player.isShuffled" class="mobile-player-view__queue-hint" role="status">
-              当前显示随机播放顺序；关闭随机模式后可调整队列顺序。
-            </p>
             <div v-if="virtualQueueEnabled" class="mobile-player-view__queue-spacer" :style="{ height: `${virtualQueueStart * QUEUE_ROW_HEIGHT}px` }" aria-hidden="true" />
             <article
               v-for="({ song: queueSong, index }) in displayedQueue"
@@ -431,7 +431,7 @@ const QUEUE_ROW_HEIGHT = 64
 const queueScrollRef = ref<HTMLElement | null>(null)
 const queueScrollTop = ref(0)
 const virtualQueueEnabled = computed(() => player.activeQueue.length > 100)
-const virtualQueueStart = computed(() => virtualQueueEnabled.value ? Math.max(0, Math.floor(queueScrollTop.value / QUEUE_ROW_HEIGHT) - 5) : 0)
+const virtualQueueStart = computed(() => virtualQueueEnabled.value ? Math.min(Math.max(0, player.activeQueue.length - 24), Math.max(0, Math.floor(queueScrollTop.value / QUEUE_ROW_HEIGHT) - 5)) : 0)
 const virtualQueueEnd = computed(() => virtualQueueEnabled.value ? Math.min(player.activeQueue.length, virtualQueueStart.value + 24) : player.activeQueue.length)
 const displayedQueue = computed(() => player.activeQueue.slice(virtualQueueStart.value, virtualQueueEnd.value).map((song, offset) => ({ song, index: virtualQueueStart.value + offset })))
 function onQueueScroll(event: Event) {

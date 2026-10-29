@@ -1,5 +1,5 @@
 <template>
-  <section class="topbar-search-section">
+  <section class="topbar-search-section" role="group" :aria-label="section.label">
     <header class="topbar-search-section__header">
       <div class="topbar-search-section__badge">
         <component :is="sectionIcon" :size="13" class="section-icon" aria-hidden="true" />
@@ -11,8 +11,11 @@
     <div class="topbar-search-section__list">
       <button
         v-for="item in section.items"
+        :id="`search-option-${item.id}`"
         :key="item.id"
         type="button"
+        role="option"
+        :aria-selected="activeId === item.id"
         class="topbar-search-section__item"
         :class="{ 'is-active': activeId === item.id }"
         @click="$emit('openItem', item.href)"

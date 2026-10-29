@@ -39,7 +39,12 @@
                 type="search"
                 placeholder="搜索文章、短笺、频道、订阅、音乐..."
                 aria-label="全局搜索输入"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-haspopup="listbox"
                 :aria-expanded="showSearch"
+                aria-controls="topbar-search-results-listbox"
+                :aria-activedescendant="activeOptionId"
                 data-testid="topbar-search-input"
                 @input="handleInput"
                 @keydown.down.prevent="moveActive(1)"
@@ -116,7 +121,12 @@
 
               <template v-else-if="filteredSections.length > 0">
                 <p v-if="globalSearch.partial.value" role="status" class="palette-state-text">部分结果暂不可用，可查看全部结果后重试。</p>
-                <div class="palette-results">
+                <div
+                  id="topbar-search-results-listbox"
+                  class="palette-results"
+                  role="listbox"
+                  aria-label="全局搜索建议"
+                >
                   <TopbarSearchSection
                     v-for="section in filteredSections"
                     :key="section.type"
@@ -203,6 +213,7 @@ const filteredSections = computed(() => {
 })
 const filteredItems = computed(() => filteredSections.value.flatMap(section => section.items))
 const activeItem = computed(() => filteredItems.value[globalSearch.activeIndex.value] || null)
+const activeOptionId = computed(() => activeItem.value ? `search-option-${activeItem.value.id}` : undefined)
 watch(activeFilter, () => {
   globalSearch.activeIndex.value = filteredItems.value.length ? 0 : -1
   if (showSearch.value && searchDraft.value.trim()) {
@@ -267,6 +278,13 @@ const handleDocumentKeydown = (event: KeyboardEvent) => {
   const isTypingContext = target?.isContentEditable
     || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName || '')
 
+  // Escape 键关闭搜索
+  if (event.key === 'Escape' && showSearch.value) {
+    event.preventDefault()
+    closeSearch()
+    return
+  }
+
   // ⌘K 或 Ctrl+K 触发
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
     event.preventDefault()
@@ -292,7 +310,7 @@ const handleGlobalOverlayOpen = (event: Event) => {
 
 watch(() => globalSearch.activeIndex.value, async () => {
   await nextTick()
-  searchPanelRef.value?.querySelector('.is-active')?.scrollIntoView?.({ block: 'nearest' })
+  searchPanelRef.value?.querySelector('.topbar-search-section__item.is-active')?.scrollIntoView?.({ block: 'nearest' })
 })
 
 onMounted(() => {
@@ -383,7 +401,7 @@ onBeforeUnmount(() => {
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border);
   border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-modal);
+  box-shadow: none !important;
   overflow: hidden;
   animation: paletteScaleIn var(--a-motion-state) var(--a-motion-ease-enter);
 }

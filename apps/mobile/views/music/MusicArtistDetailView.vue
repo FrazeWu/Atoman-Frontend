@@ -171,7 +171,7 @@ import {
 } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
-import { musicAudioFromApi, canPlayMusicSong, startMobileMusicQueue } from '@mobile/mobileMusicPlayback'
+import { musicAudioFromApi, musicPlaybackDetailsFromApi, canPlayMusicSong, startMobileMusicQueue } from '@mobile/mobileMusicPlayback'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
 
@@ -258,6 +258,7 @@ function toPlayerSong(item: any, artistContext?: { avatar_url?: string; name?: s
       ? item.duration
       : (item.duration_sec ?? item.duration_seconds ?? item.durationSeconds ?? 0),
     ...musicAudioFromApi(item),
+    ...musicPlaybackDetailsFromApi(item),
     cover_url: extractCover(item, fallbackCover),
   }
 }

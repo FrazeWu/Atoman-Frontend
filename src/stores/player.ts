@@ -186,14 +186,21 @@ export const usePlayerStore = defineStore("player", () => {
 		shuffledQueue.value = newList;
 	};
 
+	const activeQueue = computed(() =>
+		isShuffled.value && shuffledQueue.value.length > 0
+			? shuffledQueue.value
+			: queue.value,
+	);
+
 	watch(isShuffled, () => recomputeShuffledQueue());
+	// Lyrics/waveform hydration replaces queue objects without changing their
+	// identity or order; it must not reshuffle the remaining playback sequence.
 	watch(
-		queue,
+		() => queue.value.map(playbackItemKey).join("|"),
 		() => {
 			if (isShuffled.value) recomputeShuffledQueue();
 			if (currentSongStartCached) prefetchQueueAudioStarts();
 		},
-		{ deep: true },
 	);
 
 	// Sync isShuffled and repeatMode based on playbackMode
@@ -1035,6 +1042,13 @@ export const usePlayerStore = defineStore("player", () => {
 				const update = { lyrics: detail.lyrics || '', waveform_peaks: detail.waveform_peaks, summary_only: false };
 				currentSong.value = { ...currentSong.value, ...update };
 				queue.value = queue.value.map(item => playbackItemKey(item) === playbackItemKey(normalizedSong) ? { ...item, ...update } : item);
+				// Preserve the established random order and refresh its metadata
+				// without generating a different shuffle during lyric hydration.
+				if (shuffledQueue.value.length > 0) {
+					shuffledQueue.value = shuffledQueue.value.map(item =>
+						playbackItemKey(item) === playbackItemKey(normalizedSong) ? { ...item, ...update } : item,
+					);
+				}
 			}).catch(error => reportError(error, 'Failed to load playing song details'));
 		}
 		playbackError.value = "";
@@ -1219,11 +1233,8 @@ export const usePlayerStore = defineStore("player", () => {
 		}
 	};
 
-	const getActiveList = () => {
-		if (isShuffled.value && shuffledQueue.value.length > 0)
-			return shuffledQueue.value;
-		return queue.value.length > 0 ? queue.value : songs.value;
-	};
+	const getActiveList = () =>
+		activeQueue.value.length > 0 ? activeQueue.value : songs.value;
 
 	const advanceToNextSong = (completed = false) => {
 		if (!completed) reportRecommendationEvent(currentSong.value, "skip");
@@ -1237,7 +1248,9 @@ export const usePlayerStore = defineStore("player", () => {
 		const player = ensureAudio();
 
 		let nextIndex;
-		if (repeatMode.value === "one") {
+		// Single-track repeat applies only to natural playback completion.
+		// Manual next (including gestures and MediaSession) must advance.
+		if (completed && repeatMode.value === "one") {
 			player.currentTime = 0;
 			currentTime.value = 0;
 			resetListening(currentSong.value);
@@ -1245,7 +1258,7 @@ export const usePlayerStore = defineStore("player", () => {
 			return;
 		} else if (currentIndex === -1) {
 			nextIndex = 0;
-		} else if (repeatMode.value === "all" || currentIndex < list.length - 1) {
+		} else if (!completed || repeatMode.value === "all" || currentIndex < list.length - 1) {
 			nextIndex = (currentIndex + 1) % list.length;
 		} else {
 			isPlaying.value = false;
@@ -1472,6 +1485,7 @@ export const usePlayerStore = defineStore("player", () => {
 		songLibraryLoading,
 		songLibraryBootstrapped,
 		queue,
+		activeQueue,
 		currentAlbum,
 		fetchSongs,
 		playSong,

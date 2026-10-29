@@ -919,5 +919,35 @@ describe('Mobile Independent Music Views & Player', () => {
       expect(wrapper.find('.mobile-player-view__control--primary').exists()).toBe(true)
       expect(wrapper.find('.mobile-player-scrubber').exists()).toBe(true)
     })
+    it('shows the actual random sequence and does not offer misleading reorder controls', async () => {
+      const player = usePlayerStore()
+      const list = [1, 2, 3, 4, 5].map((id) => ({
+        id: 'random-view-' + id, title: 'Random View ' + id,
+        audio_url: '/random-' + id + '.mp3', artist: '艺人',
+      }))
+      player.queue = list
+      player.currentSong = list[0]
+      player.playbackMode = 'random'
+      await flushPromises()
+      const expected = player.activeQueue.map((item) => item.title)
+      expect(expected).toHaveLength(5)
+
+      const wrapper = mount(MobilePlayerView, {
+        global: { plugins: [pinia, router], stubs: { PortalTeleport: true } },
+      })
+      await wrapper.get('.mobile-player-view__header-action[aria-label="打开播放队列"]').trigger('click')
+      expect(wrapper.findAll('.mobile-player-view__queue-main').map((button) =>
+        button.attributes('aria-label')?.replace('播放 ', ''))).toEqual(expected)
+      expect(wrapper.text()).toContain('当前显示随机播放顺序')
+      expect(wrapper.findAll('.mobile-player-view__queue-actions button[title="上移"]')).toHaveLength(0)
+
+      player.playbackMode = 'loop'
+      await flushPromises()
+      expect(wrapper.findAll('.mobile-player-view__queue-main').map((button) =>
+        button.attributes('aria-label')?.replace('播放 ', ''))).toEqual(list.map((item) => item.title))
+      expect(wrapper.findAll('.mobile-player-view__queue-actions button[title="上移"]')).toHaveLength(5)
+      wrapper.unmount()
+    })
+
   })
 })

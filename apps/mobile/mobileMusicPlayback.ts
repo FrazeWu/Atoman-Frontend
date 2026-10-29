@@ -13,6 +13,29 @@ export function musicAudioFromApi(source: {
   }
 }
 
+/**
+ * Preserve lyric data already present in API lists. Most list endpoints omit
+ * full lyrics: mark those items as summaries so the player fetches song detail
+ * only when the track actually starts playing.
+ *
+ * Explicit summary_only=false from a complete detail response is respected,
+ * even if that song genuinely has no lyrics.
+ */
+export function musicPlaybackDetailsFromApi(source: object): Pick<Song, 'lyrics' | 'waveform_peaks' | 'summary_only'> {
+  const metadata = source as { lyrics?: unknown; waveform_peaks?: unknown; summary_only?: unknown }
+  const lyrics = typeof metadata.lyrics === 'string' ? metadata.lyrics : undefined
+  const waveform = Array.isArray(metadata.waveform_peaks)
+    && metadata.waveform_peaks.every((value: unknown) => typeof value === 'number' && Number.isFinite(value))
+      ? metadata.waveform_peaks as number[]
+      : undefined
+  const hasLyrics = Boolean(lyrics?.trim())
+  return {
+    ...(lyrics !== undefined ? { lyrics } : {}),
+    ...(waveform !== undefined ? { waveform_peaks: waveform } : {}),
+    summary_only: !hasLyrics && (metadata.summary_only !== false),
+  }
+}
+
 export const canPlayMusicSong = hasPlayableMusicAudio
 
 export function firstPlayableMusicSong(songs: Song[]): Song | undefined {

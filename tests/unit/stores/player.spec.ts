@@ -566,6 +566,78 @@ describe("player store", () => {
     expect(player.queue).toHaveLength(26);
   });
 
+  it("repeats only after natural completion; manual next works in single-repeat mode", async () => {
+    const player = usePlayerStore();
+    const tracks = [1, 2, 3].map((id) => ({
+      id: "mode-" + id, title: "Mode " + id, audio_url: "mode-" + id + ".mp3",
+    })) as Song[];
+    player.playAlbum(tracks);
+    player.playbackMode = "single";
+    await nextTick();
+    expect(player.repeatMode).toBe("one");
+
+    audioInstances[0].emit("ended");
+    expect(player.currentSong?.id).toBe("mode-1");
+    player.playNext();
+    expect(player.currentSong?.id).toBe("mode-2");
+    player.playNext();
+    expect(player.currentSong?.id).toBe("mode-3");
+    player.playNext();
+    expect(player.currentSong?.id).toBe("mode-1");
+    player.playPrevious();
+    expect(player.currentSong?.id).toBe("mode-3");
+    expect(player.repeatMode).toBe("one");
+  });
+
+  it("exposes the actual random order and navigation follows it", async () => {
+    const random = vi.spyOn(Math, "random").mockReturnValue(0.28);
+    try {
+      const player = usePlayerStore();
+      const list = [1, 2, 3, 4, 5].map((id) => ({
+        id: "rand-" + id, title: "Rand " + id, audio_url: "rand-" + id + ".mp3",
+      })) as Song[];
+      player.playAlbum(list);
+      player.playbackMode = "random";
+      await nextTick();
+      const shuffled = player.activeQueue.map((item) => item.id);
+      expect(shuffled).toHaveLength(5);
+      expect(shuffled[0]).toBe("rand-1");
+      expect(shuffled.slice(1)).not.toEqual(list.slice(1).map((item) => item.id));
+      player.playNext();
+      expect(player.currentSong?.id).toBe(shuffled[1]);
+      player.playPrevious();
+      expect(player.currentSong?.id).toBe(shuffled[0]);
+
+      player.playbackMode = "loop";
+      await nextTick();
+      expect(player.activeQueue.map((item) => item.id)).toEqual(list.map((item) => item.id));
+    } finally {
+      random.mockRestore();
+    }
+  });
+
+  it("hydrates current lyrics without reshuffling the remaining random queue", async () => {
+    let resolveDetail!: (result: unknown) => void;
+    mocks.getMusicSongDetail.mockReturnValue(new Promise(resolve => { resolveDetail = resolve; }));
+    const player = usePlayerStore();
+    const list = [1, 2, 3, 4].map((id) => ({
+      id: "hyd-" + id, title: "Hyd " + id,
+      audio_url: "hyd-" + id + ".mp3", summary_only: id === 1, lyrics: "",
+    })) as Song[];
+    player.playAlbum(list);
+    player.playbackMode = "random";
+    await nextTick();
+    const before = player.activeQueue.map((item) => item.id);
+
+    resolveDetail({ song: { ...list[0], lyrics: "[00:01.00]Now loaded" } });
+    await flushPromises();
+    expect(player.activeQueue.map((item) => item.id)).toEqual(before);
+    expect(player.currentSong?.lyrics).toContain("Now loaded");
+    expect(player.activeQueue[0]?.lyrics).toContain("Now loaded");
+    player.playNext();
+    expect(player.currentSong?.id).toBe(before[1]);
+  });
+
   it("advances to next song in an album queue with uuid ids", () => {
 		const player = usePlayerStore();
 		const firstSong = {

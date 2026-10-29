@@ -135,7 +135,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getMusicAlbum } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
-import { musicAudioFromApi, canPlayMusicSong, startMobileMusicQueue } from '@mobile/mobileMusicPlayback'
+import { musicAudioFromApi, musicPlaybackDetailsFromApi, canPlayMusicSong, startMobileMusicQueue } from '@mobile/mobileMusicPlayback'
 import { compareAlbumTracks } from '@/utils/musicMedia'
 import MButton from '@mobile/components/ui/MButton.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
@@ -216,6 +216,7 @@ function toPlayerSong(item: any, albumContext?: { cover_url?: string; artist?: s
     track_number: item.track_number,
     album_id: item.album_id || album.value?.id || undefined,
     ...musicAudioFromApi(item),
+    ...musicPlaybackDetailsFromApi(item),
     cover_url: extractCover(item, fallbackCover),
   }
 }

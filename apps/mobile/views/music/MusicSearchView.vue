@@ -319,7 +319,7 @@ import {
 } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
-import { musicAudioFromApi, canPlayMusicSong } from '@mobile/mobileMusicPlayback'
+import { musicAudioFromApi, musicPlaybackDetailsFromApi, canPlayMusicSong } from '@mobile/mobileMusicPlayback'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MInput from '@mobile/components/ui/MInput.vue'
 
@@ -499,6 +499,7 @@ async function executeSearch(query: string) {
         album: typeof item.album === 'string' ? item.album : item.album?.title || '',
         duration: item.duration_sec ?? item.duration_seconds ?? item.duration ?? 0,
         ...musicAudioFromApi(item),
+        ...musicPlaybackDetailsFromApi(item),
         cover_url: item.cover_url || item.album?.cover_url || '',
       }))
     } else {
@@ -569,6 +570,7 @@ async function loadRecommended() {
         album: typeof item.album === 'string' ? item.album : item.album?.title || '',
         duration: item.duration_sec ?? item.duration_seconds ?? item.duration ?? 0,
         ...musicAudioFromApi(item),
+        ...musicPlaybackDetailsFromApi(item),
         cover_url: item.cover_url || item.album?.cover_url || '',
       }))
     }
@@ -614,6 +616,7 @@ function playSong(song: SearchSongItem) {
     album: song.album || '',
     duration: song.duration || 0,
     ...musicAudioFromApi(song),
+    ...musicPlaybackDetailsFromApi(song),
     cover_url: song.cover_url || '',
   }
   player.playSong(playerSong)

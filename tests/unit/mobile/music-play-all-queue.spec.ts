@@ -297,4 +297,64 @@ describe('mobile complete music queues', () => {
     wrapper.unmount()
   })
 
+
+  it('retains lyrics already present in the album response while building its queue', async () => {
+    const play = spyQueue()
+    await router.push('/music/album/with-lyrics')
+    vi.mocked(api.getMusicAlbum).mockResolvedValue({
+      id: 'with-lyrics', title: '带歌词的专辑',
+      songs: [{ ...first, lyrics: '[00:01.00]真实歌词', waveform_peaks: [0.2, 0.8] }],
+    } as never)
+    const wrapper = mount(MusicAlbumDetailView, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    await wrapper.get('[data-testid="play-all-btn"]').trigger('click')
+    expect(play).toHaveBeenCalledOnce()
+    expect(play.mock.calls[0][0][0]).toMatchObject({
+      lyrics: '[00:01.00]真实歌词', waveform_peaks: [0.2, 0.8], summary_only: false,
+    })
+    wrapper.unmount()
+  })
+
+  it('marks unknown playlist lyrics as a summary for lazy detail hydration', async () => {
+    const play = spyQueue()
+    await router.push('/music/playlist/no-list-lyrics')
+    vi.mocked(api.getMusicPlaylist).mockResolvedValue({
+      id: 'no-list-lyrics', name: '待补全歌词的歌单', song_count: 2,
+      songs: [first, { ...second, lyrics: '[00:02.00]已知歌词' }],
+    } as never)
+    vi.mocked(api.listMusicPlaylistSongs).mockResolvedValue({
+      data: [first, { ...second, lyrics: '[00:02.00]已知歌词' }],
+      meta: { page: 1, page_size: 100, total: 2, has_more: false },
+    } as never)
+    const wrapper = mount(MusicPlaylistDetailView, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    await wrapper.get('[data-testid="play-all-btn"]').trigger('click')
+    await flushPromises()
+    expect(play).toHaveBeenCalledOnce()
+    expect(play.mock.calls[0][0][0]).toMatchObject({ id: 'first', summary_only: true })
+    expect(play.mock.calls[0][0][1]).toMatchObject({
+      id: 'second', lyrics: '[00:02.00]已知歌词', summary_only: false,
+    })
+    wrapper.unmount()
+  })
+
+  it('preserves lyrics received from the artist song-list API', async () => {
+    const play = spyQueue()
+    await router.push('/music/artist/lyrics-artist')
+    vi.mocked(api.getMusicArtist).mockResolvedValue({
+      id: 'lyrics-artist', name: '有歌词的歌手', albums: [],
+    } as never)
+    vi.mocked(api.listMusicSongs).mockResolvedValue({
+      data: [{ ...third, lyrics: '[00:03.00]歌手歌词' }],
+      meta: { page: 1, page_size: 20, total: 1, has_more: false },
+    } as never)
+    const wrapper = mount(MusicArtistDetailView, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    await wrapper.get('[data-testid="artist-play-all-btn"]').trigger('click')
+    expect(play.mock.calls[0][0][0]).toMatchObject({
+      id: 'third', lyrics: '[00:03.00]歌手歌词', summary_only: false,
+    })
+    wrapper.unmount()
+  })
+
 })

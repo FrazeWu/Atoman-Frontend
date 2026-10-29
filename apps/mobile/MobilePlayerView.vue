@@ -88,9 +88,12 @@
 
         <!-- 3. Queue View -->
         <div v-else class="mobile-player-view__queue-wrap">
-          <div v-if="player.queue.length" class="mobile-player-view__queue-list">
+          <div v-if="player.activeQueue.length" class="mobile-player-view__queue-list">
+            <p v-if="player.isShuffled" class="mobile-player-view__queue-hint" role="status">
+              当前显示随机播放顺序；关闭随机模式后可调整队列顺序。
+            </p>
             <article
-              v-for="(queueSong, index) in player.queue"
+              v-for="(queueSong, index) in player.activeQueue"
               :key="player.playbackItemKey(queueSong)"
               class="mobile-player-view__queue-item"
               :class="{ 'is-current': player.currentSong && player.playbackItemKey(player.currentSong) === player.playbackItemKey(queueSong) }"
@@ -117,6 +120,7 @@
               <div class="mobile-player-view__queue-actions">
                 <button
                   type="button"
+                  v-if="!player.isShuffled"
                   :disabled="index === 0"
                   :aria-label="`上移 ${queueSong.title}`"
                   title="上移"
@@ -126,7 +130,8 @@
                 </button>
                 <button
                   type="button"
-                  :disabled="index === player.queue.length - 1"
+                  v-if="!player.isShuffled"
+                  :disabled="index === player.activeQueue.length - 1"
                   :aria-label="`下移 ${queueSong.title}`"
                   title="下移"
                   @click="player.moveQueueItem(index, index + 1)"
@@ -1022,6 +1027,13 @@ onUnmounted(() => {
 .mobile-player-view__queue-list {
   display: grid;
   gap: 0.35rem;
+}
+
+.mobile-player-view__queue-hint {
+  margin: 0 0 0.25rem;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
 }
 
 .mobile-player-view__queue-item {

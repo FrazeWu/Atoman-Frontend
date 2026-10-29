@@ -4,7 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import type { Song } from '@/types'
 import { useAudioPlayerStore } from '@/stores/player'
-import { canPlayMusicSong, firstPlayableMusicSong, musicAudioFromApi } from '@mobile/mobileMusicPlayback'
+import { canPlayMusicSong, firstPlayableMusicSong, musicAudioFromApi, musicPlaybackDetailsFromApi } from '@mobile/mobileMusicPlayback'
 import MusicAlbumDetailView from '@mobile/views/music/MusicAlbumDetailView.vue'
 import MusicPlaylistDetailView from '@mobile/views/music/MusicPlaylistDetailView.vue'
 import MusicArtistDetailView from '@mobile/views/music/MusicArtistDetailView.vue'
@@ -67,6 +67,23 @@ function spyQueue() {
 }
 
 describe('mobile music playback integrity', () => {
+  it('preserves real lyric data and marks only unknown lyrics for detail hydration', () => {
+    expect(musicPlaybackDetailsFromApi({
+      lyrics: '[00:01.00]真实歌词', waveform_peaks: [0.1, 0.8],
+    })).toEqual({
+      lyrics: '[00:01.00]真实歌词', waveform_peaks: [0.1, 0.8], summary_only: false,
+    })
+    expect(musicPlaybackDetailsFromApi({})).toEqual({ summary_only: true })
+    expect(musicPlaybackDetailsFromApi({ lyrics: '' })).toEqual({
+      lyrics: '', summary_only: true,
+    })
+    expect(musicPlaybackDetailsFromApi({ lyrics: '', summary_only: false })).toEqual({
+      lyrics: '', summary_only: false,
+    })
+    expect(musicPlaybackDetailsFromApi({ lyrics: 'known', waveform_peaks: [Number.NaN] }))
+      .toEqual({ lyrics: 'known', summary_only: false })
+  })
+
   it('keeps only actual API audio URLs and rejects missing / processing assets', () => {
     expect(musicAudioFromApi({})).toEqual({ audio_url: '', audio_status: undefined })
     expect(musicAudioFromApi({ audio_url: '  /media/valid.mp3  ', audio_status: 'ready' })).toEqual({

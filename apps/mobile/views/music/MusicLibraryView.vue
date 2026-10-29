@@ -76,7 +76,7 @@ import { computed, onMounted, ref } from 'vue'
 import { listMusicSongs } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
-import { musicAudioFromApi, canPlayMusicSong } from '@mobile/mobileMusicPlayback'
+import { musicAudioFromApi, musicPlaybackDetailsFromApi, canPlayMusicSong } from '@mobile/mobileMusicPlayback'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MInput from '@mobile/components/ui/MInput.vue'
 
@@ -100,6 +100,7 @@ function toPlayerSong(item: any): Song {
       ? item.duration
       : (item.duration_sec ?? item.duration_seconds ?? item.durationSeconds ?? 0),
     ...musicAudioFromApi(item),
+    ...musicPlaybackDetailsFromApi(item),
     cover_url: item.cover_url || item.album?.cover_url || '',
   }
 }

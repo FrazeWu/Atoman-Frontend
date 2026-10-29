@@ -67,9 +67,10 @@
           </div>
 
           <!-- Body Text -->
-          <div
+          <RouterLink
             class="short-note-card__body"
-            @click="openNoteDetail(note.id)"
+            :to="'/posts/notes/' + note.id"
+            :aria-label="'阅读短笺：' + note.content.slice(0, 60)"
           >
             <p class="short-note-card__text">{{ note.content }}</p>
 
@@ -85,7 +86,7 @@
                 loading="lazy"
               />
             </div>
-          </div>
+          </RouterLink>
 
           <!-- Interaction Footer -->
           <div class="short-note-card__footer">
@@ -136,7 +137,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { getActivePinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
@@ -392,11 +393,16 @@ onMounted(() => {
 }
 
 .short-note-card__body {
+  min-height: 44px;
+  color: inherit;
+  text-decoration: none;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
+
+.short-note-card__body:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 
 .short-note-card__text {
   font-size: 14px;

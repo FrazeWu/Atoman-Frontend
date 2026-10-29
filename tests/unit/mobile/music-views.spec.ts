@@ -105,6 +105,10 @@ describe('Mobile Independent Music Views & Player', () => {
 
       const artistCards = wrapper.findAll('[data-testid="artist-card"]')
       expect(artistCards.length).toBeGreaterThanOrEqual(1)
+      expect(cards[0].element.tagName).toBe('A')
+      expect(cards[0].text()).not.toContain('LOSSLESS')
+      expect(albumCards[0].element.tagName).toBe('A')
+      expect(artistCards[0].element.tagName).toBe('A')
     })
 
     it('renders recent tracks list', async () => {
@@ -133,6 +137,8 @@ describe('Mobile Independent Music Views & Player', () => {
 
       const trackItems = wrapper.findAll('[data-testid="track-item"]')
       expect(trackItems.length).toBeGreaterThanOrEqual(2)
+      expect(trackItems[0].element.tagName).toBe('BUTTON')
+      expect(trackItems[0].attributes('aria-label')).toContain('播放Echoes of Silence')
       expect(wrapper.text()).toContain('Echoes of Silence')
       expect(wrapper.text()).toContain('Lumine')
     })

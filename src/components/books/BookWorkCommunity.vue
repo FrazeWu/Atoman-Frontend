@@ -69,7 +69,7 @@
     </div>
 
     <div class="book-community__comments-section">
-      <CommentSection :target="{ kind: 'book_work', resourceId: workId }" noun="讨论" />
+      <CommentSection :target="{ kind: 'book_work', resourceId: workId }" noun="讨论" compact-guest-empty />
     </div>
   </section>
 </template>

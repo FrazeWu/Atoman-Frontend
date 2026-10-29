@@ -8,7 +8,7 @@
       </div>
 
       <!-- Category Filter Chips -->
-      <div class="blog-category-chips" role="tablist">
+      <div v-if="categories.length > 1" class="blog-category-chips" role="tablist">
         <button
           v-for="cat in categories"
           :key="cat"
@@ -47,12 +47,12 @@
 
       <!-- Article Stream -->
       <div v-else class="blog-articles-stream">
-        <article
+        <RouterLink
           v-for="article in filteredArticles"
           :key="article.id"
+          :to="'/post/' + article.id"
           class="article-card"
           data-testid="article-card"
-          @click="openArticle(article.id)"
         >
           <div class="article-card__header">
             <span v-if="article.category" class="article-category-badge">
@@ -84,7 +84,7 @@
               </span>
             </div>
           </div>
-        </article>
+        </RouterLink>
       </div>
     </main>
   </div>
@@ -92,7 +92,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import { fetchPostList } from '@/entities/post/api/postApi'
 import MAvatar from '@mobile/components/ui/MAvatar.vue'
 
@@ -119,7 +119,6 @@ const props = withDefaults(
   }
 )
 
-const router = useRouter()
 const categories = computed(() => [
   '全部',
   ...new Set(articlesList.value.map(article => article.category).filter((cat): cat is string => Boolean(cat))),
@@ -143,12 +142,6 @@ const filteredArticles = computed<ArticleItem[]>(() => {
 
 function selectCategory(cat: string) {
   selectedCategory.value = cat
-}
-
-function openArticle(id: string) {
-  if (router) {
-    void router.push(`/post/${id}`)
-  }
 }
 
 function formatDate(isoString?: string): string {
@@ -287,8 +280,12 @@ onMounted(() => {
   flex-direction: column;
   gap: 10px;
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
   transition: background-color 0.15s ease;
 }
+
+.article-card:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 
 .article-card:active {
   background: var(--a-color-surface-hover, #fafafa);

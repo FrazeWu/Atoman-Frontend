@@ -54,7 +54,11 @@
         </template>
 
         <!-- Empty state -->
-        <PEmpty v-if="forumStore.topics.length === 0" title="暂无话题" description="成为第一个发起探讨的人。" />
+        <PEmpty v-if="forumStore.topics.length === 0" title="暂无话题" description="暂时没有公开话题，可先浏览讨论分类。">
+          <template #action>
+            <RouterLink class="forum-empty-categories-link" to="/forum/categories">浏览分类</RouterLink>
+          </template>
+        </PEmpty>
 
         <!-- Topic rows -->
         <div v-else ref="topicListRef" class="topic-list">
@@ -981,4 +985,21 @@ const submitCategoryRequest = async () => {
   text-decoration: underline;
 }
 
+
+.forum-empty-categories-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 8px);
+  color: var(--a-color-fg, #0f172a);
+  text-decoration: none;
+  font-size: 13px;
+}
+.forum-empty-categories-link:focus-visible {
+  outline: 2px solid var(--a-color-primary, #2563eb);
+  outline-offset: 2px;
+}
 </style>

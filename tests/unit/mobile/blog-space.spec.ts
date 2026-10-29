@@ -129,6 +129,18 @@ describe('Mobile Blog Space Overhaul', () => {
       expect(wrapper.text()).toContain('纯白微圆角设计系统')
     })
 
+    it('makes note detail a keyboard-accessible, full-card navigation link', () => {
+      const wrapper = mount(BlogNotesTimelineView, {
+        global: { plugins: [router] },
+        props: { initialNotes: mockNotes },
+      })
+      const link = wrapper.get('.short-note-card__body')
+      expect(link.element.tagName).toBe('A')
+      expect(link.attributes('href')).toBe('/posts/notes/n-1')
+      expect(link.attributes('aria-label')).toContain('阅读短笺')
+      wrapper.unmount()
+    })
+
     it('toggles like state when clicking heart button', async () => {
       const wrapper = mount(BlogNotesTimelineView, {
         global: { plugins: [router] },
@@ -180,6 +192,18 @@ describe('Mobile Blog Space Overhaul', () => {
         published_at: '2026-10-19T10:00:00Z',
       },
     ]
+
+    it('uses ordinary links for article cards and hides meaningless all-only filters', () => {
+      const wrapper = mount(BlogArticlesView, {
+        global: { plugins: [router] },
+        props: { initialArticles: [{ id: 'a-only', title: '只有一篇长文', excerpt: '测试摘要' }] },
+      })
+      const card = wrapper.get('[data-testid="article-card"]')
+      expect(card.element.tagName).toBe('A')
+      expect(card.attributes('href')).toBe('/post/a-only')
+      expect(wrapper.find('.blog-category-chips').exists()).toBe(false)
+      wrapper.unmount()
+    })
 
     it('renders category chips and article items', () => {
       const wrapper = mount(BlogArticlesView, {

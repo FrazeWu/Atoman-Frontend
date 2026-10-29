@@ -33,13 +33,18 @@
     <div v-else-if="readonly" class="comment-section__login">评论已关闭</div>
     <div v-else class="comment-section__login">
       <MessageSquare :size="18" aria-hidden="true" />
-      <span>登录后{{ noun }}</span>
+      <span>{{ compactGuestEmpty && !comments.roots.value.length && !comments.loading.value
+        ? '还没有讨论，登录后参与'
+        : '登录后' + noun }}</span>
       <PButton size="sm" :href="loginTarget">登录</PButton>
     </div>
 
     <p v-if="comments.error.value" class="comment-section__error" role="alert">加载失败，请重试</p>
     <div v-if="comments.loading.value && !comments.roots.value.length" class="comment-section__state">加载中...</div>
-    <div v-else-if="!comments.roots.value.length" class="comment-section__state">还没有{{ noun }}</div>
+    <div
+      v-else-if="!comments.roots.value.length && !(compactGuestEmpty && !authStore.isAuthenticated && !readonly)"
+      class="comment-section__state"
+    >还没有{{ noun }}</div>
     <div v-else class="comment-section__threads">
       <CommentThread
         v-for="root in comments.roots.value"
@@ -111,8 +116,10 @@ const props = withDefaults(defineProps<{
   focusCommentId?: string
   focusRootId?: string
   abovePlayer?: boolean
+  compactGuestEmpty?: boolean
 }>(), {
   noun: '评论',
+  compactGuestEmpty: false,
   markLabel: undefined,
   currentTime: undefined,
   readonly: false,

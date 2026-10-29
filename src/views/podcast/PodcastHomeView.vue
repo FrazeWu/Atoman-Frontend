@@ -188,7 +188,11 @@ function playEpisode(ep: PodcastEpisode) {
       </PContentProgress>
     </section>
 
-    <section class="ph-latest" aria-labelledby="ph-latest-title">
+    <section
+      v-if="loading || episodeError || episodes.length > 0 || recommendationLoading || recommendedEpisodes.length > 0"
+      class="ph-latest"
+      aria-labelledby="ph-latest-title"
+    >
       <div class="ph-section-header ph-section-header--compact">
         <div>
           <h2 id="ph-latest-title">最新单集</h2>

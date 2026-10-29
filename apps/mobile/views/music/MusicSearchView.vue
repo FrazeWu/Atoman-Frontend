@@ -54,10 +54,12 @@
             <span class="mobile-music-search__section-title">{{ activeTab === 'songs' ? '全部推荐单曲' : '推荐单曲' }}</span>
           </div>
           <div class="mobile-music-search__song-list">
-            <div
+            <button
               v-for="song in recommendedSongs"
               :key="song.id"
+              type="button"
               class="mobile-music-search__song-item"
+              :aria-label="'播放' + song.title + '，' + song.artist"
               data-testid="rec-song-item"
               @click="playSong(song)"
             >
@@ -76,7 +78,7 @@
               <span v-if="formatDuration(song.duration)" class="mobile-music-search__song-dur">
                 {{ formatDuration(song.duration) }}
               </span>
-            </div>
+            </button>
           </div>
         </div>
 
@@ -94,12 +96,12 @@
             </button>
           </div>
           <div :class="activeTab === 'albums' ? 'mobile-music-search__rec-grid' : 'mobile-music-search__rec-scroll'">
-            <div
+            <RouterLink
               v-for="album in recommendedAlbums"
               :key="album.id"
+              :to="'/music/album/' + album.id"
               class="mobile-music-search__rec-album-card"
               data-testid="rec-album-item"
-              @click="openAlbum(album.id)"
             >
               <div class="mobile-music-search__rec-album-cover">
                 <img v-if="album.cover_url" :src="album.cover_url" :alt="album.title" />
@@ -110,7 +112,7 @@
               </div>
               <span class="mobile-music-search__rec-album-title">{{ album.title }}</span>
               <span class="mobile-music-search__rec-album-artist">{{ album.artist }}</span>
-            </div>
+            </RouterLink>
           </div>
         </div>
 
@@ -128,12 +130,12 @@
             </button>
           </div>
           <div :class="activeTab === 'artists' ? 'mobile-music-search__rec-grid-artists' : 'mobile-music-search__rec-scroll'">
-            <div
+            <RouterLink
               v-for="artist in recommendedArtists"
               :key="artist.id"
+              :to="'/music/artist/' + artist.id"
               class="mobile-music-search__rec-artist-card"
               data-testid="rec-artist-item"
-              @click="openArtist(artist.id)"
             >
               <div class="mobile-music-search__rec-artist-avatar">
                 <img v-if="artist.avatar_url" :src="artist.avatar_url" :alt="artist.name" />
@@ -142,7 +144,7 @@
                 </div>
               </div>
               <span class="mobile-music-search__rec-artist-name">{{ artist.name }}</span>
-            </div>
+            </RouterLink>
           </div>
         </div>
       </section>
@@ -169,10 +171,12 @@
             <h2 class="mobile-music-search__group-title">单曲 ({{ songs.length }})</h2>
           </div>
           <div class="mobile-music-search__song-list">
-            <div
+            <button
               v-for="song in songs"
               :key="song.id"
+              type="button"
               class="mobile-music-search__song-item"
+              :aria-label="'播放' + song.title + '，' + song.artist"
               data-testid="search-song-item"
               @click="playSong(song)"
             >
@@ -191,7 +195,7 @@
               <span v-if="formatDuration(song.duration)" class="mobile-music-search__song-dur">
                 {{ formatDuration(song.duration) }}
               </span>
-            </div>
+            </button>
           </div>
         </section>
 
@@ -204,12 +208,12 @@
             <h2 class="mobile-music-search__group-title">专辑 ({{ albums.length }})</h2>
           </div>
           <div class="mobile-music-search__album-list">
-            <div
+            <RouterLink
               v-for="album in albums"
               :key="album.id"
+              :to="'/music/album/' + album.id"
               class="mobile-music-search__album-item"
               data-testid="search-album-item"
-              @click="openAlbum(album.id)"
             >
               <div class="mobile-music-search__album-cover">
                 <img v-if="album.cover_url" :src="album.cover_url" :alt="album.title" />
@@ -223,7 +227,7 @@
                   {{ album.artist }} · {{ album.year ? album.year + ' 年' : '专辑' }}
                 </span>
               </div>
-            </div>
+            </RouterLink>
           </div>
         </section>
 
@@ -236,12 +240,12 @@
             <h2 class="mobile-music-search__group-title">歌手 ({{ artists.length }})</h2>
           </div>
           <div class="mobile-music-search__artist-list">
-            <div
+            <RouterLink
               v-for="artist in artists"
               :key="artist.id"
+              :to="'/music/artist/' + artist.id"
               class="mobile-music-search__artist-item"
               data-testid="search-artist-item"
-              @click="openArtist(artist.id)"
             >
               <div class="mobile-music-search__artist-avatar">
                 <img v-if="artist.avatar_url" :src="artist.avatar_url" :alt="artist.name" />
@@ -253,7 +257,7 @@
                 <span class="mobile-music-search__artist-name">{{ artist.name }}</span>
                 <span v-if="artist.nationality" class="mobile-music-search__artist-sub">{{ artist.nationality }}</span>
               </div>
-            </div>
+            </RouterLink>
           </div>
         </section>
 
@@ -266,12 +270,12 @@
             <h2 class="mobile-music-search__group-title">歌单 ({{ playlists.length }})</h2>
           </div>
           <div class="mobile-music-search__playlist-list">
-            <div
+            <RouterLink
               v-for="pl in playlists"
               :key="pl.id"
+              :to="'/music/playlist/' + pl.id"
               class="mobile-music-search__playlist-item"
               data-testid="search-playlist-item"
-              @click="openPlaylist(pl.id)"
             >
               <div class="mobile-music-search__playlist-cover">
                 <img v-if="pl.cover_url" :src="pl.cover_url" :alt="pl.name" />
@@ -283,7 +287,7 @@
                 <span class="mobile-music-search__playlist-name">{{ pl.name }}</span>
                 <span class="mobile-music-search__playlist-count">{{ pl.song_count || 0 }} 首歌曲</span>
               </div>
-            </div>
+            </RouterLink>
           </div>
         </section>
       </div>
@@ -607,18 +611,6 @@ function playSong(song: SearchSongItem) {
     cover_url: song.cover_url || '',
   }
   player.playSong(playerSong)
-}
-
-function openAlbum(id: string) {
-  void router.push(`/music/album/${id}`)
-}
-
-function openArtist(id: string) {
-  void router.push(`/music/artist/${id}`)
-}
-
-function openPlaylist(id: string) {
-  void router.push(`/music/playlist/${id}`)
 }
 
 onMounted(() => {
@@ -1075,6 +1067,20 @@ onMounted(() => {
   border-bottom: 1px solid var(--a-color-border-soft, #f7f7f7);
   cursor: pointer;
 }
+.mobile-music-search__song-item {
+  width: 100%;
+  min-height: 60px;
+  border: 0;
+  border-bottom: 1px solid var(--a-color-border-soft, #f7f7f7);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.mobile-music-search__song-item:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: -2px;
+}
 
 .mobile-music-search__song-item:last-child,
 .mobile-music-search__album-item:last-child,
@@ -1180,5 +1186,24 @@ onMounted(() => {
   font-size: 13px;
   color: var(--a-color-text-secondary, #777777);
   margin: 0;
+}
+</style>
+
+<style scoped>
+.mobile-music-search__rec-album-card,
+.mobile-music-search__rec-artist-card,
+.mobile-music-search__album-item,
+.mobile-music-search__artist-item,
+.mobile-music-search__playlist-item {
+  color: inherit;
+  text-decoration: none;
+}
+.mobile-music-search__rec-album-card:focus-visible,
+.mobile-music-search__rec-artist-card:focus-visible,
+.mobile-music-search__album-item:focus-visible,
+.mobile-music-search__artist-item:focus-visible,
+.mobile-music-search__playlist-item:focus-visible {
+  outline: 2px solid var(--a-color-primary, #2563eb);
+  outline-offset: -2px;
 }
 </style>

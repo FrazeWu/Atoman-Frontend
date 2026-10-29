@@ -81,6 +81,24 @@ describe('RatingControl.vue', () => {
     expect(wrapper.get('.rating-control__star-fill').attributes('style')).toContain('width: 16px')
   })
 
+  it('offers ten explicit phone-sized score choices without changing the half-star scoring scale', async () => {
+    const wrapper = mount(RatingControl, { props: { viewerRating: 7 } })
+    const choices = wrapper.findAll('.rating-control__mobile-score')
+    expect(choices).toHaveLength(10)
+    expect(choices.map(choice => choice.text())).toEqual(
+      ['1 分', '2 分', '3 分', '4 分', '5 分', '6 分', '7 分', '8 分', '9 分', '10 分'],
+    )
+    expect(wrapper.get('[data-mobile-score="7"]').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.get('[data-mobile-score="9"]').attributes('aria-label')).toBe('9 分，4.5 星')
+    await wrapper.get('[data-mobile-score="9"]').trigger('click')
+    expect(wrapper.emitted('rate')).toEqual([[9]])
+    await wrapper.setProps({ disabled: true })
+    expect(wrapper.classes()).toContain('rating-control--disabled')
+    const css = ratingControlSource.slice(ratingControlSource.lastIndexOf('<style scoped>'))
+    expect(css).toMatch(/min-height:\s*44px/)
+    wrapper.unmount()
+  })
+
   it('moves one point at a time with the keyboard', async () => {
     const wrapper = mount(RatingControl)
 

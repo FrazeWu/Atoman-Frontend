@@ -72,6 +72,24 @@ describe('PodcastHomeView', () => {
     expect(requestedAfterSwitch).toContain('/api/v1/podcast/recommend/episodes?mode=featured&page=1&page_size=8')
   })
 
+  it('merges redundant empty recommendation and latest sections when both are empty', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/podcast/recommend/episodes')) return makeJsonResponse({ data: [] })
+      if (url.endsWith('/podcast/episodes')) return makeJsonResponse([])
+      throw new Error('unexpected fetch: ' + url)
+    })
+    const wrapper = mount(PodcastHomeView, {
+      global: {
+        stubs: { PPageHeader: { template: '<header />' } },
+      },
+    })
+    await flushPromises()
+    expect(wrapper.get('.ph-recommendations').exists()).toBe(true)
+    expect(wrapper.find('.ph-latest').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it('renders recommendations and latest episodes as modern media surfaces', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input)

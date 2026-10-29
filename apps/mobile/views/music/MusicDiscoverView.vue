@@ -21,11 +21,11 @@
     </div>
 
     <!-- Featured Recommendation Card -->
-    <section
+    <RouterLink
       v-if="featuredRecommendation"
+      :to="featuredRecommendation.type === 'album' ? '/music/album/' + featuredRecommendation.id : '/music/playlist/' + featuredRecommendation.id"
       class="mobile-music-discover__featured"
       data-testid="featured-recommendation"
-      @click="openRecommendation(featuredRecommendation)"
     >
       <div class="mobile-music-discover__featured-cover">
         <img
@@ -48,7 +48,7 @@
           <span>立即聆听</span>
         </div>
       </div>
-    </section>
+    </RouterLink>
 
     <!-- Featured Albums Section -->
     <section v-if="albums.length > 0" class="mobile-music-discover__section" aria-label="热门专辑">
@@ -60,12 +60,12 @@
       </div>
 
       <div class="mobile-music-discover__albums-scroll">
-        <div
+        <RouterLink
           v-for="album in albums"
           :key="album.id"
+          :to="'/music/album/' + album.id"
           class="mobile-music-discover__album-card"
           data-testid="album-card"
-          @click="openAlbum(album.id)"
         >
           <div class="mobile-music-discover__album-cover">
             <img
@@ -82,7 +82,7 @@
           </div>
           <span class="mobile-music-discover__album-name">{{ album.title }}</span>
           <span class="mobile-music-discover__album-artist">{{ album.artist || '未知艺术家' }}</span>
-        </div>
+        </RouterLink>
       </div>
     </section>
 
@@ -96,12 +96,12 @@
       </div>
 
       <div class="mobile-music-discover__artists-scroll">
-        <div
+        <RouterLink
           v-for="artist in artists"
           :key="artist.id"
+          :to="'/music/artist/' + artist.id"
           class="mobile-music-discover__artist-card"
           data-testid="artist-card"
-          @click="openArtist(artist.id)"
         >
           <div class="mobile-music-discover__artist-avatar">
             <img
@@ -117,7 +117,7 @@
           </div>
           <span class="mobile-music-discover__artist-name">{{ artist.name }}</span>
           <span v-if="artist.nationality" class="mobile-music-discover__artist-sub">{{ artist.nationality }}</span>
-        </div>
+        </RouterLink>
       </div>
     </section>
 
@@ -131,12 +131,12 @@
       </div>
 
       <div class="mobile-music-discover__grid">
-        <div
+        <RouterLink
           v-for="playlist in playlists"
           :key="playlist.id"
+          :to="'/music/playlist/' + playlist.id"
           class="mobile-music-discover__card"
           data-testid="playlist-card"
-          @click="openPlaylist(playlist.id)"
         >
           <div class="mobile-music-discover__card-cover">
             <img
@@ -149,13 +149,13 @@
             <div v-else class="mobile-music-discover__card-art">
               <MIcon name="waveform" size="lg" />
             </div>
-            <span class="mobile-music-discover__tag">LOSSLESS</span>
+
           </div>
           <div class="mobile-music-discover__card-info">
             <span class="mobile-music-discover__card-name">{{ playlist.name }}</span>
             <span class="mobile-music-discover__card-count">{{ playlist.song_count || 0 }} 首歌曲</span>
           </div>
-        </div>
+        </RouterLink>
       </div>
     </section>
 
@@ -166,10 +166,12 @@
       </div>
 
       <div class="mobile-music-discover__tracks">
-        <div
+        <button
           v-for="(track, index) in recentTracks"
           :key="track.id || index"
+          type="button"
           class="mobile-music-discover__track-item"
+          :aria-label="'播放' + track.title + '，' + (track.artist || '未知艺术家')"
           data-testid="track-item"
           @click="playTrack(track)"
         >
@@ -196,7 +198,7 @@
           <div class="mobile-music-discover__track-end">
             <span v-if="formatDuration(track.duration)" class="mobile-music-discover__track-duration">{{ formatDuration(track.duration) }}</span>
           </div>
-        </div>
+        </button>
       </div>
     </section>
   </div>
@@ -204,7 +206,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import {
   getMusicHome,
   listMusicAlbums,
@@ -233,7 +234,6 @@ export interface MobileArtistItem {
   nationality?: string
 }
 
-const router = useRouter()
 const player = useAudioPlayerStore()
 
 const playlists = ref<MusicPlaylistSummary[]>([])
@@ -261,7 +261,7 @@ const featuredRecommendation = computed(() => {
     return {
       id: first.id,
       title: first.name,
-      subtitle: `${first.song_count || 0} 首精选曲目 · 无损音质`,
+      subtitle: String(first.song_count || 0) + ' 首歌曲',
       cover_url: first.cover_url,
       type: 'playlist',
     }
@@ -369,26 +369,6 @@ async function loadData() {
       artists.value = (data?.data || []).map(toArtistItem)
     }),
   ])
-}
-
-function openPlaylist(id: string) {
-  void router.push(`/music/playlist/${id}`)
-}
-
-function openAlbum(id: string) {
-  void router.push(`/music/album/${id}`)
-}
-
-function openArtist(id: string) {
-  void router.push(`/music/artist/${id}`)
-}
-
-function openRecommendation(rec: any) {
-  if (rec.type === 'album') {
-    void router.push(`/music/album/${rec.id}`)
-  } else {
-    void router.push(`/music/playlist/${rec.id}`)
-  }
 }
 
 function playTrack(track: Song) {
@@ -902,5 +882,33 @@ onMounted(() => {
   .mobile-music-discover__loading-hero,
   .mobile-music-discover__loading-heading,
   .mobile-music-discover__loading-album { animation: none; }
+}
+</style>
+
+<style scoped>
+.mobile-music-discover__featured,
+.mobile-music-discover__album-card,
+.mobile-music-discover__artist-card,
+.mobile-music-discover__card {
+  color: inherit;
+  text-decoration: none;
+}
+.mobile-music-discover__featured:focus-visible,
+.mobile-music-discover__album-card:focus-visible,
+.mobile-music-discover__artist-card:focus-visible,
+.mobile-music-discover__card:focus-visible,
+.mobile-music-discover__track-item:focus-visible {
+  outline: 2px solid var(--a-color-primary, #2563eb);
+  outline-offset: 2px;
+}
+.mobile-music-discover__track-item {
+  width: 100%;
+  min-height: 56px;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--a-color-border-soft, #f1f1f1);
+  background: transparent;
+  font: inherit;
+  color: inherit;
 }
 </style>

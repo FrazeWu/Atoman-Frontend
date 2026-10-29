@@ -1,7 +1,7 @@
 <template>
   <section
     class="rating-control"
-    :class="`rating-control--${size}`"
+    :class="['rating-control--' + size, { 'rating-control--disabled': disabled }]"
     :aria-label="ariaLabel"
     :aria-busy="loading"
   >
@@ -55,6 +55,28 @@
           @keydown="handleKeydown($event, score)"
         />
       </span>
+    </div>
+
+    <!-- On narrow phones 10 half-star hit targets would be only 22px wide.
+         Keep desktop stars, but offer ten distinct 44px+ choices on mobile. -->
+    <div v-if="size === 'regular'" class="rating-control__mobile-scores" role="group" aria-label="选择评分，1 至 10 分">
+      <button
+        v-for="score in 10"
+        :key="score"
+        type="button"
+        class="rating-control__mobile-score"
+        :class="{ 'is-selected': viewerRating === score }"
+        :data-score="score"
+        :data-mobile-score="score"
+        :aria-label="scoreLabel(score)"
+        :aria-pressed="viewerRating === score"
+        :disabled="disabled"
+        :aria-disabled="disabled || loading"
+        @focus="!loading && (hoverScore = score)"
+        @blur="hoverScore = null"
+        @click="rate(score)"
+        @keydown="handleKeydown($event, score)"
+      >{{ score }} 分</button>
     </div>
 
     <button
@@ -173,7 +195,7 @@ function handleKeydown(event: KeyboardEvent, score: number) {
       : event.key === 'ArrowLeft' || event.key === 'ArrowDown'
         ? Math.max(1, score - 1)
         : Math.min(10, score + 1)
-  const group = (event.currentTarget as HTMLElement).closest('.rating-control__stars')
+  const group = (event.currentTarget as HTMLElement).closest('.rating-control__stars, .rating-control__mobile-scores')
   group?.querySelector<HTMLButtonElement>(`button[data-score="${nextScore}"]`)?.focus()
   rate(nextScore)
 }
@@ -385,5 +407,43 @@ function handleKeydown(event: KeyboardEvent, score: number) {
   .rating-control__meta {
     width: 100%;
   }
+}
+</style>
+
+<style scoped>
+.rating-control__mobile-scores { display: none; }
+@media (max-width: 640px) {
+  .rating-control--regular:not(.rating-control--disabled) .rating-control__stars { display: none; }
+  .rating-control--regular:not(.rating-control--disabled) .rating-control__mobile-scores {
+    display: grid;
+    width: min(100%, 300px);
+    min-width: 0;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .rating-control__mobile-score {
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 4px;
+    border: 1px solid var(--a-color-border, #d1d5db);
+    border-radius: 7px;
+    background: var(--a-color-bg, #fff);
+    color: var(--a-color-text, #111827);
+    font: inherit;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .rating-control__mobile-score.is-selected {
+    border-color: var(--a-color-warning, #d97706);
+    background: color-mix(in srgb, var(--a-color-warning, #d97706) 14%, white);
+    font-weight: 700;
+  }
+  .rating-control__mobile-score:focus-visible {
+    outline: 2px solid var(--a-color-primary, #2563eb);
+    outline-offset: 2px;
+  }
+  .rating-control__mobile-score:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 </style>

@@ -9,6 +9,7 @@
       </template>
     </PPageHeader>
 
+    <div class="tl-mobile-toolbar-shell" :class="{ 'tl-mobile-toolbar-shell--collapsed': emptyTimelineDefault && !showEmptyFilters }">
     <TimelineToolbar
       v-model:year-start="yearStart"
       v-model:year-end="yearEnd"
@@ -20,6 +21,14 @@
       @add-batch-to-compare="addBatchToCompare"
       @clear-batch-selection="clearBatchSelection"
     />
+    </div>
+    <button
+      v-if="emptyTimelineDefault"
+      type="button"
+      class="tl-mobile-filter-toggle"
+      :aria-expanded="showEmptyFilters"
+      @click="showEmptyFilters = !showEmptyFilters"
+    >{{ showEmptyFilters ? '收起筛选条件' : '展开筛选条件' }}</button>
 
     <div v-if="loading && events.length === 0" class="tl-state-block">
       <p style="font-weight: 500;">加载中...</p>
@@ -381,6 +390,13 @@ const { events, loading, error } = storeToRefs(store)
 const yearStart = ref<number | null>(null)
 const yearEnd = ref<number | null>(null)
 const filterCategory = ref('')
+const showEmptyFilters = ref(false)
+const emptyTimelineDefault = computed(() =>
+  !loading.value && !error.value && events.value.length === 0 &&
+  compareIds.value.length === 0 &&
+  !yearStart.value && !yearEnd.value && !filterCategory.value
+)
+
 
 const sortedEvents = computed(() =>
   [...events.value].sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
@@ -1380,6 +1396,24 @@ watch(
 
   .tl-lane-row-active {
     padding-left: 0.5rem;
+  }
+}
+
+.tl-mobile-filter-toggle { display: none; }
+@media (max-width: 640px) {
+  .tl-mobile-toolbar-shell--collapsed :deep(.tl-toolbar) { display: none; }
+  .tl-mobile-filter-toggle {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    padding: 0 12px;
+    margin-bottom: 12px;
+    border: 1px solid var(--a-color-border-soft, #e2e8f0);
+    border-radius: var(--a-radius-control, 8px);
+    background: var(--a-color-surface-muted, #f8fafc);
+    color: var(--a-color-fg, #0f172a);
+    font-size: 13px;
+    cursor: pointer;
   }
 }
 </style>

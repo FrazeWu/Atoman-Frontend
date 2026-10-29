@@ -16,6 +16,7 @@
           type="button"
           class="book-detail-mobile__action-icon"
           title="分享"
+          aria-label="分享图书"
           @click="shareBook"
         >
           <MIcon name="share" size="sm" />
@@ -58,6 +59,7 @@
         <button
           type="button"
           class="book-detail-mobile__btn book-detail-mobile__btn--primary"
+          :class="{ 'book-detail-mobile__btn--unavailable': readingStatus === 'unavailable' }"
           data-testid="start-reading-btn"
           :disabled="readingBusy || readingStatus === 'checking' || readingStatus === 'unavailable'"
           :aria-busy="readingBusy || readingStatus === 'checking'"
@@ -71,13 +73,19 @@
       <p v-else-if="readingStatus === 'error'" class="book-detail-mobile__asset-hint" role="status">暂时无法确认阅读资源，请点击上方按钮重试。</p>
 
       <p v-if="actionError" role="alert">{{ actionError }}</p>
+      <p v-if="shareFeedback" class="book-detail-mobile__share-feedback" role="status">{{ shareFeedback }}</p>
+      <label v-if="shareFallbackUrl" class="book-detail-mobile__share-fallback">
+        分享链接（可长按复制）
+        <input :value="shareFallbackUrl" readonly aria-label="图书分享链接" @focus="($event.target as HTMLInputElement).select()" />
+      </label>
       <!-- Synopsis / Introduction -->
-      <section class="book-detail-mobile__section">
+      <section v-if="book.synopsis" class="book-detail-mobile__section">
         <h2 class="book-detail-mobile__section-title">内容简介</h2>
         <div class="book-detail-mobile__synopsis">
           <p>{{ book.synopsis || '暂无详细内容简介。' }}</p>
         </div>
       </section>
+      <p v-else class="book-detail-mobile__missing-synopsis">暂无内容简介</p>
 
       <!-- Chapters Preview -->
       <section v-if="book.chapters && book.chapters.length > 0" class="book-detail-mobile__section">
@@ -143,6 +151,8 @@ const auth = useAuthStore()
 const book = ref<BookDetailData | null>(null)
 const loadError = ref('')
 const actionError = ref('')
+const shareFeedback = ref('')
+const shareFallbackUrl = ref('')
 const readingBusy = ref(false)
 const readingStatus = ref<'checking' | 'available' | 'unavailable' | 'error'>('checking')
 const cachedReading = ref<ReadingRecommendation | null>(null)
@@ -152,9 +162,30 @@ function goBack() {
   if (window.history.length > 1) router.back()
   else void router.push('/books')
 }
-function shareBook() {
-  if (navigator.share && book.value) {
-    void navigator.share({ title: book.value.title, text: `${book.value.title} - ${book.value.author}`, url: window.location.href }).catch(() => {})
+async function shareBook() {
+  if (!book.value) return
+  shareFeedback.value = ''
+  shareFallbackUrl.value = ''
+  const url = window.location.href
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: book.value.title,
+        text: book.value.title + ' - ' + book.value.author,
+        url,
+      })
+      return
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
+    }
+  }
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
+    await navigator.clipboard.writeText(url)
+    shareFeedback.value = '图书链接已复制'
+  } catch {
+    shareFeedback.value = '无法自动复制，请选择下方链接手动复制'
+    shareFallbackUrl.value = url
   }
 }
 async function checkReadingAvailability(workId: string, generation: number) {
@@ -199,6 +230,8 @@ async function loadBookData() {
   book.value = null
   loadError.value = ''
   actionError.value = ''
+  shareFeedback.value = ''
+  shareFallbackUrl.value = ''
   readingBusy.value = false
   readingStatus.value = 'checking'
   cachedReading.value = null
@@ -221,7 +254,7 @@ async function loadBookData() {
       author: result.authors?.map(author => author.name).join(' / ') || '未知作者',
       publisher: result.editions?.[0]?.publisher,
       cover: result.cover_url || result.editions?.[0]?.cover_url,
-      synopsis: result.description || '暂无内容简介。',
+      synopsis: result.description || '',
     }
     void checkReadingAvailability(result.id, generation)
   } catch {
@@ -514,5 +547,35 @@ onBeforeUnmount(() => { loadGeneration += 1 })
   to {
     transform: rotate(360deg);
   }
+}
+
+.book-detail-mobile__btn--unavailable:disabled {
+  color: var(--a-color-text-secondary, #64748b);
+  background: var(--a-color-surface-muted, #f1f5f9);
+  border-color: var(--a-color-border-soft, #e2e8f0);
+  opacity: 1;
+}
+.book-detail-mobile__missing-synopsis,
+.book-detail-mobile__share-feedback {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--a-color-text-secondary, #64748b);
+}
+.book-detail-mobile__share-fallback {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.book-detail-mobile__share-fallback input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: 8px;
+  box-sizing: border-box;
+  font: inherit;
 }
 </style>

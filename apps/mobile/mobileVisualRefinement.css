@@ -327,3 +327,82 @@
     min-height: 88px;
   }
 }
+
+/* Fourth-pass accessibility: larger actual targets, not oversized icons.
+   Mobile-shell scoped so shared desktop search/forum components are unchanged. */
+@media (max-width: 640px) {
+  .mobile-app-shell .mobile-app-main .m-input { min-height: 44px; }
+  .mobile-app-shell .mobile-app-main .m-input__clear {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    margin-left: 0;
+    background: transparent;
+  }
+  .mobile-app-shell .mobile-app-main .p-search-input__clear-btn {
+    min-width: 44px;
+    width: 44px;
+    min-height: 44px;
+    height: 44px;
+  }
+  .mobile-app-shell .mobile-app-main :is(
+    .search-group__more-link,
+    .mobile-music-discover__more-link,
+    .mobile-music-search__more-link
+  ) {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: flex-end;
+    padding-inline: 4px;
+  }
+  .mobile-app-shell .mobile-app-main [data-testid="hero-read-btn"] {
+    min-height: 44px;
+  }
+  .mobile-app-shell .mobile-app-main .forum-page .forum-tab-btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding-inline: 12px;
+  }
+  .mobile-app-shell .mobile-app-main .forum-page .forum-topic-filters {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .mobile-app-shell .mobile-app-main .forum-page :is(
+    .filter-bar, .filter-left, .filter-right, .search-wrap, .search-input
+  ) {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .mobile-app-shell .mobile-app-main .forum-page .search-clear {
+    width: 44px;
+    height: 44px;
+    top: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mobile-app-shell .mobile-app-main .forum-page .search-wrap .p-input {
+    padding-right: 48px;
+  }
+  .mobile-app-shell .mobile-app-main .mobile-music-search__song-meta,
+  .mobile-app-shell .mobile-app-main .mobile-music-search__artist-sub,
+  .mobile-app-shell .mobile-app-main .mobile-music-discover__album-artist {
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+  .mobile-app-shell .mobile-app-main :is(
+    .mobile-music-search__rec-artist-name,
+    .mobile-music-discover__artist-name
+  ) {
+    white-space: normal;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-height: 1.35;
+    min-height: 2.7em;
+    overflow-wrap: anywhere;
+  }
+}

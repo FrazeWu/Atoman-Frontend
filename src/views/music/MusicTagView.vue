@@ -340,24 +340,30 @@ onBeforeUnmount(() => {
 
 .tag-song-list {
   display: grid;
-  border-top: 1px solid var(--a-color-border-soft);
+  gap: 0.5rem;
 }
 
 .tag-song-row {
   display: grid;
   grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  align-items: center;
   min-height: 3.25rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.tag-song-row:last-child {
-  border-bottom: 0;
+.tag-song-row:hover {
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface-muted);
 }
 
 .tag-song-row--skeleton {
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 0;
+  padding: 0.5rem 1rem;
 }
 
 .tag-song-copy {

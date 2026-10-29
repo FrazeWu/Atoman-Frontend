@@ -60,15 +60,17 @@ onMounted(() => {
 }
 .forum-my__following-list a {
   display: block;
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   text-decoration: none;
   font-size: 0.875rem;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 .forum-my__following-list a:hover {
-  border-color: var(--a-color-fg);
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface-muted);
 }
 </style>

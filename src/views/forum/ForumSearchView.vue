@@ -14,7 +14,7 @@
         class="forum-search-input"
         @keydown.enter="doSearch"
       />
-      <PButton @click="doSearch">搜索</PButton>
+      <PButton size="sm" @click="doSearch">搜索</PButton>
     </div>
 
     <div v-if="forumStore.searchLoading" class="forum-search-skeletons">
@@ -154,10 +154,15 @@ watch(() => route.query.q, async (q) => {
 
 .forum-search-bar {
   display: flex;
-  align-items: end;
+  align-items: center;
   gap: 0.75rem;
   max-width: 640px;
   margin-bottom: 2rem;
+}
+
+.forum-search-bar :deep(.p-input) {
+  height: var(--a-control-height-sm, 2.25rem);
+  min-height: var(--a-control-height-sm, 2.25rem);
 }
 
 .forum-search-input {

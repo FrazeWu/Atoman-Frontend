@@ -34,7 +34,7 @@
           module="books"
           :types="selectedTypes"
           variant="bar"
-          size="md"
+          size="sm"
           :scopes="searchScopes"
           placeholder="输入书名、作者或关键词..."
           action-button-text="搜索"
@@ -42,6 +42,7 @@
           @search="search"
         />
         <PButton
+          size="sm"
           class="book-discover__add-btn"
           :to="auth.isAuthenticated ? { path: '/books/new', query: route.query } : { path: '/login', query: { redirect: '/books/new' } }"
         >
@@ -250,8 +251,12 @@ onBeforeUnmount(() => {
   min-width: 200px;
 }
 
+.book-discover__search-bar :deep(.p-search-input) {
+  height: var(--a-control-height-sm, 2.25rem);
+}
+
 .book-discover__add-btn {
-  height: 38px;
+  height: var(--a-control-height-sm, 2.25rem);
   flex-shrink: 0;
 }
 

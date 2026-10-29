@@ -2,8 +2,9 @@
 .booklists__toolbar { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-block: 1.5rem; }
 .booklists__toolbar > .p-field { flex: 1; min-width: 12rem; }
 .booklists__tabs, .booklists__actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
-.booklists__list { padding: 0; margin: 0; list-style: none; }
-.booklists__row { display: flex; align-items: start; gap: 1rem; padding-block: 1.5rem; border-bottom: 1px solid var(--a-color-border-soft); }
+.booklists__list { padding: 0; margin: 0; list-style: none; display: grid; gap: 0.75rem; }
+.booklists__row { display: flex; align-items: start; gap: 1rem; padding: 1.25rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); transition: border-color 0.15s ease, background-color 0.15s ease; }
+.booklists__row:hover { border-color: var(--a-color-border); background: var(--a-color-surface-muted); }
 .booklists__row-main { flex: 1; min-width: 0; }
 .booklists__title { font-size: 1.25rem; font-weight: 600; color: var(--a-color-text); overflow-wrap: anywhere; }
 .booklists__description { color: var(--a-color-text-secondary); max-width: 70ch; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }

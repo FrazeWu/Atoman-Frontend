@@ -119,6 +119,7 @@
           <PButton
             v-if="typeFilter !== 'note'"
             variant="primary"
+            size="sm"
             label="换一批"
             :loading="loading"
             @click="refreshStreamBatch"
@@ -1197,8 +1198,7 @@ watch([() => route.query.type, () => route.query.mode], ([rawType, rawMode]) => 
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  padding: 0.85rem 1rem 0.5rem;
   background: var(--a-color-bg);
 }
 

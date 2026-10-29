@@ -32,7 +32,7 @@
         :disabled="collectionsLoading || !channelId"
         @update:model-value="changeCollection"
       />
-      <PButton type="submit" label="搜索" />
+      <PButton type="submit" size="sm" label="搜索" />
     </form>
 
     <div v-if="currentTag" class="blog-articles__active-filter" role="status">
@@ -397,6 +397,11 @@ onMounted(() => {
   margin-bottom: 1.5rem;
 }
 
+.blog-articles__filters :deep(.p-input) {
+  height: var(--a-control-height-sm, 2.25rem);
+  min-height: var(--a-control-height-sm, 2.25rem);
+}
+
 .blog-articles__layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--a-recommendation-width);
@@ -418,8 +423,7 @@ onMounted(() => {
 }
 
 .blog-articles__rail-section {
-  border-top: 1px solid var(--a-color-border-soft);
-  padding-top: 0.75rem;
+  padding-top: 0.25rem;
 }
 
 .blog-articles__rail-section h2 {
@@ -455,9 +459,18 @@ onMounted(() => {
 }
 
 .blog-articles__tag {
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
-  padding: 0.25rem 0.5rem;
+  border: none;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
+  font-size: 0.8125rem;
+  padding: 0.35rem 0.75rem;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.blog-articles__tag:hover {
+  background: color-mix(in srgb, var(--a-color-surface-muted) 80%, var(--a-color-border-soft));
+  color: var(--a-color-fg);
 }
 
 @media (max-width: 1199px) {

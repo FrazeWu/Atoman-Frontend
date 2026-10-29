@@ -13,7 +13,8 @@
           :class="[`p-modal-${size}`, modalClass]"
           :role="role"
           aria-modal="true"
-          :aria-label="dialogLabel"
+          :aria-labelledby="title ? titleId : undefined"
+          :aria-label="title ? undefined : dialogLabel"
           tabindex="-1"
           v-bind="$attrs"
           @keydown="handleKeydown"
@@ -22,7 +23,7 @@
             <X :size="18" aria-hidden="true" />
           </button>
           <div class="p-modal-body">
-            <h2 v-if="title" class="p-modal-title-inline">{{ title }}</h2>
+            <h2 v-if="title" :id="titleId" class="p-modal-title-inline">{{ title }}</h2>
             <slot />
           </div>
           <div v-if="hasFooter" class="p-modal-footer">
@@ -37,6 +38,8 @@
 <style scoped>
 .p-modal {
   position: relative;
+  box-shadow: none !important;
+  border-radius: var(--a-radius-card, 4px);
 }
 .p-modal-close-floating {
   position: absolute;
@@ -80,6 +83,9 @@ defineOptions({
   inheritAttrs: false,
 })
 
+let modalIdCounter = 0
+const useId = () => `${++modalIdCounter}`
+
 const props = withDefaults(defineProps<{
   size?: 'sm' | 'md' | 'lg'
   title?: string
@@ -94,6 +100,8 @@ const props = withDefaults(defineProps<{
   backdropClass?: any
   modalClass?: any
   closeClass?: any
+  initialFocus?: 'auto' | 'first-input' | 'close-button' | HTMLElement | (() => HTMLElement | null)
+  lockScroll?: boolean
 }>(), {
   size: 'md',
   title: '',
@@ -108,6 +116,8 @@ const props = withDefaults(defineProps<{
   backdropClass: undefined,
   modalClass: undefined,
   closeClass: undefined,
+  initialFocus: 'auto',
+  lockScroll: true,
 })
 
 const emit = defineEmits<{
@@ -121,6 +131,7 @@ const dialogRef = ref<HTMLElement | null>(null)
 const visible = computed(() => props.modelValue ?? props.show ?? true)
 const hasFooter = computed(() => Boolean(slots.footer))
 const dialogLabel = computed(() => props.ariaLabel || props.title || '对话框')
+const titleId = `modal-title-${useId()}`
 
 const handleClose = () => {
   emit('update:modelValue', false)
@@ -133,5 +144,12 @@ const handleBackdropClick = () => {
   handleClose()
 }
 
-const { handleKeydown } = useDialogFocus(visible, dialogRef, handleClose)
+const { handleKeydown } = useDialogFocus(visible, dialogRef, handleClose, {
+  get initialFocus() {
+    return props.initialFocus
+  },
+  get lockScroll() {
+    return props.lockScroll
+  },
+})
 </script>

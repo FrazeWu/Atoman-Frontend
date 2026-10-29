@@ -203,8 +203,8 @@ function playEpisode(ep: PodcastEpisode) {
       >
         <template #skeleton>
           <div class="ph-episode-list" aria-label="正在加载单集">
-            <div v-for="i in 4" :key="i" style="display:flex;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--a-color-border-soft);">
-              <PSkeleton width="64px" height="64px" variant="rect" />
+            <div v-for="i in 4" :key="i" class="ph-episode-skel-card">
+              <PSkeleton width="5rem" height="5rem" variant="rect" style="border-radius: var(--a-radius-control); flex-shrink: 0;" />
               <div style="flex:1;display:flex;flex-direction:column;gap:0.5rem;">
                 <PSkeleton width="40%" height="18px" />
                 <PSkeleton width="90%" height="14px" />
@@ -252,14 +252,14 @@ function playEpisode(ep: PodcastEpisode) {
   display: none; /* desktop unchanged; mobile shell re-enables the action */
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 0 18px;
+  height: var(--a-control-height-sm, 2.25rem);
+  padding: 0 1rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control, 8px);
-  background: var(--a-color-surface);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-text);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 500;
   text-decoration: none;
 }
 .ph-empty-explore-link:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
@@ -383,6 +383,12 @@ function playEpisode(ep: PodcastEpisode) {
 }
 
 .ph-score {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
   font-size: 0.75rem;
 }
@@ -416,6 +422,17 @@ function playEpisode(ep: PodcastEpisode) {
 .ph-episode-list {
   display: grid;
   gap: 0.6rem;
+}
+
+.ph-episode-skel-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 5.5rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
 }
 
 .ph-episode-row {
@@ -485,14 +502,10 @@ function playEpisode(ep: PodcastEpisode) {
 }
 
 .ph-play {
-  width: 40px;
-  min-width: 40px;
+  width: var(--a-control-height-sm, 2.25rem);
+  height: var(--a-control-height-sm, 2.25rem);
+  min-width: var(--a-control-height-sm, 2.25rem);
   padding: 0;
-}
-
-.ph-episode-skeleton {
-  height: 7rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 @media (max-width: 760px) {

@@ -128,11 +128,14 @@
         <!-- TAB 2: 收听历史 (Listening History) -->
         <section v-else-if="activeTab === 'history'" class="mobile-music-me__section">
           <div v-if="historyList.length > 0" class="mobile-music-me__list">
-            <div
+            <button
               v-for="(track, index) in historyList"
               :key="track.id || index"
+              type="button"
               class="mobile-music-me__item"
               data-testid="history-item"
+              :disabled="!canPlayMusicSong(track)"
+              :aria-label="canPlayMusicSong(track) ? '播放' + track.title : track.title + '，暂无可播放音源'"
               @click="playSong(track)"
             >
               <span class="mobile-music-me__track-index">{{ String(index + 1).padStart(2, '0') }}</span>
@@ -151,10 +154,11 @@
                 </span>
               </div>
 
-              <span v-if="formatDuration(track.duration)" class="mobile-music-me__item-dur">
+              <span v-if="!canPlayMusicSong(track)" class="mobile-music-no-audio">暂无音源</span>
+              <span v-else-if="formatDuration(track.duration)" class="mobile-music-me__item-dur">
                 {{ formatDuration(track.duration) }}
               </span>
-            </div>
+            </button>
           </div>
 
           <div v-else class="mobile-music-me__empty" data-testid="empty-history">
@@ -263,6 +267,7 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
+import { musicAudioFromApi, canPlayMusicSong } from '@mobile/mobileMusicPlayback'
 import MAvatar from '@mobile/components/ui/MAvatar.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
@@ -328,7 +333,7 @@ function toPlayerSong(item: any): Song {
     duration: typeof item.duration === 'number' && item.duration > 0
       ? item.duration
       : (item.duration_sec ?? item.duration_seconds ?? item.durationSeconds ?? 0),
-    audio_url: item.audio_url || '',
+    ...musicAudioFromApi(item),
     cover_url: item.cover_url || item.album?.cover_url || '',
   }
 }
@@ -439,6 +444,7 @@ function openPlaylist(id: string) {
 }
 
 function playSong(song: Song) {
+  if (!canPlayMusicSong(song)) return
   player.playSong(song)
 }
 

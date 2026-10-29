@@ -22,11 +22,14 @@
         <button type="button" class="mobile-music-library__retry" @click="loadTracks">重新加载</button>
       </div>
       <div v-else-if="filteredTracks.length > 0" class="mobile-music-library__tracks">
-        <div
+        <button
           v-for="(track, index) in filteredTracks"
           :key="track.id || index"
+          type="button"
           class="mobile-music-library__track-item"
           data-testid="library-track-item"
+          :disabled="!canPlayMusicSong(track)"
+          :aria-label="canPlayMusicSong(track) ? '播放' + track.title : track.title + '，暂无可播放音源'"
           @click="playTrack(track)"
         >
           <span class="mobile-music-library__track-index">{{ String(index + 1).padStart(2, '0') }}</span>
@@ -51,9 +54,10 @@
           </div>
 
           <div class="mobile-music-library__track-end">
-            <span v-if="formatDuration(track.duration)" class="mobile-music-library__track-duration">{{ formatDuration(track.duration) }}</span>
+            <span v-if="!canPlayMusicSong(track)" class="mobile-music-no-audio">暂无音源</span>
+            <span v-else-if="formatDuration(track.duration)" class="mobile-music-library__track-duration">{{ formatDuration(track.duration) }}</span>
           </div>
-        </div>
+        </button>
       </div>
 
       <!-- Empty State -->
@@ -72,6 +76,7 @@ import { computed, onMounted, ref } from 'vue'
 import { listMusicSongs } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
+import { musicAudioFromApi, canPlayMusicSong } from '@mobile/mobileMusicPlayback'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MInput from '@mobile/components/ui/MInput.vue'
 
@@ -94,7 +99,7 @@ function toPlayerSong(item: any): Song {
     duration: typeof item.duration === 'number' && item.duration > 0
       ? item.duration
       : (item.duration_sec ?? item.duration_seconds ?? item.durationSeconds ?? 0),
-    audio_url: item.audio_url || '',
+    ...musicAudioFromApi(item),
     cover_url: item.cover_url || item.album?.cover_url || '',
   }
 }
@@ -133,6 +138,7 @@ async function loadTracks() {
 }
 
 function playTrack(track: Song) {
+  if (!canPlayMusicSong(track)) return
   player.playSong(track)
 }
 

@@ -406,3 +406,51 @@
     overflow-wrap: anywhere;
   }
 }
+
+/* Music media integrity: unavailable songs remain visible as metadata, never
+   become a fake-playable control. Shared only inside the mobile application. */
+.mobile-app-shell .mobile-app-main :is(
+  .mobile-album-detail__song-item,
+  .mobile-playlist-detail__song-item,
+  .mobile-artist-detail__song-item,
+  .mobile-music-library__track-item,
+  .mobile-music-me__item[data-testid="history-item"]
+) {
+  width: 100%;
+  min-height: 56px;
+  box-sizing: border-box;
+  border: 0;
+  border-bottom: 1px solid var(--a-color-border-soft, #f1f5f9);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.mobile-app-shell .mobile-app-main :is(
+  .mobile-album-detail__song-item,
+  .mobile-playlist-detail__song-item,
+  .mobile-artist-detail__song-item,
+  .mobile-music-library__track-item,
+  .mobile-music-me__item[data-testid="history-item"],
+  .mobile-music-search__song-item,
+  .mobile-music-discover__track-item
+):disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.mobile-app-shell .mobile-app-main :is(
+  .mobile-album-detail__song-item,
+  .mobile-playlist-detail__song-item,
+  .mobile-artist-detail__song-item,
+  .mobile-music-library__track-item,
+  .mobile-music-me__item[data-testid="history-item"]
+):focus-visible {
+  outline: 2px solid var(--a-color-primary, #2563eb);
+  outline-offset: -2px;
+}
+.mobile-app-shell .mobile-app-main .mobile-music-no-audio {
+  flex-shrink: 0;
+  color: var(--a-color-muted, #64748b);
+  font-size: 12px;
+  white-space: nowrap;
+}

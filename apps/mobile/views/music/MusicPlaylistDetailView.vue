@@ -59,7 +59,7 @@
             <MButton
               size="sm"
               variant="primary"
-              :disabled="songs.length === 0"
+              :disabled="!songs.some(canPlayMusicSong)"
               data-testid="play-all-btn"
               @click="handlePlayAll"
             >
@@ -77,11 +77,14 @@
         </div>
 
         <div v-if="songs.length > 0" class="mobile-playlist-detail__list">
-          <div
+          <button
             v-for="(song, index) in songs"
             :key="song.id"
+            type="button"
             class="mobile-playlist-detail__song-item"
             data-testid="playlist-song-item"
+            :disabled="!canPlayMusicSong(song)"
+            :aria-label="canPlayMusicSong(song) ? '播放' + song.title : song.title + '，暂无可播放音源'"
             @click="playSong(song)"
           >
             <span class="mobile-playlist-detail__song-index">
@@ -102,10 +105,11 @@
               </span>
             </div>
 
-            <span v-if="formatDuration(song.duration)" class="mobile-playlist-detail__song-dur">
+            <span v-if="!canPlayMusicSong(song)" class="mobile-music-no-audio">暂无音源</span>
+            <span v-else-if="formatDuration(song.duration)" class="mobile-playlist-detail__song-dur">
               {{ formatDuration(song.duration) }}
             </span>
-          </div>
+          </button>
         </div>
 
         <!-- Empty State -->
@@ -115,6 +119,11 @@
         </div>
       </section>
     </main>
+
+    <div v-else-if="loadError" class="mobile-playlist-detail__empty" role="alert" data-testid="playlist-load-error">
+      <p class="mobile-playlist-detail__empty-text">{{ loadError }}</p>
+      <MButton size="sm" variant="secondary" @click="loadPlaylistData">重新加载</MButton>
+    </div>
 
     <!-- Failed / Not Found -->
     <div v-else class="mobile-playlist-detail__empty" data-testid="playlist-not-found">
@@ -128,9 +137,10 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getMusicPlaylist, listMusicSongs } from '@/api/musicV1'
+import { getMusicPlaylist } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
+import { musicAudioFromApi, canPlayMusicSong, firstPlayableMusicSong } from '@mobile/mobileMusicPlayback'
 import MButton from '@mobile/components/ui/MButton.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 
@@ -159,6 +169,7 @@ const router = useRouter()
 const player = useAudioPlayerStore()
 
 const loading = ref(false)
+const loadError = ref('')
 const playlist = ref<PlaylistDetailData | null>(props.initialPlaylist || null)
 const songs = ref<Song[]>(props.initialSongs || [])
 
@@ -202,7 +213,7 @@ function toPlayerSong(item: any, playlistCover?: string): Song {
     duration: typeof item.duration === 'number' && item.duration > 0
       ? item.duration
       : (item.duration_sec ?? item.duration_seconds ?? item.durationSeconds ?? 0),
-    audio_url: item.audio_url || item.preview_url || '/audio/1.mp3',
+    ...musicAudioFromApi(item),
     cover_url: extractCover(item, fallbackCover),
   }
 }
@@ -217,54 +228,26 @@ function formatDuration(seconds?: number): string {
 async function loadPlaylistData() {
   if (props.initialPlaylist) return
   const id = String(route.params.playlistId || '')
-  if (!id) return
-
+  if (!id) { loadError.value = '歌单标识缺失。'; return }
   loading.value = true
+  loadError.value = ''
+  playlist.value = null
+  songs.value = []
   try {
-    const res = await getMusicPlaylist(id)
-    const data = res as any
-    if (data?.id) {
-      playlist.value = {
-        id: data.id,
-        name: data.name || '歌单',
-        description: data.description || '',
-        cover_url: data.cover_url || '',
-        creator: data.creator || { display_name: 'Atoman' },
-      }
-      if (data.songs && Array.isArray(data.songs)) {
-        songs.value = data.songs.map((s: any) => toPlayerSong(s, playlist.value?.cover_url))
-      } else {
-        songs.value = []
-      }
-    } else {
-      // Fallback: load general songs if this was a mock playlist ID
-      playlist.value = {
-        id,
-        name: '精选歌单',
-        description: '沉浸氛围音频与工作流音律精选',
-        creator: { display_name: '官方推荐' },
-      }
-      try {
-        const songsRes = await listMusicSongs({ page: 1, page_size: 15 })
-        if (songsRes?.data?.length) {
-          songs.value = songsRes.data.map((s) => toPlayerSong(s))
-        }
-      } catch {}
-    }
-  } catch {
-    // If not found in DB, provide resilient fallback view
+    const data = await getMusicPlaylist(id)
+    if (!data?.id) { loadError.value = '未找到歌单信息。'; return }
     playlist.value = {
-      id,
-      name: '精选歌单',
-      description: '沉浸氛围音频与工作流音律精选',
-      creator: { display_name: '官方推荐' },
+      id: data.id,
+      name: data.name || '歌单',
+      description: data.description || '',
+      cover_url: data.cover_url || '',
+      creator: data.owner_username ? { display_name: data.owner_username } : undefined,
     }
-    try {
-      const songsRes = await listMusicSongs({ page: 1, page_size: 15 })
-      if (songsRes?.data?.length) {
-        songs.value = songsRes.data.map((s) => toPlayerSong(s))
-      }
-    } catch {}
+    songs.value = Array.isArray(data.songs)
+      ? data.songs.map((song) => toPlayerSong(song, playlist.value?.cover_url))
+      : []
+  } catch {
+    loadError.value = '歌单加载失败，请检查网络后重试。'
   } finally {
     loading.value = false
   }
@@ -279,12 +262,14 @@ function handleBack() {
 }
 
 function playSong(song: Song) {
+  if (!canPlayMusicSong(song)) return
   player.playSong(song)
 }
 
 function handlePlayAll() {
-  if (songs.value.length === 0) return
-  player.playSong(songs.value[0])
+  const first = firstPlayableMusicSong(songs.value)
+  if (!first) return
+  player.playSong(first)
 }
 
 onMounted(() => {

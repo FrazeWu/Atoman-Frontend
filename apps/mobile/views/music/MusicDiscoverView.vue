@@ -171,7 +171,8 @@
           :key="track.id || index"
           type="button"
           class="mobile-music-discover__track-item"
-          :aria-label="'播放' + track.title + '，' + (track.artist || '未知艺术家')"
+          :disabled="!canPlayMusicSong(track)"
+          :aria-label="canPlayMusicSong(track) ? '播放' + track.title + '，' + (track.artist || '未知艺术家') : track.title + '，暂无可播放音源'"
           data-testid="track-item"
           @click="playTrack(track)"
         >
@@ -196,7 +197,8 @@
           </div>
 
           <div class="mobile-music-discover__track-end">
-            <span v-if="formatDuration(track.duration)" class="mobile-music-discover__track-duration">{{ formatDuration(track.duration) }}</span>
+            <span v-if="!canPlayMusicSong(track)" class="mobile-music-no-audio">暂无音源</span>
+            <span v-else-if="formatDuration(track.duration)" class="mobile-music-discover__track-duration">{{ formatDuration(track.duration) }}</span>
           </div>
         </button>
       </div>
@@ -216,6 +218,7 @@ import {
 } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
+import { musicAudioFromApi, canPlayMusicSong } from '@mobile/mobileMusicPlayback'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 
 export interface MobileAlbumItem {
@@ -297,7 +300,7 @@ function toPlayerSong(item: any): Song {
     duration: typeof item.duration === 'number' && item.duration > 0
       ? item.duration
       : (item.duration_sec ?? item.duration_seconds ?? item.durationSeconds ?? 0),
-    audio_url: item.audio_url || item.preview_url || '/audio/1.mp3',
+    ...musicAudioFromApi(item),
     cover_url: item.cover_url || item.album?.cover_url || '',
   }
 }
@@ -372,6 +375,7 @@ async function loadData() {
 }
 
 function playTrack(track: Song) {
+  if (!canPlayMusicSong(track)) return
   player.playSong(track)
 }
 

@@ -356,7 +356,7 @@ describe('Mobile Independent Music Views & Player', () => {
 
   describe('MusicSearchView.vue', () => {
     const mockSongs = [
-      { id: 's-1', title: 'Power', artist: 'Kanye West', album: 'MBDTF', duration: 292 },
+      { id: 's-1', title: 'Power', artist: 'Kanye West', album: 'MBDTF', duration: 292, audio_url: '/media/power.mp3', audio_status: 'ready' },
       { id: 's-2', title: 'Stronger', artist: 'Kanye West', album: 'Graduation', duration: 311 },
     ]
     const mockAlbums = [
@@ -451,7 +451,7 @@ describe('Mobile Independent Music Views & Player', () => {
       creator: { display_name: 'Atoman 官方' },
     }
     const mockSongs = [
-      { id: 's-10', title: 'Focus Track 1', artist: 'Deep Flow', duration: 180 },
+      { id: 's-10', title: 'Focus Track 1', artist: 'Deep Flow', duration: 180, audio_url: '/media/focus.mp3' },
       { id: 's-11', title: 'Focus Track 2', artist: 'Deep Flow', duration: 210 },
     ]
 
@@ -534,7 +534,7 @@ describe('Mobile Independent Music Views & Player', () => {
       bio: '美国说唱歌手、制作人',
     }
     const mockSongs = [
-      { id: 's-10', title: 'Flashing Lights', artist: 'Ye', duration: 237 },
+      { id: 's-10', title: 'Flashing Lights', artist: 'Ye', duration: 237, audio_url: '/media/flashing.mp3' },
     ]
     const mockAlbums = [
       { id: 'alb-grad', title: 'Graduation', year: 2007 },

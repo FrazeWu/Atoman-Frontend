@@ -54,7 +54,7 @@
             <MButton
               size="sm"
               variant="primary"
-              :disabled="songs.length === 0"
+              :disabled="!songs.some(canPlayMusicSong)"
               data-testid="play-all-btn"
               @click="handlePlayAll"
             >
@@ -72,11 +72,14 @@
         </div>
 
         <div v-if="songs.length > 0" class="mobile-album-detail__list">
-          <div
+          <button
             v-for="(song, index) in songs"
             :key="song.id"
+            type="button"
             class="mobile-album-detail__song-item"
             data-testid="album-song-item"
+            :disabled="!canPlayMusicSong(song)"
+            :aria-label="canPlayMusicSong(song) ? '播放' + song.title : song.title + '，暂无可播放音源'"
             @click="playSong(song)"
           >
             <span class="mobile-album-detail__song-index">
@@ -97,10 +100,11 @@
               </span>
             </div>
 
-            <span v-if="formatDuration(song.duration)" class="mobile-album-detail__song-dur">
+            <span v-if="!canPlayMusicSong(song)" class="mobile-music-no-audio">暂无音源</span>
+            <span v-else-if="formatDuration(song.duration)" class="mobile-album-detail__song-dur">
               {{ formatDuration(song.duration) }}
             </span>
-          </div>
+          </button>
         </div>
 
         <!-- Empty State -->
@@ -110,6 +114,11 @@
         </div>
       </section>
     </main>
+
+    <div v-else-if="loadError" class="mobile-album-detail__empty" role="alert" data-testid="album-load-error">
+      <p class="mobile-album-detail__empty-text">{{ loadError }}</p>
+      <MButton size="sm" variant="secondary" @click="loadAlbumData(true)">重新加载</MButton>
+    </div>
 
     <!-- Not Found -->
     <div v-else class="mobile-album-detail__empty" data-testid="album-not-found">
@@ -123,9 +132,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getMusicAlbum, listMusicSongs } from '@/api/musicV1'
+import { getMusicAlbum } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
+import { musicAudioFromApi, canPlayMusicSong, firstPlayableMusicSong } from '@mobile/mobileMusicPlayback'
 import MButton from '@mobile/components/ui/MButton.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 
@@ -153,6 +163,7 @@ const router = useRouter()
 const player = useAudioPlayerStore()
 
 const loading = ref(false)
+const loadError = ref('')
 const album = ref<AlbumDetailData | null>(props.initialAlbum || null)
 const songs = ref<Song[]>(props.initialSongs || [])
 
@@ -199,7 +210,7 @@ function toPlayerSong(item: any, albumContext?: { cover_url?: string; artist?: s
     duration: typeof item.duration === 'number' && item.duration > 0
       ? item.duration
       : (item.duration_sec ?? item.duration_seconds ?? item.durationSeconds ?? 0),
-    audio_url: item.audio_url || item.preview_url || '/audio/1.mp3',
+    ...musicAudioFromApi(item),
     cover_url: extractCover(item, fallbackCover),
   }
 }
@@ -211,50 +222,34 @@ function formatDuration(seconds?: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-async function loadAlbumData() {
+async function loadAlbumData(force = false) {
   if (props.initialAlbum) return
   const id = String(route.params.albumId || '')
-  if (!id) return
-
+  if (!id) { loadError.value = '专辑标识缺失。'; return }
   loading.value = true
+  loadError.value = ''
+  album.value = null
+  songs.value = []
   try {
-    const res = await getMusicAlbum(id)
-    const data = res as any
-    if (data?.id) {
-      const albumArtist = extractArtist(data, '')
-      album.value = {
-        id: data.id,
-        title: data.title || '专辑',
-        artist: albumArtist,
-        year: data.year || data.release_year || '',
-        cover_url: data.cover_url || '',
-      }
-      if (data.songs && Array.isArray(data.songs)) {
-        songs.value = data.songs.map((s: any) => toPlayerSong(s, {
+    const data = await getMusicAlbum(id, { force })
+    if (!data?.id) { loadError.value = '未找到专辑信息。'; return }
+    const albumArtist = extractArtist(data, '')
+    album.value = {
+      id: data.id,
+      title: data.title || '专辑',
+      artist: albumArtist,
+      year: data.year || '',
+      cover_url: data.cover_url || '',
+    }
+    songs.value = Array.isArray(data.songs)
+      ? data.songs.map((song) => toPlayerSong(song, {
           cover_url: album.value?.cover_url,
           artist: albumArtist,
           title: album.value?.title,
         }))
-      } else {
-        songs.value = []
-      }
-    } else {
-      album.value = { id, title: '专辑', artist: 'Ye', year: 2026 }
-      try {
-        const songsRes = await listMusicSongs({ page: 1, page_size: 15 })
-        if (songsRes?.data?.length) {
-          songs.value = songsRes.data.map((s) => toPlayerSong(s))
-        }
-      } catch {}
-    }
+      : []
   } catch {
-    album.value = { id, title: '精选专辑', artist: 'Ye', year: 2026 }
-    try {
-      const songsRes = await listMusicSongs({ page: 1, page_size: 15 })
-      if (songsRes?.data?.length) {
-        songs.value = songsRes.data.map((s) => toPlayerSong(s))
-      }
-    } catch {}
+    loadError.value = '专辑加载失败，请检查网络后重试。'
   } finally {
     loading.value = false
   }
@@ -269,12 +264,14 @@ function handleBack() {
 }
 
 function playSong(song: Song) {
+  if (!canPlayMusicSong(song)) return
   player.playSong(song)
 }
 
 function handlePlayAll() {
-  if (songs.value.length === 0) return
-  player.playSong(songs.value[0])
+  const first = firstPlayableMusicSong(songs.value)
+  if (!first) return
+  player.playSong(first)
 }
 
 onMounted(() => {

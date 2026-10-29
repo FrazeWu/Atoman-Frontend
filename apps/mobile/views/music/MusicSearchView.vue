@@ -59,7 +59,8 @@
               :key="song.id"
               type="button"
               class="mobile-music-search__song-item"
-              :aria-label="'播放' + song.title + '，' + song.artist"
+              :disabled="!canPlayMusicSong(song)"
+              :aria-label="canPlayMusicSong(song) ? '播放' + song.title + '，' + song.artist : song.title + '，暂无可播放音源'"
               data-testid="rec-song-item"
               @click="playSong(song)"
             >
@@ -75,7 +76,8 @@
                   {{ song.artist }} · {{ song.album || '单曲' }}
                 </span>
               </div>
-              <span v-if="formatDuration(song.duration)" class="mobile-music-search__song-dur">
+              <span v-if="!canPlayMusicSong(song)" class="mobile-music-no-audio">暂无音源</span>
+              <span v-else-if="formatDuration(song.duration)" class="mobile-music-search__song-dur">
                 {{ formatDuration(song.duration) }}
               </span>
             </button>
@@ -176,7 +178,8 @@
               :key="song.id"
               type="button"
               class="mobile-music-search__song-item"
-              :aria-label="'播放' + song.title + '，' + song.artist"
+              :disabled="!canPlayMusicSong(song)"
+              :aria-label="canPlayMusicSong(song) ? '播放' + song.title + '，' + song.artist : song.title + '，暂无可播放音源'"
               data-testid="search-song-item"
               @click="playSong(song)"
             >
@@ -192,7 +195,8 @@
                   {{ song.artist }} · {{ song.album || '单曲' }}
                 </span>
               </div>
-              <span v-if="formatDuration(song.duration)" class="mobile-music-search__song-dur">
+              <span v-if="!canPlayMusicSong(song)" class="mobile-music-no-audio">暂无音源</span>
+              <span v-else-if="formatDuration(song.duration)" class="mobile-music-search__song-dur">
                 {{ formatDuration(song.duration) }}
               </span>
             </button>
@@ -315,6 +319,7 @@ import {
 } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
+import { musicAudioFromApi, canPlayMusicSong } from '@mobile/mobileMusicPlayback'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MInput from '@mobile/components/ui/MInput.vue'
 
@@ -493,7 +498,7 @@ async function executeSearch(query: string) {
         artist: extractArtist(item),
         album: typeof item.album === 'string' ? item.album : item.album?.title || '',
         duration: item.duration_sec ?? item.duration_seconds ?? item.duration ?? 0,
-        audio_url: item.audio_url || '',
+        ...musicAudioFromApi(item),
         cover_url: item.cover_url || item.album?.cover_url || '',
       }))
     } else {
@@ -563,7 +568,7 @@ async function loadRecommended() {
         artist: extractArtist(item),
         album: typeof item.album === 'string' ? item.album : item.album?.title || '',
         duration: item.duration_sec ?? item.duration_seconds ?? item.duration ?? 0,
-        audio_url: item.audio_url || '',
+        ...musicAudioFromApi(item),
         cover_url: item.cover_url || item.album?.cover_url || '',
       }))
     }
@@ -601,13 +606,14 @@ function formatDuration(seconds?: number): string {
 }
 
 function playSong(song: SearchSongItem) {
+  if (!canPlayMusicSong(song)) return
   const playerSong: Song = {
     id: song.id,
     title: song.title,
     artist: song.artist,
     album: song.album || '',
     duration: song.duration || 0,
-    audio_url: song.audio_url || '/audio/1.mp3',
+    ...musicAudioFromApi(song),
     cover_url: song.cover_url || '',
   }
   player.playSong(playerSong)

@@ -243,4 +243,28 @@ describe('MobilePlayerView Gestures (Pull-to-Dismiss & Swipe-to-Skip)', () => {
     wrapper.unmount()
   })
 
+  it('virtualizes a large queue and preserves original indices while scrolling', async () => {
+    const wrapper = createWrapper()
+    const player = usePlayerStore()
+    player.queue = Array.from({ length: 600 }, (_, index) => ({
+      id: `queue-${index}`,
+      title: `Queue ${index}`,
+      artist: 'Test',
+      duration: 100,
+    })) as any
+    player.showQueue = true
+    await wrapper.vm.$nextTick()
+    expect(wrapper.findAll('.mobile-player-view__queue-item')).toHaveLength(24)
+    const scroll = wrapper.find('.mobile-player-view__queue-wrap')
+    Object.defineProperty(scroll.element, 'scrollTop', { configurable: true, writable: true, value: 64 * 300 })
+    await scroll.trigger('scroll')
+    expect(wrapper.findAll('.mobile-player-view__queue-item').length).toBeLessThanOrEqual(24)
+    expect(wrapper.text()).toContain('Queue 300')
+    const moveSpy = vi.spyOn(player, 'moveQueueItem').mockImplementation(() => {})
+    const button = wrapper.find('[aria-label="下移 Queue 300"]')
+    await button.trigger('click')
+    expect(moveSpy).toHaveBeenCalledWith(300, 301)
+    wrapper.unmount()
+  })
+
 })

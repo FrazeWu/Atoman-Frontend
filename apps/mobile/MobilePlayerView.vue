@@ -89,13 +89,16 @@
         </div>
 
         <!-- 3. Queue View -->
-        <div v-else class="mobile-player-view__queue-wrap">
+        <div v-else class="mobile-player-view__queue-wrap"
+          ref="queueScrollRef"
+          @scroll.passive="onQueueScroll">
           <div v-if="player.activeQueue.length" class="mobile-player-view__queue-list">
             <p v-if="player.isShuffled" class="mobile-player-view__queue-hint" role="status">
               当前显示随机播放顺序；关闭随机模式后可调整队列顺序。
             </p>
+            <div v-if="virtualQueueEnabled" class="mobile-player-view__queue-spacer" :style="{ height: `${virtualQueueStart * QUEUE_ROW_HEIGHT}px` }" aria-hidden="true" />
             <article
-              v-for="(queueSong, index) in player.activeQueue"
+              v-for="({ song: queueSong, index }) in displayedQueue"
               :key="player.playbackItemKey(queueSong)"
               class="mobile-player-view__queue-item"
               :class="{ 'is-current': player.currentSong && player.playbackItemKey(player.currentSong) === player.playbackItemKey(queueSong) }"
@@ -151,6 +154,7 @@
                 </button>
               </div>
             </article>
+            <div v-if="virtualQueueEnabled" class="mobile-player-view__queue-spacer" :style="{ height: `${(player.activeQueue.length - virtualQueueEnd) * QUEUE_ROW_HEIGHT}px` }" aria-hidden="true" />
             <button type="button" class="mobile-player-view__clear-queue" @click="player.clearQueue">清空后续歌曲</button>
           </div>
           <p v-else class="mobile-player-view__queue-empty">播放队列为空</p>
@@ -423,9 +427,34 @@ const isPodcast = computed(() => player.currentSong?.source_type === 'podcast_ep
 const isPodcastEpisode = computed(() => player.currentSong?.source_type === 'podcast_episode')
 const isFavorite = computed(() => Boolean(player.currentSong && favoriteSongIds.value.has(String(player.currentSong.id))))
 
+const QUEUE_ROW_HEIGHT = 64
+const queueScrollRef = ref<HTMLElement | null>(null)
+const queueScrollTop = ref(0)
+const virtualQueueEnabled = computed(() => player.activeQueue.length > 100)
+const virtualQueueStart = computed(() => virtualQueueEnabled.value ? Math.max(0, Math.floor(queueScrollTop.value / QUEUE_ROW_HEIGHT) - 5) : 0)
+const virtualQueueEnd = computed(() => virtualQueueEnabled.value ? Math.min(player.activeQueue.length, virtualQueueStart.value + 24) : player.activeQueue.length)
+const displayedQueue = computed(() => player.activeQueue.slice(virtualQueueStart.value, virtualQueueEnd.value).map((song, offset) => ({ song, index: virtualQueueStart.value + offset })))
+function onQueueScroll(event: Event) {
+  queueScrollTop.value = (event.target as HTMLElement).scrollTop
+}
 const showQueue = computed({
   get: () => player.showQueue,
   set: (value: boolean) => { player.showQueue = value },
+})
+
+watch([showQueue, () => player.currentSong?.id, () => player.isShuffled], async ([visible]) => {
+  if (!visible || !virtualQueueEnabled.value) return
+  await nextTick()
+  const el = queueScrollRef.value
+  if (!el) return
+  const currentKey = player.currentSong && player.playbackItemKey(player.currentSong)
+  const index = player.activeQueue.findIndex(song => player.playbackItemKey(song) === currentKey)
+  if (index < 0) return
+  const target = index * QUEUE_ROW_HEIGHT
+  if (target < el.scrollTop || target + QUEUE_ROW_HEIGHT > el.scrollTop + el.clientHeight) {
+    el.scrollTop = Math.max(0, target - Math.floor(el.clientHeight / 2))
+    queueScrollTop.value = el.scrollTop
+  }
 })
 
 const effectiveDuration = computed(() => {
@@ -1044,8 +1073,9 @@ onUnmounted(() => {
 }
 
 .mobile-player-view__queue-list {
-  display: grid;
-  gap: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .mobile-player-view__queue-hint {
@@ -1055,7 +1085,12 @@ onUnmounted(() => {
   line-height: 1.5;
 }
 
+.mobile-player-view__queue-spacer { flex: none; }
 .mobile-player-view__queue-item {
+  height: 64px;
+  min-height: 64px;
+  box-sizing: border-box;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;

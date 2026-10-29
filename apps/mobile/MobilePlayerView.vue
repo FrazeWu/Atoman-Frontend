@@ -39,11 +39,10 @@
       <!-- Middle Stage: Cover Art, Lyrics, or Queue -->
       <section class="mobile-player-view__stage" :aria-label="showQueue ? '播放队列' : activeTab === 'lyrics' ? '歌词展示' : '专辑封面'">
         <!-- 1. Cover Art View -->
-        <div
+        <button
           v-if="!showQueue && activeTab === 'cover'"
+          type="button"
           class="mobile-player-view__cover-wrap"
-          role="button"
-          tabindex="0"
           aria-label="点击切换至歌词"
           title="点击切换至歌词"
           @click="toggleLyrics"
@@ -58,7 +57,7 @@
             <MIcon name="note" size="lg" />
           </div>
           <span class="mobile-player-view__cover-hint">点击查看歌词</span>
-        </div>
+        </button>
 
         <!-- 2. Inline Lyrics View -->
         <div
@@ -67,15 +66,18 @@
           class="mobile-player-view__lyrics-wrap"
         >
           <div v-if="parsedLyrics.length" class="mobile-player-view__lyrics-list">
-            <p
+            <button
               v-for="(line, index) in parsedLyrics"
               :key="index"
+              type="button"
               class="mobile-player-view__lyric-line"
               :class="{ 'is-active': index === activeLyricIndex }"
+              :disabled="line.time < 0"
+              :aria-label="line.time >= 0 ? `跳转到 ${line.text}` : line.text"
               @click="onLyricLineClick(line)"
             >
               {{ line.text }}
-            </p>
+            </button>
           </div>
           <div v-else class="mobile-player-view__lyrics-empty">
             <MIcon name="file-text" size="md" />
@@ -917,6 +919,10 @@ onUnmounted(() => {
 }
 
 .mobile-player-view__cover-wrap {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
   width: min(60vw, 240px);
   aspect-ratio: 1;
   position: relative;
@@ -978,6 +984,11 @@ onUnmounted(() => {
 }
 
 .mobile-player-view__lyric-line {
+  border: 0;
+  background: transparent;
+  padding: 0.35rem 0.25rem;
+  width: 100%;
+  font-family: inherit;
   margin: 0;
   color: var(--a-color-muted);
   font-size: 0.95rem;
@@ -985,6 +996,11 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
+.mobile-player-view__lyric-line:disabled { cursor: default; }
+.mobile-player-view__cover-wrap:focus-visible,
+.mobile-player-view__lyric-line:focus-visible,
+.mobile-player-view__queue-actions button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 
 .mobile-player-view__lyric-line.is-active {
   color: var(--a-color-fg);
@@ -1110,12 +1126,14 @@ onUnmounted(() => {
 
 .mobile-player-view__queue-actions {
   display: flex;
-  gap: 0.25rem;
+  flex-shrink: 0;
+  gap: 0;
 }
 
 .mobile-player-view__queue-actions button {
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;

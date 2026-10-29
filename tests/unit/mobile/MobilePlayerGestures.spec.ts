@@ -222,4 +222,25 @@ describe('MobilePlayerView Gestures (Pull-to-Dismiss & Swipe-to-Skip)', () => {
 
     expect(prevSpy).toHaveBeenCalled()
   })
+  it('exposes native keyboard-operable cover and timed lyric controls', async () => {
+    const wrapper = createWrapper()
+    const player = usePlayerStore()
+    player.currentSong = {
+      ...player.currentSong!,
+      lyrics: '[00:05.00]First line\nUntimed note\n[00:15.00]Second line',
+    }
+    await wrapper.vm.$nextTick()
+    const cover = wrapper.find('.mobile-player-view__cover-wrap')
+    expect(cover.element.tagName).toBe('BUTTON')
+    await cover.trigger('click')
+    const lines = wrapper.findAll('.mobile-player-view__lyric-line')
+    expect(lines).toHaveLength(3)
+    expect(lines[0]!.element.tagName).toBe('BUTTON')
+    expect(lines[1]!.attributes('disabled')).toBeDefined()
+    const seekSpy = vi.spyOn(player, 'seek').mockImplementation(() => {})
+    await lines[2]!.trigger('click')
+    expect(seekSpy).toHaveBeenCalledWith(15)
+    wrapper.unmount()
+  })
+
 })

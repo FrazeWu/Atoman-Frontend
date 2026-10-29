@@ -1,7 +1,7 @@
 <template>
   <section class="unified-search a-content-frame" aria-labelledby="search-title">
     <div class="search-header-area">
-      <h1 id="search-title" class="search-title">全站搜索</h1>
+      <h1 id="search-title" class="search-title">{{ selectedModuleLabel || "全站搜索" }}</h1>
       <!-- Main Search Form using PUnifiedSearchBar -->
       <form class="search-form" role="search" @submit.prevent="update({ q: draft.trim() })">
         <PUnifiedSearchBar
@@ -35,7 +35,7 @@
     </nav>
 
     <!-- Modules tabs -->
-    <nav class="search-tabs search-tabs--modules" aria-label="搜索模块">
+    <nav ref="moduleTabsRef" class="search-tabs search-tabs--modules" aria-label="搜索模块">
       <button
         type="button"
         class="search-tab-pill"
@@ -221,7 +221,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Loader2 } from 'lucide-vue-next'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -235,6 +235,23 @@ const route = useRoute()
 const router = useRouter()
 const state = computed(() => readSearchQuery(route.query))
 const search = useUnifiedSearch(state)
+const moduleTabsRef = ref<HTMLElement | null>(null)
+const selectedModuleLabel = computed(() => {
+  const label = search.capabilities.value?.modules?.find(item => item.module === state.value.module)?.label
+  return label ? label + '搜索' : ''
+})
+watch([() => state.value.module, () => search.capabilities.value?.modules], async () => {
+  await nextTick()
+  const container = moduleTabsRef.value
+  const selected = container?.querySelector<HTMLElement>('.search-tab-pill.is-active')
+  if (!container || !selected) return
+  const left = selected.offsetLeft - container.offsetLeft
+  const right = left + selected.offsetWidth
+  if (left < container.scrollLeft || right > container.scrollLeft + container.clientWidth) {
+    container.scrollLeft = Math.max(0, left - (container.clientWidth - selected.offsetWidth) / 2)
+  }
+}, { immediate: true, flush: 'post' })
+
 const draft = ref('')
 const sortDraft = ref('')
 const filterDraft = ref<Record<string, string[]>>({})

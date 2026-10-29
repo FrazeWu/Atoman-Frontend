@@ -11,6 +11,15 @@
       <router-link v-else to="/music/search">前往音乐搜索</router-link>
     </div>
 
+    <div v-if="loading && !hasContent" class="mobile-music-discover__loading" role="status" aria-label="正在加载音乐">
+      <div class="mobile-music-discover__loading-hero" />
+      <div class="mobile-music-discover__loading-heading" />
+      <div class="mobile-music-discover__loading-albums">
+        <div v-for="n in 3" :key="n" class="mobile-music-discover__loading-album" />
+      </div>
+      <span class="sr-only">正在加载专辑、艺人和歌单</span>
+    </div>
+
     <!-- Featured Recommendation Card -->
     <section
       v-if="featuredRecommendation"
@@ -323,58 +332,43 @@ function formatDuration(seconds?: number): string {
 async function loadData() {
   loading.value = true
   loadError.value = false
-  try {
-    const [homeRes, playlistsRes, albumsRes, songsRes, artistsRes] = await Promise.allSettled([
-      getMusicHome(),
-      listPublicMusicPlaylists({ page: 1, page_size: 4 }),
-      listMusicAlbums({ page: 1, page_size: 10 }),
-      listMusicSongs({ page: 1, page_size: 10 }),
-      listMusicArtists({ page: 1, page_size: 10 }),
-    ])
-
-    loadError.value = [homeRes, playlistsRes, albumsRes, songsRes, artistsRes]
-      .every(result => result.status === 'rejected')
-    if (playlistsRes.status === 'fulfilled' && playlistsRes.value?.data?.length) {
-      playlists.value = playlistsRes.value.data
-    } else {
-      playlists.value = []
-    }
-
-    if (albumsRes.status === 'fulfilled' && albumsRes.value?.data?.length) {
-      albums.value = albumsRes.value.data.map(toAlbumItem)
-    } else {
-      albums.value = []
-    }
-
-    if (artistsRes.status === 'fulfilled' && artistsRes.value?.data?.length) {
-      artists.value = artistsRes.value.data.map(toArtistItem)
-    } else {
-      artists.value = []
-    }
-
-    if (homeRes.status === 'fulfilled' && homeRes.value) {
-      const items = homeRes.value.recently_played || []
-      if (items.length > 0) {
-        recentTracks.value = items.map((item) => toPlayerSong(item.song ? item.song : item))
-      } else if (songsRes.status === 'fulfilled' && songsRes.value?.data?.length) {
-        recentTracks.value = songsRes.value.data.map(toPlayerSong)
-      } else {
-        recentTracks.value = []
+  playlists.value = []
+  albums.value = []
+  artists.value = []
+  recentTracks.value = []
+  let failures = 0
+  let completed = 0
+  const settle = async <T>(promise: Promise<T>, update: (value: T) => void) => {
+    try {
+      update(await promise)
+    } catch {
+      failures += 1
+    } finally {
+      completed += 1
+      if (completed === 5) {
+        loadError.value = failures === 5
+        loading.value = false
       }
-    } else if (songsRes.status === 'fulfilled' && songsRes.value?.data?.length) {
-      recentTracks.value = songsRes.value.data.map(toPlayerSong)
-    } else {
-      recentTracks.value = []
     }
-  } catch {
-    playlists.value = []
-    albums.value = []
-    artists.value = []
-    recentTracks.value = []
-    loadError.value = true
-  } finally {
-    loading.value = false
   }
+  await Promise.all([
+    settle(getMusicHome(), (data) => {
+      const tracks = data?.recently_played || []
+      if (tracks.length > 0) recentTracks.value = tracks.map(item => toPlayerSong(item.song ? item.song : item))
+    }),
+    settle(listPublicMusicPlaylists({ page: 1, page_size: 4 }), data => {
+      playlists.value = data?.data || []
+    }),
+    settle(listMusicAlbums({ page: 1, page_size: 10 }), data => {
+      albums.value = (data?.data || []).map(toAlbumItem)
+    }),
+    settle(listMusicSongs({ page: 1, page_size: 10 }), data => {
+      if (!recentTracks.value.length) recentTracks.value = (data?.data || []).map(toPlayerSong)
+    }),
+    settle(listMusicArtists({ page: 1, page_size: 10 }), data => {
+      artists.value = (data?.data || []).map(toArtistItem)
+    }),
+  ])
 }
 
 function openPlaylist(id: string) {
@@ -891,5 +885,22 @@ onMounted(() => {
   border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-bg, #fff);
   color: var(--a-color-fg, #0f172a);
+}
+</style>
+
+<style scoped>
+.mobile-music-discover__loading { padding: 8px 16px 18px; display: grid; gap: 16px; }
+.mobile-music-discover__loading-hero { height: 170px; border-radius: 12px; }
+.mobile-music-discover__loading-heading { width: 36%; height: 20px; border-radius: 5px; }
+.mobile-music-discover__loading-albums { display: flex; gap: 12px; overflow: hidden; }
+.mobile-music-discover__loading-album { flex: 0 0 106px; height: 130px; border-radius: 9px; }
+.mobile-music-discover__loading-hero,
+.mobile-music-discover__loading-heading,
+.mobile-music-discover__loading-album { background: #f0f2f5; animation: mobile-music-shimmer 1.5s ease-in-out infinite alternate; }
+@keyframes mobile-music-shimmer { to { background: #e4e8ee; } }
+@media (prefers-reduced-motion: reduce) {
+  .mobile-music-discover__loading-hero,
+  .mobile-music-discover__loading-heading,
+  .mobile-music-discover__loading-album { animation: none; }
 }
 </style>

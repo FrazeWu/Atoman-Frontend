@@ -129,7 +129,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import MAvatar from '@mobile/components/ui/MAvatar.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import { useFeedStore } from '@/stores/feed'
@@ -171,10 +171,19 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
+const route = useRoute()
 const api = useApi()
 const feedStore = useFeedStore()
 
-const activeTab = ref<'recommend' | 'subscriptions'>(props.initialTab)
+const activeTab = ref<'recommend' | 'subscriptions'>(
+  route.query.tab === 'subscriptions' ? 'subscriptions' : props.initialTab
+)
+watch(() => route.query.tab, value => {
+  const next = value === 'subscriptions' ? 'subscriptions' : props.initialTab
+  if (activeTab.value === next) return
+  activeTab.value = next
+  if (!props.initialArticles) void fetchArticles()
+})
 const articlesList = ref<FeedArticleItem[]>(props.initialArticles ? [...props.initialArticles] : [])
 const loading = ref(props.initialArticles === undefined)
 const loadError = ref('')
@@ -192,11 +201,14 @@ watch(() => props.initialArticles, (next) => {
 })
 
 function selectTab(tab: 'recommend' | 'subscriptions') {
+  if (activeTab.value === tab) return
   activeTab.value = tab
   emit('update:tab', tab)
-  if (!props.initialArticles) {
-    void fetchArticles()
-  }
+  void router.replace({
+    path: route.path,
+    query: { ...route.query, tab: tab === 'subscriptions' ? 'subscriptions' : undefined },
+  })
+  if (!props.initialArticles) void fetchArticles()
 }
 
 function articleLink(article: FeedArticleItem): string {

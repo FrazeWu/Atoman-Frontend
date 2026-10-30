@@ -66,6 +66,21 @@
               <MIcon name="player-play" size="xs" />
               <span>{{ queueLoading ? '正在加载完整歌单…' : '播放全部' }}</span>
             </MButton>
+            <MButton v-if="canEditPlaylist" size="sm" variant="secondary" data-testid="playlist-add-songs-btn" @click="showAddSongs = !showAddSongs">
+              <MIcon name="plus" size="xs" /><span>添加歌曲</span>
+            </MButton>
+          </div>
+          <div v-if="showAddSongs && canEditPlaylist" class="mobile-playlist-detail__add-panel" data-testid="playlist-add-panel">
+            <label for="playlist-song-search">搜索要添加的歌曲</label>
+            <input id="playlist-song-search" v-model="addQuery" type="search" placeholder="输入歌曲名或歌手" @keyup.enter="searchAddSongs" />
+            <MButton size="sm" variant="secondary" :disabled="addSearching || !addQuery.trim()" @click="searchAddSongs">搜索</MButton>
+            <p v-if="addMessage" role="status">{{ addMessage }}</p>
+            <div v-for="candidate in addResults" :key="candidate.id" class="mobile-playlist-detail__add-result">
+              <span>{{ candidate.title }} · {{ candidate.artist }}</span>
+              <button type="button" :disabled="addSaving === candidate.id || songs.some(song => String(song.id) === String(candidate.id))" :aria-label="`添加 ${candidate.title}`" @click="addSong(candidate.id)">
+                {{ songs.some(song => String(song.id) === String(candidate.id)) ? '已添加' : '添加' }}
+              </button>
+            </div>
           </div>
           <p v-if="queueLoading" class="mobile-playlist-detail__queue-status" role="status" data-testid="playlist-queue-loading">正在读取完整播放队列…</p>
           <p v-if="queueError" class="mobile-playlist-detail__queue-error" role="alert" data-testid="playlist-queue-error">{{ queueError }}</p>
@@ -159,8 +174,9 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onDeactivated, onMounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getMusicPlaylist, listMusicPlaylistSongs } from '@/api/musicV1'
+import { getMusicPlaylist, listMusicPlaylistSongs, searchMusicSongs, addMusicPlaylistSong } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
+import { useAuthStore } from '@/stores/auth'
 import type { Song } from '@/types'
 import { musicAudioFromApi, musicPlaybackDetailsFromApi, canPlayMusicSong, fetchFullMobilePlaylist, startMobileMusicQueue } from '@mobile/mobileMusicPlayback'
 import MButton from '@mobile/components/ui/MButton.vue'
@@ -172,6 +188,8 @@ export interface PlaylistDetailData {
   description?: string
   cover_url?: string
   creator?: { display_name?: string }
+  user_id?: string
+  kind?: string
   song_count?: number
   songs?: any[]
 }
@@ -190,6 +208,35 @@ const props = withDefaults(
 const route = useRoute()
 const router = useRouter()
 const player = useAudioPlayerStore()
+const authStore = useAuthStore()
+const showAddSongs = ref(false)
+const addQuery = ref('')
+const addResults = ref<Awaited<ReturnType<typeof searchMusicSongs>>>([])
+const addSearching = ref(false)
+const addSaving = ref('')
+const addMessage = ref('')
+const canEditPlaylist = computed(() => authStore.isAuthenticated && Boolean(playlist.value?.user_id) && String(playlist.value?.user_id) === String(authStore.user?.uuid))
+
+async function searchAddSongs() {
+  if (!addQuery.value.trim() || addSearching.value) return
+  addSearching.value = true
+  addMessage.value = ''
+  try { addResults.value = (await searchMusicSongs(addQuery.value.trim())).slice(0, 30) }
+  catch { addMessage.value = '搜索失败，请重试' }
+  finally { addSearching.value = false }
+}
+async function addSong(id: string) {
+  if (!playlist.value || !canEditPlaylist.value || addSaving.value) return
+  addSaving.value = id
+  addMessage.value = ''
+  try {
+    await addMusicPlaylistSong(playlist.value.id, id)
+    fullQueueCache = null
+    await loadPlaylistData()
+    addMessage.value = '已添加到歌单'
+  } catch { addMessage.value = '添加失败，请重试' }
+  finally { addSaving.value = '' }
+}
 
 const loading = ref(false)
 const loadError = ref('')
@@ -291,6 +338,8 @@ async function loadPlaylistData() {
       description: data.description || '',
       cover_url: data.cover_url || '',
       song_count: data.song_count,
+      user_id: data.user_id,
+      kind: data.kind,
       creator: data.owner_username ? { display_name: data.owner_username } : undefined,
     }
     songs.value = Array.isArray(data.songs)
@@ -728,4 +777,12 @@ onBeforeUnmount(() => {
   color: var(--a-color-text-secondary, #666666);
   margin: 0 0 16px 0;
 }
+</style>
+
+<style scoped>
+.mobile-playlist-detail__add-panel{margin:12px 16px;padding:12px;border:1px solid var(--a-color-border-soft);border-radius:8px;display:flex;flex-direction:column;gap:10px}
+.mobile-playlist-detail__add-panel input{width:100%;min-height:44px;padding:8px;border:1px solid var(--a-color-border-soft);border-radius:6px;background:var(--a-color-surface);color:inherit}
+.mobile-playlist-detail__add-result{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px}
+.mobile-playlist-detail__add-result span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mobile-playlist-detail__add-result button{min-height:44px;padding:0 12px;border:1px solid var(--a-color-border-soft);border-radius:6px}
 </style>

@@ -310,7 +310,7 @@
             @click="toggleFavorite"
           >
             <MIcon name="heart" size="sm" />
-            <span>收藏</span>
+            <span>{{ isFavorite ? '已加入最爱' : '加入最爱' }}</span>
           </button>
           <button
             v-if="isPodcastEpisode"
@@ -333,6 +333,9 @@
           >
             <MIcon name="clock" size="sm" />
             <span>稍后听</span>
+          </button>
+          <button v-if="!isPodcast" type="button" class="mobile-player-view__action" aria-label="添加到歌单" @click="openPlaylistPicker">
+            <MIcon name="plus" size="sm" /><span>加歌单</span>
           </button>
           <button
             v-if="!isPodcast"
@@ -369,6 +372,12 @@
             <span>队列</span>
           </button>
         </div>
+        <div v-if="showPlaylistPicker && !isPodcast" class="mobile-player-view__playlist-picker" role="dialog" aria-label="选择歌单">
+          <div class="mobile-player-view__playlist-picker-heading"><strong>添加到歌单</strong><button type="button" aria-label="关闭歌单选择" @click="showPlaylistPicker = false">关闭</button></div>
+          <p v-if="playlistPickerError" role="alert">{{ playlistPickerError }}</p>
+          <p v-if="playlistPickerLoading" role="status">正在读取歌单…</p>
+          <button v-for="item in playlists" :key="item.id" type="button" class="mobile-player-view__playlist-option" :disabled="playlistPickerLoading" @click="addCurrentToPlaylist(item.id)">{{ item.name }}</button>
+        </div>
       </footer>
     </template>
 
@@ -403,7 +412,29 @@ const player = usePlayerStore()
 const router = useRouter()
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
-const { favoriteSongIds, loadFavoriteSongs, toggleFavoriteSong } = useMusicFavoritePlaylist()
+const { favoriteSongIds, playlists, loadPlaylists, addSongToPlaylist, loadFavoriteSongs, toggleFavoriteSong } = useMusicFavoritePlaylist()
+const showPlaylistPicker = ref(false)
+const playlistPickerLoading = ref(false)
+const playlistPickerError = ref('')
+async function openPlaylistPicker() {
+  if (!requireLogin()) return
+  showPlaylistPicker.value = true
+  playlistPickerLoading.value = true
+  playlistPickerError.value = ''
+  try { await loadPlaylists() }
+  catch { playlistPickerError.value = '歌单读取失败，请重试' }
+  finally { playlistPickerLoading.value = false }
+}
+async function addCurrentToPlaylist(playlistId: string) {
+  if (!player.currentSong || playlistPickerLoading.value) return
+  playlistPickerLoading.value = true
+  try {
+    await addSongToPlaylist(playlistId, String(player.currentSong.id))
+    showPlaylistPicker.value = false
+    showToast('已添加到歌单')
+  } catch { playlistPickerError.value = '添加失败，请重试' }
+  finally { playlistPickerLoading.value = false }
+}
 const feedback = ref('')
 
 const activeTab = ref<'cover' | 'lyrics'>('cover')
@@ -1485,4 +1516,11 @@ onUnmounted(() => {
   border-radius: 6px;
   font-size: 0.875rem;
 }
+</style>
+
+<style scoped>
+.mobile-player-view__playlist-picker{position:absolute;left:12px;right:12px;bottom:100%;z-index:30;max-height:40vh;overflow:auto;background:var(--a-color-surface);border:1px solid var(--a-color-border-soft);border-radius:12px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.mobile-player-view__playlist-picker-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.mobile-player-view__playlist-picker button{min-height:44px;border:0;background:transparent;color:inherit}
+.mobile-player-view__playlist-option{display:block;width:100%;text-align:left;border-top:1px solid var(--a-color-border-soft)!important}
 </style>

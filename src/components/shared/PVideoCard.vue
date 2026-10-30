@@ -10,10 +10,13 @@ import type { Video } from '@/types'
 import { resolveMediaImageSrcSet, resolveMediaImageURL } from '@/utils/mediaUrl'
 import { videoAvatarSource, videoThumbnailSource } from '@/utils/videoPresentation'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   video: Video
   to?: string
-}>()
+  priority?: boolean
+}>(), {
+  priority: false,
+})
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -83,7 +86,19 @@ const avatarLetter = () =>
       <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-thumb-link">
         <picture v-if="thumbnailUrl">
           <source media="(max-width: 768px)" :srcset="thumbnailMobileSrcSet || thumbnailUrl" sizes="calc(100vw - 2rem)" />
-          <img :src="thumbnailUrl" :srcset="thumbnailSrcSet || undefined" sizes="(max-width: 768px) calc(100vw - 2rem), 384px" :alt="video.title" class="vc-img" width="640" height="360" loading="lazy" decoding="async" @error="thumbnailFailed = true" />
+          <img
+            :src="thumbnailUrl"
+            :srcset="thumbnailSrcSet || undefined"
+            sizes="(max-width: 768px) calc(100vw - 2rem), 384px"
+            :alt="video.title"
+            class="vc-img"
+            width="640"
+            height="360"
+            :loading="priority ? 'eager' : 'lazy'"
+            :fetchpriority="priority ? 'high' : 'auto'"
+            decoding="async"
+            @error="thumbnailFailed = true"
+          />
         </picture>
         <div v-else class="vc-thumb-placeholder"><Play :size="28" aria-hidden="true" /></div>
 

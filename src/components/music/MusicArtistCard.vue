@@ -11,11 +11,14 @@
         :aria-label="`打开艺人 ${displayName}`"
       >
         <img
-          v-if="imageUrl"
-          :src="imageUrl"
+          v-if="optimizedImageUrl"
+          :src="optimizedImageUrl"
           :alt="displayName"
           class="avatar-image"
           loading="lazy"
+          decoding="async"
+          width="240"
+          height="240"
         />
         <span v-else class="avatar-placeholder-text">{{ artistInitial }}</span>
       </button>
@@ -74,6 +77,7 @@
 import { computed } from 'vue'
 import { Bookmark, BookmarkCheck, Headphones, Users } from 'lucide-vue-next'
 import PMediaCard from '@/components/ui/PMediaCard.vue'
+import { resolveMediaImageURL } from '@/utils/mediaUrl'
 
 export interface MusicArtistCardItem {
   id: string
@@ -108,6 +112,9 @@ defineEmits<{
 
 const imageUrl = computed(() => {
   return props.artist.image_url || ''
+})
+const optimizedImageUrl = computed(() => {
+  return props.artist.image_url ? resolveMediaImageURL(props.artist.image_url, { width: 240 }) : ''
 })
 
 const displayName = computed(() => props.artist.display_name || props.artist.name)

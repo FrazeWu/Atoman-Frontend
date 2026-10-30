@@ -20,9 +20,14 @@
     >
       <img
         v-if="coverUrl"
-        :src="coverUrl"
+        :src="resolveMediaImageURL(coverUrl, { width: 96 })"
         alt=""
         class="player-cover"
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+        width="48"
+        height="48"
       />
       <span v-else class="player-cover-fallback">{{ coverFallback }}</span>
       <svg class="player-mini-progress-ring" :data-progress="miniProgressPercent" viewBox="0 0 100 100" aria-hidden="true">
@@ -57,6 +62,7 @@
 
 <script setup lang="ts">
 import { Play, ChevronLeft } from 'lucide-vue-next'
+import { resolveMediaImageURL } from '@/utils/mediaUrl'
 
 defineProps<{
   coverUrl?: string

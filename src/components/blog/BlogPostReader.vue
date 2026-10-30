@@ -31,7 +31,7 @@ import { useInteractions } from '@/composables/useInteractions'
 import { isAdminRole } from '@/utils/roles'
 import { createContentConsumptionTracker, useContentLifecycle } from '@/composables/useContentLifecycle'
 import type { Post } from '@/types'
-import { resolveMediaURL } from '@/utils/mediaUrl'
+import { resolveMediaImageURL, resolveMediaURL } from '@/utils/mediaUrl'
 
 type Presentation = 'page' | 'sheet'
 
@@ -800,7 +800,14 @@ defineExpose({
         </div>
       </div>
       <div v-if="post.cover_url" class="article-cover">
-        <img :src="resolveMediaURL(post.cover_url)" :alt="post.title" class="post-sheet-cover" />
+        <img
+          :src="resolveMediaImageURL(post.cover_url, { width: 1200 })"
+          :alt="post.title"
+          class="post-sheet-cover"
+          loading="eager"
+          fetchpriority="high"
+          decoding="async"
+        />
       </div>
       <p v-if="post.summary" class="post-sheet-summary article-summary">{{ post.summary }}</p>
       <div v-if="post.tags?.length || post.public_tags?.length || authStore.isAuthenticated" class="post-sheet-detail-toolbar">

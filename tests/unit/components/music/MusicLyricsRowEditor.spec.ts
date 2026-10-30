@@ -359,7 +359,10 @@ describe('MusicLyricsRowEditor', () => {
     )
     expect(cssRule('.lyric-time-controls', desktopCss)).toContain('gap: 8px;')
 
-    expect(cssRule('.lyric-row.is-selected', desktopCss)).toMatch(/box-shadow:\s*inset/)
+    expect(cssRule('.lyric-row.is-selected', desktopCss)).toContain(
+      'border-left: 3px solid var(--a-color-primary);',
+    )
+    expect(cssRule('.lyric-row.is-selected', desktopCss)).toContain('box-shadow: none;')
 
     expect(cssRule('.lyric-grid-line,\n  .lyric-grid-line.is-lrc', mobileCss)).toContain(
       'grid-template-columns: minmax(0, 1fr);',

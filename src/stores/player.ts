@@ -193,7 +193,10 @@ export const usePlayerStore = defineStore("player", () => {
 			: queue.value,
 	);
 
-	watch(isShuffled, () => recomputeShuffledQueue());
+	watch(isShuffled, () => {
+		recomputeShuffledQueue();
+		if (currentSongStartCached) prefetchQueueAudioStarts();
+	});
 	// Lyrics/waveform hydration replaces queue objects without changing their
 	// identity or order; it must not reshuffle the remaining playback sequence.
 	watch(
@@ -616,23 +619,25 @@ export const usePlayerStore = defineStore("player", () => {
 
 	function prefetchQueueAudioStarts() {
 		const current = currentSong.value;
-		if (!current || queue.value.length < 2) return;
+		const effectiveQueue =
+			activeQueue.value.length > 0 ? activeQueue.value : queue.value;
+		if (!current || effectiveQueue.length < 2) return;
 
 		const currentKey = playbackItemKey(current);
-		const queueKey = queue.value
+		const queueKey = effectiveQueue
 			.map(
 				(song) =>
 					`${playbackItemKey(song)}:${resolvePlaybackAudioUrl(song.audio_url)}`,
 			)
 			.join("|");
-		const prefetchKey = `${currentKey}|${queueKey}`;
+		const prefetchKey = `${isShuffled.value ? "shuffled" : "normal"}|${currentKey}|${queueKey}`;
 		if (audioStartPrefetchKey === prefetchKey) return;
 
 		resetAudioStartPrefetch();
 		audioStartPrefetchKey = prefetchKey;
 		const signal = audioPrefetcher.getAbortSignal();
 		const urls = buildPrefetchCandidates(
-			queue.value,
+			effectiveQueue,
 			currentKey,
 			resolvePlaybackAudioUrl,
 			hasPlayableAudio,

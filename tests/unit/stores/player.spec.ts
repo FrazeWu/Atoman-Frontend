@@ -339,6 +339,28 @@ describe("player store", () => {
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
 
+	it("prefetches candidates following shuffled order when isShuffled is enabled", async () => {
+		const fetchMock = vi.fn(
+			() =>
+				Promise.resolve(
+					new Response(new Uint8Array(512 * 1024), { status: 206 }),
+				),
+		);
+		vi.stubGlobal("fetch", fetchMock);
+		const player = usePlayerStore();
+		const s1 = { id: "s1", title: "S1", audio_url: "s1.mp3" } as any;
+		const s2 = { id: "s2", title: "S2", audio_url: "s2.mp3" } as any;
+		const s3 = { id: "s3", title: "S3", audio_url: "s3.mp3" } as any;
+		player.playAlbum([s1, s2, s3]);
+		player.isShuffled = true;
+		await nextTick();
+		audioInstances[0].emit("canplay");
+		await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+		const calledUrls = fetchMock.mock.calls.map(([url]) => url);
+		expect(calledUrls).not.toContain("s1.mp3");
+		expect(calledUrls).toHaveLength(2);
+	});
+
 	it("keeps queued prefetch requests alive when switching within the queue", async () => {
 		const pendingResponses: Array<(response: Response) => void> = [];
 		const fetchMock = vi.fn(

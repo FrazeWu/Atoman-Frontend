@@ -125,6 +125,7 @@
                       channel: { id: item.id, name: item.summary || '创作者' }
                     } as unknown as Video)"
                     :to="item.target_path"
+                    :priority="isPriorityImage(item)"
                   />
                 </div>
               </div>

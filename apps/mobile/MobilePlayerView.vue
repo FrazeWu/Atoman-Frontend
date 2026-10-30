@@ -49,9 +49,12 @@
         >
           <img
             v-if="player.currentSong.cover_url"
-            :src="player.currentSong.cover_url"
+            :src="resolveMediaImageURL(player.currentSong.cover_url, { width: 600 })"
             :alt="`${player.currentSong.title} 封面`"
             class="mobile-player-view__cover"
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
           />
           <div v-else class="mobile-player-view__cover mobile-player-view__cover--fallback">
             <MIcon name="note" size="lg" />
@@ -109,7 +112,15 @@
                 :aria-label="`播放 ${queueSong.title}`"
                 @click="player.playQueuedSong(queueSong)"
               >
-                <img v-if="queueSong.cover_url" :src="queueSong.cover_url" alt="" />
+                <img
+                  v-if="queueSong.cover_url"
+                  :src="resolveMediaImageURL(queueSong.cover_url, { width: 96 })"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  width="40"
+                  height="40"
+                />
                 <span v-else class="mobile-player-view__queue-cover-fallback">{{ queueSong.title.charAt(0) }}</span>
                 <span class="mobile-player-view__queue-copy">
                   <strong>{{ queueSong.title }}</strong>
@@ -404,6 +415,7 @@ import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist
 import { usePodcastPlayerActions } from '@/composables/usePodcastPlayerActions'
 import { useVirtualList } from '@/composables/useVirtualList'
 import { modulePathUrl } from '@/router/siteUrls'
+import { resolveMediaImageURL } from '@/utils/mediaUrl'
 
 const player = usePlayerStore()
 const router = useRouter()

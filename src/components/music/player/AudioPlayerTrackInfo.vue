@@ -13,9 +13,14 @@
     >
       <img
         v-if="currentSong?.cover_url"
-        :src="currentSong.cover_url"
+        :src="resolveMediaImageURL(currentSong.cover_url, { width: 96 })"
         alt=""
         class="player-cover"
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+        width="48"
+        height="48"
       />
       <div v-else class="player-cover-fallback">{{ resolvedCoverFallback }}</div>
       <span class="cover-overlay" aria-hidden="true"><PIcon name="chevron-up" size="lg" /></span>
@@ -114,6 +119,7 @@
 import { computed } from 'vue'
 import PIcon from '@/components/ui/PIcon.vue'
 import AudioPlayerPlaylistPopover from '@/components/music/AudioPlayerPlaylistPopover.vue'
+import { resolveMediaImageURL } from '@/utils/mediaUrl'
 import type { MusicPlaylistSummary } from '@/api/musicV1'
 import type { Song } from '@/entities/music'
 

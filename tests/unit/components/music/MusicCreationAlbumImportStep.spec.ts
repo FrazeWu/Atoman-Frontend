@@ -11,6 +11,7 @@ import MusicCreationAlbumUploadZone from "../../../../src/components/music/Music
 import MusicCreationFlowDrawer from "../../../../src/components/music/MusicCreationFlowDrawer.vue";
 import * as musicApi from "../../../../src/api/musicV1";
 import * as musicImportPreview from "../../../../src/utils/musicImportPreview";
+import * as musicUploadFingerprint from "../../../../src/utils/musicImportUploadFingerprint";
 import { useMusicDrawers } from "../../../../src/composables/useMusicDrawers";
 import { useAlbumImportUpload } from "../../../../src/composables/useAlbumImportUpload";
 
@@ -1368,7 +1369,10 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 	});
 
 	it("上传后应用后台处理中的最新快照", async () => {
-		vi.useFakeTimers();
+		// This test covers server snapshot propagation, not local ZIP parsing or
+		// cryptographic file fingerprints. Isolate both asynchronous prerequisites.
+		vi.spyOn(musicImportPreview, "readAlbumImportPreview").mockResolvedValue({ title: "Stages", tracks: [] });
+		vi.spyOn(musicUploadFingerprint, "rememberMusicUploadFingerprint").mockResolvedValue(undefined);
 		const archive = new File(["zip"], "stages.zip", {
 			type: "application/zip",
 		});
@@ -1410,18 +1414,14 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
 		await fileInput(wrapper).trigger("change");
-		// Multipart setup includes async file fingerprinting. Under a busy CI shard,
-		// advancing the fake clock before the upload finishes starts the poll timer
-		// too late. Wait for the completed upload to arm polling first.
-		for (let attempt = 0; attempt < 30 && !vi.mocked(musicApi.completeMusicAlbumImportSession).mock.calls.length; attempt += 1) {
-			await flushPromises();
-			await vi.advanceTimersByTimeAsync(0);
-		}
-		expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalled();
+		// Wait for the real upload pipeline to complete and the 2s poll to run.
+		// A fake-clock jump before multipart work finishes misses that timer on CI.
+		await vi.waitFor(() => expect(musicApi.getMusicAlbumImport).toHaveBeenCalled(), {
+			timeout: 10_000,
+			interval: 50,
+		});
 		await flushPromises();
-		await vi.advanceTimersByTimeAsync(2000);
 
-		expect(musicApi.getMusicAlbumImport).toHaveBeenCalled();
 		expect(useMusicDrawers().state.value.creationFlow?.draft.albumImport).toEqual(
 			expect.objectContaining({
 				status: "extracting",

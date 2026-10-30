@@ -901,17 +901,21 @@ watch(() => route.params.artistId, (id, previous) => {
 }
 
 .mobile-artist-detail__icon-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  aspect-ratio: 1 / 1;
   border: none;
   background: transparent;
   color: var(--a-color-text-secondary, #666666);
   cursor: pointer;
-  border-radius: 50%;
-  transition: color 0.15s ease;
+  border-radius: 50% !important;
+  padding: 0;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .mobile-artist-detail__icon-btn:active {
@@ -924,16 +928,20 @@ watch(() => route.params.artistId, (id, previous) => {
 }
 
 .mobile-artist-detail__play-round-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  aspect-ratio: 1 / 1;
+  border-radius: 50% !important;
   border: none;
   background-color: var(--a-color-text, #111111);
   color: #ffffff;
   cursor: pointer;
+  padding: 0;
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
@@ -947,7 +955,7 @@ watch(() => route.params.artistId, (id, previous) => {
 
 /* Tab + Sort Nav Bar */
 .mobile-artist-detail__content-section {
-  padding: 4px 0 24px;
+  padding: 6px 0 24px;
 }
 
 .mobile-artist-detail__nav-bar {
@@ -965,17 +973,20 @@ watch(() => route.params.artistId, (id, previous) => {
   border-radius: 4px;
   padding: 2px;
   gap: 2px;
-  height: 24px;
+  height: 26px;
+  min-height: 0 !important;
   box-sizing: border-box;
 }
 
 .mobile-artist-detail__main-tab {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 3px;
   padding: 0 8px;
-  height: 20px;
-  line-height: 20px;
+  height: 22px !important;
+  min-height: 0 !important;
+  line-height: 22px;
   font-size: 11.5px;
   font-weight: 500;
   color: #64748b;
@@ -985,13 +996,15 @@ watch(() => route.params.artistId, (id, previous) => {
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
+  box-sizing: border-box;
+  margin: 0;
 }
 
 .mobile-artist-detail__main-tab.is-active {
   background-color: #ffffff;
   color: #0f172a;
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .mobile-artist-detail__tab-count {
@@ -1012,7 +1025,8 @@ watch(() => route.params.artistId, (id, previous) => {
   border-radius: 4px;
   padding: 2px;
   gap: 2px;
-  height: 24px;
+  height: 26px;
+  min-height: 0 !important;
   box-sizing: border-box;
 }
 
@@ -1020,9 +1034,10 @@ watch(() => route.params.artistId, (id, previous) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 7px;
-  height: 20px;
-  line-height: 20px;
+  padding: 0 8px;
+  height: 22px !important;
+  min-height: 0 !important;
+  line-height: 22px;
   font-size: 11px;
   font-weight: 500;
   color: #64748b;
@@ -1032,13 +1047,15 @@ watch(() => route.params.artistId, (id, previous) => {
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
+  box-sizing: border-box;
+  margin: 0;
 }
 
 .mobile-artist-detail__sort-btn.is-active {
   background-color: #ffffff;
   color: #0f172a;
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 /* Albums Vertical List */
@@ -1250,17 +1267,21 @@ watch(() => route.params.artistId, (id, previous) => {
 }
 
 .mobile-artist-detail__song-action-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  aspect-ratio: 1 / 1;
   border: none;
   background: transparent;
   color: var(--a-color-text-muted, #999999);
   cursor: pointer;
-  border-radius: 50%;
-  transition: color 0.15s ease;
+  border-radius: 50% !important;
+  padding: 0;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .mobile-artist-detail__song-action-btn:active {

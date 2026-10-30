@@ -94,7 +94,7 @@ function handleSave() {
   display: grid;
   gap: 0.7rem;
   padding: 0.9rem 0 0;
-  border-top: 1px solid var(--a-color-border-soft);
+  border-top: 0;
   border-radius: 0;
   box-shadow: none;
   background: transparent;

@@ -614,13 +614,14 @@ onBeforeUnmount(() => {
   padding: 0.25rem 0.6rem;
   font-size: 0.75rem;
   border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
-  transition: border-color 0.15s ease;
+  background: var(--a-color-surface-muted);
+  border: 1px solid transparent;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .music-tags__add :deep(.p-input:focus) {
   border-color: var(--a-color-primary);
+  background: var(--a-color-bg);
   outline: 2px solid var(--a-color-primary);
   outline-offset: 0;
   box-shadow: none;

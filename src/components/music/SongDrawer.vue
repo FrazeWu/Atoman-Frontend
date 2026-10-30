@@ -805,9 +805,9 @@ watch(
 }
 
 .song-detail { max-width: 96rem; margin: 0 auto; padding: 1.5rem; container-type: inline-size; }
-.song-detail__content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem); gap: 1.5rem; align-items: start; }
+.song-detail__content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem); gap: 2rem; align-items: start; }
 .song-detail__primary { display: grid; grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr); gap: 1.5rem; min-width: 0; }
-.song-detail__tags { min-width: 0; align-self: start; border-left: 1px solid var(--a-color-border-soft); padding-left: 1rem; }
+.song-detail__tags { min-width: 0; align-self: start; border-left: 0; padding-left: 0; }
 .song-detail__cover { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; background: var(--a-color-bg-subtle); }
 .song-detail__main { display: grid; align-content: center; justify-items: start; gap: 0.75rem; }
 .song-detail__main h1, .song-detail__album, .song-detail__release-date { margin: 0; }
@@ -818,18 +818,18 @@ watch(
 .song-detail__artists { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
 .song-detail__artists a { color: inherit; }
 .song-detail__entity-link { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; text-decoration: underline; }
-.song-detail__navigation { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--a-color-border-soft); padding-top: 1rem; }
+.song-detail__navigation { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 1rem; border-top: 0; padding-top: 1.5rem; }
 .song-detail__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.song-detail__actions--primary { grid-column: 1 / -1; align-items: center; border-top: 1px solid var(--a-color-border-soft); padding-top: 1rem; }
+.song-detail__actions--primary { grid-column: 1 / -1; align-items: center; border-top: 0; padding-top: 0.5rem; }
 .song-detail__play { min-width: 6rem; }
 .song-detail__description, .song-detail__supplementary { grid-column: 1 / -1; }
 .song-detail__description { padding-top: 0.25rem; }
-.song-detail__supplementary { display: grid; gap: 0.75rem; border-top: 1px solid var(--a-color-border-soft); padding-top: 1rem; }
+.song-detail__supplementary { display: grid; gap: 0.75rem; border-top: 0; padding-top: 1rem; }
 .song-detail__playlist-menu { display: grid; min-width: 12rem; padding: 0.35rem; }
 .song-detail__playlist-menu p { margin: 0; padding: 0.65rem; color: var(--a-color-muted); }
 .song-detail__playlist-menu button { border: 0; border-radius: var(--a-radius-control); padding: 0.6rem 0.7rem; background: transparent; color: inherit; text-align: left; cursor: pointer; }
 .song-detail__playlist-menu button:hover { background: var(--a-color-surface-muted); }
-.song-detail__lyrics { grid-column: 1 / -1; border-top: 1px solid var(--a-color-border-soft); padding-top: 1rem; }
+.song-detail__lyrics { grid-column: 1 / -1; border-top: 0; padding-top: 1.25rem; }
 .song-detail__lyrics-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
 .song-detail__lyrics-title { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
 .song-detail__lyrics-source { display: inline-flex; align-items: center; gap: 0.375rem; color: var(--a-text-muted); font-size: 0.6875rem; font-weight: 500; line-height: 1; white-space: nowrap; }
@@ -839,16 +839,16 @@ watch(
 .song-detail__lyrics h2 { margin: 0; font-size: 1rem; }
 .song-detail__lyrics-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.5rem; }
 .song-detail__lyrics-layout { min-width: 0; }
-.song-detail__lyrics-layout.has-annotation-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem); gap: 0; }
+.song-detail__lyrics-layout.has-annotation-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem); gap: 2.5rem; }
 .song-detail__lyric-lines { display: grid; gap: 0; }
 .song-detail__lyric-lines :deep(.music-lyrics-line) { opacity: 1; padding: 0.2rem 0; }
 .song-detail__lyric-lines :deep(.music-lyrics-line__text) { font-size: 1rem; line-height: 1.45; }
-.song-detail__annotation-workspace { align-self: stretch; min-width: 0; border-left: 1px solid var(--a-color-border-soft); padding: 0.15rem 0 0 1.25rem; }
+.song-detail__annotation-workspace { align-self: stretch; min-width: 0; border-left: 0; padding: 0.15rem 0 0 0; }
 .song-detail__navigation a { display: inline-flex; gap: 0.25rem; align-items: center; color: inherit; min-width: 0; }
 .song-detail__state--error { color: var(--a-color-danger); }
 @container (max-width: 76.5rem) {
   .song-detail__content { grid-template-columns: 1fr; }
-  .song-detail__tags { border-top: 1px solid var(--a-color-border-soft); border-left: 0; padding: 1.25rem 0 0; }
+  .song-detail__tags { border-top: 0; border-left: 0; padding: 1.25rem 0 0; }
 }
-@media (max-width: 640px) { .song-detail { padding: 1rem; } .song-detail__primary { grid-template-columns: 1fr; } .song-detail__cover { max-width: 18rem; } .song-detail__actions--primary { grid-column: 1; } .song-detail__lyrics-header { align-items: flex-start; flex-direction: column; } .song-detail__lyrics-actions { justify-content: flex-start; } .song-detail__lyrics-layout.has-annotation-workspace { grid-template-columns: 1fr; } .song-detail__annotation-workspace { max-height: none; border-top: 1px solid var(--a-color-border-soft); border-left: 0; padding-top: 1rem; padding-left: 0; } }
+@media (max-width: 640px) { .song-detail { padding: 1rem; } .song-detail__primary { grid-template-columns: 1fr; } .song-detail__cover { max-width: 18rem; } .song-detail__actions--primary { grid-column: 1; } .song-detail__lyrics-header { align-items: flex-start; flex-direction: column; } .song-detail__lyrics-actions { justify-content: flex-start; } .song-detail__lyrics-layout.has-annotation-workspace { grid-template-columns: 1fr; } .song-detail__annotation-workspace { max-height: none; border-top: 0; border-left: 0; padding-top: 1rem; padding-left: 0; } }
 </style>

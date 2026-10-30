@@ -153,7 +153,7 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
   justify-content: space-between;
   gap: 0.75rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  border-bottom: 0;
 }
 
 .music-annotation-panel__header > div {
@@ -193,8 +193,8 @@ function annotationScore(annotation: MusicLyricsAnnotation) {
 }
 
 .music-annotation-card + .music-annotation-card {
-  border-top: 1px solid var(--a-color-border-soft);
-  padding-top: 0.75rem;
+  border-top: 0;
+  padding-top: 1rem;
 }
 
 .music-annotation-card__quote {

@@ -14,6 +14,7 @@
             />
             <PButton
               v-if="authStore.isAuthenticated"
+              size="sm"
               @click="toggleAddModal"
               :label="showAddModal ? '取消添加' : '+ 订阅'"
               :variant="showAddModal ? 'secondary' : 'primary'"
@@ -1056,7 +1057,7 @@ onUnmounted(() => {
 .feed-timeline {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 0.75rem;
 }
 
 .feed-hub-context {
@@ -1068,17 +1069,22 @@ onUnmounted(() => {
 
 .feed-media-entry {
   display: grid;
-  grid-template-columns: 5rem minmax(0, 1fr);
+  grid-template-columns: 5.5rem minmax(0, 1fr);
   gap: 1rem;
   min-height: 5.5rem;
-  padding: 0.8rem 0;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
   color: inherit;
   text-decoration: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
 }
 
 .feed-media-entry:hover {
-  background: var(--a-color-surface-muted);
+  border-color: var(--a-color-border-hover, var(--a-color-fg));
+  background: var(--a-color-surface-subtle);
+  transform: translateY(-1px);
 }
 
 .feed-media-entry:focus-visible {
@@ -1090,7 +1096,8 @@ onUnmounted(() => {
   display: grid;
   overflow: hidden;
   place-items: center;
-  aspect-ratio: 1;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--a-radius-control);
   background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
   font-size: 0.72rem;
@@ -1155,17 +1162,17 @@ onUnmounted(() => {
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
-  min-height: 2.75rem;
-  padding: 0.5rem 0.875rem;
-  border: 1px solid var(--a-color-border);
-  border-radius: var(--a-radius-none, 4px);
+  min-height: var(--a-control-height-sm, 2.25rem);
+  padding: 0.4rem 0.875rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
   cursor: pointer;
   font: inherit;
-  font-size: 0.875rem;
-  font-weight: 600;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .feed-new-content:hover {

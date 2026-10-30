@@ -3,7 +3,7 @@
     <PPageHeader v-if="!embedded" title="稍后阅读" mb="1.25rem">
       <template #action>
         <RouterLink to="/feed" style="text-decoration:none">
-          <PButton variant="secondary" label="← 返回订阅" />
+          <PButton variant="secondary" size="sm" label="← 返回订阅" />
         </RouterLink>
       </template>
     </PPageHeader>
@@ -401,7 +401,7 @@ onUnmounted(() => {
 .feed-timeline {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .feed-skeleton {

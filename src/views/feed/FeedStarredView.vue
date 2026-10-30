@@ -9,7 +9,7 @@
             data-test="feed-saved-view-filter"
             @update:model-value="selectView"
           />
-          <PButton variant="secondary" label="← 返回订阅" @click="router.push('/feed')" />
+          <PButton variant="secondary" size="sm" label="← 返回订阅" @click="router.push('/feed')" />
         </div>
       </template>
     </PPageHeader>
@@ -452,57 +452,46 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
   border-bottom: none;
 }
 
 .star-group-button {
-  padding: 0.35rem 0.65rem;
-  cursor: pointer;
-  min-height: 2rem;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  color: var(--a-color-fg);
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--a-control-height-sm, 2.25rem);
+  padding: 0 0.85rem;
+  border-radius: var(--a-radius-control);
+  border: none;
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
   font-family: var(--a-font-sans);
-  font-size: 0.72rem;
+  font-size: 0.8125rem;
   font-weight: 500;
-  letter-spacing: 0;
-}
-
-.star-group-button {
-  border-radius: var(--a-radius-card);
-  border: 1px solid transparent;
-  padding: 0.4rem 0.75rem;
-  background: var(--a-color-bg);
-  color: var(--a-color-text-secondary);
-  font-size: 0.8rem;
   cursor: pointer;
-  transition: color 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .star-group-button:hover {
-  background: var(--a-color-surface-muted);
+  background: color-mix(in srgb, var(--a-color-surface-muted) 80%, var(--a-color-border-soft));
   color: var(--a-color-fg);
-  border-color: var(--a-color-border-soft);
 }
 
 .star-group-button.active {
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
-  border-color: var(--a-color-border);
-  box-shadow: none;
-  font-weight: 600;
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
 }
 
 .star-group-select {
   max-width: 9rem;
-  padding: 0.25rem 0.45rem;
+  height: 1.75rem;
+  padding: 0 0.5rem;
   font-family: var(--a-font-sans);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
+  background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
 }
 
@@ -510,7 +499,7 @@ onUnmounted(() => {
 .feed-timeline {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 0.75rem;
 }
 
 .feed-skeleton {

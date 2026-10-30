@@ -21,7 +21,9 @@
     </div>
 
     <template v-else>
-      <!-- TAB 1: Content (内容) -->
+      <div class="studio-tab-motion-shell">
+        <Transition name="mobile-route-switch">
+          <!-- TAB 1: Content (内容) -->
       <div v-if="currentTab === 'content'" class="studio-tab-content">
         <!-- Quick Creation Action Cards -->
         <section class="studio-actions-section">
@@ -192,6 +194,8 @@
           </button>
         </section>
       </div>
+        </Transition>
+      </div>
     </template>
   </div>
 </template>
@@ -358,6 +362,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.studio-tab-motion-shell { position: relative; }
 .studio-mobile-view {
   min-height: 100vh;
   background-color: var(--a-color-bg, #ffffff);

@@ -48,7 +48,9 @@
     </header>
 
     <!-- Topics Stream -->
-    <main class="debate-hall-content">
+    <div class="debate-tab-motion-shell">
+      <Transition name="mobile-route-switch">
+        <main :key="currentMainTab" class="debate-hall-content">
       <!-- Guest state for Subscriptions tab -->
       <div v-if="currentMainTab === 'subscriptions' && isGuest" class="debate-guest-wrap">
         <MGuestCard
@@ -182,7 +184,9 @@
           </div>
         </article>
       </div>
-    </main>
+        </main>
+      </Transition>
+    </div>
   </div>
 </template>
 
@@ -361,6 +365,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.debate-tab-motion-shell { position: relative; }
 .debate-hall-view {
   min-height: 100vh;
   background-color: var(--a-color-bg, #ffffff);

@@ -83,21 +83,3 @@
   width: 44px;
   height: 44px;
 }
-
-.mobile-module-detail-enter-active,
-.mobile-module-return-leave-active {
-  transition: transform 240ms ease, opacity 240ms ease;
-}
-
-.mobile-module-detail-enter-from,
-.mobile-module-return-leave-to {
-  opacity: 0;
-  transform: translateY(100%);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mobile-module-detail-enter-active,
-  .mobile-module-return-leave-active {
-    transition-duration: 1ms;
-  }
-}

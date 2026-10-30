@@ -1,0 +1,88 @@
+/* One motion system for top-level and nested mobile routes. The dock and
+   global navigation remain outside the animated outlet. */
+.mobile-app-main,
+.mobile-music-layout,
+.mobile-feed-layout,
+.mobile-module-layout {
+  position: relative;
+  min-width: 0;
+}
+
+.mobile-route-forward-enter-active,
+.mobile-route-forward-leave-active,
+.mobile-route-back-enter-active,
+.mobile-route-back-leave-active {
+  transition: opacity 220ms ease, transform 220ms cubic-bezier(.2, .8, .2, 1);
+  backface-visibility: hidden;
+}
+
+.mobile-route-switch-enter-active,
+.mobile-route-switch-leave-active {
+  transition: opacity 170ms ease, transform 170ms ease-out;
+  backface-visibility: hidden;
+}
+
+.mobile-route-forward-leave-active,
+.mobile-route-back-leave-active,
+.mobile-route-switch-leave-active {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+.mobile-route-forward-enter-from {
+  opacity: .3;
+  transform: translate3d(22px, 0, 0);
+}
+.mobile-route-forward-leave-to {
+  opacity: 0;
+  transform: translate3d(-10px, 0, 0);
+}
+.mobile-route-back-enter-from {
+  opacity: .3;
+  transform: translate3d(-14px, 0, 0);
+}
+.mobile-route-back-leave-to {
+  opacity: 0;
+  transform: translate3d(22px, 0, 0);
+}
+.mobile-route-switch-enter-from {
+  opacity: 0;
+  transform: translate3d(0, 6px, 0);
+}
+.mobile-route-switch-leave-to {
+  opacity: 0;
+}
+
+/* Match the padded generic module outlet when positioning outgoing pages. */
+.mobile-module-layout > .mobile-route-forward-leave-active,
+.mobile-module-layout > .mobile-route-back-leave-active,
+.mobile-module-layout > .mobile-route-switch-leave-active {
+  top: 1rem;
+  left: 1rem;
+  width: calc(100% - 2rem);
+}
+
+/* Keep inline swipe gestures in the full-screen player authoritative. */
+.mobile-player-view.mobile-route-forward-enter-from,
+.mobile-player-view.mobile-route-back-enter-from,
+.mobile-player-view.mobile-route-switch-enter-from,
+.mobile-player-view.mobile-route-forward-leave-to,
+.mobile-player-view.mobile-route-back-leave-to,
+.mobile-player-view.mobile-route-switch-leave-to {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-route-forward-enter-active,
+  .mobile-route-forward-leave-active,
+  .mobile-route-back-enter-active,
+  .mobile-route-back-leave-active,
+  .mobile-route-switch-enter-active,
+  .mobile-route-switch-leave-active {
+    transition-duration: 1ms;
+    transform: none;
+  }
+}

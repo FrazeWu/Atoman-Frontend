@@ -1,7 +1,7 @@
 <template>
   <section class="mobile-module-layout">
     <RouterView v-slot="{ Component, route: viewRoute }">
-      <Transition :name="detailTransition">
+      <Transition :name="routeMotion">
         <KeepAlive :max="2">
           <component :is="Component" :key="viewRoute.meta.bookCatalog ? 'books-catalog' : viewRoute.meta.routeOverlay ? viewRoute.matched[0]?.path : viewRoute.path" />
         </KeepAlive>
@@ -12,18 +12,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { moduleUrl } from '@/router/siteUrls'
 import { resolveSiteContext } from '@/router/siteContext'
-import { isMobileDetailRoute } from './mobileRouteMeta'
+import { useMobileRouteMotion } from './composables/useMobileRouteMotion'
 
 const route = useRoute()
 const router = useRouter()
-const detailTransition = ref('')
-watch(() => route.path, (to, from) => {
-  detailTransition.value = isMobileDetailRoute(to) ? 'mobile-module-detail' : isMobileDetailRoute(from) ? 'mobile-module-return' : ''
-})
+const routeMotion = useMobileRouteMotion(route.matched[0]?.path || '')
 const closeOverlay = () => {
   if (window.history.state?.back) {
     router.back()

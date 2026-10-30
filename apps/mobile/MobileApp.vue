@@ -73,6 +73,8 @@ import './mobileDiscovery.css'
 import './mobileSaved.css'
 import './mobileContent.css'
 import './mobileVisualRefinement.css'
+import './mobileRouteMotion.css'
+import { useMobileRouteMotion } from './composables/useMobileRouteMotion'
 
 // Direct static component binding prevents async chunk circular-deadlock on iOS WebKit
 const MobileBottomNav = MobileBottomNavComponent
@@ -184,7 +186,7 @@ const showMobilePlayer = computed(() => (
   playerPresence.hasCurrentTrack && !isFullscreenPlayerRoute.value
 ))
 
-const mobileRouteTransition = ref('')
+const mobileRouteTransition = useMobileRouteMotion()
 
 const handleBack = () => {
   if (typeof window !== 'undefined' && window.history.length > 1) {
@@ -246,14 +248,7 @@ const handleNotifications = () => {
   }
 }
 
-watch(() => route.fullPath, (to, from) => {
-  if (isMobileDetailRoute(to)) {
-    mobileRouteTransition.value = 'mobile-detail-forward'
-  } else if (from && isMobileDetailRoute(from)) {
-    mobileRouteTransition.value = 'mobile-detail-back'
-  } else {
-    mobileRouteTransition.value = ''
-  }
+watch(() => route.fullPath, () => {
   reportPageView()
   reportAnalyticsPageView()
 })
@@ -398,55 +393,6 @@ body {
 
 .mobile-app-shell--with-player {
   --mobile-app-player-reserved-height: var(--mobile-app-player-height);
-}
-
-.mobile-app-main > .mobile-detail-forward-enter-active,
-.mobile-app-main > .mobile-detail-forward-leave-active,
-.mobile-app-main > .mobile-detail-back-enter-active,
-.mobile-app-main > .mobile-detail-back-leave-active {
-  transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 240ms ease;
-}
-
-.mobile-app-main > .mobile-detail-forward-enter-active,
-.mobile-app-main > .mobile-detail-back-enter-active {
-  position: relative;
-  z-index: 1;
-}
-
-.mobile-app-main > .mobile-detail-forward-leave-active,
-.mobile-app-main > .mobile-detail-back-leave-active {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-}
-
-.mobile-detail-forward-enter-from {
-  opacity: 0.96;
-  transform: translateY(100%);
-}
-
-.mobile-detail-forward-leave-to {
-  opacity: 0.96;
-  transform: translateY(-2%);
-}
-
-.mobile-detail-back-enter-from {
-  opacity: 0.96;
-  transform: translateY(-2%);
-}
-
-.mobile-detail-back-leave-to {
-  opacity: 0.96;
-  transform: translateY(100%);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mobile-app-main > .mobile-detail-forward-enter-active,
-  .mobile-app-main > .mobile-detail-forward-leave-active,
-  .mobile-app-main > .mobile-detail-back-enter-active,
-  .mobile-app-main > .mobile-detail-back-leave-active {
-    transition-duration: 1ms;
-  }
 }
 
 .mobile-app-shell .p-dropdown-panel {

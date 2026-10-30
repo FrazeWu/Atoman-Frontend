@@ -91,7 +91,7 @@ export async function onRequest(context: SitemapContext) {
 			buildSitemapXml([...itemsByPath.values()], canonicalOrigin),
 			{
 				headers: {
-					"cache-control": "public, max-age=300, s-maxage=3600",
+					"cache-control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
 					"content-type": "application/xml; charset=UTF-8",
 				},
 			},

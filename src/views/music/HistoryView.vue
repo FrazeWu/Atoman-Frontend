@@ -193,6 +193,7 @@ watch(
         <PButton
           v-if="historyItems.length"
           variant="ghost"
+          size="sm"
           :disabled="Boolean(actionBusy) || !historyItems.length"
           data-testid="clear-history"
           title="清空播放历史"
@@ -341,14 +342,21 @@ watch(
   gap: 0.5rem;
 }
 
+.history-loading {
+  display: grid;
+  gap: 0.625rem;
+}
+
 .history-loading__row {
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr) 4rem 7rem;
   gap: 1rem;
   align-items: center;
   min-height: 72px;
-  padding: 0.65rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
 }
 
 .history-loading__copy {
@@ -360,7 +368,8 @@ watch(
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--a-color-border-soft);
+  display: grid;
+  gap: 0.625rem;
 }
 
 .history-row {
@@ -369,19 +378,19 @@ watch(
   gap: 1rem;
   align-items: center;
   min-height: 72px;
-  margin-inline: -0.65rem;
-  padding: 0.65rem;
-  border: 1px solid transparent;
-  border-bottom-color: var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  transition: background-color 0.18s ease, border-color 0.18s ease;
+  margin-inline: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
 }
 
 .history-row:hover,
 .history-row:focus-within {
-  background: var(--a-color-surface-muted);
-  border-color: var(--a-color-border-soft);
-  border-left: 3px solid var(--a-color-text);
+  border-color: var(--a-color-border-hover, var(--a-color-fg));
+  background: var(--a-color-surface-subtle);
+  transform: translateY(-1px);
   box-shadow: none;
 }
 
@@ -511,7 +520,6 @@ watch(
   justify-items: center;
   gap: 0.75rem;
   padding: 4rem 1rem;
-  border-top: 1px solid var(--a-color-border-soft);
   color: var(--a-color-muted);
 }
 

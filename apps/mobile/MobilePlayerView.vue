@@ -1230,6 +1230,7 @@ onUnmounted(() => {
 
 /* --- Footer Section --- */
 .mobile-player-view__footer {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.65rem;

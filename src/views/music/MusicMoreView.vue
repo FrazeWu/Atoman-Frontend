@@ -98,7 +98,7 @@ watch(isAdmin, async (allowed) => {
 
 .music-more-view__links {
   display: grid;
-  border-top: 1px solid var(--a-color-border-soft);
+  gap: 0.625rem;
 }
 
 .music-more-view__link {
@@ -107,32 +107,46 @@ watch(isAdmin, async (allowed) => {
   min-height: 56px;
   align-items: center;
   gap: 0.75rem;
-  padding: 0 0.75rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
   color: var(--a-color-fg);
   text-decoration: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
 }
 
 .music-more-view__link:hover,
 .music-more-view__link:focus-visible {
-  background: var(--a-color-surface-muted);
+  border-color: var(--a-color-border-hover, var(--a-color-fg));
+  background: var(--a-color-surface-subtle);
+  transform: translateY(-1px);
 }
 
 .music-more-view__link:focus-visible {
   outline: 2px solid var(--a-color-primary);
-  outline-offset: -2px;
+  outline-offset: 1px;
 }
 
 .music-more-view__link svg:last-child {
   color: var(--a-color-muted);
 }
 
-.music-more-view__archive-preview { margin-top: 2rem; border-top: 1px solid var(--a-color-border-soft); padding: 1rem .75rem; }
-.music-more-view__archive-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
-.music-more-view__archive-heading h2 { font-size: 1rem; margin: 0; }
+.music-more-view__archive-preview { margin-top: 2.5rem; padding: 0; }
+.music-more-view__archive-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 0.75rem; }
+.music-more-view__archive-heading h2 { font-size: 1.05rem; font-weight: 600; margin: 0; }
 .music-more-view__archive-preview p, .music-more-view__archive-preview span { color: var(--a-color-muted); font-size: .875rem; }
-.music-more-view__archive-preview ul { list-style: none; padding: 0; margin: .75rem 0 0; }
-.music-more-view__archive-preview li { display: flex; justify-content: space-between; gap: 1rem; padding: .75rem 0; border-bottom: 1px solid var(--a-color-border-soft); }
+.music-more-view__archive-preview ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
+.music-more-view__archive-preview li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+}
 .music-more-view__archive-preview strong { overflow-wrap: anywhere; }
 @media (max-width: 720px) {
   .music-more-view {

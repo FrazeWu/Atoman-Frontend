@@ -272,35 +272,36 @@ watch(sortMode, () => {
 .sidebar-item {
   width: 100%;
   text-align: left;
-  padding: 0.65rem 1rem;
+  min-height: var(--a-control-height-sm, 2.25rem);
+  padding: 0 0.85rem;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   border: 1px solid transparent;
   background: transparent;
-  color: var(--a-color-text-secondary);
-  border-radius: var(--a-radius-card);
+  color: var(--a-color-muted);
+  border-radius: var(--a-radius-control);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: color 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .sidebar-item:hover {
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
-  border-color: var(--a-color-border-soft);
 }
 
 .sidebar-item-active {
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
-  border-color: var(--a-color-border);
-  box-shadow: none;
   font-weight: 600;
 }
 
 .bookmark-post-list.feed-timeline-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
   border: 0;
   border-radius: 0;
   overflow: visible;

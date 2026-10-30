@@ -82,7 +82,7 @@ onMounted(() => { void load() })
           <option value="album">专辑</option>
           <option value="song">歌曲</option>
         </select>
-        <PButton variant="secondary" :disabled="loading" @click="load">刷新</PButton>
+        <PButton variant="secondary" size="sm" :disabled="loading" @click="load">刷新</PButton>
       </div>
       <p v-if="errorMessage" role="alert">{{ errorMessage }}</p>
       <p v-if="loading" role="status">正在加载归档记录…</p>
@@ -94,13 +94,13 @@ onMounted(() => { void load() })
             <p>{{ item.entity_type === 'album' ? '专辑' : '歌曲' }} · {{ item.archived_at ? new Date(item.archived_at).toLocaleString() : '归档时间未知' }}</p>
             <p v-if="item.reason">原因：{{ item.reason }}</p>
           </div>
-          <PButton variant="secondary" :disabled="busy" @click="actionError = ''; restoreTarget = item">恢复</PButton>
+          <PButton variant="secondary" size="sm" :disabled="busy" @click="actionError = ''; restoreTarget = item">恢复</PButton>
         </li>
       </ul>
       <div class="music-archived-admin__pages">
-        <PButton variant="secondary" :disabled="!hasPrevious || loading" @click="movePage(page - 1)">上一页</PButton>
+        <PButton variant="secondary" size="sm" :disabled="!hasPrevious || loading" @click="movePage(page - 1)">上一页</PButton>
         <span>第 {{ page }} 页 · 共 {{ total }} 条</span>
-        <PButton variant="secondary" :disabled="!hasNext || loading" @click="movePage(page + 1)">下一页</PButton>
+        <PButton variant="secondary" size="sm" :disabled="!hasNext || loading" @click="movePage(page + 1)">下一页</PButton>
       </div>
     </template>
     <MusicArchiveConfirm :show="Boolean(restoreTarget)" title="恢复归档" :restore="true" :loading="busy" :error="actionError" @confirm="restore" @cancel="restoreTarget = null" />
@@ -111,8 +111,26 @@ onMounted(() => { void load() })
 .music-archived-admin { padding: 1.25rem 1rem 3rem; }
 .music-archived-admin__hint, .music-archived-admin__entry p { color: var(--a-color-muted); font-size: .875rem; }
 .music-archived-admin__toolbar, .music-archived-admin__pages { display: flex; align-items: center; gap: .75rem; margin: 1.25rem 0; flex-wrap: wrap; }
-.music-archived-admin__toolbar select { padding: .5rem; background: var(--a-color-bg); color: var(--a-color-fg); border: 1px solid var(--a-color-border-soft); }
-.music-archived-admin__list { list-style: none; margin: 0; padding: 0; }
-.music-archived-admin__entry { display: flex; justify-content: space-between; align-items: center; gap: 1rem; border-bottom: 1px solid var(--a-color-border-soft); padding: 1rem 0; }
+.music-archived-admin__toolbar select {
+  height: var(--a-control-height-sm, 2.25rem);
+  padding: 0 0.75rem;
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+.music-archived-admin__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.625rem; }
+.music-archived-admin__entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  padding: 0.85rem 1rem;
+  background: var(--a-color-bg);
+}
 .music-archived-admin__entry strong { overflow-wrap: anywhere; }
 </style>

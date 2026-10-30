@@ -313,7 +313,7 @@ function preparePlaylistMenu(event: MouseEvent) {
 function editSong() {
   if (!detail.value || !requireLogin()) return
   const song = detail.value.song
-  if (song.release_type === 'single' || song.release_type === 'leak') {
+  if (song.release_type === 'single' || song.release_type === 'leak' || song.release_type === 'leak_song') {
     openMusicCreationFlow({
       mode: 'edit',
       entity: 'song',

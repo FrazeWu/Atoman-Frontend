@@ -139,7 +139,7 @@ const releaseTypeOptions = [
 ];
 const convertingToAlbum = computed(
   () =>
-    standaloneSong.value && !["single", "leak"].includes(songDraft.releaseType),
+    standaloneSong.value && !["single", "leak", "leak_song"].includes(songDraft.releaseType),
 );
 const submitLabel = computed(() =>
   convertingToAlbum.value ? "保存并转为专辑" : "保存歌曲",
@@ -208,7 +208,8 @@ async function loadSong(songId: string) {
     if (generation !== songLoadGeneration || editor.value?.id !== songId) return;
     standaloneSong.value =
       detail.song.release_type === "single" ||
-      detail.song.release_type === "leak";
+      detail.song.release_type === "leak" ||
+      detail.song.release_type === "leak_song";
     musicBrainzMatched.value =
       ['matched', 'manual'].includes(String(detail.song.match_status ?? '').toLowerCase()) ||
       ['matched', 'manual'].includes(String(detail.song.album?.match_status ?? '').toLowerCase()) ||
@@ -221,7 +222,7 @@ async function loadSong(songId: string) {
       : null;
     songDraft.title = detail.song.title;
     songDraft.description = detail.song.description ?? "";
-    songDraft.releaseType = detail.song.release_type ?? "single";
+    songDraft.releaseType = detail.song.release_type === "leak_song" ? "leak" : (detail.song.release_type ?? "single");
     songDraft.releaseDateParts = parsePartialDateParts(
       detail.song.release_date ?? "",
     );
@@ -305,7 +306,7 @@ function validateSongDraft() {
     if (!serializePartialDate(songDraft.releaseDateParts))
       return "请填写发行日期";
     if (
-      ["single", "leak"].includes(songDraft.releaseType) &&
+      ["single", "leak", "leak_song"].includes(songDraft.releaseType) &&
       !hasValidAlbumContributors(songDraft.contributors)
     ) {
       return "请保留一位主艺术家";

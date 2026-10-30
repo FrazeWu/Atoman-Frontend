@@ -261,7 +261,7 @@ function queueSong() {
 
 function editSong() {
   if (!song.value || !requireLogin()) return
-  if (song.value.release_type === 'single' || song.value.release_type === 'leak') {
+  if (song.value.release_type === 'single' || song.value.release_type === 'leak' || song.value.release_type === 'leak_song') {
     openMusicCreationFlow({
       mode: 'edit',
       entity: 'song',

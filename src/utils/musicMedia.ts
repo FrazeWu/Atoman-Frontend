@@ -10,12 +10,13 @@ export function formatAlbumTypeLabel(type?: string) {
 		ep: "EP",
 		single: "单曲",
 		leak: "泄曲",
+		leak_song: "泄曲",
 		compilation: "精选集",
 		live: "现场专辑",
 		soundtrack: "原声带",
 		demo: "Demo",
 	};
-	return labels[type.toLowerCase()] ?? type;
+	return labels[type.toLowerCase().trim()] ?? type;
 }
 
 export function compareAlbumTracks(

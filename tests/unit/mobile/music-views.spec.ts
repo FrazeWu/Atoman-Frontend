@@ -383,10 +383,14 @@ describe('Mobile Independent Music Views & Player', () => {
       const mockArtists = [
         { id: 'art-1', name: 'Kanye West', nationality: '美国' },
       ]
+      const mockSongsWithLeak = [
+        ...mockSongs,
+        { id: 's-leak', title: 'Never See Me Again', artist: 'Kanye West', release_type: 'leak_song' },
+      ]
       const wrapper = mount(MusicSearchView, {
         props: {
           initialQuery: 'Kanye',
-          initialSongs: mockSongs,
+          initialSongs: mockSongsWithLeak,
           initialAlbums: mockAlbums,
           initialArtists: mockArtists,
           initialPlaylists: mockPlaylists,
@@ -398,10 +402,12 @@ describe('Mobile Independent Music Views & Player', () => {
 
       expect(wrapper.text()).toContain('Power')
       expect(wrapper.text()).toContain('Stronger')
+      expect(wrapper.text()).toContain('Never See Me Again')
+      expect(wrapper.text()).toContain('泄曲')
       expect(wrapper.text()).toContain('Graduation')
       expect(wrapper.text()).toContain('Kanye West')
       expect(wrapper.text()).toContain('Kanye 精选')
-      expect(wrapper.findAll('[data-testid="search-song-item"]').length).toBe(2)
+      expect(wrapper.findAll('[data-testid="search-song-item"]').length).toBe(3)
       expect(wrapper.findAll('[data-testid="search-album-item"]').length).toBe(1)
       expect(wrapper.findAll('[data-testid="search-artist-item"]').length).toBe(1)
       expect(wrapper.findAll('[data-testid="search-playlist-item"]').length).toBe(1)
@@ -534,7 +540,8 @@ describe('Mobile Independent Music Views & Player', () => {
       bio: '美国说唱歌手、制作人',
     }
     const mockSongs = [
-      { id: 's-10', title: 'Flashing Lights', artist: 'Ye', duration: 237, audio_url: '/media/flashing.mp3' },
+      { id: 's-10', title: 'Flashing Lights', artist: 'Ye', album: 'Graduation', duration: 237, audio_url: '/media/flashing.mp3' },
+      { id: 's-leak', title: 'Can U Be', artist: 'Ye', release_type: 'leak_song', duration: 180, audio_url: '/media/canube.mp3' },
     ]
     const mockAlbums = [
       { id: 'alb-grad', title: 'Graduation', year: 2007 },
@@ -556,8 +563,10 @@ describe('Mobile Independent Music Views & Player', () => {
       expect(wrapper.text()).toContain('美国')
       expect(wrapper.text()).toContain('Graduation')
       expect(wrapper.text()).toContain('Flashing Lights')
+      expect(wrapper.text()).toContain('Can U Be')
+      expect(wrapper.text()).toContain('泄曲')
       expect(wrapper.findAll('[data-testid="artist-album-item"]').length).toBe(1)
-      expect(wrapper.findAll('[data-testid="artist-song-item"]').length).toBe(1)
+      expect(wrapper.findAll('[data-testid="artist-song-item"]').length).toBe(2)
     })
 
     it('clicking play all triggers playback of first song', async () => {

@@ -44,6 +44,7 @@ export interface Song {
   artist?: string
   album?: string
   album_id?: number | string
+  release_type?: string
   year?: number
   release_date?: string
   lyrics?: string

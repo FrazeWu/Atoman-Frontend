@@ -73,7 +73,7 @@
               <div class="mobile-music-search__song-info">
                 <span class="mobile-music-search__song-name">{{ song.title }}</span>
                 <span class="mobile-music-search__song-meta">
-                  {{ song.artist }} · {{ song.album || '单曲' }}
+                  {{ song.artist }} · {{ song.album || formatAlbumTypeLabel(song.release_type || 'single') }}
                 </span>
               </div>
               <span v-if="!canPlayMusicSong(song)" class="mobile-music-no-audio">暂无音源</span>
@@ -192,7 +192,7 @@
               <div class="mobile-music-search__song-info">
                 <span class="mobile-music-search__song-name">{{ song.title }}</span>
                 <span class="mobile-music-search__song-meta">
-                  {{ song.artist }} · {{ song.album || '单曲' }}
+                  {{ song.artist }} · {{ song.album || formatAlbumTypeLabel(song.release_type || 'single') }}
                 </span>
               </div>
               <span v-if="!canPlayMusicSong(song)" class="mobile-music-no-audio">暂无音源</span>
@@ -319,6 +319,7 @@ import {
 } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
+import { formatAlbumTypeLabel } from '@/utils/musicMedia'
 import { musicAudioFromApi, musicPlaybackDetailsFromApi, canPlayMusicSong } from '@mobile/mobileMusicPlayback'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MInput from '@mobile/components/ui/MInput.vue'
@@ -328,6 +329,7 @@ export interface SearchSongItem {
   title: string
   artist: string
   album?: string
+  release_type?: string
   duration?: number
   audio_url?: string
   cover_url?: string
@@ -497,6 +499,7 @@ async function executeSearch(query: string) {
         title: item.title,
         artist: extractArtist(item),
         album: typeof item.album === 'string' ? item.album : item.album?.title || '',
+        release_type: item.release_type,
         duration: item.duration_sec ?? item.duration_seconds ?? item.duration ?? 0,
         ...musicAudioFromApi(item),
         ...musicPlaybackDetailsFromApi(item),
@@ -568,6 +571,7 @@ async function loadRecommended() {
         title: item.title,
         artist: extractArtist(item),
         album: typeof item.album === 'string' ? item.album : item.album?.title || '',
+        release_type: item.release_type,
         duration: item.duration_sec ?? item.duration_seconds ?? item.duration ?? 0,
         ...musicAudioFromApi(item),
         ...musicPlaybackDetailsFromApi(item),

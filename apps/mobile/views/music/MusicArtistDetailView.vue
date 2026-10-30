@@ -81,47 +81,102 @@
         </div>
       </section>
 
-      <!-- Albums Section (Borderless Horizontal Scroll) -->
+      <!-- Albums Section (Vertical List with Sort by Time / Popularity) -->
       <section v-if="albums.length > 0" class="mobile-artist-detail__section" aria-label="专辑作品">
         <div class="mobile-artist-detail__section-header">
-          <span class="mobile-artist-detail__section-title">专辑作品</span>
-          <span class="mobile-artist-detail__count">{{ albums.length }} 张</span>
+          <div class="mobile-artist-detail__section-title-wrap">
+            <span class="mobile-artist-detail__section-title">专辑</span>
+            <span class="mobile-artist-detail__count">{{ albums.length }} 张</span>
+          </div>
+
+          <div class="mobile-artist-detail__sort-tabs" role="group" aria-label="专辑排序">
+            <button
+              type="button"
+              class="mobile-artist-detail__sort-btn"
+              :class="{ 'is-active': albumSort === 'time' }"
+              @click="albumSort = 'time'"
+            >
+              时间
+            </button>
+            <button
+              type="button"
+              class="mobile-artist-detail__sort-btn"
+              :class="{ 'is-active': albumSort === 'popularity' }"
+              @click="albumSort = 'popularity'"
+            >
+              热度
+            </button>
+          </div>
         </div>
 
-        <div class="mobile-artist-detail__albums-scroll">
+        <div class="mobile-artist-detail__album-list">
           <div
-            v-for="album in albums"
+            v-for="album in displayAlbums"
             :key="album.id"
-            class="mobile-artist-detail__album-card"
+            class="mobile-artist-detail__album-row"
             data-testid="artist-album-item"
             @click="openAlbum(album.id)"
           >
-            <div class="mobile-artist-detail__album-cover">
+            <div class="mobile-artist-detail__album-row-cover">
               <img v-if="album.cover_url" :src="album.cover_url" :alt="album.title" />
-              <div v-else class="mobile-artist-detail__album-art">
-                <MIcon name="note" size="md" />
+              <div v-else class="mobile-artist-detail__album-row-art">
+                <MIcon name="note" size="sm" />
               </div>
-              <span v-if="album.year" class="mobile-artist-detail__album-year">{{ album.year }}</span>
             </div>
-            <span class="mobile-artist-detail__album-name">{{ album.title }}</span>
+
+            <div class="mobile-artist-detail__album-row-info">
+              <span class="mobile-artist-detail__album-row-title">{{ album.title }}</span>
+              <div class="mobile-artist-detail__album-row-meta">
+                <span v-if="album.year">{{ album.year }}</span>
+                <span class="mobile-artist-detail__meta-dot">·</span>
+                <span>专辑</span>
+                <template v-if="album.song_count">
+                  <span class="mobile-artist-detail__meta-dot">·</span>
+                  <span>{{ album.song_count }} 首歌曲</span>
+                </template>
+              </div>
+            </div>
+
+            <MIcon name="chevron-right" size="xs" class="mobile-artist-detail__album-row-arrow" />
           </div>
         </div>
       </section>
 
-      <!-- Songs List (Spotify Inspired, Borderless, Compact) -->
-      <section class="mobile-artist-detail__songs" aria-label="热门单曲">
+      <!-- Songs List (Vertical List with Sort by Popularity / Time) -->
+      <section class="mobile-artist-detail__songs" aria-label="单曲列表">
         <div class="mobile-artist-detail__section-header">
-          <span class="mobile-artist-detail__section-title">热门单曲</span>
-          <span class="mobile-artist-detail__count">{{ songs.length }} 首</span>
+          <div class="mobile-artist-detail__section-title-wrap">
+            <span class="mobile-artist-detail__section-title">单曲</span>
+            <span class="mobile-artist-detail__count">{{ songs.length }} 首</span>
+          </div>
+
+          <div class="mobile-artist-detail__sort-tabs" role="group" aria-label="歌曲排序">
+            <button
+              type="button"
+              class="mobile-artist-detail__sort-btn"
+              :class="{ 'is-active': songSort === 'popularity' }"
+              @click="songSort = 'popularity'"
+            >
+              热度
+            </button>
+            <button
+              type="button"
+              class="mobile-artist-detail__sort-btn"
+              :class="{ 'is-active': songSort === 'time' }"
+              @click="songSort = 'time'"
+            >
+              时间
+            </button>
+          </div>
         </div>
 
         <div v-if="songsError" class="mobile-artist-detail__empty" role="alert">
           <p class="mobile-artist-detail__empty-text">{{ songsError }}</p>
           <MButton size="sm" variant="secondary" @click="loadArtistData(true)">重新加载</MButton>
         </div>
-        <div v-else-if="songs.length > 0" class="mobile-artist-detail__list">
+        <div v-else-if="displaySongs.length > 0" class="mobile-artist-detail__list">
           <div
-            v-for="(song, index) in songs"
+            v-for="(song, index) in displaySongs"
             :key="song.id"
             class="mobile-artist-detail__song-row"
             :class="{ 'is-active': isCurrentSong(song) }"
@@ -328,7 +383,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getMusicArtist,
@@ -354,8 +409,15 @@ export interface MobileArtistAlbumItem {
   id: string
   title: string
   year?: string | number
+  release_date?: string
   cover_url?: string
+  song_count?: number
+  plays_count?: number
 }
+
+type SortMode = 'popularity' | 'time'
+const songSort = ref<SortMode>('popularity')
+const albumSort = ref<SortMode>('time')
 
 const props = withDefaults(
   defineProps<{
@@ -476,6 +538,39 @@ const songs = ref<Song[]>(props.initialSongs || [])
 const albums = ref<MobileArtistAlbumItem[]>(props.initialAlbums || [])
 let detailGeneration = 0
 
+const displaySongs = computed(() => {
+  const list = [...songs.value]
+  if (songSort.value === 'popularity') {
+    return list.sort((a, b) => {
+      const pA = Number((a as any).plays_count ?? (a as any).play_count ?? 0)
+      const pB = Number((b as any).plays_count ?? (b as any).play_count ?? 0)
+      if (pA !== pB) return pB - pA
+      return 0
+    })
+  }
+  return list.sort((a, b) => {
+    const tA = (a as any).release_date || (a as any).year || (a as any).created_at || ''
+    const tB = (b as any).release_date || (b as any).year || (b as any).created_at || ''
+    return String(tB).localeCompare(String(tA))
+  })
+})
+
+const displayAlbums = computed(() => {
+  const list = [...albums.value]
+  if (albumSort.value === 'time') {
+    return list.sort((a, b) => {
+      const tA = a.release_date || String(a.year || '')
+      const tB = b.release_date || String(b.year || '')
+      return String(tB).localeCompare(String(tA))
+    })
+  }
+  return list.sort((a, b) => {
+    const pA = Number((a as any).plays_count ?? (a as any).song_count ?? 0)
+    const pB = Number((b as any).plays_count ?? (b as any).song_count ?? 0)
+    return pB - pA
+  })
+})
+
 function extractArtist(item: any, fallback?: string): string {
   if (typeof item?.artist === 'string' && item.artist.trim()) return item.artist.trim()
   if (Array.isArray(item?.artist_credits) && item.artist_credits.length > 0) {
@@ -592,11 +687,11 @@ function handleBack() {
 
 function playSong(song: Song) {
   if (!canPlayMusicSong(song)) return
-  startMobileMusicQueue(player, songs.value, song.id)
+  startMobileMusicQueue(player, displaySongs.value, song.id)
 }
 
 function handlePlayAll() {
-  startMobileMusicQueue(player, songs.value)
+  startMobileMusicQueue(player, displaySongs.value)
 }
 
 function openAlbum(id: string) {
@@ -841,6 +936,12 @@ watch(() => route.params.artistId, (id, previous) => {
   padding: 0 16px 8px;
 }
 
+.mobile-artist-detail__section-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
 .mobile-artist-detail__section-title {
   font-size: 13px;
   font-weight: 700;
@@ -852,70 +953,115 @@ watch(() => route.params.artistId, (id, previous) => {
   color: var(--a-color-text-muted, #999999);
 }
 
-.mobile-artist-detail__albums-scroll {
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding: 0 16px 8px;
-  scrollbar-width: none;
+/* Sort Switcher Tabs */
+.mobile-artist-detail__sort-tabs {
+  display: inline-flex;
+  align-items: center;
+  background-color: #f1f5f9;
+  border-radius: 12px;
+  padding: 2px;
+  gap: 2px;
 }
 
-.mobile-artist-detail__albums-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.mobile-artist-detail__album-card {
-  flex: 0 0 100px;
+.mobile-artist-detail__sort-btn {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mobile-artist-detail__sort-btn.is-active {
+  background-color: #ffffff;
+  color: #0f172a;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Albums Vertical List */
+.mobile-artist-detail__album-list {
   display: flex;
   flex-direction: column;
+  padding: 0 16px;
 }
 
-.mobile-artist-detail__album-cover {
-  position: relative;
-  width: 100px;
-  height: 100px;
+.mobile-artist-detail__album-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  cursor: pointer;
+  border: none !important;
+  border-bottom: none !important;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.mobile-artist-detail__album-row:active {
+  background-color: var(--a-color-surface-hover, #fafafa);
+}
+
+.mobile-artist-detail__album-row-cover {
+  width: 48px;
+  height: 48px;
   border-radius: 4px;
   overflow: hidden;
   background-color: #f4f4f5;
   border: none;
-  margin-bottom: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.mobile-artist-detail__album-cover img {
+.mobile-artist-detail__album-row-cover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.mobile-artist-detail__album-art {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.mobile-artist-detail__album-row-art {
   color: var(--a-color-text-muted, #999999);
 }
 
-.mobile-artist-detail__album-year {
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  font-size: 9px;
-  background: rgba(0, 0, 0, 0.6);
-  color: #ffffff;
-  padding: 1px 4px;
-  border-radius: 2px;
+.mobile-artist-detail__album-row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.mobile-artist-detail__album-name {
-  font-size: 11.5px;
-  font-weight: 500;
+.mobile-artist-detail__album-row-title {
+  font-size: 13.5px;
+  font-weight: 600;
   color: var(--a-color-text, #111111);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.mobile-artist-detail__album-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--a-color-text-secondary, #71717a);
+}
+
+.mobile-artist-detail__meta-dot {
+  font-size: 10px;
+  color: #cbd5e1;
+}
+
+.mobile-artist-detail__album-row-arrow {
+  color: #cbd5e1;
+  flex-shrink: 0;
 }
 
 /* Songs List */

@@ -131,13 +131,15 @@ describe('blog SEO Pages Functions', () => {
     ['backend 5xx', () => Promise.resolve(new Response('unavailable', { status: 503 }))],
     ['invalid JSON', () => Promise.resolve(new Response('{invalid'))],
     ['malformed envelope', () => Promise.resolve(new Response(JSON.stringify({ data: [{ path: 42 }] })))],
-  ])('returns 503 when sitemap data has a %s', async (_case, fetchResult) => {
+  ])('returns fallback static sitemap when sitemap data has a %s', async (_case, fetchResult) => {
     vi.stubGlobal('fetch', vi.fn(fetchResult))
 
     const response = await sitemapHandler({ request: new Request('https://atoman.org/sitemap.xml'), env: {} })
 
-    expect(response.status).toBe(503)
-    expect(response.headers.get('retry-after')).toBeTruthy()
+    expect(response.status).toBe(200)
+    const xml = await response.text()
+    expect(xml).toContain('<urlset')
+    expect(xml).toContain('<loc>https://www.atoman.org/posts</loc>')
   })
 
   it('serves robots.txt for the current origin', async () => {

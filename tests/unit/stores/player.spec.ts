@@ -1720,5 +1720,52 @@ describe("player store", () => {
 		store.skip(-30);
 		expect(store.currentTime).toBe(105);
 	});
+
+	it("discards expired playback state (> 7 days) on store initialization", () => {
+		const expiredState = {
+			version: 1,
+			savedAt: Date.now() - 8 * 24 * 3600 * 1000,
+			song: { id: "old-1", title: "Old Song", audio_url: "old.mp3" },
+			currentTime: 50,
+		};
+		localStorage.setItem("playbackState", JSON.stringify(expiredState));
+
+		try {
+			const store = usePlayerStore();
+			expect(store.currentSong).toBeNull();
+			expect(localStorage.getItem("playbackState")).toBeNull();
+		} finally {
+			localStorage.removeItem("playbackState");
+		}
+	});
+
+	it("restores valid playback state with progress and safely seeks on first togglePlay", async () => {
+		const validState = {
+			version: 1,
+			savedAt: Date.now() - 1000,
+			song: { id: "resume-1", title: "Resume Song", audio_url: "resume.mp3", duration: 200 },
+			currentTime: 68,
+		};
+		localStorage.setItem("playbackState", JSON.stringify(validState));
+
+		try {
+			const store = usePlayerStore();
+			expect(store.currentSong?.id).toBe("resume-1");
+			expect(store.currentTime).toBe(68);
+			expect(store.duration).toBe(200);
+			expect(store.isPlaying).toBe(false);
+
+			// First togglePlay triggers ensureAudio and attaches loadedmetadata seek
+			store.togglePlay();
+			const audio = audioInstances.at(-1)!;
+			expect(audio.src).toBe("resume.mp3");
+
+			// Simulate loadedmetadata event from audio element
+			audio.emit("loadedmetadata");
+			expect(audio.currentTime).toBe(68);
+		} finally {
+			localStorage.removeItem("playbackState");
+		}
+	});
 });
 

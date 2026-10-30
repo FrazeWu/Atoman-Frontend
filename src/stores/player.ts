@@ -34,6 +34,11 @@ import {
 	hasPlayableAudio,
 	normalizePlaybackSong,
 	playbackItemKey,
+	CURRENT_PLAYBACK_STATE_VERSION,
+	isPlaybackStateExpired,
+	isPlaybackProgressStale,
+	sanitizeResumePosition,
+	type PersistedPlaybackState,
 } from "@/utils/playerState";
 import {
 	buildPrefetchCandidates,
@@ -63,16 +68,6 @@ import {
 export { computeActualVolume, fadeOutAudio };
 
 export type PlaybackMode = "loop" | "single" | "random";
-
-type PersistedPlaybackState = {
-	song?: Song;
-	queue?: Song[];
-	currentTime?: number;
-	volume?: number;
-	isShuffled?: boolean;
-	repeatMode?: RepeatMode;
-	playbackMode?: PlaybackMode;
-};
 
 function resolvePlaybackAudioUrl(url: string) {
 	return resolvePlayableAudioURL(resolveAudioEngineUrl(url), api.url);
@@ -449,6 +444,7 @@ export const usePlayerStore = defineStore("player", () => {
 		window.addEventListener("pagehide", () => {
 			saveMusicProgress(false, true);
 			saveMusicSession(true);
+			savePlaybackState();
 		});
 	}
 
@@ -699,6 +695,7 @@ export const usePlayerStore = defineStore("player", () => {
 		savePodcastProgress();
 		saveMusicProgress(false, true);
 		saveMusicSession(true);
+		savePlaybackState();
 		if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
 			navigator.mediaSession.playbackState = "paused";
 		}
@@ -825,6 +822,9 @@ export const usePlayerStore = defineStore("player", () => {
 		nextAudio.addEventListener("progress", updateBuffered);
 		nextAudio.addEventListener("timeupdate", () => {
 			if (audio !== nextAudio) return;
+			if (nextAudio.currentTime === 0 && currentTime.value > 0 && nextAudio.paused) {
+				return;
+			}
 			currentTime.value = nextAudio.currentTime;
 			// A brief playable prefix is not proof of a healthy song: keep the
 			// failed-track guard until a full song completes, preventing loops
@@ -870,8 +870,23 @@ export const usePlayerStore = defineStore("player", () => {
 
 		if (currentSong.value) {
 			nextAudio.src = resolvePlaybackAudioUrl(currentSong.value.audio_url);
-			if (currentTime.value > 0) {
-				nextAudio.currentTime = currentTime.value;
+			const targetPosition = currentTime.value;
+			if (targetPosition > 0) {
+				if (nextAudio.readyState >= HTMLMediaElement.HAVE_METADATA) {
+					try {
+						nextAudio.currentTime = targetPosition;
+					} catch {}
+				} else {
+					nextAudio.addEventListener(
+						"loadedmetadata",
+						() => {
+							try {
+								nextAudio.currentTime = targetPosition;
+							} catch {}
+						},
+						{ once: true },
+					);
+				}
 			}
 		}
 
@@ -976,6 +991,10 @@ export const usePlayerStore = defineStore("player", () => {
 			});
 	};
 
+	let playbackProgressSaveTimer: ReturnType<typeof setTimeout> | null = null;
+	let lastPlaybackStateSavedAt = 0;
+	const THROTTLE_SAVE_INTERVAL_MS = 2500;
+
 	const savePlaybackState = () => {
 		if (typeof localStorage === "undefined") return;
 
@@ -986,6 +1005,8 @@ export const usePlayerStore = defineStore("player", () => {
 			}
 
 			const state: PersistedPlaybackState = {
+				version: CURRENT_PLAYBACK_STATE_VERSION,
+				savedAt: Date.now(),
 				song: compactPlaybackSong(currentSong.value),
 				queue: queue.value.map(compactPlaybackSong),
 				currentTime: audio?.currentTime ?? currentTime.value,
@@ -996,8 +1017,28 @@ export const usePlayerStore = defineStore("player", () => {
 			};
 
 			localStorage.setItem("playbackState", JSON.stringify(state));
+			lastPlaybackStateSavedAt = Date.now();
 		} catch (error) {
 			reportError(error, "Failed to persist playback state:");
+		}
+	};
+
+	const schedulePlaybackStateSave = (immediate = false) => {
+		const now = Date.now();
+		if (immediate || now - lastPlaybackStateSavedAt >= THROTTLE_SAVE_INTERVAL_MS) {
+			if (playbackProgressSaveTimer !== null) {
+				clearTimeout(playbackProgressSaveTimer);
+				playbackProgressSaveTimer = null;
+			}
+			savePlaybackState();
+			return;
+		}
+
+		if (playbackProgressSaveTimer === null) {
+			playbackProgressSaveTimer = setTimeout(() => {
+				playbackProgressSaveTimer = null;
+				savePlaybackState();
+			}, 1000);
 		}
 	};
 
@@ -1009,16 +1050,20 @@ export const usePlayerStore = defineStore("player", () => {
 
 		try {
 			const state = JSON.parse(savedState) as PersistedPlaybackState;
+			if (isPlaybackStateExpired(state)) {
+				localStorage.removeItem("playbackState");
+				return;
+			}
+
 			const restoredVol = typeof state.volume === "number" ? state.volume : 1;
 			volume.value = restoredVol;
 			if (restoredVol > 0) {
 				lastNonZeroVolume.value = restoredVol;
 			}
 			isShuffled.value = Boolean(state.isShuffled);
-			repeatMode.value = state.repeatMode || "all";
-			playbackMode.value = state.playbackMode || "loop";
-			currentTime.value =
-				typeof state.currentTime === "number" ? state.currentTime : 0;
+			repeatMode.value = (state.repeatMode as RepeatMode) || "all";
+			playbackMode.value = (state.playbackMode as PlaybackMode) || "loop";
+
 			const restoredSong = hasPlayableAudio(state.song)
 				? normalizePlaybackSong(state.song!, resolvePlaybackAudioUrl)
 				: null;
@@ -1030,17 +1075,31 @@ export const usePlayerStore = defineStore("player", () => {
 			if (restoredSong && !restoredQueue.some((song) => playbackItemKey(song) === playbackItemKey(restoredSong))) {
 				restoredQueue.unshift(restoredSong);
 			}
-			currentSong.value = restoredSong;
-			queue.value = restoredQueue;
-			currentAlbum.value = null;
-			isPlaying.value = false;
-			duration.value =
+
+			const songDuration =
 				(typeof (restoredSong as any)?.duration === "number"
 					? (restoredSong as any).duration
 					: 0) ||
 				(typeof (restoredSong as any)?.duration_seconds === "number"
 					? (restoredSong as any).duration_seconds
 					: 0);
+
+			const isPodcast = restoredSong?.source_type === "podcast_episode";
+			let targetProgress = typeof state.currentTime === "number" ? state.currentTime : 0;
+
+			// 如果普通歌曲进度超过 24 小时，进度归零
+			if (!isPodcast && isPlaybackProgressStale(state)) {
+				targetProgress = 0;
+			} else {
+				targetProgress = sanitizeResumePosition(targetProgress, songDuration, isPodcast);
+			}
+
+			currentTime.value = targetProgress;
+			currentSong.value = restoredSong;
+			queue.value = restoredQueue;
+			currentAlbum.value = null;
+			isPlaying.value = false;
+			duration.value = songDuration;
 		} catch (error) {
 			reportError(error, "Failed to restore playback state:");
 		}
@@ -1048,19 +1107,13 @@ export const usePlayerStore = defineStore("player", () => {
 
 	restorePlaybackState();
 
-	let playbackProgressSaveTimer: ReturnType<typeof setTimeout> | null = null;
 	watch(currentTime, () => {
-		if (playbackProgressSaveTimer !== null)
-			clearTimeout(playbackProgressSaveTimer);
-		playbackProgressSaveTimer = setTimeout(() => {
-			playbackProgressSaveTimer = null;
-			savePlaybackState();
-		}, 1000);
+		schedulePlaybackStateSave(false);
 	});
 
 	watch(
 		[currentSong, volume, isShuffled, repeatMode, playbackMode, queue],
-		savePlaybackState,
+		() => schedulePlaybackStateSave(true),
 		{ deep: true },
 	);
 
@@ -1313,11 +1366,28 @@ export const usePlayerStore = defineStore("player", () => {
 			player.playbackRate = playbackRate.value;
 		}
 		player.volume = computeActualVolume(volume.value);
-		if (currentTime.value > 0) {
-			try {
-				player.currentTime = currentTime.value;
-			} catch {
-				// Metadata may not be available yet
+		const targetPosition = currentTime.value;
+		if (targetPosition > 0) {
+			if (player.readyState >= HTMLMediaElement.HAVE_METADATA) {
+				try {
+					if (Math.abs(player.currentTime - targetPosition) > 0.05) {
+						player.currentTime = targetPosition;
+					}
+				} catch {
+					// Metadata may not be available yet
+				}
+			} else {
+				player.addEventListener(
+					"loadedmetadata",
+					() => {
+						try {
+							if (Math.abs(player.currentTime - targetPosition) > 0.05) {
+								player.currentTime = targetPosition;
+							}
+						} catch {}
+					},
+					{ once: true },
+				);
 			}
 		}
 
@@ -1507,6 +1577,7 @@ export const usePlayerStore = defineStore("player", () => {
 				}
 			}
 		}
+		schedulePlaybackStateSave(true);
 	};
 
 	const skip = (seconds: number) => {

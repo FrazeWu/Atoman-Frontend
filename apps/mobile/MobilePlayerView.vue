@@ -301,7 +301,7 @@
         <!-- Bottom Action Bar (Always Visible) -->
         <div class="mobile-player-view__actions" aria-label="更多播放操作">
           <button v-if="!isPodcast" type="button" class="mobile-player-view__action" aria-label="加入歌单" @click="openPlaylistPicker">
-            <MIcon name="heart" size="sm" /><span>加入歌单</span>
+            <MIcon name="playlists" size="sm" /><span>加入歌单</span>
           </button>
           <button
             v-if="isPodcastEpisode"

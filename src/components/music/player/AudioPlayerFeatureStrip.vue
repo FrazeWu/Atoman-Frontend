@@ -25,6 +25,22 @@
       @add-to-playlist="(pId, sId, close) => $emit('add-to-playlist', pId, sId, close)"
     />
 
+    <!-- 离线缓存 (Offline Cache) -->
+    <button
+      v-if="currentSong?.audio_url && !isPodcast"
+      type="button"
+      class="player-offline-btn"
+      :class="{ 'is-cached': isCached, 'is-caching': isCaching }"
+      :aria-label="isCached ? '移除离线副本' : '保存离线副本'"
+      :title="isCached ? '已离线（点击移除）' : (isCaching ? '正在离线下载…' : '保存离线副本')"
+      :disabled="isCaching"
+      @click="$emit('toggle-offline-cache')"
+    >
+      <Check v-if="isCached" :size="16" aria-hidden="true" />
+      <Loader2 v-else-if="isCaching" :size="16" class="animate-spin" aria-hidden="true" />
+      <Download v-else :size="16" aria-hidden="true" />
+    </button>
+
     <!-- 播客收藏/稍后听 -->
     <button
       v-if="isPodcastEpisode"
@@ -93,6 +109,7 @@
 </template>
 
 <script setup lang="ts">
+import { Check, Download, Loader2 } from 'lucide-vue-next'
 import PIcon from '@/components/ui/PIcon.vue'
 import AudioPlayerVolume from '@/components/music/AudioPlayerVolume.vue'
 import AudioPlayerPlaylistPopover from '@/components/music/AudioPlayerPlaylistPopover.vue'
@@ -107,6 +124,8 @@ withDefaults(
     isPodcast?: boolean
     isPodcastEpisode?: boolean
     isFavorite?: boolean
+    isCached?: boolean
+    isCaching?: boolean
     playlists?: any[]
     playlistLoadError?: string
   }>(),
@@ -115,6 +134,8 @@ withDefaults(
     isPodcast: false,
     isPodcastEpisode: false,
     isFavorite: false,
+    isCached: false,
+    isCaching: false,
     playlists: () => [],
     playlistLoadError: '',
   },
@@ -127,6 +148,7 @@ defineEmits<{
   (e: 'toggle-mute'): void
   (e: 'toggle-queue'): void
   (e: 'toggle-favorite', songId: string): void
+  (e: 'toggle-offline-cache'): void
   (e: 'guard-playlist-menu', event: MouseEvent): void
   (e: 'retry-load-playlists'): void
   (e: 'add-to-playlist', playlistId: string, songId: string, close?: () => void): void
@@ -177,7 +199,8 @@ defineEmits<{
 }
 
 .player-fav-btn,
-.player-add-btn {
+.player-add-btn,
+.player-offline-btn {
   width: 2rem;
   height: 2rem;
   display: inline-flex;
@@ -195,9 +218,15 @@ defineEmits<{
 .player-fav-btn:hover,
 .player-fav-btn:focus-visible,
 .player-add-btn:hover,
-.player-add-btn:focus-visible {
+.player-add-btn:focus-visible,
+.player-offline-btn:hover,
+.player-offline-btn:focus-visible {
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
+}
+
+.player-offline-btn.is-cached {
+  color: var(--a-color-primary, #2563eb);
 }
 
 .player-fav-btn.is-active {
@@ -294,6 +323,7 @@ defineEmits<{
 @media (max-width: 767px) {
   .player-fav-btn,
   .player-add-btn,
+  .player-offline-btn,
   .player-add-dropdown {
     display: none;
   }

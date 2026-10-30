@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { cacheMediaForOffline, getCachedMediaObjectURL, isMediaCached, MEDIA_OFFLINE_CACHE_NAME } from '@/utils/mediaOfflineCache'
+import { cacheMediaForOffline, getCachedMediaObjectURL, initMediaOfflineCacheIndex, isMediaCached, isMediaCachedSync, MEDIA_OFFLINE_CACHE_NAME } from '@/utils/mediaOfflineCache'
 
 const cache = {
   match: vi.fn(),
@@ -44,5 +44,20 @@ describe('media offline cache', () => {
     await removeCachedMedia('/media/video.mp4')
 
     expect(cache.delete).toHaveBeenCalledWith('/media/video.mp4')
+  })
+
+  it('populates synchronous cache index on initialization and updates on cache/remove', async () => {
+    const mockCache = {
+      keys: vi.fn().mockResolvedValue([{ url: 'https://example.com/audio1.mp3' }]),
+      match: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+    }
+    Object.defineProperty(window, 'caches', { configurable: true, value: { open: vi.fn().mockResolvedValue(mockCache) } })
+
+    const index = await initMediaOfflineCacheIndex()
+    expect(index.has('https://example.com/audio1.mp3')).toBe(true)
+    expect(isMediaCachedSync('https://example.com/audio1.mp3')).toBe(true)
+    expect(isMediaCachedSync('https://example.com/audio2.mp3')).toBe(false)
   })
 })

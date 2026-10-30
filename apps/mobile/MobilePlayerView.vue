@@ -315,6 +315,20 @@
             <MIcon name="playlists" size="sm" /><span>加入歌单</span>
           </button>
           <button
+            v-if="!isPodcast && player.currentSong?.audio_url"
+            type="button"
+            class="mobile-player-view__action"
+            :class="{ 'is-active': player.isCurrentAudioCached }"
+            :disabled="player.isAudioCaching"
+            :aria-label="player.isCurrentAudioCached ? '移除离线副本' : '保存离线副本'"
+            :title="player.isCurrentAudioCached ? '已离线' : '保存离线副本'"
+            @click="toggleOfflineCache"
+          >
+            <MIcon v-if="player.isCurrentAudioCached" name="check" size="sm" />
+            <MIcon v-else name="download" size="sm" />
+            <span>{{ player.isCurrentAudioCached ? '已离线' : (player.isAudioCaching ? '下载中…' : '离线') }}</span>
+          </button>
+          <button
             v-if="isPodcastEpisode"
             type="button"
             class="mobile-player-view__action"
@@ -861,6 +875,20 @@ function showToast(message: string) {
     feedback.value = ''
     toastTimer = null
   }, 2200)
+}
+
+async function toggleOfflineCache() {
+  if (player.isCurrentAudioCached) {
+    await player.removeCurrentAudio()
+    showToast('已移除离线副本')
+  } else {
+    const success = await player.cacheCurrentAudio()
+    if (success) {
+      showToast('已保存离线副本')
+    } else {
+      showToast('离线下载失败')
+    }
+  }
 }
 
 const { addPodcastBookmark, addPodcastListenLater } = usePodcastPlayerActions(showToast)

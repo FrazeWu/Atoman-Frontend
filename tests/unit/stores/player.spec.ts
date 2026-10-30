@@ -361,6 +361,44 @@ describe("player store", () => {
 		expect(calledUrls).toHaveLength(2);
 	});
 
+	it("supports caching and removing current song audio for offline playback", async () => {
+		const mockCache = {
+			match: vi.fn().mockResolvedValue(new Response("cached-audio")),
+			put: vi.fn().mockResolvedValue(undefined),
+			delete: vi.fn().mockResolvedValue(true),
+		};
+		Object.defineProperty(window, "caches", {
+			configurable: true,
+			value: { open: vi.fn().mockResolvedValue(mockCache) },
+		});
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValue(new Response("audio-stream", { status: 200 })),
+		);
+
+		const player = usePlayerStore();
+		const song = {
+			id: "offline-1",
+			title: "Offline Song",
+			audio_url: "offline.mp3",
+		} as any;
+		player.playSong(song);
+
+		expect(player.isCurrentAudioCached).toBe(false);
+		const cached = await player.cacheCurrentAudio();
+		expect(cached).toBe(true);
+		expect(player.isCurrentAudioCached).toBe(true);
+		expect(mockCache.put).toHaveBeenCalledWith(
+			"offline.mp3",
+			expect.any(Response),
+		);
+
+		const removed = await player.removeCurrentAudio();
+		expect(removed).toBe(true);
+		expect(player.isCurrentAudioCached).toBe(false);
+		expect(mockCache.delete).toHaveBeenCalledWith("offline.mp3");
+	});
+
 	it("keeps queued prefetch requests alive when switching within the queue", async () => {
 		const pendingResponses: Array<(response: Response) => void> = [];
 		const fetchMock = vi.fn(

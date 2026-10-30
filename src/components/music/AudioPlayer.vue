@@ -94,6 +94,8 @@
             :is-podcast="isPodcast"
             :is-podcast-episode="isPodcastEpisode"
             :is-favorite="isCurrentSongFavorite"
+            :is-cached="player.isCurrentAudioCached"
+            :is-caching="player.isAudioCaching"
             :playlists="playlists"
             :playlist-load-error="playlistLoadError"
             @toggle-lyrics="player.toggleLyrics()"
@@ -102,6 +104,7 @@
             @toggle-mute="player.toggleMute()"
             @toggle-queue="player.toggleQueue()"
             @toggle-favorite="toggleTrackFavorite"
+            @toggle-offline-cache="toggleTrackOfflineCache"
             @guard-playlist-menu="guardPlaylistMenu"
             @retry-load-playlists="loadPlaylists"
             @add-to-playlist="addTrackToPlaylist"
@@ -456,6 +459,20 @@ async function loadFavorites(songId?: string) {
     ));
   } catch (err) {
     reportError(err, "加载最爱歌单失败");
+  }
+}
+
+async function toggleTrackOfflineCache() {
+  if (player.isCurrentAudioCached) {
+    await player.removeCurrentAudio();
+    showToast("已移除离线缓存");
+  } else {
+    const success = await player.cacheCurrentAudio();
+    if (success) {
+      showToast("已保存离线副本");
+    } else {
+      showToast("离线缓存失败");
+    }
   }
 }
 

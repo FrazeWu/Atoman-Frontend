@@ -10,6 +10,7 @@ import {
   installStaleViteChunkRecovery,
   recoverStaleViteChunk,
 } from "./utils/staleViteChunkRecovery";
+import { initMediaOfflineCacheIndex } from "./utils/mediaOfflineCache";
 
 const isMobileRuntime = () => {
   const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(
@@ -73,6 +74,7 @@ const bootstrap = async () => {
   app.use(createPinia());
   app.use(appRouter);
   app.mount("#app");
+  void initMediaOfflineCacheIndex();
 };
 
 void bootstrap().catch((error) => {

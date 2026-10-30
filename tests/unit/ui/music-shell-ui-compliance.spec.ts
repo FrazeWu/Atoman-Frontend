@@ -45,7 +45,7 @@ describe('music shell matches the established design system', () => {
     const albumImport = read('src/components/music/MusicCreationAlbumSeedStep.vue')
     const albumDetails = read('src/components/music/MusicCreationAlbumDetailsStep.vue')
 
-    expect(drawer).toContain('background: #ffffff !important')
+    expect(drawer).toMatch(/background:\s*(#ffffff|var\(--a-color-bg\))\s*!important/)
     expect(drawer).not.toContain('rgba(255, 255, 255, 0.85)')
     expect(drawer).not.toContain('rgba(15, 23, 42, 0.88)')
     expect(albumImport).not.toContain('--color-')

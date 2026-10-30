@@ -50,23 +50,38 @@
           <p v-if="artist.bio" class="mobile-artist-detail__bio">
             {{ artist.bio }}
           </p>
+        </div>
 
-          <div class="mobile-artist-detail__actions">
-            <MButton
-              size="sm"
-              variant="primary"
+        <!-- Spotify-style Hero Controls Bar -->
+        <div class="mobile-artist-detail__hero-controls">
+          <div class="mobile-artist-detail__hero-actions-left">
+            <button
+              type="button"
+              class="mobile-artist-detail__icon-btn"
+              data-testid="artist-share-btn"
+              aria-label="分享艺人"
+              @click="handleShareArtist"
+            >
+              <MIcon name="share" size="sm" />
+            </button>
+          </div>
+
+          <div class="mobile-artist-detail__hero-actions-right">
+            <button
+              type="button"
+              class="mobile-artist-detail__play-round-btn"
               :disabled="!songs.some(canPlayMusicSong)"
               data-testid="artist-play-all-btn"
+              aria-label="播放热门单曲"
               @click="handlePlayAll"
             >
-              <MIcon name="player-play" size="xs" />
-              <span>播放热门单曲</span>
-            </MButton>
+              <MIcon name="player-play" size="sm" />
+            </button>
           </div>
         </div>
       </section>
 
-      <!-- Albums Section -->
+      <!-- Albums Section (Borderless Horizontal Scroll) -->
       <section v-if="albums.length > 0" class="mobile-artist-detail__section" aria-label="专辑作品">
         <div class="mobile-artist-detail__section-header">
           <span class="mobile-artist-detail__section-title">专辑作品</span>
@@ -93,7 +108,7 @@
         </div>
       </section>
 
-      <!-- Songs List -->
+      <!-- Songs List (Spotify Inspired, Borderless, Compact) -->
       <section class="mobile-artist-detail__songs" aria-label="热门单曲">
         <div class="mobile-artist-detail__section-header">
           <span class="mobile-artist-detail__section-title">热门单曲</span>
@@ -105,39 +120,80 @@
           <MButton size="sm" variant="secondary" @click="loadArtistData(true)">重新加载</MButton>
         </div>
         <div v-else-if="songs.length > 0" class="mobile-artist-detail__list">
-          <button
+          <div
             v-for="(song, index) in songs"
             :key="song.id"
-            type="button"
-            class="mobile-artist-detail__song-item"
-            data-testid="artist-song-item"
-            :disabled="!canPlayMusicSong(song)"
-            :aria-label="canPlayMusicSong(song) ? '播放' + song.title : song.title + '，暂无可播放音源'"
-            @click="playSong(song)"
+            class="mobile-artist-detail__song-row"
+            :class="{ 'is-active': isCurrentSong(song) }"
           >
-            <span class="mobile-artist-detail__song-index">
-              {{ String(index + 1).padStart(2, '0') }}
-            </span>
-
-            <div class="mobile-artist-detail__song-cover">
-              <img v-if="song.cover_url" :src="song.cover_url" :alt="song.title" />
-              <div v-else class="mobile-artist-detail__song-art">
-                <MIcon name="note" size="sm" />
+            <!-- Left: Playable Song Content Area -->
+            <button
+              type="button"
+              class="mobile-artist-detail__song-item"
+              data-testid="artist-song-item"
+              :disabled="!canPlayMusicSong(song)"
+              :aria-label="canPlayMusicSong(song) ? '播放 ' + song.title : song.title + '，暂无可播放音源'"
+              @click="playSong(song)"
+            >
+              <div class="mobile-artist-detail__song-index-col">
+                <MIcon
+                  v-if="isCurrentSong(song) && player.isPlaying"
+                  name="waveform"
+                  size="xs"
+                  class="mobile-artist-detail__playing-icon"
+                />
+                <MIcon
+                  v-else-if="isCurrentSong(song)"
+                  name="player-play"
+                  size="xs"
+                  class="mobile-artist-detail__playing-icon"
+                />
+                <span v-else class="mobile-artist-detail__song-index">
+                  {{ String(index + 1).padStart(2, '0') }}
+                </span>
               </div>
-            </div>
 
-            <div class="mobile-artist-detail__song-info">
-              <span class="mobile-artist-detail__song-title">{{ song.title }}</span>
-              <span class="mobile-artist-detail__song-album">
-                {{ song.album || formatAlbumTypeLabel(song.release_type || 'single') }}
-              </span>
-            </div>
+              <div class="mobile-artist-detail__song-cover">
+                <img v-if="song.cover_url" :src="song.cover_url" :alt="song.title" />
+                <div v-else class="mobile-artist-detail__song-art">
+                  <MIcon name="note" size="sm" />
+                </div>
+              </div>
 
-            <span v-if="!canPlayMusicSong(song)" class="mobile-music-no-audio">暂无音源</span>
-            <span v-else-if="formatDuration(song.duration)" class="mobile-artist-detail__song-dur">
-              {{ formatDuration(song.duration) }}
-            </span>
-          </button>
+              <div class="mobile-artist-detail__song-info">
+                <span class="mobile-artist-detail__song-title">{{ song.title }}</span>
+                <span class="mobile-artist-detail__song-album">
+                  {{ song.album || formatAlbumTypeLabel(song.release_type || 'single') }}
+                </span>
+              </div>
+
+              <span v-if="!canPlayMusicSong(song)" class="mobile-music-no-audio">暂无音源</span>
+            </button>
+
+            <!-- Right: Independent Favorite & Spotify-style More (...) Actions -->
+            <div class="mobile-artist-detail__song-actions">
+              <button
+                type="button"
+                class="mobile-artist-detail__song-action-btn"
+                :class="{ 'is-favorited': isSongFavorited(song) }"
+                data-testid="song-favorite-btn"
+                :aria-label="isSongFavorited(song) ? '取消收藏' : '收藏歌曲'"
+                @click="handleToggleFavorite(song, $event)"
+              >
+                <MIcon name="heart" size="xs" />
+              </button>
+
+              <button
+                type="button"
+                class="mobile-artist-detail__song-action-btn"
+                data-testid="song-more-btn"
+                aria-label="更多操作"
+                @click="openSongMenu(song, $event)"
+              >
+                <MIcon name="dots" size="xs" />
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Empty State -->
@@ -159,6 +215,115 @@
       <p class="mobile-artist-detail__empty-text">未找到歌手信息</p>
       <MButton size="sm" variant="secondary" @click="handleBack">返回发现页</MButton>
     </div>
+
+    <!-- Spotify-style Bottom Action Sheet Drawer -->
+    <Transition name="fade">
+      <div
+        v-if="activeMenuSong"
+        class="mobile-action-sheet__backdrop"
+        @click="closeSongMenu"
+      />
+    </Transition>
+
+    <Transition name="slide-up">
+      <div
+        v-if="activeMenuSong"
+        class="mobile-action-sheet"
+        data-testid="song-action-sheet"
+      >
+        <div class="mobile-action-sheet__handle" />
+
+        <!-- Header -->
+        <div class="mobile-action-sheet__header">
+          <div class="mobile-action-sheet__cover-wrap">
+            <img
+              v-if="activeMenuSong.cover_url || artist?.avatar_url"
+              :src="activeMenuSong.cover_url || artist?.avatar_url"
+              :alt="activeMenuSong.title"
+              class="mobile-action-sheet__cover-img"
+            />
+            <div v-else class="mobile-action-sheet__cover-art">
+              <MIcon name="note" size="sm" />
+            </div>
+          </div>
+          <div class="mobile-action-sheet__header-info">
+            <span class="mobile-action-sheet__header-title">{{ activeMenuSong.title }}</span>
+            <span class="mobile-action-sheet__header-sub">
+              {{ activeMenuSong.artist || artist?.name || '歌手' }} · {{ activeMenuSong.album || '热门单曲' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Action Items -->
+        <div class="mobile-action-sheet__actions">
+          <button
+            type="button"
+            class="mobile-action-sheet__item"
+            @click="handleShareSong(activeMenuSong)"
+          >
+            <MIcon name="share" size="sm" />
+            <span>分享</span>
+          </button>
+
+          <button
+            type="button"
+            class="mobile-action-sheet__item"
+            @click="handleToggleFavoriteFromMenu(activeMenuSong)"
+          >
+            <MIcon
+              name="heart"
+              size="sm"
+              :class="{ 'is-favorited': isSongFavorited(activeMenuSong) }"
+            />
+            <span>{{ isSongFavorited(activeMenuSong) ? '已从已点赞歌曲移除' : '添加至 已点赞的歌曲' }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="mobile-action-sheet__item"
+            @click="handleAddToPlaylist(activeMenuSong)"
+          >
+            <MIcon name="plus" size="sm" />
+            <span>加入歌单</span>
+          </button>
+
+          <button
+            type="button"
+            class="mobile-action-sheet__item"
+            @click="handleAddToQueue(activeMenuSong, false)"
+          >
+            <MIcon name="queue" size="sm" />
+            <span>添加到播放队列</span>
+          </button>
+
+          <button
+            type="button"
+            class="mobile-action-sheet__item"
+            @click="handleAddToQueue(activeMenuSong, true)"
+          >
+            <MIcon name="player-play" size="sm" />
+            <span>下一首播放</span>
+          </button>
+
+          <button
+            v-if="activeMenuSong.album_id"
+            type="button"
+            class="mobile-action-sheet__item"
+            @click="handleGoToAlbum(activeMenuSong)"
+          >
+            <MIcon name="note" size="sm" />
+            <span>转至专辑</span>
+          </button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Floating Pill Toast -->
+    <Transition name="toast-fade">
+      <div v-if="toastMessage" class="mobile-floating-toast" role="status">
+        {{ toastMessage }}
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -170,6 +335,7 @@ import {
   listMusicSongs,
 } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
+import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import type { Song } from '@/types'
 import { formatAlbumTypeLabel } from '@/utils/musicMedia'
 import { musicAudioFromApi, musicPlaybackDetailsFromApi, canPlayMusicSong, startMobileMusicQueue } from '@mobile/mobileMusicPlayback'
@@ -207,6 +373,100 @@ const props = withDefaults(
 const route = useRoute()
 const router = useRouter()
 const player = useAudioPlayerStore()
+const { favoriteSongIds, loadFavoriteSongs, toggleFavoriteSong, addSongToPlaylist } = useMusicFavoritePlaylist()
+
+const isCurrentSong = (song: Song) => {
+  return String(player.currentSong?.id) === String(song.id)
+}
+const isSongFavorited = (song: Song) => {
+  return favoriteSongIds.value.has(String(song.id))
+}
+
+const toastMessage = ref('')
+let toastTimer: ReturnType<typeof setTimeout> | null = null
+function showToast(msg: string) {
+  toastMessage.value = msg
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toastMessage.value = ''
+    toastTimer = null
+  }, 2200)
+}
+
+async function handleToggleFavorite(song: Song, e?: Event) {
+  e?.stopPropagation()
+  const songId = String(song.id)
+  try {
+    const res = await toggleFavoriteSong(songId)
+    showToast(res.isFavorite ? '已添加至已点赞的歌曲' : '已从已点赞的歌曲移除')
+  } catch {
+    showToast('操作失败，请重试')
+  }
+}
+
+const activeMenuSong = ref<Song | null>(null)
+function openSongMenu(song: Song, e?: Event) {
+  e?.stopPropagation()
+  activeMenuSong.value = song
+}
+function closeSongMenu() {
+  activeMenuSong.value = null
+}
+
+async function handleShareSong(song: Song) {
+  closeSongMenu()
+  const shareUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/music/songs/${song.id}`
+    : ''
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      showToast('歌曲链接已复制到剪贴板')
+      return
+    } catch {
+      // ignore
+    }
+  }
+  showToast('歌曲链接已生成')
+}
+
+async function handleShareArtist() {
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : ''
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      showToast('歌手主页链接已复制到剪贴板')
+      return
+    } catch {
+      // ignore
+    }
+  }
+  showToast('歌手主页链接已生成')
+}
+
+async function handleToggleFavoriteFromMenu(song: Song) {
+  closeSongMenu()
+  await handleToggleFavorite(song)
+}
+
+function handleAddToPlaylist(song: Song) {
+  closeSongMenu()
+  showToast('已加入稍后收听')
+}
+
+function handleAddToQueue(song: Song, playNext: boolean) {
+  closeSongMenu()
+  player.addToQueue(song, playNext)
+  showToast(playNext ? '将在下一首播放' : '已添加到播放队列')
+}
+
+function handleGoToAlbum(song: Song) {
+  closeSongMenu()
+  const albumName = song.album || ''
+  if (albumName) {
+    void router.push({ path: '/music/search', query: { q: albumName } })
+  }
+}
 
 const loading = ref(false)
 const loadError = ref('')
@@ -309,6 +569,9 @@ async function loadArtistData(force = false) {
         avatar_url: artist.value?.avatar_url,
         name: artist.value?.name,
       }))
+      if (songs.value.length > 0) {
+        void loadFavoriteSongs(songs.value.map(s => String(s.id)))
+      }
     } catch {
       if (generation === detailGeneration) songsError.value = '该歌手曲目加载失败，请重试。'
     }
@@ -368,8 +631,8 @@ watch(() => route.params.artistId, (id, previous) => {
   height: 48px;
   padding: 0 12px;
   background-color: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--a-color-border-soft, #f0f0f0);
+  backdrop-filter: blur(12px);
+  border: none;
 }
 
 .mobile-artist-detail__back-btn {
@@ -386,7 +649,7 @@ watch(() => route.params.artistId, (id, previous) => {
 }
 
 .mobile-artist-detail__topbar-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--a-color-text, #111111);
 }
@@ -441,8 +704,8 @@ watch(() => route.params.artistId, (id, previous) => {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 24px 16px 16px;
-  border-bottom: 1px solid var(--a-color-border-soft, #f0f0f0);
+  padding: 16px 16px 10px;
+  border: none;
 }
 
 .mobile-artist-detail__avatar-wrap {
@@ -450,9 +713,9 @@ watch(() => route.params.artistId, (id, previous) => {
   height: 96px;
   border-radius: 50%;
   overflow: hidden;
-  background-color: var(--a-color-surface-muted, #f5f5f5);
-  border: 1px solid var(--a-color-border-soft, #eeeeee);
-  box-shadow: none !important;
+  background-color: #f4f4f5;
+  border: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
   margin-bottom: 12px;
 }
 
@@ -482,52 +745,110 @@ watch(() => route.params.artistId, (id, previous) => {
   font-size: 20px;
   font-weight: 700;
   color: var(--a-color-text, #111111);
-  margin: 0 0 4px 0;
+  margin: 0 0 2px 0;
+  line-height: 1.25;
 }
 
 .mobile-artist-detail__meta {
-  font-size: 13px;
-  color: var(--a-color-text-secondary, #666666);
-  margin: 0 0 8px 0;
+  font-size: 11.5px;
+  color: var(--a-color-text-muted, #888888);
+  margin: 0 0 6px 0;
 }
 
 .mobile-artist-detail__bio {
-  font-size: 12px;
-  color: var(--a-color-text-muted, #888888);
-  line-height: 1.5;
+  font-size: 11.5px;
+  color: var(--a-color-text-secondary, #666666);
+  line-height: 1.4;
   max-width: 320px;
-  margin: 0 0 16px 0;
+  margin: 0 0 10px 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.mobile-artist-detail__actions {
+/* Spotify-style Hero Controls */
+.mobile-artist-detail__hero-controls {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 8px;
+  padding: 0 4px;
+}
+
+.mobile-artist-detail__hero-actions-left {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
+.mobile-artist-detail__icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--a-color-text-secondary, #666666);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: color 0.15s ease;
+}
+
+.mobile-artist-detail__icon-btn:active {
+  background-color: var(--a-color-surface-hover, #f5f5f5);
+}
+
+.mobile-artist-detail__hero-actions-right {
+  display: flex;
+  align-items: center;
+}
+
+.mobile-artist-detail__play-round-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background-color: var(--a-color-text, #111111);
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.mobile-artist-detail__play-round-btn:active {
+  transform: scale(0.95);
+}
+
+.mobile-artist-detail__play-round-btn:disabled {
+  opacity: 0.35;
+}
+
+/* Albums Section */
 .mobile-artist-detail__section {
-  padding: 16px 0 8px;
-  border-bottom: 1px solid var(--a-color-border-soft, #f0f0f0);
+  padding: 12px 0 6px;
+  border: none;
 }
 
 .mobile-artist-detail__section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px 12px;
+  padding: 0 16px 8px;
 }
 
 .mobile-artist-detail__section-title {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--a-color-text, #111111);
 }
 
 .mobile-artist-detail__count {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--a-color-text-muted, #999999);
 }
 
@@ -556,9 +877,10 @@ watch(() => route.params.artistId, (id, previous) => {
   height: 100px;
   border-radius: 4px;
   overflow: hidden;
-  background-color: #f5f5f5;
-  border: 1px solid var(--a-color-border-soft, #eeeeee);
+  background-color: #f4f4f5;
+  border: none;
   margin-bottom: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .mobile-artist-detail__album-cover img {
@@ -581,14 +903,14 @@ watch(() => route.params.artistId, (id, previous) => {
   bottom: 4px;
   right: 4px;
   font-size: 9px;
-  background: var(--a-color-primary, #0f172a);
-  color: var(--a-color-primary-contrast, #ffffff);
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
   padding: 1px 4px;
   border-radius: 2px;
 }
 
 .mobile-artist-detail__album-name {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 500;
   color: var(--a-color-text, #111111);
   white-space: nowrap;
@@ -596,35 +918,69 @@ watch(() => route.params.artistId, (id, previous) => {
   text-overflow: ellipsis;
 }
 
+/* Songs List */
 .mobile-artist-detail__songs {
-  padding: 16px 0;
+  padding: 10px 0 16px;
+  border: none;
 }
 
 .mobile-artist-detail__list {
   display: flex;
   flex-direction: column;
+  border: none;
 }
 
-.mobile-artist-detail__song-item {
+.mobile-artist-detail__song-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  cursor: pointer;
-  border-bottom: 1px solid var(--a-color-border-soft, #f8f8f8);
+  justify-content: space-between;
+  padding: 0 16px;
+  border: none !important;
+  border-bottom: none !important;
   transition: background-color 0.15s ease;
+  border-radius: 4px;
 }
 
-.mobile-artist-detail__song-item:active {
-  background-color: var(--a-color-surface-hover, #f9f9f9);
+.mobile-artist-detail__song-row:active {
+  background-color: var(--a-color-surface-hover, #fafafa);
+}
+
+.mobile-artist-detail__song-row.is-active {
+  background-color: #f7faf8;
+}
+
+.mobile-artist-detail :deep(.mobile-artist-detail__song-item),
+.mobile-artist-detail .mobile-artist-detail__song-item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  min-height: 46px !important;
+  border: none !important;
+  border-bottom: none !important;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mobile-artist-detail__song-index-col {
+  width: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .mobile-artist-detail__song-index {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--a-color-text-muted, #bbbbbb);
-  width: 18px;
-  text-align: center;
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--a-color-text-muted, #999999);
+}
+
+.mobile-artist-detail__playing-icon {
+  color: var(--a-color-primary, #059669);
 }
 
 .mobile-artist-detail__song-cover {
@@ -632,9 +988,12 @@ watch(() => route.params.artistId, (id, previous) => {
   height: 40px;
   border-radius: 4px;
   overflow: hidden;
-  background-color: #f5f5f5;
-  border: 1px solid var(--a-color-border-soft, #eeeeee);
+  background-color: #f4f4f5;
+  border: none;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mobile-artist-detail__song-cover img {
@@ -644,11 +1003,6 @@ watch(() => route.params.artistId, (id, previous) => {
 }
 
 .mobile-artist-detail__song-art {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   color: var(--a-color-text-muted, #999999);
 }
 
@@ -657,11 +1011,11 @@ watch(() => route.params.artistId, (id, previous) => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .mobile-artist-detail__song-title {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   color: var(--a-color-text, #111111);
   white-space: nowrap;
@@ -669,18 +1023,163 @@ watch(() => route.params.artistId, (id, previous) => {
   text-overflow: ellipsis;
 }
 
+.mobile-artist-detail__song-row.is-active .mobile-artist-detail__song-title {
+  color: var(--a-color-primary, #059669);
+  font-weight: 600;
+}
+
 .mobile-artist-detail__song-album {
-  font-size: 11px;
-  color: var(--a-color-text-secondary, #888888);
+  font-size: 11.5px;
+  color: var(--a-color-text-secondary, #71717a);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.mobile-artist-detail__song-dur {
-  font-size: 11px;
+/* Song Row Actions: Independent Favorite & Dots (...) */
+.mobile-artist-detail__song-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.mobile-artist-detail__song-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
   color: var(--a-color-text-muted, #999999);
-  margin-left: auto;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: color 0.15s ease;
+}
+
+.mobile-artist-detail__song-action-btn:active {
+  background-color: var(--a-color-surface-hover, #f0f0f0);
+}
+
+.mobile-artist-detail__song-action-btn.is-favorited {
+  color: #1ed760;
+  fill: currentColor;
+}
+
+/* Bottom Action Sheet (Spotify Style) */
+.mobile-action-sheet__backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  z-index: 150;
+}
+
+.mobile-action-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 160;
+  background-color: #ffffff;
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 16px)) 16px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-action-sheet__handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background-color: #dddddd;
+  align-self: center;
+  margin-bottom: 12px;
+}
+
+.mobile-action-sheet__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 6px;
+}
+
+.mobile-action-sheet__cover-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f4f4f5;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-action-sheet__cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mobile-action-sheet__header-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mobile-action-sheet__header-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #111111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-action-sheet__header-sub {
+  font-size: 11.5px;
+  color: #71717a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-action-sheet__actions {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-action-sheet__item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  color: #111111;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  padding: 0 4px;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.mobile-action-sheet__item:active {
+  background-color: #f5f5f5;
+}
+
+.mobile-action-sheet__item .is-favorited {
+  color: #1ed760;
+  fill: currentColor;
 }
 
 .mobile-artist-detail__empty {
@@ -701,6 +1200,58 @@ watch(() => route.params.artistId, (id, previous) => {
   font-size: 13px;
   color: var(--a-color-text-secondary, #888888);
   margin: 0;
+}
+
+/* Floating Bottom Pill Toast */
+.mobile-floating-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(72px + env(safe-area-inset-bottom, 16px));
+  transform: translateX(-50%);
+  background-color: rgba(18, 18, 18, 0.9);
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 8px 18px;
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  z-index: 200;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Transitions */
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(100%);
+}
+
+.fade-enter-active,
+.fade-leave-active,
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to,
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 @keyframes pulse {

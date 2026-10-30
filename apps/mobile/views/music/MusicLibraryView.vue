@@ -178,18 +178,17 @@ onMounted(() => {
 .mobile-music-library__tracks {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-card, 4px);
-  background: #ffffff;
-  overflow: hidden;
+  border: none !important;
+  background: transparent;
 }
 
 .mobile-music-library__track-item {
   display: flex;
   align-items: center;
-  padding: 0.75rem 0.875rem;
+  padding: 0.5rem 0.25rem;
   gap: 0.75rem;
-  border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: none !important;
+  border-bottom: none !important;
   cursor: pointer;
   user-select: none;
   transition: background-color 0.1s ease;

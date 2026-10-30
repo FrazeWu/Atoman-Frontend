@@ -417,10 +417,10 @@
   .mobile-music-me__item[data-testid="history-item"]
 ) {
   width: 100%;
-  min-height: 56px;
+  min-height: 48px;
   box-sizing: border-box;
-  border: 0;
-  border-bottom: 1px solid var(--a-color-border-soft, #f1f5f9);
+  border: none !important;
+  border-bottom: none !important;
   background: transparent;
   color: inherit;
   font: inherit;

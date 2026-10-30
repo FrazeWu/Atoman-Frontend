@@ -44,9 +44,9 @@ describe('固定修订阅读选区', () => {
     doc.body.innerHTML = '<section><p>相同😀文本与批注</p></section>'
     const range = doc.createRange(); range.setStart(doc.querySelector('p')!.firstChild!, 2); range.setEnd(doc.querySelector('p')!.firstChild!, 8)
     const cfi = new EpubCFI(range, '/6/2[chapter]').toString()
-    const selected = epubSelection(cfi, range)!
+    const selected = epubSelection(cfi, range, EpubCFI)!
     expect(selected.anchor.epub_start_cfi).toContain(':2)')
     expect(selected.anchor.epub_end_cfi).toContain(':8)')
-    expect(epubMarkRange(selected.anchor, doc).toString()).toBe(range.toString())
+    expect(epubMarkRange(selected.anchor, doc, EpubCFI).toString()).toBe(range.toString())
   })
 })

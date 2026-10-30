@@ -79,6 +79,9 @@ export default defineConfig(({ mode }) => {
 				output: {
 					experimentalMinChunkSize: 15000,
 					manualChunks(id) {
+						if (id.includes("commonjsHelpers") || id.includes("dynamic-require")) {
+							return "vue-core";
+						}
 						if (id.includes("spaceConstants") || id.includes("bottomNavConstants"))
 							return "mobile-space-constants";
 						if (id.includes("lucide-vue-next")) return "ui-icons";

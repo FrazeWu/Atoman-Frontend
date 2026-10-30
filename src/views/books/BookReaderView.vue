@@ -95,7 +95,9 @@
           <div ref="textMeasure" class="books-reader__text-page-content" />
         </div>
       </div>
-      <div v-else-if="asset?.format === 'epub'" ref="epubViewport" class="books-reader__epub" />
+      <div v-else-if="asset?.format === 'epub'" ref="epubViewport" class="books-reader__epub">
+        <BookReaderSkeleton v-if="isEngineLoading" format="epub" />
+      </div>
       <div v-else-if="asset?.format === 'cbz' || asset?.format === 'cbr'" ref="comicViewport" class="books-reader__comic" aria-label="漫画页面">
         <figure v-for="(page, index) in comicPages" :key="page.name" :ref="element => setComicPageRef(index, element)" class="books-reader__comic-page">
           <img :src="page.url" :alt="`${asset?.title || '漫画'} 第 ${index + 1} 页`" loading="lazy" />
@@ -103,7 +105,8 @@
         </figure>
       </div>
       <div v-else class="books-reader__pdf">
-        <canvas ref="pdfCanvas" aria-label="PDF 页面" />
+        <BookReaderSkeleton v-if="isEngineLoading" format="pdf" />
+        <canvas v-show="!isEngineLoading" ref="pdfCanvas" aria-label="PDF 页面" />
       </div>
       <template #settings>
         <BookReaderDisplayControls v-model="displayPreferences" @update:model-value="updateDisplayPreferences" />
@@ -173,9 +176,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { Bookmark, Download, Save, Search } from 'lucide-vue-next'
 import BookQuoteActionModal from '@/components/books/BookQuoteActionModal.vue'
 import { useDraftStagingStore } from '@/stores/draftStaging'
-import ePub from 'epubjs'
-import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from 'pdfjs-dist/legacy/build/pdf.mjs'
-import pdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs?url'
+import type { PDFDocumentProxy } from 'pdfjs-dist/legacy/build/pdf.mjs'
+import { loadPdfEngine, loadEpubEngine } from '@/utils/bookReaderEngines'
+import BookReaderSkeleton from '@/components/books/BookReaderSkeleton.vue'
 import PButton from '@/components/ui/PButton.vue'
 import BookReaderDisplayControls from '@/components/books/BookReaderDisplayControls.vue'
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
@@ -204,10 +207,8 @@ import {
   type BookReadingState,
 } from '@/api/books'
 
-GlobalWorkerOptions.workerSrc = pdfWorker
-
-type EpubBook = ReturnType<typeof ePub>
-type EpubRendition = ReturnType<EpubBook['renderTo']>
+type EpubBook = any
+type EpubRendition = any
 
 type EpubLocation = {
   start?: { cfi?: string; percentage?: number }
@@ -267,8 +268,9 @@ const comicViewport = ref<HTMLElement | null>(null)
 const pdfCanvas = ref<HTMLCanvasElement | null>(null)
 const textPageElements: Array<HTMLElement | undefined> = []
 const comicPageElements: Array<HTMLElement | undefined> = []
+const isEngineLoading = ref(false)
 let pdfDocument: PDFDocumentProxy | null = null
-let pdfLoadingTask: ReturnType<typeof getDocument> | null = null
+let pdfLoadingTask: ReturnType<typeof import('pdfjs-dist/legacy/build/pdf.mjs').getDocument> | null = null
 let epubBook: EpubBook | null = null
 let epubRendition: EpubRendition | null = null
 let saveTimer: ReturnType<typeof setTimeout> | undefined
@@ -328,12 +330,18 @@ async function loadText() {
 }
 
 async function loadPDF() {
-  const data = await contentBlob.value!.arrayBuffer()
-  pdfLoadingTask = getDocument({ data })
-  pdfDocument = await pdfLoadingTask.promise
-  pdfPageCount.value = pdfDocument.numPages
-  pdfPage.value = Math.min(Math.max(1, pdfPage.value), pdfDocument.numPages)
-  await renderPDFPage()
+  isEngineLoading.value = true
+  try {
+    const { getDocument } = await loadPdfEngine()
+    const data = await contentBlob.value!.arrayBuffer()
+    pdfLoadingTask = getDocument({ data })
+    pdfDocument = await pdfLoadingTask.promise
+    pdfPageCount.value = pdfDocument.numPages
+    pdfPage.value = Math.min(Math.max(1, pdfPage.value), pdfDocument.numPages)
+    await renderPDFPage()
+  } finally {
+    isEngineLoading.value = false
+  }
 }
 
 async function renderPDFPage() {
@@ -367,16 +375,23 @@ function handleScrollModeChange(newMode: BookReaderScrollMode) {
 }
 
 async function loadEPUB() {
-  epubBook = ePub(await contentBlob.value!.arrayBuffer())
-  await epubBook.ready
-  epubTOC.value = flattenEpubTOC(epubBook.navigation.toc as EpubTOCSource[])
-  epubRendition = epubBook.renderTo(epubViewport.value!, {
-    width: '100%',
-    height: '100%',
-    flow: 'paginated',
-    manager: 'default',
-    allowScriptedContent: false,
-  })
+  isEngineLoading.value = true
+  try {
+    const [{ ePub }, data] = await Promise.all([
+      loadEpubEngine(),
+      contentBlob.value!.arrayBuffer(),
+    ])
+    if (!ePub || !data || !epubViewport.value) return
+    epubBook = ePub(data)
+    await epubBook.ready
+    epubTOC.value = flattenEpubTOC(epubBook.navigation.toc as EpubTOCSource[])
+    epubRendition = epubBook.renderTo(epubViewport.value, {
+      width: '100%',
+      height: '100%',
+      flow: 'paginated',
+      manager: 'default',
+      allowScriptedContent: false,
+    })
 
   epubRendition.themes.default({
     '.book-highlight': {
@@ -436,6 +451,9 @@ async function loadEPUB() {
   })
 
   await epubRendition.display(readingState.value?.epub_cfi || undefined)
+  } finally {
+    isEngineLoading.value = false
+  }
 }
 
 async function loadComic() {

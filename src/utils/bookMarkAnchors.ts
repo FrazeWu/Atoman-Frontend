@@ -1,5 +1,5 @@
-import { EpubCFI } from 'epubjs'
 import type { ReadingAnchor, ReadingMark } from '@/api/bookReading'
+import { epubSelection, epubMarkRange, type EpubCfiConstructor } from './epubMarkAnchors'
 
 export interface HighlightSelection { anchor: ReadingAnchor; quote: string }
 
@@ -47,22 +47,7 @@ export function pdfSelection(root: HTMLElement, page: number, selection: Selecti
   return rects.length ? { quote, anchor: { pdf_page: page, pdf_rects: rects } } : null
 }
 
-export function epubSelection(cfi: string, range: Range): HighlightSelection | null {
-  if (!range.toString().trim()) return null
-  const start = new EpubCFI(cfi)
-  const end = new EpubCFI(cfi)
-  start.collapse(true)
-  end.collapse(false)
-  if (start.compare(start, end) >= 0) return null
-  return { quote: range.toString(), anchor: { epub_start_cfi: start.toString(), epub_end_cfi: end.toString() } }
-}
-
-export function epubMarkRange(anchor: ReadingAnchor, doc: Document): Range {
-  const start = new EpubCFI(anchor.epub_start_cfi).toRange(doc)
-  const end = new EpubCFI(anchor.epub_end_cfi).toRange(doc)
-  start.setEnd(end.endContainer, end.endOffset)
-  return start
-}
+export { epubSelection, epubMarkRange, type EpubCfiConstructor } from './epubMarkAnchors'
 
 export const highlightColors: Record<string, string> = { yellow: '#facc15', green: '#4ade80', blue: '#60a5fa', pink: '#f472b6' }
 

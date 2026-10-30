@@ -78,6 +78,9 @@ export default defineConfig(({ mode }) => {
 			rollupOptions: {
 				output: {
 					manualChunks(id) {
+						if (id.includes("commonjsHelpers") || id.includes("dynamic-require")) {
+							return "vue-core";
+						}
 						if (id.includes("spaceConstants") || id.includes("bottomNavConstants"))
 							return "mobile-space-constants";
 						if (id.includes("lucide-vue-next")) return "ui-icons";

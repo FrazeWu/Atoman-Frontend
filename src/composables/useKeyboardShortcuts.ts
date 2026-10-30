@@ -1,4 +1,5 @@
 import { onMounted, onUnmounted, toValue, type MaybeRefOrGetter } from 'vue'
+import { hasActiveDialog } from './useDialogFocus'
 
 export interface KeyboardShortcut {
   key: string
@@ -8,6 +9,11 @@ export interface KeyboardShortcut {
   meta?: boolean
   shift?: boolean
   alt?: boolean
+  allowInDialog?: boolean
+}
+
+export function isModalOverlayActive(): boolean {
+  return hasActiveDialog()
 }
 
 export function isKeyboardEditableTarget(target: EventTarget | null): boolean {
@@ -17,7 +23,10 @@ export function isKeyboardEditableTarget(target: EventTarget | null): boolean {
       ? document.activeElement
       : null
   if (!element) return false
-  return ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName) || element.isContentEditable
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName) || element.isContentEditable) {
+    return true
+  }
+  return Boolean(element.closest?.('.p-editor, .dm-composer, .cm-editor, [contenteditable="true"]'))
 }
 
 export function matchesKeyboardShortcut(event: KeyboardEvent, shortcut: KeyboardShortcut): boolean {
@@ -33,7 +42,13 @@ export function useKeyboardShortcuts(
 ) {
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.defaultPrevented || isKeyboardEditableTarget(event.target)) return
-    const shortcut = toValue(shortcuts).find((item) => matchesKeyboardShortcut(event, item))
+
+    const inDialog = isModalOverlayActive()
+    const shortcut = toValue(shortcuts).find((item) => {
+      if (inDialog && !item.allowInDialog) return false
+      return matchesKeyboardShortcut(event, item)
+    })
+
     if (!shortcut) return
     event.preventDefault()
     shortcut.handler()

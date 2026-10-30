@@ -131,6 +131,7 @@ const handleNavigate = (path: string) => {
 }
 
 const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.defaultPrevented) return
   if (e.key === 'Escape') {
     emit('close')
   }

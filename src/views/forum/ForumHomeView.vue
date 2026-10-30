@@ -149,6 +149,7 @@ import { apiRequestResult } from '@/api/client'
 import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useForumStore } from '@/stores/forum'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
@@ -448,17 +449,22 @@ const clearSearch = () => {
 
 // ─── Keyboard navigation ─────────────────────────────────────────────────────
 
-const handleKeydown = (e: KeyboardEvent) => {
-  const target = e.target as HTMLElement
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
-
-  if (e.key === 'n') {
-    if (authStore.isAuthenticated) router.push('/forum/new')
-  } else if (e.key === '/') {
-    e.preventDefault()
-    document.querySelector<HTMLInputElement>('.forum-topic-filters input')?.focus()
-  }
-}
+useKeyboardShortcuts([
+  {
+    key: 'n',
+    description: '发布新帖',
+    handler: () => {
+      if (authStore.isAuthenticated) router.push('/forum/new')
+    },
+  },
+  {
+    key: '/',
+    description: '聚焦搜索',
+    handler: () => {
+      document.querySelector<HTMLInputElement>('.forum-topic-filters input')?.focus()
+    },
+  },
+])
 
 onMounted(async () => {
   await Promise.all([
@@ -467,8 +473,6 @@ onMounted(async () => {
   ])
   if (isUnmounted) return
   await loadTopics(true)
-  if (isUnmounted) return
-  window.addEventListener('keydown', handleKeydown)
 })
 
 onBeforeUnmount(() => {
@@ -476,7 +480,6 @@ onBeforeUnmount(() => {
   invalidateTopicPagination()
   forumStore.topicsLoading = false
   forumStore.loading = false
-  window.removeEventListener('keydown', handleKeydown)
   if (searchTimer) clearTimeout(searchTimer)
 })
 

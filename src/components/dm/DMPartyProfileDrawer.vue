@@ -141,6 +141,7 @@ const onToggleBlock = () => {
 }
 
 const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.defaultPrevented) return
   if (event.key === 'Escape') {
     emit('close')
   }

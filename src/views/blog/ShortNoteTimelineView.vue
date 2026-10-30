@@ -213,6 +213,11 @@ onBeforeUnmount(() => loadMoreObserver?.disconnect())
   flex-direction: column;
 }
 
+.short-note-timeline__feed > :deep(*) {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 160px;
+}
+
 .short-note-timeline__skeleton {
   height: 10rem;
   border-radius: var(--a-radius-card);

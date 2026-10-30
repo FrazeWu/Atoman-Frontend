@@ -194,7 +194,12 @@
         <template v-else>
           <div v-if="player.playedHistory.length" class="queue-list">
             <div
-              v-for="(song, index) in player.playedHistory"
+              v-if="historyTopSpacerHeight > 0"
+              class="queue-spacer"
+              :style="{ height: `${historyTopSpacerHeight}px` }"
+            />
+            <div
+              v-for="{ item: song, index } in visibleHistoryItems"
               :key="`hist-${player.playbackItemKey(song)}`"
               class="queue-item history-item"
               @click="player.playSong(song)"
@@ -217,6 +222,11 @@
                 重播
               </button>
             </div>
+            <div
+              v-if="historyBottomSpacerHeight > 0"
+              class="queue-spacer"
+              :style="{ height: `${historyBottomSpacerHeight}px` }"
+            />
           </div>
           <div v-else class="queue-empty-box">
             <p class="placeholder-title">暂无播放历史</p>
@@ -234,9 +244,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toRef } from 'vue'
 import PIcon from '@/components/ui/PIcon.vue'
 import { useDialogFocus } from '@/composables/useDialogFocus'
+import { useVirtualList } from '@/composables/useVirtualList'
 import { usePlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
 
@@ -256,52 +267,38 @@ const dragOverQueueIndex = ref<number | null>(null)
 const hoverQueueIndex = ref<number | null>(null)
 
 // Virtual windowing state for large queues
-const scrollTop = ref(0)
-const containerHeight = ref(0)
-const ITEM_HEIGHT = 56
+const isDraggingQueue = computed(() => draggedQueueIndex.value !== null)
 
-function handleScroll(e: Event) {
-  const el = e.target as HTMLElement
-  scrollTop.value = el.scrollTop
-}
-
-const isVirtualActive = computed(() => player.queue.length > 40 && containerHeight.value > 0)
-
-const startIndex = computed(() => {
-  if (!isVirtualActive.value) return 0
-  return Math.max(0, Math.floor(scrollTop.value / ITEM_HEIGHT) - 5)
+const {
+  isVirtualActive,
+  startIndex,
+  endIndex,
+  topSpacerHeight,
+  bottomSpacerHeight,
+  visibleItems: virtualQueueItems,
+  handleScroll,
+} = useVirtualList(toRef(() => player.queue), {
+  itemHeight: 56,
+  containerRef: queueContentRef,
+  overscan: 5,
+  threshold: 40,
+  disabled: isDraggingQueue,
 })
 
-const endIndex = computed(() => {
-  if (!isVirtualActive.value) return player.queue.length
-  return Math.min(
-    player.queue.length,
-    Math.ceil((scrollTop.value + containerHeight.value) / ITEM_HEIGHT) + 5,
-  )
-})
+const visibleQueueItems = computed(() =>
+  virtualQueueItems.value.map(({ item, index }) => ({ song: item, index })),
+)
 
-const topSpacerHeight = computed(() => {
-  if (!isVirtualActive.value) return 0
-  return startIndex.value * ITEM_HEIGHT
-})
-
-const bottomSpacerHeight = computed(() => {
-  if (!isVirtualActive.value) return 0
-  return Math.max(0, (player.queue.length - endIndex.value) * ITEM_HEIGHT)
-})
-
-const visibleQueueItems = computed(() => {
-  if (!isVirtualActive.value) {
-    return player.queue.map((song, index) => ({ song, index }))
-  }
-  const result: Array<{ song: Song; index: number }> = []
-  for (let i = startIndex.value; i < endIndex.value; i++) {
-    const song = player.queue[i]
-    if (song) {
-      result.push({ song, index: i })
-    }
-  }
-  return result
+// History virtual windowing
+const {
+  visibleItems: visibleHistoryItems,
+  topSpacerHeight: historyTopSpacerHeight,
+  bottomSpacerHeight: historyBottomSpacerHeight,
+} = useVirtualList(toRef(() => player.playedHistory), {
+  itemHeight: 56,
+  containerRef: queueContentRef,
+  overscan: 5,
+  threshold: 40,
 })
 
 const playbackModeLabel = computed(() => {
@@ -439,26 +436,12 @@ function handleWindowKeydown(event: KeyboardEvent) {
   player.toggleQueue()
 }
 
-let resizeObserver: ResizeObserver | null = null
-
 onMounted(() => {
   window.addEventListener('keydown', handleWindowKeydown)
-  if (queueContentRef.value) {
-    containerHeight.value = queueContentRef.value.clientHeight
-    if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          containerHeight.value = entry.contentRect.height
-        }
-      })
-      resizeObserver.observe(queueContentRef.value)
-    }
-  }
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleWindowKeydown)
-  resizeObserver?.disconnect()
 })
 </script>
 

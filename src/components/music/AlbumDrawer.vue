@@ -1576,6 +1576,8 @@ watch(
   background: var(--a-border);
 }
 .track {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 44px;
   display: grid;
   grid-template-columns: 2rem minmax(0, 1fr) auto;
   grid-template-rows: auto;

@@ -394,7 +394,7 @@ export default {
 </script>
 
 <script setup lang="ts">
-import { computed, nextTick, onActivated, onMounted, onUnmounted, ref, watch, type CSSProperties } from 'vue'
+import { computed, nextTick, onActivated, onMounted, onUnmounted, ref, toRef, watch, type CSSProperties } from 'vue'
 import { useRouter } from 'vue-router'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import { usePlayerStore } from '@/stores/player'
@@ -402,6 +402,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import { usePodcastPlayerActions } from '@/composables/usePodcastPlayerActions'
+import { useVirtualList } from '@/composables/useVirtualList'
 import { modulePathUrl } from '@/router/siteUrls'
 
 const player = usePlayerStore()
@@ -471,14 +472,27 @@ const isFavorite = computed(() => Boolean(player.currentSong && favoriteSongIds.
 
 const QUEUE_ROW_HEIGHT = 64
 const queueScrollRef = ref<HTMLElement | null>(null)
-const queueScrollTop = ref(0)
-const virtualQueueEnabled = computed(() => player.activeQueue.length > 100)
-const virtualQueueStart = computed(() => virtualQueueEnabled.value ? Math.min(Math.max(0, player.activeQueue.length - 24), Math.max(0, Math.floor(queueScrollTop.value / QUEUE_ROW_HEIGHT) - 5)) : 0)
-const virtualQueueEnd = computed(() => virtualQueueEnabled.value ? Math.min(player.activeQueue.length, virtualQueueStart.value + 24) : player.activeQueue.length)
-const displayedQueue = computed(() => player.activeQueue.slice(virtualQueueStart.value, virtualQueueEnd.value).map((song, offset) => ({ song, index: virtualQueueStart.value + offset })))
-function onQueueScroll(event: Event) {
-  queueScrollTop.value = (event.target as HTMLElement).scrollTop
-}
+
+const {
+  scrollTop: queueScrollTop,
+  isVirtualActive: virtualQueueEnabled,
+  startIndex: virtualQueueStart,
+  endIndex: virtualQueueEnd,
+  visibleItems: virtualQueueItems,
+  handleScroll: onQueueScroll,
+  scrollToIndex: scrollQueueToIndex,
+} = useVirtualList(toRef(() => player.activeQueue), {
+  itemHeight: 64,
+  containerRef: queueScrollRef,
+  threshold: 100,
+  pageSize: 24,
+  overscan: 5,
+})
+
+const displayedQueue = computed(() =>
+  virtualQueueItems.value.map(({ item, index }) => ({ song: item, index })),
+)
+
 const showQueue = computed({
   get: () => player.showQueue,
   set: (value: boolean) => { player.showQueue = value },
@@ -487,15 +501,10 @@ const showQueue = computed({
 watch([showQueue, () => player.currentSong?.id, () => player.isShuffled], async ([visible]) => {
   if (!visible || !virtualQueueEnabled.value) return
   await nextTick()
-  const el = queueScrollRef.value
-  if (!el) return
   const currentKey = player.currentSong && player.playbackItemKey(player.currentSong)
   const index = player.activeQueue.findIndex(song => player.playbackItemKey(song) === currentKey)
-  if (index < 0) return
-  const target = index * QUEUE_ROW_HEIGHT
-  if (target < el.scrollTop || target + QUEUE_ROW_HEIGHT > el.scrollTop + el.clientHeight) {
-    el.scrollTop = Math.max(0, target - Math.floor(el.clientHeight / 2))
-    queueScrollTop.value = el.scrollTop
+  if (index >= 0) {
+    scrollQueueToIndex(index, { align: 'center' })
   }
 })
 

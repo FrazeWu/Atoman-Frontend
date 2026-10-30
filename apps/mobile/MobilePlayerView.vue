@@ -300,17 +300,8 @@
 
         <!-- Bottom Action Bar (Always Visible) -->
         <div class="mobile-player-view__actions" aria-label="更多播放操作">
-          <button
-            v-if="!isPodcast"
-            type="button"
-            class="mobile-player-view__action"
-            :class="{ 'is-active': isFavorite }"
-            :aria-label="isFavorite ? '移出最爱' : '加入最爱'"
-            :title="isFavorite ? '移出最爱' : '加入最爱'"
-            @click="toggleFavorite"
-          >
-            <MIcon name="heart" size="sm" />
-            <span>{{ isFavorite ? '已加入最爱' : '加入最爱' }}</span>
+          <button v-if="!isPodcast" type="button" class="mobile-player-view__action" aria-label="加入歌单" @click="openPlaylistPicker">
+            <MIcon name="heart" size="sm" /><span>加入歌单</span>
           </button>
           <button
             v-if="isPodcastEpisode"
@@ -333,9 +324,6 @@
           >
             <MIcon name="clock" size="sm" />
             <span>稍后听</span>
-          </button>
-          <button v-if="!isPodcast" type="button" class="mobile-player-view__action" aria-label="添加到歌单" @click="openPlaylistPicker">
-            <MIcon name="plus" size="sm" /><span>加歌单</span>
           </button>
           <button
             v-if="!isPodcast"
@@ -372,11 +360,17 @@
             <span>队列</span>
           </button>
         </div>
-        <div v-if="showPlaylistPicker && !isPodcast" class="mobile-player-view__playlist-picker" role="dialog" aria-label="选择歌单">
-          <div class="mobile-player-view__playlist-picker-heading"><strong>添加到歌单</strong><button type="button" aria-label="关闭歌单选择" @click="showPlaylistPicker = false">关闭</button></div>
+        <div v-if="showPlaylistPicker && !isPodcast" class="mobile-player-view__playlist-picker" role="dialog" aria-modal="true" aria-label="选择歌单">
+          <div class="mobile-player-view__playlist-picker-heading"><strong>加入歌单</strong><button type="button" aria-label="关闭歌单选择" @click="showPlaylistPicker = false">关闭</button></div>
           <p v-if="playlistPickerError" role="alert">{{ playlistPickerError }}</p>
-          <p v-if="playlistPickerLoading" role="status">正在读取歌单…</p>
-          <button v-for="item in playlists" :key="item.id" type="button" class="mobile-player-view__playlist-option" :disabled="playlistPickerLoading" @click="addCurrentToPlaylist(item.id)">{{ item.name }}</button>
+          <p v-if="playlistPickerLoading" role="status">正在处理…</p>
+          <div role="radiogroup" aria-label="选择目标歌单">
+            <label v-for="item in playlists" :key="item.id" class="mobile-player-view__playlist-option">
+              <input type="radio" name="mobile-playlist-target" :value="item.id" v-model="selectedPlaylistId" :disabled="playlistPickerLoading" />
+              <span>{{ item.name }}</span><span v-if="item.kind === 'favorite'">（默认）</span>
+            </label>
+          </div>
+          <button type="button" class="mobile-player-view__playlist-confirm" :disabled="playlistPickerLoading || !selectedPlaylistId" @click="confirmPlaylistSelection">确认添加</button>
         </div>
       </footer>
     </template>
@@ -412,24 +406,30 @@ const player = usePlayerStore()
 const router = useRouter()
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
-const { favoriteSongIds, playlists, loadPlaylists, addSongToPlaylist, loadFavoriteSongs, toggleFavoriteSong } = useMusicFavoritePlaylist()
+const { favoriteSongIds, playlists, loadPlaylists, addSongToPlaylist, loadFavoriteSongs } = useMusicFavoritePlaylist()
 const showPlaylistPicker = ref(false)
 const playlistPickerLoading = ref(false)
 const playlistPickerError = ref('')
+const selectedPlaylistId = ref('')
 async function openPlaylistPicker() {
   if (!requireLogin()) return
   showPlaylistPicker.value = true
   playlistPickerLoading.value = true
   playlistPickerError.value = ''
-  try { await loadPlaylists() }
-  catch { playlistPickerError.value = '歌单读取失败，请重试' }
+  selectedPlaylistId.value = ''
+  try {
+    const available = await loadPlaylists()
+    selectedPlaylistId.value = String(available.find(item => item.kind === 'favorite')?.id || available[0]?.id || '')
+    if (!selectedPlaylistId.value) playlistPickerError.value = '暂无可添加的歌单'
+  } catch { playlistPickerError.value = '歌单读取失败，请关闭后重试' }
   finally { playlistPickerLoading.value = false }
 }
-async function addCurrentToPlaylist(playlistId: string) {
-  if (!player.currentSong || playlistPickerLoading.value) return
+async function confirmPlaylistSelection() {
+  if (!player.currentSong || playlistPickerLoading.value || !selectedPlaylistId.value) return
   playlistPickerLoading.value = true
+  playlistPickerError.value = ''
   try {
-    await addSongToPlaylist(playlistId, String(player.currentSong.id))
+    await addSongToPlaylist(selectedPlaylistId.value, String(player.currentSong.id))
     showPlaylistPicker.value = false
     showToast('已添加到歌单')
   } catch { playlistPickerError.value = '添加失败，请重试' }
@@ -849,15 +849,6 @@ watch(
   { immediate: true },
 )
 
-async function toggleFavorite() {
-  if (!player.currentSong || !requireLogin()) return
-  try {
-    const result = await toggleFavoriteSong(String(player.currentSong.id))
-    showToast(result.message)
-  } catch {
-    showToast('收藏操作失败，请重试')
-  }
-}
 
 onUnmounted(() => {
   player.showQueue = false
@@ -1524,4 +1515,10 @@ onUnmounted(() => {
 .mobile-player-view__playlist-picker-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .mobile-player-view__playlist-picker button{min-height:44px;border:0;background:transparent;color:inherit}
 .mobile-player-view__playlist-option{display:block;width:100%;text-align:left;border-top:1px solid var(--a-color-border-soft)!important}
+</style>
+
+<style scoped>
+.mobile-player-view__playlist-option{display:flex;align-items:center;gap:8px;min-height:44px;border-bottom:1px solid var(--a-color-border-soft)}
+.mobile-player-view__playlist-option input{width:18px;height:18px;flex-shrink:0}
+.mobile-player-view__playlist-confirm{width:100%;min-height:44px;font-weight:600;background:var(--a-color-primary)!important;color:white!important;border-radius:8px;margin-top:8px}
 </style>

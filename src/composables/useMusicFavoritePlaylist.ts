@@ -53,12 +53,17 @@ export function useMusicFavoritePlaylist() {
 			if (isCurrent()) favoriteSongIds.value = new Set();
 			return favoriteSongIds.value;
 		}
-		const playlistId = await requireFavoritePlaylistId();
-		const loadedIds = new Set(
-			await getMusicPlaylistSongStatus(playlistId, uniqueIds),
-		);
-		if (isCurrent()) favoriteSongIds.value = loadedIds;
-		return loadedIds;
+		try {
+			const playlistId = await requireFavoritePlaylistId();
+			const loadedIds = new Set(
+				await getMusicPlaylistSongStatus(playlistId, uniqueIds),
+			);
+			if (isCurrent()) favoriteSongIds.value = loadedIds;
+			return loadedIds;
+		} catch {
+			if (isCurrent()) favoriteSongIds.value = new Set();
+			return favoriteSongIds.value;
+		}
 	}
 
 	function setSongFavorite(songId: string, isFavorite: boolean) {

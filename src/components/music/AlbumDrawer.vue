@@ -1421,7 +1421,7 @@ watch(
   min-width: 12rem;
   padding: 0.35rem;
   border: 1px solid var(--a-color-border-soft);
-  background: #ffffff;
+  background: var(--a-color-bg);
 }
 .album-more-menu button {
   display: flex;

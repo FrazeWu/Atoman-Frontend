@@ -1628,7 +1628,7 @@ async function completeCreation() {
 .drawer-body :deep(.progress-card) { display: none; }
 
 :global(.creation-flow-drawer) {
-  background: #ffffff !important;
+  background: var(--a-color-bg) !important;
   border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }

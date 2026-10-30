@@ -207,14 +207,14 @@ onMounted(load)
 
 .book-community__rating-summary {
   font-size: 0.8125rem;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   margin: 0;
 }
 
 .book-community__rating-box {
   padding: 1rem 1.25rem;
   background: var(--a-color-surface-muted, #f8fafc);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card, 4px);
 }
 
@@ -248,8 +248,8 @@ onMounted(load)
 
 .book-community__review-item {
   padding: 0.875rem 1rem;
-  background: var(--a-color-bg, #ffffff);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card, 4px);
   display: flex;
   flex-direction: column;
@@ -269,7 +269,7 @@ onMounted(load)
 
 .book-community__review-summary {
   font-size: 0.8125rem;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   margin: 0;
   line-height: 1.5;
 }
@@ -278,7 +278,7 @@ onMounted(load)
   margin-top: 0.5rem;
   padding: 0.75rem 1rem;
   background: var(--a-color-surface-muted, #f8fafc);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
 }
 
@@ -301,15 +301,15 @@ onMounted(load)
   flex-direction: column;
   gap: 0.25rem;
   font-size: 0.75rem;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
 }
 
 .book-community__link-input {
   height: 34px;
   padding: 0 0.5rem;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
-  background: var(--a-color-bg, #ffffff);
+  background: var(--a-color-bg);
   font-size: 0.8125rem;
 }
 
@@ -329,7 +329,7 @@ onMounted(load)
 }
 
 .book-community__comments-section {
-  border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-top: 1px solid var(--a-color-border-soft);
   padding-top: 1.5rem;
 }
 </style>

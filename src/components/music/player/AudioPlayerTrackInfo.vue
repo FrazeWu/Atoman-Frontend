@@ -451,7 +451,7 @@ const audioQualityBadge = computed(() => {
 }
 
 .player-fav-btn.is-active {
-  color: var(--a-color-danger, #ef4444);
+  color: var(--a-color-danger);
 }
 
 [data-hint] {

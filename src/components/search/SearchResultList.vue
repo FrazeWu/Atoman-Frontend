@@ -47,8 +47,8 @@ function getModuleLabel(mod: string): string {
 }
 
 .search-result-item {
-  background-color: var(--a-color-bg, #ffffff);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background-color: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card, 4px);
   box-shadow: none !important;
   transition: border-color 0.15s ease, background-color 0.15s ease;
@@ -93,7 +93,7 @@ function getModuleLabel(mod: string): string {
   align-items: center;
   font-size: 11px;
   font-weight: 500;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   background-color: var(--a-color-surface-muted, #f1f5f9);
   border: none;
   border-radius: var(--a-radius-control, 4px);
@@ -103,7 +103,7 @@ function getModuleLabel(mod: string): string {
 
 .result-subtitle {
   font-size: 13px;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   line-height: 1.4;
 }
 

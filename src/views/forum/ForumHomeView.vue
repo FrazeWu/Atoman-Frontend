@@ -992,7 +992,7 @@ const submitCategoryRequest = async () => {
   align-items: center;
   justify-content: center;
   padding: 0 16px;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 8px);
   color: var(--a-color-fg, #0f172a);
   text-decoration: none;

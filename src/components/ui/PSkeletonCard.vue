@@ -58,7 +58,7 @@ const aspectClass = computed(() => {
 }
 
 .p-skeleton-card--bordered {
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
 }
 
 .p-skeleton-card__media {

@@ -142,9 +142,9 @@ function handleInput(event: Event) {
   width: 100%;
   min-width: min(100%, 24rem);
   position: relative;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
-  background: var(--a-color-bg, #ffffff);
+  background: var(--a-color-bg);
   box-shadow: none !important;
   padding: 0;
   display: grid;
@@ -205,7 +205,7 @@ function handleInput(event: Event) {
   display: flex;
   align-items: stretch;
   flex-shrink: 0;
-  border-left: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-left: 1px solid var(--a-color-border-soft);
 }
 
 .search-btn {
@@ -328,8 +328,8 @@ function handleInput(event: Event) {
   left: 0;
   right: 0;
   margin-top: 0;
-  background: var(--a-color-bg, #ffffff);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;
   z-index: 80;

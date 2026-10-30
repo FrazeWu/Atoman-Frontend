@@ -329,15 +329,15 @@ onBeforeUnmount(() => {
 
 .book-catalog__status-text {
   font-size: 0.875rem;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   padding: 1.5rem 0;
 }
 
 .book-catalog__error-box {
   padding: 1.5rem;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
-  background: var(--a-color-bg, #ffffff);
+  background: var(--a-color-bg);
 }
 
 .book-catalog__upload-actions {

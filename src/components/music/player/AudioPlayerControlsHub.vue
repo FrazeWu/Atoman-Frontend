@@ -276,7 +276,7 @@ defineEmits<{
 }
 
 .main-play-btn.has-error {
-  background: var(--a-color-danger, #ef4444);
+  background: var(--a-color-danger);
   color: #fff;
   animation: pulse-subtle 1.8s infinite;
 }

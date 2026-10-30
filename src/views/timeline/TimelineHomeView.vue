@@ -1411,7 +1411,7 @@ watch(
     align-items: center;
     padding: 0 12px;
     margin-bottom: 12px;
-    border: 1px solid var(--a-color-border-soft, #e2e8f0);
+    border: 1px solid var(--a-color-border-soft);
     border-radius: var(--a-radius-control, 8px);
     background: var(--a-color-surface-muted, #f8fafc);
     color: var(--a-color-fg, #0f172a);

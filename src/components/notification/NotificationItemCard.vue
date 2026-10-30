@@ -423,7 +423,7 @@ const onMuteSource = (e?: MouseEvent) => {
   flex-direction: column;
   gap: 0.75rem;
   padding: 1.15rem 1.25rem;
-  background: var(--a-color-bg, #ffffff);
+  background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card, 4px);
   cursor: pointer;
@@ -523,12 +523,12 @@ const onMuteSource = (e?: MouseEvent) => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--a-color-bg, #ffffff);
-  border: 1.5px solid var(--a-color-bg, #ffffff);
+  background: var(--a-color-bg);
+  border: 1.5px solid var(--a-color-bg);
 }
 
 .card-action-badge--like {
-  color: var(--a-color-danger, #ef4444);
+  color: var(--a-color-danger);
 }
 
 .card-action-badge--reply,
@@ -716,7 +716,7 @@ const onMuteSource = (e?: MouseEvent) => {
   z-index: 20;
   min-width: 140px;
   padding: 0.25rem 0;
-  background: var(--a-color-bg, #ffffff);
+  background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none;

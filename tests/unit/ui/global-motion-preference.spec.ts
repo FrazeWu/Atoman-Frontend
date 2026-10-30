@@ -4,10 +4,10 @@ import { describe, expect, it } from "vitest";
 
 describe("global motion preference", () => {
 	it("reduces mobile route transition duration for the OS reduced-motion preference", () => {
-		for (const path of ["apps/mobile/MobileApp.vue", "apps/mobile/mobileModules.css"]) {
-			const source = readFileSync(resolve(process.cwd(), path), "utf8");
-			expect(source).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?transition-duration:\s*1ms;/);
-		}
+		const app = readFileSync(resolve(process.cwd(), "apps/mobile/MobileApp.vue"), "utf8");
+		expect(app).toContain("import './mobileRouteMotion.css'");
+		const motionStyles = readFileSync(resolve(process.cwd(), "apps/mobile/mobileRouteMotion.css"), "utf8");
+		expect(motionStyles).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?transition-duration:\s*1ms;/);
 	});
 
 	it("uses the shared motion token for music tag arrows", () => {

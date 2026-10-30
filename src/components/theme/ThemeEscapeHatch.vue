@@ -37,7 +37,7 @@ const { activeTheme, isEscapeHatchActive, toggleEscapeHatch } = useCreatorTheme(
   background-color: var(--a-color-surface);
   color: var(--a-color-text);
   border: 1px solid var(--a-color-border-soft);
-  box-shadow: var(--a-shadow-md);
+  box-shadow: none;
   border-radius: var(--a-radius-control, 4px);
   font-size: 0.75rem;
   font-weight: 500;

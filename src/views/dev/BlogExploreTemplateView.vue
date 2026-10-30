@@ -369,7 +369,7 @@ const recommendedAuthors = ref([
   color: var(--a-color-fg);
   font-weight: 650;
   border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .explore-template-sidebar__item.active::before {
@@ -495,7 +495,7 @@ const recommendedAuthors = ref([
 
 .explore-template__channel-card:hover {
   border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .explore-template__channel-banner {
@@ -610,7 +610,7 @@ const recommendedAuthors = ref([
 
 .explore-template__feed-card:hover {
   border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .explore-template__feed-meta {

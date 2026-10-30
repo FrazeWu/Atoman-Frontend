@@ -343,7 +343,7 @@ const weeklyMustRead = [
 
 .blog-template__hero-card:hover {
   border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-md);
+  box-shadow: none;
 }
 
 .blog-template__hero-cover-wrapper {
@@ -443,7 +443,7 @@ const weeklyMustRead = [
 
 .blog-template__post-card:hover {
   border-color: var(--a-color-border);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .blog-template__post-header {

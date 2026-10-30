@@ -75,6 +75,6 @@ onMounted(() => {
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-md);
+  box-shadow: none;
 }
 </style>

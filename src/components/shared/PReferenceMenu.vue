@@ -54,7 +54,7 @@ defineEmits<{
   border: 1px solid var(--a-color-border);
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
-  box-shadow: var(--a-shadow-md);
+  box-shadow: none;
 }
 
 .p-reference-menu--fixed {

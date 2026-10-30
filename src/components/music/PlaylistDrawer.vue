@@ -955,7 +955,7 @@ watch(
 .track-row:focus-within {
   background-color: var(--a-color-surface-muted);
   border-left-color: var(--a-color-text);
-  box-shadow: inset 0 0 0 1px var(--a-color-border-soft);
+  box-shadow: none;
 }
 
 .track-row:last-child {

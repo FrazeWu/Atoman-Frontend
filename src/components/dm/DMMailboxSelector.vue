@@ -54,7 +54,8 @@ const selectMailbox = (event: Event) => emit('select-mailbox', (event.target as 
 
 .dm-mailbox-selector__wrapper:focus-within {
   border-color: var(--a-color-primary);
-  box-shadow: 0 0 0 1px var(--a-color-primary);
+  outline: 1px solid var(--a-color-primary);
+  box-shadow: none;
 }
 
 .dm-mailbox-selector__select {

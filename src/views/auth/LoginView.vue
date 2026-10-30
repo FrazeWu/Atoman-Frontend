@@ -747,7 +747,8 @@ watch(username, (value) => {
 
 .step-dot--active {
   background: var(--a-color-fg);
-  box-shadow: 0 0 0 2px var(--a-color-border-soft);
+  outline: 2px solid var(--a-color-border-soft);
+  box-shadow: none;
 }
 
 .step-line {
@@ -823,7 +824,8 @@ watch(username, (value) => {
 
 .auth-code-input-group:focus-within {
   border-color: var(--a-color-fg);
-  box-shadow: inset 0 0 0 1px var(--a-color-fg);
+  outline: 1px solid var(--a-color-fg);
+  box-shadow: none;
 }
 
 .auth-code-input-group--error {

@@ -164,7 +164,9 @@ function selectFont(font: FontFamily) {
 }
 
 .color-btn:focus-visible {
-  box-shadow: 0 0 0 2px var(--a-color-bg), 0 0 0 4px var(--a-color-primary);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
+  box-shadow: none;
 }
 
 .color-check-dot {
@@ -214,6 +216,8 @@ function selectFont(font: FontFamily) {
 }
 
 .option-btn:focus-visible {
-  box-shadow: 0 0 0 2px var(--a-color-primary);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+  box-shadow: none;
 }
 </style>

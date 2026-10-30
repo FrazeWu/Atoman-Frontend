@@ -494,7 +494,7 @@ onUnmounted(() => window.removeEventListener('click', handleClickOutside))
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-md);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
@@ -616,7 +616,7 @@ onUnmounted(() => window.removeEventListener('click', handleClickOutside))
 :global(.dark) .date-popover {
   background: var(--a-color-bg);
   border-color: var(--a-color-border-soft);
-  box-shadow: var(--a-shadow-dropdown, var(--a-shadow-lg));
+  box-shadow: none;
 }
 
 :global(.dark) .popover-select {

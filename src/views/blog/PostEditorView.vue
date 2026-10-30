@@ -985,7 +985,7 @@ watch(() => route.params.id, () => { void initializeEditor() }, { immediate: tru
 
 .editor-body :deep(.cm-activeLine) {
   background-color: var(--a-color-surface-muted) !important;
-  box-shadow: -0.75rem 0 var(--a-color-surface-muted), 0.75rem 0 var(--a-color-surface-muted);
+  box-shadow: none;
 }
 
 .editor-body :deep(.cm-activeLineGutter) {

@@ -506,7 +506,8 @@ watch(() => studio.currentChannel?.id, (current, previous) => {
 .collection-item-sequence__input:focus {
   border-color: var(--a-color-primary);
   background: var(--a-color-bg);
-  box-shadow: 0 0 0 1px var(--a-color-primary);
+  outline: 1px solid var(--a-color-primary);
+  box-shadow: none;
   color: var(--a-color-text);
 }
 

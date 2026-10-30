@@ -609,7 +609,8 @@ const mockChannels = ref([
 .proto-btn.is-active {
   border-color: var(--a-color-text);
   background: var(--a-color-surface-muted);
-  box-shadow: 0 0 0 1px var(--a-color-text);
+  outline: 1px solid var(--a-color-text);
+  box-shadow: none;
 }
 .proto-btn__icon { font-size: 1.25rem; }
 .proto-btn__name { font-size: 0.95rem; font-weight: 700; color: var(--a-color-fg); }

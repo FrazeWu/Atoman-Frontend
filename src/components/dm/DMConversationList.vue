@@ -189,7 +189,8 @@ const formatTime = (value: string | null): string => {
 
 .dm-conversation-list__search-wrapper:focus-within {
   border-color: var(--a-color-primary);
-  box-shadow: 0 0 0 1px var(--a-color-primary);
+  outline: 1px solid var(--a-color-primary);
+  box-shadow: none;
 }
 
 .dm-conversation-list__search-icon {
@@ -244,7 +245,8 @@ const formatTime = (value: string | null): string => {
 .dm-conversation-list__item.is-active,
 .dm-conversation-list__item.active {
   background: var(--a-color-surface-muted);
-  box-shadow: inset 2px 0 0 var(--a-color-primary);
+  border-left: 2px solid var(--a-color-primary);
+  box-shadow: none;
 }
 
 .dm-conversation-list__avatar-wrap {

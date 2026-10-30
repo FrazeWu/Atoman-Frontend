@@ -1029,7 +1029,8 @@ watch(
 }
 
 .tl-lane-row-active {
-  box-shadow: inset 6px 0 0 var(--a-color-fg);
+  border-left: 4px solid var(--a-color-fg);
+  box-shadow: none;
   padding-left: 1rem;
 }
 
@@ -1083,7 +1084,9 @@ watch(
   min-width: 1rem;
   border-radius: 4px;
   background: var(--a-color-fg);
-  box-shadow: 0 0 0 4px var(--a-color-bg), 0 0 0 6px var(--a-color-fg);
+  outline: 2px solid var(--a-color-fg);
+  outline-offset: 2px;
+  box-shadow: none;
   transform: translateX(-50%);
 }
 

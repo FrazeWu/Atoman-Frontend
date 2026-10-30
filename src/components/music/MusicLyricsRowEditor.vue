@@ -394,7 +394,8 @@ function describedByForField(
 
 .lyric-row.is-selected {
   background: color-mix(in srgb, var(--a-color-primary) 6%, var(--a-color-bg));
-  box-shadow: inset 3px 0 0 var(--a-color-primary);
+  border-left: 3px solid var(--a-color-primary);
+  box-shadow: none;
 }
 
 .lyric-editor-tools {
@@ -462,9 +463,10 @@ function describedByForField(
 
 .lyric-input:focus-visible,
 .lyric-action:focus-visible {
-  outline: none;
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
   border-color: var(--a-color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--a-color-primary) 20%, transparent);
+  box-shadow: none;
 }
 
 .lyric-time-input {

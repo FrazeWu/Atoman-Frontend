@@ -360,8 +360,9 @@
             <span>队列</span>
           </button>
         </div>
-        <div v-if="showPlaylistPicker && !isPodcast" class="mobile-player-view__playlist-picker" role="dialog" aria-modal="true" aria-label="选择歌单">
-          <div class="mobile-player-view__playlist-picker-heading"><strong>加入歌单</strong><button type="button" aria-label="关闭歌单选择" @click="showPlaylistPicker = false">关闭</button></div>
+        <div v-if="showPlaylistPicker && !isPodcast" class="mobile-player-view__playlist-backdrop" @click.stop="closePlaylistPicker" @touchstart.stop @touchmove.stop @touchend.stop @pointerdown.stop>
+        <div class="mobile-player-view__playlist-picker" role="dialog" aria-modal="true" aria-label="选择歌单" @click.stop>
+          <div class="mobile-player-view__playlist-picker-heading"><strong>加入歌单</strong><button type="button" aria-label="关闭歌单选择" @click.stop="closePlaylistPicker">关闭</button></div>
           <p v-if="playlistPickerError" role="alert">{{ playlistPickerError }}</p>
           <p v-if="playlistPickerLoading" role="status">正在处理…</p>
           <div role="radiogroup" aria-label="选择目标歌单">
@@ -370,7 +371,8 @@
               <span>{{ item.name }}</span><span v-if="item.kind === 'favorite'">（默认）</span>
             </label>
           </div>
-          <button type="button" class="mobile-player-view__playlist-confirm" :disabled="playlistPickerLoading || !selectedPlaylistId" @click="confirmPlaylistSelection">确认添加</button>
+          <button type="button" class="mobile-player-view__playlist-confirm" :disabled="playlistPickerLoading || !selectedPlaylistId" @click.stop="confirmPlaylistSelection">确认添加</button>
+        </div>
         </div>
       </footer>
     </template>
@@ -411,8 +413,15 @@ const showPlaylistPicker = ref(false)
 const playlistPickerLoading = ref(false)
 const playlistPickerError = ref('')
 const selectedPlaylistId = ref('')
+const pendingPlaylistSongId = ref('')
+function closePlaylistPicker() {
+  if (playlistPickerLoading.value) return
+  showPlaylistPicker.value = false
+  pendingPlaylistSongId.value = ''
+}
 async function openPlaylistPicker() {
-  if (!requireLogin()) return
+  if (!requireLogin() || !player.currentSong) return
+  pendingPlaylistSongId.value = String(player.currentSong.id)
   showPlaylistPicker.value = true
   playlistPickerLoading.value = true
   playlistPickerError.value = ''
@@ -425,12 +434,14 @@ async function openPlaylistPicker() {
   finally { playlistPickerLoading.value = false }
 }
 async function confirmPlaylistSelection() {
-  if (!player.currentSong || playlistPickerLoading.value || !selectedPlaylistId.value) return
+  if (!pendingPlaylistSongId.value || playlistPickerLoading.value || !selectedPlaylistId.value) return
+  const songId = pendingPlaylistSongId.value
   playlistPickerLoading.value = true
   playlistPickerError.value = ''
   try {
-    await addSongToPlaylist(selectedPlaylistId.value, String(player.currentSong.id))
+    await addSongToPlaylist(selectedPlaylistId.value, songId)
     showPlaylistPicker.value = false
+    pendingPlaylistSongId.value = ''
     showToast('已添加到歌单')
   } catch { playlistPickerError.value = '添加失败，请重试' }
   finally { playlistPickerLoading.value = false }
@@ -1511,7 +1522,7 @@ onUnmounted(() => {
 </style>
 
 <style scoped>
-.mobile-player-view__playlist-picker{position:absolute;left:12px;right:12px;bottom:100%;z-index:30;max-height:40vh;overflow:auto;background:var(--a-color-surface);border:1px solid var(--a-color-border-soft);border-radius:12px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.mobile-player-view__playlist-picker{position:absolute;left:12px;right:12px;bottom:12px;z-index:1;max-height:40vh;overflow:auto;background:var(--a-color-surface);border:1px solid var(--a-color-border-soft);border-radius:12px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
 .mobile-player-view__playlist-picker-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .mobile-player-view__playlist-picker button{min-height:44px;border:0;background:transparent;color:inherit}
 .mobile-player-view__playlist-option{display:block;width:100%;text-align:left;border-top:1px solid var(--a-color-border-soft)!important}
@@ -1521,4 +1532,9 @@ onUnmounted(() => {
 .mobile-player-view__playlist-option{display:flex;align-items:center;gap:8px;min-height:44px;border-bottom:1px solid var(--a-color-border-soft)}
 .mobile-player-view__playlist-option input{width:18px;height:18px;flex-shrink:0}
 .mobile-player-view__playlist-confirm{width:100%;min-height:44px;font-weight:600;background:var(--a-color-primary)!important;color:white!important;border-radius:8px;margin-top:8px}
+</style>
+
+<style scoped>
+.mobile-player-view__playlist-backdrop{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.44);touch-action:pan-y}
+.mobile-player-view__playlist-picker{max-height:min(65dvh,520px);overscroll-behavior:contain}
 </style>

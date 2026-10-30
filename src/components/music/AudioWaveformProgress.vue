@@ -162,20 +162,40 @@ const displayRatio = computed(() => {
   return progressRatio.value
 })
 
-const waveformPath = computed(() => {
-  if (!peaks.value.length) return ''
+const waveformPathCache = new Map<string, string>()
+const MAX_CACHE_SIZE = 50
+
+function getCachedWaveformPath(songId: string, peakList: number[]): string {
+  if (!peakList.length) return ''
+  const cacheKey = `${songId}_${peakList.length}_${peakList[0]?.toFixed(2)}_${peakList[peakList.length - 1]?.toFixed(2)}`
+  const cached = waveformPathCache.get(cacheKey)
+  if (cached) return cached
 
   const width = 1000
   const center = 50
   const amplitude = 42
-  const lastIndex = Math.max(1, peaks.value.length - 1)
-  return peaks.value.map((peak, index) => {
-    const x = (index / lastIndex) * width
+  const lastIndex = Math.max(1, peakList.length - 1)
+  const pathParts: string[] = []
+  for (let i = 0; i < peakList.length; i++) {
+    const peak = peakList[i]
+    const x = Math.round((i / lastIndex) * width * 100) / 100
     const safePeak = Number.isFinite(peak) ? Math.min(1, Math.max(0.08, peak)) : 0.08
-    const top = center - safePeak * amplitude
-    const bottom = center + safePeak * amplitude
-    return `M ${x.toFixed(2)} ${top.toFixed(2)} L ${x.toFixed(2)} ${bottom.toFixed(2)}`
-  }).join(' ')
+    const top = Math.round((center - safePeak * amplitude) * 100) / 100
+    const bottom = Math.round((center + safePeak * amplitude) * 100) / 100
+    pathParts.push(`M ${x} ${top} L ${x} ${bottom}`)
+  }
+  const result = pathParts.join(' ')
+
+  if (waveformPathCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = waveformPathCache.keys().next().value
+    if (firstKey) waveformPathCache.delete(firstKey)
+  }
+  waveformPathCache.set(cacheKey, result)
+  return result
+}
+
+const waveformPath = computed(() => {
+  return getCachedWaveformPath(props.songId, peaks.value)
 })
 
 function formatTime(seconds: number) {

@@ -71,6 +71,9 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		plugins: [tailwindcss(), vue(), deferInitialStylesheetPlugin()],
+		worker: {
+			format: "es",
+		},
 		build: {
 			outDir: path.resolve(frontendRoot, "dist-mobile"),
 			emptyOutDir: true,
@@ -84,6 +87,8 @@ export default defineConfig(({ mode }) => {
 						if (id.includes("spaceConstants") || id.includes("bottomNavConstants"))
 							return "mobile-space-constants";
 						if (id.includes("lucide-vue-next")) return "ui-icons";
+						if (id.includes("node_modules/music-metadata")) return "music-metadata";
+						if (id.includes("node_modules/jszip")) return "jszip";
 						if (id.includes("node_modules/pdfjs-dist")) return "pdfjs";
 						if (id.includes("node_modules/epubjs")) return "epubjs";
 						if (id.includes("node_modules/ol")) return "openlayers";

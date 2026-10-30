@@ -1410,7 +1410,14 @@ describe("MusicCreationAlbumImportStep.vue", () => {
 		const wrapper = mount(MusicCreationAlbumSeedStep);
 		setFiles(fileInput(wrapper).element as HTMLInputElement, [archive]);
 		await fileInput(wrapper).trigger("change");
-		await flushPromises();
+		// Multipart setup includes async file fingerprinting. Under a busy CI shard,
+		// advancing the fake clock before the upload finishes starts the poll timer
+		// too late. Wait for the completed upload to arm polling first.
+		for (let attempt = 0; attempt < 30 && !vi.mocked(musicApi.completeMusicAlbumImportSession).mock.calls.length; attempt += 1) {
+			await flushPromises();
+			await vi.advanceTimersByTimeAsync(0);
+		}
+		expect(musicApi.completeMusicAlbumImportSession).toHaveBeenCalled();
 		await flushPromises();
 		await vi.advanceTimersByTimeAsync(2000);
 

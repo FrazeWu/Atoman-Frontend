@@ -292,6 +292,7 @@ function formatNumber(value: number) {
 .studio-content-table__scroll { min-width: 0; width: 100%; max-width: 100%; overflow-x: auto; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); box-shadow: none; }
 table { width: 100%; border-collapse: collapse; min-width: 1180px; }
 th, td { padding: 0.75rem 0.625rem; border-bottom: 1px solid var(--a-color-border-soft); text-align: left; vertical-align: middle; }
+tbody tr:last-child td { border-bottom: 0; }
 th { background: var(--a-color-bg); color: var(--a-color-muted); font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
 td { font-size: 0.875rem; }
 tbody tr:hover { background: var(--a-color-surface-muted); }

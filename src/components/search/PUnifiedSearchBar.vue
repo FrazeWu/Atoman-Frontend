@@ -366,7 +366,7 @@ onUnmounted(() => {
   padding: 4px 0;
   display: flex;
   flex-direction: column;
-  background-color: var(--a-color-bg, #ffffff);
+  background-color: var(--a-color-bg);
   box-shadow: none !important;
 }
 
@@ -377,11 +377,11 @@ onUnmounted(() => {
   gap: 8px;
   padding: 24px 16px;
   font-size: 13px;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
 }
 
 .p-unified-search-dropdown__status.is-error {
-  color: var(--a-color-danger, #ef4444);
+  color: var(--a-color-danger);
 }
 
 .p-unified-search-dropdown__spinner {
@@ -393,9 +393,9 @@ onUnmounted(() => {
   padding: 6px 12px;
   margin: 4px 8px;
   font-size: 12px;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   background-color: var(--a-color-bg-subtle, #f8fafc);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
 }
 
@@ -431,7 +431,7 @@ onUnmounted(() => {
   border-radius: var(--a-radius-control, 4px);
   background-color: var(--a-color-bg-muted, #f1f5f9);
   color: var(--a-color-text-secondary, #475569);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   flex-shrink: 0;
   line-height: 1.2;
 }
@@ -455,7 +455,7 @@ onUnmounted(() => {
 
 .p-unified-search-dropdown__subtitle {
   font-size: 12px;
-  color: var(--a-color-text-tertiary, #64748b);
+  color: var(--a-color-text-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -483,8 +483,8 @@ onUnmounted(() => {
   padding: 8px 12px;
   margin: 4px 4px 2px 4px;
   font-size: 12px;
-  color: var(--a-color-text-secondary, #64748b);
-  border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
+  color: var(--a-color-text-secondary);
+  border-top: 1px solid var(--a-color-border-soft);
   cursor: pointer;
   border-radius: var(--a-radius-control, 4px);
   user-select: none;
@@ -499,7 +499,7 @@ onUnmounted(() => {
   font-size: 11px;
   padding: 1px 4px;
   background-color: var(--a-color-bg-muted, #f1f5f9);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
   color: var(--a-color-text-tertiary, #94a3b8);
 }

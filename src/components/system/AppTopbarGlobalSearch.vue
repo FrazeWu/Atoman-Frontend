@@ -355,7 +355,7 @@ onBeforeUnmount(() => {
   color: var(--a-color-fg);
   border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 .search-pill-icon {

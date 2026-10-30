@@ -300,7 +300,7 @@ onBeforeUnmount(() => {
 .media-picker-tabs {
   display: flex;
   gap: 0.5rem;
-  border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-bottom: 1px solid var(--a-color-border-soft);
   margin-bottom: 1rem;
 }
 
@@ -308,7 +308,7 @@ onBeforeUnmount(() => {
   padding: 0.5rem 0.875rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--a-color-muted, #64748b);
+  color: var(--a-color-muted);
   border: none;
   background: transparent;
   border-bottom: 2px solid transparent;
@@ -336,7 +336,7 @@ onBeforeUnmount(() => {
 .media-picker-search-icon {
   position: absolute;
   left: 0.75rem;
-  color: var(--a-color-muted, #64748b);
+  color: var(--a-color-muted);
   pointer-events: none;
 }
 
@@ -345,9 +345,9 @@ onBeforeUnmount(() => {
   height: 2.375rem;
   padding: 0 2rem 0 2.25rem;
   font-size: 0.875rem;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 6px);
-  background: var(--a-color-bg, #ffffff);
+  background: var(--a-color-bg);
   color: var(--a-color-text, #0f172a);
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -360,7 +360,7 @@ onBeforeUnmount(() => {
 .media-picker-search-spinner {
   position: absolute;
   right: 0.75rem;
-  color: var(--a-color-muted, #64748b);
+  color: var(--a-color-muted);
   animation: spin 1s linear infinite;
 }
 
@@ -382,7 +382,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  color: var(--a-color-muted, #64748b);
+  color: var(--a-color-muted);
   font-size: 0.875rem;
   padding: 2rem 0;
 }
@@ -420,7 +420,7 @@ onBeforeUnmount(() => {
   height: 2.5rem;
   border-radius: 4px;
   background: var(--a-color-surface-soft, rgba(0, 0, 0, 0.05));
-  color: var(--a-color-muted, #64748b);
+  color: var(--a-color-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -450,7 +450,7 @@ onBeforeUnmount(() => {
 
 .media-picker-item-subtitle {
   font-size: 0.75rem;
-  color: var(--a-color-muted, #64748b);
+  color: var(--a-color-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -462,7 +462,7 @@ onBeforeUnmount(() => {
   padding: 0.125rem 0.5rem;
   border-radius: 9999px;
   background: var(--a-color-surface-soft, rgba(0, 0, 0, 0.05));
-  color: var(--a-color-muted, #64748b);
+  color: var(--a-color-muted);
   flex-shrink: 0;
 }
 

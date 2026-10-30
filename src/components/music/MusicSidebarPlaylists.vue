@@ -458,7 +458,7 @@ watch(
 .collapsed-icon-btn.is-active {
   background-color: var(--a-color-surface-muted);
   color: var(--a-color-text);
-  border-color: transparent;
-  box-shadow: inset 3px 0 0 var(--a-color-text);
+  border-left: 3px solid var(--a-color-text);
+  box-shadow: none;
 }
 </style>

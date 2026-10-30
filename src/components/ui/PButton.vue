@@ -205,7 +205,8 @@ const handleClick = (event: MouseEvent) => {
 }
 
 .p-button:not(.p-button--disabled):active {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent);
+  box-shadow: none;
+  opacity: 0.9;
 }
 
 .p-button--disabled {

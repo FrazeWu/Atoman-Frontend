@@ -596,7 +596,7 @@ const mobileSheetStyle = computed(() => {
   max-width: 100vw;
   padding: 1rem 0 2rem;
   border-left: 1px solid var(--a-color-border-soft);
-  background: #ffffff;
+  background: var(--a-color-bg);
   box-shadow: none !important;
 }
 
@@ -666,7 +666,7 @@ const mobileSheetStyle = computed(() => {
   min-height: 44px;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
-  background: #ffffff;
+  background: var(--a-color-bg);
   color: var(--a-color-text);
   font: inherit;
   cursor: pointer;
@@ -697,7 +697,7 @@ const mobileSheetStyle = computed(() => {
 .p-sheet-layer {
   position: fixed;
   bottom: var(--a-content-bottom-offset);
-  background: #ffffff;
+  background: var(--a-color-bg);
   display: flex;
   flex-direction: column;
   border-top: 1px solid var(--a-color-border-soft);
@@ -761,7 +761,7 @@ const mobileSheetStyle = computed(() => {
   width: 32px;
   flex-direction: column;
   align-items: center;
-  background: #ffffff;
+  background: var(--a-color-bg);
 }
 
 .sheet-layer-controls {
@@ -888,7 +888,7 @@ const mobileSheetStyle = computed(() => {
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: #ffffff;
+  background: var(--a-color-bg);
   color: var(--a-color-fg);
   font-size: 0.75rem;
   line-height: 1.2;
@@ -963,7 +963,7 @@ const mobileSheetStyle = computed(() => {
   min-height: 4.5rem;
   padding: 0.75rem 2.5rem;
   border-top: 1px solid var(--a-color-border-soft);
-  background: #ffffff;
+  background: var(--a-color-bg);
 }
 
 .sheet-content--compact {

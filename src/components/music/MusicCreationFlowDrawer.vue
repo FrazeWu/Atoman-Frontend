@@ -214,7 +214,7 @@ async function loadEditDraft() {
     if (flow.entity === 'song') {
       const detail = await musicApi.getMusicSongDetail(targetId)
       const song = detail.song
-      if (song.album?.id || (song.release_type !== 'single' && song.release_type !== 'leak')) {
+      if (song.album?.id || (song.release_type !== 'single' && song.release_type !== 'leak' && song.release_type !== 'leak_song')) {
         throw new Error('专辑曲目请使用歌曲编辑入口')
       }
       const contributors = contributorsFromSongDetail(detail)
@@ -228,7 +228,7 @@ async function loadEditDraft() {
         contributors,
         releaseDateParts: parsePartialDateParts(formatStoredPartialDate(song.release_date, song.release_date_precision)),
         releaseDate: formatStoredPartialDate(song.release_date, song.release_date_precision),
-        type: song.release_type,
+        type: song.release_type === 'leak_song' ? 'leak' : song.release_type,
         releaseYear: song.release_date?.slice(0, 4) || '',
         bio: song.description ?? '',
         tags: [],
@@ -1628,7 +1628,7 @@ async function completeCreation() {
 .drawer-body :deep(.progress-card) { display: none; }
 
 :global(.creation-flow-drawer) {
-  background: #ffffff !important;
+  background: var(--a-color-bg) !important;
   border-left: 1px solid var(--a-color-border-soft) !important;
   box-shadow: none !important;
 }

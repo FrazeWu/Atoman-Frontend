@@ -51,8 +51,8 @@ withDefaults(defineProps<{
 }
 
 .p-skeleton--bordered {
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  background: var(--a-color-bg, #ffffff);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
 }
 
 .p-skeleton--shimmer::after {

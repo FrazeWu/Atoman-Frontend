@@ -141,6 +141,7 @@ const onToggleBlock = () => {
 }
 
 const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.defaultPrevented) return
   if (event.key === 'Escape') {
     emit('close')
   }
@@ -161,7 +162,7 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--a-color-bg, #ffffff);
+  background: var(--a-color-bg);
   border-left: 1px solid var(--a-color-border-soft);
   flex-shrink: 0;
   box-sizing: border-box;
@@ -310,12 +311,12 @@ onUnmounted(() => {
 }
 
 .dm-profile-drawer__action-item--danger {
-  color: var(--a-color-danger, #ef4444);
+  color: var(--a-color-danger);
 }
 
 .dm-profile-drawer__action-item--danger:hover {
-  background-color: color-mix(in srgb, var(--a-color-danger, #ef4444) 8%, #ffffff);
-  color: var(--a-color-danger, #ef4444);
+  background-color: color-mix(in srgb, var(--a-color-danger) 8%);
+  color: var(--a-color-danger);
 }
 
 .dm-profile-drawer__action-item--muted {

@@ -383,7 +383,7 @@ const hasResults = computed(
   font-weight: 500;
   padding: 6px 14px;
   background-color: transparent;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   border: none;
   border-radius: var(--a-radius-control, 4px);
   cursor: pointer;
@@ -412,7 +412,7 @@ const hasResults = computed(
   font-weight: 500;
   padding: 5px 12px;
   background-color: transparent;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   border: none;
   border-radius: var(--a-radius-control, 4px);
   cursor: pointer;
@@ -427,7 +427,7 @@ const hasResults = computed(
 
 .search-tab-pill.is-active,
 .search-tab-pill[aria-pressed='true'] {
-  color: var(--a-color-primary-contrast, #ffffff);
+  color: var(--a-color-primary-contrast);
   background-color: var(--a-color-text-primary, #0f172a);
 }
 
@@ -441,7 +441,7 @@ const hasResults = computed(
   font-weight: 500;
   padding: 4px 10px;
   background-color: transparent;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   border: none;
   border-radius: var(--a-radius-control, 4px);
   cursor: pointer;
@@ -457,7 +457,7 @@ const hasResults = computed(
 .search-subtab-pill.is-active,
 .search-subtab-pill[aria-pressed='true'] {
   color: var(--a-color-text-primary, #0f172a);
-  background-color: var(--a-color-surface-muted, #e2e8f0);
+  background-color: var(--a-color-surface-muted);
   font-weight: 600;
 }
 
@@ -475,7 +475,7 @@ const hasResults = computed(
   align-items: center;
   font-size: 13px;
   font-weight: 500;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   padding: 6px 12px;
   cursor: pointer;
   user-select: none;
@@ -513,7 +513,7 @@ const hasResults = computed(
 .filter-label {
   font-size: 12px;
   font-weight: 500;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
 }
 
 .filter-select,
@@ -521,9 +521,9 @@ const hasResults = computed(
   height: 36px;
   padding: 0 10px;
   font-size: 13px;
-  background-color: var(--a-color-bg, #ffffff);
+  background-color: var(--a-color-bg);
   color: var(--a-color-text-primary, #0f172a);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;
   outline: none;
@@ -554,7 +554,7 @@ const hasResults = computed(
 
 .filter-btn--primary {
   background-color: var(--a-color-primary, #0ea5e9);
-  color: var(--a-color-primary-contrast, #ffffff);
+  color: var(--a-color-primary-contrast);
   border: 1px solid var(--a-color-primary, #0ea5e9);
 }
 
@@ -563,9 +563,9 @@ const hasResults = computed(
 }
 
 .filter-btn--secondary {
-  background-color: var(--a-color-bg, #ffffff);
-  color: var(--a-color-text-secondary, #64748b);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background-color: var(--a-color-bg);
+  color: var(--a-color-text-secondary);
+  border: 1px solid var(--a-color-border-soft);
 }
 
 .filter-btn--secondary:hover {
@@ -578,16 +578,16 @@ const hasResults = computed(
   padding: 3rem 1rem;
   text-align: center;
   font-size: 14px;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   background-color: transparent;
   border: none;
   box-shadow: none !important;
 }
 
 .search-state-message.is-error {
-  color: var(--a-color-danger, #ef4444);
-  background-color: color-mix(in srgb, var(--a-color-danger, #ef4444) 6%, var(--a-color-bg, #ffffff));
-  border: 1px solid color-mix(in srgb, var(--a-color-danger, #ef4444) 20%, var(--a-color-border-soft, #e2e8f0));
+  color: var(--a-color-danger);
+  background-color: color-mix(in srgb, var(--a-color-danger) 6%, var(--a-color-bg));
+  border: 1px solid color-mix(in srgb, var(--a-color-danger) 20%, var(--a-color-border-soft));
   border-radius: var(--a-radius-control, 4px);
 }
 
@@ -598,9 +598,9 @@ const hasResults = computed(
   padding: 10px 14px;
   margin-bottom: 1rem;
   font-size: 13px;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   background-color: var(--a-color-bg-subtle, #f8fafc);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;
 }
@@ -609,8 +609,8 @@ const hasResults = computed(
   font-size: 12px;
   font-weight: 500;
   padding: 3px 8px;
-  background-color: var(--a-color-bg, #ffffff);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background-color: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
   color: var(--a-color-primary, #0ea5e9);
   cursor: pointer;
@@ -631,7 +631,7 @@ const hasResults = computed(
 .search-meta__total {
   font-size: 13px;
   font-weight: 500;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
 }
 
 /* Grouped Modules */
@@ -669,7 +669,7 @@ const hasResults = computed(
 .search-group__title {
   font-size: 13.5px;
   font-weight: 600;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   margin: 0;
 }
 
@@ -685,7 +685,7 @@ const hasResults = computed(
 
 .search-group__error {
   font-size: 13px;
-  color: var(--a-color-danger, #ef4444);
+  color: var(--a-color-danger);
   padding: 8px 0;
   display: flex;
   align-items: center;
@@ -706,10 +706,10 @@ const hasResults = computed(
   font-size: 13px;
   font-weight: 500;
   padding: 6px 14px;
-  background-color: var(--a-color-bg, #ffffff);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background-color: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   cursor: pointer;
   box-shadow: none !important;
   transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
@@ -728,7 +728,7 @@ const hasResults = computed(
 
 .pagination-page {
   font-size: 13px;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
 }
 
 @media (max-width: 640px) {

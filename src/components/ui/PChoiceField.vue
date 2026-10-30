@@ -158,7 +158,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   border-radius: var(--a-radius-control);
   background: var(--a-color-surface);
   border: 1px solid var(--a-color-border-soft);
-  box-shadow: var(--a-shadow-dropdown);
+  box-shadow: none;
 }
 
 .p-choice-field-option {

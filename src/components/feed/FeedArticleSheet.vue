@@ -806,7 +806,7 @@ const emitPlayPodcast = () => {
   display: block;
   min-width: 0;
   padding: 1rem 0 2rem;
-  background: #ffffff;
+  background: var(--a-color-bg);
 }
 
 .article-comments-link {
@@ -829,7 +829,7 @@ const emitPlayPodcast = () => {
   border: 1px solid var(--a-color-border-soft);
   border-radius: 4px;
   box-shadow: none !important;
-  background: #ffffff;
+  background: var(--a-color-bg);
   overflow: hidden;
 }
 

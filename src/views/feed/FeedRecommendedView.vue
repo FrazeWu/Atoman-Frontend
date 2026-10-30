@@ -1751,7 +1751,7 @@ onUnmounted(() => { recommendationRequest++ })
   padding: 0.3rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: 4px;
-  background: #fff;
+  background: var(--a-color-bg);
   box-shadow: none;
 }
 

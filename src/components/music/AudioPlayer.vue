@@ -196,7 +196,10 @@ import { useLoginRedirect } from "@/composables/useLoginRedirect";
 import { usePodcastPlayerActions } from "@/composables/usePodcastPlayerActions";
 import { listMusicPlaylists, type MusicPlaylistSummary } from "@/api/musicV1";
 import { reportError } from "@/utils/logger";
-import { resolveMusicPlayerShortcut } from "@/utils/musicKeyboardShortcuts";
+import {
+  resolveMusicPlayerShortcut,
+  isMusicKeyboardShortcutTargetBlocked,
+} from "@/utils/musicKeyboardShortcuts";
 import AudioPlayerTrackInfo from "@/components/music/player/AudioPlayerTrackInfo.vue";
 import AudioPlayerControlsHub from "@/components/music/player/AudioPlayerControlsHub.vue";
 import AudioPlayerFeatureStrip from "@/components/music/player/AudioPlayerFeatureStrip.vue";
@@ -251,16 +254,7 @@ function openCurrentSongDetail() {
 }
 
 function isInputActive(): boolean {
-  const active = document.activeElement;
-  if (!active) return false;
-  const tagName = active.tagName.toLowerCase();
-  return (
-    tagName === 'input' ||
-    tagName === 'textarea' ||
-    tagName === 'select' ||
-    (active as HTMLElement).isContentEditable ||
-    Boolean(active.closest?.('.p-editor, .dm-composer, .cm-editor, [contenteditable="true"]'))
-  );
+  return isMusicKeyboardShortcutTargetBlocked();
 }
 
 let touchStartX = 0;

@@ -367,7 +367,7 @@ const filteredNotifications = computed(() => {
   border-color: var(--a-color-border);
   font-weight: 600;
   color: var(--a-color-text);
-  box-shadow: var(--a-shadow-sm);
+  box-shadow: none;
 }
 
 /* 布局：外层无边框，左侧一个框，右侧一个框 */

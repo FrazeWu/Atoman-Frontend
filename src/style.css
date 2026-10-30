@@ -252,7 +252,7 @@ body:has(.app-shell.has-sidebar) {
 	gap: var(--a-space-2);
 	border: var(--a-border);
 	border-radius: var(--a-radius-control);
-	box-shadow: var(--a-shadow-button);
+	box-shadow: none;
 	cursor: pointer;
 	font-family: inherit;
 	font-weight: var(--a-font-weight-black);
@@ -277,7 +277,7 @@ body:has(.app-shell.has-sidebar) {
 .a-btn:active:not(:disabled),
 .a-btn.a-btn--active {
 	transform: translateY(1px);
-	box-shadow: var(--a-shadow-pressed);
+	box-shadow: none;
 }
 .a-btn:disabled,
 .a-btn.a-btn--disabled {
@@ -643,7 +643,8 @@ body:has(.app-shell.has-sidebar) {
 .a-select:focus,
 .p-select-trigger:focus {
 	border-color: var(--a-color-fg);
-	box-shadow: inset 0 0 0 1px var(--a-color-fg);
+	box-shadow: none;
+	outline: 1px solid var(--a-color-fg);
 }
 .a-input--error,
 .a-textarea--error,
@@ -655,7 +656,8 @@ body:has(.app-shell.has-sidebar) {
 .a-textarea--error:focus,
 .a-select--error:focus,
 .p-select-trigger--error:focus {
-	box-shadow: inset 0 0 0 1px var(--a-color-danger);
+	box-shadow: none;
+	outline: 1px solid var(--a-color-danger);
 }
 .a-textarea {
 	resize: none;
@@ -693,7 +695,8 @@ body:has(.app-shell.has-sidebar) {
 }
 .a-select-trigger--open,
 .p-select-trigger--open {
-	box-shadow: inset 0 0 0 1px var(--a-color-border);
+	border-color: var(--a-color-fg);
+	box-shadow: none;
 }
 .a-select-trigger--error,
 .p-select-trigger--error {
@@ -718,7 +721,7 @@ body:has(.app-shell.has-sidebar) {
 	z-index: var(--a-z-dropdown);
 	background: var(--a-color-bg);
 	border: var(--a-border);
-	box-shadow: var(--a-shadow-dropdown);
+	box-shadow: none;
 	border-radius: var(--a-radius-control);
 	max-height: 16rem;
 	overflow-y: auto;
@@ -935,7 +938,7 @@ body:has(.app-shell.has-sidebar) {
 	min-width: 12rem;
 	background: var(--a-color-bg);
 	border: var(--a-border);
-	box-shadow: var(--a-shadow-dropdown);
+	box-shadow: none;
 	z-index: var(--a-z-dropdown);
 	border-radius: var(--a-radius-control);
 	padding: 0.25rem;

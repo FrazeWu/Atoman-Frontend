@@ -72,7 +72,7 @@ const { safeLinkState, closeSafeLink, proceedToSafeLink, copySafeLink } = useSaf
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.5;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
 }
 
 .p-safe-link-modal__card {
@@ -81,7 +81,7 @@ const { safeLinkState, closeSafeLink, proceedToSafeLink, copySafeLink } = useSaf
   gap: 0.25rem;
   padding: 0.75rem 1rem;
   background: var(--a-color-surface-muted, #f8fafc);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card, 4px);
   overflow: hidden;
 }
@@ -95,7 +95,7 @@ const { safeLinkState, closeSafeLink, proceedToSafeLink, copySafeLink } = useSaf
 
 .p-safe-link-modal__url {
   font-size: 0.75rem;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -122,9 +122,9 @@ const { safeLinkState, closeSafeLink, proceedToSafeLink, copySafeLink } = useSaf
 }
 
 .p-safe-link-modal__btn--cancel {
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   background: transparent;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
 }
 
 .p-safe-link-modal__btn--cancel:hover {
@@ -134,7 +134,7 @@ const { safeLinkState, closeSafeLink, proceedToSafeLink, copySafeLink } = useSaf
 
 .p-safe-link-modal__btn--copy {
   border: 1px solid var(--a-color-border, #cbd5e1);
-  background: var(--a-color-bg, #ffffff);
+  background: var(--a-color-bg);
   color: var(--a-color-text, #0f172a);
 }
 
@@ -145,7 +145,7 @@ const { safeLinkState, closeSafeLink, proceedToSafeLink, copySafeLink } = useSaf
 .p-safe-link-modal__btn--proceed {
   border: 1px solid var(--a-color-text, #0f172a);
   background: var(--a-color-text, #0f172a);
-  color: var(--a-color-bg, #ffffff);
+  color: var(--a-color-bg);
 }
 
 .p-safe-link-modal__btn--proceed:hover {

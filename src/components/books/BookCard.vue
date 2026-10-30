@@ -114,7 +114,7 @@ const ratingText = computed(() => {
 
 .book-card__author {
   font-size: 0.75rem;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

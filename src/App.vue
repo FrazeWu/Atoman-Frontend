@@ -205,7 +205,7 @@ onBeforeUnmount(() => cancelIdleWork())
 
 .app-main--auth {
   padding-bottom: 0;
-  background: #fff;
+  background: var(--a-color-bg);
 }
 
 @media (max-width: 767px) {

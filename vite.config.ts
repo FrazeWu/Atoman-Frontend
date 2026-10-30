@@ -74,7 +74,7 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		build: {
-			chunkSizeWarningLimit: 1700,
+			chunkSizeWarningLimit: 1000,
 			rollupOptions: {
 				output: {
 					experimentalMinChunkSize: 15000,
@@ -82,6 +82,11 @@ export default defineConfig(({ mode }) => {
 						if (id.includes("spaceConstants") || id.includes("bottomNavConstants"))
 							return "mobile-space-constants";
 						if (id.includes("lucide-vue-next")) return "ui-icons";
+						if (id.includes("node_modules/pdfjs-dist")) return "pdfjs";
+						if (id.includes("node_modules/epubjs")) return "epubjs";
+						if (id.includes("node_modules/ol")) return "openlayers";
+						if (id.includes("node_modules/chart.js")) return "chartjs";
+						if (id.includes("node_modules/katex")) return "katex";
 						if (id.includes("node_modules/highlight.js")) return "highlight";
 						if (id.includes("node_modules/marked/")) return "markdown-runtime";
 						if (

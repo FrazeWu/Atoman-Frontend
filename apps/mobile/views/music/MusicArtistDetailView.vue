@@ -129,7 +129,7 @@
             <div class="mobile-artist-detail__song-info">
               <span class="mobile-artist-detail__song-title">{{ song.title }}</span>
               <span class="mobile-artist-detail__song-album">
-                {{ song.album || '单曲' }}
+                {{ song.album || formatAlbumTypeLabel(song.release_type || 'single') }}
               </span>
             </div>
 
@@ -171,6 +171,7 @@ import {
 } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import type { Song } from '@/types'
+import { formatAlbumTypeLabel } from '@/utils/musicMedia'
 import { musicAudioFromApi, musicPlaybackDetailsFromApi, canPlayMusicSong, startMobileMusicQueue } from '@mobile/mobileMusicPlayback'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
@@ -254,6 +255,7 @@ function toPlayerSong(item: any, artistContext?: { avatar_url?: string; name?: s
     title: item.title,
     artist: extractArtist(item, fallbackArtist),
     album: extractAlbumTitle(item),
+    release_type: item.release_type,
     duration: typeof item.duration === 'number' && item.duration > 0
       ? item.duration
       : (item.duration_sec ?? item.duration_seconds ?? item.durationSeconds ?? 0),

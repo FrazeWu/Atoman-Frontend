@@ -1115,7 +1115,7 @@ defineExpose({
   border: 1px solid var(--a-color-border-soft);
   border-radius: 4px;
   box-shadow: none !important;
-  background: #ffffff;
+  background: var(--a-color-bg);
   overflow: hidden;
 }
 

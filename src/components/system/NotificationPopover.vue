@@ -131,6 +131,7 @@ const handleNavigate = (path: string) => {
 }
 
 const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.defaultPrevented) return
   if (e.key === 'Escape') {
     emit('close')
   }
@@ -193,7 +194,7 @@ onBeforeUnmount(() => {
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border);
   border-radius: var(--a-radius-card);
-  box-shadow: var(--a-shadow-dropdown, var(--a-shadow-lg));
+  box-shadow: none;
   box-sizing: border-box;
   text-align: left;
   user-select: none;

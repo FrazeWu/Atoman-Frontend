@@ -303,8 +303,8 @@ defineExpose({
 .p-search-input {
   display: inline-flex;
   align-items: stretch;
-  background-color: var(--a-color-bg, #ffffff);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background-color: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;
   transition: border-color 0.15s ease, background-color 0.15s ease;
@@ -353,7 +353,7 @@ defineExpose({
 .p-search-input__scope {
   display: flex;
   align-items: center;
-  border-right: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-right: 1px solid var(--a-color-border-soft);
   background-color: var(--a-color-bg-subtle, #f8fafc);
   border-top-left-radius: calc(var(--a-radius-control, 4px) - 1px);
   border-bottom-left-radius: calc(var(--a-radius-control, 4px) - 1px);
@@ -364,7 +364,7 @@ defineExpose({
 .p-search-input__scope-select {
   border: none;
   background: transparent;
-  color: var(--a-color-text-secondary, #64748b);
+  color: var(--a-color-text-secondary);
   font-size: 13px;
   font-weight: 500;
   padding: 0 8px;
@@ -492,7 +492,7 @@ defineExpose({
   font-weight: 500;
   color: var(--a-color-text-tertiary, #94a3b8);
   background-color: var(--a-color-bg-subtle, #f1f5f9);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
   line-height: 1;
   user-select: none;
@@ -504,7 +504,7 @@ defineExpose({
   display: flex;
   align-items: stretch;
   flex-shrink: 0;
-  border-left: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-left: 1px solid var(--a-color-border-soft);
 }
 
 .p-search-input__action-btn {
@@ -553,8 +553,8 @@ defineExpose({
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background-color: var(--a-color-bg, #ffffff);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background-color: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;
   z-index: 50;

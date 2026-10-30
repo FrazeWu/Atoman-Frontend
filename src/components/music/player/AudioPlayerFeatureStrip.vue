@@ -201,11 +201,11 @@ defineEmits<{
 }
 
 .player-fav-btn.is-active {
-  color: var(--a-color-danger, #ef4444);
+  color: var(--a-color-danger);
 }
 
 .fav-icon.is-filled {
-  color: var(--a-color-danger, #ef4444);
+  color: var(--a-color-danger);
 }
 
 .queue-trigger {

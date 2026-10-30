@@ -98,6 +98,18 @@ let originalBodyOverflow = "";
 export let activeScrollLockCount = 0;
 const activeDialogStack: symbol[] = [];
 
+export function hasActiveDialog(): boolean {
+  if (activeDialogStack.length > 0) return true;
+  if (typeof document !== "undefined") {
+    return Boolean(
+      document.querySelector(
+        '.p-modal[aria-modal="true"], .p-sheet[aria-modal="true"], .p-modal-backdrop, .p-sheet-backdrop, [role="dialog"][aria-modal="true"], .p-image-lightbox'
+      )
+    );
+  }
+  return false;
+}
+
 export function resetScrollLockForTesting(): void {
   activeScrollLockCount = 0;
   originalBodyOverflow = "";
@@ -295,6 +307,7 @@ export function useDialogFocus(
     if (!isCurrentTopLayer()) return;
     if (event.defaultPrevented) return;
     event.preventDefault();
+    event.stopImmediatePropagation?.();
     close();
   };
 

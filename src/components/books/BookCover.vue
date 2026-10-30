@@ -119,8 +119,8 @@ watch(
   width: 100%;
   overflow: hidden;
   border-radius: var(--a-radius-card, 4px);
-  background: #ffffff;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
   box-shadow: none !important;
   user-select: none;
   display: flex;
@@ -142,7 +142,7 @@ watch(
   width: 100%;
   height: 100%;
   position: relative;
-  background: #ffffff;
+  background: var(--a-color-bg);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -199,7 +199,7 @@ watch(
 
 .book-cover__modern-subtitle {
   font-size: 0.6875rem;
-  color: #64748b;
+  color: var(--a-color-muted);
   margin-top: 0.25rem;
   line-height: 1.4;
   display: -webkit-box;

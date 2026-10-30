@@ -301,8 +301,15 @@ describe("ArtistDrawer.vue", () => {
 					release_date: "0001-01-01T00:00:00Z",
 					entry_status: "open",
 				},
+				{
+					id: "song-5",
+					title: "Legacy Leak Song",
+					release_type: "leak_song",
+					release_date: "2024-06-01",
+					entry_status: "open",
+				},
 			],
-			meta: { page: 1, page_size: 24, total: 2, has_more: false },
+			meta: { page: 1, page_size: 24, total: 3, has_more: false },
 		});
 
 		await wrapper
@@ -317,9 +324,10 @@ describe("ArtistDrawer.vue", () => {
 			page: 1,
 			page_size: 24,
 		});
-		expect(wrapper.findAll(".artist-track")).toHaveLength(2);
+		expect(wrapper.findAll(".artist-track")).toHaveLength(3);
 		expect(wrapper.text()).toContain("New Single");
 		expect(wrapper.text()).toContain("Undated Leak");
+		expect(wrapper.text()).toContain("Legacy Leak Song");
 		expect(wrapper.text()).not.toContain("Featured Album Track");
 		expect(wrapper.text()).toContain("单曲");
 		expect(wrapper.text()).toContain("泄曲");

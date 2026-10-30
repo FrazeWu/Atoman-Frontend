@@ -160,7 +160,9 @@ function isComplete(videoId: string) {
 }
 
 .vcp__item-button:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--a-color-primary);
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: -2px;
+  box-shadow: none;
 }
 
 .vcp__item-button:disabled {

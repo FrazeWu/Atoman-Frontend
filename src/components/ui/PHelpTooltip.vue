@@ -221,7 +221,7 @@ defineExpose({
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
-  box-shadow: var(--a-shadow-md);
+  box-shadow: none;
   color: var(--a-color-fg);
   animation: p-tooltip-fade 0.18s ease-out;
 }

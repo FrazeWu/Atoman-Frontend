@@ -1532,10 +1532,12 @@ onBeforeUnmount(() => {
 
 @keyframes pulse-highlight {
   0%, 100% {
+    outline: none;
     box-shadow: none;
   }
   30%, 70% {
-    box-shadow: 0 0 0 4px var(--a-color-primary);
+    outline: 2px solid var(--a-color-primary);
+    box-shadow: none;
   }
 }
 </style>

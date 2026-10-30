@@ -377,6 +377,7 @@ watch(accountIdentity, (identity, previous) => {
 })
 
 const handleKeyDownGlobal = (e: KeyboardEvent) => {
+  if (e.defaultPrevented) return
   if (e.key === 'Escape') {
     showArticleSheet.value = false
   }

@@ -343,7 +343,8 @@ function compareItems(left: TimelineItem, right: TimelineItem, mode: 'newest' | 
   font-size: 1.2rem;
   font-weight: 500;
   overflow: hidden;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--feed-source-color) 24%, white);
+  border: 1px solid color-mix(in srgb, var(--feed-source-color) 24%, white);
+  box-shadow: none;
 }
 
 .source-sheet-avatar-image {

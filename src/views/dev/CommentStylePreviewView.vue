@@ -547,7 +547,7 @@ function submitComment() {
 .is-linear .preview-composer { padding: 0.75rem 0; border-bottom: 1px solid var(--a-color-border); background: var(--a-color-surface); }
 .is-linear .preview-composer__heading, .is-linear .preview-composer textarea, .is-linear .preview-composer__footer { margin-right: 0.75rem; margin-left: 0.75rem; }
 .is-linear .preview-composer textarea { padding: 0.35rem 0; border: 0; outline: 0; background: transparent; }
-.is-linear .preview-composer:focus-within { background: var(--a-color-bg); box-shadow: inset 0 0 0 1px var(--a-color-border); }
+.is-linear .preview-composer:focus-within { background: var(--a-color-bg); outline: 1px solid var(--a-color-border); box-shadow: none; }
 .is-linear .preview-composer__footer { padding-top: 0.4rem; }
 .is-linear .preview-comment-list { gap: 0; }
 .is-linear .preview-comment { padding: 0.9rem 0; border-bottom: 1px solid var(--a-color-border-soft); }

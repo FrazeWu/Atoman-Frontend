@@ -1049,7 +1049,7 @@ async function duplicateDraft() {
   transition: width 0.2s ease;
 }
 
-.ve-field-error { font-size: 0.8rem; color: var(--a-color-danger, #ef4444); margin: 0; }
+.ve-field-error { font-size: 0.8rem; color: var(--a-color-danger); margin: 0; }
 
 .ve-panel {
   position: sticky;
@@ -1183,7 +1183,7 @@ async function duplicateDraft() {
   margin: 0;
 }
 
-.ve-error { font-size: 0.8rem; color: var(--a-color-danger, #ef4444); margin: 0; }
+.ve-error { font-size: 0.8rem; color: var(--a-color-danger); margin: 0; }
 .ve-saved { font-size: 0.8rem; color: var(--a-color-success, #10b981); margin: 0; }
 
 @media (max-width: 768px) {

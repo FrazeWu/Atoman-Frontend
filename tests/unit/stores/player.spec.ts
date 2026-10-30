@@ -1767,5 +1767,62 @@ describe("player store", () => {
 			localStorage.removeItem("playbackState");
 		}
 	});
+
+	it("cleans up loading and cancels recovery timer when foreign play request arrives", async () => {
+		const store = usePlayerStore();
+		const song = { id: "foreign-1", title: "Foreign Test", audio_url: "f.mp3" } as any;
+
+		store.playSong(song);
+		const audio = audioInstances.at(-1)!;
+		await audio.play.mock.results.at(-1)?.value;
+		await nextTick();
+
+		store.isLoading = true;
+		expect(store.isPlaying).toBe(true);
+		expect(store.isLoading).toBe(true);
+
+		// Simulate foreign play broadcast arriving
+		window.dispatchEvent(
+			new StorageEvent("storage", {
+				key: "__atoman_audio_sync__",
+				newValue: JSON.stringify({
+					type: "PLAY_REQUEST",
+					tabId: "different-tab-id",
+					timestamp: Date.now() + 500,
+				}),
+			}),
+		);
+
+		await nextTick();
+		expect(store.isPlaying).toBe(false);
+		expect(store.isLoading).toBe(false);
+	});
+
+	it("arbitrates concurrent play requests avoiding dual-pause deadlocks", async () => {
+		const store = usePlayerStore();
+		const song = { id: "arb-1", title: "Arb Test", audio_url: "arb.mp3" } as any;
+
+		store.playSong(song);
+		const audio = audioInstances.at(-1)!;
+		await audio.play.mock.results.at(-1)?.value;
+		await nextTick();
+		expect(store.isPlaying).toBe(true);
+
+		// A stale/earlier foreign request arriving during recent play window is ignored
+		window.dispatchEvent(
+			new StorageEvent("storage", {
+				key: "__atoman_audio_sync__",
+				newValue: JSON.stringify({
+					type: "PLAY_REQUEST",
+					tabId: "older-tab-id",
+					timestamp: Date.now() - 5000, // Older than current play initiation
+				}),
+			}),
+		);
+
+		await nextTick();
+		// Still playing because this tab had the fresher play request!
+		expect(store.isPlaying).toBe(true);
+	});
 });
 

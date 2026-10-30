@@ -1,14 +1,31 @@
-import { getCurrentInstance, onBeforeUnmount } from "vue";
+export type AudioSyncMessage = {
+	type: "PLAY_REQUEST";
+	tabId: string;
+	timestamp: number;
+};
 
-export type AudioSyncMessage = { type: "PLAY_REQUEST"; tabId: string };
+const STORAGE_SYNC_KEY = "__atoman_audio_sync__";
 
 export function useAudioPlayerSync() {
 	const channelName = "atoman_audio_sync";
 	let channel: BroadcastChannel | null = null;
 	const tabId = Math.random().toString(36).substring(2, 9);
+	let storageListener: ((e: StorageEvent) => void) | null = null;
 
 	const callbacks = {
-		onForeignPlayRequest: () => {},
+		onForeignPlayRequest: (_meta: { tabId: string; timestamp: number }) => {},
+	};
+
+	const handleIncomingMessage = (msg: AudioSyncMessage | null | undefined) => {
+		if (!msg || typeof msg !== "object") return;
+		if (msg.tabId === tabId) return; // 过滤本标签页广播
+
+		if (msg.type === "PLAY_REQUEST") {
+			callbacks.onForeignPlayRequest({
+				tabId: msg.tabId,
+				timestamp: typeof msg.timestamp === "number" ? msg.timestamp : Date.now(),
+			});
+		}
 	};
 
 	const getChannel = (): BroadcastChannel | null => {
@@ -19,12 +36,10 @@ export function useAudioPlayerSync() {
 			try {
 				channel = new BroadcastChannel(channelName);
 				channel.onmessage = (event) => {
-					const msg = event.data as AudioSyncMessage;
-					if (msg.tabId === tabId) return;
-
-					if (msg.type === "PLAY_REQUEST") {
-						callbacks.onForeignPlayRequest();
-					}
+					handleIncomingMessage(event.data as AudioSyncMessage);
+				};
+				channel.onmessageerror = () => {
+					// 忽略无法反序列化的畸形消息
 				};
 			} catch {
 				channel = null;
@@ -33,23 +48,51 @@ export function useAudioPlayerSync() {
 		return channel;
 	};
 
-	// Attempt initial channel creation
-	getChannel();
+	// 尝试初始化 Channel 与 Storage 监听
+	if (typeof window !== "undefined") {
+		getChannel();
+		storageListener = (event: StorageEvent) => {
+			if (event.key !== STORAGE_SYNC_KEY || !event.newValue) return;
+			try {
+				const msg = JSON.parse(event.newValue) as AudioSyncMessage;
+				handleIncomingMessage(msg);
+			} catch {
+				// 忽略解析失败
+			}
+		};
+		window.addEventListener("storage", storageListener);
+	}
 
 	const broadcastPlayRequest = () => {
+		const timestamp = Date.now();
+		const message: AudioSyncMessage = {
+			type: "PLAY_REQUEST",
+			tabId,
+			timestamp,
+		};
+
 		try {
 			const activeChannel = getChannel();
 			if (activeChannel) {
-				activeChannel.postMessage({ type: "PLAY_REQUEST", tabId });
+				activeChannel.postMessage(message);
 			}
 		} catch {
-			// If channel was closed or invalid, reset it so next broadcast re-creates it.
-			// Never throw to prevent interrupting audio playback.
 			channel = null;
+		}
+
+		// 同步写 localStorage 触发跨标签 storage 事件以保证双通道送达
+		if (typeof localStorage !== "undefined") {
+			try {
+				localStorage.setItem(STORAGE_SYNC_KEY, JSON.stringify(message));
+			} catch {
+				// 忽略存储配额超限等异常
+			}
 		}
 	};
 
-	const setForeignPlayRequestCallback = (cb: () => void) => {
+	const setForeignPlayRequestCallback = (
+		cb: (meta: { tabId: string; timestamp: number }) => void,
+	) => {
 		callbacks.onForeignPlayRequest = cb;
 	};
 
@@ -57,9 +100,14 @@ export function useAudioPlayerSync() {
 		try {
 			channel?.close();
 		} catch {
-			// Ignore close errors
+			// 忽略关闭异常
 		}
 		channel = null;
+
+		if (typeof window !== "undefined" && storageListener) {
+			window.removeEventListener("storage", storageListener);
+			storageListener = null;
+		}
 	};
 
 	// Media Session API Support
@@ -167,6 +215,7 @@ export function useAudioPlayerSync() {
 	};
 
 	return {
+		tabId,
 		broadcastPlayRequest,
 		setForeignPlayRequestCallback,
 		closeChannel,

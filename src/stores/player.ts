@@ -77,6 +77,7 @@ export const usePlayerStore = defineStore("player", () => {
 	const podcastAdapter = usePodcastPlaybackAdapter();
 	const authStore = useAuthStore();
 	const {
+		tabId: playerTabId,
 		broadcastPlayRequest,
 		setForeignPlayRequestCallback,
 		closeChannel,
@@ -84,6 +85,7 @@ export const usePlayerStore = defineStore("player", () => {
 		updateMediaSessionMetadata,
 		updateMediaSessionPosition,
 	} = useAudioPlayerSync();
+	let lastPlayInitiatedAt = 0;
 	const songs = ref<Song[]>([]);
 	const currentSong = ref<Song | null>(null);
 	const playerPresence = usePlayerPresenceStore();
@@ -460,18 +462,38 @@ export const usePlayerStore = defineStore("player", () => {
 		{ immediate: true },
 	);
 
-	setForeignPlayRequestCallback(() => {
-		if (audio && shouldPauseAudio(audio)) {
-			playGeneration += 1;
-			playRequested = false;
-			savePodcastProgress();
-			saveMusicProgress(false, true);
-			audio.pause();
-			isPlaying.value = false;
-			pauseListening();
-			if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-				navigator.mediaSession.playbackState = "paused";
+	setForeignPlayRequestCallback((meta) => {
+		if (!audio || !shouldPauseAudio(audio)) return;
+
+		// 并发仲裁：若 600ms 内双方均发起起播，后发者胜，防止双停死锁
+		const COLLISION_WINDOW_MS = 600;
+		const isRecentPlay = Date.now() - lastPlayInitiatedAt < COLLISION_WINDOW_MS;
+		if (isRecentPlay && isPlaying.value && meta && typeof meta.timestamp === "number") {
+			const isForeignWinner =
+				meta.timestamp > lastPlayInitiatedAt ||
+				(meta.timestamp === lastPlayInitiatedAt && meta.tabId > playerTabId);
+
+			if (!isForeignWinner) {
+				// 本标签页胜出，保持播放，避免互相暂停
+				return;
 			}
+		}
+
+		playGeneration += 1;
+		playRequested = false;
+		isLoading.value = false;
+		resetAudioRecovery();
+
+		savePodcastProgress();
+		saveMusicProgress(false, true);
+		saveMusicSession(true);
+		savePlaybackState();
+
+		audio.pause();
+		isPlaying.value = false;
+		pauseListening();
+		if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+			navigator.mediaSession.playbackState = "paused";
 		}
 	});
 	const listeningThresholdMs = 5000;
@@ -948,6 +970,7 @@ export const usePlayerStore = defineStore("player", () => {
 		isLoading.value = true;
 		playRequested = true;
 		playbackError.value = "";
+		lastPlayInitiatedAt = Date.now();
 		player.volume = computeActualVolume(volume.value);
 		player
 			.play()

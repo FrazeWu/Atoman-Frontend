@@ -75,186 +75,196 @@
               aria-label="播放热门单曲"
               @click="handlePlayAll"
             >
-              <MIcon name="player-play" size="sm" />
+              <MIcon name="player-play" size="xs" />
             </button>
           </div>
         </div>
       </section>
 
-      <!-- Albums Section (Vertical List with Sort by Time / Popularity) -->
-      <section v-if="albums.length > 0" class="mobile-artist-detail__section" aria-label="专辑作品">
-        <div class="mobile-artist-detail__section-header">
-          <div class="mobile-artist-detail__section-title-wrap">
-            <span class="mobile-artist-detail__section-title">专辑</span>
-            <span class="mobile-artist-detail__count">{{ albums.length }} 张</span>
-          </div>
-
-          <div class="mobile-artist-detail__sort-tabs" role="group" aria-label="专辑排序">
+      <!-- Tabs (单曲 / 专辑) & Sort (热度 / 时间) Navigation Bar -->
+      <section class="mobile-artist-detail__content-section">
+        <div class="mobile-artist-detail__nav-bar">
+          <!-- Left: Main Tab Switcher -->
+          <div class="mobile-artist-detail__main-tabs" role="tablist" aria-label="作品分类">
             <button
               type="button"
-              class="mobile-artist-detail__sort-btn"
-              :class="{ 'is-active': albumSort === 'time' }"
-              @click="albumSort = 'time'"
+              class="mobile-artist-detail__main-tab"
+              :class="{ 'is-active': activeTab === 'songs' }"
+              role="tab"
+              :aria-selected="activeTab === 'songs'"
+              data-testid="artist-tab-songs"
+              @click="activeTab = 'songs'"
             >
-              时间
+              <span>单曲</span>
+              <span v-if="songs.length" class="mobile-artist-detail__tab-count">{{ songs.length }}</span>
             </button>
             <button
+              v-if="albums.length > 0"
               type="button"
-              class="mobile-artist-detail__sort-btn"
-              :class="{ 'is-active': albumSort === 'popularity' }"
-              @click="albumSort = 'popularity'"
+              class="mobile-artist-detail__main-tab"
+              :class="{ 'is-active': activeTab === 'albums' }"
+              role="tab"
+              :aria-selected="activeTab === 'albums'"
+              data-testid="artist-tab-albums"
+              @click="activeTab = 'albums'"
             >
-              热度
+              <span>专辑</span>
+              <span class="mobile-artist-detail__tab-count">{{ albums.length }}</span>
             </button>
           </div>
-        </div>
 
-        <div class="mobile-artist-detail__album-list">
-          <div
-            v-for="album in displayAlbums"
-            :key="album.id"
-            class="mobile-artist-detail__album-row"
-            data-testid="artist-album-item"
-            @click="openAlbum(album.id)"
-          >
-            <div class="mobile-artist-detail__album-row-cover">
-              <img v-if="album.cover_url" :src="album.cover_url" :alt="album.title" />
-              <div v-else class="mobile-artist-detail__album-row-art">
-                <MIcon name="note" size="sm" />
-              </div>
-            </div>
-
-            <div class="mobile-artist-detail__album-row-info">
-              <span class="mobile-artist-detail__album-row-title">{{ album.title }}</span>
-              <div class="mobile-artist-detail__album-row-meta">
-                <span v-if="album.year">{{ album.year }}</span>
-                <span class="mobile-artist-detail__meta-dot">·</span>
-                <span>专辑</span>
-                <template v-if="album.song_count">
-                  <span class="mobile-artist-detail__meta-dot">·</span>
-                  <span>{{ album.song_count }} 首歌曲</span>
-                </template>
-              </div>
-            </div>
-
-            <MIcon name="chevron-right" size="xs" class="mobile-artist-detail__album-row-arrow" />
-          </div>
-        </div>
-      </section>
-
-      <!-- Songs List (Vertical List with Sort by Popularity / Time) -->
-      <section class="mobile-artist-detail__songs" aria-label="单曲列表">
-        <div class="mobile-artist-detail__section-header">
-          <div class="mobile-artist-detail__section-title-wrap">
-            <span class="mobile-artist-detail__section-title">单曲</span>
-            <span class="mobile-artist-detail__count">{{ songs.length }} 首</span>
-          </div>
-
-          <div class="mobile-artist-detail__sort-tabs" role="group" aria-label="歌曲排序">
+          <!-- Right: Sort Switcher (热度 / 时间) -->
+          <div class="mobile-artist-detail__sort-tabs" role="group" aria-label="排序方式">
             <button
               type="button"
               class="mobile-artist-detail__sort-btn"
-              :class="{ 'is-active': songSort === 'popularity' }"
-              @click="songSort = 'popularity'"
+              :class="{ 'is-active': currentSort === 'popularity' }"
+              data-testid="sort-popularity-btn"
+              @click="currentSort = 'popularity'"
             >
               热度
             </button>
             <button
               type="button"
               class="mobile-artist-detail__sort-btn"
-              :class="{ 'is-active': songSort === 'time' }"
-              @click="songSort = 'time'"
+              :class="{ 'is-active': currentSort === 'time' }"
+              data-testid="sort-time-btn"
+              @click="currentSort = 'time'"
             >
               时间
             </button>
           </div>
         </div>
 
-        <div v-if="songsError" class="mobile-artist-detail__empty" role="alert">
-          <p class="mobile-artist-detail__empty-text">{{ songsError }}</p>
-          <MButton size="sm" variant="secondary" @click="loadArtistData(true)">重新加载</MButton>
-        </div>
-        <div v-else-if="displaySongs.length > 0" class="mobile-artist-detail__list">
-          <div
-            v-for="(song, index) in displaySongs"
-            :key="song.id"
-            class="mobile-artist-detail__song-row"
-            :class="{ 'is-active': isCurrentSong(song) }"
-          >
-            <!-- Left: Playable Song Content Area -->
-            <button
-              type="button"
-              class="mobile-artist-detail__song-item"
-              data-testid="artist-song-item"
-              :disabled="!canPlayMusicSong(song)"
-              :aria-label="canPlayMusicSong(song) ? '播放 ' + song.title : song.title + '，暂无可播放音源'"
-              @click="playSong(song)"
+        <!-- Songs Tab Panel -->
+        <div v-show="activeTab === 'songs'" class="mobile-artist-detail__tab-panel" role="tabpanel" aria-label="单曲列表">
+          <div v-if="songsError" class="mobile-artist-detail__empty" role="alert">
+            <p class="mobile-artist-detail__empty-text">{{ songsError }}</p>
+            <MButton size="sm" variant="secondary" @click="loadArtistData(true)">重新加载</MButton>
+          </div>
+          <div v-else-if="displaySongs.length > 0" class="mobile-artist-detail__list">
+            <div
+              v-for="(song, index) in displaySongs"
+              :key="song.id"
+              class="mobile-artist-detail__song-row"
+              :class="{ 'is-active': isCurrentSong(song) }"
             >
-              <div class="mobile-artist-detail__song-index-col">
-                <MIcon
-                  v-if="isCurrentSong(song) && player.isPlaying"
-                  name="waveform"
-                  size="xs"
-                  class="mobile-artist-detail__playing-icon"
-                />
-                <MIcon
-                  v-else-if="isCurrentSong(song)"
-                  name="player-play"
-                  size="xs"
-                  class="mobile-artist-detail__playing-icon"
-                />
-                <span v-else class="mobile-artist-detail__song-index">
-                  {{ String(index + 1).padStart(2, '0') }}
-                </span>
-              </div>
+              <!-- Left: Playable Song Content Area -->
+              <button
+                type="button"
+                class="mobile-artist-detail__song-item"
+                data-testid="artist-song-item"
+                :disabled="!canPlayMusicSong(song)"
+                :aria-label="canPlayMusicSong(song) ? '播放 ' + song.title : song.title + '，暂无可播放音源'"
+                @click="playSong(song)"
+              >
+                <div class="mobile-artist-detail__song-index-col">
+                  <MIcon
+                    v-if="isCurrentSong(song) && player.isPlaying"
+                    name="waveform"
+                    size="xs"
+                    class="mobile-artist-detail__playing-icon"
+                  />
+                  <MIcon
+                    v-else-if="isCurrentSong(song)"
+                    name="player-play"
+                    size="xs"
+                    class="mobile-artist-detail__playing-icon"
+                  />
+                  <span v-else class="mobile-artist-detail__song-index">
+                    {{ String(index + 1).padStart(2, '0') }}
+                  </span>
+                </div>
 
-              <div class="mobile-artist-detail__song-cover">
-                <img v-if="song.cover_url" :src="song.cover_url" :alt="song.title" />
-                <div v-else class="mobile-artist-detail__song-art">
+                <div class="mobile-artist-detail__song-cover">
+                  <img v-if="song.cover_url" :src="song.cover_url" :alt="song.title" />
+                  <div v-else class="mobile-artist-detail__song-art">
+                    <MIcon name="note" size="sm" />
+                  </div>
+                </div>
+
+                <div class="mobile-artist-detail__song-info">
+                  <span class="mobile-artist-detail__song-title">{{ song.title }}</span>
+                  <span class="mobile-artist-detail__song-album">
+                    {{ song.album || formatAlbumTypeLabel(song.release_type || 'single') }}
+                  </span>
+                </div>
+
+                <span v-if="!canPlayMusicSong(song)" class="mobile-music-no-audio">暂无音源</span>
+              </button>
+
+              <!-- Right: Independent Favorite & Spotify-style More (...) Actions -->
+              <div class="mobile-artist-detail__song-actions">
+                <button
+                  type="button"
+                  class="mobile-artist-detail__song-action-btn"
+                  :class="{ 'is-favorited': isSongFavorited(song) }"
+                  data-testid="song-favorite-btn"
+                  :aria-label="isSongFavorited(song) ? '取消收藏' : '收藏歌曲'"
+                  @click="handleToggleFavorite(song, $event)"
+                >
+                  <MIcon name="heart" size="xs" />
+                </button>
+
+                <button
+                  type="button"
+                  class="mobile-artist-detail__song-action-btn"
+                  data-testid="song-more-btn"
+                  aria-label="更多操作"
+                  @click="openSongMenu(song, $event)"
+                >
+                  <MIcon name="dots" size="xs" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div v-else class="mobile-artist-detail__empty" data-testid="artist-empty">
+            <MIcon name="note" size="lg" class="mobile-artist-detail__empty-icon" />
+            <p class="mobile-artist-detail__empty-text">暂无收录单曲</p>
+          </div>
+        </div>
+
+        <!-- Albums Tab Panel (Vertical List) -->
+        <div
+          v-if="albums.length > 0"
+          v-show="activeTab === 'albums'"
+          class="mobile-artist-detail__tab-panel"
+          role="tabpanel"
+          aria-label="专辑列表"
+        >
+          <div class="mobile-artist-detail__album-list">
+            <div
+              v-for="album in displayAlbums"
+              :key="album.id"
+              class="mobile-artist-detail__album-row"
+              data-testid="artist-album-item"
+              @click="openAlbum(album.id)"
+            >
+              <div class="mobile-artist-detail__album-row-cover">
+                <img v-if="album.cover_url" :src="album.cover_url" :alt="album.title" />
+                <div v-else class="mobile-artist-detail__album-row-art">
                   <MIcon name="note" size="sm" />
                 </div>
               </div>
 
-              <div class="mobile-artist-detail__song-info">
-                <span class="mobile-artist-detail__song-title">{{ song.title }}</span>
-                <span class="mobile-artist-detail__song-album">
-                  {{ song.album || formatAlbumTypeLabel(song.release_type || 'single') }}
-                </span>
+              <div class="mobile-artist-detail__album-row-info">
+                <span class="mobile-artist-detail__album-row-title">{{ album.title }}</span>
+                <div class="mobile-artist-detail__album-row-meta">
+                  <span v-if="album.year">{{ album.year }}</span>
+                  <span class="mobile-artist-detail__meta-dot">·</span>
+                  <span>专辑</span>
+                  <template v-if="album.song_count">
+                    <span class="mobile-artist-detail__meta-dot">·</span>
+                    <span>{{ album.song_count }} 首歌曲</span>
+                  </template>
+                </div>
               </div>
 
-              <span v-if="!canPlayMusicSong(song)" class="mobile-music-no-audio">暂无音源</span>
-            </button>
-
-            <!-- Right: Independent Favorite & Spotify-style More (...) Actions -->
-            <div class="mobile-artist-detail__song-actions">
-              <button
-                type="button"
-                class="mobile-artist-detail__song-action-btn"
-                :class="{ 'is-favorited': isSongFavorited(song) }"
-                data-testid="song-favorite-btn"
-                :aria-label="isSongFavorited(song) ? '取消收藏' : '收藏歌曲'"
-                @click="handleToggleFavorite(song, $event)"
-              >
-                <MIcon name="heart" size="xs" />
-              </button>
-
-              <button
-                type="button"
-                class="mobile-artist-detail__song-action-btn"
-                data-testid="song-more-btn"
-                aria-label="更多操作"
-                @click="openSongMenu(song, $event)"
-              >
-                <MIcon name="dots" size="xs" />
-              </button>
+              <MIcon name="chevron-right" size="xs" class="mobile-artist-detail__album-row-arrow" />
             </div>
           </div>
-        </div>
-
-        <!-- Empty State -->
-        <div v-else class="mobile-artist-detail__empty" data-testid="artist-empty">
-          <MIcon name="note" size="lg" class="mobile-artist-detail__empty-icon" />
-          <p class="mobile-artist-detail__empty-text">暂无收录单曲</p>
         </div>
       </section>
     </main>
@@ -416,8 +426,20 @@ export interface MobileArtistAlbumItem {
 }
 
 type SortMode = 'popularity' | 'time'
+const activeTab = ref<'songs' | 'albums'>('songs')
 const songSort = ref<SortMode>('popularity')
-const albumSort = ref<SortMode>('time')
+const albumSort = ref<SortMode>('popularity')
+
+const currentSort = computed({
+  get: () => (activeTab.value === 'songs' ? songSort.value : albumSort.value),
+  set: (val: SortMode) => {
+    if (activeTab.value === 'songs') {
+      songSort.value = val
+    } else {
+      albumSort.value = val
+    }
+  }
+})
 
 const props = withDefaults(
   defineProps<{
@@ -905,8 +927,8 @@ watch(() => route.params.artistId, (id, previous) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: none;
   background-color: var(--a-color-text, #111111);
@@ -923,34 +945,63 @@ watch(() => route.params.artistId, (id, previous) => {
   opacity: 0.35;
 }
 
-/* Albums Section */
-.mobile-artist-detail__section {
-  padding: 12px 0 6px;
-  border: none;
+/* Tab + Sort Nav Bar */
+.mobile-artist-detail__content-section {
+  padding: 4px 0 24px;
 }
 
-.mobile-artist-detail__section-header {
+.mobile-artist-detail__nav-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px 8px;
 }
 
-.mobile-artist-detail__section-title-wrap {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
+/* Main Tab Switcher (单曲 / 专辑) */
+.mobile-artist-detail__main-tabs {
+  display: inline-flex;
+  align-items: center;
+  background-color: #f1f5f9;
+  border-radius: 4px;
+  padding: 2px;
+  gap: 2px;
+  height: 24px;
+  box-sizing: border-box;
 }
 
-.mobile-artist-detail__section-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--a-color-text, #111111);
+.mobile-artist-detail__main-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 8px;
+  height: 20px;
+  line-height: 20px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
 }
 
-.mobile-artist-detail__count {
-  font-size: 11px;
-  color: var(--a-color-text-muted, #999999);
+.mobile-artist-detail__main-tab.is-active {
+  background-color: #ffffff;
+  color: #0f172a;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.mobile-artist-detail__tab-count {
+  font-size: 10px;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.mobile-artist-detail__main-tab.is-active .mobile-artist-detail__tab-count {
+  color: #64748b;
 }
 
 /* Sort Switcher Tabs */
@@ -958,28 +1009,36 @@ watch(() => route.params.artistId, (id, previous) => {
   display: inline-flex;
   align-items: center;
   background-color: #f1f5f9;
-  border-radius: 12px;
+  border-radius: 4px;
   padding: 2px;
   gap: 2px;
+  height: 24px;
+  box-sizing: border-box;
 }
 
 .mobile-artist-detail__sort-btn {
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 7px;
+  height: 20px;
+  line-height: 20px;
   font-size: 11px;
   font-weight: 500;
   color: #64748b;
   background: transparent;
   border: none;
-  border-radius: 10px;
+  border-radius: 3px;
   cursor: pointer;
   transition: all 0.15s ease;
+  user-select: none;
 }
 
 .mobile-artist-detail__sort-btn.is-active {
   background-color: #ffffff;
   color: #0f172a;
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 /* Albums Vertical List */

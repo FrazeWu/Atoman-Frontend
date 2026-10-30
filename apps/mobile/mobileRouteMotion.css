@@ -12,13 +12,13 @@
 .mobile-route-forward-leave-active,
 .mobile-route-back-enter-active,
 .mobile-route-back-leave-active {
-  transition: opacity 220ms ease, transform 220ms cubic-bezier(.2, .8, .2, 1);
+  transition: opacity 260ms ease, transform 260ms cubic-bezier(.2, .8, .2, 1);
   backface-visibility: hidden;
 }
 
 .mobile-route-switch-enter-active,
 .mobile-route-switch-leave-active {
-  transition: opacity 170ms ease, transform 170ms ease-out;
+  transition: opacity 230ms ease, transform 230ms cubic-bezier(.2, .8, .2, 1);
   backface-visibility: hidden;
 }
 
@@ -34,7 +34,7 @@
 
 .mobile-route-forward-enter-from {
   opacity: .3;
-  transform: translate3d(22px, 0, 0);
+  transform: translate3d(28px, 0, 0);
 }
 .mobile-route-forward-leave-to {
   opacity: 0;
@@ -42,19 +42,38 @@
 }
 .mobile-route-back-enter-from {
   opacity: .3;
-  transform: translate3d(-14px, 0, 0);
+  transform: translate3d(-22px, 0, 0);
 }
 .mobile-route-back-leave-to {
   opacity: 0;
-  transform: translate3d(22px, 0, 0);
+  transform: translate3d(28px, 0, 0);
 }
 .mobile-route-switch-enter-from {
   opacity: 0;
-  transform: translate3d(0, 6px, 0);
+  transform: translate3d(0, 16px, 0);
 }
 .mobile-route-switch-leave-to {
   opacity: 0;
+  transform: translate3d(0, -8px, 0);
 }
+
+/* iOS WebKit may reuse a kept-alive page during the first frame.
+   Explicit enter animations make the transition visible on activation, too. */
+@keyframes mobile-route-enter-forward {
+  from { opacity: 0; transform: translate3d(28px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes mobile-route-enter-back {
+  from { opacity: 0; transform: translate3d(-22px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes mobile-route-enter-switch {
+  from { opacity: 0; transform: translate3d(0, 16px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.mobile-route-forward-enter-active { animation: mobile-route-enter-forward 260ms cubic-bezier(.2, .8, .2, 1) both; }
+.mobile-route-back-enter-active { animation: mobile-route-enter-back 260ms cubic-bezier(.2, .8, .2, 1) both; }
+.mobile-route-switch-enter-active { animation: mobile-route-enter-switch 230ms cubic-bezier(.2, .8, .2, 1) both; }
 
 /* Match the padded generic module outlet when positioning outgoing pages. */
 .mobile-module-layout > .mobile-route-forward-leave-active,
@@ -83,6 +102,7 @@
   .mobile-route-switch-enter-active,
   .mobile-route-switch-leave-active {
     transition-duration: 1ms;
+    animation-duration: 1ms;
     transform: none;
   }
 }

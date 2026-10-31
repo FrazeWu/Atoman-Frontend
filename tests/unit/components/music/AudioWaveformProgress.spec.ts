@@ -168,4 +168,64 @@ describe('AudioWaveformProgress', () => {
     expect(bufferedPath.exists()).toBe(true)
     expect(bufferedPath.attributes('style')).toContain('clip-path: inset(0 40% 0 0)')
   })
+
+  it('activates hover states and applies smooth clamp tooltip on pointer move', async () => {
+    const wrapper = mount(AudioWaveformProgress, {
+      props: {
+        songId: 'hover-song',
+        audioUrl: '/hover.mp3',
+        currentTime: 20,
+        duration: 100,
+        generateWaveform: false,
+      },
+    })
+    const root = wrapper.get('.waveform-progress')
+    vi.spyOn(root.element, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      width: 200,
+      top: 0,
+      right: 200,
+      bottom: 34,
+      height: 34,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+
+    // Pointer move at 10px (5% - near start boundary)
+    root.element.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 10 }))
+    await nextTick()
+
+    expect(root.classes()).toContain('is-hovering')
+    const hoverTooltip = wrapper.find('.waveform-time--hover')
+    expect(hoverTooltip.exists()).toBe(true)
+    expect(hoverTooltip.attributes('data-hover-ratio')).toBe('0.05')
+    expect(hoverTooltip.text()).toBe('0:05')
+    expect(wrapper.get('.waveform-track').attributes('style')).toContain('--waveform-time-pad: 24px')
+
+    // Pointer move to center 100px (50%)
+    root.element.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 100 }))
+    await nextTick()
+    expect(hoverTooltip.attributes('data-hover-ratio')).toBe('0.5')
+    expect(hoverTooltip.text()).toBe('0:50')
+
+    // Pointer leave removes hover states
+    root.element.dispatchEvent(new MouseEvent('pointerleave', { bubbles: true }))
+    await nextTick()
+    expect(root.classes()).not.toContain('is-hovering')
+    expect(wrapper.find('.waveform-time--hover').exists()).toBe(false)
+  })
+
+  it('adjusts clamp padding for long audio exceeding one hour', async () => {
+    const wrapper = mount(AudioWaveformProgress, {
+      props: {
+        songId: 'long-song',
+        audioUrl: '/long.mp3',
+        currentTime: 0,
+        duration: 4000,
+        generateWaveform: false,
+      },
+    })
+    expect(wrapper.get('.waveform-track').attributes('style')).toContain('--waveform-time-pad: 32px')
+  })
 })

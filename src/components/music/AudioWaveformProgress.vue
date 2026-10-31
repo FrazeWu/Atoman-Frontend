@@ -2,14 +2,23 @@
   <div
     ref="rootRef"
     class="waveform-progress"
-    :class="{ 'waveform-progress--fallback': !peaks.length }"
+    :class="{
+      'waveform-progress--fallback': !peaks.length,
+      'is-hovering': isHovering,
+      'is-dragging': dragging,
+    }"
     @pointerdown="startSeek"
     @pointermove="movePointer"
     @pointerup="stopSeek"
     @pointercancel="stopSeek"
+    @pointerenter="isHovering = true"
     @pointerleave="leavePointer"
   >
-    <div ref="trackRef" class="waveform-track">
+    <div
+      ref="trackRef"
+      class="waveform-track"
+      :style="{ '--waveform-time-pad': `${hoverClampPadding}px` }"
+    >
       <svg
         v-if="peaks.length"
         class="waveform-shape"
@@ -44,11 +53,16 @@
         :style="{ left: `${displayRatio * 100}%` }"
       />
       <template v-if="hoverRatio !== null">
-        <span class="waveform-hover-line" aria-hidden="true" :style="{ left: `${hoverRatio * 100}%` }" />
+        <span
+          class="waveform-hover-line"
+          aria-hidden="true"
+          :style="{ left: `${hoverRatio * 100}%` }"
+        />
         <span
           class="waveform-time waveform-time--hover"
           :class="timePositionClass(hoverRatio)"
-          :style="{ left: `${hoverRatio * 100}%` }"
+          :data-hover-ratio="hoverRatio"
+          :style="hoverTooltipStyle"
         >
           {{ formatTime(hoverRatio * duration) }}
         </span>
@@ -96,6 +110,7 @@ const emit = defineEmits<{
 
 const rootRef = ref<HTMLElement | null>(null)
 const trackRef = ref<HTMLElement | null>(null)
+const isHovering = ref(false)
 const dragging = ref(false)
 const hoverRatio = ref<number | null>(null)
 const lastCommittedRatio = ref<number | null>(null)
@@ -210,6 +225,16 @@ function formatTime(seconds: number) {
     : `${minutes}:${tail}`
 }
 
+const hoverClampPadding = computed(() => (props.duration >= 3600 ? 32 : 24))
+
+const hoverTooltipStyle = computed(() => {
+  if (hoverRatio.value === null) return {}
+  const pad = hoverClampPadding.value
+  return {
+    left: `clamp(${pad}px, ${(hoverRatio.value * 100).toFixed(2)}%, calc(100% - ${pad}px))`,
+  }
+})
+
 function timePositionClass(ratio: number) {
   if (ratio < 0.08) return 'waveform-time--start'
   if (ratio > 0.92) return 'waveform-time--end'
@@ -236,11 +261,13 @@ function seekFromPointer(event: PointerEvent) {
 function startSeek(event: PointerEvent) {
   if (!props.duration) return
   dragging.value = true
+  isHovering.value = true
   rootRef.value?.setPointerCapture?.(event.pointerId)
   seekFromPointer(event)
 }
 
 function movePointer(event: PointerEvent) {
+  isHovering.value = true
   hoverRatio.value = pointerRatio(event)
 }
 
@@ -263,7 +290,10 @@ function stopSeek(event: PointerEvent) {
 }
 
 function leavePointer() {
-  if (!dragging.value) hoverRatio.value = null
+  if (!dragging.value) {
+    isHovering.value = false
+    hoverRatio.value = null
+  }
 }
 
 function handleRangeInput(event: Event) {
@@ -299,6 +329,14 @@ function handleRangeInput(event: Event) {
   width: 100%;
   height: 20px;
   overflow: hidden;
+  transition: height 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center center;
+}
+
+.waveform-progress:hover .waveform-shape,
+.waveform-progress.is-hovering .waveform-shape,
+.waveform-progress.is-dragging .waveform-shape {
+  height: 26px;
 }
 
 .waveform-shape__unplayed,
@@ -308,20 +346,36 @@ function handleRangeInput(event: Event) {
   stroke-linecap: round;
   stroke-width: 1.4px;
   vector-effect: non-scaling-stroke;
+  transition: stroke 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .waveform-shape__unplayed {
   stroke: color-mix(in srgb, var(--a-color-muted) 28%, transparent);
 }
 
+.waveform-progress:hover .waveform-shape__unplayed,
+.waveform-progress.is-hovering .waveform-shape__unplayed {
+  stroke: color-mix(in srgb, var(--a-color-muted) 38%, transparent);
+}
+
 .waveform-shape__buffered {
   stroke: color-mix(in srgb, var(--a-color-muted) 55%, transparent);
-  transition: clip-path 120ms ease-out;
+  transition: clip-path 120ms ease-out, stroke 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.waveform-progress:hover .waveform-shape__buffered,
+.waveform-progress.is-hovering .waveform-shape__buffered {
+  stroke: color-mix(in srgb, var(--a-color-muted) 65%, transparent);
 }
 
 .waveform-shape__played {
   stroke: color-mix(in srgb, var(--a-color-primary) 82%, transparent);
-  transition: clip-path 80ms linear;
+  transition: clip-path 80ms linear, stroke 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.waveform-progress:hover .waveform-shape__played,
+.waveform-progress.is-hovering .waveform-shape__played {
+  stroke: var(--a-color-primary);
 }
 
 .waveform-fallback-line {
@@ -329,6 +383,14 @@ function handleRangeInput(event: Event) {
   width: 100%;
   height: 2px;
   background: var(--a-color-border-soft);
+  border-radius: 1px;
+  transition: height 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.waveform-progress:hover .waveform-fallback-line,
+.waveform-progress.is-hovering .waveform-fallback-line,
+.waveform-progress.is-dragging .waveform-fallback-line {
+  height: 4px;
 }
 
 .waveform-fallback-buffer {
@@ -365,6 +427,7 @@ function handleRangeInput(event: Event) {
 
 .waveform-playhead {
   background: var(--a-color-primary);
+  z-index: 1;
 }
 
 .waveform-playhead::after {
@@ -377,42 +440,75 @@ function handleRangeInput(event: Event) {
   background: var(--a-color-primary);
   content: '';
   transform: translate(-50%, -50%);
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.waveform-progress:hover .waveform-playhead::after,
+.waveform-progress.is-hovering .waveform-playhead::after {
+  transform: translate(-50%, -50%) scale(1.25);
+}
+
+.waveform-progress.is-dragging .waveform-playhead::after {
+  transform: translate(-50%, -50%) scale(1.4);
 }
 
 .waveform-hover-line {
-  background: var(--a-color-muted);
+  background: var(--a-color-fg);
   opacity: 0.55;
+  z-index: 2;
+  animation: waveform-line-in 140ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.waveform-progress.is-dragging .waveform-hover-line {
+  opacity: 0;
+}
+
+@keyframes waveform-line-in {
+  from { opacity: 0; }
+  to { opacity: 0.55; }
 }
 
 .waveform-time {
   position: absolute;
-  z-index: 2;
-  top: 50%;
+  z-index: 3;
   min-width: 38px;
-  padding: 1px 4px;
-  transform: translate(-50%, -50%);
-  background: var(--a-color-primary);
-  color: var(--a-color-primary-contrast);
+  padding: 2px 6px;
+  transform: translateX(-50%);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  line-height: 16px;
+  line-height: 14px;
   text-align: center;
   pointer-events: none;
   white-space: nowrap;
+  user-select: none;
 }
 
 .waveform-time--hover {
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
+  bottom: calc(100% + 4px);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  box-shadow: none !important;
+  animation: waveform-tooltip-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.waveform-time--start {
-  transform: translate(0, -50%);
-}
-
+.waveform-time--start,
 .waveform-time--end {
-  transform: translate(-100%, -50%);
+  transform: translateX(-50%);
+}
+
+@keyframes waveform-tooltip-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
 }
 
 .waveform-range {

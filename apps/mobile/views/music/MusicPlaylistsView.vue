@@ -67,10 +67,6 @@
             <span class="mobile-music-playlists__item-name">{{ pl.name }}</span>
             <span class="mobile-music-playlists__item-count">{{ pl.song_count || 0 }} 首歌曲</span>
           </div>
-
-          <div class="mobile-music-playlists__item-arrow">
-            <MIcon name="chevron-down" size="sm" class="mobile-music-playlists__arrow-icon" />
-          </div>
         </RouterLink>
       </div>
 
@@ -137,10 +133,6 @@
               <div class="mobile-music-playlists__item-meta">
                 <span class="mobile-music-playlists__item-name">{{ playlist.name }}</span>
                 <span class="mobile-music-playlists__item-count">{{ playlist.song_count || 0 }} 首歌曲</span>
-              </div>
-
-              <div class="mobile-music-playlists__item-arrow">
-                <MIcon name="chevron-down" size="sm" class="mobile-music-playlists__arrow-icon" />
               </div>
             </RouterLink>
           </div>
@@ -407,15 +399,16 @@ onActivated(() => {
 }
 
 .mobile-music-playlists__item-cover {
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: var(--a-radius-control, 4px);
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 6px;
   overflow: hidden;
   background-color: var(--a-color-surface-subtle, #f1f5f9);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .mobile-music-playlists__item-img {
@@ -449,15 +442,7 @@ onActivated(() => {
   color: var(--a-color-text-secondary, #64748b);
 }
 
-.mobile-music-playlists__item-arrow {
-  color: var(--a-color-text-muted, #94a3b8);
-  display: flex;
-  align-items: center;
-}
 
-.mobile-music-playlists__arrow-icon {
-  transform: rotate(-90deg);
-}
 
 .mobile-music-playlists__empty {
   display: flex;

@@ -55,17 +55,8 @@
           <MIcon name="player-play" size="sm" />
           <span>{{ detail.playable && song.audio_url ? '播放歌曲' : '暂无音频' }}</span>
         </button>
-        <button
-          type="button"
-          class="mobile-song-view__action"
-          :class="{ 'is-active': isFavorite }"
-          :disabled="actionBusy === 'favorite'"
-          :aria-label="isFavorite ? '移出最爱' : '加入最爱'"
-          :title="isFavorite ? '移出最爱' : '加入最爱'"
-          @click="toggleFavorite"
-        >
-          <MIcon name="heart" size="sm" />
-          <span>{{ isFavorite ? '已收藏' : '收藏' }}</span>
+        <button type="button" class="mobile-song-view__action" aria-label="加入歌单" @click="openSongPlaylistPicker">
+          <MIcon name="playlists" size="sm" /><span>加入歌单</span>
         </button>
         <button
           type="button"
@@ -89,6 +80,18 @@
           <MIcon name="edit" size="sm" />
           <span>编辑</span>
         </button>
+      </div>
+      <div v-if="showSongPlaylistPicker" class="mobile-song-view__picker-backdrop" @click.self="closeSongPlaylistPicker" @touchstart.stop @touchmove.stop @touchend.stop>
+        <div role="dialog" aria-modal="true" aria-label="选择歌单" class="mobile-song-view__picker">
+          <div class="mobile-song-view__picker-header"><strong>加入歌单</strong><button type="button" @click="closeSongPlaylistPicker">关闭</button></div>
+          <p v-if="playlistPickerError" role="alert">{{ playlistPickerError }}</p>
+          <p v-if="playlistPickerBusy" role="status">正在处理…</p>
+          <label v-for="item in playlists" :key="item.id" class="mobile-song-view__picker-item">
+            <input type="radio" name="song-playlist-target" v-model="selectedPlaylistId" :value="item.id" :disabled="playlistPickerBusy" />
+            {{ item.name }}<span v-if="item.kind === 'favorite'">（默认）</span>
+          </label>
+          <button type="button" class="mobile-song-view__picker-confirm" :disabled="playlistPickerBusy || !selectedPlaylistId" @click="confirmSongPlaylist">确认添加</button>
+        </div>
       </div>
       <p v-if="feedback" class="mobile-song-view__feedback" role="status">{{ feedback }}</p>
 
@@ -143,7 +146,7 @@ const router = useRouter()
 const player = usePlayerStore()
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
-const { favoriteSongIds, loadFavoriteSongs, toggleFavoriteSong } = useMusicFavoritePlaylist()
+const { favoriteSongIds, loadFavoriteSongs, playlists, loadPlaylists, addSongToPlaylist } = useMusicFavoritePlaylist()
 const { openMusicCreationFlow, openMusicEditor } = useMusicDrawers()
 const detail = ref<MusicSongDetail | null>(null)
 const loading = ref(false)
@@ -240,17 +243,40 @@ function showFeedback(message: string) {
   feedback.value = message
 }
 
-async function toggleFavorite() {
-  if (!song.value || !requireLogin() || actionBusy.value) return
-  actionBusy.value = 'favorite'
+const showSongPlaylistPicker = ref(false)
+const selectedPlaylistId = ref('')
+const playlistPickerBusy = ref(false)
+const playlistPickerError = ref('')
+const pendingSongId = ref('')
+function closeSongPlaylistPicker() {
+  if (playlistPickerBusy.value) return
+  showSongPlaylistPicker.value = false
+  pendingSongId.value = ''
+}
+async function openSongPlaylistPicker() {
+  if (!song.value || !requireLogin()) return
+  pendingSongId.value = String(song.value.id)
+  selectedPlaylistId.value = ''
+  playlistPickerError.value = ''
+  showSongPlaylistPicker.value = true
+  playlistPickerBusy.value = true
   try {
-    const result = await toggleFavoriteSong(String(song.value.id))
-    showFeedback(result.message)
-  } catch {
-    showFeedback('收藏操作失败，请重试')
-  } finally {
-    actionBusy.value = ''
-  }
+    const available = await loadPlaylists()
+    selectedPlaylistId.value = String(available.find(item => item.kind === 'favorite')?.id || available[0]?.id || '')
+  } catch { playlistPickerError.value = '读取歌单失败，请重试' }
+  finally { playlistPickerBusy.value = false }
+}
+async function confirmSongPlaylist() {
+  if (!pendingSongId.value || !selectedPlaylistId.value || playlistPickerBusy.value) return
+  playlistPickerBusy.value = true
+  playlistPickerError.value = ''
+  try {
+    await addSongToPlaylist(selectedPlaylistId.value, pendingSongId.value)
+    showSongPlaylistPicker.value = false
+    pendingSongId.value = ''
+    showFeedback('已添加到歌单')
+  } catch { playlistPickerError.value = '添加失败，请重试' }
+  finally { playlistPickerBusy.value = false }
 }
 
 function queueSong() {
@@ -515,4 +541,14 @@ watch(songId, loadSong, { immediate: true })
   color: var(--a-color-fg);
   cursor: pointer;
 }
+</style>
+
+<style scoped>
+.mobile-song-view__picker-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1100;display:flex;align-items:flex-end;justify-content:center}
+.mobile-song-view__picker{width:100%;max-width:540px;max-height:70dvh;overflow:auto;background:var(--a-color-surface);padding:20px;border-radius:16px 16px 0 0;overscroll-behavior:contain}
+.mobile-song-view__picker-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.mobile-song-view__picker-item{display:flex;align-items:center;gap:10px;min-height:48px}
+.mobile-song-view__picker-item input{width:18px;height:18px}
+.mobile-song-view__picker-header button,.mobile-song-view__picker-confirm{min-height:44px;padding:0 12px}
+.mobile-song-view__picker-confirm{width:100%;background:var(--a-color-primary);color:white;border:0;border-radius:8px}
 </style>

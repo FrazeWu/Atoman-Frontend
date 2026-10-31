@@ -267,4 +267,97 @@ describe('MobilePlayerView Gestures (Pull-to-Dismiss & Swipe-to-Skip)', () => {
     wrapper.unmount()
   })
 
+  it('applies non-linear rubber-banding dampening beyond threshold (>72px)', async () => {
+    const wrapper = createWrapper()
+    const header = wrapper.find('.mobile-player-view__header')
+
+    await header.trigger('touchstart', {
+      touches: [{ clientX: 200, clientY: 100 }],
+    })
+
+    // Pull down deltaY = 160px (> 72px)
+    window.dispatchEvent(
+      new TouchEvent('touchmove', {
+        touches: [{ clientX: 200, clientY: 260 } as any],
+        bubbles: true,
+        cancelable: true,
+      })
+    )
+    await wrapper.vm.$nextTick()
+
+    const containerStyle = wrapper.find('.mobile-player-view').attributes('style') || ''
+    // Rubber-band formula: 72 + round((88 * 180 / 268) * 0.75) = 72 + 44 = 116px
+    expect(containerStyle).toContain('translateY(116px)')
+    wrapper.unmount()
+  })
+
+  it('prevents accidental swipe-to-skip when interacting inside lyrics scroll view', async () => {
+    const wrapper = createWrapper()
+    const player = usePlayerStore()
+    player.currentSong = {
+      ...player.currentSong!,
+      lyrics: '[00:01.00]Line 1\n[00:03.00]Line 2',
+    }
+    await wrapper.vm.$nextTick()
+
+    // Switch to lyrics tab
+    const cover = wrapper.find('.mobile-player-view__cover-wrap')
+    await cover.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const lyricsWrap = wrapper.find('.mobile-player-view__lyrics-wrap')
+    expect(lyricsWrap.exists()).toBe(true)
+
+    const nextSpy = vi.spyOn(player, 'playNext').mockImplementation(() => {})
+
+    // Swipe horizontally inside lyrics area
+    await lyricsWrap.trigger('touchstart', {
+      touches: [{ clientX: 250, clientY: 200 }],
+    })
+
+    window.dispatchEvent(
+      new TouchEvent('touchmove', {
+        touches: [{ clientX: 160, clientY: 205 } as any],
+        bubbles: true,
+      })
+    )
+    await wrapper.vm.$nextTick()
+
+    window.dispatchEvent(
+      new TouchEvent('touchend', {
+        changedTouches: [{ clientX: 160, clientY: 205 } as any],
+        bubbles: true,
+      })
+    )
+    await wrapper.vm.$nextTick()
+
+    // Directional lock / scroll conflict protection should prevent track skipping
+    expect(nextSpy).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('allows pulling down on the cover wrap button without being blocked as an interactive control', async () => {
+    const wrapper = createWrapper()
+    const cover = wrapper.find('.mobile-player-view__cover-wrap')
+    expect(cover.exists()).toBe(true)
+
+    // Touch start directly on cover button
+    await cover.trigger('touchstart', {
+      touches: [{ clientX: 200, clientY: 100 }],
+    })
+
+    // Touch move to deltaY = 60
+    window.dispatchEvent(
+      new TouchEvent('touchmove', {
+        touches: [{ clientX: 200, clientY: 160 } as any],
+        bubbles: true,
+        cancelable: true,
+      })
+    )
+    await wrapper.vm.$nextTick()
+
+    const containerStyle = wrapper.find('.mobile-player-view').attributes('style') || ''
+    expect(containerStyle).toContain('translateY(60px)')
+    wrapper.unmount()
+  })
 })

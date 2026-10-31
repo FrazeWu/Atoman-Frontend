@@ -742,8 +742,8 @@ describe('Mobile Independent Music Views & Player', () => {
       const icons = wrapper.findAllComponents(MIcon)
       const iconNames = icons.map((icon) => icon.props('name'))
 
-      // Expect favorite heart and play or player-play or pause controls
-      expect(iconNames.some((name) => ['heart', 'heart-filled'].includes(name))).toBe(true)
+      // Expect favorite (plus/check) and play or player-play or pause controls
+      expect(iconNames.some((name) => ['plus', 'plus-circle', 'check', 'check-circle', 'check-circle-filled', 'heart', 'heart-filled'].includes(name))).toBe(true)
       expect(iconNames.some((name) => ['player-play', 'player-pause', 'play', 'pause'].includes(name))).toBe(true)
     })
 

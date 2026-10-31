@@ -104,13 +104,22 @@ async function handleToggleFavorite() {
 
 const isDragging = ref(false)
 const dragOffsetY = ref(0)
+const dragOffsetX = ref(0)
 const hasInteracted = ref(false)
 
 const miniPlayerStyle = computed<CSSProperties>(() => {
-  if (isDragging.value && dragOffsetY.value < 0) {
-    return {
-      transform: `translateY(${dragOffsetY.value}px)`,
-      transition: 'none',
+  if (isDragging.value) {
+    if (dragOffsetY.value < 0) {
+      return {
+        transform: `translateY(${dragOffsetY.value}px)`,
+        transition: 'none',
+      }
+    }
+    if (Math.abs(dragOffsetX.value) > 0) {
+      return {
+        transform: `translateX(${dragOffsetX.value}px)`,
+        transition: 'none',
+      }
     }
   }
   if (hasInteracted.value) {
@@ -144,10 +153,11 @@ function openPlayer() {
   }
 }
 
-// Micro-displacement & Swipe to Expand Gestures
+// Micro-displacement & Swipe to Expand / Skip Gestures
 let startTouchX = 0
 let startTouchY = 0
 let isTrackingY = false
+let isTrackingX = false
 let isSwiped = false
 
 function handleTouchStart(e: TouchEvent) {
@@ -156,6 +166,7 @@ function handleTouchStart(e: TouchEvent) {
   startTouchX = touch.clientX
   startTouchY = touch.clientY
   isTrackingY = false
+  isTrackingX = false
   isSwiped = false
 }
 
@@ -164,9 +175,19 @@ function handleTouchMove(e: TouchEvent) {
   const touch = e.touches[0]
   const deltaX = touch.clientX - startTouchX
   const deltaY = touch.clientY - startTouchY
+  const absX = Math.abs(deltaX)
+  const absY = Math.abs(deltaY)
 
-  if (!isTrackingY && Math.abs(deltaY) > Math.abs(deltaX) && deltaY < 0) {
+  // Vertical drag detection (pulling upward to open player)
+  if (!isTrackingY && !isTrackingX && absY > absX && deltaY < 0) {
     isTrackingY = true
+    isDragging.value = true
+    hasInteracted.value = true
+  }
+
+  // Horizontal drag detection (swiping left/right to skip)
+  if (!isTrackingX && !isTrackingY && absX > absY && absX > 6) {
+    isTrackingX = true
     isDragging.value = true
     hasInteracted.value = true
   }
@@ -175,6 +196,10 @@ function handleTouchMove(e: TouchEvent) {
     const upwardDist = Math.max(0, -deltaY)
     const dampedY = -Math.pow(upwardDist, 0.82)
     dragOffsetY.value = dampedY
+  } else if (isTrackingX) {
+    const sign = deltaX > 0 ? 1 : -1
+    const dampedX = sign * Math.pow(absX, 0.82)
+    dragOffsetX.value = dampedX
   }
 }
 
@@ -188,6 +213,24 @@ function handleTouchEnd(e: TouchEvent) {
     if (upwardMoved > 40) {
       isSwiped = true
       openPlayer()
+      return
+    }
+  }
+
+  if (isTrackingX) {
+    isTrackingX = false
+    isDragging.value = false
+    const movedX = dragOffsetX.value
+    dragOffsetX.value = 0
+
+    if (movedX < -35) {
+      isSwiped = true
+      player.playNext()
+      return
+    }
+    if (movedX > 35) {
+      isSwiped = true
+      player.playPrevious()
       return
     }
   }
@@ -207,14 +250,14 @@ function handleTouchEnd(e: TouchEvent) {
   }
 
   // Swipe left for next track
-  if (deltaX < -50 && absX > 1.2 * absY) {
+  if (deltaX < -35 && absX > 1.2 * absY) {
     isSwiped = true
     player.playNext()
     return
   }
 
   // Swipe right for previous track
-  if (deltaX > 50 && absX > 1.2 * absY) {
+  if (deltaX > 35 && absX > 1.2 * absY) {
     isSwiped = true
     player.playPrevious()
     return

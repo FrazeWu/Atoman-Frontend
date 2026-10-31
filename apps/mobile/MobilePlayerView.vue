@@ -186,11 +186,11 @@
             class="mobile-player-view__fav-btn"
             :class="{ 'is-favorited': isCurrentFavorite }"
             data-testid="player-favorite-btn"
-            :aria-label="isCurrentFavorite ? '已收藏' : '收藏'"
-            :title="isCurrentFavorite ? '已收藏' : '收藏'"
+            :aria-label="isCurrentFavorite ? '已加入最爱' : '添加至最爱'"
+            :title="isCurrentFavorite ? '已加入最爱' : '添加至最爱'"
             @click="handleToggleFavorite"
           >
-            <MIcon :name="isCurrentFavorite ? 'heart-filled' : 'heart'" size="md" />
+            <MIcon :name="isCurrentFavorite ? 'check-circle-filled' : 'plus-circle'" size="md" />
           </button>
         </div>
 
@@ -747,11 +747,17 @@ let dismissTimer: ReturnType<typeof setTimeout> | null = null
 let snapResetTimer: ReturnType<typeof setTimeout> | null = null
 let suppressCoverClick = false
 let isStageTouch = false
+let isScrollableTarget = false
+let touchDirection: 'none' | 'vertical' | 'horizontal' = 'none'
 
 function isInteractiveElement(target: EventTarget | null): boolean {
   if (!target) return false
   const element = target instanceof Element ? target : (target as Node).parentElement
   if (!element) return false
+  // 封面容器采用语义化 button 满足无障碍聚焦，但在触摸手势层作为主舞台放行，支持触屏下拉与横滑切歌
+  if (element.closest('.mobile-player-view__cover-wrap')) {
+    return false
+  }
   return Boolean(
     element.closest(
       'button, a, input, select, textarea, [data-interactive], .mobile-player-scrubber, .mobile-player-view__controls, .mobile-player-view__actions, .mobile-player-view__queue-item, .mobile-player-view__queue-actions, .mobile-player-view__clear-queue'
@@ -770,6 +776,13 @@ function handleTouchStart(e: TouchEvent) {
   isStageTouch = Boolean(
     target instanceof Element && target.closest('.mobile-player-view__stage')
   )
+  isScrollableTarget = Boolean(
+    showQueue.value ||
+      activeTab.value === 'lyrics' ||
+      (target instanceof Element &&
+        target.closest('.mobile-player-view__lyrics-wrap, .mobile-player-view__queue-wrap'))
+  )
+  touchDirection = 'none'
 
   startTouchX = touch.clientX
   startTouchY = touch.clientY
@@ -800,21 +813,37 @@ function handleTouchMove(e: TouchEvent) {
   const absX = Math.abs(deltaX)
   const absY = Math.abs(deltaY)
 
-  // Downward pull detection
-  if (deltaY > 8 && absY > absX) {
-    if (e.cancelable) {
-      e.preventDefault()
+  // 方向锁定（Directional Lock）：主轴意图判定
+  if (touchDirection === 'none') {
+    if (absY > 8 && absY >= absX) {
+      touchDirection = 'vertical'
+    } else if (absX > 8 && absX > absY * 1.5 && !isScrollableTarget) {
+      touchDirection = 'horizontal'
     }
-    isDragging.value = true
-    hasInteracted.value = true
-    suppressCoverClick = true
+  }
 
-    if (deltaY <= 120) {
-      dragOffsetY.value = deltaY
-    } else {
-      dragOffsetY.value = 120 + (deltaY - 120) * 0.4
+  // 下拉收起（Pull-to-Dismiss）：支持线性跟手与 Rubber-Banding 物理非线性阻尼
+  if (touchDirection === 'vertical' || (touchDirection === 'none' && deltaY > 8 && absY > absX)) {
+    if (deltaY > 8) {
+      if (e.cancelable) {
+        e.preventDefault()
+      }
+      isDragging.value = true
+      hasInteracted.value = true
+      suppressCoverClick = true
+
+      const PULL_THRESHOLD = 72
+      if (deltaY <= PULL_THRESHOLD) {
+        // 临界阈值内 1:1 跟手，保证明确触控反馈
+        dragOffsetY.value = deltaY
+      } else {
+        // 临界阈值外引入 iOS Rubber-Banding 双曲阻尼递减，增强物理韧性与紧致手感
+        const excess = deltaY - PULL_THRESHOLD
+        const rubberExtension = ((excess * 180) / (excess + 180)) * 0.75
+        dragOffsetY.value = Math.round(PULL_THRESHOLD + rubberExtension)
+      }
     }
-  } else if (isStageTouch && absX > 15 && absX > absY) {
+  } else if (isStageTouch && !isScrollableTarget && absX > 15 && absX > absY) {
     suppressCoverClick = true
   }
 }
@@ -835,20 +864,27 @@ function handleTouchEnd(e: TouchEvent) {
   const absX = Math.abs(deltaX)
   const absY = Math.abs(deltaY)
 
-  // Stage horizontal swipe to skip track
-  if (isStageTouch && absX > 50 && absX > 1.2 * absY) {
+  // 封面舞台水平滑动手势切歌（带有严格方向锁定与歌词/队列滚动防误触保护）
+  const isHorizontalSwipe =
+    isStageTouch &&
+    !isScrollableTarget &&
+    (touchDirection === 'horizontal' || (absX > 35 && absX > 1.2 * absY))
+
+  if (isHorizontalSwipe && absX > 35) {
     suppressCoverClick = true
-    if (deltaX < -50) {
+    if (deltaX < -35) {
       player.playNext()
-    } else if (deltaX > 50) {
+    } else if (deltaX > 35) {
       player.playPrevious()
     }
     isDragging.value = false
     dragOffsetY.value = 0
+    touchDirection = 'none'
     return
   }
 
   if (!isDragging.value) {
+    touchDirection = 'none'
     return
   }
 
@@ -856,6 +892,7 @@ function handleTouchEnd(e: TouchEvent) {
   const velocity = deltaY / elapsed
 
   isDragging.value = false
+  touchDirection = 'none'
 
   const isFlick = deltaY > 50 && elapsed >= 40 && elapsed < 400 && velocity > 0.5
   if (deltaY > 72 || isFlick) {
@@ -873,7 +910,7 @@ function handleTouchEnd(e: TouchEvent) {
     snapResetTimer = setTimeout(() => {
       hasInteracted.value = false
       suppressCoverClick = false
-    }, 240)
+    }, 260)
   }
 }
 
@@ -881,7 +918,7 @@ const playerGestureStyle = computed<CSSProperties>(() => {
   if (isDismissing.value) {
     return {
       transform: 'translateY(100%)',
-      transition: 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+      transition: 'transform 200ms cubic-bezier(0.25, 0.9, 0.35, 1)',
     }
   }
   if (isDragging.value) {
@@ -893,7 +930,7 @@ const playerGestureStyle = computed<CSSProperties>(() => {
   if (hasInteracted.value) {
     return {
       transform: `translateY(${dragOffsetY.value}px)`,
-      transition: 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+      transition: 'transform 260ms cubic-bezier(0.16, 1, 0.3, 1)',
     }
   }
   return {}

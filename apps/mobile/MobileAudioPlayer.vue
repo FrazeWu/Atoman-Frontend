@@ -36,11 +36,15 @@
         class="mobile-mini-player__action mobile-mini-player__action--favorite"
         :class="{ 'is-favorited': isCurrentFavorite }"
         data-testid="mini-player-favorite-btn"
-        :aria-label="isCurrentFavorite ? '已收藏' : '收藏'"
-        :title="isCurrentFavorite ? '已收藏' : '收藏'"
+        :aria-label="isCurrentFavorite ? '已添加至喜欢的音乐' : '添加至喜欢的音乐'"
+        :title="isCurrentFavorite ? '已添加至喜欢的音乐' : '添加至喜欢的音乐'"
         @click.stop="handleToggleFavorite"
       >
-        <MIcon :name="isCurrentFavorite ? 'heart-filled' : 'heart'" size="sm" />
+        <MIcon
+          :name="isCurrentFavorite ? 'check-circle-filled' : 'plus-circle'"
+          :class="{ 'text-[#1ed760]': isCurrentFavorite }"
+          size="sm"
+        />
       </button>
 
       <button

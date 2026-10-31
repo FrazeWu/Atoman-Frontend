@@ -99,7 +99,7 @@
               aria-label="播放全部"
               @click="handlePlayAll"
             >
-              <MIcon name="player-play" size="sm" />
+              <MIcon name="player-play" size="xs" />
             </button>
           </div>
         </div>
@@ -302,11 +302,11 @@
             @click="handleToggleFavoriteFromMenu(activeMenuSong)"
           >
             <MIcon
-              name="heart"
+              :name="isSongFavorited(activeMenuSong) ? 'check-circle-filled' : 'plus-circle'"
               size="sm"
-              :class="{ 'is-favorited': isSongFavorited(activeMenuSong) }"
+              :class="{ 'text-[#1ed760]': isSongFavorited(activeMenuSong) }"
             />
-            <span>{{ isSongFavorited(activeMenuSong) ? '已从已点赞歌曲移除' : '添加至 已点赞的歌曲' }}</span>
+            <span>{{ isSongFavorited(activeMenuSong) ? '已添加至喜欢的音乐' : '添加至喜欢的音乐' }}</span>
           </button>
 
           <button
@@ -432,7 +432,7 @@ async function handleToggleFavorite(song: Song, e?: Event) {
   const songId = String(song.id)
   try {
     const res = await toggleFavoriteSong(songId)
-    showToast(res.isFavorite ? '已添加至已点赞的歌曲' : '已从已点赞的歌曲移除')
+    showToast(res.isFavorite ? '已添加至喜欢的音乐' : '已从喜欢的音乐中移除')
   } catch {
     showToast('操作失败，请重试')
   }
@@ -975,17 +975,21 @@ onBeforeUnmount(() => {
 }
 
 .mobile-playlist-detail__icon-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  aspect-ratio: 1 / 1;
   border: none;
   background: transparent;
   color: var(--a-color-text-secondary, #666666);
   cursor: pointer;
-  border-radius: 50%;
-  transition: color 0.15s ease;
+  border-radius: 50% !important;
+  padding: 0;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .mobile-playlist-detail__icon-btn:active {
@@ -1002,13 +1006,16 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  aspect-ratio: 1 / 1;
   border: none;
   background: transparent;
   color: var(--a-color-text-secondary, #666666);
   cursor: pointer;
-  border-radius: 50%;
+  border-radius: 50% !important;
   padding: 0;
   transition: color 0.15s ease;
 }
@@ -1018,16 +1025,20 @@ onBeforeUnmount(() => {
 }
 
 .mobile-playlist-detail__play-round-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  aspect-ratio: 1 / 1;
+  border-radius: 50% !important;
   border: none;
   background-color: #1ed760;
   color: #000000;
   cursor: pointer;
+  padding: 0;
   box-shadow: 0 4px 12px rgba(30, 215, 96, 0.35);
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
@@ -1087,9 +1098,9 @@ onBeforeUnmount(() => {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 4px;
-  min-height: 46px !important;
+  gap: 12px;
+  padding: 8px 0;
+  min-height: 48px !important;
   border: none !important;
   border-bottom: none !important;
   background: transparent;
@@ -1106,13 +1117,13 @@ onBeforeUnmount(() => {
 }
 
 .mobile-playlist-detail__song-index {
-  font-size: 11px;
-  font-family: monospace;
-  color: var(--a-color-text-muted, #999999);
+  font-size: 13px;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
 }
 
 .mobile-playlist-detail__playing-icon {
-  color: var(--a-color-primary, #059669);
+  color: #1ed760;
 }
 
 .mobile-playlist-detail__song-cover {
@@ -1143,26 +1154,26 @@ onBeforeUnmount(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .mobile-playlist-detail__song-title {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--a-color-text, #111111);
+  color: var(--a-color-text, #0f172a);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .mobile-playlist-detail__song-row.is-active .mobile-playlist-detail__song-title {
-  color: var(--a-color-primary, #059669);
+  color: #1ed760;
   font-weight: 600;
 }
 
 .mobile-playlist-detail__song-artist {
-  font-size: 11.5px;
-  color: var(--a-color-text-secondary, #71717a);
+  font-size: 12px;
+  color: var(--a-color-text-secondary, #64748b);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1174,20 +1185,25 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .mobile-playlist-detail__song-action-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  aspect-ratio: 1 / 1;
   border: none;
   background: transparent;
   color: var(--a-color-text-muted, #999999);
   cursor: pointer;
-  border-radius: 50%;
-  transition: color 0.15s ease;
+  border-radius: 50% !important;
+  padding: 0;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .mobile-playlist-detail__song-action-btn:active {
@@ -1196,7 +1212,6 @@ onBeforeUnmount(() => {
 
 .mobile-playlist-detail__song-action-btn.is-favorited {
   color: #1ed760;
-  fill: currentColor;
 }
 
 /* Bottom Action Sheet (Spotify Style) */
@@ -1267,7 +1282,7 @@ onBeforeUnmount(() => {
 }
 
 .mobile-action-sheet__header-title {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
   color: #111111;
   white-space: nowrap;
@@ -1276,7 +1291,7 @@ onBeforeUnmount(() => {
 }
 
 .mobile-action-sheet__header-sub {
-  font-size: 11.5px;
+  font-size: 12px;
   color: #71717a;
   white-space: nowrap;
   overflow: hidden;
@@ -1292,11 +1307,11 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 14px;
-  height: 44px;
+  height: 46px;
   border: none;
   background: transparent;
   color: #111111;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
   text-align: left;

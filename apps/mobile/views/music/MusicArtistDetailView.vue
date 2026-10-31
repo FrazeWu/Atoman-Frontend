@@ -353,11 +353,11 @@
             @click="handleToggleFavoriteFromMenu(activeMenuSong)"
           >
             <MIcon
-              name="heart"
+              :name="isSongFavorited(activeMenuSong) ? 'check-circle-filled' : 'plus-circle'"
               size="sm"
-              :class="{ 'is-favorited': isSongFavorited(activeMenuSong) }"
+              :class="{ 'text-[#1ed760]': isSongFavorited(activeMenuSong) }"
             />
-            <span>{{ isSongFavorited(activeMenuSong) ? '已从已点赞歌曲移除' : '添加至 已点赞的歌曲' }}</span>
+            <span>{{ isSongFavorited(activeMenuSong) ? '已添加至喜欢的音乐' : '添加至喜欢的音乐' }}</span>
           </button>
 
           <button
@@ -499,7 +499,7 @@ async function handleToggleFavorite(song: Song, e?: Event) {
   const songId = String(song.id)
   try {
     const res = await toggleFavoriteSong(songId)
-    showToast(res.isFavorite ? '已添加至已点赞的歌曲' : '已从已点赞的歌曲移除')
+    showToast(res.isFavorite ? '已添加至喜欢的音乐' : '已从喜欢的音乐中移除')
   } catch {
     showToast('操作失败，请重试')
   }
@@ -1418,7 +1418,7 @@ watch(() => route.params.artistId, (id, previous) => {
 }
 
 .mobile-action-sheet__header-title {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
   color: #111111;
   white-space: nowrap;
@@ -1427,7 +1427,7 @@ watch(() => route.params.artistId, (id, previous) => {
 }
 
 .mobile-action-sheet__header-sub {
-  font-size: 11.5px;
+  font-size: 12px;
   color: #71717a;
   white-space: nowrap;
   overflow: hidden;
@@ -1443,11 +1443,11 @@ watch(() => route.params.artistId, (id, previous) => {
   display: flex;
   align-items: center;
   gap: 14px;
-  height: 44px;
+  height: 46px;
   border: none;
   background: transparent;
   color: #111111;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
   text-align: left;

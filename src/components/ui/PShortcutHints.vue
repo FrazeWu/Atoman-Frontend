@@ -31,6 +31,7 @@ const pinia = getActivePinia()
 const uiStore = pinia ? useUIStore(pinia) : null
 const {
   commonShortcutHints,
+  mediaGlobalShortcutHints,
   moduleShortcutHints,
   moduleSectionTitle,
 } = useShortcutHints()
@@ -163,6 +164,23 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleDocumentKeyd
             <ul class="shortcut-hints__list">
               <li
                 v-for="hint in moduleShortcutHints"
+                :key="`${hint.key}-${hint.label}`"
+                class="shortcut-hints__item"
+              >
+                <span class="shortcut-hints__label-text">{{ hint.label }}</span>
+                <div class="shortcut-hints__keys">
+                  <kbd v-for="k in parseKeys(hint.key)" :key="k">{{ k }}</kbd>
+                </div>
+              </li>
+            </ul>
+          </section>
+
+          <!-- 全局视听控制（后台播放中） -->
+          <section v-if="mediaGlobalShortcutHints.length > 0" class="shortcut-hints__section">
+            <h3 class="shortcut-hints__section-title">全局视听控制 (后台播放盲操)</h3>
+            <ul class="shortcut-hints__list">
+              <li
+                v-for="hint in mediaGlobalShortcutHints"
                 :key="`${hint.key}-${hint.label}`"
                 class="shortcut-hints__item"
               >

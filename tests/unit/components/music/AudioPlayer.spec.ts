@@ -730,4 +730,50 @@ describe("AudioPlayer", () => {
 
 		wrapper.unmount();
 	});
+
+	it("responds to global blind control (Alt+Shift+Space) and active lyrics shortcuts", async () => {
+		const player = usePlayerStore();
+		player.currentSong = {
+			id: "song-keys",
+			title: "Song Keys",
+			artist: "Artist Keys",
+			audio_url: "/song-keys.mp3",
+		} as any;
+		player.isPlaying = false;
+		const togglePlaySpy = vi.spyOn(player, "togglePlay");
+
+		const wrapper = mount(AudioPlayer, {
+			global: {
+				plugins: [createTestRouter()],
+				stubs: {
+					MusicLyricsPanel: true,
+					PDropdown: true,
+					PToast: true,
+				},
+			},
+		});
+
+		// 1. Regular Space while browsing normal page -> does not toggle play
+		window.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space" }));
+		expect(togglePlaySpy).not.toHaveBeenCalled();
+
+		// 2. Alt + Shift + Space global blind control -> toggles play
+		window.dispatchEvent(
+			new KeyboardEvent("keydown", {
+				key: " ",
+				code: "Space",
+				altKey: true,
+				shiftKey: true,
+			}),
+		);
+		expect(togglePlaySpy).toHaveBeenCalledTimes(1);
+
+		// 3. When lyrics panel is open, regular Space toggles play
+		player.showLyrics = true;
+		await wrapper.vm.$nextTick();
+		window.dispatchEvent(new KeyboardEvent("keydown", { key: " ", code: "Space" }));
+		expect(togglePlaySpy).toHaveBeenCalledTimes(2);
+
+		wrapper.unmount();
+	});
 });

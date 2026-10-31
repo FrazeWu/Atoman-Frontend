@@ -328,10 +328,13 @@ function cyclePlaybackRate() {
 }
 
 function handleGlobalKeydown(e: KeyboardEvent) {
-  if (isInputActive()) return;
   if (!player.currentSong) return;
 
-  const shortcut = resolveMusicPlayerShortcut(e);
+  const shortcut = resolveMusicPlayerShortcut(e, {
+    activeElement: typeof document !== 'undefined' ? document.activeElement : null,
+    showLyrics: player.showLyrics,
+    showQueue: player.showQueue,
+  });
   if (!shortcut) return;
   e.preventDefault();
   if (shortcut === 'lyrics') player.toggleLyrics();

@@ -1,5 +1,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { getActivePinia } from 'pinia'
+import { usePlayerStore } from '@/stores/player'
 
 export interface ShortcutHint {
   key: string
@@ -24,10 +26,18 @@ export function useShortcutHints() {
     route = null
   }
 
+  let player: ReturnType<typeof usePlayerStore> | null = null
+  try {
+    const pinia = getActivePinia()
+    player = pinia ? usePlayerStore(pinia) : null
+  } catch {
+    player = null
+  }
+
   const currentPath = computed(() => route?.path || '')
 
   const isMediaModule = computed(() => {
-    return /^\/(music|podcasts|videos)(\/|$)/.test(currentPath.value)
+    return /^\/(music|podcasts|videos)(\/|$)/.test(currentPath.value) || Boolean(player?.showLyrics)
   })
 
   const moduleSectionTitle = computed(() => {
@@ -60,21 +70,33 @@ export function useShortcutHints() {
     } else if (isMediaModule.value) {
       hints.push(
         { key: 'Space', label: '播放 / 暂停', category: 'module' },
-        { key: 'Alt + ← / →', label: '上一首 / 下一首', category: 'module' },
         { key: '← / →', label: '快退 / 快进 5 秒', category: 'module' },
-        { key: 'M', label: '静音', category: 'module' },
-        { key: 'Shift + F', label: '打开歌词', category: 'module' },
+        { key: '↑ / ↓', label: '音量调节', category: 'module' },
+        { key: 'M', label: '静音 / 取消静音', category: 'module' },
+        { key: 'Shift + F', label: '展开 / 收起歌词', category: 'module' },
       )
     }
     return hints
   })
 
+  const mediaGlobalShortcutHints = computed<ShortcutHint[]>(() => {
+    if (!player?.currentSong) return []
+    return [
+      { key: 'Alt + Shift + Space', label: '全局 播放 / 暂停', category: 'global' },
+      { key: 'Alt + Shift + ← / →', label: '全局 上一首 / 下一首', category: 'global' },
+      { key: 'Alt + Shift + ↑ / ↓', label: '全局 音量调节', category: 'global' },
+      { key: 'Alt + Shift + M', label: '全局 静音', category: 'global' },
+      { key: 'Shift + F', label: '全局 歌词面板', category: 'global' },
+    ]
+  })
+
   const shortcutHints = computed<ShortcutHint[]>(() => {
-    return [...commonShortcutHints, ...moduleShortcutHints.value]
+    return [...commonShortcutHints, ...mediaGlobalShortcutHints.value, ...moduleShortcutHints.value]
   })
 
   return {
     commonShortcutHints,
+    mediaGlobalShortcutHints,
     moduleShortcutHints,
     moduleSectionTitle,
     shortcutHints,

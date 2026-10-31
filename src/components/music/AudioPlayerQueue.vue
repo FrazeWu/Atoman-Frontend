@@ -1,14 +1,13 @@
 <template>
-  <div>
-    <div
-      ref="queuePanelRef"
-      class="queue-panel"
-      role="dialog"
-      aria-modal="false"
-      aria-labelledby="queue-title"
-      tabindex="-1"
-      @keydown="handleKeydown"
-    >
+  <div
+    ref="queuePanelRef"
+    class="queue-panel"
+    role="dialog"
+    aria-modal="false"
+    aria-labelledby="queue-title"
+    tabindex="-1"
+    @keydown="handleKeydown"
+  >
       <div class="queue-header">
         <div class="queue-tabs" role="tablist">
           <div
@@ -240,7 +239,6 @@
         <span>{{ activeTab === 'queue' ? '拖动调整顺序' : '点击直接重播' }}</span>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup lang="ts">
@@ -436,12 +434,23 @@ function handleWindowKeydown(event: KeyboardEvent) {
   player.toggleQueue()
 }
 
+function handleWindowPointerDown(event: PointerEvent) {
+  if (!player.showQueue) return
+  const target = event.target as HTMLElement | null
+  if (!target) return
+  if (queuePanelRef.value?.contains(target)) return
+  if (target.closest('[data-testid="player-queue-btn"], .queue-trigger, [aria-label*="队列"]')) return
+  player.toggleQueue()
+}
+
 onMounted(() => {
   window.addEventListener('keydown', handleWindowKeydown)
+  window.addEventListener('pointerdown', handleWindowPointerDown)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleWindowKeydown)
+  window.removeEventListener('pointerdown', handleWindowPointerDown)
 })
 </script>
 
@@ -465,9 +474,19 @@ onUnmounted(() => {
   animation: queueReveal 550ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+.queue-panel.slide-up-leave-active {
+  animation: none !important;
+}
+
 @keyframes queueReveal {
-  from { opacity: 0; transform: translateY(1.5rem) scaleY(0.97); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .queue-header {

@@ -4,18 +4,25 @@
 
 /* Slide transitions for player panels and drawers */
 .slide-up-enter-active {
-  transition: transform var(--a-motion-overlay) var(--a-motion-ease-enter);
-  will-change: transform;
+  transition: transform var(--a-motion-overlay) var(--a-motion-ease-enter), opacity var(--a-motion-overlay) var(--a-motion-ease-enter);
+  will-change: transform, opacity;
 }
 
 .slide-up-leave-active {
-  transition: transform var(--a-motion-overlay-exit) var(--a-motion-ease-exit);
-  will-change: transform;
+  transition: transform var(--a-motion-overlay-exit) var(--a-motion-ease-exit), opacity var(--a-motion-overlay-exit) var(--a-motion-ease-exit);
+  will-change: transform, opacity;
 }
 
 .slide-up-enter-from,
 .slide-up-leave-to {
   transform: translateY(100%);
+  opacity: 0;
+}
+
+.slide-up-enter-to,
+.slide-up-leave-from {
+  transform: translateY(0);
+  opacity: 1;
 }
 
 .slide-right-enter-active {

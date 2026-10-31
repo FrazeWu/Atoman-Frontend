@@ -82,6 +82,16 @@
 
           <div class="mobile-playlist-detail__hero-actions-right">
             <button
+              v-if="songs.some(canPlayMusicSong) || playlistCount > songs.length"
+              type="button"
+              class="mobile-playlist-detail__shuffle-btn"
+              :disabled="queueLoading"
+              aria-label="随机播放"
+              @click="handleShufflePlay"
+            >
+              <MIcon name="shuffle" size="sm" />
+            </button>
+            <button
               type="button"
               class="mobile-playlist-detail__play-round-btn"
               :disabled="queueLoading || !(songs.some(canPlayMusicSong) || playlistCount > songs.length)"
@@ -177,7 +187,11 @@
                 :aria-label="isSongFavorited(song) ? '取消收藏' : '收藏歌曲'"
                 @click="handleToggleFavorite(song, $event)"
               >
-                <MIcon name="heart" size="xs" />
+                <MIcon
+                  :name="isSongFavorited(song) ? 'check-circle-filled' : 'plus-circle'"
+                  :class="{ 'text-[#1ed760]': isSongFavorited(song) }"
+                  size="xs"
+                />
               </button>
 
               <button
@@ -769,6 +783,11 @@ function handlePlayAll() {
   void startPlaylistPlayback()
 }
 
+function handleShufflePlay() {
+  player.playbackMode = 'random'
+  void startPlaylistPlayback()
+}
+
 onMounted(() => {
   void loadPlaylistData()
 })
@@ -976,7 +995,26 @@ onBeforeUnmount(() => {
 .mobile-playlist-detail__hero-actions-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+}
+
+.mobile-playlist-detail__shuffle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--a-color-text-secondary, #666666);
+  cursor: pointer;
+  border-radius: 50%;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+
+.mobile-playlist-detail__shuffle-btn:disabled {
+  opacity: 0.35;
 }
 
 .mobile-playlist-detail__play-round-btn {
@@ -987,9 +1025,10 @@ onBeforeUnmount(() => {
   height: 44px;
   border-radius: 50%;
   border: none;
-  background-color: var(--a-color-text, #111111);
-  color: #ffffff;
+  background-color: #1ed760;
+  color: #000000;
   cursor: pointer;
+  box-shadow: 0 4px 12px rgba(30, 215, 96, 0.35);
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
 

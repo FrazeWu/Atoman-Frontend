@@ -99,7 +99,11 @@
               aria-label="收藏专辑"
               @click="toggleAlbumFavorite"
             >
-              <MIcon name="heart" size="sm" />
+              <MIcon
+                :name="albumFavorited ? 'check-circle-filled' : 'plus-circle'"
+                :class="{ 'text-[#1ed760]': albumFavorited }"
+                size="sm"
+              />
             </button>
             <button
               type="button"
@@ -201,7 +205,11 @@
                 :aria-label="isSongFavorited(song) ? '取消收藏' : '收藏歌曲'"
                 @click="handleToggleFavorite(song, $event)"
               >
-                <MIcon name="heart" size="xs" />
+                <MIcon
+                  :name="isSongFavorited(song) ? 'check-circle-filled' : 'plus-circle'"
+                  :class="{ 'text-[#1ed760]': isSongFavorited(song) }"
+                  size="xs"
+                />
               </button>
 
               <button
@@ -929,9 +937,10 @@ watch(() => route.params.albumId, (id, previous) => {
   height: 44px;
   border-radius: 50%;
   border: none;
-  background-color: var(--a-color-text, #111111);
-  color: #ffffff;
+  background-color: #1ed760;
+  color: #000000;
   cursor: pointer;
+  box-shadow: 0 4px 12px rgba(30, 215, 96, 0.35);
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
 

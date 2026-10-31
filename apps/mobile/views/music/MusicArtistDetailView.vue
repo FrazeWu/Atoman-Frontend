@@ -68,6 +68,15 @@
 
           <div class="mobile-artist-detail__hero-actions-right">
             <button
+              v-if="songs.some(canPlayMusicSong)"
+              type="button"
+              class="mobile-artist-detail__shuffle-btn"
+              aria-label="随机播放"
+              @click="handleShufflePlay"
+            >
+              <MIcon name="shuffle" size="sm" />
+            </button>
+            <button
               type="button"
               class="mobile-artist-detail__play-round-btn"
               :disabled="!songs.some(canPlayMusicSong)"
@@ -81,39 +90,43 @@
         </div>
       </section>
 
-      <!-- Tabs (单曲 / 专辑) & Sort (热度 / 时间) Navigation Bar -->
+      <!-- Main Navigation Tabs (单曲 / 专辑 选项卡) -->
       <section class="mobile-artist-detail__content-section">
-        <div class="mobile-artist-detail__nav-bar">
-          <!-- Left: Main Tab Switcher -->
-          <div class="mobile-artist-detail__main-tabs" role="tablist" aria-label="作品分类">
-            <button
-              type="button"
-              class="mobile-artist-detail__main-tab"
-              :class="{ 'is-active': activeTab === 'songs' }"
-              role="tab"
-              :aria-selected="activeTab === 'songs'"
-              data-testid="artist-tab-songs"
-              @click="activeTab = 'songs'"
-            >
-              <span>单曲</span>
-              <span v-if="songs.length" class="mobile-artist-detail__tab-count">{{ songs.length }}</span>
-            </button>
-            <button
-              v-if="albums.length > 0"
-              type="button"
-              class="mobile-artist-detail__main-tab"
-              :class="{ 'is-active': activeTab === 'albums' }"
-              role="tab"
-              :aria-selected="activeTab === 'albums'"
-              data-testid="artist-tab-albums"
-              @click="activeTab = 'albums'"
-            >
-              <span>专辑</span>
-              <span class="mobile-artist-detail__tab-count">{{ albums.length }}</span>
-            </button>
-          </div>
+        <div class="mobile-artist-detail__tabs-header" role="tablist" aria-label="作品分类">
+          <button
+            type="button"
+            class="mobile-artist-detail__tab-btn"
+            :class="{ 'is-active': activeTab === 'songs' }"
+            role="tab"
+            :aria-selected="activeTab === 'songs'"
+            data-testid="artist-tab-songs"
+            @click="activeTab = 'songs'"
+          >
+            <span>单曲</span>
+            <span v-if="songs.length" class="mobile-artist-detail__tab-badge">{{ songs.length }}</span>
+          </button>
+          <button
+            v-if="albums.length > 0"
+            type="button"
+            class="mobile-artist-detail__tab-btn"
+            :class="{ 'is-active': activeTab === 'albums' }"
+            role="tab"
+            :aria-selected="activeTab === 'albums'"
+            data-testid="artist-tab-albums"
+            @click="activeTab = 'albums'"
+          >
+            <span>专辑</span>
+            <span class="mobile-artist-detail__tab-badge">{{ albums.length }}</span>
+          </button>
+        </div>
 
-          <!-- Right: Sort Switcher (热度 / 时间) -->
+        <!-- Subheader: Count summary & Sort Switcher (热度 / 时间) -->
+        <div class="mobile-artist-detail__list-subheader">
+          <span class="mobile-artist-detail__list-count-label">
+            {{ activeTab === 'songs' ? `${displaySongs.length} 首单曲` : `${displayAlbums.length} 张专辑` }}
+          </span>
+
+          <!-- Right: Compact Sort Switcher (热度 / 时间) with minimal rounded corners -->
           <div class="mobile-artist-detail__sort-tabs" role="group" aria-label="排序方式">
             <button
               type="button"
@@ -203,7 +216,11 @@
                   :aria-label="isSongFavorited(song) ? '取消收藏' : '收藏歌曲'"
                   @click="handleToggleFavorite(song, $event)"
                 >
-                  <MIcon name="heart" size="xs" />
+                  <MIcon
+                    :name="isSongFavorited(song) ? 'check-circle-filled' : 'plus-circle'"
+                    :class="{ 'text-[#1ed760]': isSongFavorited(song) }"
+                    size="xs"
+                  />
                 </button>
 
                 <button
@@ -716,6 +733,13 @@ function handlePlayAll() {
   startMobileMusicQueue(player, displaySongs.value)
 }
 
+function handleShufflePlay() {
+  const playable = displaySongs.value.filter(canPlayMusicSong)
+  if (!playable.length) return
+  const shuffled = [...playable].sort(() => Math.random() - 0.5)
+  player.playAlbum(shuffled, 0)
+}
+
 function openAlbum(id: string) {
   void router.push(`/music/album/${id}`)
 }
@@ -890,7 +914,7 @@ watch(() => route.params.artistId, (id, previous) => {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  margin-top: 8px;
+  margin-top: 6px;
   padding: 0 4px;
 }
 
@@ -925,23 +949,44 @@ watch(() => route.params.artistId, (id, previous) => {
 .mobile-artist-detail__hero-actions-right {
   display: flex;
   align-items: center;
+  gap: 4px;
+}
+
+.mobile-artist-detail__shuffle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--a-color-text-secondary, #666666);
+  cursor: pointer;
+  border-radius: 50%;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+
+.mobile-artist-detail__shuffle-btn:disabled {
+  opacity: 0.35;
 }
 
 .mobile-artist-detail__play-round-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px !important;
-  height: 32px !important;
+  width: 38px !important;
+  height: 38px !important;
   min-width: 0 !important;
   min-height: 0 !important;
   aspect-ratio: 1 / 1;
   border-radius: 50% !important;
   border: none;
-  background-color: var(--a-color-text, #111111);
-  color: #ffffff;
+  background-color: #1ed760;
+  color: #000000;
   cursor: pointer;
   padding: 0;
+  box-shadow: 0 4px 12px rgba(30, 215, 96, 0.35);
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
@@ -955,69 +1000,81 @@ watch(() => route.params.artistId, (id, previous) => {
 
 /* Tab + Sort Nav Bar */
 .mobile-artist-detail__content-section {
-  padding: 6px 0 24px;
+  padding: 4px 0 24px;
 }
 
-.mobile-artist-detail__nav-bar {
+/* Main Tab Bar (选项卡: 单曲 / 专辑) */
+.mobile-artist-detail__tabs-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 16px 8px;
+  gap: 20px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--a-color-border-subtle, #f1f5f9);
+  margin-bottom: 6px;
 }
 
-/* Main Tab Switcher (单曲 / 专辑) */
-.mobile-artist-detail__main-tabs {
+.mobile-artist-detail__tab-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  background-color: #f1f5f9;
-  border-radius: 4px;
-  padding: 2px;
-  gap: 2px;
-  height: 26px;
-  min-height: 0 !important;
-  box-sizing: border-box;
-}
-
-.mobile-artist-detail__main-tab {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: 0 8px;
-  height: 22px !important;
-  min-height: 0 !important;
-  line-height: 22px;
-  font-size: 11.5px;
-  font-weight: 500;
-  color: #64748b;
+  gap: 6px;
+  padding: 10px 0;
   background: transparent;
   border: none;
-  border-radius: 3px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--a-color-text-secondary, #64748b);
+  transition: color 0.15s ease;
   user-select: none;
-  box-sizing: border-box;
-  margin: 0;
 }
 
-.mobile-artist-detail__main-tab.is-active {
-  background-color: #ffffff;
-  color: #0f172a;
-  font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+.mobile-artist-detail__tab-btn.is-active {
+  color: var(--a-color-text, #0f172a);
+  font-weight: 700;
 }
 
-.mobile-artist-detail__tab-count {
-  font-size: 10px;
-  color: #94a3b8;
+.mobile-artist-detail__tab-btn.is-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--a-color-text, #0f172a);
+  border-radius: 1px;
+}
+
+.mobile-artist-detail__tab-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 9999px;
+  background-color: #f1f5f9;
+  color: #64748b;
   font-variant-numeric: tabular-nums;
 }
 
-.mobile-artist-detail__main-tab.is-active .mobile-artist-detail__tab-count {
-  color: #64748b;
+.mobile-artist-detail__tab-btn.is-active .mobile-artist-detail__tab-badge {
+  background-color: #e2e8f0;
+  color: #0f172a;
 }
 
-/* Sort Switcher Tabs */
+/* Subheader: Count summary & Sort Switcher (热度 / 时间) */
+.mobile-artist-detail__list-subheader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 16px 8px;
+}
+
+.mobile-artist-detail__list-count-label {
+  font-size: 12px;
+  color: var(--a-color-text-muted, #94a3b8);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sort Switcher Tabs - Minimal rounded corners, compact height */
 .mobile-artist-detail__sort-tabs {
   display: inline-flex;
   align-items: center;
@@ -1025,7 +1082,7 @@ watch(() => route.params.artistId, (id, previous) => {
   border-radius: 4px;
   padding: 2px;
   gap: 2px;
-  height: 26px;
+  height: 22px;
   min-height: 0 !important;
   box-sizing: border-box;
 }
@@ -1034,16 +1091,16 @@ watch(() => route.params.artistId, (id, previous) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 8px;
-  height: 22px !important;
+  padding: 0 6px;
+  height: 18px !important;
   min-height: 0 !important;
-  line-height: 22px;
+  line-height: 18px;
   font-size: 11px;
   font-weight: 500;
   color: #64748b;
   background: transparent;
   border: none;
-  border-radius: 3px;
+  border-radius: 2px;
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
@@ -1055,7 +1112,7 @@ watch(() => route.params.artistId, (id, previous) => {
   background-color: #ffffff;
   color: #0f172a;
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 /* Albums Vertical List */

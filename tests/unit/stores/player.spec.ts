@@ -1428,6 +1428,116 @@ describe("player store", () => {
 		Reflect.deleteProperty(navigator, "mediaSession");
 	});
 
+	it("handles media session stop action by pausing and resetting time", async () => {
+		const handlers = new Map<string, (details?: any) => void>();
+		const mediaSession = {
+			playbackState: "none",
+			metadata: null,
+			setActionHandler: vi.fn((action: string, handler: any) => {
+				handlers.set(action, handler);
+			}),
+			setPositionState: vi.fn(),
+		};
+		Object.defineProperty(navigator, "mediaSession", {
+			configurable: true,
+			value: mediaSession,
+		});
+
+		const player = usePlayerStore();
+		player.playSong({
+			id: "media-song-stop",
+			title: "Media Song Stop",
+			audio_url: "media.mp3",
+			duration: 180,
+		} as any);
+		await audioInstances[0].play.mock.results[0]?.value;
+
+		player.currentTime = 50;
+		audioInstances[0].currentTime = 50;
+
+		handlers.get("stop")?.();
+		expect(audioInstances[0].pause).toHaveBeenCalled();
+		expect(player.currentTime).toBe(0);
+		expect(mediaSession.playbackState).toBe("none");
+
+		Reflect.deleteProperty(navigator, "mediaSession");
+	});
+
+	it("rewinds to 0 on previoustrack when currentTime > 3s, otherwise switches track", async () => {
+		const handlers = new Map<string, (details?: any) => void>();
+		const mediaSession = {
+			playbackState: "none",
+			metadata: null,
+			setActionHandler: vi.fn((action: string, handler: any) => {
+				handlers.set(action, handler);
+			}),
+			setPositionState: vi.fn(),
+		};
+		Object.defineProperty(navigator, "mediaSession", {
+			configurable: true,
+			value: mediaSession,
+		});
+
+		const player = usePlayerStore();
+		const song1 = { id: "s1", title: "Song 1", audio_url: "s1.mp3", duration: 180 } as any;
+		const song2 = { id: "s2", title: "Song 2", audio_url: "s2.mp3", duration: 200 } as any;
+		player.playAlbum([song1, song2], 1);
+		await audioInstances[0].play.mock.results[0]?.value;
+
+		expect(player.currentSong?.id).toBe("s2");
+
+		// Case 1: currentTime > 3s -> rewinds to 0, stays on song2
+		player.currentTime = 15;
+		audioInstances[0].currentTime = 15;
+		handlers.get("previoustrack")?.();
+		expect(player.currentTime).toBe(0);
+		expect(player.currentSong?.id).toBe("s2");
+
+		// Case 2: currentTime <= 3s -> switches to song1
+		player.currentTime = 1;
+		audioInstances[0].currentTime = 1;
+		handlers.get("previoustrack")?.();
+		expect(player.currentSong?.id).toBe("s1");
+
+		Reflect.deleteProperty(navigator, "mediaSession");
+	});
+
+	it("formats multi-artists in metadata and cleans up media session on session reset", async () => {
+		const mediaSession = {
+			playbackState: "none",
+			metadata: null as any,
+			setActionHandler: vi.fn(),
+			setPositionState: vi.fn(),
+		};
+		Object.defineProperty(navigator, "mediaSession", {
+			configurable: true,
+			value: mediaSession,
+		});
+
+		const player = usePlayerStore();
+		player.playSong({
+			id: "s-collab",
+			title: "Collab Track",
+			audio_url: "collab.mp3",
+			artists: [{ name: "Alice" }, { name: "Bob" }],
+			album: "Great Album",
+			cover_url: "https://example.com/cover.jpg",
+		} as any);
+		await audioInstances[0].play.mock.results[0]?.value;
+
+		expect(mediaSession.metadata).toBeTruthy();
+		expect(mediaSession.metadata.artist).toBe("Alice, Bob");
+		expect(mediaSession.metadata.album).toBe("Great Album");
+
+		// Trigger session reset
+		player.resetPlaybackForSession();
+		expect(mediaSession.playbackState).toBe("none");
+		expect(mediaSession.metadata).toBeNull();
+		expect(mediaSession.setPositionState).toHaveBeenCalledWith();
+
+		Reflect.deleteProperty(navigator, "mediaSession");
+	});
+
 	it("computes actual volume using logarithmic perceptual mapping", () => {
 		expect(computeActualVolume(0)).toBe(0);
 		expect(computeActualVolume(1)).toBe(1);

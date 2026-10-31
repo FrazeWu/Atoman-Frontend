@@ -82,8 +82,10 @@ export const usePlayerStore = defineStore("player", () => {
 		setForeignPlayRequestCallback,
 		closeChannel,
 		setupMediaSession,
+		updateMediaSessionPlaybackState,
 		updateMediaSessionMetadata,
 		updateMediaSessionPosition,
+		clearMediaSession,
 	} = useAudioPlayerSync();
 	let lastPlayInitiatedAt = 0;
 	const songs = ref<Song[]>([]);
@@ -492,9 +494,7 @@ export const usePlayerStore = defineStore("player", () => {
 		audio.pause();
 		isPlaying.value = false;
 		pauseListening();
-		if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-			navigator.mediaSession.playbackState = "paused";
-		}
+		updateMediaSessionPlaybackState("paused");
 	});
 	const listeningThresholdMs = 5000;
 	let listeningTimer: ReturnType<typeof setTimeout> | null = null;
@@ -582,6 +582,7 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const resetPlaybackForSession = () => {
 		resetAudioRecovery();
+		clearMediaSession();
 		musicAccountGeneration += 1;
 		playGeneration += 1;
 		resetAudioStartPrefetch();
@@ -718,9 +719,7 @@ export const usePlayerStore = defineStore("player", () => {
 		saveMusicProgress(false, true);
 		saveMusicSession(true);
 		savePlaybackState();
-		if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-			navigator.mediaSession.playbackState = "paused";
-		}
+		updateMediaSessionPlaybackState("paused");
 	};
 
 	const recoverFromMediaError = (player: HTMLAudioElement): boolean => {
@@ -796,9 +795,7 @@ export const usePlayerStore = defineStore("player", () => {
 			isPlaying.value = false;
 			isLoading.value = false;
 			pauseListening();
-			if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-				navigator.mediaSession.playbackState = "paused";
-			}
+			updateMediaSessionPlaybackState("paused");
 		});
 		nextAudio.addEventListener("error", () => {
 			if (audio !== nextAudio) return;
@@ -812,13 +809,7 @@ export const usePlayerStore = defineStore("player", () => {
 			pauseListening();
 			if (recoveryTimer !== null || (wasActive && recoverFromMediaError(nextAudio))) return;
 			playbackError.value = "音频加载失败，请重试";
-			if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-				try {
-					navigator.mediaSession.playbackState = "paused";
-				} catch {
-					// Ignore media session errors
-				}
-			}
+			updateMediaSessionPlaybackState("paused");
 		});
 		nextAudio.addEventListener("canplay", () => {
 			if (audio !== nextAudio) return;
@@ -912,27 +903,103 @@ export const usePlayerStore = defineStore("player", () => {
 			}
 		}
 
-		setupMediaSession({
-			play: () => {
-				if (currentSong.value && !isPlaying.value) attemptPlay(nextAudio);
-			},
-			pause: () => {
-				if (shouldPauseAudio(nextAudio)) pauseCurrentAudio(nextAudio);
-			},
-			previoustrack: playPrevious,
-			nexttrack: playNext,
-			seekto: (details) => {
-				if (details.seekTime !== undefined) {
-					seek(details.seekTime);
-				}
-			},
-			skip: (seconds) => {
-				skip(seconds);
-			},
-		});
+		registerMediaSessionHandlers(nextAudio);
 
 		audio = nextAudio;
 		return nextAudio;
+	};
+
+	const registerMediaSessionHandlers = (playerTarget?: HTMLAudioElement | null) => {
+		const targetAudio = playerTarget || audio;
+		const isIOS =
+			typeof navigator !== "undefined" &&
+			(/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+				(navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1));
+
+		const isPodcast = currentSong.value?.source_type === "podcast_episode";
+		const allowSeekButtons = !isIOS || isPodcast;
+
+		setupMediaSession({
+			play: () => {
+				if (currentSong.value && !isPlaying.value && targetAudio) {
+					attemptPlay(targetAudio);
+				}
+			},
+			pause: () => {
+				if (targetAudio && shouldPauseAudio(targetAudio)) {
+					pauseCurrentAudio(targetAudio);
+				}
+			},
+			stop: () => {
+				if (targetAudio && shouldPauseAudio(targetAudio)) {
+					pauseCurrentAudio(targetAudio);
+				}
+				seek(0);
+				updateMediaSessionPlaybackState("none");
+			},
+			previoustrack: () => {
+				if (currentTime.value > 3) {
+					seek(0);
+					updateMediaSessionPosition({
+						duration: duration.value,
+						playbackRate: playbackRate.value,
+						position: 0,
+					});
+					return;
+				}
+				playPrevious();
+			},
+			nexttrack: playNext,
+			seekto: (details) => {
+				if (details.seekTime !== undefined) {
+					if (details.fastSeek && targetAudio && typeof (targetAudio as any).fastSeek === "function") {
+						try {
+							(targetAudio as any).fastSeek(details.seekTime);
+							currentTime.value = details.seekTime;
+						} catch {
+							seek(details.seekTime);
+						}
+					} else {
+						seek(details.seekTime);
+					}
+					updateMediaSessionPosition({
+						duration: duration.value,
+						playbackRate: playbackRate.value,
+						position: details.seekTime,
+					});
+				}
+			},
+			seekbackward: allowSeekButtons
+				? (details) => {
+						const offset = details.seekOffset || (isPodcast ? 15 : 10);
+						skip(-offset);
+						updateMediaSessionPosition({
+							duration: duration.value,
+							playbackRate: playbackRate.value,
+							position: currentTime.value,
+						});
+					}
+				: null,
+			seekforward: allowSeekButtons
+				? (details) => {
+						const offset = details.seekOffset || (isPodcast ? 15 : 10);
+						skip(offset);
+						updateMediaSessionPosition({
+							duration: duration.value,
+							playbackRate: playbackRate.value,
+							position: currentTime.value,
+						});
+					}
+				: null,
+			skip: (seconds) => {
+				skip(seconds);
+				updateMediaSessionPosition({
+					duration: duration.value,
+					playbackRate: playbackRate.value,
+					position: currentTime.value,
+				});
+			},
+		});
 	};
 
 	const syncCurrentSongFromLibrary = (library: Song[]) => {
@@ -989,13 +1056,7 @@ export const usePlayerStore = defineStore("player", () => {
 				} catch {
 					// Ignore listening tracker error
 				}
-				if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-					try {
-						navigator.mediaSession.playbackState = "playing";
-					} catch {
-						// Ignore media session error
-					}
-				}
+				updateMediaSessionPlaybackState("playing");
 			})
 			.catch((err) => {
 				if (generation !== playGeneration || player !== audio) return;
@@ -1004,13 +1065,7 @@ export const usePlayerStore = defineStore("player", () => {
 				playbackError.value = "无法播放此音频，请重试";
 				isPlaying.value = false;
 				pauseListening();
-				if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-					try {
-						navigator.mediaSession.playbackState = "paused";
-					} catch {
-						// Ignore media session error
-					}
-				}
+				updateMediaSessionPlaybackState("paused");
 			});
 	};
 
@@ -1266,12 +1321,26 @@ export const usePlayerStore = defineStore("player", () => {
 		duration.value = normalizedSong.duration || (normalizedSong as any).duration_seconds || 0;
 		podcastTracker = null;
 
+		const displayArtist =
+			song.artists && song.artists.length > 0
+				? song.artists
+						.map((a: any) => (typeof a === "string" ? a : a?.name || ""))
+						.filter(Boolean)
+						.join(", ")
+				: song.artist || "未知艺术家";
+
+		const displayAlbum =
+			song.source_type === "podcast_episode"
+				? song.album || "播客"
+				: song.album || "未知专辑";
+
 		updateMediaSessionMetadata({
 			title: song.title,
-			artist: song.artist || "未知艺术家",
-			album: song.album || "未知专辑",
+			artist: displayArtist,
+			album: displayAlbum,
 			artworkUrl: song.cover_url || "",
 		});
+		registerMediaSessionHandlers(player);
 
 		if (song.source_type === "podcast_episode" && song.source_id) {
 			const episodeID = song.source_id;
@@ -1789,6 +1858,7 @@ export const usePlayerStore = defineStore("player", () => {
 		togglePinned,
 		savePlaybackState,
 		restorePlaybackState,
+		resetPlaybackForSession,
 	};
 });
 

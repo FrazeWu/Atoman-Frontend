@@ -1,7 +1,24 @@
+import {
+	buildMediaSessionArtwork,
+	sanitizeMediaPositionState,
+} from "@/utils/mediaSession";
+
 export type AudioSyncMessage = {
 	type: "PLAY_REQUEST";
 	tabId: string;
 	timestamp: number;
+};
+
+export type MediaSessionHandlers = {
+	play: () => void;
+	pause: () => void;
+	stop?: (() => void) | null;
+	previoustrack?: (() => void) | null;
+	nexttrack?: (() => void) | null;
+	seekto?: ((details: MediaSessionActionDetails) => void) | null;
+	seekbackward?: ((details: MediaSessionActionDetails) => void) | null;
+	seekforward?: ((details: MediaSessionActionDetails) => void) | null;
+	skip?: ((seconds: number) => void) | null;
 };
 
 const STORAGE_SYNC_KEY = "__atoman_audio_sync__";
@@ -111,41 +128,26 @@ export function useAudioPlayerSync() {
 	};
 
 	// Media Session API Support
-	const setupMediaSession = (handlers: {
-		play: () => void;
-		pause: () => void;
-		previoustrack: () => void;
-		nexttrack: () => void;
-		seekto: (details: MediaSessionActionDetails) => void;
-		skip?: (seconds: number) => void;
-	}) => {
+	const setupMediaSession = (handlers: MediaSessionHandlers) => {
 		if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-			const actions: Array<[MediaSessionAction, MediaSessionActionHandler]> = [
-				["play", handlers.play],
-				["pause", handlers.pause],
-				["previoustrack", handlers.previoustrack],
-				["nexttrack", handlers.nexttrack],
-				["seekto", handlers.seekto],
-			];
-			if (handlers.skip) {
-				actions.push(
-					[
-						"seekbackward",
-						(details) => {
-							const offset = details.seekOffset || 10;
-							handlers.skip!(-offset);
-						},
-					],
-					[
-						"seekforward",
-						(details) => {
-							const offset = details.seekOffset || 10;
-							handlers.skip!(offset);
-						},
-					],
-				);
-			}
-			for (const [action, handler] of actions) {
+			const actionMap: Partial<Record<MediaSessionAction, MediaSessionActionHandler | null>> = {
+				play: handlers.play,
+				pause: handlers.pause,
+				stop: handlers.stop ?? null,
+				previoustrack: handlers.previoustrack ?? null,
+				nexttrack: handlers.nexttrack ?? null,
+				seekto: handlers.seekto ?? null,
+				seekbackward: handlers.seekbackward ?? (handlers.skip ? (details) => {
+					const offset = details.seekOffset || 10;
+					handlers.skip!(-offset);
+				} : null),
+				seekforward: handlers.seekforward ?? (handlers.skip ? (details) => {
+					const offset = details.seekOffset || 10;
+					handlers.skip!(offset);
+				} : null),
+			};
+
+			for (const [action, handler] of Object.entries(actionMap) as [MediaSessionAction, MediaSessionActionHandler | null][]) {
 				try {
 					navigator.mediaSession.setActionHandler(action, handler);
 				} catch {
@@ -155,61 +157,74 @@ export function useAudioPlayerSync() {
 		}
 	};
 
+	const updateMediaSessionPlaybackState = (state: "playing" | "paused" | "none") => {
+		if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+			try {
+				navigator.mediaSession.playbackState = state;
+			} catch {
+				// Best-effort assignment
+			}
+		}
+	};
+
 	const updateMediaSessionMetadata = (metadata: {
 		title: string;
-		artist: string;
-		album: string;
-		artworkUrl: string;
+		artist?: string;
+		album?: string;
+		artworkUrl?: string;
 	}) => {
 		if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
 			try {
-				const artwork = metadata.artworkUrl
-					? [
-							{ src: metadata.artworkUrl, sizes: "96x96", type: "image/jpeg" },
-							{ src: metadata.artworkUrl, sizes: "128x128", type: "image/jpeg" },
-							{ src: metadata.artworkUrl, sizes: "192x192", type: "image/jpeg" },
-							{ src: metadata.artworkUrl, sizes: "256x256", type: "image/jpeg" },
-							{ src: metadata.artworkUrl, sizes: "512x512", type: "image/jpeg" },
-						]
-					: [];
-				navigator.mediaSession.metadata = new MediaMetadata({
-					title: metadata.title,
-					artist: metadata.artist,
-					album: metadata.album,
+				const artwork = buildMediaSessionArtwork(metadata.artworkUrl);
+				const metaPayload = {
+					title: metadata.title || "",
+					artist: metadata.artist || "",
+					album: metadata.album || "",
 					artwork,
-				});
+				};
+				navigator.mediaSession.metadata =
+					typeof MediaMetadata !== "undefined"
+						? new MediaMetadata(metaPayload)
+						: (metaPayload as any);
 			} catch {
 				// Metadata is optional on partial Media Session implementations.
 			}
 		}
 	};
 
-	const updateMediaSessionPosition = (state: {
+	const updateMediaSessionPosition = (state?: {
 		duration: number;
-		playbackRate: number;
+		playbackRate?: number;
 		position: number;
-	}) => {
+	} | null) => {
 		if (
 			typeof navigator !== "undefined" &&
 			"mediaSession" in navigator &&
 			navigator.mediaSession.setPositionState
 		) {
 			try {
-				if (
-					state.duration > 0 &&
-					state.position >= 0 &&
-					state.position <= state.duration
-				) {
-					navigator.mediaSession.setPositionState({
-						duration: state.duration,
-						playbackRate: state.playbackRate,
-						position: state.position,
-					});
+				const sanitized = sanitizeMediaPositionState(state);
+				if (sanitized) {
+					navigator.mediaSession.setPositionState(sanitized);
 				} else {
-					navigator.mediaSession.setPositionState(undefined);
+					navigator.mediaSession.setPositionState();
 				}
 			} catch {
 				// Position state is best-effort and unsupported on some devices.
+			}
+		}
+	};
+
+	const clearMediaSession = () => {
+		if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+			try {
+				navigator.mediaSession.playbackState = "none";
+				navigator.mediaSession.metadata = null;
+				if (navigator.mediaSession.setPositionState) {
+					navigator.mediaSession.setPositionState();
+				}
+			} catch {
+				// Best-effort cleanup
 			}
 		}
 	};
@@ -220,7 +235,9 @@ export function useAudioPlayerSync() {
 		setForeignPlayRequestCallback,
 		closeChannel,
 		setupMediaSession,
+		updateMediaSessionPlaybackState,
 		updateMediaSessionMetadata,
 		updateMediaSessionPosition,
+		clearMediaSession,
 	};
 }

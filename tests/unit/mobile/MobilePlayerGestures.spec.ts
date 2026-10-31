@@ -430,6 +430,15 @@ describe('MobilePlayerView Gestures (Pull-to-Dismiss & Swipe-to-Skip)', () => {
     // In locked state, automatic scroll request is guarded from hijacking user focus
     expect(scrollToSpy).not.toHaveBeenCalled()
 
+    // Resume button appears
+    const resumeBtn = wrapper.find('[data-testid="lyrics-resume-scroll-btn"]')
+    expect(resumeBtn.exists()).toBe(true)
+
+    // Clicking resume button immediately restores auto-centering
+    await resumeBtn.trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(scrollToSpy).toHaveBeenCalled()
+
     wrapper.unmount()
   })
 })

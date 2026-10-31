@@ -96,6 +96,21 @@
               返回封面
             </button>
           </div>
+
+          <!-- Floating "Back to Current Lyric" Pill -->
+          <Transition name="fade">
+            <button
+              v-if="isUserScrollingLyrics && activeLyricIndex >= 0 && parsedLyrics.length"
+              type="button"
+              class="mobile-player-view__lyrics-resume-btn"
+              data-testid="lyrics-resume-scroll-btn"
+              aria-label="回到正在播放的歌词"
+              @click.stop="resumeLyricsAutoScroll"
+            >
+              <MIcon name="player-play" size="xs" />
+              <span>回到当前</span>
+            </button>
+          </Transition>
         </div>
 
         <!-- 3. Queue View -->
@@ -695,7 +710,16 @@ function onLyricsUserInteraction() {
   lyricsScrollLockTimer = setTimeout(() => {
     isUserScrollingLyrics.value = false
     scrollToActiveLyric(true)
-  }, 2800)
+  }, 3200)
+}
+
+function resumeLyricsAutoScroll() {
+  if (lyricsScrollLockTimer) {
+    clearTimeout(lyricsScrollLockTimer)
+    lyricsScrollLockTimer = null
+  }
+  isUserScrollingLyrics.value = false
+  scrollToActiveLyric(true)
 }
 
 function scrollToActiveLyric(smooth = true) {
@@ -983,20 +1007,28 @@ function handleTouchEnd(e: TouchEvent) {
 const playerGestureStyle = computed<CSSProperties>(() => {
   if (isDismissing.value) {
     return {
-      transform: 'translateY(100%)',
-      transition: 'transform 200ms cubic-bezier(0.25, 0.9, 0.35, 1)',
+      transform: 'translateY(100%) scale(0.92)',
+      borderRadius: '24px',
+      boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.25)',
+      transition: 'transform 200ms cubic-bezier(0.25, 0.9, 0.35, 1), border-radius 200ms ease, box-shadow 200ms ease',
     }
   }
   if (isDragging.value) {
+    const scaleRatio = Math.max(0.95, 1 - (dragOffsetY.value / 600) * 0.05)
+    const radiusPx = Math.min(20, Math.round((dragOffsetY.value / 72) * 16))
     return {
-      transform: `translateY(${dragOffsetY.value}px)`,
+      transform: `translateY(${dragOffsetY.value}px) scale(${scaleRatio})`,
+      borderRadius: radiusPx > 0 ? `${radiusPx}px` : undefined,
+      boxShadow: radiusPx > 0 ? '0 12px 40px rgba(0, 0, 0, 0.22)' : undefined,
       transition: 'none',
     }
   }
   if (hasInteracted.value) {
     return {
-      transform: `translateY(${dragOffsetY.value}px)`,
-      transition: 'transform 260ms cubic-bezier(0.16, 1, 0.3, 1)',
+      transform: `translateY(${dragOffsetY.value}px) scale(1)`,
+      borderRadius: '0px',
+      boxShadow: 'none',
+      transition: 'transform 260ms cubic-bezier(0.16, 1, 0.3, 1), border-radius 260ms ease, box-shadow 260ms ease',
     }
   }
   return {}
@@ -1335,6 +1367,34 @@ onUnmounted(() => {
   color: var(--a-color-fg);
   font-size: 0.78rem;
   cursor: pointer;
+}
+
+.mobile-player-view__lyrics-resume-btn {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background-color: rgba(18, 18, 18, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  user-select: none;
+}
+
+.mobile-player-view__lyrics-resume-btn:active {
+  transform: translateX(-50%) scale(0.95);
 }
 
 /* --- Queue Stage --- */

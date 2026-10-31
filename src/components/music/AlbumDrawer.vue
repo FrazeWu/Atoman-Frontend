@@ -45,6 +45,7 @@ import {
 } from '@/api/musicV1'
 import { usePlayerStore } from '@/stores/player'
 import { buildPlayableSongsFromAlbum, compareAlbumTracks, formatAlbumTypeLabel, resolveAlbumCoverUrl } from '@/utils/musicMedia'
+import { resolveMediaImageURL } from '@/utils/mediaUrl'
 import { resolveMusicRedirect } from '@/utils/musicRedirect'
 import { getMusicRecommendationAlbumContext } from '@/utils/musicRecommendationAttribution'
 import type { MusicSheetLayer } from './musicSheetTypes'
@@ -199,6 +200,7 @@ const releaseYear = computed(() => {
 })
 const tracks = computed(() => [...(album.value?.songs || [])].sort(compareAlbumTracks))
 const coverUrl = computed(() => album.value ? resolveAlbumCoverUrl(album.value) : '')
+const optimizedCoverUrl = computed(() => coverUrl.value ? resolveMediaImageURL(coverUrl.value, { width: 360 }) : '')
 const playableSongs = computed(() => {
   if (!album.value) return []
   const songs = buildPlayableSongsFromAlbum(album.value)
@@ -855,10 +857,13 @@ watch(
             <div class="album-cover">
           <div class="album-cover-frame">
             <img
-              v-if="coverUrl && !isCoverBroken"
-              :src="coverUrl"
+              v-if="optimizedCoverUrl && !isCoverBroken"
+              :src="optimizedCoverUrl"
               :alt="`${album?.title || '专辑'}封面`"
               class="album-cover-img"
+              loading="eager"
+              fetchpriority="high"
+              decoding="async"
               @error="handleCoverError"
             >
             <span v-else class="album-cover-empty">暂无封面</span>
@@ -1132,7 +1137,16 @@ watch(
             @click="navigateToArtist(artist)"
           >
             <div class="artist-card-avatar">
-              <img v-if="artist.avatarUrl" :src="artist.avatarUrl" alt="" class="avatar-card-img" />
+              <img
+                v-if="artist.avatarUrl"
+                :src="resolveMediaImageURL(artist.avatarUrl, { width: 96 })"
+                alt=""
+                class="avatar-card-img"
+                loading="lazy"
+                decoding="async"
+                width="36"
+                height="36"
+              />
               <UserRound v-else :size="18" />
             </div>
             <div class="artist-card-info">
@@ -1576,6 +1590,8 @@ watch(
   background: var(--a-border);
 }
 .track {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 44px;
   display: grid;
   grid-template-columns: 2rem minmax(0, 1fr) auto;
   grid-template-rows: auto;

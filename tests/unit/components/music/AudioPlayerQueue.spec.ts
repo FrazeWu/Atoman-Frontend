@@ -248,5 +248,41 @@ describe("AudioPlayerQueue.vue", () => {
 
 		wrapper.unmount();
 	});
+
+	it("renders .queue-panel as its single root element to allow direct Vue slide-up Transition binding", () => {
+		const pinia = createPinia();
+		const wrapper = mount(AudioPlayerQueue, {
+			global: { plugins: [pinia] },
+		});
+		expect(wrapper.element.classList.contains("queue-panel")).toBe(true);
+		wrapper.unmount();
+	});
+
+	it("closes the queue when clicking outside the panel and trigger", async () => {
+		const pinia = createPinia();
+		setActivePinia(pinia);
+		const player = usePlayerStore();
+		player.showQueue = true;
+		const toggleSpy = vi.spyOn(player, "toggleQueue");
+
+		const wrapper = mount(AudioPlayerQueue, {
+			global: { plugins: [pinia] },
+		});
+		document.body.appendChild(wrapper.element);
+
+		// Click inside panel -> should not close
+		const header = wrapper.find(".queue-header");
+		header.element.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+		expect(toggleSpy).not.toHaveBeenCalled();
+
+		// Click outside on document body -> should close
+		const outsideEl = document.createElement("div");
+		document.body.appendChild(outsideEl);
+		outsideEl.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+		expect(toggleSpy).toHaveBeenCalledOnce();
+
+		outsideEl.remove();
+		wrapper.unmount();
+	});
 });
 

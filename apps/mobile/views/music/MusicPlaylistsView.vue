@@ -67,10 +67,6 @@
             <span class="mobile-music-playlists__item-name">{{ pl.name }}</span>
             <span class="mobile-music-playlists__item-count">{{ pl.song_count || 0 }} 首歌曲</span>
           </div>
-
-          <div class="mobile-music-playlists__item-arrow">
-            <MIcon name="chevron-down" size="sm" class="mobile-music-playlists__arrow-icon" />
-          </div>
         </RouterLink>
       </div>
 
@@ -137,10 +133,6 @@
               <div class="mobile-music-playlists__item-meta">
                 <span class="mobile-music-playlists__item-name">{{ playlist.name }}</span>
                 <span class="mobile-music-playlists__item-count">{{ playlist.song_count || 0 }} 首歌曲</span>
-              </div>
-
-              <div class="mobile-music-playlists__item-arrow">
-                <MIcon name="chevron-down" size="sm" class="mobile-music-playlists__arrow-icon" />
               </div>
             </RouterLink>
           </div>
@@ -331,9 +323,9 @@ onActivated(() => {
 .mobile-music-playlists__tabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid var(--a-color-border-soft, #f0f0f0);
-  padding-bottom: 8px;
+  margin-bottom: 0.75rem;
+  border-bottom: none;
+  padding-bottom: 4px;
 }
 
 .mobile-music-playlists__tab {
@@ -342,8 +334,8 @@ onActivated(() => {
   font-weight: 500;
   color: var(--a-color-text-secondary, #666666);
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-control, 4px);
+  border: none;
+  border-radius: 16px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -359,7 +351,7 @@ onActivated(() => {
 
 .mobile-music-playlists__create-panel {
   background-color: var(--a-color-surface-subtle, #f8fafc);
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border: none;
   border-radius: var(--a-radius-card, 4px);
   padding: 1rem;
   margin-bottom: 1.5rem;
@@ -382,7 +374,7 @@ onActivated(() => {
 .mobile-music-playlists__list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.25rem;
 }
 
 .mobile-music-playlists__item {
@@ -391,31 +383,32 @@ onActivated(() => {
   display: flex;
   align-items: center;
   gap: 0.875rem;
-  padding: 0.75rem;
-  background-color: #ffffff;
-  border: 1px solid var(--a-color-border-soft, #f1f5f9);
+  padding: 0.5rem 0;
+  background-color: transparent;
+  border: none !important;
+  border-bottom: none !important;
   border-radius: var(--a-radius-card, 4px);
   cursor: pointer;
   box-shadow: none !important;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease;
 }
 
 .mobile-music-playlists__item:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .mobile-music-playlists__item:active {
   background-color: var(--a-color-surface-hover, #f8fafc);
-  border-color: var(--a-color-border, #cbd5e1);
 }
 
 .mobile-music-playlists__item-cover {
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: var(--a-radius-control, 4px);
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 6px;
   overflow: hidden;
   background-color: var(--a-color-surface-subtle, #f1f5f9);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .mobile-music-playlists__item-img {
@@ -449,15 +442,7 @@ onActivated(() => {
   color: var(--a-color-text-secondary, #64748b);
 }
 
-.mobile-music-playlists__item-arrow {
-  color: var(--a-color-text-muted, #94a3b8);
-  display: flex;
-  align-items: center;
-}
 
-.mobile-music-playlists__arrow-icon {
-  transform: rotate(-90deg);
-}
 
 .mobile-music-playlists__empty {
   display: flex;

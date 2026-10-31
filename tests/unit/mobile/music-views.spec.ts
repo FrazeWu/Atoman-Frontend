@@ -508,13 +508,16 @@ describe('Mobile Independent Music Views & Player', () => {
       id: 'alb-2049',
       title: '2049',
       artist: 'Ye',
+      artist_id: 'art-ye',
+      album_type: 'live',
       year: 2026,
     }
     const mockSongs = [
-      { id: 's-20', title: 'Track 2049', artist: 'Ye', duration: 240 },
+      { id: 's-20', title: 'Track 2049', artist: 'Ye', duration: 240, audio_url: '/media/2049.mp3' },
+      { id: 's-21', title: 'Alien', artist: 'Ye', release_type: 'leak_song', duration: 190, audio_url: '/media/alien.mp3' },
     ]
 
-    it('renders album info and songs list', async () => {
+    it('renders album info, album type tag, and songs list', async () => {
       const wrapper = mount(MusicAlbumDetailView, {
         props: {
           initialAlbum: mockAlbum,
@@ -528,7 +531,49 @@ describe('Mobile Independent Music Views & Player', () => {
       expect(wrapper.text()).toContain('2049')
       expect(wrapper.text()).toContain('Ye')
       expect(wrapper.text()).toContain('2026 年')
-      expect(wrapper.findAll('[data-testid="album-song-item"]').length).toBe(1)
+      expect(wrapper.text()).toContain('现场专辑')
+      expect(wrapper.text()).toContain('泄曲')
+      expect(wrapper.findAll('[data-testid="album-song-item"]').length).toBe(2)
+      expect(wrapper.find('[data-testid="play-all-btn"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="shuffle-play-btn"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="album-share-btn"]').exists()).toBe(true)
+    })
+
+    it('clicking artist link navigates to artist detail', async () => {
+      const pushSpy = vi.spyOn(router, 'push').mockImplementation(async () => {})
+      const wrapper = mount(MusicAlbumDetailView, {
+        props: {
+          initialAlbum: mockAlbum,
+          initialSongs: mockSongs,
+        },
+        global: {
+          plugins: [pinia, router],
+        },
+      })
+
+      const artistLink = wrapper.find('.mobile-album-detail__artist-link')
+      expect(artistLink.exists()).toBe(true)
+      await artistLink.trigger('click')
+      expect(pushSpy).toHaveBeenCalledWith('/music/artist/art-ye')
+    })
+
+    it('clicking shuffle play button triggers playAlbum with songs', async () => {
+      const playerStore = useAudioPlayerStore()
+      const playSpy = vi.spyOn(playerStore, 'playAlbum').mockImplementation(() => undefined)
+
+      const wrapper = mount(MusicAlbumDetailView, {
+        props: {
+          initialAlbum: mockAlbum,
+          initialSongs: mockSongs,
+        },
+        global: {
+          plugins: [pinia, router],
+        },
+      })
+
+      const shuffleBtn = wrapper.find('[data-testid="shuffle-play-btn"]')
+      await shuffleBtn.trigger('click')
+      expect(playSpy).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({ id: 's-20' })]), 0)
     })
   })
 
@@ -680,7 +725,7 @@ describe('Mobile Independent Music Views & Player', () => {
       expect(togglePlaySpy).toHaveBeenCalled()
     })
 
-    it('uses MIcon for previous, play/pause, next controls', () => {
+    it('uses MIcon for favorite and play/pause controls', () => {
       const playerStore = usePlayerStore()
       playerStore.currentSong = {
         id: 's-42',
@@ -697,10 +742,9 @@ describe('Mobile Independent Music Views & Player', () => {
       const icons = wrapper.findAllComponents(MIcon)
       const iconNames = icons.map((icon) => icon.props('name'))
 
-      // Expect previous, play or player-play or pause, and next controls
-      expect(iconNames.some((name) => ['player-prev', 'previous', 'skip-back'].includes(name))).toBe(true)
+      // Expect favorite (plus/check) and play or player-play or pause controls
+      expect(iconNames.some((name) => ['plus', 'plus-circle', 'check', 'check-circle', 'check-circle-filled', 'heart', 'heart-filled'].includes(name))).toBe(true)
       expect(iconNames.some((name) => ['player-play', 'player-pause', 'play', 'pause'].includes(name))).toBe(true)
-      expect(iconNames.some((name) => ['player-next', 'next', 'skip-forward'].includes(name))).toBe(true)
     })
 
     it('swiping up on track card navigates to full player (/music/player)', async () => {

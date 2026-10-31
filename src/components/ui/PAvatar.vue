@@ -9,7 +9,8 @@
       :width="avatarSize"
       :height="avatarSize"
       class="avatar-img"
-      loading="lazy"
+      :loading="priority ? 'eager' : 'lazy'"
+      :fetchpriority="priority ? 'high' : 'auto'"
       decoding="async"
       @error="imageFailed = true"
     />
@@ -27,9 +28,11 @@ const props = withDefaults(defineProps<{
   name?: string
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   grayscale?: boolean
+  priority?: boolean
 }>(), {
   size: 'md',
-  grayscale: false
+  grayscale: false,
+  priority: false,
 })
 
 const initials = computed(() => {

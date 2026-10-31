@@ -18,7 +18,8 @@
           class="cover-image"
           width="320"
           height="320"
-          loading="lazy"
+          :loading="priority ? 'eager' : 'lazy'"
+          :fetchpriority="priority ? 'high' : 'auto'"
           decoding="async"
         />
         <span v-else class="cover-placeholder">
@@ -83,9 +84,11 @@ const props = withDefaults(defineProps<{
   playlist: MusicPlaylistCardItem
   isBookmarked?: boolean
   showBookmarkButton?: boolean
+  priority?: boolean
 }>(), {
   isBookmarked: false,
   showBookmarkButton: true,
+  priority: false,
 })
 
 defineEmits<{

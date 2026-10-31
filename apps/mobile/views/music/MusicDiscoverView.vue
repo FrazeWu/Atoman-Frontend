@@ -417,26 +417,27 @@ onMounted(() => {
   gap: 14px;
   margin: 8px 16px 16px;
   padding: 12px;
-  border-radius: 4px;
-  border: 1px solid var(--a-color-border-soft, #eeeeee);
-  background: #ffffff;
+  border-radius: 8px;
+  border: none !important;
+  background: #f8fafc;
   cursor: pointer;
   transition: background-color 0.15s ease;
 }
 
 .mobile-music-discover__featured:active {
-  background-color: var(--a-color-surface-hover, #fafafa);
+  background-color: #f1f5f9;
 }
 
 .mobile-music-discover__featured-cover {
   position: relative;
-  width: 72px;
-  height: 72px;
-  border-radius: 4px;
+  width: 76px;
+  height: 76px;
+  border-radius: 6px;
   overflow: hidden;
-  border: 1px solid var(--a-color-border-soft, #eeeeee);
-  background: #fbfbfb;
+  border: none;
+  background: #f1f5f9;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .mobile-music-discover__featured-img {
@@ -460,10 +461,11 @@ onMounted(() => {
   left: 4px;
   font-size: 9px;
   font-weight: 500;
-  padding: 1px 4px;
+  padding: 1px 5px;
   border-radius: 2px;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.65);
   color: #ffffff;
+  backdrop-filter: blur(4px);
 }
 
 .mobile-music-discover__featured-info {
@@ -471,13 +473,13 @@ onMounted(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .mobile-music-discover__featured-title {
   font-size: 15px;
-  font-weight: 600;
-  color: var(--a-color-text, #111111);
+  font-weight: 700;
+  color: var(--a-color-text, #0f172a);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -486,7 +488,7 @@ onMounted(() => {
 
 .mobile-music-discover__featured-sub {
   font-size: 12px;
-  color: var(--a-color-text-secondary, #666666);
+  color: var(--a-color-text-secondary, #64748b);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -497,9 +499,9 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--a-color-primary, #007aff);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #1ed760;
   margin-top: 4px;
 }
 
@@ -516,14 +518,14 @@ onMounted(() => {
 
 .mobile-music-discover__section-title {
   font-size: 16px;
-  font-weight: 600;
-  color: var(--a-color-text, #111111);
+  font-weight: 700;
+  color: var(--a-color-text, #0f172a);
   margin: 0;
 }
 
 .mobile-music-discover__more-link {
   font-size: 12px;
-  color: var(--a-color-text-secondary, #666666);
+  color: var(--a-color-text-secondary, #64748b);
   text-decoration: none;
   font-weight: 500;
 }
@@ -543,21 +545,23 @@ onMounted(() => {
 }
 
 .mobile-music-discover__album-card {
-  width: 112px;
+  width: 116px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .mobile-music-discover__album-cover {
   position: relative;
-  width: 112px;
-  height: 112px;
-  border-radius: 4px;
+  width: 116px;
+  height: 116px;
+  border-radius: 6px;
   overflow: hidden;
-  border: 1px solid var(--a-color-border-soft, #eeeeee);
-  background: #fbfbfb;
+  border: none !important;
+  background: #f1f5f9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .mobile-music-discover__album-img {
@@ -589,8 +593,8 @@ onMounted(() => {
 
 .mobile-music-discover__album-name {
   font-size: 13px;
-  font-weight: 500;
-  color: var(--a-color-text, #111111);
+  font-weight: 600;
+  color: var(--a-color-text, #0f172a);
   margin-top: 6px;
   white-space: nowrap;
   overflow: hidden;
@@ -598,8 +602,8 @@ onMounted(() => {
 }
 
 .mobile-music-discover__album-artist {
-  font-size: 11px;
-  color: var(--a-color-text-secondary, #666666);
+  font-size: 11.5px;
+  color: var(--a-color-text-secondary, #64748b);
   margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
@@ -628,19 +632,21 @@ onMounted(() => {
   width: 76px;
   flex-shrink: 0;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .mobile-music-discover__artist-avatar {
-  width: 64px;
-  height: 64px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
   overflow: hidden;
-  background-color: #f5f5f5;
-  border: 1px solid var(--a-color-border-soft, #eeeeee);
+  background-color: #f1f5f9;
+  border: none !important;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .mobile-music-discover__artist-img {
@@ -658,8 +664,8 @@ onMounted(() => {
 
 .mobile-music-discover__artist-name {
   font-size: 12px;
-  font-weight: 500;
-  color: var(--a-color-text, #111111);
+  font-weight: 600;
+  color: var(--a-color-text, #0f172a);
   width: 100%;
   white-space: nowrap;
   overflow: hidden;
@@ -667,8 +673,8 @@ onMounted(() => {
 }
 
 .mobile-music-discover__artist-sub {
-  font-size: 10px;
-  color: var(--a-color-text-secondary, #777777);
+  font-size: 10.5px;
+  color: var(--a-color-text-secondary, #64748b);
   margin-top: 2px;
   width: 100%;
   white-space: nowrap;
@@ -676,36 +682,40 @@ onMounted(() => {
   text-overflow: ellipsis;
 }
 
-/* Playlists Grid */
+/* Playlists Grid - Spotify Borderless Cards */
 .mobile-music-discover__grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 14px;
 }
 
 .mobile-music-discover__card {
   display: flex;
   flex-direction: column;
-  border-radius: 4px;
-  border: 1px solid var(--a-color-border-soft, #f0f0f0);
-  background-color: #ffffff;
+  border-radius: 6px;
+  border: none !important;
+  background-color: transparent !important;
   overflow: hidden;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
 }
 
 .mobile-music-discover__card:active {
-  background-color: var(--a-color-surface-hover, #fafafa);
+  opacity: 0.8;
 }
 
 .mobile-music-discover__card-cover {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
-  background-color: #f7f7f7;
+  background-color: #f1f5f9;
+  border-radius: 6px;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .mobile-music-discover__card-img {
@@ -721,89 +731,73 @@ onMounted(() => {
   color: var(--a-color-text-muted, #999999);
 }
 
-.mobile-music-discover__tag {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  padding: 2px 5px;
-  background-color: rgba(0, 0, 0, 0.6);
-  color: #ffffff;
-  border-radius: 2px;
-  backdrop-filter: blur(4px);
-}
-
 .mobile-music-discover__card-info {
-  padding: 8px 10px;
+  padding: 6px 2px 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
 .mobile-music-discover__card-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--a-color-text, #111111);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--a-color-text, #0f172a);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .mobile-music-discover__card-count {
-  font-size: 11px;
-  color: var(--a-color-text-secondary, #777777);
+  font-size: 11.5px;
+  color: var(--a-color-text-secondary, #64748b);
 }
 
-/* Tracks List */
+/* Tracks List - Borderless Flat Rows */
 .mobile-music-discover__tracks {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--a-color-border-soft, #f0f0f0);
-  border-radius: 4px;
-  background-color: #ffffff;
-  overflow: hidden;
+  border: none !important;
+  background: transparent !important;
 }
 
 .mobile-music-discover__track-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--a-color-border-soft, #f7f7f7);
+  padding: 6px 0;
+  min-height: 48px;
+  border: none !important;
+  border-bottom: none !important;
+  background: transparent;
   cursor: pointer;
+  border-radius: 4px;
   transition: background-color 0.15s ease;
 }
 
-.mobile-music-discover__track-item:last-child {
-  border-bottom: none;
-}
-
 .mobile-music-discover__track-item:active {
-  background-color: var(--a-color-surface-hover, #fafafa);
+  background-color: #f8fafc;
 }
 
 .mobile-music-discover__track-index {
-  font-size: 12px;
-  font-family: monospace;
-  color: var(--a-color-text-muted, #999999);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: #94a3b8;
   width: 20px;
   text-align: center;
   flex-shrink: 0;
 }
 
 .mobile-music-discover__track-cover {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 4px;
   overflow: hidden;
-  background-color: #f7f7f7;
+  background-color: #f1f5f9;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--a-color-border-soft, #eeeeee);
+  border: none !important;
 }
 
 .mobile-music-discover__track-img {
@@ -825,20 +819,21 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  text-align: left;
 }
 
 .mobile-music-discover__track-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--a-color-text, #111111);
+  color: var(--a-color-text, #0f172a);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .mobile-music-discover__track-artist {
-  font-size: 11px;
-  color: var(--a-color-text-secondary, #777777);
+  font-size: 12px;
+  color: var(--a-color-text-secondary, #64748b);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -846,6 +841,12 @@ onMounted(() => {
 
 .mobile-music-discover__track-end {
   flex-shrink: 0;
+}
+
+.mobile-music-discover__track-duration {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #94a3b8;
 }
 
 .mobile-music-discover__track-duration {

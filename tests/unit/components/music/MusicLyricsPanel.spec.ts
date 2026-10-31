@@ -1133,4 +1133,13 @@ describe('useMusicLyrics', () => {
     expect(musicLyrics.loading.value).toBe(false)
     expect(musicLyrics.errorMessage.value).toBe('')
   })
+
+  it('按 Escape 键时触发 close 事件关闭歌词面板', async () => {
+    const wrapper = await mountPanel()
+    await flushPromises()
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    expect(wrapper.emitted('close')).toHaveLength(1)
+    wrapper.unmount()
+  })
 })

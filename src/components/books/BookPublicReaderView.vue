@@ -64,7 +64,9 @@
         />
       </template>
       <div v-if="asset?.format === 'txt'" ref="textViewport" class="public-reader__text" @scroll="handleTextScroll" @mouseup="captureSelection(true)" @keyup="captureSelection(true)"><pre ref="textRoot"><template v-for="part in textParts" :key="part.start"><mark v-if="part.mark" :data-mark-id="part.mark.id" :style="highlightStyle(part.mark)" @click="clickTextMark(part.mark)">{{ part.text }}</mark><template v-else>{{ part.text }}</template></template></pre></div>
-      <div v-else-if="asset?.format === 'epub'" ref="epubViewport" class="public-reader__epub" />
+      <div v-else-if="asset?.format === 'epub'" ref="epubViewport" class="public-reader__epub">
+        <BookReaderSkeleton v-if="isEngineLoading" format="epub" />
+      </div>
       <div v-else-if="asset?.format === 'cbz' || asset?.format === 'cbr'" ref="comicViewport" class="public-reader__comic" aria-label="漫画页面">
         <figure v-for="(page, index) in comicPages" :key="page.name" :ref="element => setComicPageRef(index, element)" class="public-reader__comic-page">
           <img :src="page.url" :alt="`${asset?.file_name || '漫画'} 第 ${index + 1} 页`" loading="lazy" />
@@ -72,7 +74,8 @@
         </figure>
       </div>
       <div v-else ref="pdfViewport" class="public-reader__pdf" @mouseup="captureSelection(true)" @keyup="captureSelection(true)">
-        <div class="public-reader__pdf-page" :class="{ 'is-selectable': source?.annotations !== undefined }" :style="pdfWidth ? { width: `${pdfWidth}px` } : {}">
+        <BookReaderSkeleton v-if="isEngineLoading" format="pdf" />
+        <div v-show="!isEngineLoading" class="public-reader__pdf-page" :class="{ 'is-selectable': source?.annotations !== undefined }" :style="pdfWidth ? { width: `${pdfWidth}px` } : {}">
           <canvas ref="pdfCanvas" aria-label="PDF 页面" />
           <div v-if="source?.annotations !== undefined" ref="pdfTextRoot" class="textLayer" aria-label="PDF 可选文字" />
           <div class="public-reader__pdf-marks" aria-hidden="true"><template v-for="mark in annotations.filter(item => item.anchor.pdf_page === pdfPage)" :key="mark.id"><span v-for="(rect, index) in mark.anchor.pdf_rects" :key="index" :style="pdfMarkStyle(mark, rect)" /></template></div>
@@ -118,10 +121,9 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Bookmark, Flag, Search } from 'lucide-vue-next'
-import ePub, { EpubCFI, type Contents } from 'epubjs'
-import { GlobalWorkerOptions, getDocument, TextLayer, type PDFDocumentProxy, type RenderTask } from 'pdfjs-dist/legacy/build/pdf.mjs'
-import 'pdfjs-dist/web/pdf_viewer.css'
-import pdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs?url'
+import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist/legacy/build/pdf.mjs'
+import { loadPdfEngine, loadEpubEngine } from '@/utils/bookReaderEngines'
+import BookReaderSkeleton from '@/components/books/BookReaderSkeleton.vue'
 import PButton from '@/components/ui/PButton.vue'
 import BookReaderDisplayControls from '@/components/books/BookReaderDisplayControls.vue'
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
@@ -138,10 +140,9 @@ import type { ReadingMark, ReadingAnchor } from '@/api/bookReading'
 import type { BookAnnotation } from '@/api/books'
 import { textSelection, pdfSelection, epubSelection, epubMarkRange, textRange, highlightedText, highlightColors, type HighlightSelection } from '@/utils/bookMarkAnchors'
 
-GlobalWorkerOptions.workerSrc = pdfWorker
-
-type EpubBook = ReturnType<typeof ePub>
-type EpubRendition = ReturnType<EpubBook['renderTo']>
+type EpubBook = any
+type EpubRendition = any
+type Contents = any
 type EpubTOCSource = { id?: string; href: string; label: string; subitems?: EpubTOCSource[] }
 type EpubTOCItem = EpubTOCSource & { depth: number }
 
@@ -180,16 +181,19 @@ const epubViewport = ref<HTMLElement | null>(null)
 const comicViewport = ref<HTMLElement | null>(null)
 const pdfCanvas = ref<HTMLCanvasElement | null>(null)
 const comicPageElements: Array<HTMLElement | undefined> = []
+const isEngineLoading = ref(false)
 let contentBlob: Blob | null = null
 let pdfDocument: PDFDocumentProxy | null = null
-let pdfLoadingTask: ReturnType<typeof getDocument> | null = null
+let pdfLoadingTask: ReturnType<typeof import('pdfjs-dist/legacy/build/pdf.mjs').getDocument> | null = null
+let pdfTextLayerClass: any = null
+let activeEpubCfi: any = null
 let epubBook: EpubBook | null = null
 let epubRendition: EpubRendition | null = null
 let epubNavigating = false
 let localProgress: LocalBookReadingProgress | null = null
 let disposed = false
 let pdfRenderTask: RenderTask | undefined
-let pdfTextTask: TextLayer | undefined
+let pdfTextTask: any = undefined
 const epubPainted: { cfi: string; type: string }[] = []
 let pdfRenderGeneration = 0
 let lastTextScrollTop = 0
@@ -252,8 +256,8 @@ async function paintEpubAnnotations() {
     try {
       const start = await epubBook.getRange(mark.anchor.epub_start_cfi)
       if (disposed || current !== epubPaintGeneration) return
-      const range = epubMarkRange(mark.anchor, start.startContainer.ownerDocument!)
-      const cfi = new EpubCFI(range, new EpubCFI(mark.anchor.epub_start_cfi).base).toString()
+      const range = epubMarkRange(mark.anchor, start.startContainer.ownerDocument!, activeEpubCfi)
+      const cfi = activeEpubCfi ? new activeEpubCfi(range, new activeEpubCfi(mark.anchor.epub_start_cfi).base).toString() : mark.anchor.epub_start_cfi
       const type = mark.style === 'underline' ? 'underline' : 'highlight'
       if (keys.has(type + cfi)) continue
       keys.add(type + cfi)
@@ -331,13 +335,20 @@ async function loadText() {
 }
 
 async function loadPDF() {
-  pdfLoadingTask = getDocument({ data: await contentBlob!.arrayBuffer() })
-  pdfDocument = await pdfLoadingTask.promise
-  if (disposed) return
-  pdfPageCount.value = pdfDocument.numPages
-  if (localProgress) pdfPage.value = Math.min(pdfPageCount.value, Math.max(1, Math.round(localProgress.reading_percent * pdfPageCount.value)))
-  if (props.source?.initialPosition?.pdf_page) pdfPage.value = Math.min(pdfPageCount.value, props.source.initialPosition.pdf_page)
-  await renderPDFPage()
+  isEngineLoading.value = true
+  try {
+    const { getDocument, TextLayer } = await loadPdfEngine()
+    pdfTextLayerClass = TextLayer
+    pdfLoadingTask = getDocument({ data: await contentBlob!.arrayBuffer() })
+    pdfDocument = await pdfLoadingTask.promise
+    if (disposed) return
+    pdfPageCount.value = pdfDocument.numPages
+    if (localProgress) pdfPage.value = Math.min(pdfPageCount.value, Math.max(1, Math.round(localProgress.reading_percent * pdfPageCount.value)))
+    if (props.source?.initialPosition?.pdf_page) pdfPage.value = Math.min(pdfPageCount.value, props.source.initialPosition.pdf_page)
+    await renderPDFPage()
+  } finally {
+    isEngineLoading.value = false
+  }
 }
 
 async function renderPDFPage() {
@@ -374,8 +385,8 @@ async function renderPDFPage() {
         if (disposed || current !== pdfRenderGeneration) return
         if (!content.items.some(item => 'str' in item && item.str.trim())) annotationMessage.value = '当前页没有可选文字，扫描版 PDF 暂不支持选字划线。'
         pdfTextRoot.value.style.setProperty('--total-scale-factor', String(viewport.scale * (viewport.userUnit || 1)))
-        pdfTextTask = new TextLayer({ textContentSource: content, container: pdfTextRoot.value, viewport })
-        await pdfTextTask.render()
+        pdfTextTask = pdfTextLayerClass ? new pdfTextLayerClass({ textContentSource: content, container: pdfTextRoot.value, viewport }) : null
+        if (pdfTextTask) await pdfTextTask.render()
       } catch { if (!disposed && current === pdfRenderGeneration) annotationMessage.value = '文字层暂不可用，仍可阅读；请重新载入后再尝试选字划线。' }
     }
     if (disposed || current !== pdfRenderGeneration) return
@@ -414,37 +425,48 @@ function handleScrollModeChange(newMode: BookReaderScrollMode) {
 }
 
 async function loadEPUB() {
-  epubBook = ePub(await contentBlob!.arrayBuffer())
-  await epubBook.ready
-  if (disposed) return
-  epubTOC.value = flattenEpubTOC(epubBook.navigation.toc as EpubTOCSource[])
-  epubRendition = epubBook.renderTo(epubViewport.value!, { width: '100%', height: '100%', flow: 'paginated', manager: 'default', allowScriptedContent: false })
-  epubRendition.on('selected', (cfi: string, contents: Contents) => {
-    if (disposed || props.source?.annotations === undefined) return
-    try {
-      selectionCandidate.value = epubSelection(cfi, contents.range(cfi)) || undefined
-      annotateCandidate()
-    } catch { annotationMessage.value = '选区无法定位，请重新选择同一章节内的文字。' }
-  })
-  void paintEpubAnnotations()
-  for (const event of ['click', 'keydown', 'touchstart']) epubRendition.on(event, () => { epubNavigating = true })
-  // 百分比依赖位置索引；在后台生成，避免阻塞正文首次显示。
-  if (props.source?.onPosition) void epubBook.locations.generate(1600).then(() => {
-    if (!disposed && localProgress?.epub_cfi && epubBook) readingPercent.value = epubBook.locations.percentageFromCfi(localProgress.epub_cfi)
-  }).catch(() => { /* 即使索引生成失败，仍用精确 CFI 恢复位置。 */ })
-  epubRendition.on('relocated', (location: { start?: { cfi?: string; percentage?: number } }) => {
-    const moved = localProgress?.epub_cfi !== location.start?.cfi
-    if (!props.source?.onPosition || epubBook?.locations.length()) readingPercent.value = Math.max(0, Math.min(1, location.start?.percentage || 0))
-    saveLocalBookReadingProgress(progressKey(), {
-      reading_percent: readingPercent.value,
-      epub_cfi: location.start?.cfi || '',
-      bookmarks: bookmarks.value,
+  isEngineLoading.value = true
+  try {
+    const [{ ePub, EpubCFI }, data] = await Promise.all([
+      loadEpubEngine(),
+      contentBlob!.arrayBuffer(),
+    ])
+    activeEpubCfi = EpubCFI
+    if (disposed || !ePub || !data || !epubViewport.value) return
+    epubBook = ePub(data)
+    await epubBook.ready
+    if (disposed) return
+    epubTOC.value = flattenEpubTOC(epubBook.navigation.toc as EpubTOCSource[])
+    epubRendition = epubBook.renderTo(epubViewport.value, { width: '100%', height: '100%', flow: 'paginated', manager: 'default', allowScriptedContent: false })
+    epubRendition.on('selected', (cfi: string, contents: Contents) => {
+      if (disposed || props.source?.annotations === undefined) return
+      try {
+        selectionCandidate.value = epubSelection(cfi, contents.range(cfi), activeEpubCfi) || undefined
+        annotateCandidate()
+      } catch { annotationMessage.value = '选区无法定位，请重新选择同一章节内的文字。' }
     })
-    localProgress = getLocalBookReadingProgress(progressKey())
-    if (epubNavigating && moved && localProgress?.epub_cfi) notifyPosition()
-    epubNavigating = false
-  })
-  await epubRendition.display(localProgress?.epub_cfi || undefined)
+    void paintEpubAnnotations()
+    for (const event of ['click', 'keydown', 'touchstart']) epubRendition.on(event, () => { epubNavigating = true })
+    // 百分比依赖位置索引；在后台生成，避免阻塞正文首次显示。
+    if (props.source?.onPosition) void epubBook.locations.generate(1600).then(() => {
+      if (!disposed && localProgress?.epub_cfi && epubBook) readingPercent.value = epubBook.locations.percentageFromCfi(localProgress.epub_cfi)
+    }).catch(() => { /* 即使索引生成失败，仍用精确 CFI 恢复位置。 */ })
+    epubRendition.on('relocated', (location: { start?: { cfi?: string; percentage?: number } }) => {
+      const moved = localProgress?.epub_cfi !== location.start?.cfi
+      if (!props.source?.onPosition || epubBook?.locations.length()) readingPercent.value = Math.max(0, Math.min(1, location.start?.percentage || 0))
+      saveLocalBookReadingProgress(progressKey(), {
+        reading_percent: readingPercent.value,
+        epub_cfi: location.start?.cfi || '',
+        bookmarks: bookmarks.value,
+      })
+      localProgress = getLocalBookReadingProgress(progressKey())
+      if (epubNavigating && moved && localProgress?.epub_cfi) notifyPosition()
+      epubNavigating = false
+    })
+    await epubRendition.display(localProgress?.epub_cfi || undefined)
+  } finally {
+    isEngineLoading.value = false
+  }
 }
 
 async function loadComic() {

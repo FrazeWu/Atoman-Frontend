@@ -339,6 +339,66 @@ describe("player store", () => {
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
 
+	it("prefetches candidates following shuffled order when isShuffled is enabled", async () => {
+		const fetchMock = vi.fn(
+			() =>
+				Promise.resolve(
+					new Response(new Uint8Array(512 * 1024), { status: 206 }),
+				),
+		);
+		vi.stubGlobal("fetch", fetchMock);
+		const player = usePlayerStore();
+		const s1 = { id: "s1", title: "S1", audio_url: "s1.mp3" } as any;
+		const s2 = { id: "s2", title: "S2", audio_url: "s2.mp3" } as any;
+		const s3 = { id: "s3", title: "S3", audio_url: "s3.mp3" } as any;
+		player.playAlbum([s1, s2, s3]);
+		player.isShuffled = true;
+		await nextTick();
+		audioInstances[0].emit("canplay");
+		await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+		const calledUrls = fetchMock.mock.calls.map(([url]) => url);
+		expect(calledUrls).not.toContain("s1.mp3");
+		expect(calledUrls).toHaveLength(2);
+	});
+
+	it("supports caching and removing current song audio for offline playback", async () => {
+		const mockCache = {
+			match: vi.fn().mockResolvedValue(new Response("cached-audio")),
+			put: vi.fn().mockResolvedValue(undefined),
+			delete: vi.fn().mockResolvedValue(true),
+		};
+		Object.defineProperty(window, "caches", {
+			configurable: true,
+			value: { open: vi.fn().mockResolvedValue(mockCache) },
+		});
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValue(new Response("audio-stream", { status: 200 })),
+		);
+
+		const player = usePlayerStore();
+		const song = {
+			id: "offline-1",
+			title: "Offline Song",
+			audio_url: "offline.mp3",
+		} as any;
+		player.playSong(song);
+
+		expect(player.isCurrentAudioCached).toBe(false);
+		const cached = await player.cacheCurrentAudio();
+		expect(cached).toBe(true);
+		expect(player.isCurrentAudioCached).toBe(true);
+		expect(mockCache.put).toHaveBeenCalledWith(
+			"offline.mp3",
+			expect.any(Response),
+		);
+
+		const removed = await player.removeCurrentAudio();
+		expect(removed).toBe(true);
+		expect(player.isCurrentAudioCached).toBe(false);
+		expect(mockCache.delete).toHaveBeenCalledWith("offline.mp3");
+	});
+
 	it("keeps queued prefetch requests alive when switching within the queue", async () => {
 		const pendingResponses: Array<(response: Response) => void> = [];
 		const fetchMock = vi.fn(
@@ -1368,6 +1428,116 @@ describe("player store", () => {
 		Reflect.deleteProperty(navigator, "mediaSession");
 	});
 
+	it("handles media session stop action by pausing and resetting time", async () => {
+		const handlers = new Map<string, (details?: any) => void>();
+		const mediaSession = {
+			playbackState: "none",
+			metadata: null,
+			setActionHandler: vi.fn((action: string, handler: any) => {
+				handlers.set(action, handler);
+			}),
+			setPositionState: vi.fn(),
+		};
+		Object.defineProperty(navigator, "mediaSession", {
+			configurable: true,
+			value: mediaSession,
+		});
+
+		const player = usePlayerStore();
+		player.playSong({
+			id: "media-song-stop",
+			title: "Media Song Stop",
+			audio_url: "media.mp3",
+			duration: 180,
+		} as any);
+		await audioInstances[0].play.mock.results[0]?.value;
+
+		player.currentTime = 50;
+		audioInstances[0].currentTime = 50;
+
+		handlers.get("stop")?.();
+		expect(audioInstances[0].pause).toHaveBeenCalled();
+		expect(player.currentTime).toBe(0);
+		expect(mediaSession.playbackState).toBe("none");
+
+		Reflect.deleteProperty(navigator, "mediaSession");
+	});
+
+	it("rewinds to 0 on previoustrack when currentTime > 3s, otherwise switches track", async () => {
+		const handlers = new Map<string, (details?: any) => void>();
+		const mediaSession = {
+			playbackState: "none",
+			metadata: null,
+			setActionHandler: vi.fn((action: string, handler: any) => {
+				handlers.set(action, handler);
+			}),
+			setPositionState: vi.fn(),
+		};
+		Object.defineProperty(navigator, "mediaSession", {
+			configurable: true,
+			value: mediaSession,
+		});
+
+		const player = usePlayerStore();
+		const song1 = { id: "s1", title: "Song 1", audio_url: "s1.mp3", duration: 180 } as any;
+		const song2 = { id: "s2", title: "Song 2", audio_url: "s2.mp3", duration: 200 } as any;
+		player.playAlbum([song1, song2], 1);
+		await audioInstances[0].play.mock.results[0]?.value;
+
+		expect(player.currentSong?.id).toBe("s2");
+
+		// Case 1: currentTime > 3s -> rewinds to 0, stays on song2
+		player.currentTime = 15;
+		audioInstances[0].currentTime = 15;
+		handlers.get("previoustrack")?.();
+		expect(player.currentTime).toBe(0);
+		expect(player.currentSong?.id).toBe("s2");
+
+		// Case 2: currentTime <= 3s -> switches to song1
+		player.currentTime = 1;
+		audioInstances[0].currentTime = 1;
+		handlers.get("previoustrack")?.();
+		expect(player.currentSong?.id).toBe("s1");
+
+		Reflect.deleteProperty(navigator, "mediaSession");
+	});
+
+	it("formats multi-artists in metadata and cleans up media session on session reset", async () => {
+		const mediaSession = {
+			playbackState: "none",
+			metadata: null as any,
+			setActionHandler: vi.fn(),
+			setPositionState: vi.fn(),
+		};
+		Object.defineProperty(navigator, "mediaSession", {
+			configurable: true,
+			value: mediaSession,
+		});
+
+		const player = usePlayerStore();
+		player.playSong({
+			id: "s-collab",
+			title: "Collab Track",
+			audio_url: "collab.mp3",
+			artists: [{ name: "Alice" }, { name: "Bob" }],
+			album: "Great Album",
+			cover_url: "https://example.com/cover.jpg",
+		} as any);
+		await audioInstances[0].play.mock.results[0]?.value;
+
+		expect(mediaSession.metadata).toBeTruthy();
+		expect(mediaSession.metadata.artist).toBe("Alice, Bob");
+		expect(mediaSession.metadata.album).toBe("Great Album");
+
+		// Trigger session reset
+		player.resetPlaybackForSession();
+		expect(mediaSession.playbackState).toBe("none");
+		expect(mediaSession.metadata).toBeNull();
+		expect(mediaSession.setPositionState).toHaveBeenCalledWith();
+
+		Reflect.deleteProperty(navigator, "mediaSession");
+	});
+
 	it("computes actual volume using logarithmic perceptual mapping", () => {
 		expect(computeActualVolume(0)).toBe(0);
 		expect(computeActualVolume(1)).toBe(1);
@@ -1659,6 +1829,110 @@ describe("player store", () => {
 
 		store.skip(-30);
 		expect(store.currentTime).toBe(105);
+	});
+
+	it("discards expired playback state (> 7 days) on store initialization", () => {
+		const expiredState = {
+			version: 1,
+			savedAt: Date.now() - 8 * 24 * 3600 * 1000,
+			song: { id: "old-1", title: "Old Song", audio_url: "old.mp3" },
+			currentTime: 50,
+		};
+		localStorage.setItem("playbackState", JSON.stringify(expiredState));
+
+		try {
+			const store = usePlayerStore();
+			expect(store.currentSong).toBeNull();
+			expect(localStorage.getItem("playbackState")).toBeNull();
+		} finally {
+			localStorage.removeItem("playbackState");
+		}
+	});
+
+	it("restores valid playback state with progress and safely seeks on first togglePlay", async () => {
+		const validState = {
+			version: 1,
+			savedAt: Date.now() - 1000,
+			song: { id: "resume-1", title: "Resume Song", audio_url: "resume.mp3", duration: 200 },
+			currentTime: 68,
+		};
+		localStorage.setItem("playbackState", JSON.stringify(validState));
+
+		try {
+			const store = usePlayerStore();
+			expect(store.currentSong?.id).toBe("resume-1");
+			expect(store.currentTime).toBe(68);
+			expect(store.duration).toBe(200);
+			expect(store.isPlaying).toBe(false);
+
+			// First togglePlay triggers ensureAudio and attaches loadedmetadata seek
+			store.togglePlay();
+			const audio = audioInstances.at(-1)!;
+			expect(audio.src).toBe("resume.mp3");
+
+			// Simulate loadedmetadata event from audio element
+			audio.emit("loadedmetadata");
+			expect(audio.currentTime).toBe(68);
+		} finally {
+			localStorage.removeItem("playbackState");
+		}
+	});
+
+	it("cleans up loading and cancels recovery timer when foreign play request arrives", async () => {
+		const store = usePlayerStore();
+		const song = { id: "foreign-1", title: "Foreign Test", audio_url: "f.mp3" } as any;
+
+		store.playSong(song);
+		const audio = audioInstances.at(-1)!;
+		await audio.play.mock.results.at(-1)?.value;
+		await nextTick();
+
+		store.isLoading = true;
+		expect(store.isPlaying).toBe(true);
+		expect(store.isLoading).toBe(true);
+
+		// Simulate foreign play broadcast arriving
+		window.dispatchEvent(
+			new StorageEvent("storage", {
+				key: "__atoman_audio_sync__",
+				newValue: JSON.stringify({
+					type: "PLAY_REQUEST",
+					tabId: "different-tab-id",
+					timestamp: Date.now() + 500,
+				}),
+			}),
+		);
+
+		await nextTick();
+		expect(store.isPlaying).toBe(false);
+		expect(store.isLoading).toBe(false);
+	});
+
+	it("arbitrates concurrent play requests avoiding dual-pause deadlocks", async () => {
+		const store = usePlayerStore();
+		const song = { id: "arb-1", title: "Arb Test", audio_url: "arb.mp3" } as any;
+
+		store.playSong(song);
+		const audio = audioInstances.at(-1)!;
+		await audio.play.mock.results.at(-1)?.value;
+		await nextTick();
+		expect(store.isPlaying).toBe(true);
+
+		// A stale/earlier foreign request arriving during recent play window is ignored
+		window.dispatchEvent(
+			new StorageEvent("storage", {
+				key: "__atoman_audio_sync__",
+				newValue: JSON.stringify({
+					type: "PLAY_REQUEST",
+					tabId: "older-tab-id",
+					timestamp: Date.now() - 5000, // Older than current play initiation
+				}),
+			}),
+		);
+
+		await nextTick();
+		// Still playing because this tab had the fresher play request!
+		expect(store.isPlaying).toBe(true);
 	});
 });
 

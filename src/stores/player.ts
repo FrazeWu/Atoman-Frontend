@@ -34,11 +34,24 @@ import {
 	hasPlayableAudio,
 	normalizePlaybackSong,
 	playbackItemKey,
+	CURRENT_PLAYBACK_STATE_VERSION,
+	isPlaybackStateExpired,
+	isPlaybackProgressStale,
+	sanitizeResumePosition,
+	type PersistedPlaybackState,
 } from "@/utils/playerState";
 import {
 	buildPrefetchCandidates,
 	shufflePlaybackItems,
 } from "@/utils/playerQueue";
+import {
+	cacheMediaForOffline,
+	getCachedMediaObjectURL,
+	initMediaOfflineCacheIndex,
+	isMediaCached,
+	isMediaCachedSync,
+	removeCachedMedia,
+} from "@/utils/mediaOfflineCache";
 
 const api = useApi();
 
@@ -56,16 +69,6 @@ export { computeActualVolume, fadeOutAudio };
 
 export type PlaybackMode = "loop" | "single" | "random";
 
-type PersistedPlaybackState = {
-	song?: Song;
-	queue?: Song[];
-	currentTime?: number;
-	volume?: number;
-	isShuffled?: boolean;
-	repeatMode?: RepeatMode;
-	playbackMode?: PlaybackMode;
-};
-
 function resolvePlaybackAudioUrl(url: string) {
 	return resolvePlayableAudioURL(resolveAudioEngineUrl(url), api.url);
 }
@@ -74,13 +77,17 @@ export const usePlayerStore = defineStore("player", () => {
 	const podcastAdapter = usePodcastPlaybackAdapter();
 	const authStore = useAuthStore();
 	const {
+		tabId: playerTabId,
 		broadcastPlayRequest,
 		setForeignPlayRequestCallback,
 		closeChannel,
 		setupMediaSession,
+		updateMediaSessionPlaybackState,
 		updateMediaSessionMetadata,
 		updateMediaSessionPosition,
+		clearMediaSession,
 	} = useAudioPlayerSync();
+	let lastPlayInitiatedAt = 0;
 	const songs = ref<Song[]>([]);
 	const currentSong = ref<Song | null>(null);
 	const playerPresence = usePlayerPresenceStore();
@@ -115,6 +122,8 @@ export const usePlayerStore = defineStore("player", () => {
 	const duration = ref(0);
 	const isLoading = ref(false);
 	const isCurrentAudioCached = ref(false);
+	const isAudioCaching = ref(false);
+	const audioCacheError = ref("");
 	const playbackError = ref("");
 	const audioRecoveryNotice = ref("");
 	const songLibraryLoading = ref(false);
@@ -193,7 +202,10 @@ export const usePlayerStore = defineStore("player", () => {
 			: queue.value,
 	);
 
-	watch(isShuffled, () => recomputeShuffledQueue());
+	watch(isShuffled, () => {
+		recomputeShuffledQueue();
+		if (currentSongStartCached) prefetchQueueAudioStarts();
+	});
 	// Lyrics/waveform hydration replaces queue objects without changing their
 	// identity or order; it must not reshuffle the remaining playback sequence.
 	watch(
@@ -436,6 +448,7 @@ export const usePlayerStore = defineStore("player", () => {
 		window.addEventListener("pagehide", () => {
 			saveMusicProgress(false, true);
 			saveMusicSession(true);
+			savePlaybackState();
 		});
 	}
 
@@ -451,19 +464,37 @@ export const usePlayerStore = defineStore("player", () => {
 		{ immediate: true },
 	);
 
-	setForeignPlayRequestCallback(() => {
-		if (audio && shouldPauseAudio(audio)) {
-			playGeneration += 1;
-			playRequested = false;
-			savePodcastProgress();
-			saveMusicProgress(false, true);
-			audio.pause();
-			isPlaying.value = false;
-			pauseListening();
-			if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-				navigator.mediaSession.playbackState = "paused";
+	setForeignPlayRequestCallback((meta) => {
+		if (!audio || !shouldPauseAudio(audio)) return;
+
+		// 并发仲裁：若 600ms 内双方均发起起播，后发者胜，防止双停死锁
+		const COLLISION_WINDOW_MS = 600;
+		const isRecentPlay = Date.now() - lastPlayInitiatedAt < COLLISION_WINDOW_MS;
+		if (isRecentPlay && isPlaying.value && meta && typeof meta.timestamp === "number") {
+			const isForeignWinner =
+				meta.timestamp > lastPlayInitiatedAt ||
+				(meta.timestamp === lastPlayInitiatedAt && meta.tabId > playerTabId);
+
+			if (!isForeignWinner) {
+				// 本标签页胜出，保持播放，避免互相暂停
+				return;
 			}
 		}
+
+		playGeneration += 1;
+		playRequested = false;
+		isLoading.value = false;
+		resetAudioRecovery();
+
+		savePodcastProgress();
+		saveMusicProgress(false, true);
+		saveMusicSession(true);
+		savePlaybackState();
+
+		audio.pause();
+		isPlaying.value = false;
+		pauseListening();
+		updateMediaSessionPlaybackState("paused");
 	});
 	const listeningThresholdMs = 5000;
 	let listeningTimer: ReturnType<typeof setTimeout> | null = null;
@@ -551,6 +582,7 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const resetPlaybackForSession = () => {
 		resetAudioRecovery();
+		clearMediaSession();
 		musicAccountGeneration += 1;
 		playGeneration += 1;
 		resetAudioStartPrefetch();
@@ -614,25 +646,29 @@ export const usePlayerStore = defineStore("player", () => {
 		closeChannel();
 	});
 
+	void initMediaOfflineCacheIndex();
+
 	function prefetchQueueAudioStarts() {
 		const current = currentSong.value;
-		if (!current || queue.value.length < 2) return;
+		const effectiveQueue =
+			activeQueue.value.length > 0 ? activeQueue.value : queue.value;
+		if (!current || effectiveQueue.length < 2) return;
 
 		const currentKey = playbackItemKey(current);
-		const queueKey = queue.value
+		const queueKey = effectiveQueue
 			.map(
 				(song) =>
 					`${playbackItemKey(song)}:${resolvePlaybackAudioUrl(song.audio_url)}`,
 			)
 			.join("|");
-		const prefetchKey = `${currentKey}|${queueKey}`;
+		const prefetchKey = `${isShuffled.value ? "shuffled" : "normal"}|${currentKey}|${queueKey}`;
 		if (audioStartPrefetchKey === prefetchKey) return;
 
 		resetAudioStartPrefetch();
 		audioStartPrefetchKey = prefetchKey;
 		const signal = audioPrefetcher.getAbortSignal();
 		const urls = buildPrefetchCandidates(
-			queue.value,
+			effectiveQueue,
 			currentKey,
 			resolvePlaybackAudioUrl,
 			hasPlayableAudio,
@@ -682,9 +718,8 @@ export const usePlayerStore = defineStore("player", () => {
 		savePodcastProgress();
 		saveMusicProgress(false, true);
 		saveMusicSession(true);
-		if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-			navigator.mediaSession.playbackState = "paused";
-		}
+		savePlaybackState();
+		updateMediaSessionPlaybackState("paused");
 	};
 
 	const recoverFromMediaError = (player: HTMLAudioElement): boolean => {
@@ -760,9 +795,7 @@ export const usePlayerStore = defineStore("player", () => {
 			isPlaying.value = false;
 			isLoading.value = false;
 			pauseListening();
-			if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-				navigator.mediaSession.playbackState = "paused";
-			}
+			updateMediaSessionPlaybackState("paused");
 		});
 		nextAudio.addEventListener("error", () => {
 			if (audio !== nextAudio) return;
@@ -776,13 +809,7 @@ export const usePlayerStore = defineStore("player", () => {
 			pauseListening();
 			if (recoveryTimer !== null || (wasActive && recoverFromMediaError(nextAudio))) return;
 			playbackError.value = "音频加载失败，请重试";
-			if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-				try {
-					navigator.mediaSession.playbackState = "paused";
-				} catch {
-					// Ignore media session errors
-				}
-			}
+			updateMediaSessionPlaybackState("paused");
 		});
 		nextAudio.addEventListener("canplay", () => {
 			if (audio !== nextAudio) return;
@@ -808,6 +835,9 @@ export const usePlayerStore = defineStore("player", () => {
 		nextAudio.addEventListener("progress", updateBuffered);
 		nextAudio.addEventListener("timeupdate", () => {
 			if (audio !== nextAudio) return;
+			if (nextAudio.currentTime === 0 && currentTime.value > 0 && nextAudio.paused) {
+				return;
+			}
 			currentTime.value = nextAudio.currentTime;
 			// A brief playable prefix is not proof of a healthy song: keep the
 			// failed-track guard until a full song completes, preventing loops
@@ -853,32 +883,123 @@ export const usePlayerStore = defineStore("player", () => {
 
 		if (currentSong.value) {
 			nextAudio.src = resolvePlaybackAudioUrl(currentSong.value.audio_url);
-			if (currentTime.value > 0) {
-				nextAudio.currentTime = currentTime.value;
+			const targetPosition = currentTime.value;
+			if (targetPosition > 0) {
+				if (nextAudio.readyState >= HTMLMediaElement.HAVE_METADATA) {
+					try {
+						nextAudio.currentTime = targetPosition;
+					} catch {}
+				} else {
+					nextAudio.addEventListener(
+						"loadedmetadata",
+						() => {
+							try {
+								nextAudio.currentTime = targetPosition;
+							} catch {}
+						},
+						{ once: true },
+					);
+				}
 			}
 		}
 
-		setupMediaSession({
-			play: () => {
-				if (currentSong.value && !isPlaying.value) attemptPlay(nextAudio);
-			},
-			pause: () => {
-				if (shouldPauseAudio(nextAudio)) pauseCurrentAudio(nextAudio);
-			},
-			previoustrack: playPrevious,
-			nexttrack: playNext,
-			seekto: (details) => {
-				if (details.seekTime !== undefined) {
-					seek(details.seekTime);
-				}
-			},
-			skip: (seconds) => {
-				skip(seconds);
-			},
-		});
+		registerMediaSessionHandlers(nextAudio);
 
 		audio = nextAudio;
 		return nextAudio;
+	};
+
+	const registerMediaSessionHandlers = (playerTarget?: HTMLAudioElement | null) => {
+		const targetAudio = playerTarget || audio;
+		const isIOS =
+			typeof navigator !== "undefined" &&
+			(/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+				(navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1));
+
+		const isPodcast = currentSong.value?.source_type === "podcast_episode";
+		const allowSeekButtons = !isIOS || isPodcast;
+
+		setupMediaSession({
+			play: () => {
+				if (currentSong.value && !isPlaying.value && targetAudio) {
+					attemptPlay(targetAudio);
+				}
+			},
+			pause: () => {
+				if (targetAudio && shouldPauseAudio(targetAudio)) {
+					pauseCurrentAudio(targetAudio);
+				}
+			},
+			stop: () => {
+				if (targetAudio && shouldPauseAudio(targetAudio)) {
+					pauseCurrentAudio(targetAudio);
+				}
+				seek(0);
+				updateMediaSessionPlaybackState("none");
+			},
+			previoustrack: () => {
+				if (currentTime.value > 3) {
+					seek(0);
+					updateMediaSessionPosition({
+						duration: duration.value,
+						playbackRate: playbackRate.value,
+						position: 0,
+					});
+					return;
+				}
+				playPrevious();
+			},
+			nexttrack: playNext,
+			seekto: (details) => {
+				if (details.seekTime !== undefined) {
+					if (details.fastSeek && targetAudio && typeof (targetAudio as any).fastSeek === "function") {
+						try {
+							(targetAudio as any).fastSeek(details.seekTime);
+							currentTime.value = details.seekTime;
+						} catch {
+							seek(details.seekTime);
+						}
+					} else {
+						seek(details.seekTime);
+					}
+					updateMediaSessionPosition({
+						duration: duration.value,
+						playbackRate: playbackRate.value,
+						position: details.seekTime,
+					});
+				}
+			},
+			seekbackward: allowSeekButtons
+				? (details) => {
+						const offset = details.seekOffset || (isPodcast ? 15 : 10);
+						skip(-offset);
+						updateMediaSessionPosition({
+							duration: duration.value,
+							playbackRate: playbackRate.value,
+							position: currentTime.value,
+						});
+					}
+				: null,
+			seekforward: allowSeekButtons
+				? (details) => {
+						const offset = details.seekOffset || (isPodcast ? 15 : 10);
+						skip(offset);
+						updateMediaSessionPosition({
+							duration: duration.value,
+							playbackRate: playbackRate.value,
+							position: currentTime.value,
+						});
+					}
+				: null,
+			skip: (seconds) => {
+				skip(seconds);
+				updateMediaSessionPosition({
+					duration: duration.value,
+					playbackRate: playbackRate.value,
+					position: currentTime.value,
+				});
+			},
+		});
 	};
 
 	const syncCurrentSongFromLibrary = (library: Song[]) => {
@@ -916,6 +1037,7 @@ export const usePlayerStore = defineStore("player", () => {
 		isLoading.value = true;
 		playRequested = true;
 		playbackError.value = "";
+		lastPlayInitiatedAt = Date.now();
 		player.volume = computeActualVolume(volume.value);
 		player
 			.play()
@@ -934,13 +1056,7 @@ export const usePlayerStore = defineStore("player", () => {
 				} catch {
 					// Ignore listening tracker error
 				}
-				if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-					try {
-						navigator.mediaSession.playbackState = "playing";
-					} catch {
-						// Ignore media session error
-					}
-				}
+				updateMediaSessionPlaybackState("playing");
 			})
 			.catch((err) => {
 				if (generation !== playGeneration || player !== audio) return;
@@ -949,15 +1065,13 @@ export const usePlayerStore = defineStore("player", () => {
 				playbackError.value = "无法播放此音频，请重试";
 				isPlaying.value = false;
 				pauseListening();
-				if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-					try {
-						navigator.mediaSession.playbackState = "paused";
-					} catch {
-						// Ignore media session error
-					}
-				}
+				updateMediaSessionPlaybackState("paused");
 			});
 	};
+
+	let playbackProgressSaveTimer: ReturnType<typeof setTimeout> | null = null;
+	let lastPlaybackStateSavedAt = 0;
+	const THROTTLE_SAVE_INTERVAL_MS = 2500;
 
 	const savePlaybackState = () => {
 		if (typeof localStorage === "undefined") return;
@@ -969,6 +1083,8 @@ export const usePlayerStore = defineStore("player", () => {
 			}
 
 			const state: PersistedPlaybackState = {
+				version: CURRENT_PLAYBACK_STATE_VERSION,
+				savedAt: Date.now(),
 				song: compactPlaybackSong(currentSong.value),
 				queue: queue.value.map(compactPlaybackSong),
 				currentTime: audio?.currentTime ?? currentTime.value,
@@ -979,8 +1095,28 @@ export const usePlayerStore = defineStore("player", () => {
 			};
 
 			localStorage.setItem("playbackState", JSON.stringify(state));
+			lastPlaybackStateSavedAt = Date.now();
 		} catch (error) {
 			reportError(error, "Failed to persist playback state:");
+		}
+	};
+
+	const schedulePlaybackStateSave = (immediate = false) => {
+		const now = Date.now();
+		if (immediate || now - lastPlaybackStateSavedAt >= THROTTLE_SAVE_INTERVAL_MS) {
+			if (playbackProgressSaveTimer !== null) {
+				clearTimeout(playbackProgressSaveTimer);
+				playbackProgressSaveTimer = null;
+			}
+			savePlaybackState();
+			return;
+		}
+
+		if (playbackProgressSaveTimer === null) {
+			playbackProgressSaveTimer = setTimeout(() => {
+				playbackProgressSaveTimer = null;
+				savePlaybackState();
+			}, 1000);
 		}
 	};
 
@@ -992,16 +1128,20 @@ export const usePlayerStore = defineStore("player", () => {
 
 		try {
 			const state = JSON.parse(savedState) as PersistedPlaybackState;
+			if (isPlaybackStateExpired(state)) {
+				localStorage.removeItem("playbackState");
+				return;
+			}
+
 			const restoredVol = typeof state.volume === "number" ? state.volume : 1;
 			volume.value = restoredVol;
 			if (restoredVol > 0) {
 				lastNonZeroVolume.value = restoredVol;
 			}
 			isShuffled.value = Boolean(state.isShuffled);
-			repeatMode.value = state.repeatMode || "all";
-			playbackMode.value = state.playbackMode || "loop";
-			currentTime.value =
-				typeof state.currentTime === "number" ? state.currentTime : 0;
+			repeatMode.value = (state.repeatMode as RepeatMode) || "all";
+			playbackMode.value = (state.playbackMode as PlaybackMode) || "loop";
+
 			const restoredSong = hasPlayableAudio(state.song)
 				? normalizePlaybackSong(state.song!, resolvePlaybackAudioUrl)
 				: null;
@@ -1013,17 +1153,31 @@ export const usePlayerStore = defineStore("player", () => {
 			if (restoredSong && !restoredQueue.some((song) => playbackItemKey(song) === playbackItemKey(restoredSong))) {
 				restoredQueue.unshift(restoredSong);
 			}
-			currentSong.value = restoredSong;
-			queue.value = restoredQueue;
-			currentAlbum.value = null;
-			isPlaying.value = false;
-			duration.value =
+
+			const songDuration =
 				(typeof (restoredSong as any)?.duration === "number"
 					? (restoredSong as any).duration
 					: 0) ||
 				(typeof (restoredSong as any)?.duration_seconds === "number"
 					? (restoredSong as any).duration_seconds
 					: 0);
+
+			const isPodcast = restoredSong?.source_type === "podcast_episode";
+			let targetProgress = typeof state.currentTime === "number" ? state.currentTime : 0;
+
+			// 如果普通歌曲进度超过 24 小时，进度归零
+			if (!isPodcast && isPlaybackProgressStale(state)) {
+				targetProgress = 0;
+			} else {
+				targetProgress = sanitizeResumePosition(targetProgress, songDuration, isPodcast);
+			}
+
+			currentTime.value = targetProgress;
+			currentSong.value = restoredSong;
+			queue.value = restoredQueue;
+			currentAlbum.value = null;
+			isPlaying.value = false;
+			duration.value = songDuration;
 		} catch (error) {
 			reportError(error, "Failed to restore playback state:");
 		}
@@ -1031,19 +1185,13 @@ export const usePlayerStore = defineStore("player", () => {
 
 	restorePlaybackState();
 
-	let playbackProgressSaveTimer: ReturnType<typeof setTimeout> | null = null;
 	watch(currentTime, () => {
-		if (playbackProgressSaveTimer !== null)
-			clearTimeout(playbackProgressSaveTimer);
-		playbackProgressSaveTimer = setTimeout(() => {
-			playbackProgressSaveTimer = null;
-			savePlaybackState();
-		}, 1000);
+		schedulePlaybackStateSave(false);
 	});
 
 	watch(
 		[currentSong, volume, isShuffled, repeatMode, playbackMode, queue],
-		savePlaybackState,
+		() => schedulePlaybackStateSave(true),
 		{ deep: true },
 	);
 
@@ -1152,7 +1300,7 @@ export const usePlayerStore = defineStore("player", () => {
 			if (generation !== playGeneration || audio !== player) return;
 			player.src = normalizedSong.audio_url;
 			player.playbackRate = playbackRate.value;
-			isCurrentAudioCached.value = false;
+			isCurrentAudioCached.value = isMediaCachedSync(normalizedSong.audio_url);
 			player.volume = computeActualVolume(volume.value);
 			applyResumePosition();
 			if (resumePosition > 0) {
@@ -1161,6 +1309,7 @@ export const usePlayerStore = defineStore("player", () => {
 				});
 			}
 			attemptPlay(player, generation);
+			void checkCurrentSongAudioCached(generation);
 		};
 
 		if (audio && !audio.paused && audio.currentTime > 0) {
@@ -1172,12 +1321,26 @@ export const usePlayerStore = defineStore("player", () => {
 		duration.value = normalizedSong.duration || (normalizedSong as any).duration_seconds || 0;
 		podcastTracker = null;
 
+		const displayArtist =
+			song.artists && song.artists.length > 0
+				? song.artists
+						.map((a: any) => (typeof a === "string" ? a : a?.name || ""))
+						.filter(Boolean)
+						.join(", ")
+				: song.artist || "未知艺术家";
+
+		const displayAlbum =
+			song.source_type === "podcast_episode"
+				? song.album || "播客"
+				: song.album || "未知专辑";
+
 		updateMediaSessionMetadata({
 			title: song.title,
-			artist: song.artist || "未知艺术家",
-			album: song.album || "未知专辑",
+			artist: displayArtist,
+			album: displayAlbum,
 			artworkUrl: song.cover_url || "",
 		});
+		registerMediaSessionHandlers(player);
 
 		if (song.source_type === "podcast_episode" && song.source_id) {
 			const episodeID = song.source_id;
@@ -1295,11 +1458,28 @@ export const usePlayerStore = defineStore("player", () => {
 			player.playbackRate = playbackRate.value;
 		}
 		player.volume = computeActualVolume(volume.value);
-		if (currentTime.value > 0) {
-			try {
-				player.currentTime = currentTime.value;
-			} catch {
-				// Metadata may not be available yet
+		const targetPosition = currentTime.value;
+		if (targetPosition > 0) {
+			if (player.readyState >= HTMLMediaElement.HAVE_METADATA) {
+				try {
+					if (Math.abs(player.currentTime - targetPosition) > 0.05) {
+						player.currentTime = targetPosition;
+					}
+				} catch {
+					// Metadata may not be available yet
+				}
+			} else {
+				player.addEventListener(
+					"loadedmetadata",
+					() => {
+						try {
+							if (Math.abs(player.currentTime - targetPosition) > 0.05) {
+								player.currentTime = targetPosition;
+							}
+						} catch {}
+					},
+					{ once: true },
+				);
 			}
 		}
 
@@ -1489,6 +1669,7 @@ export const usePlayerStore = defineStore("player", () => {
 				}
 			}
 		}
+		schedulePlaybackStateSave(true);
 	};
 
 	const skip = (seconds: number) => {
@@ -1503,7 +1684,7 @@ export const usePlayerStore = defineStore("player", () => {
 		seek(Math.max(0, newTime));
 	};
 
-	const reloadCurrentAudio = (automatic: boolean) => {
+	const reloadCurrentAudio = async (automatic: boolean) => {
 		if (!currentSong.value) return;
 		if (!automatic) resetAudioRecovery();
 		const player = ensureAudio();
@@ -1511,7 +1692,18 @@ export const usePlayerStore = defineStore("player", () => {
 		playbackError.value = "";
 		isLoading.value = true;
 		player.pause();
-		player.src = resolvePlaybackAudioUrl(currentSong.value.audio_url);
+		let targetSrc = resolvePlaybackAudioUrl(currentSong.value.audio_url);
+		const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+		if (isCurrentAudioCached.value || isOffline) {
+			const blobUrl = await getCachedMediaObjectURL(currentSong.value.audio_url);
+			if (blobUrl) {
+				releaseCachedAudioObjectUrl();
+				cachedAudioObjectUrl = blobUrl;
+				targetSrc = blobUrl;
+				isCurrentAudioCached.value = true;
+			}
+		}
+		player.src = targetSrc;
 		player.playbackRate = playbackRate.value;
 		player.load();
 		if (resumePosition > 0) {
@@ -1532,6 +1724,50 @@ export const usePlayerStore = defineStore("player", () => {
 	// Deliberately no parameters: Vue @click may pass MouseEvent, which must
 	// never turn a manual retry into an automatic recovery attempt.
 	const retryPlayback = () => reloadCurrentAudio(false);
+
+	async function checkCurrentSongAudioCached(generation?: number) {
+		const song = currentSong.value;
+		if (!song || !song.audio_url) {
+			isCurrentAudioCached.value = false;
+			return false;
+		}
+		const url = song.audio_url;
+		const cached = await isMediaCached(url);
+		if (generation !== undefined && generation !== playGeneration) return cached;
+		isCurrentAudioCached.value = cached;
+		return cached;
+	}
+
+	async function cacheCurrentAudio(): Promise<boolean> {
+		const song = currentSong.value;
+		if (!song || !song.audio_url || isAudioCaching.value) return false;
+		isAudioCaching.value = true;
+		audioCacheError.value = "";
+		try {
+			const success = await cacheMediaForOffline(song.audio_url);
+			if (success) {
+				isCurrentAudioCached.value = true;
+				return true;
+			} else {
+				audioCacheError.value = "当前音源无法保存离线副本";
+				return false;
+			}
+		} catch (error) {
+			audioCacheError.value = error instanceof Error ? error.message : "离线保存失败";
+			return false;
+		} finally {
+			isAudioCaching.value = false;
+		}
+	}
+
+	async function removeCurrentAudio(): Promise<boolean> {
+		const song = currentSong.value;
+		if (!song || !song.audio_url) return false;
+		await removeCachedMedia(song.audio_url);
+		isCurrentAudioCached.value = false;
+		releaseCachedAudioObjectUrl();
+		return true;
+	}
 
 	const toggleLyrics = () => {
 		showLyrics.value = !showLyrics.value;
@@ -1565,6 +1801,9 @@ export const usePlayerStore = defineStore("player", () => {
 		bufferedTime,
 		duration,
 		isLoading,
+		isCurrentAudioCached,
+		isAudioCaching,
+		audioCacheError,
 		playbackError,
 		audioRecoveryNotice,
 		songLibraryLoading,
@@ -1604,6 +1843,9 @@ export const usePlayerStore = defineStore("player", () => {
 		seek,
 		skip,
 		retryPlayback,
+		cacheCurrentAudio,
+		removeCurrentAudio,
+		checkCurrentSongAudioCached,
 		showLyrics,
 		lyricsCloseRequest,
 		toggleLyrics,
@@ -1616,6 +1858,7 @@ export const usePlayerStore = defineStore("player", () => {
 		togglePinned,
 		savePlaybackState,
 		restorePlaybackState,
+		resetPlaybackForSession,
 	};
 });
 

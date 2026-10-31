@@ -139,4 +139,27 @@ describe('AudioPlayerFeatureStrip', () => {
     await volumeComp.vm.$emit('toggle-mute')
     expect(wrapper.emitted('toggle-mute')).toHaveLength(1)
   })
+
+  it('renders offline cache button and emits toggle-offline-cache', async () => {
+    const wrapper = mount(AudioPlayerFeatureStrip, {
+      props: {
+        ...defaultProps,
+        currentSong: { id: 123, audio_url: 'https://example.com/audio.mp3' },
+        isCached: false,
+        isCaching: false,
+      },
+    })
+
+    const offlineBtn = wrapper.find('.player-offline-btn')
+    expect(offlineBtn.exists()).toBe(true)
+    expect(offlineBtn.attributes('aria-label')).toBe('保存离线副本')
+
+    await offlineBtn.trigger('click')
+    expect(wrapper.emitted('toggle-offline-cache')).toHaveLength(1)
+
+    // When cached
+    await wrapper.setProps({ isCached: true })
+    expect(wrapper.find('.player-offline-btn').classes()).toContain('is-cached')
+    expect(wrapper.find('.player-offline-btn').attributes('aria-label')).toBe('移除离线副本')
+  })
 })

@@ -22,7 +22,7 @@ import MusicSongLyricsEditorDrawer from '@/components/music/MusicSongLyricsEdito
 import { primaryAlbumRole } from '@/utils/musicAlbumCredits'
 import { parsePartialDateParts, serializePartialDate } from '@/components/music/birthDateMask'
 import { musicCreationProgress } from '@/utils/musicCreationProgress'
-import { normalizeImportedTrackTitle } from '@/utils/musicImportPreview'
+import { normalizeImportedTrackTitle, parseAudioTrackTitleAsync } from '@/utils/musicImportPreview'
 import { musicTrackLyricsLabel } from '@/utils/musicTrackLyrics'
 import type { MusicCreationTrackDraft } from './musicCreationTypes'
 
@@ -183,13 +183,8 @@ function titleFromAudioFile(file: File): string {
 }
 
 async function readTrackTitle(file: File): Promise<string> {
-  try {
-    const { parseBlob } = await import('music-metadata')
-    const metadata = (await parseBlob(file)).common
-    return normalizeImportedTrackTitle(metadata.title?.trim() || titleFromAudioFile(file), metadata.artist || albumDetailsDraft.value?.contributors.find(item => item.roles.some(role => role.role === 'primary'))?.name || '')
-  } catch {
-    return titleFromAudioFile(file)
-  }
+  const primaryArtist = albumDetailsDraft.value?.contributors.find(item => item.roles.some(role => role.role === 'primary'))?.name || ''
+  return parseAudioTrackTitleAsync(file, file.name, primaryArtist)
 }
 
 async function uploadNewTrack(file: File, trackId: string) {

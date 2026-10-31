@@ -212,7 +212,7 @@ function renderEmbedCard(
   if (kind === "music") {
     const musicKind = embed.kind === "song" ? "song" : "album";
     const image = embed.imageUrl
-      ? `<img class="atoman-post-embed__image" src="${escapeHtml(embed.imageUrl)}" alt="" loading="lazy">`
+      ? `<img class="atoman-post-embed__image" src="${escapeHtml(embed.imageUrl)}" alt="" loading="lazy" decoding="async">`
       : `<div class="atoman-post-embed__image atoman-post-embed__image--empty" aria-hidden="true">♪</div>`;
     const playButton = interactiveMedia && !missing && embed.playbackSongs?.length
       ? `  <button class="atoman-post-embed__play" type="button" data-atoman-embed-play="music" data-atoman-embed-id="${escapeHtml(embed.id)}" aria-label="播放 ${title}">播放</button>`
@@ -248,7 +248,7 @@ function renderEmbedCard(
       : embed.videoSrc
         ? `<video class="atoman-post-embed__player" controls preload="metadata" playsinline src="${escapeHtml(embed.videoSrc)}"${embed.posterUrl ? ` poster="${escapeHtml(embed.posterUrl)}"` : ""}></video>`
         : embed.posterUrl
-          ? `<img class="atoman-post-embed__player atoman-post-embed__player--poster" src="${escapeHtml(embed.posterUrl)}" alt="" loading="lazy">`
+          ? `<img class="atoman-post-embed__player atoman-post-embed__player--poster" src="${escapeHtml(embed.posterUrl)}" alt="" loading="lazy" decoding="async">`
           : `<div class="atoman-post-embed__player atoman-post-embed__player--empty">视频暂不可播放</div>`);
     return [
       `<div class="atoman-post-embed atoman-post-embed--video${missing ? " atoman-post-embed--missing" : ""}">`,

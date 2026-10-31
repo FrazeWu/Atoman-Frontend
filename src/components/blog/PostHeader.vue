@@ -2,7 +2,14 @@
   <div class="post-header">
     <!-- Cover image -->
     <div v-if="post.cover_url" class="post-header__cover-wrap">
-      <img :src="post.cover_url" :alt="post.title" class="post-header__cover" />
+      <img
+        :src="optimizedCoverUrl"
+        :alt="post.title"
+        class="post-header__cover"
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+      />
     </div>
 
     <div :class="isAcademic ? 'a-page' : 'a-page-md'" class="post-header__body">
@@ -84,6 +91,7 @@ import { BookOpen, PanelRight } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import PLink from '@/components/ui/PLink.vue'
 import { userUrl } from '@/composables/useSubdomainNav'
+import { resolveMediaImageURL } from '@/utils/mediaUrl'
 import type { Post } from '@/types'
 
 const props = defineProps<{
@@ -91,6 +99,11 @@ const props = defineProps<{
   isOwner?: boolean
   isAcademic?: boolean
 }>()
+
+const optimizedCoverUrl = computed(() => {
+  if (!props.post.cover_url) return ''
+  return resolveMediaImageURL(props.post.cover_url, { width: 1200 })
+})
 
 defineEmits<{
   toggleAcademic: [isAcademic: boolean]

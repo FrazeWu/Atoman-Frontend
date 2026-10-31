@@ -30,18 +30,28 @@
       <button
         type="button"
         class="main-play-btn"
-        :class="{ 'has-error': hasError }"
-        :aria-label="hasError ? '重试播放' : (isPlaying ? '暂停' : '播放')"
-        :title="hasError ? '音频加载失败，点击重试' : (isPlaying ? '暂停' : '播放')"
+        :class="{ 'has-error': hasError, 'is-loading': isLoading }"
+        :aria-label="hasError ? '重试播放' : (isLoading ? '正在加载' : (isPlaying ? '暂停' : '播放'))"
+        :title="hasError ? '音频加载失败，点击重试' : (isLoading ? '正在加载…' : (isPlaying ? '暂停' : '播放'))"
         :data-hint="hasError ? '重试' : (isPlaying ? '暂停 (Space)' : '播放 (Space)')"
         @click="hasError ? $emit('retry-playback') : $emit('toggle-play')"
       >
-        <PIcon
-          :name="hasError ? 'refresh' : (isPlaying ? 'player-pause' : 'player-play')"
-          size="sm"
-          class="play-icon"
-          aria-hidden="true"
-        />
+        <span class="play-icon-stage" aria-hidden="true">
+          <Transition name="player-icon-swap" mode="out-in">
+            <span v-if="hasError" key="error" class="play-icon-glyph">
+              <PIcon name="refresh" size="sm" class="play-icon" />
+            </span>
+            <span v-else-if="isLoading" key="loading" class="play-icon-glyph play-icon-glyph--loading">
+              <span class="player-unified-spinner" />
+            </span>
+            <span v-else-if="isPlaying" key="pause" class="play-icon-glyph">
+              <PIcon name="player-pause" size="sm" class="play-icon" />
+            </span>
+            <span v-else key="play" class="play-icon-glyph play-icon-glyph--play">
+              <PIcon name="player-play" size="sm" class="play-icon" />
+            </span>
+          </Transition>
+        </span>
         <span class="sr-only">{{ hasError ? '重试' : (isPlaying ? '暂停' : '播放') }}</span>
       </button>
 
@@ -112,6 +122,7 @@ import PIcon from '@/components/ui/PIcon.vue'
 
 interface Props {
   isPlaying: boolean
+  isLoading?: boolean
   playbackError?: unknown
   isPodcast?: boolean
   playbackRate?: number
@@ -119,6 +130,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  isLoading: false,
   isPodcast: false,
   playbackRate: 1,
   playbackMode: 'loop',
@@ -261,6 +273,68 @@ defineEmits<{
 
 .main-play-btn:active {
   transform: scale(0.96);
+}
+
+/* 固定尺寸与网格中心约束 */
+.play-icon-stage {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  position: relative;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.play-icon-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  transform-origin: center center;
+}
+
+.play-icon-glyph--play {
+  transform: translateX(0.5px);
+}
+
+/* Cupertino Micro-Transition */
+.player-icon-swap-enter-active,
+.player-icon-swap-leave-active {
+  transition:
+    opacity 120ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.player-icon-swap-enter-from,
+.player-icon-swap-leave-to {
+  opacity: 0;
+  transform: scale(0.82);
+}
+
+/* 统一 Token 化 Spinner */
+.player-unified-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: player-spin-subtle 0.75s linear infinite;
+}
+
+@keyframes player-spin-subtle {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-icon-swap-enter-active,
+  .player-icon-swap-leave-active {
+    transition: opacity 0.05s linear !important;
+    transform: none !important;
+  }
 }
 
 .sr-only {

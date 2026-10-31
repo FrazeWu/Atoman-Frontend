@@ -336,14 +336,23 @@ function syncMobileViewport() {
   if (!isMobileViewport.value) mobileAnnotationOpen.value = false
 }
 
+function handleWindowKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Escape' || event.defaultPrevented) return
+  const activeEl = document.activeElement
+  if (activeEl instanceof HTMLInputElement || activeEl instanceof HTMLTextAreaElement) return
+  requestClose()
+}
+
 onMounted(() => {
   mobileViewportQuery = window.matchMedia?.('(max-width: 900px)') ?? null
   syncMobileViewport()
   mobileViewportQuery?.addEventListener('change', syncMobileViewport)
+  window.addEventListener('keydown', handleWindowKeydown)
 })
 
 onBeforeUnmount(() => {
   mobileViewportQuery?.removeEventListener('change', syncMobileViewport)
+  window.removeEventListener('keydown', handleWindowKeydown)
 })
 
 const isAuthenticated = computed(() => Boolean(authStore.isAuthenticated))

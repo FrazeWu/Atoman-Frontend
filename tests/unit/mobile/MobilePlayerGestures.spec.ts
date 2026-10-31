@@ -267,4 +267,178 @@ describe('MobilePlayerView Gestures (Pull-to-Dismiss & Swipe-to-Skip)', () => {
     wrapper.unmount()
   })
 
+  it('applies non-linear rubber-banding dampening beyond threshold (>72px)', async () => {
+    const wrapper = createWrapper()
+    const header = wrapper.find('.mobile-player-view__header')
+
+    await header.trigger('touchstart', {
+      touches: [{ clientX: 200, clientY: 100 }],
+    })
+
+    // Pull down deltaY = 160px (> 72px)
+    window.dispatchEvent(
+      new TouchEvent('touchmove', {
+        touches: [{ clientX: 200, clientY: 260 } as any],
+        bubbles: true,
+        cancelable: true,
+      })
+    )
+    await wrapper.vm.$nextTick()
+
+    const containerStyle = wrapper.find('.mobile-player-view').attributes('style') || ''
+    // Rubber-band formula: 72 + round((88 * 180 / 268) * 0.75) = 72 + 44 = 116px
+    expect(containerStyle).toContain('translateY(116px)')
+    wrapper.unmount()
+  })
+
+  it('prevents accidental swipe-to-skip when interacting inside lyrics scroll view', async () => {
+    const wrapper = createWrapper()
+    const player = usePlayerStore()
+    player.currentSong = {
+      ...player.currentSong!,
+      lyrics: '[00:01.00]Line 1\n[00:03.00]Line 2',
+    }
+    await wrapper.vm.$nextTick()
+
+    // Switch to lyrics tab
+    const cover = wrapper.find('.mobile-player-view__cover-wrap')
+    await cover.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const lyricsWrap = wrapper.find('.mobile-player-view__lyrics-wrap')
+    expect(lyricsWrap.exists()).toBe(true)
+
+    const nextSpy = vi.spyOn(player, 'playNext').mockImplementation(() => {})
+
+    // Swipe horizontally inside lyrics area
+    await lyricsWrap.trigger('touchstart', {
+      touches: [{ clientX: 250, clientY: 200 }],
+    })
+
+    window.dispatchEvent(
+      new TouchEvent('touchmove', {
+        touches: [{ clientX: 160, clientY: 205 } as any],
+        bubbles: true,
+      })
+    )
+    await wrapper.vm.$nextTick()
+
+    window.dispatchEvent(
+      new TouchEvent('touchend', {
+        changedTouches: [{ clientX: 160, clientY: 205 } as any],
+        bubbles: true,
+      })
+    )
+    await wrapper.vm.$nextTick()
+
+    // Directional lock / scroll conflict protection should prevent track skipping
+    expect(nextSpy).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('allows pulling down on the cover wrap button without being blocked as an interactive control', async () => {
+    const wrapper = createWrapper()
+    const cover = wrapper.find('.mobile-player-view__cover-wrap')
+    expect(cover.exists()).toBe(true)
+
+    // Touch start directly on cover button
+    await cover.trigger('touchstart', {
+      touches: [{ clientX: 200, clientY: 100 }],
+    })
+
+    // Touch move to deltaY = 60
+    window.dispatchEvent(
+      new TouchEvent('touchmove', {
+        touches: [{ clientX: 200, clientY: 160 } as any],
+        bubbles: true,
+        cancelable: true,
+      })
+    )
+    await wrapper.vm.$nextTick()
+
+    const containerStyle = wrapper.find('.mobile-player-view').attributes('style') || ''
+    expect(containerStyle).toContain('translateY(60px)')
+    wrapper.unmount()
+  })
+
+  it('assigns proximity gradient classes (is-active, is-near, is-far) according to active lyric distance', async () => {
+    const wrapper = createWrapper()
+    const player = usePlayerStore()
+    player.currentSong = {
+      ...player.currentSong!,
+      lyrics: '[00:02.00]Line 0\n[00:05.00]Line 1\n[00:10.00]Line 2\n[00:15.00]Line 3\n[00:20.00]Line 4',
+    }
+    await wrapper.vm.$nextTick()
+
+    // Switch to lyrics tab
+    const cover = wrapper.find('.mobile-player-view__cover-wrap')
+    await cover.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    // Advance time to Line 2 (10s) -> activeLyricIndex = 2
+    player.currentTime = 11
+    await wrapper.vm.$nextTick()
+
+    const lines = wrapper.findAll('.mobile-player-view__lyric-line')
+    expect(lines).toHaveLength(5)
+
+    // Distance 0 (Line 2): is-active
+    expect(lines[2]!.classes()).toContain('is-active')
+    expect(lines[2]!.classes()).not.toContain('is-near')
+    expect(lines[2]!.classes()).not.toContain('is-far')
+
+    // Distance 1 (Line 1 and Line 3): is-near
+    expect(lines[1]!.classes()).toContain('is-near')
+    expect(lines[3]!.classes()).toContain('is-near')
+    expect(lines[1]!.classes()).not.toContain('is-active')
+    expect(lines[3]!.classes()).not.toContain('is-active')
+
+    // Distance >= 2 (Line 0 and Line 4): is-far
+    expect(lines[0]!.classes()).toContain('is-far')
+    expect(lines[4]!.classes()).toContain('is-far')
+    expect(lines[0]!.classes()).not.toContain('is-near')
+    expect(lines[4]!.classes()).not.toContain('is-near')
+
+    wrapper.unmount()
+  })
+
+  it('locks auto scroll when user manually touches lyrics view and recovers after idle timeout', async () => {
+    const wrapper = createWrapper()
+    const player = usePlayerStore()
+    player.currentSong = {
+      ...player.currentSong!,
+      lyrics: '[00:05.00]Line 1\n[00:10.00]Line 2\n[00:15.00]Line 3',
+    }
+    await wrapper.vm.$nextTick()
+
+    const cover = wrapper.find('.mobile-player-view__cover-wrap')
+    await cover.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const lyricsWrap = wrapper.find('.mobile-player-view__lyrics-wrap')
+    const scrollToSpy = vi.fn()
+    lyricsWrap.element.scrollTo = scrollToSpy
+
+    // Trigger manual interaction
+    await lyricsWrap.trigger('touchstart')
+    await wrapper.vm.$nextTick()
+
+    // Advance player time to Line 2 while locked
+    player.currentTime = 11
+    await wrapper.vm.$nextTick()
+
+    // In locked state, automatic scroll request is guarded from hijacking user focus
+    expect(scrollToSpy).not.toHaveBeenCalled()
+
+    // Resume button appears
+    const resumeBtn = wrapper.find('[data-testid="lyrics-resume-scroll-btn"]')
+    expect(resumeBtn.exists()).toBe(true)
+
+    // Clicking resume button immediately restores auto-centering
+    await resumeBtn.trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(scrollToSpy).toHaveBeenCalled()
+
+    wrapper.unmount()
+  })
 })

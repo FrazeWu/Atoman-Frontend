@@ -16,6 +16,7 @@ vi.mock('@/api/musicV1', () => ({
   getMusicPlaylist: vi.fn(),
   listMusicSongs: vi.fn(),
   listMusicPlaylistSongs: vi.fn(),
+  listMusicPlaylists: vi.fn().mockResolvedValue({ data: { playlists: [] } }),
 }))
 
 const song = (id: string, extra: Partial<Song> = {}): Song => ({
@@ -31,6 +32,7 @@ let pinia: ReturnType<typeof createPinia>
 
 beforeEach(async () => {
   vi.resetAllMocks()
+  vi.mocked(api.listMusicPlaylists).mockResolvedValue({ data: [] } as never)
   pinia = createPinia()
   setActivePinia(pinia)
   router = createRouter({

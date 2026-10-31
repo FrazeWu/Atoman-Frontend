@@ -6,6 +6,7 @@
       :src="imageSrc"
       :alt="title"
       :loading="eager ? 'eager' : 'lazy'"
+      :fetchpriority="eager ? 'high' : 'auto'"
       decoding="async"
       @load="loaded = true"
       @error="onError"

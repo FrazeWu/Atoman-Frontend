@@ -219,7 +219,13 @@ async function submitEdit(input: CreateCommentInput) {
 </script>
 
 <style scoped>
-.comment-thread { display: grid; min-width: 0; gap: 0.4rem; }
+.comment-thread {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 100px;
+  display: grid;
+  min-width: 0;
+  gap: 0.4rem;
+}
 .comment-thread__replies { display: grid; gap: 0; margin-left: clamp(0.5rem, 2vw, 1rem); padding-left: 0.65rem; border-left: 2px solid var(--a-color-border-soft); }
 .comment-thread__expand { display: inline-flex; align-items: center; justify-content: flex-start; gap: 0.4rem; width: fit-content; min-height: 2.25rem; padding: 0 0.55rem; border: 0; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-primary); cursor: pointer; font: inherit; font-size: var(--a-text-sm); }
 .comment-thread__expand:hover:not(:disabled) { background: var(--a-color-surface-muted); }

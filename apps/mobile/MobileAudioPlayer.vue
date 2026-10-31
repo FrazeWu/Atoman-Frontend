@@ -5,11 +5,6 @@
     :style="miniPlayerStyle"
     aria-label="正在播放"
   >
-    <!-- 2px Top Progress Line -->
-    <div class="mobile-mini-player__progress" aria-hidden="true">
-      <span :style="{ width: `${progressRatio}%` }" />
-    </div>
-
     <!-- Track Info (Click opens full-screen player, swipes expand or switch tracks) -->
     <button
       type="button"
@@ -34,40 +29,47 @@
       </span>
     </button>
 
-    <!-- Controls: Previous, Play/Pause, Next -->
+    <!-- Spotify-style Controls: Favorite Heart & Play/Pause -->
     <div class="mobile-mini-player__controls">
       <button
         type="button"
-        class="mobile-mini-player__action"
-        aria-label="上一首"
-        title="上一首"
-        @click="player.playPrevious()"
+        class="mobile-mini-player__action mobile-mini-player__action--favorite"
+        :class="{ 'is-favorited': isCurrentFavorite }"
+        data-testid="mini-player-favorite-btn"
+        :aria-label="isCurrentFavorite ? '已收藏' : '收藏'"
+        :title="isCurrentFavorite ? '已收藏' : '收藏'"
+        @click.stop="handleToggleFavorite"
       >
-        <MIcon name="player-prev" size="sm" />
+        <MIcon :name="isCurrentFavorite ? 'heart-filled' : 'heart'" size="sm" />
       </button>
 
       <button
         type="button"
-        class="mobile-mini-player__action mobile-mini-player__action--primary"
+        class="mobile-mini-player__action mobile-mini-player__action--play"
         data-testid="player-play-btn"
         :aria-label="player.isPlaying ? '暂停' : '播放'"
         :title="player.isPlaying ? '暂停' : '播放'"
-        @click="player.togglePlay()"
+        @click.stop="player.togglePlay()"
       >
-        <span v-if="player.isLoading" class="mobile-mini-player__spinner" aria-hidden="true" />
-        <MIcon v-else-if="player.isPlaying" name="player-pause" size="sm" />
-        <MIcon v-else name="player-play" size="sm" />
+        <span class="mobile-play-icon-stage" aria-hidden="true">
+          <Transition name="player-icon-swap" mode="out-in">
+            <span v-if="player.isLoading" key="loading" class="play-icon-glyph play-icon-glyph--loading">
+              <span class="mobile-mini-player__spinner" />
+            </span>
+            <span v-else-if="player.isPlaying" key="pause" class="play-icon-glyph">
+              <MIcon name="player-pause" size="sm" />
+            </span>
+            <span v-else key="play" class="play-icon-glyph play-icon-glyph--play">
+              <MIcon name="player-play" size="sm" />
+            </span>
+          </Transition>
+        </span>
       </button>
+    </div>
 
-      <button
-        type="button"
-        class="mobile-mini-player__action"
-        aria-label="下一首"
-        title="下一首"
-        @click="player.playNext()"
-      >
-        <MIcon name="player-next" size="sm" />
-      </button>
+    <!-- 2px Bottom Progress Line (Flush with capsule bottom) -->
+    <div class="mobile-mini-player__progress" aria-hidden="true">
+      <span :style="{ width: `${progressRatio}%` }" />
     </div>
   </section>
 </template>
@@ -76,11 +78,29 @@
 import { computed, ref, type CSSProperties } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
+import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 
 const player = usePlayerStore()
 const router = useRouter()
 const route = useRoute()
+
+const { favoriteSongIds, toggleFavoriteSong } = useMusicFavoritePlaylist()
+
+const isCurrentFavorite = computed(() => {
+  const songId = player.currentSong?.id
+  return !!songId && favoriteSongIds.value.has(String(songId))
+})
+
+async function handleToggleFavorite() {
+  const songId = player.currentSong?.id
+  if (!songId) return
+  try {
+    await toggleFavoriteSong(String(songId))
+  } catch (err) {
+    console.error('Toggle favorite failed:', err)
+  }
+}
 
 const isDragging = ref(false)
 const dragOffsetY = ref(0)
@@ -102,79 +122,84 @@ const miniPlayerStyle = computed<CSSProperties>(() => {
   return {}
 })
 
-const artistText = computed(() => {
-  const song = player.currentSong
-  if (!song) return '未知艺术家'
-  return song.artist || '未知艺术家'
-})
-
-const coverFallback = computed(() => {
-  const text = player.currentSong?.album || player.currentSong?.artist || player.currentSong?.title || 'P'
-  return text.trim().charAt(0) || 'P'
-})
-
 const progressRatio = computed(() => {
-  if (!player.duration) return 0
-  return Math.min(100, Math.max(0, (player.currentTime / player.duration) * 100))
+  const duration = player.duration
+  if (!duration || Number.isNaN(duration)) return 0
+  const ratio = (player.currentTime / duration) * 100
+  return Math.min(100, Math.max(0, ratio))
+})
+
+const artistText = computed(() => {
+  const current = player.currentSong
+  if (!current) return '轻触开始探索'
+  if (current.artist && current.album) {
+    return `${current.artist} · ${current.album}`
+  }
+  return current.artist || current.album || '未知艺术家'
 })
 
 function openPlayer() {
-  if (route.path !== '/music/player') {
-    player.savePlaybackState()
-    void router.push('/music/player')
+  if (router && typeof router.push === 'function') {
+    void router.push('/music/player').catch(() => {})
   }
 }
 
-let touchStartX = 0
-let touchStartY = 0
-let touchCurrentX = 0
-let touchCurrentY = 0
+// Micro-displacement & Swipe to Expand Gestures
+let startTouchX = 0
+let startTouchY = 0
+let isTrackingY = false
 let isSwiped = false
 
 function handleTouchStart(e: TouchEvent) {
+  if (!e.touches || e.touches.length === 0) return
   const touch = e.touches[0]
-  if (!touch) return
-  touchStartX = touch.clientX
-  touchStartY = touch.clientY
-  touchCurrentX = touchStartX
-  touchCurrentY = touchStartY
+  startTouchX = touch.clientX
+  startTouchY = touch.clientY
+  isTrackingY = false
   isSwiped = false
-  isDragging.value = false
-  dragOffsetY.value = 0
 }
 
 function handleTouchMove(e: TouchEvent) {
+  if (!e.touches || e.touches.length === 0) return
   const touch = e.touches[0]
-  if (!touch) return
-  touchCurrentX = touch.clientX
-  touchCurrentY = touch.clientY
+  const deltaX = touch.clientX - startTouchX
+  const deltaY = touch.clientY - startTouchY
 
-  const deltaX = touchCurrentX - touchStartX
-  const deltaY = touchCurrentY - touchStartY
-
-  // Upward drag micro-displacement
-  if (deltaY < -4 && Math.abs(deltaY) > Math.abs(deltaX)) {
+  if (!isTrackingY && Math.abs(deltaY) > Math.abs(deltaX) && deltaY < 0) {
+    isTrackingY = true
     isDragging.value = true
     hasInteracted.value = true
-    dragOffsetY.value = Math.max(-16, deltaY * 0.35)
+  }
+
+  if (isTrackingY) {
+    const upwardDist = Math.max(0, -deltaY)
+    const dampedY = -Math.pow(upwardDist, 0.82)
+    dragOffsetY.value = dampedY
   }
 }
 
 function handleTouchEnd(e: TouchEvent) {
-  const touch = e.changedTouches?.[0] || e.touches?.[0]
-  if (touch) {
-    touchCurrentX = touch.clientX
-    touchCurrentY = touch.clientY
+  if (isTrackingY) {
+    isTrackingY = false
+    isDragging.value = false
+    const upwardMoved = -dragOffsetY.value
+    dragOffsetY.value = 0
+
+    if (upwardMoved > 40) {
+      isSwiped = true
+      openPlayer()
+      return
+    }
   }
-  const deltaX = touchCurrentX - touchStartX
-  const deltaY = touchCurrentY - touchStartY
+
+  if (!e.changedTouches || e.changedTouches.length === 0) return
+  const touch = e.changedTouches[0]
+  const deltaX = touch.clientX - startTouchX
+  const deltaY = touch.clientY - startTouchY
   const absX = Math.abs(deltaX)
   const absY = Math.abs(deltaY)
 
-  isDragging.value = false
-  dragOffsetY.value = 0
-
-  // Swipe up to expand to full player
+  // Swipe up to expand player
   if (deltaY < -40 && absY > 1.2 * absX) {
     isSwiped = true
     openPlayer()
@@ -208,139 +233,166 @@ function handleTrackClick() {
 <style scoped>
 .mobile-mini-player {
   position: fixed;
-  right: 0;
-  bottom: var(--mobile-app-player-bottom, calc(56px + env(safe-area-inset-bottom, 0px)));
-  left: 0;
+  right: 8px;
+  bottom: calc(var(--mobile-app-player-bottom, calc(56px + env(safe-area-inset-bottom, 0px))) + 6px);
+  left: 8px;
   z-index: var(--a-z-player, 720);
-  transition: bottom 0.2s ease;
+  transition: bottom 0.2s ease, transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  min-height: var(--mobile-app-player-height, 56px);
+  gap: 8px;
+  height: 52px;
+  min-height: 0 !important;
   box-sizing: border-box;
-  padding: 0.25rem 0.875rem;
-  border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
-  background: var(--a-color-surface, #ffffff);
-  box-shadow: none !important;
+  padding: 0 8px 0 8px;
+  border: none !important;
+  border-radius: 8px;
+  background-color: #212124;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.24);
+  overflow: hidden;
+  user-select: none;
+}
+
+.mobile-app-shell .mobile-app-dock > .mobile-mini-player {
+  position: relative;
+  inset: auto;
+  margin: 0 8px 6px 8px;
+  width: calc(100% - 16px);
+  max-width: 464px;
+  pointer-events: auto;
+}
+
+.mobile-app-dock--without-nav > .mobile-mini-player {
+  margin-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
 }
 
 .mobile-mini-player__progress {
   position: absolute;
-  top: 0;
+  bottom: 0;
   right: 0;
   left: 0;
   height: 2px;
-  background: var(--a-color-border-soft, #e2e8f0);
+  background-color: rgba(255, 255, 255, 0.16);
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .mobile-mini-player__progress span {
   display: block;
   height: 100%;
-  background: var(--a-color-primary, #0f172a);
+  background-color: #ffffff;
   transition: width 120ms linear;
 }
 
 .mobile-mini-player__track {
   display: flex;
   min-width: 0;
-  min-height: 44px;
+  height: 100%;
   flex: 1;
   align-items: center;
-  gap: 0.625rem;
+  gap: 10px;
   padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--a-color-text, #0f172a);
+  border: 0 !important;
+  background: transparent !important;
+  color: #ffffff;
   text-align: left;
   cursor: pointer;
+  user-select: none;
+  min-height: 0 !important;
 }
 
 .mobile-mini-player__cover {
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
   object-fit: cover;
-  border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: var(--a-radius-control, 4px);
+  border: none !important;
+  border-radius: 4px;
 }
 
 .mobile-mini-player__cover--fallback {
   display: grid;
   place-items: center;
-  background: var(--a-color-surface-muted, #f8fafc);
-  color: var(--a-color-muted, #64748b);
-  font-size: 1.125rem;
-  font-weight: 600;
+  background: rgba(255, 255, 255, 0.12);
+  color: #a1a1aa;
 }
 
 .mobile-mini-player__meta {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
-  gap: 0.125rem;
-}
-
-.mobile-mini-player__meta strong,
-.mobile-mini-player__meta span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1;
 }
 
 .mobile-mini-player__meta strong {
-  font-size: 0.875rem;
+  display: block;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--a-color-text, #0f172a);
+  line-height: 1.25;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .mobile-mini-player__meta span {
-  color: var(--a-color-muted, #64748b);
-  font-size: 0.75rem;
+  display: block;
+  font-size: 11.5px;
+  line-height: 1.2;
+  color: #a1a1aa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
 }
 
 .mobile-mini-player__controls {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 4px;
   flex-shrink: 0;
 }
 
 .mobile-mini-player__action {
   position: relative;
-  display: inline-grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
   padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--a-color-text, #0f172a);
+  border: none !important;
+  background: transparent !important;
+  color: #ffffff;
   cursor: pointer;
-  border-radius: var(--a-radius-control, 4px);
-  transition: background-color 0.1s ease;
+  border-radius: 50% !important;
+  transition: transform 0.1s ease, color 0.15s ease;
 }
 
 .mobile-mini-player__action:active {
-  background-color: var(--a-color-surface-muted, #f8fafc);
+  transform: scale(0.92);
 }
 
-.mobile-mini-player__action--primary {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--a-radius-control, 4px);
-  background: var(--a-color-text, #0f172a);
+.mobile-mini-player__action--favorite {
+  color: #a1a1aa;
+}
+
+.mobile-mini-player__action--favorite.is-favorited {
+  color: #1ed760;
+}
+
+.mobile-mini-player__action--play {
   color: #ffffff;
-}
-
-.mobile-mini-player__action--primary:active {
-  opacity: 0.9;
-  background: var(--a-color-text, #0f172a);
 }
 
 .mobile-mini-player__action:focus-visible,
 .mobile-mini-player__track:focus-visible {
-  outline: 2px solid var(--a-color-primary, #0f172a);
-  outline-offset: 2px;
+  outline: none;
 }
 
 .mobile-mini-player__spinner {
@@ -350,6 +402,50 @@ function handleTrackClick() {
   border-top-color: transparent;
   border-radius: 50%;
   animation: mobile-player-spin 0.8s linear infinite;
+}
+
+.mobile-play-icon-stage {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  position: relative;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.play-icon-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  transform-origin: center center;
+}
+
+.play-icon-glyph--play {
+  transform: translateX(0.5px);
+}
+
+.player-icon-swap-enter-active,
+.player-icon-swap-leave-active {
+  transition:
+    opacity 120ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.player-icon-swap-enter-from,
+.player-icon-swap-leave-to {
+  opacity: 0;
+  transform: scale(0.82);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-icon-swap-enter-active,
+  .player-icon-swap-leave-active {
+    transition: opacity 0.05s linear !important;
+    transform: none !important;
+  }
 }
 
 @keyframes mobile-player-spin {

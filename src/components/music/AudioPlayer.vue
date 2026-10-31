@@ -69,6 +69,7 @@
             <!-- Right: Controls -->
             <AudioPlayerControlsHub
               :is-playing="player.isPlaying"
+              :is-loading="player.isLoading"
               :playback-error="player.playbackError"
               :is-podcast="isPodcast"
               :playback-rate="player.playbackRate"

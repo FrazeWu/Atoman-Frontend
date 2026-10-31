@@ -188,4 +188,18 @@ describe('AudioPlayerControlsHub', () => {
     expect(wrapperRandom.find('.repeat-one-wrapper').exists()).toBe(false)
     expect(wrapperRandom.find('.player-mode-btn').exists()).toBe(true)
   })
+
+  it('renders loading spinner and sets loading state on main-play-btn', () => {
+    const wrapper = mount(AudioPlayerControlsHub, {
+      props: {
+        ...defaultProps,
+        isLoading: true,
+      },
+    })
+
+    const mainBtn = wrapper.find('.main-play-btn')
+    expect(mainBtn.classes()).toContain('is-loading')
+    expect(mainBtn.find('.player-unified-spinner').exists()).toBe(true)
+    expect(mainBtn.attributes('aria-label')).toBe('正在加载')
+  })
 })

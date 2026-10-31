@@ -266,13 +266,24 @@
           <button
             type="button"
             class="mobile-player-view__control mobile-player-view__control--primary"
+            :class="{ 'is-loading': player.isLoading }"
             :aria-label="player.isPlaying ? '暂停' : '播放'"
             :title="player.isPlaying ? '暂停' : '播放'"
             @click="player.togglePlay"
           >
-            <span v-if="player.isLoading" class="mobile-player-view__spinner" aria-hidden="true" />
-            <MIcon v-else-if="player.isPlaying" name="player-pause" size="md" />
-            <MIcon v-else name="player-play" size="md" />
+            <span class="mobile-play-icon-stage" aria-hidden="true">
+              <Transition name="player-icon-swap" mode="out-in">
+                <span v-if="player.isLoading" key="loading" class="play-icon-glyph play-icon-glyph--loading">
+                  <span class="mobile-player-view__spinner" />
+                </span>
+                <span v-else-if="player.isPlaying" key="pause" class="play-icon-glyph">
+                  <MIcon name="player-pause" size="md" />
+                </span>
+                <span v-else key="play" class="play-icon-glyph play-icon-glyph--play">
+                  <MIcon name="player-play" size="md" />
+                </span>
+              </Transition>
+            </span>
           </button>
 
           <button
@@ -1440,9 +1451,53 @@ onUnmounted(() => {
   width: 20px;
   height: 20px;
   border: 2px solid currentColor;
-  border-right-color: transparent;
+  border-top-color: transparent;
   border-radius: 50%;
-  animation: mobile-player-spin 0.9s linear infinite;
+  animation: mobile-player-spin 0.75s linear infinite;
+}
+
+.mobile-play-icon-stage {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  position: relative;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.play-icon-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  transform-origin: center center;
+}
+
+.play-icon-glyph--play {
+  transform: translateX(0.5px);
+}
+
+.player-icon-swap-enter-active,
+.player-icon-swap-leave-active {
+  transition:
+    opacity 120ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.player-icon-swap-enter-from,
+.player-icon-swap-leave-to {
+  opacity: 0;
+  transform: scale(0.82);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-icon-swap-enter-active,
+  .player-icon-swap-leave-active {
+    transition: opacity 0.05s linear !important;
+    transform: none !important;
+  }
 }
 
 @keyframes mobile-player-spin {
@@ -1571,7 +1626,7 @@ onUnmounted(() => {
 </style>
 
 <style scoped>
-.mobile-player-view__playlist-picker{position:absolute;left:12px;right:12px;bottom:12px;z-index:1;max-height:40vh;overflow:auto;background:var(--a-color-surface);border:1px solid var(--a-color-border-soft);border-radius:12px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.mobile-player-view__playlist-picker{position:absolute;left:12px;right:12px;bottom:12px;z-index:1;max-height:40vh;overflow:auto;background:var(--a-color-surface);border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-control,4px);padding:12px;box-shadow:none!important}
 .mobile-player-view__playlist-picker-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .mobile-player-view__playlist-picker button{min-height:44px;border:0;background:transparent;color:inherit}
 .mobile-player-view__playlist-option{display:block;width:100%;text-align:left;border-top:1px solid var(--a-color-border-soft)!important}

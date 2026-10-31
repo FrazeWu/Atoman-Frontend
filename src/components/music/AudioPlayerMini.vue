@@ -42,9 +42,11 @@
           :style="{ strokeDashoffset: String(100 - miniProgressPercent) }"
         />
       </svg>
-      <span v-if="!isPlaying" class="player-mini-play-overlay" aria-hidden="true">
-        <Play :size="22" fill="currentColor" />
-      </span>
+      <Transition name="mini-play-overlay">
+        <span v-if="!isPlaying" class="player-mini-play-overlay" aria-hidden="true">
+          <Play :size="22" fill="currentColor" />
+        </span>
+      </Transition>
     </button>
 
     <!-- Expand button (fixed at the far right, matching collapse tab position) -->
@@ -174,6 +176,16 @@ defineEmits<{
   color: #fff;
   background: rgba(19, 28, 46, 0.42);
   pointer-events: none;
+}
+
+.mini-play-overlay-enter-active,
+.mini-play-overlay-leave-active {
+  transition: opacity 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.mini-play-overlay-enter-from,
+.mini-play-overlay-leave-to {
+  opacity: 0;
 }
 
 .player-mini-expand {

@@ -725,7 +725,7 @@ describe('Mobile Independent Music Views & Player', () => {
       expect(togglePlaySpy).toHaveBeenCalled()
     })
 
-    it('uses MIcon for previous, play/pause, next controls', () => {
+    it('uses MIcon for favorite and play/pause controls', () => {
       const playerStore = usePlayerStore()
       playerStore.currentSong = {
         id: 's-42',
@@ -742,10 +742,9 @@ describe('Mobile Independent Music Views & Player', () => {
       const icons = wrapper.findAllComponents(MIcon)
       const iconNames = icons.map((icon) => icon.props('name'))
 
-      // Expect previous, play or player-play or pause, and next controls
-      expect(iconNames.some((name) => ['player-prev', 'previous', 'skip-back'].includes(name))).toBe(true)
+      // Expect favorite heart and play or player-play or pause controls
+      expect(iconNames.some((name) => ['heart', 'heart-filled'].includes(name))).toBe(true)
       expect(iconNames.some((name) => ['player-play', 'player-pause', 'play', 'pause'].includes(name))).toBe(true)
-      expect(iconNames.some((name) => ['player-next', 'next', 'skip-forward'].includes(name))).toBe(true)
     })
 
     it('swiping up on track card navigates to full player (/music/player)', async () => {

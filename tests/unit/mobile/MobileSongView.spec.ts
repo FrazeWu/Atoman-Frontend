@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   getMusicSongDetail: vi.fn(),
   loadFavoriteSongs: vi.fn(),
   toggleFavoriteSong: vi.fn(),
+  loadPlaylists: vi.fn().mockResolvedValue([{ id: 'pl-1', name: '我喜欢的音乐', kind: 'favorite' }]),
+  addSongToPlaylist: vi.fn().mockResolvedValue({}),
   playSong: vi.fn(),
   addToQueue: vi.fn(),
   openMusicEditor: vi.fn(),
@@ -35,8 +37,11 @@ vi.mock('@/composables/useLoginRedirect', () => ({
 vi.mock('@/composables/useMusicFavoritePlaylist', () => ({
   useMusicFavoritePlaylist: () => ({
     favoriteSongIds: { value: new Set<string>() },
+    playlists: { value: [{ id: 'pl-1', name: '我喜欢的音乐', kind: 'favorite' }] },
     loadFavoriteSongs: mocks.loadFavoriteSongs,
     toggleFavoriteSong: mocks.toggleFavoriteSong,
+    loadPlaylists: mocks.loadPlaylists,
+    addSongToPlaylist: mocks.addSongToPlaylist,
   }),
 }))
 
@@ -79,17 +84,19 @@ describe('MobileSongView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('夜行列车')
-    expect(wrapper.find('[aria-label="加入最爱"]').exists()).toBe(true)
+    expect(wrapper.find('[aria-label="加入歌单"]').exists()).toBe(true)
     expect(wrapper.find('[aria-label="加入播放队列"]').exists()).toBe(true)
     expect(wrapper.find('[aria-label="稍后播放"]').exists()).toBe(false)
     expect(wrapper.find('[aria-label="编辑歌曲"]').exists()).toBe(true)
 
     await wrapper.get('[aria-label="加入播放队列"]').trigger('click')
-    await wrapper.get('[aria-label="加入最爱"]').trigger('click')
+    await wrapper.get('[aria-label="加入歌单"]').trigger('click')
+    await flushPromises()
+    expect(mocks.loadPlaylists).toHaveBeenCalled()
+
     await wrapper.get('[aria-label="编辑歌曲"]').trigger('click')
 
     expect(mocks.addToQueue).toHaveBeenCalledWith(expect.objectContaining({ id: 'song-1' }))
-    expect(mocks.toggleFavoriteSong).toHaveBeenCalledWith('song-1')
     expect(mocks.openMusicEditor).toHaveBeenCalledWith({ entity: 'song', mode: 'edit', id: 'song-1' })
   })
 

@@ -103,4 +103,50 @@ describe('MobileAudioPlayer Gestures (Micro-displacement & Drag to Expand)', () 
     const rootStyle = wrapper.find('.mobile-mini-player').attributes('style') || ''
     expect(rootStyle).toContain('translateY(0px)')
   })
+
+  it('swiping left on mini player triggers player.playNext() and slide feedback', async () => {
+    const wrapper = createWrapper()
+    const playerStore = usePlayerStore()
+    const nextSpy = vi.spyOn(playerStore, 'playNext').mockImplementation(() => {})
+    const trackBtn = wrapper.find('.mobile-mini-player__track')
+
+    await trackBtn.trigger('touchstart', {
+      touches: [{ clientX: 200, clientY: 100 }],
+    })
+
+    await trackBtn.trigger('touchmove', {
+      touches: [{ clientX: 140, clientY: 102 }], // deltaX = -60, deltaY = 2
+    })
+
+    await trackBtn.trigger('touchend', {
+      changedTouches: [{ clientX: 140, clientY: 102 }],
+    })
+    await wrapper.vm.$nextTick()
+
+    expect(nextSpy).toHaveBeenCalled()
+    expect(wrapper.find('.mobile-mini-player__track').classes()).toContain('is-slide-next')
+  })
+
+  it('swiping right on mini player triggers player.playPrevious() and slide feedback', async () => {
+    const wrapper = createWrapper()
+    const playerStore = usePlayerStore()
+    const prevSpy = vi.spyOn(playerStore, 'playPrevious').mockImplementation(() => {})
+    const trackBtn = wrapper.find('.mobile-mini-player__track')
+
+    await trackBtn.trigger('touchstart', {
+      touches: [{ clientX: 100, clientY: 100 }],
+    })
+
+    await trackBtn.trigger('touchmove', {
+      touches: [{ clientX: 160, clientY: 102 }], // deltaX = +60, deltaY = 2
+    })
+
+    await trackBtn.trigger('touchend', {
+      changedTouches: [{ clientX: 160, clientY: 102 }],
+    })
+    await wrapper.vm.$nextTick()
+
+    expect(prevSpy).toHaveBeenCalled()
+    expect(wrapper.find('.mobile-mini-player__track').classes()).toContain('is-slide-prev')
+  })
 })

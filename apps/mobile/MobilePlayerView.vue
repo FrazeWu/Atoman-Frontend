@@ -43,6 +43,8 @@
           v-if="!showQueue && activeTab === 'cover'"
           type="button"
           class="mobile-player-view__cover-wrap"
+          :class="coverMotionClass"
+          :style="coverGestureStyle"
           aria-label="点击切换至歌词"
           title="点击切换至歌词"
           @click="toggleLyrics"
@@ -760,6 +762,45 @@ const isDragging = ref(false)
 const isDismissing = ref(false)
 const hasInteracted = ref(false)
 const dragOffsetY = ref(0)
+const coverDragX = ref(0)
+const coverSwipeDirection = ref<'next' | 'prev' | null>(null)
+let coverTransitionTimer: ReturnType<typeof setTimeout> | null = null
+
+const coverMotionClass = computed(() => {
+  if (coverSwipeDirection.value === 'next') return 'is-cover-entering-next'
+  if (coverSwipeDirection.value === 'prev') return 'is-cover-entering-prev'
+  return ''
+})
+
+function triggerCoverSwipeTransition(direction: 'next' | 'prev') {
+  coverSwipeDirection.value = direction
+  if (coverTransitionTimer) clearTimeout(coverTransitionTimer)
+  coverTransitionTimer = setTimeout(() => {
+    coverSwipeDirection.value = null
+    coverTransitionTimer = null
+  }, 260)
+}
+
+const coverGestureStyle = computed<CSSProperties>(() => {
+  if (coverSwipeDirection.value) {
+    return {}
+  }
+  if (coverDragX.value !== 0) {
+    const rot = (coverDragX.value / 300) * 8
+    const scale = Math.max(0.92, 1 - Math.abs(coverDragX.value) / 1200)
+    const op = Math.max(0.7, 1 - Math.abs(coverDragX.value) / 600)
+    return {
+      transform: `translateX(${coverDragX.value}px) rotate(${rot}deg) scale(${scale})`,
+      opacity: op,
+      transition: 'none',
+    }
+  }
+  return {
+    transform: 'translateX(0px) rotate(0deg) scale(1)',
+    transition: 'transform 260ms cubic-bezier(0.16, 1, 0.3, 1), opacity 260ms ease',
+  }
+})
+
 let startTouchX = 0
 let startTouchY = 0
 let currentTouchX = 0
@@ -865,8 +906,16 @@ function handleTouchMove(e: TouchEvent) {
         dragOffsetY.value = Math.round(PULL_THRESHOLD + rubberExtension)
       }
     }
-  } else if (isStageTouch && !isScrollableTarget && absX > 15 && absX > absY) {
+  } else if (isStageTouch && !isScrollableTarget && (touchDirection === 'horizontal' || (absX > 8 && absX > absY))) {
+    // 封面舞台水平滑动手势位移跟手与非线性阻尼
+    touchDirection = 'horizontal'
     suppressCoverClick = true
+    hasInteracted.value = true
+    if (e.cancelable) {
+      e.preventDefault()
+    }
+    const dampedX = (deltaX > 0 ? 1 : -1) * Math.pow(absX, 0.88)
+    coverDragX.value = Math.round(dampedX)
   }
 }
 
@@ -894,6 +943,9 @@ function handleTouchEnd(e: TouchEvent) {
 
   if (isHorizontalSwipe && absX > 35) {
     suppressCoverClick = true
+    const direction = deltaX < 0 ? 'next' : 'prev'
+    coverDragX.value = 0
+    triggerCoverSwipeTransition(direction)
     if (deltaX < -35) {
       player.playNext()
     } else if (deltaX > 35) {
@@ -903,6 +955,16 @@ function handleTouchEnd(e: TouchEvent) {
     dragOffsetY.value = 0
     touchDirection = 'none'
     return
+  }
+
+  // 若水平滑动未达阈值，则回弹复位
+  if (coverDragX.value !== 0) {
+    coverDragX.value = 0
+    suppressCoverClick = true
+    if (snapResetTimer) clearTimeout(snapResetTimer)
+    snapResetTimer = setTimeout(() => {
+      suppressCoverClick = false
+    }, 260)
   }
 
   if (!isDragging.value) {
@@ -1015,6 +1077,21 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+@keyframes mobile-player-slide-up-enter {
+  0% {
+    transform: translateY(100%) scale(0.94);
+    border-radius: 24px;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.25);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    border-radius: 0;
+    box-shadow: none;
+    opacity: 1;
+  }
+}
+
 .mobile-player-view {
   position: fixed;
   inset: 0 0 calc(56px + env(safe-area-inset-bottom, 0px));
@@ -1032,6 +1109,7 @@ onUnmounted(() => {
   overflow-y: auto;
   touch-action: pan-y;
   will-change: transform;
+  animation: mobile-player-slide-up-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .mobile-player-view.is-dragging {
@@ -1132,6 +1210,37 @@ onUnmounted(() => {
   align-items: center;
   border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+  will-change: transform, opacity;
+}
+
+.mobile-player-view__cover-wrap.is-cover-entering-next {
+  animation: cover-enter-from-right 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.mobile-player-view__cover-wrap.is-cover-entering-prev {
+  animation: cover-enter-from-left 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes cover-enter-from-right {
+  0% {
+    transform: translateX(48px) rotate(3deg) scale(0.92);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateX(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes cover-enter-from-left {
+  0% {
+    transform: translateX(-48px) rotate(-3deg) scale(0.92);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateX(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
 }
 
 .mobile-player-view__cover {
@@ -1837,6 +1946,22 @@ onUnmounted(() => {
   margin: 0;
 }
 
+.mobile-player-view__queue-wrap,
+.mobile-player-view__lyrics-wrap {
+  animation: stage-content-fade 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes stage-content-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .mobile-player-view__back-link {
   margin-top: 0.5rem;
   padding: 0.5rem 1rem;
@@ -1845,5 +1970,15 @@ onUnmounted(() => {
   text-decoration: none;
   border-radius: 6px;
   font-size: 0.875rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-player-view,
+  .mobile-player-view__cover-wrap.is-cover-entering-next,
+  .mobile-player-view__cover-wrap.is-cover-entering-prev,
+  .mobile-player-view__queue-wrap,
+  .mobile-player-view__lyrics-wrap {
+    animation: none !important;
+  }
 }
 </style>

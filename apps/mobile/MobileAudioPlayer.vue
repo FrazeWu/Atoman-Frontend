@@ -9,6 +9,7 @@
     <button
       type="button"
       class="mobile-mini-player__track"
+      :class="trackMotionClass"
       @click="handleTrackClick"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
@@ -110,6 +111,23 @@ const isDragging = ref(false)
 const dragOffsetY = ref(0)
 const dragOffsetX = ref(0)
 const hasInteracted = ref(false)
+const miniSwipeDirection = ref<'next' | 'prev' | null>(null)
+let miniTransitionTimer: ReturnType<typeof setTimeout> | null = null
+
+const trackMotionClass = computed(() => {
+  if (miniSwipeDirection.value === 'next') return 'is-slide-next'
+  if (miniSwipeDirection.value === 'prev') return 'is-slide-prev'
+  return ''
+})
+
+function triggerMiniSwipeFeedback(dir: 'next' | 'prev') {
+  miniSwipeDirection.value = dir
+  if (miniTransitionTimer) clearTimeout(miniTransitionTimer)
+  miniTransitionTimer = setTimeout(() => {
+    miniSwipeDirection.value = null
+    miniTransitionTimer = null
+  }, 240)
+}
 
 const miniPlayerStyle = computed<CSSProperties>(() => {
   if (isDragging.value) {
@@ -208,13 +226,18 @@ function handleTouchMove(e: TouchEvent) {
 }
 
 function handleTouchEnd(e: TouchEvent) {
+  const deltaX = (e.changedTouches?.[0]?.clientX ?? e.touches?.[0]?.clientX ?? startTouchX) - startTouchX
+  const deltaY = (e.changedTouches?.[0]?.clientY ?? e.touches?.[0]?.clientY ?? startTouchY) - startTouchY
+  const absX = Math.abs(deltaX)
+  const absY = Math.abs(deltaY)
+
   if (isTrackingY) {
     isTrackingY = false
     isDragging.value = false
     const upwardMoved = -dragOffsetY.value
     dragOffsetY.value = 0
 
-    if (upwardMoved > 40) {
+    if (upwardMoved > 40 || deltaY < -40) {
       isSwiped = true
       openPlayer()
       return
@@ -224,27 +247,23 @@ function handleTouchEnd(e: TouchEvent) {
   if (isTrackingX) {
     isTrackingX = false
     isDragging.value = false
-    const movedX = dragOffsetX.value
     dragOffsetX.value = 0
 
-    if (movedX < -35) {
+    if (deltaX < -35) {
       isSwiped = true
       player.playNext()
+      triggerMiniSwipeFeedback('next')
       return
     }
-    if (movedX > 35) {
+    if (deltaX > 35) {
       isSwiped = true
       player.playPrevious()
+      triggerMiniSwipeFeedback('prev')
       return
     }
   }
 
   if (!e.changedTouches || e.changedTouches.length === 0) return
-  const touch = e.changedTouches[0]
-  const deltaX = touch.clientX - startTouchX
-  const deltaY = touch.clientY - startTouchY
-  const absX = Math.abs(deltaX)
-  const absY = Math.abs(deltaY)
 
   // Swipe up to expand player
   if (deltaY < -40 && absY > 1.2 * absX) {
@@ -257,6 +276,7 @@ function handleTouchEnd(e: TouchEvent) {
   if (deltaX < -35 && absX > 1.2 * absY) {
     isSwiped = true
     player.playNext()
+    triggerMiniSwipeFeedback('next')
     return
   }
 
@@ -264,6 +284,7 @@ function handleTouchEnd(e: TouchEvent) {
   if (deltaX > 35 && absX > 1.2 * absY) {
     isSwiped = true
     player.playPrevious()
+    triggerMiniSwipeFeedback('prev')
     return
   }
 }
@@ -349,6 +370,37 @@ function handleTrackClick() {
   cursor: pointer;
   user-select: none;
   min-height: 0 !important;
+  will-change: transform, opacity;
+}
+
+.mobile-mini-player__track.is-slide-next {
+  animation: mini-track-slide-next 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.mobile-mini-player__track.is-slide-prev {
+  animation: mini-track-slide-prev 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes mini-track-slide-next {
+  0% {
+    transform: translateX(20px);
+    opacity: 0.35;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes mini-track-slide-prev {
+  0% {
+    transform: translateX(-20px);
+    opacity: 0.35;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 .mobile-mini-player__cover {
@@ -492,6 +544,10 @@ function handleTrackClick() {
   .player-icon-swap-leave-active {
     transition: opacity 0.05s linear !important;
     transform: none !important;
+  }
+  .mobile-mini-player__track.is-slide-next,
+  .mobile-mini-player__track.is-slide-prev {
+    animation: none !important;
   }
 }
 

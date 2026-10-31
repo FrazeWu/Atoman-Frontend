@@ -222,6 +222,29 @@ describe('MobilePlayerView Gestures (Pull-to-Dismiss & Swipe-to-Skip)', () => {
 
     expect(prevSpy).toHaveBeenCalled()
   })
+
+  it('dragging horizontally on the cover translates it with real-time displacement and tilt', async () => {
+    const wrapper = createWrapper()
+    const stage = wrapper.find('.mobile-player-view__stage')
+    const cover = wrapper.find('.mobile-player-view__cover-wrap')
+    expect(cover.exists()).toBe(true)
+
+    await stage.trigger('touchstart', {
+      touches: [{ clientX: 200, clientY: 200 }],
+    })
+
+    window.dispatchEvent(
+      new TouchEvent('touchmove', {
+        touches: [{ clientX: 140, clientY: 202 } as any], // deltaX = -60, deltaY = 2
+        bubbles: true,
+        cancelable: true,
+      })
+    )
+    await wrapper.vm.$nextTick()
+
+    const coverStyle = wrapper.find('.mobile-player-view__cover-wrap').attributes('style') || ''
+    expect(coverStyle).toContain('translateX(-')
+  })
   it('exposes native keyboard-operable cover and timed lyric controls', async () => {
     const wrapper = createWrapper()
     const player = usePlayerStore()

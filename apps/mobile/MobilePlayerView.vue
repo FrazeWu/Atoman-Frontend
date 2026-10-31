@@ -174,10 +174,24 @@
 
       <!-- Persistent Footer: Track Identity, Scrubber, Playback Controls, Actions -->
       <footer class="mobile-player-view__footer">
-        <!-- Track Identity -->
+        <!-- Track Identity & Favorite Button (Spotify Style) -->
         <div class="mobile-player-view__identity">
-          <h2>{{ player.currentSong.title }}</h2>
-          <p>{{ artistText }}</p>
+          <div class="mobile-player-view__identity-meta">
+            <h2>{{ player.currentSong.title }}</h2>
+            <p>{{ artistText }}</p>
+          </div>
+          <button
+            v-if="!isPodcast"
+            type="button"
+            class="mobile-player-view__fav-btn"
+            :class="{ 'is-favorited': isCurrentFavorite }"
+            data-testid="player-favorite-btn"
+            :aria-label="isCurrentFavorite ? '已收藏' : '收藏'"
+            :title="isCurrentFavorite ? '已收藏' : '收藏'"
+            @click="handleToggleFavorite"
+          >
+            <MIcon :name="isCurrentFavorite ? 'heart-filled' : 'heart'" size="md" />
+          </button>
         </div>
 
         <!-- Touch-Optimized Progress Scrubber -->
@@ -230,6 +244,7 @@
 
         <!-- Main Media Controls (Always Visible) -->
         <div class="mobile-player-view__controls" aria-label="播放控制">
+          <!-- 1. Shuffle (or podcast skip -15s) -->
           <button
             v-if="isPodcast"
             type="button"
@@ -244,15 +259,16 @@
           <button
             v-else
             type="button"
-            class="mobile-player-view__control mobile-player-view__control--secondary"
-            aria-label="后退 5 秒"
-            title="后退 5 秒"
-            @click="player.skip(-5)"
+            class="mobile-player-view__control mobile-player-view__control--mode"
+            :class="{ 'is-active': player.isShuffled }"
+            aria-label="随机播放"
+            title="随机播放"
+            @click="player.toggleShuffle"
           >
-            <MIcon name="rotate-ccw" size="sm" />
-            <span>5</span>
+            <MIcon name="shuffle" size="md" />
           </button>
 
+          <!-- 2. Previous Track -->
           <button
             type="button"
             class="mobile-player-view__control"
@@ -263,6 +279,7 @@
             <MIcon name="player-prev" size="md" />
           </button>
 
+          <!-- 3. Primary Play / Pause -->
           <button
             type="button"
             class="mobile-player-view__control mobile-player-view__control--primary"
@@ -286,6 +303,7 @@
             </span>
           </button>
 
+          <!-- 4. Next Track -->
           <button
             type="button"
             class="mobile-player-view__control"
@@ -296,6 +314,7 @@
             <MIcon name="player-next" size="md" />
           </button>
 
+          <!-- 5. Repeat Mode (or podcast skip +30s) -->
           <button
             v-if="isPodcast"
             type="button"
@@ -310,13 +329,13 @@
           <button
             v-else
             type="button"
-            class="mobile-player-view__control mobile-player-view__control--secondary"
-            aria-label="前进 5 秒"
-            title="前进 5 秒"
-            @click="player.skip(5)"
+            class="mobile-player-view__control mobile-player-view__control--mode"
+            :class="{ 'is-active': player.playbackMode === 'single' }"
+            :aria-label="modeLabel"
+            :title="modeLabel"
+            @click="player.cyclePlaybackMode"
           >
-            <MIcon name="rotate-cw" size="sm" />
-            <span>5</span>
+            <MIcon name="repeat" size="md" />
           </button>
         </div>
 
@@ -360,18 +379,6 @@
           >
             <MIcon name="clock" size="sm" />
             <span>稍后听</span>
-          </button>
-          <button
-            v-if="!isPodcast"
-            type="button"
-            class="mobile-player-view__action"
-            :aria-label="modeLabel"
-            :title="modeLabel"
-            @click="player.cyclePlaybackMode"
-          >
-            <MIcon v-if="player.playbackMode === 'random'" name="shuffle" size="sm" />
-            <MIcon v-else name="repeat" size="sm" />
-            <span>{{ modeLabel }}</span>
           </button>
           <button
             type="button"
@@ -446,7 +453,22 @@ const player = usePlayerStore()
 const router = useRouter()
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
-const { favoriteSongIds, playlists, loadPlaylists, addSongToPlaylist, loadFavoriteSongs } = useMusicFavoritePlaylist()
+const { favoriteSongIds, playlists, loadPlaylists, addSongToPlaylist, loadFavoriteSongs, toggleFavoriteSong } = useMusicFavoritePlaylist()
+
+const isCurrentFavorite = computed(() => {
+  const songId = player.currentSong?.id
+  return !!songId && favoriteSongIds.value.has(String(songId))
+})
+
+async function handleToggleFavorite() {
+  if (!requireLogin() || !player.currentSong?.id) return
+  try {
+    const res = await toggleFavoriteSong(String(player.currentSong.id))
+    showToast(res.message)
+  } catch (err) {
+    showToast('操作失败')
+  }
+}
 const showPlaylistPicker = ref(false)
 const playlistPickerLoading = ref(false)
 const playlistPickerError = ref('')
@@ -1004,14 +1026,13 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control, 4px);
-  background: var(--a-color-bg);
+  border: none !important;
+  border-radius: 50% !important;
+  background: transparent !important;
   color: var(--a-color-fg);
 }
 
 .mobile-player-view__header-action.is-active {
-  border-color: var(--a-color-primary);
   color: var(--a-color-primary);
 }
 
@@ -1045,13 +1066,15 @@ onUnmounted(() => {
   border: 0;
   background: transparent;
   color: inherit;
-  width: min(60vw, 240px);
+  width: min(78vw, 300px);
   aspect-ratio: 1;
   position: relative;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
 }
 
 .mobile-player-view__cover {
@@ -1059,8 +1082,8 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control, 4px);
+  border: none !important;
+  border-radius: 8px;
   box-shadow: none !important;
 }
 
@@ -1069,20 +1092,13 @@ onUnmounted(() => {
   place-items: center;
   background: var(--a-color-surface-muted);
   color: var(--a-color-muted);
-  border-radius: var(--a-radius-control, 4px);
+  border-radius: 8px;
   width: 100%;
   height: 100%;
 }
 
 .mobile-player-view__cover-hint {
-  position: absolute;
-  bottom: 0.5rem;
-  padding: 0.2rem 0.6rem;
-  border-radius: 9999px;
-  background: rgba(0, 0, 0, 0.65);
-  color: #ffffff;
-  font-size: 0.68rem;
-  opacity: 0.85;
+  display: none !important;
 }
 
 /* --- Inline Lyrics Stage --- */
@@ -1301,25 +1317,61 @@ onUnmounted(() => {
 
 .mobile-player-view__identity {
   min-width: 0;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  padding: 0 4px;
+}
+
+.mobile-player-view__identity-meta {
+  flex: 1;
+  min-width: 0;
 }
 
 .mobile-player-view__identity h2 {
-  margin: 0 0 0.2rem;
+  margin: 0 0 0.15rem;
   overflow: hidden;
   font-size: 1.25rem;
-  font-weight: 600;
+  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .mobile-player-view__identity p {
   margin: 0;
-  color: var(--a-color-muted);
-  font-size: 0.85rem;
+  color: var(--a-color-muted, #71717a);
+  font-size: 0.88rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.mobile-player-view__fav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0;
+  border: none !important;
+  background: transparent !important;
+  color: #a1a1aa;
+  cursor: pointer;
+  border-radius: 50% !important;
+  flex-shrink: 0;
+  transition: transform 0.1s ease, color 0.15s ease;
+}
+
+.mobile-player-view__fav-btn:active {
+  transform: scale(0.92);
+}
+
+.mobile-player-view__fav-btn.is-favorited {
+  color: #1ed760;
 }
 
 /* --- Touch-Optimized Scrubber --- */
@@ -1391,36 +1443,51 @@ onUnmounted(() => {
 
 /* --- Controls --- */
 .mobile-player-view__controls {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(44px, 1fr));
-  gap: 0.5rem;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
 }
 
 .mobile-player-view__control {
   display: inline-flex;
-  min-width: 44px;
-  min-height: 50px;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
   align-items: center;
   justify-content: center;
-  gap: 0.1rem;
   padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--a-color-fg);
-  border-radius: var(--a-radius-control, 4px);
+  border: none !important;
+  background: transparent !important;
+  color: var(--a-color-fg, #111111);
+  border-radius: 50% !important;
+  cursor: pointer;
+  transition: transform 0.1s ease, color 0.15s ease;
+}
+
+.mobile-player-view__control:active {
+  transform: scale(0.92);
+}
+
+.mobile-player-view__control--mode {
+  color: var(--a-color-muted, #71717a);
+}
+
+.mobile-player-view__control--mode.is-active {
+  color: #1ed760;
 }
 
 .mobile-player-view__control--secondary {
   position: relative;
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  min-height: 48px;
-  margin: 0 auto;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control, 4px);
-  color: var(--a-color-muted);
+  width: 44px;
+  height: 44px;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0;
+  border: none !important;
+  border-radius: 50% !important;
+  color: var(--a-color-muted, #71717a);
   font-size: 0.65rem;
 }
 
@@ -1437,14 +1504,19 @@ onUnmounted(() => {
 }
 
 .mobile-player-view__control--primary {
-  width: 56px;
-  height: 56px;
-  min-width: 56px;
-  min-height: 56px;
-  margin: 0 auto;
-  border-radius: 50%;
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
+  width: 62px !important;
+  height: 62px !important;
+  min-width: 62px !important;
+  min-height: 62px !important;
+  margin: 0;
+  border-radius: 50% !important;
+  background: var(--a-color-fg, #111111) !important;
+  color: var(--a-color-bg, #ffffff) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+.mobile-player-view__control--primary:active {
+  transform: scale(0.95);
 }
 
 .mobile-player-view__spinner {
@@ -1506,28 +1578,32 @@ onUnmounted(() => {
 
 /* --- Bottom Actions --- */
 .mobile-player-view__actions {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
+  display: flex;
   align-items: center;
-  border-top: 1px solid var(--a-color-border-soft);
-  padding-top: 0.5rem;
+  justify-content: space-around;
+  border-top: none !important;
+  padding-top: 0.25rem;
 }
 
 .mobile-player-view__action {
-  display: grid;
-  min-height: 48px;
-  place-items: center;
-  gap: 0.2rem;
-  padding: 0.2rem;
-  border: 0;
-  background: transparent;
-  color: var(--a-color-muted);
+  display: flex;
+  flex-direction: column;
+  min-height: 0 !important;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.5rem;
+  border: none !important;
+  background: transparent !important;
+  color: var(--a-color-muted, #71717a);
   font-size: 0.68rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.15s ease;
 }
 
 .mobile-player-view__action.is-active {
-  color: var(--a-color-primary);
+  color: #1ed760;
 }
 
 /* --- Toast Feedback --- */

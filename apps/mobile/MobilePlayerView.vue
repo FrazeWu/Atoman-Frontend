@@ -67,6 +67,9 @@
           v-else-if="!showQueue && activeTab === 'lyrics'"
           ref="lyricsContainerRef"
           class="mobile-player-view__lyrics-wrap"
+          @touchstart.passive="onLyricsUserInteraction"
+          @touchmove.passive="onLyricsUserInteraction"
+          @wheel.passive="onLyricsUserInteraction"
         >
           <div v-if="parsedLyrics.length" class="mobile-player-view__lyrics-list">
             <button
@@ -74,7 +77,11 @@
               :key="index"
               type="button"
               class="mobile-player-view__lyric-line"
-              :class="{ 'is-active': index === activeLyricIndex }"
+              :class="{
+                'is-active': index === activeLyricIndex,
+                'is-near': activeLyricIndex >= 0 && Math.abs(index - activeLyricIndex) === 1,
+                'is-far': activeLyricIndex >= 0 && Math.abs(index - activeLyricIndex) > 1,
+              }"
               :disabled="line.time < 0"
               :aria-label="line.time >= 0 ? `跳转到 ${line.text}` : line.text"
               @click="onLyricLineClick(line)"
@@ -643,7 +650,7 @@ const parsedLyrics = computed<ParsedLyricLine[]>(() => {
   if (!raw || typeof raw !== 'string') return []
   const lines = raw.split(/\r?\n/)
   const result: ParsedLyricLine[] = []
-  const timeRegex = /\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\]/
+  const timeRegex = /\[(\d{1,3}):(\d{2})(?:\.(\d{1,3}))?\]/
 
   for (const line of lines) {
     const trimmed = line.trim()
@@ -676,22 +683,81 @@ const activeLyricIndex = computed(() => {
   return activeIndex
 })
 
-watch(activeLyricIndex, (newIdx) => {
-  if (newIdx >= 0 && activeTab.value === 'lyrics' && !showQueue.value && lyricsContainerRef.value) {
-    void nextTick(() => {
-      const container = lyricsContainerRef.value
-      const activeEl = container?.querySelector('.mobile-player-view__lyric-line.is-active') as HTMLElement | null
-      if (container && activeEl) {
-        const top = activeEl.offsetTop - container.clientHeight / 2 + activeEl.clientHeight / 2
-        container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
-      }
+// --- Lyrics Scroll Sync & Focus Guard ---
+const isUserScrollingLyrics = ref(false)
+let lyricsScrollLockTimer: ReturnType<typeof setTimeout> | null = null
+
+function onLyricsUserInteraction() {
+  isUserScrollingLyrics.value = true
+  if (lyricsScrollLockTimer) {
+    clearTimeout(lyricsScrollLockTimer)
+  }
+  lyricsScrollLockTimer = setTimeout(() => {
+    isUserScrollingLyrics.value = false
+    scrollToActiveLyric(true)
+  }, 2800)
+}
+
+function scrollToActiveLyric(smooth = true) {
+  if (isUserScrollingLyrics.value || activeTab.value !== 'lyrics' || showQueue.value) return
+  const container = lyricsContainerRef.value
+  if (!container) return
+
+  const activeEl = container.querySelector('.mobile-player-view__lyric-line.is-active') as HTMLElement | null
+  if (!activeEl) return
+
+  const containerRect = typeof container.getBoundingClientRect === 'function' ? container.getBoundingClientRect() : null
+  const activeRect = typeof activeEl.getBoundingClientRect === 'function' ? activeEl.getBoundingClientRect() : null
+
+  let delta = 0
+  if (containerRect && activeRect && containerRect.height > 0) {
+    delta = activeRect.top + activeRect.height / 2 - (containerRect.top + containerRect.height / 2)
+  } else {
+    const top = activeEl.offsetTop - (container.clientHeight || 300) / 2 + (activeEl.clientHeight || 30) / 2
+    delta = top - container.scrollTop
+  }
+
+  if (Math.abs(delta) < 1) return
+
+  if (typeof container.scrollTo === 'function') {
+    container.scrollTo({
+      top: Math.max(0, container.scrollTop + delta),
+      behavior: smooth ? 'smooth' : 'auto',
     })
+  }
+}
+
+watch(activeLyricIndex, (newIdx) => {
+  if (newIdx >= 0) {
+    void nextTick(() => {
+      scrollToActiveLyric(true)
+    })
+  }
+})
+
+watch([activeTab, showQueue], async ([tab, inQueue]) => {
+  if (tab === 'lyrics' && !inQueue) {
+    if (lyricsScrollLockTimer) {
+      clearTimeout(lyricsScrollLockTimer)
+      lyricsScrollLockTimer = null
+    }
+    isUserScrollingLyrics.value = false
+    await nextTick()
+    scrollToActiveLyric(false)
   }
 })
 
 function onLyricLineClick(line: ParsedLyricLine) {
   if (line.time >= 0) {
+    if (lyricsScrollLockTimer) {
+      clearTimeout(lyricsScrollLockTimer)
+      lyricsScrollLockTimer = null
+    }
+    isUserScrollingLyrics.value = false
     player.seek(line.time)
+    void nextTick(() => {
+      scrollToActiveLyric(true)
+    })
   }
 }
 
@@ -987,6 +1053,10 @@ onUnmounted(() => {
   window.removeEventListener('touchcancel', handleTouchEnd)
   if (dismissTimer) clearTimeout(dismissTimer)
   if (snapResetTimer) clearTimeout(snapResetTimer)
+  if (lyricsScrollLockTimer) {
+    clearTimeout(lyricsScrollLockTimer)
+    lyricsScrollLockTimer = null
+  }
   if (toastTimer) {
     clearTimeout(toastTimer)
     toastTimer = null
@@ -1140,48 +1210,110 @@ onUnmounted(() => {
 
 /* --- Inline Lyrics Stage --- */
 .mobile-player-view__lyrics-wrap {
+  position: relative;
   width: 100%;
-  height: 32vh;
+  height: clamp(220px, 36vh, 400px);
   min-height: 180px;
   overflow-y: auto;
-  padding: 1rem 0.5rem;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  padding: 0 0.5rem;
   box-sizing: border-box;
   text-align: center;
-  mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%);
+}
+
+.mobile-player-view__lyrics-wrap::-webkit-scrollbar {
+  display: none;
 }
 
 .mobile-player-view__lyrics-list {
   display: flex;
   flex-direction: column;
-  gap: 1.15rem;
-  padding: 2rem 0;
+  gap: clamp(1rem, 0.8rem + 0.8vh, 1.4rem);
+  padding: clamp(90px, 16vh, 180px) 0;
 }
 
 .mobile-player-view__lyric-line {
   border: 0;
   background: transparent;
-  padding: 0.35rem 0.25rem;
+  padding: 0.45rem 0.6rem;
   width: 100%;
+  box-sizing: border-box;
   font-family: inherit;
   margin: 0;
-  color: var(--a-color-muted);
-  font-size: 0.95rem;
+  color: var(--a-color-fg, #111111);
+  font-size: clamp(0.9375rem, 0.88rem + 0.35vw, 1.0625rem);
   line-height: 1.5;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  border-radius: var(--a-radius-control, 4px);
+  opacity: 0.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  transform-origin: center center;
+  transition:
+    opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    font-size 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    font-weight 0.2s ease;
 }
 
-.mobile-player-view__lyric-line:disabled { cursor: default; }
+.mobile-player-view__lyric-line.is-near {
+  opacity: 0.65;
+}
+
+.mobile-player-view__lyric-line.is-far {
+  opacity: 0.32;
+}
+
+.mobile-player-view__lyric-line:disabled {
+  cursor: default;
+  opacity: 0.35;
+  font-style: italic;
+}
+
 .mobile-player-view__cover-wrap:focus-visible,
 .mobile-player-view__lyric-line:focus-visible,
-.mobile-player-view__queue-actions button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
+.mobile-player-view__queue-actions button:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
+}
 
 .mobile-player-view__lyric-line.is-active {
-  color: var(--a-color-fg);
+  color: var(--a-color-fg, #111111);
   font-weight: 700;
-  font-size: 1.15rem;
-  transform: scale(1.05);
+  font-size: clamp(1.1875rem, 1.05rem + 0.65vw, 1.35rem);
+  line-height: 1.4;
+  opacity: 1;
+  transform: scale(1.02);
+  animation: lyric-active-breath 3.6s ease-in-out infinite;
+}
+
+@keyframes lyric-active-breath {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  50% {
+    opacity: 0.92;
+    transform: scale(1.01);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-player-view__lyric-line,
+  .mobile-player-view__lyric-line.is-active {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
 }
 
 .mobile-player-view__lyrics-empty {
@@ -1198,7 +1330,7 @@ onUnmounted(() => {
   margin-top: 0.5rem;
   padding: 0.35rem 0.85rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 6px;
+  border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-surface);
   color: var(--a-color-fg);
   font-size: 0.78rem;

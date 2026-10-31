@@ -360,4 +360,76 @@ describe('MobilePlayerView Gestures (Pull-to-Dismiss & Swipe-to-Skip)', () => {
     expect(containerStyle).toContain('translateY(60px)')
     wrapper.unmount()
   })
+
+  it('assigns proximity gradient classes (is-active, is-near, is-far) according to active lyric distance', async () => {
+    const wrapper = createWrapper()
+    const player = usePlayerStore()
+    player.currentSong = {
+      ...player.currentSong!,
+      lyrics: '[00:02.00]Line 0\n[00:05.00]Line 1\n[00:10.00]Line 2\n[00:15.00]Line 3\n[00:20.00]Line 4',
+    }
+    await wrapper.vm.$nextTick()
+
+    // Switch to lyrics tab
+    const cover = wrapper.find('.mobile-player-view__cover-wrap')
+    await cover.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    // Advance time to Line 2 (10s) -> activeLyricIndex = 2
+    player.currentTime = 11
+    await wrapper.vm.$nextTick()
+
+    const lines = wrapper.findAll('.mobile-player-view__lyric-line')
+    expect(lines).toHaveLength(5)
+
+    // Distance 0 (Line 2): is-active
+    expect(lines[2]!.classes()).toContain('is-active')
+    expect(lines[2]!.classes()).not.toContain('is-near')
+    expect(lines[2]!.classes()).not.toContain('is-far')
+
+    // Distance 1 (Line 1 and Line 3): is-near
+    expect(lines[1]!.classes()).toContain('is-near')
+    expect(lines[3]!.classes()).toContain('is-near')
+    expect(lines[1]!.classes()).not.toContain('is-active')
+    expect(lines[3]!.classes()).not.toContain('is-active')
+
+    // Distance >= 2 (Line 0 and Line 4): is-far
+    expect(lines[0]!.classes()).toContain('is-far')
+    expect(lines[4]!.classes()).toContain('is-far')
+    expect(lines[0]!.classes()).not.toContain('is-near')
+    expect(lines[4]!.classes()).not.toContain('is-near')
+
+    wrapper.unmount()
+  })
+
+  it('locks auto scroll when user manually touches lyrics view and recovers after idle timeout', async () => {
+    const wrapper = createWrapper()
+    const player = usePlayerStore()
+    player.currentSong = {
+      ...player.currentSong!,
+      lyrics: '[00:05.00]Line 1\n[00:10.00]Line 2\n[00:15.00]Line 3',
+    }
+    await wrapper.vm.$nextTick()
+
+    const cover = wrapper.find('.mobile-player-view__cover-wrap')
+    await cover.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const lyricsWrap = wrapper.find('.mobile-player-view__lyrics-wrap')
+    const scrollToSpy = vi.fn()
+    lyricsWrap.element.scrollTo = scrollToSpy
+
+    // Trigger manual interaction
+    await lyricsWrap.trigger('touchstart')
+    await wrapper.vm.$nextTick()
+
+    // Advance player time to Line 2 while locked
+    player.currentTime = 11
+    await wrapper.vm.$nextTick()
+
+    // In locked state, automatic scroll request is guarded from hijacking user focus
+    expect(scrollToSpy).not.toHaveBeenCalled()
+
+    wrapper.unmount()
+  })
 })

@@ -464,4 +464,71 @@ describe('MobilePlayerView Gestures (Pull-to-Dismiss & Swipe-to-Skip)', () => {
 
     wrapper.unmount()
   })
+
+  it('scrubber responds to pointerdown, pointermove dragging, and pointerup seeking with active thumb feedback', async () => {
+    const wrapper = createWrapper()
+    const player = usePlayerStore()
+    player.duration = 200
+    player.currentTime = 20
+    await wrapper.vm.$nextTick()
+
+    const scrubberTrackWrap = wrapper.find('.mobile-player-scrubber__track-wrap')
+    expect(scrubberTrackWrap.exists()).toBe(true)
+
+    // Mock getBoundingClientRect on track wrap
+    vi.spyOn(scrubberTrackWrap.element, 'getBoundingClientRect').mockReturnValue({
+      left: 100,
+      top: 500,
+      right: 300,
+      bottom: 520,
+      width: 200,
+      height: 20,
+      x: 100,
+      y: 500,
+      toJSON: () => {},
+    } as DOMRect)
+
+    const seekSpy = vi.spyOn(player, 'seek').mockImplementation(() => {})
+
+    // Pointer down at x = 150 (ratio = (150 - 100) / 200 = 0.25 -> 50s)
+    await scrubberTrackWrap.trigger('pointerdown', { clientX: 150 } as any)
+    await wrapper.vm.$nextTick()
+
+    const thumb = wrapper.find('.mobile-player-scrubber__thumb')
+    expect(thumb.classes()).toContain('is-active')
+    expect(wrapper.find('.mobile-player-scrubber__time').text()).toBe('0:50')
+
+    // Drag pointermove to x = 200 (ratio = (200 - 100) / 200 = 0.5 -> 100s)
+    window.dispatchEvent(
+      new MouseEvent('pointermove', { clientX: 200 } as any)
+    )
+    await wrapper.vm.$nextTick()
+
+    expect(thumb.classes()).toContain('is-active')
+    expect(wrapper.find('.mobile-player-scrubber__time').text()).toBe('1:40')
+
+    // Pointer up at x = 250 (ratio = (250 - 100) / 200 = 0.75 -> 150s)
+    window.dispatchEvent(
+      new MouseEvent('pointerup', { clientX: 250 } as any)
+    )
+    await wrapper.vm.$nextTick()
+
+    expect(seekSpy).toHaveBeenCalledWith(150)
+    expect(wrapper.find('.mobile-player-scrubber__thumb').classes()).not.toContain('is-active')
+    wrapper.unmount()
+  })
+
+  it('scrubber responds to keyboard arrow keys left and right to skip playback', async () => {
+    const wrapper = createWrapper()
+    const player = usePlayerStore()
+    const skipSpy = vi.spyOn(player, 'skip').mockImplementation(() => {})
+
+    const scrubberTrackWrap = wrapper.find('.mobile-player-scrubber__track-wrap')
+    await scrubberTrackWrap.trigger('keydown.left')
+    expect(skipSpy).toHaveBeenCalledWith(-5)
+
+    await scrubberTrackWrap.trigger('keydown.right')
+    expect(skipSpy).toHaveBeenCalledWith(5)
+    wrapper.unmount()
+  })
 })

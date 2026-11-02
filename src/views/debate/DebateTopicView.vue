@@ -121,6 +121,7 @@
             @vote="handleVote"
             @remove="handleRemoveVote"
           />
+          <DebateConclusionTimeline :items="conclusions" />
         </aside>
       </div>
 
@@ -154,6 +155,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ChevronLeft, History, MessageSquare, Pencil } from 'lucide-vue-next'
 
+import DebateConclusionTimeline from '@/components/debate/DebateConclusionTimeline.vue'
 import DebateDiscussionSheet from '@/components/debate/DebateDiscussionSheet.vue'
 import DebateRelationGraph from '@/components/debate/DebateRelationGraph.vue'
 import DebateRevisionSheet from '@/components/debate/DebateRevisionSheet.vue'
@@ -166,6 +168,7 @@ import { useDebateStore } from '@/stores/debate'
 import type {
   Debate,
   ContentReference,
+  DebateConclusionEvent,
   DebateGraph,
   DebateReference,
   DebateResourceKind,
@@ -232,6 +235,7 @@ const reconfirmError = ref('')
 const routeDebateSettled = ref(false)
 const voteOwnerID = ref('')
 const voteLoadState = ref<'loading' | 'ready' | 'error'>('loading')
+const conclusions = ref<DebateConclusionEvent[]>([])
 let reconfirmSession = 0
 let relationSession = 0
 const relationBaseRequestSequence: Record<RelationView, number> = { tree: 0, graph: 0 }
@@ -306,8 +310,12 @@ watch(() => String(route.params.id || ''), (id) => {
   activeTab.value = 'content'
   lastLoadedRelationView.value = null
   showWikiEditor.value = false
+  conclusions.value = []
   void loadRouteDebate(id)
   void loadRouteVotes(id)
+  void debateStore.fetchConclusions?.(id)?.then((result) => {
+    if (routeDebateID.value === id && result) conclusions.value = result
+  })
 }, { immediate: true })
 
 async function loadRouteDebate(id: string) {

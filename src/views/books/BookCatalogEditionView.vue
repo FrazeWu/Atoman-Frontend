@@ -34,6 +34,17 @@
           </div>
         </div>
         <p v-else class="book-catalog__empty-hint">暂无通过安全检查的文件。</p>
+        <details v-if="files.length" class="edition-file__quality" aria-label="文件质量信息与对比">
+          <summary>{{ files.length > 1 ? '文件质量信息与对比' : '查看文件质量信息' }}</summary>
+          <p class="edition-file__quality-intro">下列指标来自实际文件检查，仅供人工比较。不能判断是否缺页、错字或内容完整；不会按 EPUB、PDF 等格式自动排名，也不会替换你书架中的文件。</p>
+          <div class="edition-file__quality-grid">
+            <article v-for="item in files" :key="item.revision_id" class="edition-file__quality-item">
+              <div class="edition-file__quality-heading"><strong>{{ item.file_name }}</strong><small>{{ item.is_best ? '当前最优' : '其他文件' }} · {{ item.format.toUpperCase() }}</small></div>
+              <ul><li v-for="(fact, index) in describeBookFileQuality(item.quality)" :key="index">{{ fact }}</li></ul>
+              <p v-for="(caveat, index) in item.quality?.limitations || []" :key="index" class="edition-file__quality-caveat">未检测范围：{{ caveat }}</p>
+            </article>
+          </div>
+        </details>
         <p v-if="fileNotice" role="status">{{ fileNotice }}</p>
         <details v-if="otherFiles.length" class="edition-file__history">
           <summary>历史版本（{{ otherFiles.length }}）</summary>
@@ -43,7 +54,7 @@
               <div class="edition-file__actions">
                 <PButton size="sm" variant="secondary" :to="resourceReaderPath(work.id, item.asset_id, item.revision_id)">阅读</PButton>
                 <PButton v-if="auth.isAuthenticated" size="sm" variant="secondary" :disabled="!!busyFile" @click="addToShelf(item)">加入书架</PButton>
-                <PButton v-if="auth.isAuthenticated" size="sm" variant="ghost" :disabled="!!busyFile" @click="promote(item)">设为最优</PButton>
+                <PButton v-if="auth.isAuthenticated" size="sm" variant="ghost" :disabled="!!busyFile" @click="bestCandidate = item">设为最优</PButton>
                 <PButton v-if="item.can_manage" size="sm" variant="ghost" :disabled="!!busyFile" @click="confirmVisibility(item)">{{ item.is_public ? '停止公开' : '公开分享' }}</PButton>
               </div>
             </li>
@@ -57,6 +68,13 @@
         </div>
       </section>
     </template>
+    <PConfirm
+      :show="!!bestCandidate"
+      title="设为此出版版本的当前最优文件？"
+      message="系统仅展示已验证的技术指标，无法确定内容是否完整。确认后只更改出版版本的推荐文件，不影响任何用户书架、阅读进度或笔记。"
+      @confirm="promote"
+      @cancel="bestCandidate = null"
+    />
     <PConfirm
       :show="!!visibilityCandidate"
       :title="visibilityCandidate?.is_public ? '停止公开此电子书？' : '公开分享此电子书？'"
@@ -77,6 +95,7 @@ import { wikiMetadata, type WikiMetadata } from '@/api/bookWiki'
 import { getCatalogWork, type CatalogWork } from '@/api/bookCatalog'
 import { listEditionFiles, saveFileShelf, selectEditionBestFile, setFilePublicAccess, type EditionFile } from '@/api/bookFileShelf'
 import { resourceReaderPath } from '@/api/bookResources'
+import { describeBookFileQuality } from '@/utils/bookFileQuality'
 import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
 import BookResourceUpload from '@/components/books/BookResourceUpload.vue'
 import BookCover from '@/components/books/BookCover.vue'
@@ -94,6 +113,7 @@ const error = ref('')
 const resourceError = ref('')
 const fileNotice = ref('')
 const busyFile = ref('')
+const bestCandidate = ref<EditionFile | null>(null)
 const visibilityCandidate = ref<EditionFile | null>(null)
 const loading = ref(true)
 const edition = computed(() => work.value?.editions.find(item => item.id === metadata.value?.entity_id))
@@ -141,8 +161,10 @@ async function addToShelf(file: EditionFile) {
   } catch { fileNotice.value = '加入书架失败，请重试。' }
   finally { busyFile.value = '' }
 }
-async function promote(file: EditionFile) {
-  if (!edition.value) return
+async function promote() {
+  const file = bestCandidate.value
+  bestCandidate.value = null
+  if (!edition.value || !file) return
   busyFile.value = file.revision_id
   try {
     await selectEditionBestFile(edition.value.id, file.revision_id)
@@ -175,4 +197,13 @@ onBeforeUnmount(() => { generation++ })
 .edition-file__history { margin-top: 1rem; }
 .edition-file__history summary { cursor: pointer; font-weight: 600; padding: .65rem 0; }
 .edition-file__upload { margin-top: 1.5rem; }
+ .edition-file__quality { margin-top: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: .55rem; padding: .75rem 1rem; }
+ .edition-file__quality summary { font-weight: 600; cursor: pointer; }
+ .edition-file__quality-intro { font-size: .85rem; color: var(--a-color-text-secondary); line-height: 1.6; }
+ .edition-file__quality-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: .75rem; }
+ .edition-file__quality-item { min-width: 0; border: 1px solid var(--a-color-border-soft); border-radius: .5rem; padding: .75rem; }
+ .edition-file__quality-heading { display: flex; flex-direction: column; gap: .3rem; overflow-wrap: anywhere; }
+ .edition-file__quality-heading small { color: var(--a-color-text-secondary); }
+ .edition-file__quality-item ul { font-size: .82rem; padding-left: 1.2rem; line-height: 1.6; }
+ .edition-file__quality-caveat { margin: .5rem 0 0; font-size: .78rem; color: var(--a-color-text-secondary); }
 </style>

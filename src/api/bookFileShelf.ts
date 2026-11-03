@@ -4,6 +4,18 @@ import { useApiUrl } from '@/composables/useApi'
 export type FileShelfStatus = 'unstarted' | 'reading' | 'finished' | 'paused'
 export type FileShelfSort = 'activity' | 'added' | 'progress' | 'title'
 
+export interface BookFileQualityReport {
+  version: number
+  format: string
+  bytes: number
+  epub_spine_items?: number
+  epub_has_navigation?: boolean
+  comic_image_pages?: number
+  txt_valid_utf8?: boolean
+  txt_characters?: number
+  limitations: string[]
+}
+
 export interface EditionFile {
   asset_id: string
   revision_id: string
@@ -14,6 +26,7 @@ export interface EditionFile {
   language: string
   file_name: string
   is_best: boolean
+  quality?: BookFileQualityReport
   is_public: boolean
   can_manage: boolean
   created_at: string

@@ -111,6 +111,20 @@
             :rows="3"
             placeholder="例如 马可·奥勒留"
           />
+          <div v-if="nameConflicts.length" class="book-catalog__new-work-card" role="status">
+            <p>发现已有同名作者。请选择正确的作者，或确认这是不同的人。</p>
+            <div v-for="conflict in nameConflicts" :key="conflict.name">
+              <strong>{{ conflict.name }}</strong>
+              <div v-for="person in conflict.matches" :key="person.id" class="book-catalog__choice">
+                <span>{{ person.name }}</span>
+                <PButton type="button" variant="secondary" @click="reusePerson(conflict.name, person.id, false)">使用已有作者</PButton>
+              </div>
+              <label>
+                <input v-model="newAuthorNames" type="checkbox" :value="conflict.name" />
+                确认为不同作者，仍新建同名人物
+              </label>
+            </div>
+          </div>
           <details class="book-catalog__people-picker">
             <summary class="book-catalog__people-summary">选择已有作者</summary>
             <div class="book-catalog__people-content">
@@ -159,6 +173,17 @@
             placeholder="关于这部作品的核心主旨、写作背景或作者思想概述..."
             :rows="4"
           />
+          <div v-if="duplicateWorkCandidates.length" class="book-catalog__new-work-card" role="status">
+            <p>发现疑似重复作品。建议优先使用已有作品。</p>
+            <div v-for="candidate in duplicateWorkCandidates" :key="candidate.work.id" class="book-catalog__choice">
+              <span>{{ candidate.work.title }} · {{ candidate.work.authors.map(person => person.name).join(' / ') }}</span>
+              <PButton type="button" variant="secondary" @click="useExistingWork(candidate.work.id)">使用此作品</PButton>
+            </div>
+            <label>
+              <input v-model="confirmDuplicateWork" type="checkbox" />
+              我已确认是不同作品，仍然新建，不自动合并
+            </label>
+          </div>
         </div>
       </fieldset>
       <div class="book-catalog__actions">
@@ -252,10 +277,24 @@
             :rows="2"
             placeholder="例如 何怀宏"
           />
+          <div v-if="translatorConflicts.length" class="book-catalog__new-work-card" role="status">
+            <p>已有同名译者，请选择对应人物或确认新建。</p>
+            <div v-for="conflict in translatorConflicts" :key="conflict.name">
+              <strong>{{ conflict.name }}</strong>
+              <div v-for="person in conflict.matches" :key="person.id" class="book-catalog__choice">
+                <span>{{ person.name }}</span>
+                <PButton type="button" variant="secondary" @click="reusePerson(conflict.name, person.id, true)">使用已有译者</PButton>
+              </div>
+              <label>
+                <input v-model="newTranslatorNames" type="checkbox" :value="conflict.name" />
+                确认为不同人物，仍新建同名译者
+              </label>
+            </div>
+          </div>
           <PInput
             id="create-edition-language"
             v-model="language"
-            label="版本语言代码（选填）"
+            label="版本语言代码（必填）"
             placeholder="例如 zh 或 en"
           />
           <PInput
@@ -289,7 +328,7 @@
             id="create-edition-isbn"
             v-model="isbn"
             label="ISBN（选填）"
-            placeholder="例如 9787100057418"
+            placeholder="例如 9780306406157"
           />
           <PInput
             id="create-edition-pages"
@@ -308,6 +347,22 @@
           />
         </div>
 
+        <div v-if="editionChoice === 'new' && duplicateEditionCandidates.length" class="book-catalog__new-work-card" role="status">
+          <p>发现疑似重复版本，请优先检查已有书目。</p>
+          <div v-for="candidate in duplicateEditionCandidates" :key="candidate.edition.id" class="book-catalog__choice">
+            <span>{{ candidate.edition.title || selectedWork?.title || title }} · {{ candidate.edition.language }} · {{ candidate.edition.publisher || candidate.edition.isbn13 }}</span>
+            <PButton
+              v-if="candidate.edition.work_id === createdId"
+              type="button"
+              variant="secondary"
+              @click="useExistingEdition(candidate.edition.id)"
+            >使用此版本</PButton>
+          </div>
+          <label>
+            <input v-model="confirmDuplicateEdition" type="checkbox" />
+            我已确认是独立的出版版本，仍然新建
+          </label>
+        </div>
         <dl v-else-if="chosenEdition" class="book-catalog__chosen-box">
           <dt>已选择版本（不会修改已有资料）</dt>
           <dd>{{ editionSummary(chosenEdition) }}</dd>
@@ -369,7 +424,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
-import { createCatalogEdition, createCatalogWork, getCatalogWork, searchCatalogWorks, type CatalogWork } from '@/api/bookCatalog'
+import {
+  checkCatalogEditionDuplicates, checkCatalogWorkDuplicates, createCatalogEdition, createCatalogWork,
+  getCatalogWork, searchCatalogWorks, type CatalogWork, type WorkDuplicateMatch, type EditionDuplicateMatch,
+} from '@/api/bookCatalog'
+import type { CreateCatalogEdition } from '@/entities/book/model/types'
 import type { BookPublicEdition, BookPublicWork } from '@/api/books'
 import { searchWikiPeople } from '@/api/bookWiki'
 import BookResourceUpload from '@/components/books/BookResourceUpload.vue'
@@ -392,10 +451,79 @@ const editionTitle = ref(''), subtitle = ref(''), translators = ref(''), languag
 const publishedDate = ref({ year: '', month: '', day: '' })
 const busy = ref(false), error = ref(''), createdId = ref(''), editionId = ref(''), finished = ref(false), leaveOpen = ref(false)
 const savedEditionTitle = ref(''), savedLanguage = ref('')
+const duplicateWorkCandidates = ref<WorkDuplicateMatch[]>([])
+const duplicateEditionCandidates = ref<EditionDuplicateMatch[]>([])
+const confirmDuplicateWork = ref(false), confirmDuplicateEdition = ref(false)
+const nameConflicts = ref<{ name: string; matches: { id: string; name: string }[] }[]>([])
+const translatorConflicts = ref<{ name: string; matches: { id: string; name: string }[] }[]>([])
+const newAuthorNames = ref<string[]>([]), newTranslatorNames = ref<string[]>([])
+const selectedTranslatorIDs = ref<string[]>([])
 let leaveResolve: ((leave: boolean) => void) | undefined
 let alive = true, searchController: AbortController | undefined
+let previousWorkPayload = '', workRequestID = ''
+let previousEditionPayload = '', editionRequestID = ''
+function stableRequestID(payload: unknown, kind: 'work' | 'edition') {
+  const fingerprint = JSON.stringify(payload)
+  if (kind === 'work') {
+    if (fingerprint !== previousWorkPayload || !workRequestID) {
+      previousWorkPayload = fingerprint
+      workRequestID = crypto.randomUUID()
+    }
+    return workRequestID
+  }
+  if (fingerprint !== previousEditionPayload || !editionRequestID) {
+    previousEditionPayload = fingerprint
+    editionRequestID = crypto.randomUUID()
+  }
+  return editionRequestID
+}
 const names = (value: string) => [...new Set(value.split('\n').map(name => name.trim()).filter(Boolean))]
 const canContinue = computed(() => !!workChoice.value && (workChoice.value !== 'new' || (!!title.value.trim() && (names(authors.value).length > 0 || selectedAuthors.value.length > 0))))
+function normalizedPersonName(value: string) { return value.trim().toLocaleLowerCase() }
+async function findNameConflicts(rawNames: string[], selectedIDs: string[], confirmedNewNames: string[]) {
+  const conflicts: { name: string; matches: { id: string; name: string }[] }[] = []
+  for (const name of rawNames) {
+    if (confirmedNewNames.some(item => normalizedPersonName(item) === normalizedPersonName(name))) continue
+    const page = await searchWikiPeople(name)
+    const exact = page.items.filter(person => normalizedPersonName(person.name) === normalizedPersonName(name))
+    if (exact.length && !exact.some(person => selectedIDs.includes(person.id))) conflicts.push({ name, matches: exact })
+  }
+  return conflicts
+}
+function reusePerson(name: string, personId: string, translator: boolean) {
+  if (translator) {
+    if (!selectedTranslatorIDs.value.includes(personId)) selectedTranslatorIDs.value.push(personId)
+    translators.value = names(translators.value).filter(item => normalizedPersonName(item) !== normalizedPersonName(name)).join('\n')
+    translatorConflicts.value = translatorConflicts.value.filter(item => item.name !== name)
+  } else {
+    if (!selectedAuthors.value.includes(personId)) selectedAuthors.value.push(personId)
+    authors.value = names(authors.value).filter(item => normalizedPersonName(item) !== normalizedPersonName(name)).join('\n')
+    nameConflicts.value = nameConflicts.value.filter(item => item.name !== name)
+  }
+}
+async function useExistingWork(id: string) { workChoice.value = id; await next() }
+async function useExistingEdition(id: string) {
+  const workId = createdId.value || selectedWork.value?.id
+  if (!workId) return
+  try {
+    selectedWork.value = await getCatalogWork(workId)
+    editionChoice.value = id
+    duplicateEditionCandidates.value = []
+    confirmDuplicateEdition.value = false
+  } catch { error.value = '版本资料加载失败，请重新查找。' }
+}
+function isValidISBN(value: string) {
+  if (!value) return true
+  if (/^\d{9}[\dX]$/.test(value)) {
+    return [...value].reduce((sum, char, i) => sum + (char === 'X' ? 10 : Number(char)) * (10 - i), 0) % 11 === 0
+  }
+  if (/^\d{13}$/.test(value)) {
+    return [...value].reduce((sum, char, i) => sum + Number(char) * (i % 2 ? 3 : 1), 0) % 10 === 0
+  }
+  return false
+}
+watch([title, authors, originalTitle, selectedAuthors], () => { duplicateWorkCandidates.value = []; confirmDuplicateWork.value = false; nameConflicts.value = [] }, { deep: true })
+watch([editionTitle, translators, language, publisher, statement, isbn, publishedDate], () => { duplicateEditionCandidates.value = []; confirmDuplicateEdition.value = false; translatorConflicts.value = [] }, { deep: true })
 const chosenEdition = computed(() => selectedWork.value?.editions.find(edition => edition.id === editionChoice.value))
 const matchText = (value: string) => value.replace(/[\s-]/g, '').toLowerCase()
 const matchingEditions = computed(() => (selectedWork.value?.editions || []).filter(edition => matchText(`${edition.title || ''} ${editionSummary(edition)}`).includes(matchText(editionQuery.value))))
@@ -426,24 +554,86 @@ async function next() {
 }
 async function save(withEdition: boolean) {
   if (busy.value || !canContinue.value || (withEdition && !editionChoice.value)) return
-  const normalizedISBN = isbn.value.replace(/[\s-]/g, '').toUpperCase()
   const newEdition = withEdition && editionChoice.value === 'new'
-  if (newEdition && normalizedISBN && !/^(\d{9}[\dX]|\d{13})$/.test(normalizedISBN)) { error.value = 'ISBN 请输入 10 位或 13 位编号。'; return }
+  const normalizedISBN = isbn.value.replace(/[\s-]/g, '').toUpperCase()
+  if (newEdition && !isValidISBN(normalizedISBN)) { error.value = 'ISBN 校验位不正确，请核对 ISBN-10 或 ISBN-13。'; return }
+  if (newEdition && !language.value.trim()) { error.value = '出版版本必须填写语言代码，例如 zh 或 en。'; return }
   if (newEdition && pages.value && (!Number.isInteger(Number(pages.value)) || Number(pages.value) < 1)) { error.value = '页数请输入正整数。'; return }
   const date = publishedDate.value
   const dateString = [date.year, date.month, date.day].join('-')
   if (newEdition && [date.year, date.month, date.day].some(Boolean) && (!/^\d{4}-\d{2}-\d{2}$/.test(dateString) || Number.isNaN(Date.parse(dateString)) || new Date(dateString).toISOString().slice(0, 10) !== dateString)) { error.value = '请填写完整有效的出版日期，或留空。'; return }
-  busy.value = true; error.value = ''
+  const editionPayload: CreateCatalogEdition = {
+    title: editionTitle.value.trim(), subtitle: subtitle.value.trim(), translators: names(translators.value),
+    translator_ids: selectedTranslatorIDs.value, new_translator_names: newTranslatorNames.value,
+    language: language.value.trim(), publisher: publisher.value.trim(), edition_statement: statement.value.trim(),
+    isbn10: normalizedISBN.length === 10 ? normalizedISBN : '', isbn13: normalizedISBN.length === 13 ? normalizedISBN : '',
+    published_date: date.year ? dateString : '', page_count: Number(pages.value || 0), cover_url: cover.value.trim(),
+  }
+  if (newEdition && !normalizedISBN && !(
+    (editionPayload.publisher && (editionPayload.published_date || editionPayload.edition_statement || editionPayload.translators?.length || editionPayload.translator_ids?.length)) ||
+    (editionPayload.published_date && editionPayload.title && (editionPayload.translators?.length || editionPayload.translator_ids?.length))
+  )) { error.value = '未填写 ISBN 时，需要出版社和出版时间、版次或译者等可识别信息。'; return }
+
+  busy.value = true
+  error.value = ''
   try {
-    // 保存过的作品 ID 始终复用，后续失败不重建上一步。
-    if (!createdId.value) createdId.value = selectedWork.value?.id || (await createCatalogWork({ title: title.value.trim(), authors: names(authors.value), author_ids: selectedAuthors.value, original_title: originalTitle.value.trim(), description: description.value.trim() })).id
+    if (!createdId.value && workChoice.value === 'new') {
+      const input = {
+        title: title.value.trim(), authors: names(authors.value), author_ids: selectedAuthors.value,
+        original_title: originalTitle.value.trim(),
+      }
+      nameConflicts.value = await findNameConflicts(input.authors, selectedAuthors.value, newAuthorNames.value)
+      if (nameConflicts.value.length) {
+        error.value = '已有同名作者，请选择已有作者或确认新建不同人物。'
+        return
+      }
+      duplicateWorkCandidates.value = (await checkCatalogWorkDuplicates(input)).matches
+      if (duplicateWorkCandidates.value.length && !confirmDuplicateWork.value) {
+        error.value = '发现疑似重复作品，请检查并确认后继续。'
+        return
+      }
+    }
+    if (!createdId.value) {
+      const workPayload = {
+        title: title.value.trim(), authors: names(authors.value), author_ids: selectedAuthors.value,
+        new_author_names: newAuthorNames.value, original_title: originalTitle.value.trim(), description: description.value.trim(),
+      }
+      createdId.value = selectedWork.value?.id || (await createCatalogWork(workPayload, stableRequestID(workPayload, 'work'))).id
+    }
     if (!createdId.value) throw new Error('缺少作品 ID')
-    if (!withEdition) { finished.value = true; busy.value = false; await router.replace({ path: `/books/work/${createdId.value}`, query: route.query }); return }
-    const edition = newEdition ? await createCatalogEdition(createdId.value, { title: editionTitle.value.trim(), subtitle: subtitle.value.trim(), translators: names(translators.value), language: language.value.trim(), publisher: publisher.value.trim(), edition_statement: statement.value.trim(), isbn10: normalizedISBN.length === 10 ? normalizedISBN : '', isbn13: normalizedISBN.length === 13 ? normalizedISBN : '', published_date: date.year ? dateString : '', page_count: Number(pages.value || 0), cover_url: cover.value.trim() }) : chosenEdition.value
+    if (!withEdition) {
+      finished.value = true
+      await router.replace({ path: `/books/work/${createdId.value}`, query: route.query })
+      return
+    }
+    if (newEdition) {
+      translatorConflicts.value = await findNameConflicts(names(translators.value), selectedTranslatorIDs.value, newTranslatorNames.value)
+      if (translatorConflicts.value.length) {
+        error.value = '已有同名译者，请选择已有人物或确认新建不同人物。'
+        return
+      }
+      duplicateEditionCandidates.value = (await checkCatalogEditionDuplicates(createdId.value, editionPayload)).matches
+      if (duplicateEditionCandidates.value.length && !confirmDuplicateEdition.value) {
+        error.value = '发现疑似重复版本，请检查并确认后继续。'
+        return
+      }
+    }
+    const edition = newEdition
+      ? await createCatalogEdition(createdId.value, editionPayload, stableRequestID({ work_id: createdId.value, ...editionPayload }, 'edition'))
+      : chosenEdition.value
     if (!edition?.id) throw new Error('缺少版本 ID')
-    editionId.value = edition.id; savedEditionTitle.value = edition.title || selectedWork.value?.title || title.value; savedLanguage.value = edition.language || ''; step.value = 3; finished.value = true
-  } catch { error.value = createdId.value ? '作品已保存，版本保存失败。输入仍保留，请重试，不会重复创建作品。' : '创建结果未确认。请先查找是否已创建，避免重复。' }
-  finally { if (alive) busy.value = false }
+    editionId.value = edition.id
+    savedEditionTitle.value = edition.title || selectedWork.value?.title || title.value
+    savedLanguage.value = edition.language || ''
+    step.value = 3
+    finished.value = true
+  } catch {
+    error.value = createdId.value
+      ? '作品已保存，但版本处理未完成。可重试或检查已有版本，避免重复创建。'
+      : '创建结果尚未确认，请先搜索是否已创建，避免重复。'
+  } finally {
+    if (alive) busy.value = false
+  }
 }
 function resolveLeave(leave: boolean) { leaveOpen.value = false; leaveResolve?.(leave); leaveResolve = undefined }
 onBeforeRouteLeave(() => { if (busy.value) return false; if (!dirty.value) return true; leaveOpen.value = true; return new Promise<boolean>(resolve => { leaveResolve = resolve }) })

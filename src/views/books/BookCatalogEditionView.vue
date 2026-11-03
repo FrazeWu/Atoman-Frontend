@@ -136,7 +136,7 @@ async function loadFiles() {
 async function addToShelf(file: EditionFile) {
   busyFile.value = file.revision_id
   try {
-    await saveFileShelf(file.revision_id, { status: 'unstarted' })
+    await saveFileShelf(file.revision_id)
     fileNotice.value = '已加入书架。此具体文件将持续保留在你的书架中。'
   } catch { fileNotice.value = '加入书架失败，请重试。' }
   finally { busyFile.value = '' }

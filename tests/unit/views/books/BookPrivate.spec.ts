@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import * as api from '@/api/bookPrivate'
+import * as fileShelf from '@/api/bookFileShelf'
 import BookPrivateLibraryView from '@/views/books/BookPrivateLibraryView.vue'
 import BookPrivateNotesView from '@/views/books/BookPrivateNotesView.vue'
 const wrappers: VueWrapper[] = []
@@ -10,7 +11,7 @@ const note: api.PrivateNote = { id: 'note-1', work_id: 'work-1', version: 7, tit
 beforeEach(() => { setActivePinia(createPinia()); vi.spyOn(api, 'listPrivateNotes').mockResolvedValue({ items: [note], total: 1 }) })
 afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()); vi.restoreAllMocks() })
 async function setup(component: typeof BookPrivateNotesView | typeof BookPrivateLibraryView) {
-  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/books/notes', component }, { path: '/books', component: { template: '<p>发现</p>' } }] })
+  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/books/notes', component }, { path: '/books', component: { template: '<p>发现</p>' } }, { path: '/books/read/:workId/:assetId/:revisionId', component: { template: '<p>阅读器</p>' } }] })
   await router.push('/books/notes'); await router.isReady()
   const wrapper = mount(component, { global: { plugins: [router], stubs: { BookPrivateHighlights: true, PSheet: { props: ['show'], template: '<section v-if="show"><slot /></section>' }, PConfirm: { props: ['show'], template: '<div v-if="show"><button data-confirm @click="$emit(\'confirm\')">确定</button></div>' } } } })
   wrappers.push(wrapper); await flushPromises(); return wrapper
@@ -39,12 +40,25 @@ it('回收站恢复使用删除后的版本，不把旧副本覆盖回云端', a
   await wrapper.findAll('button').find(button => button.text() === '恢复笔记')!.trigger('click'); await flushPromises()
   expect(restore).toHaveBeenCalledWith(expect.objectContaining({ id: 'note-1', version: 8 }))
 })
-it('书架只有作品状态和私人标签，不再混入本地导入记录', async () => {
-  vi.spyOn(api, 'listLibrary').mockResolvedValue({ items: [{ id: 'entry', work_id: 'work', work_title: '图书', status: 'reading', tags: ['历史'], version: 3 }], total: 1 })
-  vi.spyOn(api, 'readingStatistics').mockResolvedValue({ total_seconds: 120, days: [], works: [], timezone: 'UTC', from: '', to: '' })
-  const save = vi.spyOn(api, 'saveLibrary').mockResolvedValue({ id: 'entry', version: 4 } as never)
+it('书架固定绑定具体文件，包含归档与历史书，点击直接续读', async () => {
+  const list = vi.spyOn(fileShelf, 'listFileShelf').mockResolvedValue({
+    items: [
+      { id: 'shelf-a', revision_id: 'revision-old', asset_id: 'asset-a', work_id: 'work-1', edition_id: 'edition-1', title: '图书', format: 'pdf', status: 'reading', archived: true, furthest_percent: 0.7, has_better: true, file_available: true, cover_url: '', created_at: '2026-11-03T00:00:00Z' },
+      { id: 'shelf-b', revision_id: 'revision-new', asset_id: 'asset-b', work_id: 'work-1', edition_id: 'edition-1', title: '图书', format: 'epub', status: 'unstarted', archived: false, furthest_percent: 0, has_better: false, file_available: true, cover_url: '', created_at: '2026-11-03T00:00:01Z' },
+    ], total: 2,
+  })
+  const save = vi.spyOn(fileShelf, 'saveFileShelf').mockResolvedValue({} as never)
   const wrapper = await setup(BookPrivateLibraryView)
-  expect(wrapper.text()).not.toContain('本地导入'); expect(wrapper.text()).toContain('有效阅读 2 分钟')
-  await wrapper.findAll('select')[1].setValue('read'); await flushPromises()
-  expect(save).toHaveBeenCalledWith('work', 'read', ['历史'], expect.objectContaining({ id: 'entry' }))
+  expect(list).toHaveBeenCalledWith({ sort: 'activity', status: '' })
+  expect(wrapper.findAll('.file-library__card')).toHaveLength(2)
+  expect(wrapper.text()).toContain('有更优版本')
+  expect(wrapper.text()).toContain('已归档')
+  expect(wrapper.text()).toContain('最远阅读 70%')
+  await wrapper.get('.file-library__card .file-library__cover').trigger('click')
+  await flushPromises()
+  expect(wrapper.vm.$router.currentRoute.value.path).toBe('/books/read/work-1/asset-a/revision-old')
+  await wrapper.get('.file-library__card summary').trigger('click')
+  await wrapper.findAll('.file-library__card details button').find(item => item.text() === '取消归档')!.trigger('click')
+  await flushPromises()
+  expect(save).toHaveBeenCalledWith('revision-old', { archived: false })
 })

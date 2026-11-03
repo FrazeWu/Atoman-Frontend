@@ -423,7 +423,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import {
   checkCatalogEditionDuplicates, checkCatalogWorkDuplicates, createCatalogEdition, createCatalogWork,
@@ -447,7 +447,7 @@ const router = useRouter(), route = useRoute()
 const step = ref(1), workChoice = ref(''), editionChoice = ref('')
 const editionQuery = ref('')
 const query = ref(''), matches = ref<BookPublicWork[]>([]), searched = ref(false), searching = ref(false), searchError = ref('')
-const selectedWork = ref<CatalogWork | null>(null), file = ref<File | null>(null)
+const selectedWork = ref<CatalogWork | null>(null), file = shallowRef<File | null>(null)
 const coverCandidates = ref<BookCoverCandidate[]>([])
 const selectedCover = ref(''), coverExplanation = ref(''), coverBusy = ref(false), coverSaving = ref(false), resourceReady = ref(false)
 const title = ref(''), authors = ref(''), originalTitle = ref(''), description = ref('')
@@ -547,7 +547,7 @@ async function findPeople() { try { const page = await searchWikiPeople(personQu
 async function chooseFile(event: Event) {
   const selected = (event.target as HTMLInputElement).files?.[0]
   if (!selected) return
-  if (!/\\.(epub|pdf|txt|cbz|cbr)$/i.test(selected.name) || !selected.size) {
+  if (!/\.(epub|pdf|txt|cbz|cbr)$/i.test(selected.name) || !selected.size) {
     error.value = '请选择非空的 EPUB、PDF、TXT、CBZ 或 CBR 文件。'
     return
   }
@@ -694,7 +694,7 @@ async function save(withEdition: boolean) {
   }
 }
 function resolveLeave(leave: boolean) { leaveOpen.value = false; leaveResolve?.(leave); leaveResolve = undefined }
-onBeforeRouteLeave(() => { if (busy.value) return false; if (!dirty.value) return true; leaveOpen.value = true; return new Promise<boolean>(resolve => { leaveResolve = resolve }) })
+onBeforeRouteLeave(() => { if (finished.value) return true; if (busy.value) return false; if (!dirty.value) return true; leaveOpen.value = true; return new Promise<boolean>(resolve => { leaveResolve = resolve }) })
 function beforeUnload(event: BeforeUnloadEvent) { if (dirty.value || busy.value) { event.preventDefault(); event.returnValue = '' } }
 onMounted(async () => { window.addEventListener('beforeunload', beforeUnload); if (typeof route.query.work === 'string') { workChoice.value = route.query.work; await next() } })
 onBeforeUnmount(() => { alive = false; searchController?.abort(); window.removeEventListener('beforeunload', beforeUnload); leaveResolve?.(false) })

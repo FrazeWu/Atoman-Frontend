@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ApiErrorResponseError } from '@/api/client'
@@ -38,7 +38,7 @@ const idSuffix = `-${props.replaceAsset?.id || props.editionId || props.workId}`
 const emit = defineEmits<{ ready: [] }>()
 const auth = useAuthStore()
 const storageKey = `atoman:book-upload:${auth.user?.uuid}:${props.workId}:${props.replaceAsset?.id || props.editionId || 'legacy'}`
-const file = ref<File | null>(props.initialFile || null)
+const file = shallowRef<File | null>(props.initialFile || null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const language = ref(props.initialLanguage || '')
 const confirmed = ref(false)

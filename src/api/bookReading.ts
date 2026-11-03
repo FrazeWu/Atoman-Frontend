@@ -3,6 +3,9 @@ import { useApiUrl } from '@/composables/useApi'
 
 export interface ReadingPosition {
   current_percent: number
+  // false means a deliberate TOC/search/bookmark jump: save resume position
+  // without counting the destination as naturally read.
+  advance_furthest?: boolean
   epub_cfi: string
   pdf_page: number
   txt_offset: number

@@ -153,11 +153,15 @@ describe('BookPublicReaderView', () => {
     const wrapper = mount(BookPublicReaderView, { global: { plugins: [router] } })
     await flushPromises()
 
+    await wrapper.get('.public-reader__text').trigger('scroll')
+    const initiallyStored = JSON.parse(localStorage.getItem('atoman:book-reading-progress:public-asset-5') || '{}')
+    expect(initiallyStored.display.scroll_mode).toBe('continuous')
     await wrapper.find('.book-reader-display-controls select').setValue('0.85')
     await wrapper.find('[aria-label="夜间主题"]').trigger('click')
 
     expect(localStorage.getItem('atoman:book-reading-progress:public-asset-5')).toContain('"theme":"night"')
     expect(localStorage.getItem('atoman:book-reading-progress:public-asset-5')).toContain('"font_scale":0.85')
+    expect(JSON.parse(localStorage.getItem('atoman:book-reading-progress:public-asset-5') || '{}').display.scroll_mode).toBe('continuous')
     wrapper.unmount()
   })
 })

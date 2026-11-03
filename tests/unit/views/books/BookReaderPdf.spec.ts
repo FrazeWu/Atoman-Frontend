@@ -4,6 +4,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, expect, it, vi } from 'vitest'
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import BookPublicReaderView from '@/components/books/BookPublicReaderView.vue'
+import BookPdfContinuousView from '@/components/books/BookPdfContinuousView.vue'
 
 vi.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({ GlobalWorkerOptions: {}, getDocument: vi.fn() }))
 afterEach(() => vi.restoreAllMocks())
@@ -24,12 +25,16 @@ it('云端 PDF 精确页码优先于百分比，翻页提交对应页码', async
   } }, global: { plugins: [router] } })
   try {
     await flushPromises()
-    expect(getPage).toHaveBeenLastCalledWith(3)
+    expect(wrapper.findComponent(BookPdfContinuousView).exists()).toBe(true)
     expect(observe).not.toHaveBeenCalled()
     expect(ready).toHaveBeenCalledOnce()
+    // Switch to paginated mode to access the single-page navigation buttons.
+    await wrapper.get('button[aria-label="切换为单页翻页"]').trigger('click')
+    await flushPromises()
+    expect(getPage).toHaveBeenLastCalledWith(3)
     await wrapper.get('button[aria-label="下一页"]').trigger('click')
     await flushPromises()
-    expect(observe).toHaveBeenLastCalledWith({ pdf_page: 4, current_percent: .4, txt_offset: 0, epub_cfi: '' })
+    expect(observe).toHaveBeenLastCalledWith({ advance_furthest: true, pdf_page: 4, current_percent: .4, txt_offset: 0, epub_cfi: '' })
   } finally { wrapper.unmount() }
 })
 
@@ -57,6 +62,8 @@ it('快速缩放取消旧 PDF 绘制，只有最新请求继续使用画布', as
     asset: { id: 'a', format: 'pdf', file_name: 'test.pdf', content_type: 'application/pdf', size: 3, status: 'published', created_at: '' },
   } }, global: { plugins: [router] } })
   try {
+    await flushPromises()
+    await wrapper.get('button[aria-label="切换为单页翻页"]').trigger('click')
     await flushPromises()
     expect(tasks).toHaveLength(1)
     await wrapper.get('button[aria-label="放大"]').trigger('click')

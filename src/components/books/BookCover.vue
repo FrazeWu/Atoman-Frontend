@@ -47,6 +47,7 @@ import { resolveMediaImageURL, resolveMediaURL } from '@/utils/mediaUrl'
 const props = withDefaults(
   defineProps<{
     src?: string
+    seed?: string
     title: string
     eager?: boolean
     width?: number
@@ -85,7 +86,7 @@ const showImage = computed(() => {
 // 根据分类或书名 hash 动态计算 2B 的顶部 accent 颜色
 const accentColors = ['#0284c7', '#059669', '#d97706', '#475569', '#7c3aed', '#e11d48']
 const accentColor = computed(() => {
-  const seed = props.category || props.title || ''
+  const seed = props.seed || props.category || props.title || ''
   let hash = 0
   for (let i = 0; i < seed.length; i++) {
     hash = (hash << 5) - hash + seed.charCodeAt(i)

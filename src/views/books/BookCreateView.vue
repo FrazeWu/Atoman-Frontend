@@ -16,23 +16,6 @@
     </ol>
     <form v-if="step === 1" class="book-catalog__form" @submit.prevent="next">
       <fieldset class="book-catalog__fields" :disabled="busy">
-        <!-- 电子文件选择区域 -->
-        <div class="book-catalog__file-zone">
-          <label for="create-source-file" class="book-catalog__file-label">
-            选择电子文件（可选，也可以只填写书目）
-          </label>
-          <input
-            id="create-source-file"
-            type="file"
-            class="book-catalog__file-input"
-            accept=".epub,.pdf,.txt,.cbz,.cbr"
-            @change="chooseFile"
-          />
-          <p v-if="file" class="book-catalog__file-info">
-            {{ file.name }} · 文件暂存在本页，确认版本并同意公开分享后才上传。此步骤不会进行 OCR。
-          </p>
-        </div>
-
         <!-- 查找已有作品 -->
         <div class="book-catalog__search-row">
           <PInput
@@ -189,7 +172,7 @@
       <div class="book-catalog__actions">
         <PButton type="submit" :disabled="!canContinue || busy">下一步：版本／译本</PButton>
         <PButton
-          v-if="workChoice === 'new' && !file"
+          v-if="workChoice === 'new'"
           type="button"
           variant="secondary"
           :disabled="!canContinue || busy"
@@ -210,7 +193,31 @@
         </div>
       </div>
 
-      <p class="book-catalog__step-intro">同一作品的不同出版版本、语言和译者都放在这里。可选择已有版本，或录入新版本。</p>
+      <div class="book-catalog__new-edition-card">
+        <h3>1. 先选择电子书文件</h3>
+        <label for="edition-source-file">电子书文件（必填）</label>
+        <input id="edition-source-file" type="file" accept=".epub,.pdf,.txt,.cbz,.cbr" @change="chooseFile" />
+        <p v-if="file">{{ file.name }} · {{ Math.round(file.size / 1024) }} KB</p>
+        <p v-if="coverBusy" role="status">正在分析文件前五页及书目元数据…</p>
+        <p v-if="coverExplanation">{{ coverExplanation }}</p>
+        <div v-if="coverCandidates.length" class="book-catalog__cover-candidates">
+          <button v-for="(candidate,index) in coverCandidates" :key="index" type="button"
+            :class="{ 'is-selected': selectedCover === candidate.dataUrl }"
+            :aria-pressed="selectedCover === candidate.dataUrl"
+            @click="selectedCover = candidate.dataUrl">
+            <img :src="candidate.dataUrl" :alt="candidate.label" loading="lazy" />
+            <small>{{ candidate.label }}{{ selectedCover === candidate.dataUrl ? ' · 已选择' : '' }}</small>
+          </button>
+        </div>
+        <label for="edition-manual-cover">封面不正确？手动上传封面图片</label>
+        <input id="edition-manual-cover" type="file" accept="image/jpeg,image/png,image/webp" @change="chooseCoverImage" />
+        <div v-if="selectedCover" class="book-catalog__selected-cover">
+          <img :src="selectedCover" alt="已选择的出版封面" />
+          <span>已选择封面，可继续核对出版资料</span>
+        </div>
+        <p v-else role="status">请选择以上候选之一，或手动上传出版封面。</p>
+      </div>
+      <p class="book-catalog__step-intro">2. 核对出版版本与书目资料，自动识别结果均可修改。</p>
 
       <fieldset class="book-catalog__fields" :disabled="busy">
         <PInput
@@ -338,13 +345,7 @@
             min="1"
             step="1"
           />
-          <PInput
-            id="create-edition-cover"
-            v-model="cover"
-            label="封面图片地址（选填）"
-            type="url"
-            placeholder="https://..."
-          />
+
         </div>
 
         <div v-if="editionChoice === 'new' && duplicateEditionCandidates.length" class="book-catalog__new-work-card" role="status">
@@ -383,8 +384,8 @@
         >
           返回作品
         </PButton>
-        <PButton type="submit" :disabled="!editionChoice || busy">
-          {{ busy ? '正在保存…' : editionChoice === 'new' ? '确认并公开版本' : '确认使用此版本' }}
+        <PButton type="submit" :disabled="!editionChoice || busy || !file || !selectedCover || coverBusy">
+          {{ busy ? '正在保存…' : '确认版本并上传文件' }}
         </PButton>
       </div>
     </form>
@@ -392,16 +393,14 @@
     <!-- Step 3: 关联文件与阅读 -->
     <section v-else-if="createdId && editionId" class="book-catalog__step3-card">
       <div class="book-catalog__step3-header">
-        <h2 class="book-catalog__step3-title">书目已公开</h2>
+        <h2 class="book-catalog__step3-title">上传并验证电子书</h2>
         <p class="book-catalog__step3-sub">
           <strong>{{ selectedWork?.title || title }}</strong> → {{ savedEditionTitle }}
         </p>
       </div>
 
       <div class="book-catalog__step3-actions">
-        <PButton :to="`/books/edition/${editionId}`" variant="secondary">
-          查看版本详情
-        </PButton>
+        <p>文件通过安全检查后，该出版版本才会正式创建并公开展示。</p>
       </div>
 
       <div class="book-catalog__upload-wrap">
@@ -412,9 +411,11 @@
           :title="savedEditionTitle"
           :initial-file="file"
           :initial-language="savedLanguage"
-          @ready="file = null"
+          @ready="onResourceReady"
         />
       </div>
+      <p v-if="coverSaving" role="status">正在保存已选择的出版封面…</p>
+      <PButton v-if="resourceReady && selectedCover && !coverSaving" type="button" variant="secondary" @click="onResourceReady">完成封面保存并进入版本详情</PButton>
     </section>
     <p v-if="error" class="book-catalog__error" role="alert">{{ error }}</p>
     <PConfirm :show="leaveOpen" title="离开创建" message="未保存的信息和未上传的本地文件不会保留，确定离开吗？" @confirm="resolveLeave(true)" @cancel="resolveLeave(false)" />
@@ -432,6 +433,8 @@ import type { CreateCatalogEdition } from '@/entities/book/model/types'
 import type { BookPublicEdition, BookPublicWork } from '@/api/books'
 import { searchWikiPeople } from '@/api/bookWiki'
 import BookResourceUpload from '@/components/books/BookResourceUpload.vue'
+import { inspectBookCoverCandidates, coverFromFile, type BookCoverCandidate } from '@/utils/bookCoverCandidates'
+import { saveEditionCover } from '@/api/bookFileShelf'
 import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -445,9 +448,11 @@ const step = ref(1), workChoice = ref(''), editionChoice = ref('')
 const editionQuery = ref('')
 const query = ref(''), matches = ref<BookPublicWork[]>([]), searched = ref(false), searching = ref(false), searchError = ref('')
 const selectedWork = ref<CatalogWork | null>(null), file = ref<File | null>(null)
+const coverCandidates = ref<BookCoverCandidate[]>([])
+const selectedCover = ref(''), coverExplanation = ref(''), coverBusy = ref(false), coverSaving = ref(false), resourceReady = ref(false)
 const title = ref(''), authors = ref(''), originalTitle = ref(''), description = ref('')
 const personQuery = ref(''), selectedAuthors = ref<string[]>([]), availablePeople = ref<{ id: string; name: string }[]>([])
-const editionTitle = ref(''), subtitle = ref(''), translators = ref(''), language = ref(''), publisher = ref(''), statement = ref(''), isbn = ref(''), pages = ref(''), cover = ref('')
+const editionTitle = ref(''), subtitle = ref(''), translators = ref(''), language = ref(''), publisher = ref(''), statement = ref(''), isbn = ref(''), pages = ref('')
 const publishedDate = ref({ year: '', month: '', day: '' })
 const busy = ref(false), error = ref(''), createdId = ref(''), editionId = ref(''), finished = ref(false), leaveOpen = ref(false)
 const savedEditionTitle = ref(''), savedLanguage = ref('')
@@ -539,11 +544,60 @@ async function findWorks() {
   finally { if (alive && controller === searchController) searching.value = false }
 }
 async function findPeople() { try { const page = await searchWikiPeople(personQuery.value); if (alive) availablePeople.value = [...availablePeople.value.filter(person => selectedAuthors.value.includes(person.id)), ...page.items.filter(person => !selectedAuthors.value.includes(person.id))] } catch { if (alive) error.value = '作者搜索失败，请重试。' } }
-function chooseFile(event: Event) {
+async function chooseFile(event: Event) {
   const selected = (event.target as HTMLInputElement).files?.[0]
   if (!selected) return
-  if (!/\.(epub|pdf|txt|cbz|cbr)$/i.test(selected.name) || !selected.size) { error.value = '请选择非空的 EPUB、PDF、TXT、CBZ 或 CBR 文件。'; return }
-  file.value = selected; error.value = ''
+  if (!/\\.(epub|pdf|txt|cbz|cbr)$/i.test(selected.name) || !selected.size) {
+    error.value = '请选择非空的 EPUB、PDF、TXT、CBZ 或 CBR 文件。'
+    return
+  }
+  file.value = selected
+  coverCandidates.value = []
+  selectedCover.value = ''
+  coverExplanation.value = ''
+  resourceReady.value = false
+  error.value = ''
+  coverBusy.value = true
+  try {
+    const inspection = await inspectBookCoverCandidates(selected)
+    if (file.value !== selected || !alive) return
+    coverCandidates.value = inspection.candidates
+    coverExplanation.value = inspection.explanation
+    const data = inspection.metadata
+    // Existing user edits always win over file metadata.
+    if (!editionTitle.value.trim() && data.title) editionTitle.value = data.title
+    if (!language.value.trim() && data.language) language.value = data.language
+    if (!publisher.value.trim() && data.publisher) publisher.value = data.publisher
+    if (!isbn.value.trim() && data.isbn) isbn.value = data.isbn
+    if (!pages.value.trim() && data.pageCount) pages.value = String(data.pageCount)
+  } catch (reason) {
+    if (alive) error.value = reason instanceof Error
+      ? '自动分析失败：' + reason.message + '。可手动上传封面并填写资料。'
+      : '自动识别失败，可手动填写资料。'
+  } finally { if (alive) coverBusy.value = false }
+}
+async function chooseCoverImage(event: Event) {
+  const selected = (event.target as HTMLInputElement).files?.[0]
+  if (!selected) return
+  coverBusy.value = true
+  try { selectedCover.value = await coverFromFile(selected); error.value = '' }
+  catch (reason) { error.value = reason instanceof Error ? reason.message : '封面读取失败。' }
+  finally { coverBusy.value = false }
+}
+async function onResourceReady() {
+  resourceReady.value = true
+  if (coverSaving.value || !editionId.value || !selectedCover.value) return
+  coverSaving.value = true
+  error.value = ''
+  try {
+    await saveEditionCover(editionId.value, selectedCover.value)
+    finished.value = true
+    file.value = null
+    await router.replace({ path: '/books/edition/' + editionId.value })
+  } catch (reason) {
+    error.value = '文件已通过安全检查，但出版封面保存失败。可点击下方按钮重试。' +
+      (reason instanceof Error ? ' ' + reason.message : '')
+  } finally { if (alive) coverSaving.value = false }
 }
 async function next() {
   if (busy.value || !canContinue.value) return
@@ -554,6 +608,10 @@ async function next() {
 }
 async function save(withEdition: boolean) {
   if (busy.value || !canContinue.value || (withEdition && !editionChoice.value)) return
+  if (withEdition && (!file.value || !selectedCover.value)) {
+    error.value = '创建出版版本必须上传电子书文件并选择实际出版封面。'
+    return
+  }
   const newEdition = withEdition && editionChoice.value === 'new'
   const normalizedISBN = isbn.value.replace(/[\s-]/g, '').toUpperCase()
   if (newEdition && !isValidISBN(normalizedISBN)) { error.value = 'ISBN 校验位不正确，请核对 ISBN-10 或 ISBN-13。'; return }
@@ -567,7 +625,7 @@ async function save(withEdition: boolean) {
     translator_ids: selectedTranslatorIDs.value, new_translator_names: newTranslatorNames.value,
     language: language.value.trim(), publisher: publisher.value.trim(), edition_statement: statement.value.trim(),
     isbn10: normalizedISBN.length === 10 ? normalizedISBN : '', isbn13: normalizedISBN.length === 13 ? normalizedISBN : '',
-    published_date: date.year ? dateString : '', page_count: Number(pages.value || 0), cover_url: cover.value.trim(),
+    published_date: date.year ? dateString : '', page_count: Number(pages.value || 0), cover_url: '',
   }
   if (newEdition && !normalizedISBN && !(
     (editionPayload.publisher && (editionPayload.published_date || editionPayload.edition_statement || editionPayload.translators?.length || editionPayload.translator_ids?.length)) ||
@@ -626,7 +684,7 @@ async function save(withEdition: boolean) {
     savedEditionTitle.value = edition.title || selectedWork.value?.title || title.value
     savedLanguage.value = edition.language || ''
     step.value = 3
-    finished.value = true
+    // Wait for the upload scan before treating an Edition as published.
   } catch {
     error.value = createdId.value
       ? '作品已保存，但版本处理未完成。可重试或检查已有版本，避免重复创建。'
@@ -641,3 +699,46 @@ function beforeUnload(event: BeforeUnloadEvent) { if (dirty.value || busy.value)
 onMounted(async () => { window.addEventListener('beforeunload', beforeUnload); if (typeof route.query.work === 'string') { workChoice.value = route.query.work; await next() } })
 onBeforeUnmount(() => { alive = false; searchController?.abort(); window.removeEventListener('beforeunload', beforeUnload); leaveResolve?.(false) })
 </script>
+
+<style scoped>
+.book-catalog__cover-candidates {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: .7rem;
+  margin: 1rem 0;
+}
+.book-catalog__cover-candidates button {
+  display: grid;
+  gap: .4rem;
+  padding: .4rem;
+  background: transparent;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: .5rem;
+  cursor: pointer;
+}
+.book-catalog__cover-candidates button.is-selected {
+  border: 2px solid var(--a-color-primary, var(--a-color-text-primary));
+}
+.book-catalog__cover-candidates img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: contain;
+  background: var(--a-color-bg);
+}
+.book-catalog__cover-candidates small {
+  font-size: .75rem;
+  text-align: center;
+  color: var(--a-color-text-secondary);
+}
+.book-catalog__selected-cover {
+  display: flex;
+  align-items: center;
+  gap: .9rem;
+  margin-top: .9rem;
+}
+.book-catalog__selected-cover img {
+  width: 90px;
+  max-height: 130px;
+  object-fit: contain;
+}
+</style>

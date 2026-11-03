@@ -15,6 +15,7 @@
             variant="work"
             :src="work.cover_url"
             :title="work.title"
+            :seed="work.id"
             :subtitle="work.subtitle || work.original_title"
             :author="work.authors.map(author => author.name).join(' / ')"
             eager
@@ -51,7 +52,7 @@
           </div>
 
           <div class="book-catalog__hero-actions">
-            <BookShelfAction v-if="auth.isAuthenticated" :key="auth.user?.uuid" :work-id="work.id" />
+            <p class="book-catalog__step-intro">阅读书架只收录具体电子书；请在下方出版版本中选择文件后加入。</p>
             <PButton
               v-if="auth.isAuthenticated"
               variant="secondary"
@@ -101,60 +102,17 @@
                 <span v-if="edition.page_count">{{ edition.page_count }} 页</span>
               </div>
 
-              <!-- 该版本下的可读电子书文件 -->
               <div class="book-catalog__edition-resources">
-                <div
-                  v-for="asset in resources.filter(asset => asset.edition_id === edition.id)"
-                  :key="asset.id"
-                  class="book-catalog__resource-chip"
-                >
-                  <span class="book-catalog__resource-badge">{{ asset.format.toUpperCase() }}</span>
-                  <span class="book-catalog__resource-name">{{ asset.title || edition.title || work.title }} · {{ asset.language }}</span>
-                  <PButton
-                    v-if="asset.current_revision_id"
-                    size="sm"
-                    :to="resourceReaderPath(work.id, asset.id, asset.current_revision_id)"
-                  >
-                    开始阅读
-                  </PButton>
-                  <BookResourceVersions :asset="asset" :authenticated="auth.isAuthenticated" />
-                </div>
+                <PButton size="sm" variant="secondary" :to="'/books/edition/' + edition.id">
+                  查看推荐阅读文件与历史版本
+                </PButton>
               </div>
-
               <div class="book-catalog__edition-wiki-row">
                 <BookWikiPanel kind="edition" :entity-id="edition.id" :work-id="work.id" :authenticated="auth.isAuthenticated" @changed="refreshWork" />
               </div>
             </div>
           </li>
         </ul>
-      </section>
-
-      <!-- 电子书文件区 -->
-      <section aria-labelledby="catalog-resources-title" class="book-catalog__section">
-        <h2 id="catalog-resources-title">电子书文件</h2>
-        <div v-if="resourceError" role="alert" class="book-catalog__error-box">
-          <p class="book-catalog__error">{{ resourceError }}</p>
-          <PButton variant="secondary" @click="loadResources">重试加载文件</PButton>
-        </div>
-        <p v-else-if="resourcesLoading" role="status" class="book-catalog__status-text">正在检查可用文件…</p>
-        <p v-else-if="!resources.length" class="book-catalog__empty-hint">图书已公开，暂时没有通过自动安全检查的电子书文件。</p>
-        <div v-else>
-          <p class="book-catalog__step-intro">文件按版本／译本展示。旧文件保持原状，不自动推断所属版本。</p>
-          <ul class="book-catalog__list">
-            <li v-for="asset in resources" :key="asset.id" class="book-catalog__row">
-              <strong>{{ asset.title || work.title }}</strong>
-              <span>{{ asset.format.toUpperCase() }} · {{ asset.language }}</span>
-              <span>文件已通过自动安全检查</span>
-              <PButton v-if="asset.current_revision_id" :to="resourceReaderPath(work.id, asset.id, asset.current_revision_id)">开始阅读</PButton>
-              <BookResourceVersions :asset="asset" :authenticated="auth.isAuthenticated" />
-            </li>
-          </ul>
-        </div>
-        <div class="book-catalog__upload-actions">
-          <PButton v-if="!auth.isAuthenticated" variant="secondary" :to="{ path: '/login', query: { redirect: route.fullPath } }">
-            登录后上传文件
-          </PButton>
-        </div>
       </section>
 
       <!-- 读者研讨与社区 -->
@@ -182,15 +140,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import BookResourceVersions from '@/components/books/BookResourceVersions.vue'
-import BookShelfAction from '@/components/books/BookShelfAction.vue'
 import BookWorkCommunity from '@/components/books/BookWorkCommunity.vue'
 import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
 import BookCover from '@/components/books/BookCover.vue'
 import RatingControl from '@/components/shared/RatingControl.vue'
 import { ApiErrorResponseError } from '@/api/client'
-import { getCatalogWork, listCatalogResources, type CatalogResource, type CatalogWork } from '@/api/bookCatalog'
-import { resourceReaderPath } from '@/api/bookResources'
+import { getCatalogWork, type CatalogWork } from '@/api/bookCatalog'
 import { setWorkRating, removeWorkRating, type WorkRating } from '@/api/bookCommunity'
 import './bookCatalog.css'
 import './bookPrivate.css'
@@ -203,11 +158,8 @@ const work = ref<CatalogWork>()
 const workRating = ref<WorkRating | null>(null)
 const ratingBusy = ref(false)
 const ratingError = ref('')
-const resources = ref<CatalogResource[]>([])
 const loading = ref(true)
-const resourcesLoading = ref(false)
 const error = ref('')
-const resourceError = ref('')
 let alive = true
 
 async function refreshWork() {
@@ -255,25 +207,6 @@ async function handleClearRate() {
   }
 }
 
-async function loadResources() {
-  if (!work.value) return
-  const targetId = work.value.id
-  resourcesLoading.value = true
-  resourceError.value = ''
-  try {
-    const list = await listCatalogResources(targetId)
-    if (!alive || work.value?.id !== targetId) return
-    resources.value = list.items
-  } catch (err) {
-    if (!alive || work.value?.id !== targetId) return
-    resourceError.value = '文件信息加载失败，图书书目仍然公开。'
-  } finally {
-    if (alive && work.value?.id === targetId) {
-      resourcesLoading.value = false
-    }
-  }
-}
-
 async function load() {
   const id = String(route.params.workId || '')
   if (!id) {
@@ -294,7 +227,6 @@ async function load() {
     }
     work.value = result
     loading.value = false
-    void loadResources()
   } catch (err) {
     if (!alive) return
     loading.value = false

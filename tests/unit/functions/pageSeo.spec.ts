@@ -71,6 +71,9 @@ describe("static page SEO", () => {
 		expect(
 			buildStaticPageHtml(shell, "/messages", "www.atoman.org"),
 		).toContain('<meta name="robots" content="noindex, nofollow">');
+		expect(
+			buildStaticPageHtml(shell, "/mail", "www.atoman.org"),
+		).toContain('<meta name="robots" content="noindex, nofollow">');
 	});
 
 	it("leaves dynamic public content for its route-specific SEO handler", () => {
@@ -84,6 +87,15 @@ describe("static page SEO", () => {
 
 		expect(html).not.toContain('rel="canonical"');
 		expect(html).not.toContain('https://www.atoman.org/"');
+	});
+
+	it("recognizes Webmail as a private route instead of returning 404", async () => {
+		const response = await pageMiddleware({
+			request: new Request("https://www.atoman.org/mail"),
+			next: async () => new Response(shell, { headers: { "content-type": "text/html" } }),
+		});
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain('<meta name="robots" content="noindex, nofollow">');
 	});
 
 	it("returns a noindex 404 for an unknown SPA route", async () => {

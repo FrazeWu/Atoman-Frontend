@@ -40,6 +40,17 @@
   </RouterLink>
 
   <RouterLink
+    to="/mail"
+    class="notif-btn mail-btn"
+    data-testid="topbar-mail-link"
+    title="电子邮件"
+    aria-label="电子邮件"
+    @click="closeDropdown"
+  >
+    <Mail :size="19" class="notif-btn__icon" aria-hidden="true" />
+  </RouterLink>
+
+  <RouterLink
     to="/studio"
     class="studio-link"
     data-testid="studio-link"
@@ -73,6 +84,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { Mail } from 'lucide-vue-next'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useInboxStore } from '@/stores/inbox'

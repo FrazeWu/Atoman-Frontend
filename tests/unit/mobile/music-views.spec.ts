@@ -552,7 +552,7 @@ describe('Mobile Independent Music Views & Player', () => {
       auth.isAuthenticated = true
       const wrapper = mount(MusicPlaylistDetailView, {
         props: { initialPlaylist: { ...mockDetail, user_id: 'owner-1' }, initialSongs: [] },
-        global: { plugins: [pinia, router], stubs: { MIcon: true } },
+        global: { plugins: [pinia, router], stubs: { MIcon: true, Teleport: true } },
       })
       await flushPromises()
       return wrapper

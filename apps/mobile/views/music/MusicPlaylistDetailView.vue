@@ -370,6 +370,7 @@
       </div>
     </Transition>
 
+    <Teleport to="body">
     <div v-if="deletePending && canEditPlaylist" class="mobile-playlist-delete-confirm" data-testid="playlist-delete-confirm">
       <div class="mobile-playlist-delete-confirm__backdrop" @click="deletePending = false" />
       <section role="alertdialog" aria-modal="true" aria-labelledby="playlist-delete-heading" aria-describedby="playlist-delete-description" class="mobile-playlist-delete-confirm__panel">
@@ -381,6 +382,7 @@
         </div>
       </section>
     </div>
+    </Teleport>
     <p v-if="deleteError" class="mobile-playlist-detail__delete-error" role="alert" data-testid="playlist-delete-error">{{ deleteError }}</p>
 
     <!-- Floating Pill Toast -->
@@ -1451,7 +1453,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .mobile-playlist-detail__icon-btn--danger{color:var(--a-color-danger,#d14343)}
-.mobile-playlist-delete-confirm{position:fixed;inset:0;z-index:1000;display:flex;align-items:flex-end;justify-content:center}
+.mobile-playlist-delete-confirm{position:fixed;inset:0;z-index:10000;display:flex;align-items:flex-end;justify-content:center}
 .mobile-playlist-delete-confirm__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55)}
 .mobile-playlist-delete-confirm__panel{position:relative;width:min(100%,480px);padding:24px 20px calc(20px + env(safe-area-inset-bottom));background:var(--a-color-surface,#fff);border-radius:16px 16px 0 0;box-shadow:0 -6px 36px rgba(0,0,0,.15)}
 .mobile-playlist-delete-confirm__panel h2{font-size:18px;font-weight:650;margin:0 0 12px}

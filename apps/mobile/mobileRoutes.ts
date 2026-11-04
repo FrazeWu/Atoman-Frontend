@@ -171,12 +171,6 @@ export const mobileRoutes: RouteRecordRaw[] = [
 				meta: requiresAuth,
 			},
 			{
-				path: "starred",
-				component: () => import("./views/feed/FeedStreamView.vue"),
-				props: { initialTab: 'starred' },
-				meta: requiresAuth,
-			},
-			{
 				path: "article/:id",
 				component: () => import("./views/feed/FeedArticleReaderView.vue"),
 			},

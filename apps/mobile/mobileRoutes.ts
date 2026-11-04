@@ -213,6 +213,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 		component: () => import("./views/blog/BlogSubscriptionsMobileView.vue"),
 		meta: requiresAuth,
 	},
+	{ path: "/bookmarks", redirect: "/posts/bookmarks" },
 	{
 		path: "/posts/bookmarks",
 		component: () => import("./views/blog/BlogMeView.vue"),

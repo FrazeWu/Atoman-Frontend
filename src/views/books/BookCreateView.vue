@@ -16,84 +16,116 @@
     </ol>
     <form v-if="step === 1" class="book-catalog__form" @submit.prevent="next">
       <fieldset class="book-catalog__fields" :disabled="busy">
-        <!-- 查找已有作品 -->
-        <div class="book-catalog__search-row">
-          <PInput
-            id="create-work-search"
-            v-model="query"
-            label="查找已有作品"
-            placeholder="输入书名或作者"
-            @keyup.enter="findWorks"
-          />
-          <PButton
-            type="button"
-            variant="secondary"
-            :disabled="searching"
-            @click="findWorks"
-          >
-            {{ searching ? '正在查找…' : '查找作品' }}
-          </PButton>
-        </div>
-
-        <p v-if="searched && !matches.length && !searchError" role="status" class="book-catalog__empty-hint">
-          没有找到匹配作品，可以选择新建。
-        </p>
-        <p v-if="searchError" role="alert" class="book-catalog__error">
-          {{ searchError }}
-        </p>
-
-        <!-- 匹配作品与新建选项列表 -->
-        <div class="book-catalog__choices-container">
-          <label
-            v-for="work in matches"
-            :key="work.id"
-            class="book-catalog__choice"
-          >
-            <input
-              v-model="workChoice"
-              type="radio"
-              name="work"
-              :value="work.id"
-            />
-            <div class="book-catalog__choice-body">
-              <span class="book-catalog__choice-title">{{ work.title }}</span>
-              <small>{{ work.authors.map(person => person.name).join(' / ') }} · {{ work.editions.length }} 个版本</small>
-            </div>
-          </label>
-
-          <label class="book-catalog__choice">
-            <input
-              v-model="workChoice"
-              type="radio"
-              name="work"
-              value="new"
-            />
-            <div class="book-catalog__choice-body">
-              <span class="book-catalog__choice-title">新建作品（不是新增出版版本）</span>
-              <small>尚未收录此作品，建立全新作品后可为其添加具体出版版本。</small>
-            </div>
-          </label>
-        </div>
-
-        <!-- 新建作品表单卡片 -->
-        <div v-if="workChoice === 'new'" class="book-catalog__new-work-card">
+        <!-- 输入书名即查找，选择结果或直接创建未收录的作品。 -->
+        <div ref="workSearchRoot" class="book-create__combobox" @focusout="onWorkFocusOut">
           <PInput
             id="create-book-title"
-            v-model="title"
-            label="作品书名"
-            required
-            :maxlength="200"
-            placeholder="例如 沉思录、代码整洁之道"
+            v-model="query"
+            label="书名"
+            placeholder="输入书名，搜索已有作品"
+            autocomplete="off"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls="book-create-work-results"
+            :aria-expanded="workListOpen"
+            @focus="workListOpen = true"
+            @keydown.esc="workListOpen = false"
+            @keydown.enter.prevent="confirmWorkInput"
           />
-          <PTextarea
-            id="create-book-authors"
-            v-model="authors"
-            label="作者"
-            hint="每行一位新作者，也可以选择已有作者。译者在下一步填写。"
-            :required="!selectedAuthors.length"
-            :rows="3"
-            placeholder="例如 马可·奥勒留"
-          />
+          <div v-if="workListOpen && query.trim()" id="book-create-work-results" class="book-create__suggestions" role="listbox" aria-label="作品搜索结果">
+            <p v-if="searching" class="book-create__suggestions-status" role="status">正在查找作品…</p>
+            <template v-else>
+              <button
+                v-for="work in matches"
+                :key="work.id"
+                type="button"
+                class="book-create__suggestion"
+                role="option"
+                :aria-selected="workChoice === work.id"
+                @click="selectExistingWork(work)"
+              >
+                <span class="book-create__suggestion-title">{{ work.title }}</span>
+                <small>{{ work.authors.map(person => person.name).join(' / ') || '作者待补充' }} · {{ work.editions.length }} 个版本</small>
+              </button>
+              <button
+                v-if="canSuggestNewWork"
+                type="button"
+                class="book-create__suggestion book-create__suggestion--create"
+                role="option"
+                :aria-selected="workChoice === 'new'"
+                @click="selectNewWork"
+              >
+                <span class="book-create__suggestion-title">{{ hasExactWorkMatch ? '仍新建同名作品' : `＋ 新建《${query.trim()}》` }}</span>
+                <small>{{ hasExactWorkMatch ? '仅当这是不同作品时使用；保存时会再次查重' : '没有完全相同的作品，创建后再添加出版版本' }}</small>
+              </button>
+              <p v-else-if="searched && !matches.length && !searchError" class="book-create__suggestions-status">暂无搜索结果</p>
+            </template>
+            <button v-if="searchError" type="button" class="book-create__suggestion" @click="findWorks">搜索失败，点击重试</button>
+          </div>
+        </div>
+        <p v-if="workChoice && workChoice !== 'new'" class="book-create__selected-hint" role="status">
+          已选择已有作品：{{ matches.find(work => work.id === workChoice)?.title || selectedWork?.title || '已有作品' }}
+          <button type="button" class="book-create__text-action" @click="workListOpen = true">更换作品</button>
+        </p>
+
+        <div v-if="workChoice === 'new'" class="book-catalog__new-work-card">
+          <div ref="personSearchRoot" class="book-create__combobox" @focusout="onPersonFocusOut">
+            <PInput
+              id="create-person-search"
+              v-model="personQuery"
+              label="作者"
+              hint="逐个输入并添加作者，可选择已有作者或新建。译者在下一步填写。"
+              placeholder="输入作者姓名，自动搜索"
+              autocomplete="off"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls="book-create-person-results"
+              :aria-expanded="personListOpen"
+              @focus="personListOpen = true"
+              @keydown.esc="personListOpen = false"
+              @keydown.enter.prevent="confirmPersonInput"
+            />
+            <div v-if="personListOpen && personQuery.trim()" id="book-create-person-results" class="book-create__suggestions" role="listbox" aria-label="作者搜索结果">
+              <p v-if="personSearching" class="book-create__suggestions-status" role="status">正在查找作者…</p>
+              <template v-else>
+                <button
+                  v-for="person in availablePeople"
+                  :key="person.id"
+                  type="button"
+                  class="book-create__suggestion"
+                  role="option"
+                  :aria-selected="selectedAuthors.includes(person.id)"
+                  :disabled="selectedAuthors.includes(person.id)"
+                  @click="addExistingAuthor(person)"
+                >
+                  <span class="book-create__suggestion-title">{{ person.name }}</span>
+                  <small>{{ selectedAuthors.includes(person.id) ? '已添加' : '选择已有作者' }}</small>
+                </button>
+                <button
+                  v-if="canSuggestNewAuthor"
+                  type="button"
+                  class="book-create__suggestion book-create__suggestion--create"
+                  role="option"
+                  aria-selected="false"
+                  @click="addNewAuthor"
+                >
+                  <span class="book-create__suggestion-title">{{ hasExactAuthorMatch ? '仍新建同名作者' : `＋ 新建作者「${personQuery.trim()}」` }}</span>
+                  <small>{{ hasExactAuthorMatch ? '请确认是不同人物，保存作品时才创建' : '保存作品时一并创建作者，不会单独产生空记录' }}</small>
+                </button>
+              </template>
+              <button v-if="personSearchError" type="button" class="book-create__suggestion" @click="findPeople">搜索失败，点击重试</button>
+            </div>
+          </div>
+          <div v-if="selectedAuthorPeople.length || names(authors).length" class="book-create__authors" aria-label="已添加作者">
+            <span v-for="person in selectedAuthorPeople" :key="person.id" class="book-create__author-chip">
+              {{ person.name }}
+              <button type="button" :aria-label="'移除作者' + person.name" @click="removeExistingAuthor(person.id)">×</button>
+            </span>
+            <span v-for="name in names(authors)" :key="name" class="book-create__author-chip">
+              {{ name }} <small>新建</small>
+              <button type="button" :aria-label="'移除作者' + name" @click="removeNewAuthor(name)">×</button>
+            </span>
+          </div>
           <div v-if="nameConflicts.length" class="book-catalog__new-work-card" role="status">
             <p>发现已有同名作者。请选择正确的作者，或确认这是不同的人。</p>
             <div v-for="conflict in nameConflicts" :key="conflict.name">
@@ -108,41 +140,6 @@
               </label>
             </div>
           </div>
-          <details class="book-catalog__people-picker">
-            <summary class="book-catalog__people-summary">选择已有作者</summary>
-            <div class="book-catalog__people-content">
-              <div class="book-catalog__people-search-row">
-                <PInput
-                  id="create-person-search"
-                  v-model="personQuery"
-                  label="作者姓名"
-                  placeholder="搜索作者库"
-                  @keyup.enter="findPeople"
-                />
-                <PButton
-                  type="button"
-                  variant="secondary"
-                  @click="findPeople"
-                >
-                  搜索已有作者
-                </PButton>
-              </div>
-              <div v-if="availablePeople.length > 0" class="book-catalog__people-list">
-                <label
-                  v-for="person in availablePeople"
-                  :key="person.id"
-                  class="book-catalog__person-chip"
-                >
-                  <input
-                    v-model="selectedAuthors"
-                    type="checkbox"
-                    :value="person.id"
-                  />
-                  <span>{{ person.name }}</span>
-                </label>
-              </div>
-            </div>
-          </details>
           <PInput
             id="create-book-original"
             v-model="originalTitle"
@@ -452,6 +449,13 @@ const coverCandidates = ref<BookCoverCandidate[]>([])
 const selectedCover = ref(''), coverExplanation = ref(''), coverBusy = ref(false), coverSaving = ref(false), resourceReady = ref(false)
 const title = ref(''), authors = ref(''), originalTitle = ref(''), description = ref('')
 const personQuery = ref(''), selectedAuthors = ref<string[]>([]), availablePeople = ref<{ id: string; name: string }[]>([])
+const selectedAuthorPeople = ref<{ id: string; name: string }[]>([])
+const workSearchRoot = ref<HTMLElement | null>(null), personSearchRoot = ref<HTMLElement | null>(null)
+const workListOpen = ref(false), personListOpen = ref(false)
+const personSearching = ref(false), personSearched = ref(false), personSearchError = ref('')
+let workDebounce: ReturnType<typeof setTimeout> | undefined
+let personDebounce: ReturnType<typeof setTimeout> | undefined
+let personRequestSequence = 0
 const editionTitle = ref(''), subtitle = ref(''), translators = ref(''), language = ref(''), publisher = ref(''), statement = ref(''), isbn = ref(''), pages = ref('')
 const publishedDate = ref({ year: '', month: '', day: '' })
 const busy = ref(false), error = ref(''), createdId = ref(''), editionId = ref(''), finished = ref(false), leaveOpen = ref(false)
@@ -485,6 +489,96 @@ function stableRequestID(payload: unknown, kind: 'work' | 'edition') {
 const names = (value: string) => [...new Set(value.split('\n').map(name => name.trim()).filter(Boolean))]
 const canContinue = computed(() => !!workChoice.value && (workChoice.value !== 'new' || (!!title.value.trim() && (names(authors.value).length > 0 || selectedAuthors.value.length > 0))))
 function normalizedPersonName(value: string) { return value.trim().toLocaleLowerCase() }
+function normalizedWorkTitle(value: string) { return value.trim().replace(/\s+/g, '').toLocaleLowerCase() }
+const hasExactWorkMatch = computed(() => matches.value.some(work => normalizedWorkTitle(work.title) === normalizedWorkTitle(query.value)))
+const hasExactAuthorMatch = computed(() => availablePeople.value.some(person => normalizedPersonName(person.name) === normalizedPersonName(personQuery.value)))
+const canSuggestNewWork = computed(() => searched.value && !searching.value && !searchError.value && !!query.value.trim())
+const canSuggestNewAuthor = computed(() => personSearched.value && !personSearching.value && !personSearchError.value && !!personQuery.value.trim())
+
+function onWorkFocusOut(event: FocusEvent) {
+  const next = event.relatedTarget
+  if (!(next instanceof Node) || !workSearchRoot.value?.contains(next)) workListOpen.value = false
+}
+function onPersonFocusOut(event: FocusEvent) {
+  const next = event.relatedTarget
+  if (!(next instanceof Node) || !personSearchRoot.value?.contains(next)) personListOpen.value = false
+}
+function selectExistingWork(work: BookPublicWork) {
+  workChoice.value = work.id
+  workListOpen.value = false
+}
+function selectNewWork() {
+  if (!canSuggestNewWork.value) return
+  title.value = query.value.trim()
+  workChoice.value = 'new'
+  workListOpen.value = false
+}
+function confirmWorkInput() {
+  if (searching.value || !searched.value) return
+  const exact = matches.value.find(work => normalizedWorkTitle(work.title) === normalizedWorkTitle(query.value))
+  if (exact) selectExistingWork(exact)
+  else if (canSuggestNewWork.value) selectNewWork()
+}
+function addExistingAuthor(person: { id: string; name: string }) {
+  if (!selectedAuthors.value.includes(person.id)) {
+    selectedAuthors.value.push(person.id)
+    selectedAuthorPeople.value.push(person)
+  }
+  authors.value = names(authors.value).filter(name => normalizedPersonName(name) !== normalizedPersonName(person.name)).join('\n')
+  newAuthorNames.value = newAuthorNames.value.filter(name => normalizedPersonName(name) !== normalizedPersonName(person.name))
+  personQuery.value = ''
+  personListOpen.value = false
+}
+function addNewAuthor() {
+  if (!canSuggestNewAuthor.value) return
+  const value = personQuery.value.trim()
+  if (hasExactAuthorMatch.value && !newAuthorNames.value.some(name => normalizedPersonName(name) === normalizedPersonName(value))) {
+    newAuthorNames.value.push(value)
+  }
+  if (!names(authors.value).some(name => normalizedPersonName(name) === normalizedPersonName(value)) &&
+      !selectedAuthorPeople.value.some(person => normalizedPersonName(person.name) === normalizedPersonName(value))) {
+    authors.value = [...names(authors.value), value].join('\n')
+  }
+  personQuery.value = ''
+  personListOpen.value = false
+}
+function confirmPersonInput() {
+  if (personSearching.value || !personSearched.value) return
+  const exact = availablePeople.value.find(person => normalizedPersonName(person.name) === normalizedPersonName(personQuery.value))
+  if (exact) addExistingAuthor(exact)
+  else if (canSuggestNewAuthor.value) addNewAuthor()
+}
+function removeExistingAuthor(id: string) {
+  selectedAuthors.value = selectedAuthors.value.filter(value => value !== id)
+  selectedAuthorPeople.value = selectedAuthorPeople.value.filter(person => person.id !== id)
+}
+function removeNewAuthor(name: string) {
+  authors.value = names(authors.value).filter(value => normalizedPersonName(value) !== normalizedPersonName(name)).join('\n')
+  newAuthorNames.value = newAuthorNames.value.filter(value => normalizedPersonName(value) !== normalizedPersonName(name))
+}
+watch(query, value => {
+  if (workDebounce) clearTimeout(workDebounce)
+  searchController?.abort()
+  matches.value = []
+  searched.value = false
+  searching.value = false
+  searchError.value = ''
+  title.value = value.trim()
+  if (workChoice.value && workChoice.value !== 'new') workChoice.value = ''
+  workListOpen.value = !!value.trim()
+  if (value.trim()) workDebounce = setTimeout(() => void findWorks(), 260)
+})
+watch(personQuery, value => {
+  if (personDebounce) clearTimeout(personDebounce)
+  personRequestSequence++
+  availablePeople.value = []
+  personSearched.value = false
+  personSearching.value = false
+  personSearchError.value = ''
+  personListOpen.value = !!value.trim()
+  if (value.trim() && workChoice.value === 'new') personDebounce = setTimeout(() => void findPeople(), 240)
+})
+
 async function findNameConflicts(rawNames: string[], selectedIDs: string[], confirmedNewNames: string[]) {
   const conflicts: { name: string; matches: { id: string; name: string }[] }[] = []
   for (const name of rawNames) {
@@ -501,8 +595,7 @@ function reusePerson(name: string, personId: string, translator: boolean) {
     translators.value = names(translators.value).filter(item => normalizedPersonName(item) !== normalizedPersonName(name)).join('\n')
     translatorConflicts.value = translatorConflicts.value.filter(item => item.name !== name)
   } else {
-    if (!selectedAuthors.value.includes(personId)) selectedAuthors.value.push(personId)
-    authors.value = names(authors.value).filter(item => normalizedPersonName(item) !== normalizedPersonName(name)).join('\n')
+    addExistingAuthor({ id: personId, name })
     nameConflicts.value = nameConflicts.value.filter(item => item.name !== name)
   }
 }
@@ -536,14 +629,43 @@ const dirty = computed(() => !finished.value && (!!workChoice.value || !!file.va
 watch(workChoice, () => { selectedWork.value = null; editionChoice.value = ''; editionQuery.value = ''; error.value = '' })
 function editionSummary(edition: BookPublicEdition) { return [edition.subtitle, edition.translators?.map(person => person.name).join(' / '), edition.language, edition.publisher, edition.published_date?.slice(0, 10), edition.edition_statement, edition.isbn13 || edition.isbn10].filter(Boolean).join(' · ') || '版本资料待补充' }
 async function findWorks() {
-  searchController?.abort(); searchController = new AbortController()
+  if (workDebounce) clearTimeout(workDebounce)
+  const term = query.value.trim()
+  if (!term) return
+  searchController?.abort()
+  searchController = new AbortController()
   const controller = searchController
-  searching.value = true; searchError.value = ''
-  try { const page = await searchCatalogWorks(query.value.trim(), 24, 0, controller.signal); if (alive && !controller.signal.aborted) { matches.value = page.items; searched.value = true } }
-  catch { if (alive && !controller.signal.aborted) searchError.value = '作品查找失败，请重试。' }
-  finally { if (alive && controller === searchController) searching.value = false }
+  searching.value = true; searched.value = false; searchError.value = ''
+  try {
+    const result = await searchCatalogWorks(term, 24, 0, controller.signal)
+    if (alive && !controller.signal.aborted && query.value.trim() === term) {
+      matches.value = result.items
+      searched.value = true
+    }
+  } catch {
+    if (alive && !controller.signal.aborted && query.value.trim() === term) searchError.value = '作品查找失败'
+  } finally {
+    if (alive && controller === searchController) searching.value = false
+  }
 }
-async function findPeople() { try { const page = await searchWikiPeople(personQuery.value); if (alive) availablePeople.value = [...availablePeople.value.filter(person => selectedAuthors.value.includes(person.id)), ...page.items.filter(person => !selectedAuthors.value.includes(person.id))] } catch { if (alive) error.value = '作者搜索失败，请重试。' } }
+async function findPeople() {
+  if (personDebounce) clearTimeout(personDebounce)
+  const term = personQuery.value.trim()
+  if (!term) return
+  const sequence = ++personRequestSequence
+  personSearching.value = true; personSearched.value = false; personSearchError.value = ''
+  try {
+    const result = await searchWikiPeople(term)
+    if (alive && sequence === personRequestSequence && personQuery.value.trim() === term) {
+      availablePeople.value = result.items
+      personSearched.value = true
+    }
+  } catch {
+    if (alive && sequence === personRequestSequence) personSearchError.value = '作者查找失败'
+  } finally {
+    if (alive && sequence === personRequestSequence) personSearching.value = false
+  }
+}
 async function chooseFile(event: Event) {
   const selected = (event.target as HTMLInputElement).files?.[0]
   if (!selected) return
@@ -697,10 +819,53 @@ function resolveLeave(leave: boolean) { leaveOpen.value = false; leaveResolve?.(
 onBeforeRouteLeave(() => { if (finished.value) return true; if (busy.value) return false; if (!dirty.value) return true; leaveOpen.value = true; return new Promise<boolean>(resolve => { leaveResolve = resolve }) })
 function beforeUnload(event: BeforeUnloadEvent) { if (dirty.value || busy.value) { event.preventDefault(); event.returnValue = '' } }
 onMounted(async () => { window.addEventListener('beforeunload', beforeUnload); if (typeof route.query.work === 'string') { workChoice.value = route.query.work; await next() } })
-onBeforeUnmount(() => { alive = false; searchController?.abort(); window.removeEventListener('beforeunload', beforeUnload); leaveResolve?.(false) })
+onBeforeUnmount(() => { alive = false; if (workDebounce) clearTimeout(workDebounce); if (personDebounce) clearTimeout(personDebounce); personRequestSequence++; searchController?.abort(); window.removeEventListener('beforeunload', beforeUnload); leaveResolve?.(false) })
 </script>
 
 <style scoped>
+.book-create__combobox { position: relative; min-width: 0; }
+.book-create__suggestions {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + .25rem);
+  left: 0;
+  right: 0;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding: .25rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 12%);
+}
+.book-create__suggestion {
+  display: grid;
+  width: 100%;
+  min-height: 48px;
+  gap: .2rem;
+  padding: .625rem .75rem;
+  text-align: left;
+  border: 0;
+  border-radius: var(--a-radius-control);
+  background: transparent;
+  color: var(--a-color-text);
+  font: inherit;
+  cursor: pointer;
+}
+.book-create__suggestion:hover, .book-create__suggestion:focus-visible { background: var(--a-color-surface-muted); }
+.book-create__suggestion:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: -2px; }
+.book-create__suggestion:disabled { opacity: .55; cursor: default; }
+.book-create__suggestion-title { font-size: .9375rem; font-weight: 600; overflow-wrap: anywhere; }
+.book-create__suggestion small { color: var(--a-color-muted); font-size: .8rem; }
+.book-create__suggestion--create { color: var(--a-color-primary); border-top: 1px solid var(--a-color-border-soft); border-radius: 0; }
+.book-create__suggestions-status { margin: 0; padding: .75rem; color: var(--a-color-muted); font-size: .875rem; }
+.book-create__selected-hint { margin: 0; padding: .7rem .85rem; border-radius: var(--a-radius-control); background: var(--a-color-surface-muted); }
+.book-create__text-action { margin-left: .75rem; padding: .1rem 0; border: 0; background: none; color: var(--a-color-primary); font: inherit; cursor: pointer; }
+.book-create__authors { display: flex; flex-wrap: wrap; gap: .5rem; }
+.book-create__author-chip { display: inline-flex; align-items: center; gap: .4rem; max-width: 100%; padding: .4rem .65rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-surface-muted); font-size: .875rem; overflow-wrap: anywhere; }
+.book-create__author-chip small { color: var(--a-color-muted); font-size: .75rem; }
+.book-create__author-chip button { border: 0; background: none; color: var(--a-color-muted); cursor: pointer; font-size: 1.05rem; line-height: 1; }
+.book-create__author-chip button:hover, .book-create__author-chip button:focus-visible { color: var(--a-color-danger); }
 .book-catalog__cover-candidates {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));

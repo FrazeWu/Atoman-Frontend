@@ -71,6 +71,27 @@
             <button
               v-if="canEditPlaylist"
               type="button"
+              class="mobile-playlist-detail__icon-btn mobile-playlist-detail__icon-btn--danger"
+              data-testid="playlist-delete-btn"
+              aria-label="删除歌单"
+              :disabled="deletingPlaylist"
+              @click="deletePending = true"
+            >
+              <MIcon name="trash" size="sm" />
+            </button>
+            <button
+              v-if="canEditPlaylist"
+              type="button"
+              class="mobile-playlist-detail__icon-btn"
+              data-testid="playlist-edit-btn"
+              aria-label="编辑歌单"
+              @click="openPlaylistEdit"
+            >
+              <MIcon name="edit" size="sm" />
+            </button>
+            <button
+              v-if="canEditPlaylist"
+              type="button"
               class="mobile-playlist-detail__icon-btn"
               data-testid="playlist-add-songs-btn"
               aria-label="添加歌曲"
@@ -104,6 +125,18 @@
           </div>
         </div>
 
+        <form v-if="editingPlaylist && canEditPlaylist" class="mobile-playlist-detail__edit-panel" data-testid="playlist-edit-panel" @submit.prevent="savePlaylistEdit">
+          <label for="mobile-playlist-edit-name">歌单名称</label>
+          <input id="mobile-playlist-edit-name" v-model="editName" maxlength="120" required />
+          <label for="mobile-playlist-edit-description">歌单简介</label>
+          <textarea id="mobile-playlist-edit-description" v-model="editDescription" rows="3" maxlength="1200" />
+          <label class="mobile-playlist-detail__edit-public"><input v-model="editPublic" type="checkbox" /> 公开歌单</label>
+          <p v-if="editError" role="alert" data-testid="playlist-edit-error">{{ editError }}</p>
+          <div class="mobile-playlist-detail__edit-actions">
+            <MButton variant="secondary" type="button" :disabled="editSaving" data-testid="playlist-edit-cancel" @click="editingPlaylist = false">取消</MButton>
+            <MButton variant="primary" type="submit" :disabled="editSaving || !editName.trim()" data-testid="playlist-edit-save">{{ editSaving ? '保存中…' : '保存' }}</MButton>
+          </div>
+        </form>
         <div v-if="showAddSongs && canEditPlaylist" class="mobile-playlist-detail__add-panel" data-testid="playlist-add-panel">
           <label for="playlist-song-search">搜索要添加的歌曲</label>
           <input id="playlist-song-search" v-model="addQuery" type="search" placeholder="输入歌曲名或歌手" @keyup.enter="searchAddSongs" />
@@ -124,7 +157,9 @@
       <section class="mobile-playlist-detail__songs" aria-label="歌曲列表">
         <div class="mobile-playlist-detail__list-header">
           <span class="mobile-playlist-detail__list-title">曲目列表</span>
+          <span v-if="canReorderSongs" class="mobile-playlist-detail__sort-hint">上下移动以调整顺序</span>
         </div>
+        <p v-if="reorderError" role="alert" data-testid="playlist-reorder-error" class="mobile-playlist-detail__queue-error">{{ reorderError }}</p>
 
         <div v-if="songs.length > 0" class="mobile-playlist-detail__list">
           <div
@@ -179,6 +214,10 @@
 
             <!-- Right: Independent Favorite & Spotify-style More (...) Actions -->
             <div class="mobile-playlist-detail__song-actions">
+              <div v-if="canReorderSongs" class="mobile-playlist-detail__move-controls">
+                <button type="button" :aria-label="`上移 ${song.title}`" :data-testid="`playlist-move-up-${index}`" :disabled="reordering || index === 0" @click="moveSong(index, -1)"><MIcon name="chevron-up" size="xs" /></button>
+                <button type="button" :aria-label="`下移 ${song.title}`" :data-testid="`playlist-move-down-${index}`" :disabled="reordering || index === songs.length - 1" @click="moveSong(index, 1)"><MIcon name="chevron-down" size="xs" /></button>
+              </div>
               <button
                 type="button"
                 class="mobile-playlist-detail__song-action-btn"
@@ -359,6 +398,21 @@
       </div>
     </Transition>
 
+    <Teleport to="body">
+    <div v-if="deletePending && canEditPlaylist" class="mobile-playlist-delete-confirm" data-testid="playlist-delete-confirm">
+      <div class="mobile-playlist-delete-confirm__backdrop" @click="deletePending = false" />
+      <section role="alertdialog" aria-modal="true" aria-labelledby="playlist-delete-heading" aria-describedby="playlist-delete-description" class="mobile-playlist-delete-confirm__panel">
+        <h2 id="playlist-delete-heading">删除歌单</h2>
+        <p id="playlist-delete-description">删除后无法恢复，确定删除这张歌单吗？</p>
+        <div class="mobile-playlist-delete-confirm__actions">
+          <MButton variant="secondary" :disabled="deletingPlaylist" data-testid="playlist-delete-cancel" @click="deletePending = false">取消</MButton>
+          <MButton variant="primary" :disabled="deletingPlaylist" data-testid="playlist-delete-confirm-btn" @click="confirmDeletePlaylist">{{ deletingPlaylist ? '删除中…' : '删除' }}</MButton>
+        </div>
+      </section>
+    </div>
+    </Teleport>
+    <p v-if="deleteError" class="mobile-playlist-detail__delete-error" role="alert" data-testid="playlist-delete-error">{{ deleteError }}</p>
+
     <!-- Floating Pill Toast -->
     <Transition name="toast-fade">
       <div v-if="toastMessage" class="mobile-floating-toast" role="status">
@@ -371,7 +425,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onDeactivated, onMounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getMusicPlaylist, listMusicPlaylistSongs, searchMusicSongs, addMusicPlaylistSong, removeMusicPlaylistSong } from '@/api/musicV1'
+import { getMusicPlaylist, listMusicPlaylistSongs, searchMusicSongs, addMusicPlaylistSong, removeMusicPlaylistSong, deleteMusicPlaylist, updateMusicPlaylist, reorderMusicPlaylistSongs } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
@@ -389,6 +443,7 @@ export interface PlaylistDetailData {
   user_id?: string
   kind?: string
   song_count?: number
+  is_public?: boolean
   songs?: any[]
 }
 
@@ -523,7 +578,91 @@ const addResults = ref<Awaited<ReturnType<typeof searchMusicSongs>>>([])
 const addSearching = ref(false)
 const addSaving = ref('')
 const addMessage = ref('')
-const canEditPlaylist = computed(() => authStore.isAuthenticated && Boolean(playlist.value?.user_id) && String(playlist.value?.user_id) === String(authStore.user?.uuid))
+const canEditPlaylist = computed(() => authStore.isAuthenticated && Boolean(playlist.value?.user_id) && String(playlist.value?.user_id) === String(authStore.user?.uuid) && !['favorite', 'later'].includes(playlist.value?.kind || ''))
+const editingPlaylist = ref(false)
+const editName = ref('')
+const editDescription = ref('')
+const editPublic = ref(false)
+const editError = ref('')
+const editSaving = ref(false)
+function openPlaylistEdit() {
+  const current = playlist.value
+  if (!current || !canEditPlaylist.value) return
+  editName.value = current.name
+  editDescription.value = current.description || ''
+  editPublic.value = Boolean(current.is_public)
+  editError.value = ''
+  editingPlaylist.value = true
+}
+async function savePlaylistEdit() {
+  const current = playlist.value
+  const name = editName.value.trim()
+  if (!current || !canEditPlaylist.value || !name || editSaving.value) return
+  editSaving.value = true
+  editError.value = ''
+  try {
+    const updated = await updateMusicPlaylist(current.id, { name, description: editDescription.value.trim(), is_public: editPublic.value })
+    if (!updated?.id) throw new Error('Playlist update not confirmed')
+    // Keep the confirmed local song list; the metadata mutation does not return it.
+    if (playlist.value?.id === current.id) {
+      playlist.value = { ...playlist.value, name: updated.name, description: updated.description || '', is_public: updated.is_public }
+    }
+    editingPlaylist.value = false
+  } catch {
+    editError.value = '保存歌单失败，请重试。'
+  } finally {
+    editSaving.value = false
+  }
+}
+const reordering = ref(false)
+const reorderError = ref('')
+const canReorderSongs = computed(() => canEditPlaylist.value && songs.value.length > 1 &&
+  playlistCount.value === songs.value.length && !listHasMore.value)
+async function moveSong(index: number, offset: number) {
+  const current = playlist.value
+  const next = index + offset
+  if (!current || !canReorderSongs.value || reordering.value || next < 0 || next >= songs.value.length) return
+  reordering.value = true
+  reorderError.value = ''
+  const original = [...songs.value]
+  const arranged = [...original]
+  const [item] = arranged.splice(index, 1)
+  if (!item) { reordering.value = false; return }
+  arranged.splice(next, 0, item)
+  songs.value = arranged
+  try {
+    const result = await reorderMusicPlaylistSongs(current.id, arranged.map(song => String(song.id)))
+    if (result?.reordered !== true) throw new Error('Order not confirmed')
+    fullQueueCache = null
+  } catch {
+    if (playlist.value?.id === current.id) songs.value = original
+    reorderError.value = '歌单顺序保存失败，已恢复原顺序。'
+  } finally {
+    reordering.value = false
+  }
+}
+const deletePending = ref(false)
+const deletingPlaylist = ref(false)
+const deleteError = ref('')
+async function confirmDeletePlaylist() {
+  const target = playlist.value
+  if (!target || !canEditPlaylist.value || deletingPlaylist.value) return
+  const targetId = String(target.id)
+  deletingPlaylist.value = true
+  deleteError.value = ''
+  try {
+    const response = await deleteMusicPlaylist(targetId)
+    if (response?.deleted !== true) throw new Error('Deletion was not confirmed')
+    deletePending.value = false
+    await router.replace('/music/playlists')
+  } catch {
+    deletePending.value = false
+    deleteError.value = '删除歌单失败，请重试。'
+  } finally {
+    deletingPlaylist.value = false
+  }
+}
+
 
 async function searchAddSongs() {
   if (!addQuery.value.trim() || addSearching.value) return
@@ -648,6 +787,7 @@ async function loadPlaylistData() {
       song_count: data.song_count,
       user_id: data.user_id,
       kind: data.kind,
+      is_public: data.is_public,
       creator: data.owner_username ? { display_name: data.owner_username } : undefined,
     }
     songs.value = Array.isArray(data.songs)
@@ -1404,6 +1544,22 @@ onBeforeUnmount(() => {
 </style>
 
 <style scoped>
+.mobile-playlist-detail__icon-btn--danger{color:var(--a-color-danger,#d14343)}
+.mobile-playlist-delete-confirm{position:fixed;inset:0;z-index:10000;display:flex;align-items:flex-end;justify-content:center}
+.mobile-playlist-delete-confirm__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+.mobile-playlist-delete-confirm__panel{position:relative;width:min(100%,480px);padding:24px 20px calc(20px + env(safe-area-inset-bottom));background:var(--a-color-surface,#fff);border-radius:16px 16px 0 0;box-shadow:0 -6px 36px rgba(0,0,0,.15)}
+.mobile-playlist-delete-confirm__panel h2{font-size:18px;font-weight:650;margin:0 0 12px}
+.mobile-playlist-delete-confirm__panel p{margin:0 0 22px;line-height:1.5}
+.mobile-playlist-delete-confirm__actions{display:flex;justify-content:flex-end;gap:12px}
+.mobile-playlist-detail__delete-error{margin:12px 16px;padding:12px;border-radius:8px;color:var(--a-color-danger,#b42318);background:var(--a-color-surface,#fff);border:1px solid currentColor}
+.mobile-playlist-detail__edit-panel{margin:12px 16px;padding:14px;display:flex;flex-direction:column;gap:9px;border:1px solid var(--a-color-border-soft);border-radius:10px}
+.mobile-playlist-detail__edit-panel input:not([type=checkbox]),.mobile-playlist-detail__edit-panel textarea{width:100%;min-height:42px;padding:10px;border:1px solid var(--a-color-border-soft);border-radius:6px;background:var(--a-color-surface);color:inherit}
+.mobile-playlist-detail__edit-public{display:flex;align-items:center;gap:9px}
+.mobile-playlist-detail__edit-actions{display:flex;justify-content:flex-end;gap:10px}
+.mobile-playlist-detail__sort-hint{font-size:12px;color:var(--a-color-text-secondary)}
+.mobile-playlist-detail__move-controls{display:flex;flex-direction:column;align-items:center;gap:2px}
+.mobile-playlist-detail__move-controls button{width:30px;height:30px;display:grid;place-items:center;border:0;background:transparent;color:inherit}
+.mobile-playlist-detail__move-controls button:disabled{opacity:.28}
 .mobile-playlist-detail__add-panel{margin:12px 16px;padding:12px;border:1px solid var(--a-color-border-soft);border-radius:8px;display:flex;flex-direction:column;gap:10px}
 .mobile-playlist-detail__add-panel input{width:100%;min-height:44px;padding:8px;border:1px solid var(--a-color-border-soft);border-radius:6px;background:var(--a-color-surface);color:inherit}
 .mobile-playlist-detail__add-result{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px}

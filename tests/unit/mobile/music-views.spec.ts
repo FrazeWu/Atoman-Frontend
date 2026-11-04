@@ -31,6 +31,9 @@ vi.mock('@/api/musicV1', () => ({
   listMusicArtists: vi.fn(),
   searchMusicSongs: vi.fn(),
   createMusicPlaylist: vi.fn(),
+  deleteMusicPlaylist: vi.fn(),
+  updateMusicPlaylist: vi.fn(),
+  reorderMusicPlaylistSongs: vi.fn(),
 }))
 
 const mockPlaylists = [
@@ -399,6 +402,44 @@ describe('Mobile Independent Music Views & Player', () => {
     })
   })
 
+  describe('Music playlists read failures', () => {
+    it('distinguishes failed loading from an empty list and can recover', async () => {
+      const auth = (await import('@/stores/auth')).useAuthStore()
+      auth.user = { uuid: 'u-1', username: 'tester' } as any
+      auth.isAuthenticated = true
+      vi.mocked(musicApi.listMusicPlaylists)
+        .mockRejectedValueOnce(new Error('backend offline'))
+        .mockResolvedValueOnce({ data: mockPlaylists, total: 2 } as any)
+      vi.mocked(musicApi.listPlaylistBookmarks).mockResolvedValue({ data: [], total: 0 } as any)
+      vi.mocked(musicApi.listPublicMusicPlaylists).mockResolvedValue({ data: [], total: 0 } as any)
+      const wrapper = mount(MusicPlaylistsView, {
+        global: { plugins: [pinia, router], stubs: { MIcon: true } },
+      })
+      await flushPromises()
+      expect(wrapper.get('[data-testid="playlist-load-error"]').text()).toContain('歌单加载失败')
+      expect(wrapper.find('[data-testid="empty-state"]').exists()).toBe(false)
+      await wrapper.get('[data-testid="playlist-load-retry"]').trigger('click')
+      await flushPromises()
+      expect(wrapper.find('[data-testid="playlist-load-error"]').exists()).toBe(false)
+      expect(wrapper.findAll('[data-testid="playlist-item"]')).toHaveLength(2)
+    })
+
+    it('does not report empty when only bookmarked playlists fail', async () => {
+      const auth = (await import('@/stores/auth')).useAuthStore()
+      auth.user = { uuid: 'u-1', username: 'tester' } as any
+      auth.isAuthenticated = true
+      vi.mocked(musicApi.listMusicPlaylists).mockResolvedValue({ data: [], total: 0 } as any)
+      vi.mocked(musicApi.listPlaylistBookmarks).mockRejectedValueOnce(new Error('bookmark service failed'))
+      vi.mocked(musicApi.listPublicMusicPlaylists).mockResolvedValue({ data: [], total: 0 } as any)
+      const wrapper = mount(MusicPlaylistsView, {
+        global: { plugins: [pinia, router], stubs: { MIcon: true } },
+      })
+      await flushPromises()
+      expect(wrapper.find('[data-testid="playlist-load-error"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="empty-state"]').exists()).toBe(false)
+    })
+  })
+
   describe('MusicSearchView.vue', () => {
     const mockSongs = [
       { id: 's-1', title: 'Power', artist: 'Kanye West', album: 'MBDTF', duration: 292, audio_url: '/media/power.mp3', audio_status: 'ready' },
@@ -505,6 +546,136 @@ describe('Mobile Independent Music Views & Player', () => {
       { id: 's-10', title: 'Focus Track 1', artist: 'Deep Flow', duration: 180, audio_url: '/media/focus.mp3' },
       { id: 's-11', title: 'Focus Track 2', artist: 'Deep Flow', duration: 210 },
     ]
+
+    async function mountOwnerPlaylist() {
+      const { useAuthStore } = await import('@/stores/auth')
+      const auth = useAuthStore()
+      auth.user = { uuid: 'owner-1', username: 'tester' } as any
+      auth.isAuthenticated = true
+      const wrapper = mount(MusicPlaylistDetailView, {
+        props: { initialPlaylist: { ...mockDetail, user_id: 'owner-1' }, initialSongs: [] },
+        global: { plugins: [pinia, router], stubs: { MIcon: true, Teleport: true } },
+      })
+      await flushPromises()
+      return wrapper
+    }
+
+    it('does not expose deleting another user playlist', async () => {
+      const { useAuthStore } = await import('@/stores/auth')
+      const auth = useAuthStore()
+      auth.user = { uuid: 'other-1' } as any
+      auth.isAuthenticated = true
+      const wrapper = mount(MusicPlaylistDetailView, {
+        props: { initialPlaylist: { ...mockDetail, user_id: 'owner-1' } },
+        global: { plugins: [pinia, router] },
+      })
+      expect(wrapper.find('[data-testid="playlist-delete-btn"]').exists()).toBe(false)
+    })
+
+    it('canceling deletion does not call the API', async () => {
+      const wrapper = await mountOwnerPlaylist()
+      await wrapper.get('[data-testid="playlist-delete-btn"]').trigger('click')
+      expect(wrapper.get('[data-testid="playlist-delete-confirm"]').exists()).toBe(true)
+      await wrapper.get('[data-testid="playlist-delete-cancel"]').trigger('click')
+      expect(wrapper.find('[data-testid="playlist-delete-confirm"]').exists()).toBe(false)
+      expect(musicApi.deleteMusicPlaylist).not.toHaveBeenCalled()
+    })
+
+    it('keeps the playlist and reports a failed deletion', async () => {
+      vi.mocked(musicApi.deleteMusicPlaylist).mockRejectedValueOnce(new Error('network unavailable'))
+      const wrapper = await mountOwnerPlaylist()
+      await wrapper.get('[data-testid="playlist-delete-btn"]').trigger('click')
+      await wrapper.get('[data-testid="playlist-delete-confirm-btn"]').trigger('click')
+      await flushPromises()
+      expect(wrapper.text()).toContain(mockDetail.name)
+      expect(wrapper.get('[data-testid="playlist-delete-error"]').text()).toContain('删除歌单失败')
+      expect(wrapper.find('[data-testid="playlist-delete-confirm"]').exists()).toBe(false)
+      expect(musicApi.deleteMusicPlaylist).toHaveBeenCalledWith('pl-100')
+    })
+
+    it('returns to playlists only after server confirms deletion', async () => {
+      vi.mocked(musicApi.deleteMusicPlaylist).mockResolvedValueOnce({ deleted: true })
+      const replace = vi.spyOn(router, 'replace').mockResolvedValue(undefined as any)
+      const wrapper = await mountOwnerPlaylist()
+      await wrapper.get('[data-testid="playlist-delete-btn"]').trigger('click')
+      await wrapper.get('[data-testid="playlist-delete-confirm-btn"]').trigger('click')
+      await flushPromises()
+      expect(musicApi.deleteMusicPlaylist).toHaveBeenCalledWith('pl-100')
+      expect(replace).toHaveBeenCalledWith('/music/playlists')
+      expect(wrapper.find('[data-testid="playlist-delete-error"]').exists()).toBe(false)
+    })
+
+    async function mountEditablePlaylist(initialSongs: any[] = mockSongs, songCount = initialSongs.length) {
+      const { useAuthStore } = await import('@/stores/auth')
+      const auth = useAuthStore()
+      auth.user = { uuid: 'owner-1', username: 'tester' } as any
+      auth.isAuthenticated = true
+      const wrapper = mount(MusicPlaylistDetailView, {
+        props: { initialPlaylist: { ...mockDetail, user_id: 'owner-1', song_count: songCount, is_public: false }, initialSongs },
+        global: { plugins: [pinia, router], stubs: { MIcon: true, Teleport: true } },
+      })
+      await flushPromises()
+      return wrapper
+    }
+
+    it('hides edit and ordering controls on playlists owned by others', async () => {
+      const { useAuthStore } = await import('@/stores/auth')
+      const auth = useAuthStore()
+      auth.user = { uuid: 'someone-else' } as any
+      auth.isAuthenticated = true
+      const wrapper = mount(MusicPlaylistDetailView, {
+        props: { initialPlaylist: { ...mockDetail, user_id: 'owner-1', song_count: 2 }, initialSongs: mockSongs },
+        global: { plugins: [pinia, router] },
+      })
+      expect(wrapper.find('[data-testid="playlist-edit-btn"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="playlist-move-down-0"]').exists()).toBe(false)
+    })
+
+    it('updates playlist metadata only after a successful server response', async () => {
+      vi.mocked(musicApi.updateMusicPlaylist).mockResolvedValueOnce({ id: 'pl-100', name: '改名成功', description: '新的简介', is_public: true } as any)
+      const wrapper = await mountEditablePlaylist()
+      await wrapper.get('[data-testid="playlist-edit-btn"]').trigger('click')
+      await wrapper.get('#mobile-playlist-edit-name').setValue(' 改名成功 ')
+      await wrapper.get('#mobile-playlist-edit-description').setValue('新的简介')
+      await wrapper.get('.mobile-playlist-detail__edit-public input').setValue(true)
+      await wrapper.get('[data-testid="playlist-edit-panel"]').trigger('submit')
+      await flushPromises()
+      expect(musicApi.updateMusicPlaylist).toHaveBeenCalledWith('pl-100', { name: '改名成功', description: '新的简介', is_public: true })
+      expect(wrapper.get('h1').text()).toBe('改名成功')
+      expect(wrapper.find('[data-testid="playlist-edit-panel"]').exists()).toBe(false)
+    })
+
+    it('keeps old playlist name and entered form on failed edit', async () => {
+      vi.mocked(musicApi.updateMusicPlaylist).mockRejectedValueOnce(new Error('offline'))
+      const wrapper = await mountEditablePlaylist()
+      await wrapper.get('[data-testid="playlist-edit-btn"]').trigger('click')
+      await wrapper.get('#mobile-playlist-edit-name').setValue('暂未保存')
+      await wrapper.get('[data-testid="playlist-edit-panel"]').trigger('submit')
+      await flushPromises()
+      expect(wrapper.get('h1').text()).toBe(mockDetail.name)
+      expect(wrapper.get('#mobile-playlist-edit-name').element.value).toBe('暂未保存')
+      expect(wrapper.get('[data-testid="playlist-edit-error"]').text()).toContain('保存歌单失败')
+    })
+
+    it('reorders the complete song list after confirmation and rolls back failures', async () => {
+      vi.mocked(musicApi.reorderMusicPlaylistSongs)
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValueOnce({ reordered: true })
+      const wrapper = await mountEditablePlaylist()
+      await wrapper.get('[data-testid="playlist-move-down-0"]').trigger('click')
+      await flushPromises()
+      expect(wrapper.findAll('[data-testid="playlist-song-item"]')[0].attributes('aria-label')).toContain('Focus Track 1')
+      expect(wrapper.get('[data-testid="playlist-reorder-error"]').text()).toContain('已恢复原顺序')
+      await wrapper.get('[data-testid="playlist-move-down-0"]').trigger('click')
+      await flushPromises()
+      expect(wrapper.findAll('[data-testid="playlist-song-item"]')[0].attributes('aria-label')).toContain('Focus Track 2')
+      expect(musicApi.reorderMusicPlaylistSongs).toHaveBeenLastCalledWith('pl-100', ['s-11', 's-10'])
+    })
+
+    it('does not submit partial song ordering when playlist is paginated', async () => {
+      const wrapper = await mountEditablePlaylist(mockSongs, 10)
+      expect(wrapper.find('[data-testid="playlist-move-down-0"]').exists()).toBe(false)
+    })
 
     it('renders playlist hero info, play all button, and songs list', async () => {
       const wrapper = mount(MusicPlaylistDetailView, {

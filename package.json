@@ -28,7 +28,8 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "audit:dependencies": "bun audit --audit-level=moderate",
-    "check:sensitive-artifacts": "bun scripts/check-sensitive-artifacts.ts"
+    "check:sensitive-artifacts": "bun scripts/check-sensitive-artifacts.ts",
+    "qa:books:r2-prefix": "node scripts/verify-r2-book-private-prefix.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.3",

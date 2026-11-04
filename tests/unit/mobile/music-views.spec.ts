@@ -31,6 +31,7 @@ vi.mock('@/api/musicV1', () => ({
   listMusicArtists: vi.fn(),
   searchMusicSongs: vi.fn(),
   createMusicPlaylist: vi.fn(),
+  deleteMusicPlaylist: vi.fn(),
 }))
 
 const mockPlaylists = [
@@ -543,6 +544,64 @@ describe('Mobile Independent Music Views & Player', () => {
       { id: 's-10', title: 'Focus Track 1', artist: 'Deep Flow', duration: 180, audio_url: '/media/focus.mp3' },
       { id: 's-11', title: 'Focus Track 2', artist: 'Deep Flow', duration: 210 },
     ]
+
+    async function mountOwnerPlaylist() {
+      const { useAuthStore } = await import('@/stores/auth')
+      const auth = useAuthStore()
+      auth.user = { uuid: 'owner-1', username: 'tester' } as any
+      auth.isAuthenticated = true
+      const wrapper = mount(MusicPlaylistDetailView, {
+        props: { initialPlaylist: { ...mockDetail, user_id: 'owner-1' }, initialSongs: [] },
+        global: { plugins: [pinia, router], stubs: { MIcon: true } },
+      })
+      await flushPromises()
+      return wrapper
+    }
+
+    it('does not expose deleting another user playlist', async () => {
+      const { useAuthStore } = await import('@/stores/auth')
+      const auth = useAuthStore()
+      auth.user = { uuid: 'other-1' } as any
+      auth.isAuthenticated = true
+      const wrapper = mount(MusicPlaylistDetailView, {
+        props: { initialPlaylist: { ...mockDetail, user_id: 'owner-1' } },
+        global: { plugins: [pinia, router] },
+      })
+      expect(wrapper.find('[data-testid="playlist-delete-btn"]').exists()).toBe(false)
+    })
+
+    it('canceling deletion does not call the API', async () => {
+      const wrapper = await mountOwnerPlaylist()
+      await wrapper.get('[data-testid="playlist-delete-btn"]').trigger('click')
+      expect(wrapper.get('[data-testid="playlist-delete-confirm"]').exists()).toBe(true)
+      await wrapper.get('[data-testid="playlist-delete-cancel"]').trigger('click')
+      expect(wrapper.find('[data-testid="playlist-delete-confirm"]').exists()).toBe(false)
+      expect(musicApi.deleteMusicPlaylist).not.toHaveBeenCalled()
+    })
+
+    it('keeps the playlist and reports a failed deletion', async () => {
+      vi.mocked(musicApi.deleteMusicPlaylist).mockRejectedValueOnce(new Error('network unavailable'))
+      const wrapper = await mountOwnerPlaylist()
+      await wrapper.get('[data-testid="playlist-delete-btn"]').trigger('click')
+      await wrapper.get('[data-testid="playlist-delete-confirm-btn"]').trigger('click')
+      await flushPromises()
+      expect(wrapper.text()).toContain(mockDetail.name)
+      expect(wrapper.get('[data-testid="playlist-delete-error"]').text()).toContain('删除歌单失败')
+      expect(wrapper.find('[data-testid="playlist-delete-confirm"]').exists()).toBe(false)
+      expect(musicApi.deleteMusicPlaylist).toHaveBeenCalledWith('pl-100')
+    })
+
+    it('returns to playlists only after server confirms deletion', async () => {
+      vi.mocked(musicApi.deleteMusicPlaylist).mockResolvedValueOnce({ deleted: true })
+      const replace = vi.spyOn(router, 'replace').mockResolvedValue(undefined as any)
+      const wrapper = await mountOwnerPlaylist()
+      await wrapper.get('[data-testid="playlist-delete-btn"]').trigger('click')
+      await wrapper.get('[data-testid="playlist-delete-confirm-btn"]').trigger('click')
+      await flushPromises()
+      expect(musicApi.deleteMusicPlaylist).toHaveBeenCalledWith('pl-100')
+      expect(replace).toHaveBeenCalledWith('/music/playlists')
+      expect(wrapper.find('[data-testid="playlist-delete-error"]').exists()).toBe(false)
+    })
 
     it('renders playlist hero info, play all button, and songs list', async () => {
       const wrapper = mount(MusicPlaylistDetailView, {

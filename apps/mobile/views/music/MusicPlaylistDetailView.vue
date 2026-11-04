@@ -71,6 +71,17 @@
             <button
               v-if="canEditPlaylist"
               type="button"
+              class="mobile-playlist-detail__icon-btn mobile-playlist-detail__icon-btn--danger"
+              data-testid="playlist-delete-btn"
+              aria-label="删除歌单"
+              :disabled="deletingPlaylist"
+              @click="deletePending = true"
+            >
+              <MIcon name="trash" size="sm" />
+            </button>
+            <button
+              v-if="canEditPlaylist"
+              type="button"
               class="mobile-playlist-detail__icon-btn"
               data-testid="playlist-add-songs-btn"
               aria-label="添加歌曲"
@@ -359,6 +370,19 @@
       </div>
     </Transition>
 
+    <div v-if="deletePending && canEditPlaylist" class="mobile-playlist-delete-confirm" data-testid="playlist-delete-confirm">
+      <div class="mobile-playlist-delete-confirm__backdrop" @click="deletePending = false" />
+      <section role="alertdialog" aria-modal="true" aria-labelledby="playlist-delete-heading" aria-describedby="playlist-delete-description" class="mobile-playlist-delete-confirm__panel">
+        <h2 id="playlist-delete-heading">删除歌单</h2>
+        <p id="playlist-delete-description">删除后无法恢复，确定删除这张歌单吗？</p>
+        <div class="mobile-playlist-delete-confirm__actions">
+          <MButton variant="secondary" :disabled="deletingPlaylist" data-testid="playlist-delete-cancel" @click="deletePending = false">取消</MButton>
+          <MButton variant="primary" :disabled="deletingPlaylist" data-testid="playlist-delete-confirm-btn" @click="confirmDeletePlaylist">{{ deletingPlaylist ? '删除中…' : '删除' }}</MButton>
+        </div>
+      </section>
+    </div>
+    <p v-if="deleteError" class="mobile-playlist-detail__delete-error" role="alert" data-testid="playlist-delete-error">{{ deleteError }}</p>
+
     <!-- Floating Pill Toast -->
     <Transition name="toast-fade">
       <div v-if="toastMessage" class="mobile-floating-toast" role="status">
@@ -371,7 +395,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onDeactivated, onMounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getMusicPlaylist, listMusicPlaylistSongs, searchMusicSongs, addMusicPlaylistSong, removeMusicPlaylistSong } from '@/api/musicV1'
+import { getMusicPlaylist, listMusicPlaylistSongs, searchMusicSongs, addMusicPlaylistSong, removeMusicPlaylistSong, deleteMusicPlaylist } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import { useAuthStore } from '@/stores/auth'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
@@ -524,6 +548,28 @@ const addSearching = ref(false)
 const addSaving = ref('')
 const addMessage = ref('')
 const canEditPlaylist = computed(() => authStore.isAuthenticated && Boolean(playlist.value?.user_id) && String(playlist.value?.user_id) === String(authStore.user?.uuid))
+const deletePending = ref(false)
+const deletingPlaylist = ref(false)
+const deleteError = ref('')
+async function confirmDeletePlaylist() {
+  const target = playlist.value
+  if (!target || !canEditPlaylist.value || deletingPlaylist.value) return
+  const targetId = String(target.id)
+  deletingPlaylist.value = true
+  deleteError.value = ''
+  try {
+    const response = await deleteMusicPlaylist(targetId)
+    if (response?.deleted !== true) throw new Error('Deletion was not confirmed')
+    deletePending.value = false
+    await router.replace('/music/playlists')
+  } catch {
+    deletePending.value = false
+    deleteError.value = '删除歌单失败，请重试。'
+  } finally {
+    deletingPlaylist.value = false
+  }
+}
+
 
 async function searchAddSongs() {
   if (!addQuery.value.trim() || addSearching.value) return
@@ -1404,6 +1450,14 @@ onBeforeUnmount(() => {
 </style>
 
 <style scoped>
+.mobile-playlist-detail__icon-btn--danger{color:var(--a-color-danger,#d14343)}
+.mobile-playlist-delete-confirm{position:fixed;inset:0;z-index:1000;display:flex;align-items:flex-end;justify-content:center}
+.mobile-playlist-delete-confirm__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+.mobile-playlist-delete-confirm__panel{position:relative;width:min(100%,480px);padding:24px 20px calc(20px + env(safe-area-inset-bottom));background:var(--a-color-surface,#fff);border-radius:16px 16px 0 0;box-shadow:0 -6px 36px rgba(0,0,0,.15)}
+.mobile-playlist-delete-confirm__panel h2{font-size:18px;font-weight:650;margin:0 0 12px}
+.mobile-playlist-delete-confirm__panel p{margin:0 0 22px;line-height:1.5}
+.mobile-playlist-delete-confirm__actions{display:flex;justify-content:flex-end;gap:12px}
+.mobile-playlist-detail__delete-error{margin:12px 16px;padding:12px;border-radius:8px;color:var(--a-color-danger,#b42318);background:var(--a-color-surface,#fff);border:1px solid currentColor}
 .mobile-playlist-detail__add-panel{margin:12px 16px;padding:12px;border:1px solid var(--a-color-border-soft);border-radius:8px;display:flex;flex-direction:column;gap:10px}
 .mobile-playlist-detail__add-panel input{width:100%;min-height:44px;padding:8px;border:1px solid var(--a-color-border-soft);border-radius:6px;background:var(--a-color-surface);color:inherit}
 .mobile-playlist-detail__add-result{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px}

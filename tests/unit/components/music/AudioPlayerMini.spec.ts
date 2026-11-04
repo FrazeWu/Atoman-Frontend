@@ -32,6 +32,7 @@ describe('AudioPlayerMini.vue', () => {
 
     expect(wrapper.find('.player-cover-fallback').text()).toBe('M')
     expect(wrapper.find('.player-mini-play-overlay').exists()).toBe(false)
+    expect(wrapper.find('.player-mini-pause-overlay').exists()).toBe(true)
   })
 
   it('emits expand event when clicking expand button', async () => {

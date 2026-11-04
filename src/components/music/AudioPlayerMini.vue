@@ -46,6 +46,9 @@
         <span v-if="!isPlaying" class="player-mini-play-overlay" aria-hidden="true">
           <Play :size="22" fill="currentColor" />
         </span>
+        <span v-else class="player-mini-pause-overlay" aria-hidden="true">
+          <Pause :size="22" fill="currentColor" />
+        </span>
       </Transition>
     </button>
 
@@ -63,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { Play, ChevronLeft } from 'lucide-vue-next'
+import { Play, Pause, ChevronLeft } from 'lucide-vue-next'
 import { resolveMediaImageURL } from '@/utils/mediaUrl'
 
 defineProps<{
@@ -167,7 +170,8 @@ defineEmits<{
   transition: stroke-dashoffset 160ms linear;
 }
 
-.player-mini-play-overlay {
+.player-mini-play-overlay,
+.player-mini-pause-overlay {
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -176,6 +180,16 @@ defineEmits<{
   color: #fff;
   background: rgba(19, 28, 46, 0.42);
   pointer-events: none;
+}
+
+.player-mini-pause-overlay {
+  opacity: 0;
+  transition: opacity 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.player-mini-cover:hover .player-mini-pause-overlay,
+.player-mini-cover:focus-visible .player-mini-pause-overlay {
+  opacity: 1;
 }
 
 .mini-play-overlay-enter-active,

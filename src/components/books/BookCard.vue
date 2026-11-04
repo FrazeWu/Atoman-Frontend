@@ -5,6 +5,7 @@
       variant="work"
       :src="coverSrc"
       :title="work.title"
+      :seed="work.id"
       :subtitle="work.subtitle"
       :author="authorText"
       :category="categoryText"
@@ -43,7 +44,7 @@ const target = computed(() => ({
 const authorText = computed(() => props.work.authors?.map(a => a.name).join(' / ') || '')
 
 const coverSrc = computed(() => {
-  return props.work.cover_url || props.work.editions?.[0]?.cover_url || ''
+  return props.work.cover_url || ''
 })
 
 const categoryText = computed(() => {

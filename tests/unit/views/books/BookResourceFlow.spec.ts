@@ -61,12 +61,15 @@ function mockReader() {
 }
 
 describe('文件上传与公开反馈', () => {
-  it('未确认分享权限时不创建资源或上传会话', async () => {
+  it('未确认公开权限时仍可上传，但默认只有上传者可读', async () => {
     mockUpload()
     const wrapper = await setupUpload()
     await selectFile(wrapper)
+    vi.spyOn(api, 'uploadResourceFile').mockResolvedValue({ ...session, status: 'scanning' })
     await wrapper.get('form').trigger('submit')
-    expect(api.createCatalogResource).not.toHaveBeenCalled()
+    await flushPromises()
+    expect(api.createCatalogResource).toHaveBeenCalledTimes(1)
+    expect(api.createResourceUpload).toHaveBeenCalledWith(asset.id, expect.any(File), false)
   })
   it('拒绝不支持或空文件', async () => {
     const wrapper = await setupUpload()
@@ -86,7 +89,7 @@ describe('文件上传与公开反馈', () => {
     expect(api.createCatalogResource).toHaveBeenCalledTimes(1)
     expect(api.createCatalogResource).toHaveBeenCalledWith('work-1', expect.objectContaining({ edition_id: 'edition-1' }))
     expect(api.createResourceUpload).toHaveBeenCalledTimes(1)
-    expect(wrapper.text()).toContain('正在自动检查')
+    expect(wrapper.text()).toContain('正在自动安全检查')
     expect(wrapper.text()).not.toContain('开始阅读')
     expect(localStorage.getItem('atoman:book-upload:user-1:work-1:edition-1')).toBe('upload-1')
   })
@@ -94,7 +97,7 @@ describe('文件上传与公开反馈', () => {
     localStorage.setItem('atoman:book-upload:user-1:work-1:edition-1', 'upload-1')
     vi.spyOn(api, 'getResourceUpload').mockResolvedValue({ ...session, status: 'ready', revision_id: 'revision-1' })
     const wrapper = await setupUpload()
-    expect(wrapper.text()).toContain('文件已公开')
+    expect(wrapper.text()).toContain('仅自己可读')
     expect(wrapper.emitted('ready')).toHaveLength(1)
     expect(wrapper.findComponent({ name: 'PButton' }).exists()).toBe(true)
     const link = wrapper.findAllComponents({ name: 'PButton' }).find(button => button.text() === '开始阅读')
@@ -116,7 +119,7 @@ describe('文件上传与公开反馈', () => {
     expect(wrapper.get('[role="alert"]').text()).toContain('不会因此重复上传')
     await wrapper.findAll('button').find(button => button.text() === '检查处理状态')!.trigger('click')
     await flushPromises()
-    expect(wrapper.text()).toContain('文件已公开')
+    expect(wrapper.text()).toContain('仅自己可读')
     expect(upload).not.toHaveBeenCalled()
   })
 })

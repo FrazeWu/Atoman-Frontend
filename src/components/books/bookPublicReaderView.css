@@ -76,6 +76,8 @@
   background: var(--book-reader-surface);
 }
 
+.public-reader__text--paginated { overflow: hidden; }
+
 .public-reader__text pre {
   max-width: 72ch;
   margin: 0 auto;
@@ -90,8 +92,10 @@
 .public-reader__epub {
   height: min(68vh, 720px);
   padding: 1rem;
+  position: relative;
   background: var(--book-reader-surface);
 }
+.public-reader__epub-renderer { width: 100%; height: 100%; }
 
 .public-reader__comic {
   display: grid;
@@ -130,6 +134,7 @@
   padding: 1rem;
   background: var(--book-reader-surface);
 }
+.public-reader__pdf--continuous { padding:0; overflow:hidden; }
 .public-reader__pdf-page { position: relative; max-width: 100%; margin-inline: auto; }
 .public-reader__pdf-page.is-selectable { max-width: none; }
 .public-reader__pdf-page.is-selectable canvas { max-width: none; border: 0; }

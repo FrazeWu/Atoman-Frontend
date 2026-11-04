@@ -77,9 +77,10 @@
            视图 2：长篇读书笔记与书评 (真实后端 /me/private-notes)
            ===================================================================== -->
       <div v-else class="space-y-4">
+        <BookHighlightTrash v-if="trash" />
         <PEmpty
           v-if="!notes.length"
-          :description="trash ? '回收站为空。删除的笔记保留 30 天。' : '暂无长篇笔记。点击上方“+ 写长篇笔记”开始记录。'"
+          :description="trash ? '没有已删除的独立笔记。已删除划线单独列在上方，统一保留 30 天。' : '暂无长篇笔记。点击上方“+ 写长篇笔记”开始记录。'"
         />
 
         <ul v-else class="book-catalog__list">
@@ -108,7 +109,7 @@
                 <PButton variant="secondary" size="sm" :disabled="busy" @click="restore(item)">
                   恢复笔记
                 </PButton>
-                <PButton variant="ghost" size="sm" :disabled="busy" @click="deleting = item">
+                <PButton variant="ghost" size="sm" :disabled="busy" @click="prepareErase(item)">
                   彻底销毁
                 </PButton>
               </template>
@@ -119,7 +120,7 @@
                 <PButton variant="ghost" size="sm" :disabled="busy" @click="preparePublish(item)">
                   发布为博客
                 </PButton>
-                <PButton variant="ghost" size="sm" :disabled="busy" @click="deleting = item">
+                <PButton variant="ghost" size="sm" :disabled="busy" @click="prepareDelete(item)">
                   删除
                 </PButton>
               </template>
@@ -229,14 +230,20 @@
       </div>
     </PSheet>
 
-    <!-- 确认删除弹窗 -->
-    <PConfirm
-      :show="!!deleting"
-      :title="trash ? '确定彻底销毁？' : '确定移入回收站？'"
-      :message="trash ? '此操作将永久抹除该条笔记数据，无法恢复。' : '删除后可在 30 天内随时恢复。'"
-      @confirm="remove"
-      @cancel="deleting = null"
-    />
+    <!-- 删除前明确显示每个受到影响的公开快照及保留选项。 -->
+    <PSheet :show="!!deleting" :title="trash ? '回收站笔记' : '删除私人笔记'" mode="partial" @close="deleting = null">
+      <div v-if="deleting" class="space-y-4 p-4">
+        <p>笔记移入回收站后可在 30 天内恢复；默认会撤销所有包含它的当前公开快照。</p>
+        <template v-if="shareImpact?.total">
+          <p role="status">此笔记属于 {{ shareImpact.total }} 个正在分享的快照，撤销时整个合集的分享链接都将失效：</p>
+          <ul class="list-disc pl-5"><li v-for="impact in shareImpact.items" :key="impact.collection_id">{{ impact.title }}（{{ impact.visibility === 'public' ? '完全公开' : '通过链接访问' }}）</li></ul>
+          <label class="flex gap-2 items-start"><input v-model="keepShared" type="checkbox" aria-label="明确保留已发布快照" /><span>我明确选择保留这些已公开快照，即使删除私人原笔记，分享内容仍可被访问。</span></label>
+        </template>
+        <div class="flex gap-3"><PButton variant="secondary" @click="deleting = null">取消</PButton><PButton variant="danger" :disabled="busy" @click="remove">{{ keepShared ? '删除并保留分享' : '删除并撤销相关分享' }}</PButton></div>
+      </div>
+    </PSheet>
+
+    <PConfirm :show="!!erasing" title="确认彻底销毁这条私人笔记？" message="立即擦除已删除的正文、标题、标签和阅读位置，之后无法恢复。原来明确保留的公开快照不会因此自动撤销。" :danger="true" confirm-text="确认永久销毁" :loading="busy" @confirm="erase" @cancel="erasing=null" />
 
     <!-- 未保存关闭拦截 -->
     <PConfirm
@@ -256,6 +263,7 @@ import { apiGet } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import {
   deletePrivateNote,
+  erasePrivateNote,
   downloadBookData,
   exportPrivateNotes,
   listPrivateNotes,
@@ -265,6 +273,7 @@ import {
   type PrivateNote,
 } from '@/api/bookPrivate'
 import { searchCatalogWorks } from '@/api/bookCatalog'
+import { getNoteShareImpact, type NoteShareImpact } from '@/api/bookNoteCollections'
 import type { BookPublicWork } from '@/api/books'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -273,6 +282,7 @@ import PConfirm from '@/components/ui/PConfirm.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import BookPrivateHighlights from '@/components/books/BookPrivateHighlights.vue'
+import BookHighlightTrash from '@/components/books/BookHighlightTrash.vue'
 import './bookCatalog.css'
 import './bookPrivate.css'
 
@@ -311,6 +321,9 @@ const draftTags = ref('')
 const editError = ref('')
 const original = ref('')
 const deleting = ref<PrivateNote | null>(null)
+const erasing = ref<PrivateNote | null>(null)
+const shareImpact = ref<NoteShareImpact | null>(null)
+const keepShared = ref(false)
 const confirmClose = ref(false)
 let closeResolve: ((value: boolean) => void) | undefined
 
@@ -445,13 +458,33 @@ function finishClose(value: boolean) {
   closeResolve = undefined
 }
 
+function prepareErase(note: PrivateNote){if(busy.value)return;erasing.value=note}
+async function erase(){const note=erasing.value;erasing.value=null;if(!note||busy.value)return;busy.value=true;error.value='';try{await erasePrivateNote(note);notice.value='笔记正文及阅读位置已永久销毁。';await load()}catch{error.value='永久销毁失败，请刷新回收站后重试。'}finally{busy.value=false}}
+
+async function prepareDelete(note: PrivateNote) {
+  if (busy.value) return
+  busy.value = true
+  error.value = ''
+  keepShared.value = false
+  shareImpact.value = null
+  try {
+    shareImpact.value = await getNoteShareImpact('chapter_note', note.id)
+    deleting.value = note
+  } catch {
+    error.value = '无法确认笔记关联的公开快照，因此暂不删除。请重试。'
+  } finally { busy.value = false }
+}
+
 async function remove() {
   const note = deleting.value
+  const keep = keepShared.value && !!shareImpact.value?.total
   deleting.value = null
+  keepShared.value = false
+  shareImpact.value = null
   if (!note || busy.value) return
   busy.value = true
   try {
-    await deletePrivateNote(note)
+    await deletePrivateNote(note, keep)
     await load()
   } catch {
     error.value = '删除失败或笔记已更改，请重新加载后重试。'

@@ -60,7 +60,9 @@ export function useRevisionReading(owner: string, revisionId: string) {
     currentPosition = { ...position }
     outbox.latest = currentPosition
     outbox.baseVersion ??= state.value?.version
-    outbox.furthest = Math.max(outbox.furthest, position.current_percent)
+    if (position.advance_furthest !== false) {
+      outbox.furthest = Math.max(outbox.furthest, position.current_percent)
+    }
     persist()
     if (status.value === 'conflict' || status.value === 'offline') return
     status.value = 'pending'
@@ -74,7 +76,7 @@ export function useRevisionReading(owner: string, revisionId: string) {
     saving = true
     status.value = 'saving'
     if (!outbox.request) {
-      outbox.request = { ...outbox.latest!, session_id: session.id, request_id: crypto.randomUUID(), sequence: ++session.last_sequence, base_version: state.value.version, furthest_percent: outbox.furthest }
+      outbox.request = { ...outbox.latest!, advance_furthest: outbox.latest!.advance_furthest !== false, session_id: session.id, request_id: crypto.randomUUID(), sequence: ++session.last_sequence, base_version: state.value.version, furthest_percent: outbox.furthest }
       outbox.latest = undefined
       persist()
     }

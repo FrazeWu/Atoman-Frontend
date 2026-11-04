@@ -12,6 +12,7 @@ export interface BookReaderSource {
   initialPosition?: ReadingPosition
   bookmarks?: BookReaderBookmark[]
   annotations?: ReadingMark[]
+  supportsChapterNotes?: boolean
   onPosition?: (position: ReadingPosition) => void
   onReady?: () => void
   addBookmark?: (bookmark: BookReaderBookmark) => Promise<BookReaderBookmark[]>

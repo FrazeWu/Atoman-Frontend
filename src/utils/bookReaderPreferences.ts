@@ -32,6 +32,17 @@ export const defaultBookReaderDisplayPreferences: BookReaderDisplayPreferences =
   zoom_level: 100,
 }
 
+/** Newly opened text/PDF/EPUB books scroll by default, comics page by page.
+ * An explicitly saved per-book choice always overrides this format default. */
+export function bookReaderPreferencesForFormat(format: string, value: unknown): BookReaderDisplayPreferences {
+  const result = parseBookReaderDisplayPreferences(value)
+  const candidate = value && typeof value === 'object' ? value as Partial<BookReaderDisplayPreferences> : null
+  if (candidate?.scroll_mode !== 'continuous' && candidate?.scroll_mode !== 'paginated') {
+    result.scroll_mode = ['epub', 'pdf', 'txt'].includes(format) ? 'continuous' : 'paginated'
+  }
+  return result
+}
+
 export function parseBookReaderDisplayPreferences(value: unknown): BookReaderDisplayPreferences {
   if (!value || typeof value !== 'object') return { ...defaultBookReaderDisplayPreferences }
   const candidate = value as Partial<BookReaderDisplayPreferences>

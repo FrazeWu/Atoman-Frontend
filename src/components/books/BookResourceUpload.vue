@@ -1,15 +1,15 @@
 <template>
   <section class="resource-upload" :aria-labelledby="`resource-upload-title${idSuffix}`">
     <h3 :id="`resource-upload-title${idSuffix}`">{{ replaceAsset ? '上传替换文件' : '上传电子书' }}</h3>
-    <p>支持 EPUB、PDF、TXT、CBZ、CBR。文件通过自动安全检查后直接公开，不需要人工审核。</p>
+    <p>支持 EPUB、PDF、TXT、CBZ、CBR。文件先通过自动安全检查，默认仅上传者可读；确认有权分享时可选择公开。</p>
     <form @submit.prevent="upload">
       <fieldset :disabled="busy || pending" class="resource-upload__fields">
         <label :for="`resource-file${idSuffix}`">电子书文件</label>
         <input :id="`resource-file${idSuffix}`" ref="fileInput" type="file" accept=".epub,.pdf,.txt,.cbz,.cbr" @change="chooseFile">
         <p v-if="file">已选择：{{ file.name }}</p>
         <PInput v-if="!replaceAsset" id="resource-language" v-model="language" label="文件语言代码" placeholder="例如 zh、en；不确定时留空" />
-        <label><input v-model="confirmed" type="checkbox"> 我确认有权将这个文件公开分享</label>
-        <PButton type="submit" :loading="busy" :disabled="!file || !confirmed || (!!session && session.status !== 'uploading')">{{ session?.status === 'uploading' ? '继续本次上传' : '上传并公开文件' }}</PButton>
+        <label><input v-model="confirmed" type="checkbox"> 同时公开分享此文件（我确认拥有公开分享所需权利）</label>
+        <PButton type="submit" :loading="busy" :disabled="!file || (!!session && session.status !== 'uploading')">{{ session?.status === 'uploading' ? '继续本次上传' : (confirmed ? '上传并公开文件' : '上传文件（仅自己可读）') }}</PButton>
       </fieldset>
     </form>
     <div v-if="busy" role="status"><progress :value="percent" max="100" aria-label="文件上传进度" /> {{ percent }}% · {{ phase }}</div>
@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ApiErrorResponseError } from '@/api/client'
@@ -38,7 +38,7 @@ const idSuffix = `-${props.replaceAsset?.id || props.editionId || props.workId}`
 const emit = defineEmits<{ ready: [] }>()
 const auth = useAuthStore()
 const storageKey = `atoman:book-upload:${auth.user?.uuid}:${props.workId}:${props.replaceAsset?.id || props.editionId || 'legacy'}`
-const file = ref<File | null>(props.initialFile || null)
+const file = shallowRef<File | null>(props.initialFile || null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const language = ref(props.initialLanguage || '')
 const confirmed = ref(false)
@@ -58,10 +58,10 @@ const pending = computed(() => !!session.value && ['uploaded', 'scanning', 'comp
 const unsubmitted = computed(() => !!file.value && !pending.value && session.value?.status !== 'ready')
 const statusText = computed(() => {
   const status = session.value?.status
-  if (status === 'ready') return '文件已公开，可以开始阅读。'
+  if (status === 'ready') return confirmed.value ? '文件已通过安全检查并公开分享。' : '文件已通过安全检查，仅自己可读；以后可以单独选择公开分享。'
   if (status === 'failed' || status === 'quarantined') return `文件未公开：${session.value?.error_message || '未通过自动安全检查，请检查源文件。'}`
   if (status === 'uploading') return '文件还未传完，可在本页继续本次上传。'
-  return '文件已收到，正在自动检查。图书本身始终公开，检查完成后文件会自动公开。'
+  return '文件已收到，正在自动安全检查。书目公开不代表电子书文件自动公开。'
 })
 function persistStatus() {
   // 只恢复已提交文件的处理状态；刷新后不复用无法核对内容的未完成分片。
@@ -86,7 +86,7 @@ function chooseFile(event: Event) {
 }
 function chooseAnother() { if (fileInput.value) { fileInput.value.value = ''; fileInput.value.click() } }
 async function upload() {
-  if (!file.value || !confirmed.value || busy.value || pending.value) return
+  if (!file.value || busy.value || pending.value) return
   busy.value = true
   error.value = ''
   controller = new AbortController()

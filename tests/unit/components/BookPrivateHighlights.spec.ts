@@ -4,6 +4,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import BookPrivateHighlights from '@/components/books/BookPrivateHighlights.vue'
 import * as apiPrivate from '@/api/bookPrivate'
 import * as apiReading from '@/api/bookReading'
+import * as apiCollections from '@/api/bookNoteCollections'
 import { useToast } from '@/composables/useToast'
 
 describe('BookPrivateHighlights', () => {
@@ -90,6 +91,7 @@ describe('BookPrivateHighlights', () => {
 
   it('deletes highlight with CAS version', async () => {
     const deleteSpy = vi.spyOn(apiReading, 'deleteReadingMark').mockResolvedValue({})
+    const impactSpy = vi.spyOn(apiCollections, 'getNoteShareImpact').mockResolvedValue({ total: 0, items: [] })
     const wrapper = await createWrapper()
 
     // 触发编辑并调用内部删除
@@ -97,10 +99,13 @@ describe('BookPrivateHighlights', () => {
     await editBtn?.trigger('click')
     expect((wrapper.vm as any).draft).toBeTruthy()
 
+    await (wrapper.vm as any).prepareDelete()
+    await flushPromises()
+    expect(impactSpy).toHaveBeenCalledWith('highlight', 'mark-1')
     await (wrapper.vm as any).remove()
     await flushPromises()
 
-    expect(deleteSpy).toHaveBeenCalledWith('rev-1', 'mark-1', 2)
+    expect(deleteSpy).toHaveBeenCalledWith('rev-1', 'mark-1', 2, undefined, false)
   })
 
   it('copies highlight quote and displays success toast', async () => {

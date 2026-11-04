@@ -26,6 +26,7 @@ describe('BookPublicReaderView', () => {
     const wrapper = mount(BookPublicReaderView, { props: { source: {
       title: '历史', backTo: '/books/work/work-1', progressKey: 'revision:user-1:revision-old', loadContent,
       asset: { id: 'asset-1', work_id: 'work-1', format: 'txt', file_name: 'old.txt', content_type: 'text/plain', size: 9, status: 'published', created_at: '' },
+      supportsChapterNotes: true,
     } }, global: { plugins: [router] } })
     await flushPromises()
     expect(wrapper.text()).toContain('固定版本的正文')
@@ -38,6 +39,8 @@ describe('BookPublicReaderView', () => {
     const cached = JSON.parse(localStorage.getItem('atoman:book-reading-progress:revision:user-1:revision-old') || '{}')
     expect(cached.bookmarks).toHaveLength(1)
     expect(localStorage.getItem('atoman:book-reading-progress:asset-1')).toBeNull()
+    await wrapper.get('button[aria-label="记录当前位置笔记"]').trigger('click')
+    expect(wrapper.emitted('chapter-note')?.[0]).toEqual([expect.objectContaining({ format: 'txt', txt_offset: 0 })])
     wrapper.unmount()
   })
 
@@ -153,11 +156,15 @@ describe('BookPublicReaderView', () => {
     const wrapper = mount(BookPublicReaderView, { global: { plugins: [router] } })
     await flushPromises()
 
+    await wrapper.get('.public-reader__text').trigger('scroll')
+    const initiallyStored = JSON.parse(localStorage.getItem('atoman:book-reading-progress:public-asset-5') || '{}')
+    expect(initiallyStored.display.scroll_mode).toBe('continuous')
     await wrapper.find('.book-reader-display-controls select').setValue('0.85')
     await wrapper.find('[aria-label="夜间主题"]').trigger('click')
 
     expect(localStorage.getItem('atoman:book-reading-progress:public-asset-5')).toContain('"theme":"night"')
     expect(localStorage.getItem('atoman:book-reading-progress:public-asset-5')).toContain('"font_scale":0.85')
+    expect(JSON.parse(localStorage.getItem('atoman:book-reading-progress:public-asset-5') || '{}').display.scroll_mode).toBe('continuous')
     wrapper.unmount()
   })
 })

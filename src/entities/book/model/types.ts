@@ -474,6 +474,7 @@ export interface CreateCatalogWork {
   title: string
   authors: string[]
   author_ids?: string[]
+  new_author_names?: string[]
   subtitle?: string
   original_title?: string
   description?: string
@@ -486,6 +487,7 @@ export interface CreateCatalogEdition {
   edition_statement?: string
   translators?: string[]
   translator_ids?: string[]
+  new_translator_names?: string[]
   publisher?: string
   producer?: string
   isbn10?: string

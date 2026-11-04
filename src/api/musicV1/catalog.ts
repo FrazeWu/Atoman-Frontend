@@ -357,6 +357,7 @@ export async function getMusicSong(
 export async function listMusicSongs(
 	filters: {
 		artist_id?: string;
+		artist_relation?: "participating";
 		tag_id?: string;
 		release_type?: MusicStandaloneSongType | "single,leak_song" | "single,leak";
 		sort?: "-release_date" | "release_date" | "hot";

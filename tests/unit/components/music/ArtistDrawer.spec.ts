@@ -1,6 +1,6 @@
 // web/tests/unit/ArtistDrawer.spec.ts
 import { nextTick, ref } from "vue";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { ApiErrorResponseError } from "../../../../src/api/client";
 // @ts-expect-error Vitest resolves Vue SFCs through Vite; this test is outside the Vue TS project.
@@ -191,6 +191,49 @@ describe("ArtistDrawer.vue", () => {
 			created_at: "2026-07-02T00:00:00Z",
 		});
 		deleteArtistBookmark.mockResolvedValue({ deleted: true });
+	});
+
+	it("defaults an empty personal catalog to related band albums without changing attribution", async () => {
+		drawerState.value = { artistId: 'band-member-only', artistRefreshToken: 0 };
+		getMusicArtist.mockResolvedValue({ id: 'band-member-only', name: '成员', artist_form: 'person' });
+		listMusicAlbums.mockImplementation(async (filters) => ({
+			data: filters.artist_relation ? [{ id: 'band-album', title: '乐队专辑', artists: [{ id: 'band', name: '交工乐队' }] }] : [],
+			meta: { page: 1, page_size: 20, total: filters.artist_relation ? 1 : 0, has_more: false },
+		}));
+		const wrapper = mount(ArtistDrawer);
+		await flushPromises();
+		await flushPromises();
+		expect(wrapper.get('[data-testid="artist-group-works-notice"]').text()).toContain('不代表个人署名');
+		expect(wrapper.text()).toContain('乐队专辑');
+		expect(wrapper.text()).toContain('交工乐队');
+		expect(listMusicAlbums).toHaveBeenCalledWith(expect.objectContaining({ artist_id: 'band-member-only', artist_relation: 'participating', page: 1, page_size: 24 }));
+		await wrapper.get('.album-row').trigger('click');
+		expect(musicDrawerMocks.openAlbum).toHaveBeenCalledWith('band-album');
+		await wrapper.get('[data-testid="artist-release-type-album"]').trigger('click');
+		await flushPromises();
+		expect(wrapper.find('[data-testid="artist-group-works-notice"]').exists()).toBe(false);
+		wrapper.unmount();
+		const reopened = mount(ArtistDrawer);
+		await flushPromises();
+		await flushPromises();
+		expect(reopened.get('[data-testid="artist-group-works-notice"]').exists()).toBe(true);
+		reopened.unmount();
+	});
+
+	it("defaults to related standalone songs when both personal releases and band albums are empty", async () => {
+		drawerState.value = { artistId: 'band-song-member', artistRefreshToken: 0 };
+		getMusicArtist.mockResolvedValue({ id: 'band-song-member', name: '成员', artist_form: 'person' });
+		listMusicAlbums.mockResolvedValue({ data: [], meta: { page: 1, page_size: 20, total: 0, has_more: false } });
+		listMusicSongs.mockImplementation(async (filters) => ({
+			data: filters.artist_relation ? [{ id: 'band-single', title: '乐队单曲', artists: [{ id: 'band', name: '交工乐队' }] }] : [],
+			meta: { page: 1, page_size: 20, total: filters.artist_relation ? 1 : 0, has_more: false },
+		}));
+		const wrapper = mount(ArtistDrawer);
+		await flushPromises();
+		await flushPromises();
+		expect(wrapper.text()).toContain('乐队单曲');
+		expect(wrapper.get('[data-testid="artist-group-works-notice"]').exists()).toBe(true);
+		wrapper.unmount();
 	});
 
 	it("renders artist information and albums when artistId is present", async () => {

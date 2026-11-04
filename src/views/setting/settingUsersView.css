@@ -353,3 +353,6 @@
     width: 100%;
   }
 }
+
+.setting-users__heading-actions { display: flex; align-items: center; gap: .65rem; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 640px) { .setting-users__heading { align-items: start; flex-direction: column; } .setting-users__heading-actions { width: 100%; justify-content: flex-start; } }

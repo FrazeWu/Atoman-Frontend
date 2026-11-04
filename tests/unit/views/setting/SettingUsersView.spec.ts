@@ -128,6 +128,18 @@ describe('SettingUsersView', () => {
     expect(listAdminUsers).toHaveBeenCalledWith(expect.objectContaining({ page: 1, page_size: 20 }))
   })
 
+  it('shows administrator mail invitation controls in user management', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.find('[data-test="mail-invites-open"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="user-mail-invite-member-id"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="user-mail-invite-admin-id"]').exists()).toBe(false)
+    await wrapper.get('[data-test="user-mail-invite-member-id"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="mail-invite-selected-user"]').text()).toContain('Alice')
+    wrapper.unmount()
+  })
+
   it('creates a regular user from the create dialog', async () => {
     vi.mocked(createAdminUser).mockResolvedValue({ ...member, uuid: 'new-id', username: 'new-user' })
     const wrapper = mountView()

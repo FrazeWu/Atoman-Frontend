@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fetchMailFolders, fetchMailSummaries, fetchMyMailAccount, redeemMailInvitation } from '@/api/mail'
+import { fetchMailFolders, fetchMailSummaries, fetchMyMailAccount, redeemMailInvitation, issueMailInvitation, reserveAdminMailAddress } from '@/api/mail'
 
 const { get, post } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }))
 vi.mock('@/api/client', () => ({ apiGet: get, apiPostJson: post }))
@@ -30,10 +30,19 @@ describe('Atoman Webmail API client', () => {
     expect(get).toHaveBeenCalledTimes(1)
   })
 
+  it('supports admin invite issuance and own address reservation via protected site APIs', async () => {
+    post.mockResolvedValue({ id: 'issued-1' })
+    await issueMailInvitation('some-user-uuid')
+    expect(post).toHaveBeenCalledWith('/api/v1/mail/admin/invites', { target_user_id: 'some-user-uuid' })
+    await reserveAdminMailAddress('chosen.self')
+    expect(post).toHaveBeenCalledWith('/api/v1/mail/admin/reserve-self', { local_part: 'chosen.self' })
+    expect(get).not.toHaveBeenCalled()
+  })
+
   it('submits one-time invitation tokens only in a JSON body', async () => {
     post.mockResolvedValue({ available: false, status: 'reserved' })
-    await redeemMailInvitation('temporary-invitation-token')
-    expect(post).toHaveBeenCalledWith('/api/v1/mail/activate', { token: 'temporary-invitation-token' })
+    await redeemMailInvitation('temporary-invitation-token', 'my.name')
+    expect(post).toHaveBeenCalledWith('/api/v1/mail/activate', { token: 'temporary-invitation-token', local_part: 'my.name' })
     expect(get).not.toHaveBeenCalled()
   })
 })

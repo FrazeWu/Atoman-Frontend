@@ -6,13 +6,17 @@ import type { MailAccountInfo, MailFolder, MailSummary } from '@/api/mail'
 const loadAccount = vi.fn<() => Promise<MailAccountInfo>>()
 const loadFolders = vi.fn<() => Promise<MailFolder[]>>()
 const loadMessages = vi.fn<(folderId: string, limit?: number) => Promise<MailSummary[]>>()
-const redeemInvite = vi.fn<(token: string) => Promise<MailAccountInfo>>()
+const redeemInvite = vi.fn<(token: string, localPart: string) => Promise<MailAccountInfo>>()
+const reserveSelf = vi.fn<(localPart: string) => Promise<MailAccountInfo>>()
+const authState = { user: { role: 'user' as 'user' | 'admin' | 'owner' } }
+vi.mock('@/stores/auth', () => ({ useAuthStore: () => authState }))
 
 vi.mock('@/api/mail', () => ({
   fetchMyMailAccount: (...args: []) => loadAccount(...args),
   fetchMailFolders: (...args: []) => loadFolders(...args),
   fetchMailSummaries: (folderId: string, limit?: number) => loadMessages(folderId, limit),
-  redeemMailInvitation: (token: string) => redeemInvite(token),
+  redeemMailInvitation: (token: string, localPart: string) => redeemInvite(token, localPart),
+  reserveAdminMailAddress: (localPart: string) => reserveSelf(localPart),
 }))
 
 const activeAccount: MailAccountInfo = { status: 'active', available: true, address: 'alice@atoman.org' }
@@ -34,6 +38,8 @@ describe('Atoman Mail workspace', () => {
     loadFolders.mockReset()
     loadMessages.mockReset()
     redeemInvite.mockReset()
+    reserveSelf.mockReset()
+    authState.user.role = 'user'
     loadAccount.mockResolvedValue(pendingAccount)
     loadFolders.mockResolvedValue(testFolders)
     loadMessages.mockResolvedValue([receivedMail])
@@ -68,11 +74,39 @@ describe('Atoman Mail workspace', () => {
     await flushPromises()
     const token = 'a'.repeat(43)
     await wrapper.get('#mail-invitation').setValue(token)
+    await wrapper.get('#mail-chosen-local').setValue('My.Custom-Name')
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(redeemInvite).toHaveBeenCalledWith(token)
+    expect(redeemInvite).toHaveBeenCalledWith(token, 'my.custom-name')
     expect(wrapper.get('[data-testid="mail-not-active"]').text()).toContain('邮箱地址已预留')
     expect(loadMessages).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('allows administrators to choose and reserve a name without an invitation', async () => {
+    authState.user.role = 'admin'
+    loadAccount.mockResolvedValue({ status: 'not_invited', available: false })
+    reserveSelf.mockResolvedValue({ status: 'reserved', available: false, address: 'admin.custom@atoman.org' })
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.get('[data-testid="mail-admin-self-form"]').text()).toContain('无需邀请码')
+    expect(wrapper.find('[data-testid="mail-invite-redeem-form"]').exists()).toBe(false)
+    await wrapper.get('#mail-self-local').setValue('Admin.Custom')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(reserveSelf).toHaveBeenCalledWith('admin.custom')
+    expect(wrapper.get('[data-testid="mail-not-active"]').text()).toContain('admin.custom@atoman.org')
+    expect(loadMessages).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('does not let a regular user enter the admin self-reservation flow', async () => {
+    loadAccount.mockResolvedValue({ status: 'not_invited', available: false })
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="mail-admin-self-form"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="mail-invite-redeem-form"]').exists()).toBe(true)
+    expect(reserveSelf).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 

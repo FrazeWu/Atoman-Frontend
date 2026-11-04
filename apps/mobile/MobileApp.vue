@@ -101,7 +101,7 @@ const isAuthRoute = computed(() => {
 })
 
 const isUtilityRoute = computed(() => {
-  return /^\/(?:search|about|terms|privacy|modules|users\/[^/]+\/settings)(\/|$)/.test(route.path)
+  return /^\/(?:search|mail|about|terms|privacy|modules|users\/[^/]+\/settings)(\/|$)/.test(route.path)
 })
 
 const isSubRoute = computed(() => {
@@ -121,6 +121,7 @@ const isSubRoute = computed(() => {
 const subRouteTitle = computed(() => {
   const p = route.path || '/'
   if (p === '/search') return '全站搜索'
+  if (p === '/mail') return '电子邮件'
   if (p.startsWith('/login')) return '登录'
   if (p.startsWith('/register')) return '注册'
   if (p.startsWith('/forgot-password')) return '重置密码'

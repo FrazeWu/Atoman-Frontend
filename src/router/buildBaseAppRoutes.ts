@@ -72,6 +72,7 @@ export function buildBaseAppRoutes(extraRoutes: RouteRecordRaw[] = []): RouteRec
     { path: '/me', component: () => import('@/views/user/MySpaceView.vue'), meta: { requiresAuth: true } },
     { path: '/inbox', component: () => import('@/views/feed/InboxPage.vue'), meta: { requiresAuth: true } },
     { path: '/messages', component: () => import('@/views/messages/MessagesWorkspaceView.vue'), meta: { requiresAuth: true } },
+    { path: '/mail', component: () => import('@/views/mail/MailWorkspaceView.vue'), meta: { requiresAuth: true } },
     {
       path: '/books/read/:assetId',
       component: () => import('@/views/books/BookReaderView.vue'),

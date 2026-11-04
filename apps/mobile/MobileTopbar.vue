@@ -64,6 +64,7 @@ const mobileModuleLabel = computed(() => {
   if (route.path === '/') return '首页'
   if (route.path === '/modules') return '模块'
   if (route.path.startsWith('/inbox')) return '私信'
+  if (route.path === '/mail') return '电子邮件'
   if (route.path.startsWith('/studio')) return 'Studio'
   if (isVideoRoute.value) return '视频'
   if (mobileModule.value === 'blog') return '博客'
@@ -72,9 +73,13 @@ const mobileModuleLabel = computed(() => {
   if (mobileModule.value) return moduleRooms[mobileModule.value].name
   return '模块'
 })
-const showMobileBack = computed(() => !isAuthRoute.value && (route.path === '/modules' || isMobileDetailRoute(route.path) || /^\/(?:inbox\/|studio\/(?:blog|podcast|video)\/)/.test(route.path)))
+const showMobileBack = computed(() => !isAuthRoute.value && (route.path === '/modules' || route.path === '/mail' || isMobileDetailRoute(route.path) || /^\/(?:inbox\/|studio\/(?:blog|podcast|video)\/)/.test(route.path)))
 
 const goBack = () => {
+  if (route.path === '/mail' && (!window.history.state?.back || window.history.length <= 1)) {
+    void router.push('/modules')
+    return
+  }
   if (route.path === '/modules') {
     void router.push('/feed')
     return

@@ -92,6 +92,15 @@ describe('host-scoped route tables', () => {
     expect(appRoutePaths).not.toContain('/feed/inbox')
   })
 
+  it('registers mail as a distinct authenticated page, not private messages', () => {
+    const mailRoute = buildAppRoutes().find((route) => route.path === '/mail')
+    const dmRoute = buildAppRoutes().find((route) => route.path === '/messages')
+
+    expect(mailRoute?.meta?.requiresAuth).toBe(true)
+    expect(lazyImportPath(mailRoute?.component)).toContain('MailWorkspaceView.vue')
+    expect(lazyImportPath(dmRoute?.component)).toContain('MessagesWorkspaceView.vue')
+  })
+
   it('registers the personal hub as an authenticated top-level route', () => {
 		const personalRoute = buildAppRoutes().find((route) => route.path === '/me')
 

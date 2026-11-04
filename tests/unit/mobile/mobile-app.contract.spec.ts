@@ -52,6 +52,7 @@ describe("mobile app route boundary", () => {
 				"/books/work/:workId",
 				"/books/edition/:editionId",
 				"/inbox",
+				"/mail",
 				"/me",
 				"/studio",
 				"/studio/:module(blog|podcast|video)/content",
@@ -96,6 +97,13 @@ describe("mobile app route boundary", () => {
 				"/privacy",
 			]),
 		);
+	});
+
+	it("registers authenticated mobile Webmail without replacing private messages", () => {
+		const mailRoute = mobileRoutes.find((route) => route.path === "/mail");
+		expect(mailRoute?.meta?.requiresAuth).toBe(true);
+		expect(String(mailRoute?.component)).toContain("MailWorkspaceView.vue");
+		expect(mobileRoutes.some((route) => route.path === "/messages")).toBe(true);
 	});
 
 	it("marks mobile authentication entry routes as guest-only", () => {

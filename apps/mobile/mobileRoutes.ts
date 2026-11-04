@@ -81,6 +81,11 @@ export const mobileRoutes: RouteRecordRaw[] = [
 		meta: { restoreSession: true },
 	},
 	{
+		path: "/mail",
+		component: () => import("@/views/mail/MailWorkspaceView.vue"),
+		meta: requiresAuth,
+	},
+	{
 		path: "/me",
 		component: () => import("./views/me/ProfileMobileView.vue"),
 		meta: { restoreSession: true },

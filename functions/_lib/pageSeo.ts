@@ -65,6 +65,8 @@ const noIndexPrefixes = [
 	"/register",
 	"/forgot-password",
 	"/auth",
+	"/search",
+	"/modules",
 	"/studio",
 	"/site/setting",
 	"/inbox",

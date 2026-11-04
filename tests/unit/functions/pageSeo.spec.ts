@@ -100,6 +100,19 @@ describe("static page SEO", () => {
 		expect(html).not.toContain('rel="canonical"');
 	});
 
+	it.each(["/search?module=books", "/modules"])(
+		"serves the valid application route %s as 200 without indexing it",
+		async (pagePath) => {
+			const response = await pageMiddleware({
+				request: new Request(`https://www.atoman.org${pagePath}`),
+				next: async () => new Response(shell, { headers: { "content-type": "text/html" } }),
+			});
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toContain('<meta name="robots" content="noindex, nofollow">');
+		},
+	);
+
 	it("keeps known private application routes out of unknown-route handling", async () => {
 		const response = await pageMiddleware({
 			request: new Request("https://www.atoman.org/inbox"),

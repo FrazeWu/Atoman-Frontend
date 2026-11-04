@@ -108,8 +108,9 @@
       <div ref="topicContentAnchor" class="topic-main">
           <!-- Topic content (Markdown rendered) -->
           <div
-            class="markdown-body topic-content-card"
-            v-html="renderMarkdown(forumStore.currentTopic.content, { references: forumStore.currentTopic.references })"
+            class="markdown-body prose-blog topic-content-card"
+            v-html="renderedTopicContent"
+            @click="handleTopicContentClick"
           />
 
       </div>
@@ -198,12 +199,15 @@ import InteractionBar from '@/components/shared/InteractionBar.vue'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import { useApi } from '@/composables/useApi'
 import { useInteractions } from '@/composables/useInteractions'
+import { usePlayerStore } from '@/stores/player'
+import { useBlogMediaEmbeds } from '@/composables/useBlogMediaEmbeds'
 
 const route = useRoute()
 const router = useRouter()
 const forumStore = useForumStore()
 const authStore = useAuthStore()
 const { renderMarkdown } = useMarkdownRenderer()
+const { postEmbeds, musicEmbeds, videoEmbeds, load: loadMediaEmbeds } = useBlogMediaEmbeds()
 const topicId = computed(() => String(route.params.id || ''))
 const interactions = useInteractions('forum', 'forum_topic', topicId)
 const commentsOpen = ref(false)
@@ -252,12 +256,54 @@ const onScroll = () => {
   showBackTop.value = window.scrollY > 300
 }
 
+const renderedTopicContent = computed(() => {
+  if (!forumStore.currentTopic?.content) return ''
+  return renderMarkdown(forumStore.currentTopic.content, {
+    references: forumStore.currentTopic.references,
+    postEmbeds: postEmbeds.value,
+    musicEmbeds: musicEmbeds.value,
+    videoEmbeds: videoEmbeds.value,
+    interactiveMedia: true,
+  })
+})
+
+function handleTopicContentClick(event: MouseEvent) {
+  const target = event.target
+  if (!(target instanceof Element)) return
+
+  const button = target.closest<HTMLButtonElement>('[data-atoman-embed-play="music"]')
+  if (button) {
+    const id = button.dataset.atomanEmbedId
+    const embed = id ? musicEmbeds.value[id] : undefined
+    const songs = embed?.playbackSongs || []
+    if (embed && songs.length) {
+      event.preventDefault()
+      event.stopPropagation()
+      const player = usePlayerStore()
+      if (embed.kind === 'song') player.playSong(songs[0])
+      else player.playAlbum(songs)
+      player.expandPlayer?.()
+      return
+    }
+  }
+
+  const link = target.closest<HTMLAnchorElement>('a[data-atoman-embed]')
+  const href = link?.getAttribute('href')
+  if (link && href && !href.startsWith('#')) {
+    event.preventDefault()
+    void router.push(href)
+  }
+}
+
 const loadTopic = async () => {
   const id = topicId.value
   const generation = ++loadTopicGeneration
   commentsOpen.value = false
   const topic = await forumStore.fetchTopic(id)
   if (generation !== loadTopicGeneration || topicId.value !== id || topic?.id !== id) return
+  if (topic.content) {
+    void loadMediaEmbeds(topic.content, authStore.token || undefined)
+  }
   interactions.liked.value = topic.is_liked
   interactions.likeCount.value = topic.like_count
   interactions.commentCount.value = topic.reply_count

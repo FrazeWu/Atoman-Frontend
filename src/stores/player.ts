@@ -119,6 +119,10 @@ export const usePlayerStore = defineStore("player", () => {
 	const songLibraryLoaded = ref(false);
 	const showLyrics = ref(false);
 	const lyricsCloseRequest = computed(() => playerPresence.lyricsCloseRequest);
+	const expandRequest = computed(() => playerPresence.expandRequest);
+	const expandPlayer = () => {
+		playerPresence.requestExpand();
+	};
 	const showQueue = ref(false);
 	const isPinned = ref(
 		typeof localStorage === "undefined" ||
@@ -1418,6 +1422,8 @@ export const usePlayerStore = defineStore("player", () => {
 		checkCurrentSongAudioCached,
 		showLyrics,
 		lyricsCloseRequest,
+		expandRequest,
+		expandPlayer,
 		toggleLyrics,
 		requestLyricsClose,
 		closeLyrics,

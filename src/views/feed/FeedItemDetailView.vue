@@ -214,7 +214,10 @@ function playPodcast(feedItem: FeedItem) {
   const timelineItem = article.value
   if (timelineItem) playerStore.setQueueFromCurrentItems([timelineItem])
   const podcast = playerStore.createPodcastSong(feedItem)
-  if (podcast) playerStore.playQueuedSong(podcast)
+  if (podcast) {
+    playerStore.playQueuedSong(podcast)
+    playerStore.expandPlayer()
+  }
 }
 
 async function reportReadEvent(feedItem: FeedItem) {

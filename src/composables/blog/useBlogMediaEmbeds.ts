@@ -54,6 +54,8 @@ function toPlaybackSong(
     lyrics?: string
     track_number?: number
     disc_number?: number
+    duration_sec?: number
+    waveform_peaks?: number[]
     artists?: Array<{ id: string; name: string }>
   },
   album?: {
@@ -79,6 +81,8 @@ function toPlaybackSong(
     cover_url: source.cover_url || album?.cover_url || '',
     track_number: source.track_number,
     disc_number: source.disc_number,
+    duration: source.duration_sec,
+    waveform_peaks: source.waveform_peaks,
     artists,
     status: 'open',
   }

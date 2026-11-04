@@ -75,6 +75,7 @@
             v-model="editorValue"
             :mode="editorMode"
             :enable-mentions="true"
+            :enable-embeds="true"
             :show-mode-toggle="true"
             :show-sync-scroll-toggle="true"
             :sync-scroll="syncScroll"

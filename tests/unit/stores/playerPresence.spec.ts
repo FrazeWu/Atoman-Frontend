@@ -31,4 +31,12 @@ describe("player presence store", () => {
 		expect(presence.hasCurrentTrack).toBe(false);
 		expect(presence.lyricsCloseRequest).toBe(1);
 	});
+
+	it("increments the expand request counter", () => {
+		const presence = usePlayerPresenceStore();
+
+		expect(presence.expandRequest).toBe(0);
+		presence.requestExpand();
+		expect(presence.expandRequest).toBe(1);
+	});
 });

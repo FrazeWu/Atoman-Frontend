@@ -6,6 +6,7 @@ import type { Song, Video } from '@/types'
 const playerMock = vi.hoisted(() => ({
   playAlbum: vi.fn(),
   playSong: vi.fn(),
+  expandPlayer: vi.fn(),
 }))
 
 vi.mock('@/stores/player', () => ({
@@ -47,6 +48,7 @@ describe('BlogMediaContent', () => {
   afterEach(() => {
     playerMock.playAlbum.mockReset()
     playerMock.playSong.mockReset()
+    playerMock.expandPlayer.mockReset()
   })
 
   it('plays a single or an album through the global player', async () => {
@@ -69,6 +71,7 @@ describe('BlogMediaContent', () => {
       song,
       { ...song, id: 'song-2' },
     ])
+    expect(playerMock.expandPlayer).toHaveBeenCalledTimes(2)
   })
 
   it('mounts the existing video shell and controls for local videos', async () => {

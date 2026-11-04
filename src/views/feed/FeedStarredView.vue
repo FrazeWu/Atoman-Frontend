@@ -306,6 +306,7 @@ const playFeedItemFromSheet = (feedItem: FeedItem) => {
   const tempSong = playerStore.createPodcastSong(feedItem)
   if (!tempSong) return
   playerStore.playQueuedSong(tempSong)
+  playerStore.expandPlayer()
 }
 
 const fetchStarred = async (background = false) => {

@@ -82,7 +82,7 @@
       </div>
       
       <p v-if="article.post.summary" class="article-summary">{{ article.post.summary }}</p>
-      <div class="prose-blog article-body" v-html="renderedContent" @click="handleSafeLinkClick"></div>
+      <div class="prose-blog article-body" v-html="renderedContent" @click="handleArticleBodyClick"></div>
       <PostRatingControl
         :rating-score="article.post.rating_score"
         :rating-count="article.post.rating_count"
@@ -309,11 +309,14 @@ import { hasFeedReaderImage } from '@/utils/feedReader'
 import { resolveMediaURL } from '@/utils/mediaUrl'
 import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
 import { safeExternalUrl } from '@/utils/safeExternalUrl'
+import { useRouter } from 'vue-router'
 import { useSafeLink } from '@/composables/useSafeLink'
 import { useAuthStore } from '@/stores/auth'
+import { usePlayerStore } from '@/stores/player'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useFeedStore } from '@/stores/feed'
 import { useApi } from '@/composables/useApi'
+import { useBlogMediaEmbeds } from '@/composables/useBlogMediaEmbeds'
 
 const props = withDefaults(defineProps<{
   show: boolean
@@ -342,7 +345,9 @@ const isFeedItemTimeline = (
 ): item is TimelineItem & { type: 'feed_item' | 'project_update'; feed_item: FeedItem } =>
 	(item?.type === 'feed_item' || item?.type === 'project_update') && Boolean(item.feed_item)
 
+const router = useRouter()
 const { renderMarkdown, runtimeState: markdownRuntimeState } = useMarkdownRenderer()
+const { postEmbeds, musicEmbeds, videoEmbeds, load: loadMediaEmbeds } = useBlogMediaEmbeds()
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()
 const api = useApi()
@@ -433,14 +438,61 @@ watch([() => props.article?.feed_item?.id, () => props.reader?.default_variant],
   feedContentMode.value = defaultFeedContentMode(props.reader)
 })
 
+watch(
+  () => (props.article?.type === 'post' ? props.article.post?.content : undefined),
+  (content) => {
+    if (content) {
+      void loadMediaEmbeds(content, authStore.token || undefined)
+    }
+  },
+  { immediate: true },
+)
+
 const renderedContent = computed(() => {
   // Re-render after the lazily loaded KaTeX and code-highlight extensions are ready.
   void markdownRuntimeState.value
   if (props.article?.type === 'post' && props.article.post?.content) {
-    return renderMarkdown(props.article.post.content)
+    return renderMarkdown(props.article.post.content, {
+      postEmbeds: postEmbeds.value,
+      musicEmbeds: musicEmbeds.value,
+      videoEmbeds: videoEmbeds.value,
+      interactiveMedia: true,
+    })
   }
   return ''
 })
+
+function handleArticleBodyClick(event: MouseEvent) {
+  const target = event.target
+  if (target instanceof Element) {
+    const button = target.closest<HTMLButtonElement>('[data-atoman-embed-play="music"]')
+    if (button) {
+      const id = button.dataset.atomanEmbedId
+      const embed = id ? musicEmbeds.value[id] : undefined
+      const songs = embed?.playbackSongs || []
+      if (embed && songs.length) {
+        event.preventDefault()
+        event.stopPropagation()
+        const player = usePlayerStore()
+        if (embed.kind === 'song') player.playSong(songs[0])
+        else player.playAlbum(songs)
+        player.expandPlayer?.()
+        return
+      }
+    }
+
+    const embedLink = target.closest<HTMLAnchorElement>('a[data-atoman-embed]')
+    const href = embedLink?.getAttribute('href')
+    if (embedLink && href && !href.startsWith('#')) {
+      event.preventDefault()
+      event.stopPropagation()
+      void router.push(href)
+      return
+    }
+  }
+
+  handleSafeLinkClick(event)
+}
 
 const emit = defineEmits<{
   (e: 'close'): void

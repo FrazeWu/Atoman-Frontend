@@ -140,6 +140,7 @@ export function useFeedItemActions({
     const tempSong = playerStore.createPodcastSong(feedItem)
     if (!tempSong) return
     playerStore.playQueuedSong(tempSong)
+    playerStore.expandPlayer()
   }
 
   const playPodcast = (feedItem: FeedItem, event: Event) => {

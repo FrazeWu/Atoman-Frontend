@@ -14,36 +14,13 @@
 
     <ContentContinueSection module="blog" />
 
-    <section
-      v-if="digestLoading || digest || digestError"
-      class="blog-home__digest"
-      :aria-labelledby="digest ? 'blog-digest-title' : undefined"
-      :aria-label="digestError ? '订阅摘要' : undefined"
-    >
-      <div v-if="digestLoading" class="a-skeleton blog-home__digest-skeleton" aria-hidden="true" />
-      <template v-else-if="digest">
-        <div class="blog-home__digest-summary">
-          <p class="blog-home__digest-eyebrow">订阅{{ digest.period === 'day' ? '日报' : '周报' }}</p>
-          <h2 id="blog-digest-title">过去{{ digest.period === 'day' ? '24 小时' : '7 天' }}有 {{ digest.total }} 篇新文章</h2>
-        </div>
-        <div class="blog-home__digest-items">
-          <button
-            v-for="item in digest.items"
-            :key="item.id"
-            type="button"
-            class="blog-home__digest-item"
-            @click="openDigestItem(item)"
-          >
-            <span>{{ item.title }}</span>
-            <small>{{ item.channel?.name || '订阅频道' }}</small>
-          </button>
-        </div>
-      </template>
-      <p v-else class="blog-home__digest-error" role="status">
-        订阅摘要加载失败
-        <PButton size="sm" variant="ghost" label="重试" @click="fetchDigest" />
-      </p>
-    </section>
+    <BlogHomeDigestSection
+      :digest="digest"
+      :loading="digestLoading"
+      :error="digestError"
+      @open-item="openDigestItem"
+      @retry="fetchDigest"
+    />
 
     <p v-if="hiddenRecommendation" class="blog-home__feedback-status" role="status">
       已不再推荐《{{ hiddenRecommendation.title }}》
@@ -213,30 +190,10 @@
       </main>
 
       <!-- 右侧发现辅助栏 -->
-      <aside class="blog-home__rail" aria-label="侧边推荐">
-        <!-- 热门频道卡片 -->
-        <section v-if="channels.length" class="blog-home__rail-section">
-          <div class="blog-home__rail-header">
-            <Flame :size="16" class="blog-home__rail-icon is-hot" />
-            <h2>热门频道</h2>
-          </div>
-          <div class="blog-home__rail-list">
-            <BlogEntityCard
-              v-for="ch in channels.slice(0, 5)"
-              :key="ch.id"
-              kind="channel"
-              :title="ch.name"
-              :cover-url="ch.cover_url"
-              :owner-name="ch.user?.display_name || ch.user?.username"
-              :owner-avatar="ch.user?.avatar_url"
-              :description="ch.description"
-              :updated-at="ch.updated_at"
-              :show-subscribe="false"
-              @select="openChannel(ch)"
-            />
-          </div>
-        </section>
-      </aside>
+      <BlogHomeRail
+        :channels="channels"
+        @open-channel="openChannel"
+      />
     </div>
   </div>
   <PConfirm
@@ -255,12 +212,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { EyeOff, Flame, Undo2 } from 'lucide-vue-next'
+import { EyeOff, Undo2 } from 'lucide-vue-next'
 
 import ContentContinueSection from '@/components/content/ContentContinueSection.vue'
 import PUnifiedSearchBar from '@/components/search/PUnifiedSearchBar.vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
-import BlogEntityCard from '@/components/blog/BlogEntityCard.vue'
+import BlogHomeRail from './BlogHomeRail.vue'
+import BlogHomeDigestSection from './BlogHomeDigestSection.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
@@ -280,111 +238,17 @@ import { reportError } from '@/utils/logger'
 import type { ReferenceTarget } from '@/api/references'
 import { modulePathUrl } from '@/router/siteUrls'
 import type { Post, ShortNote } from '@/types'
+import { useBlogHomeDigest } from '@/composables/blog/useBlogHomeDigest'
+import { useBlogHomePreferences } from '@/composables/blog/useBlogHomePreferences'
+import type {
+  BlogChannel,
+  BlogCollection,
+  BlogHomeListItem,
+  BlogHomeStreamItem,
+  RecommendationPayload,
+} from './blogHomeTypes'
 
 defineOptions({ name: 'BlogHomePage' })
-
-interface BlogChannel {
-  id: string | number
-  name: string
-  slug?: string
-  description?: string
-  cover_url?: string
-  updated_at?: string
-  user?: {
-    uuid?: string
-    username?: string
-    display_name?: string
-    avatar_url?: string
-  }
-}
-
-interface BlogCollection {
-  id: string | number
-  name: string
-}
-
-interface BlogHomeListItem {
-  id: string
-  title: string
-  summary?: string
-  cover_url?: string
-  created_at?: string
-  view_count?: number
-  read_count?: number
-  rating_score?: number
-  rating_count?: number
-  bookmarks_count?: number
-  likes_count?: number
-  comments_count?: number
-  channel?: BlogChannel
-  user?: {
-    username?: string
-    display_name?: string
-    avatar_url?: string
-  }
-  source: 'post' | 'feed'
-  sourceTitle?: string
-  targetPath: string
-  recommendationReason?: string
-  publicTagCount?: number
-}
-
-interface RecommendationPayload {
-  id: string
-  title: string
-  summary?: string
-  description?: string
-  excerpt?: string
-  image_url?: string
-  cover_url?: string
-  target_path?: string
-  source_title?: string
-  score_label?: string
-  snippet?: string
-  match_field?: string
-  view_count?: number
-  read_count?: number
-  rating_score?: number
-  rating_count?: number
-  bookmark_count?: number
-  bookmarks_count?: number
-  likes_count?: number
-  comments_count?: number
-  public_tag_count?: number
-  created_at?: string
-  published_at?: string
-  user?: BlogHomeListItem['user']
-  channel?: BlogChannel
-  post?: BlogHomeListItem
-}
-
-interface BlogDigestPayload {
-  period: 'day' | 'week'
-  total: number
-  items: Array<{
-    id: string
-    title: string
-    target_path: string
-    channel?: BlogChannel
-  }>
-}
-
-const unwrapBlogDigest = (value: unknown): BlogDigestPayload | null => {
-  const candidate = value && typeof value === 'object' && 'data' in value
-    ? value.data
-    : value
-  if (!candidate || typeof candidate !== 'object') return null
-  const digest = candidate as Partial<BlogDigestPayload>
-  if ((digest.period !== 'day' && digest.period !== 'week') || typeof digest.total !== 'number' || !Array.isArray(digest.items)) {
-    return null
-  }
-  return digest as BlogDigestPayload
-}
-
-type BlogHomeStreamItem =
-  | { kind: 'post'; key: string; timestamp?: string; post: BlogHomeListItem }
-  | { kind: 'note'; key: string; timestamp?: string; note: ShortNote }
-
 
 const PAGE_SIZE = 20
 const route = useRoute()
@@ -406,14 +270,7 @@ const channels = ref<BlogChannel[]>([])
 const searchCollections = ref<BlogCollection[]>([])
 const collectionsLoading = ref(false)
 let searchCollectionsRequestSequence = 0
-const digest = ref<BlogDigestPayload | null>(null)
-const digestLoading = ref(false)
-const digestError = ref(false)
-const hiddenRecommendation = ref<BlogHomeListItem | null>(null)
-const hidingPostId = ref<string | null>(null)
-const feedbackError = ref('')
-const personalizedRecommendations = ref(true)
-const recommendationPreferenceLoading = ref(false)
+
 const loading = ref(true)
 const page = ref(1)
 const hasMore = ref(false)
@@ -445,42 +302,30 @@ const searchCollectionID = ref(typeof queryValue(route.query.collection_id) === 
 let postsRequestSequence = 0
 const recordedImpressions = new Set<string>()
 
-async function loadRecommendationPreference() {
-  if (!authStore.isAuthenticated) return
-  const response = await apiRequestResult(api.blog.recommendationPreference, { headers: { Authorization: `Bearer ${authStore.token}` } })
-  if (!response.ok) return
-  const payload = await Promise.resolve(response.data) as { data?: { enabled?: boolean } }
-  personalizedRecommendations.value = payload.data?.enabled !== false
-}
+const {
+  digest,
+  digestLoading,
+  digestError,
+  fetchDigest,
+  openDigestItem,
+} = useBlogHomeDigest()
 
-async function toggleRecommendationPreference() {
-  if (!authStore.isAuthenticated || recommendationPreferenceLoading.value) return
-  recommendationPreferenceLoading.value = true
-  try {
-    const next = !personalizedRecommendations.value
-    const response = await apiRequestResult(api.blog.recommendationPreference, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authStore.token}` },
-      body: JSON.stringify({ enabled: next }),
-    })
-    if (!response.ok) return
-    personalizedRecommendations.value = next
-    if (!isSearchMode.value) await fetchPosts()
-  } finally {
-    recommendationPreferenceLoading.value = false
-  }
-}
-
-async function clearRecommendationData() {
-  if (!authStore.isAuthenticated || recommendationPreferenceLoading.value) return
-  recommendationPreferenceLoading.value = true
-  try {
-    const response = await apiRequestResult(api.blog.recommendationData, { method: 'DELETE', headers: { Authorization: `Bearer ${authStore.token}` } })
-    if (response.ok && !isSearchMode.value) await fetchPosts()
-  } finally {
-    recommendationPreferenceLoading.value = false
-  }
-}
+const {
+  personalizedRecommendations,
+  recommendationPreferenceLoading,
+  hiddenRecommendation,
+  hidingPostId,
+  feedbackError,
+  loadRecommendationPreference,
+  toggleRecommendationPreference,
+  clearRecommendationData,
+  hideRecommendation,
+  restoreRecommendation,
+} = useBlogHomePreferences({
+  isSearchMode,
+  posts,
+  fetchPosts: () => fetchPosts(),
+})
 
 const recordPostImpressions = (items: BlogHomeListItem[]) => {
   const source = isSearchMode.value
@@ -655,9 +500,6 @@ const searchMatchLabel = (field?: string) => {
   }
 }
 
-const openDigestItem = (item: BlogDigestPayload['items'][number]) => {
-  blogSheets.openPost(item.id, item.title)
-}
 
 const openBlogSearchTarget = (target: ReferenceTarget) => {
   void router.push(modulePathUrl('blog', target.path))
@@ -705,72 +547,6 @@ const fetchSearchCollections = async (channelID: string) => {
   }
 }
 
-const fetchDigest = async () => {
-  if (!authStore.token) {
-    digest.value = null
-    digestError.value = false
-    return
-  }
-  digestLoading.value = true
-  digestError.value = false
-  try {
-    const response = await apiRequestResult(api.blog.digest, {
-      headers: { Authorization: `Bearer ${authStore.token}` },
-    })
-    if (!response.ok) throw new Error('digest request failed')
-    const nextDigest = unwrapBlogDigest(response.data)
-    if (!nextDigest) throw new Error('invalid digest response')
-    digest.value = nextDigest.total > 0 ? nextDigest : null
-  } catch (error) {
-    reportError(error)
-    digest.value = null
-    digestError.value = true
-  } finally {
-    digestLoading.value = false
-  }
-}
-
-const hideRecommendation = async (item: BlogHomeListItem) => {
-  if (!authStore.token || hidingPostId.value) return
-  hidingPostId.value = item.id
-  feedbackError.value = ''
-  try {
-    const response = await apiRequestResult(api.blog.recommendationFeedback, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authStore.token}`,
-      },
-      body: JSON.stringify({ content_id: item.id, action: 'hide' }),
-    })
-    if (!response.ok) throw new Error('recommendation feedback failed')
-    posts.value = posts.value.filter((post) => post.id !== item.id)
-    hiddenRecommendation.value = item
-  } catch (error) {
-    reportError(error)
-    feedbackError.value = '暂时无法更新推荐，请稍后重试'
-  } finally {
-    hidingPostId.value = null
-  }
-}
-
-const restoreRecommendation = async () => {
-  const item = hiddenRecommendation.value
-  if (!item || !authStore.token) return
-  feedbackError.value = ''
-  try {
-    const response = await apiRequestResult(api.blog.recommendationFeedbackItem(item.id), {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${authStore.token}` },
-    })
-    if (!response.ok) throw new Error('recommendation restore failed')
-    hiddenRecommendation.value = null
-    await fetchPosts()
-  } catch (error) {
-    reportError(error)
-    feedbackError.value = '暂时无法恢复推荐，请稍后重试'
-  }
-}
 
 const fetchShortNotes = async (append = false) => {
   if (typeFilter.value === 'post' || isSearchMode.value) {
@@ -966,337 +742,5 @@ watch([() => route.query.type, () => route.query.mode], ([rawType, rawMode]) => 
 </script>
 
 <style scoped>
-.blog-home {
-  max-width: 72rem;
-  margin: 0 auto;
-}
-
-.blog-home__digest {
-  display: grid;
-  grid-template-columns: minmax(12rem, 0.8fr) minmax(0, 1.2fr);
-  gap: 1rem 1.5rem;
-  align-items: start;
-  margin: 1rem 0;
-  padding: 0.9rem 0;
-  border-block: 1px solid var(--a-color-border-soft);
-}
-
-.blog-home__digest-summary {
-  min-width: 0;
-}
-
-.blog-home__digest-eyebrow {
-  margin: 0 0 0.25rem;
-  color: var(--a-color-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.blog-home__digest h2 {
-  margin: 0;
-  color: var(--a-color-fg);
-  font-size: 0.95rem;
-  line-height: 1.45;
-}
-
-.blog-home__digest-items {
-  display: grid;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
-.blog-home__digest-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.75rem;
-  width: 100%;
-  padding: 0.35rem 0;
-  border: 0;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  background: transparent;
-  color: var(--a-color-fg);
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-}
-
-.blog-home__digest-item:last-child {
-  border-bottom: 0;
-}
-
-.blog-home__digest-item > span,
-.blog-home__digest-item > small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.blog-home__digest-item > span {
-  font-size: 0.82rem;
-  font-weight: 500;
-}
-
-.blog-home__digest-item > small {
-  color: var(--a-color-muted);
-  font-size: 0.75rem;
-}
-
-.blog-home__digest-item:hover,
-.blog-home__digest-item:focus-visible {
-  color: var(--a-color-primary);
-  outline: none;
-}
-
-.blog-home__digest-item:focus-visible {
-  outline: 2px solid var(--a-color-primary);
-  outline-offset: 2px;
-}
-
-.blog-home__digest-skeleton {
-  grid-column: 1 / -1;
-  height: 4.5rem;
-}
-
-.blog-home__digest-error,
-.blog-home__feedback-status {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin: 0;
-  color: var(--a-color-muted);
-  font-size: 0.82rem;
-}
-
-.blog-home__feedback-status {
-  margin: 0.5rem 0;
-}
-
-.blog-home__filters {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-bottom: 1.5rem;
-}
-
-.blog-home__preference-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.blog-home__filter-group--search {
-  flex: 1 1 20rem;
-  min-width: min(100%, 18rem);
-}
-
-
-.blog-home__filter-group {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.blog-home__filter-group--end {
-  margin-left: auto;
-}
-
-.blog-home__filter-group--search :deep(.search-surface) {
-  min-width: 100%;
-}
-
-
-/* 生产 Stream + Rail 布局 */
-.blog-home__layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--a-recommendation-width);
-  gap: var(--a-content-column-gap);
-  align-items: start;
-}
-
-.blog-home__stream {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.blog-home__skeleton-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.blog-home__feed {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.blog-home__entry-card {
-  cursor: pointer;
-  transition: border-color 0.2s ease;
-}
-
-.blog-home__entry-card:hover {
-  border-color: var(--a-color-border);
-}
-
-.blog-home__author {
-  font-weight: 500;
-  color: var(--a-color-text);
-}
-
-.blog-home__channel {
-  color: var(--a-color-primary);
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.blog-home__channel:hover {
-  text-decoration: underline;
-}
-
-.blog-home__dot {
-  color: var(--a-color-muted-soft);
-}
-
-.blog-home__time {
-  color: var(--a-color-muted);
-}
-
-.blog-home__feed.feed-timeline-box {
-  border: 0;
-  border-radius: 0;
-  overflow: visible;
-  background: transparent;
-}
-
-.blog-home__feed :deep(.sticky-memo-card) {
-  margin: 0;
-}
-
-/* 侧轨 */
-.blog-home__rail {
-  position: sticky;
-  top: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.blog-home__rail-section {
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  overflow: hidden;
-}
-
-.blog-home__rail-header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.85rem 1rem 0.5rem;
-  background: var(--a-color-bg);
-}
-
-.blog-home__rail-header h2 {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--a-color-fg);
-}
-
-.blog-home__rail-icon.is-hot {
-  color: var(--a-color-warning);
-}
-
-.blog-home__rail-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.blog-home__channel-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  text-decoration: none;
-  transition: background 0.15s ease;
-}
-
-.blog-home__channel-item:last-child {
-  border-bottom: 0;
-}
-
-.blog-home__channel-item:hover {
-  background: var(--a-color-surface-muted);
-}
-
-.blog-home__channel-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.blog-home__channel-name {
-  font-size: 0.85rem;
-  color: var(--a-color-fg);
-  font-weight: 600;
-}
-
-.blog-home__channel-desc {
-  font-size: 0.75rem;
-  color: var(--a-color-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-@media (max-width: 1199px) {
-  .blog-home__layout {
-    grid-template-columns: 1fr;
-  }
-  .blog-home__rail {
-    display: none;
-  }
-}
-@media (max-width: 720px) {
-  .blog-home__digest {
-    grid-template-columns: 1fr;
-  }
-
-  .blog-home__filters {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    margin-right: -1rem;
-    padding-right: 1rem;
-    scrollbar-width: none;
-  }
-
-  .blog-home__filters::-webkit-scrollbar {
-    display: none;
-  }
-
-  .blog-home__filter-group {
-    flex: 0 0 auto;
-  }
-
-  .blog-home__filter-group--end {
-    margin-left: 0;
-  }
-
-  .blog-home__layout {
-    gap: 1rem;
-  }
-
-  .blog-home__stream {
-    gap: 1rem;
-  }
-}
+@import "./blogHomePage.css";
 </style>

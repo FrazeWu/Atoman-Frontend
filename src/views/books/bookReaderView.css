@@ -1,0 +1,386 @@
+.books-reader {
+  display: grid;
+  gap: 1.25rem;
+  padding-top: var(--a-page-start-space);
+  --book-reader-surface: var(--a-color-bg);
+  --book-reader-text: var(--a-color-fg);
+  --book-reader-muted: var(--a-color-muted);
+}
+
+.books-reader--theme-dim {
+  --book-reader-surface: #f3eee4;
+  --book-reader-text: #423a2f;
+  --book-reader-muted: #756b5d;
+}
+
+.books-reader--theme-night {
+  --book-reader-surface: #1f2430;
+  --book-reader-text: #e7e9ee;
+  --book-reader-muted: #aab2c0;
+}
+
+.books-reader__feedback {
+  margin: 0.25rem 0 0;
+  color: var(--a-color-muted);
+  font-size: 0.88rem;
+}
+
+.books-reader__feedback--error {
+  color: var(--a-color-danger);
+}
+
+.books-reader__surface {
+  display: grid;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.books-reader__text,
+.books-reader__epub,
+.books-reader__pdf {
+  min-height: min(68vh, 720px);
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--book-reader-surface);
+  overflow: hidden;
+}
+
+.books-reader__text {
+  position: relative;
+  overflow: auto;
+  max-height: min(78vh, 60rem);
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  background: var(--book-reader-surface);
+}
+
+.books-reader__text-pages {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+}
+
+.books-reader__text-pages--double {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  max-width: 96rem;
+  margin: 0 auto;
+}
+
+.books-reader__text-page {
+  position: relative;
+  box-sizing: border-box;
+  width: min(100%, 56rem);
+  aspect-ratio: 1 / 1.414;
+  padding: clamp(2rem, 5vw, 4.75rem) clamp(1.75rem, 7vw, 6.5rem) 3.25rem;
+  background: var(--book-reader-surface);
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: none;
+}
+
+.books-reader__text-page-content {
+  height: 100%;
+  color: var(--book-reader-text);
+  font: inherit;
+  font-family: Georgia, "Songti SC", "SimSun", serif;
+  font-size: calc(clamp(0.9rem, 1vw, 1.05rem) * var(--book-reader-font-scale, 1));
+  line-height: 1.78;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  column-count: 2;
+  column-fill: auto;
+  column-gap: clamp(1.5rem, 4vw, 3.5rem);
+  column-rule: 1px solid var(--a-color-border-soft);
+  overflow: hidden;
+}
+
+.books-reader__text-page-number {
+  position: absolute;
+  inset: auto 0 1.1rem;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.books-reader__text-page--measure {
+  position: absolute;
+  top: 0;
+  left: -10000px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.books-reader__epub {
+  padding: 1rem;
+  background: var(--book-reader-surface);
+}
+
+.books-reader__comic {
+  display: grid;
+  gap: 1rem;
+  max-height: min(78vh, 60rem);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--book-reader-surface);
+  scroll-behavior: smooth;
+}
+
+.books-reader__comic-page {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.books-reader__comic-page img {
+  display: block;
+  max-width: min(100%, 64rem);
+  height: auto;
+  border: 1px solid var(--a-color-border-soft);
+}
+
+.books-reader__comic-page figcaption {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .books-reader__comic {
+    scroll-behavior: auto;
+  }
+}
+
+.books-reader__pdf {
+  display: grid;
+  place-items: start center;
+  overflow: auto;
+  padding: 1rem;
+  background: var(--book-reader-surface);
+}
+
+.books-reader__pdf canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  background: var(--book-reader-surface);
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: none;
+}
+
+.books-reader__public-status {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 0.85rem;
+}
+
+.books-reader__search {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 42rem;
+}
+
+.books-reader__search > label {
+  color: var(--a-color-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.books-reader__search-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.books-reader__search-row input {
+  min-width: 0;
+  flex: 1;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--book-reader-surface);
+  color: var(--book-reader-text);
+}
+
+.books-reader__search-row input:focus-visible,
+.books-reader__search-results button:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+}
+
+.books-reader__search-status {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 0.8rem;
+}
+
+.books-reader__search-results {
+  display: grid;
+  gap: 0.35rem;
+  max-height: 12rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.books-reader__search-results button {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: color-mix(in srgb, var(--book-reader-surface) 92%, var(--book-reader-text));
+  color: var(--book-reader-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.books-reader__bookmarks {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 42rem;
+  color: var(--a-color-muted);
+  font-size: 0.85rem;
+}
+
+.books-reader__bookmarks summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.books-reader__bookmarks ol {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.books-reader__bookmarks li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.books-reader__bookmarks button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--a-color-fg);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.books-reader__bookmarks button:last-child {
+  color: var(--a-color-muted);
+  font-size: 0.78rem;
+}
+
+.books-reader__notes {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 72ch;
+}
+
+.books-reader__notes span {
+  color: var(--a-color-muted);
+  font-size: 0.88rem;
+}
+
+.books-reader__notes textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 5rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--book-reader-surface);
+  color: var(--book-reader-text);
+  padding: 0.75rem;
+  font: inherit;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.books-reader__notes textarea:focus {
+  border-color: var(--a-color-primary);
+}
+
+@media (max-width: 720px) {
+  .books-reader__text {
+    max-height: none;
+    overflow: visible;
+    padding-inline: 0;
+  }
+
+  .books-reader__text-page {
+    width: 100%;
+    min-height: 141vw;
+    aspect-ratio: auto;
+    padding: 2.5rem 9vw 3.25rem;
+  }
+
+  .books-reader__text-page-content {
+    column-count: 1;
+    column-rule: 0;
+    font-size: 1rem;
+  }
+}
+
+/* 高亮划线样式 */
+:deep(.book-highlight),
+.book-highlight {
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0 1px;
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+:deep(.book-highlight--yellow),
+.book-highlight--yellow {
+  background-color: color-mix(in srgb, var(--a-color-warning) 30%, transparent);
+}
+
+:deep(.book-highlight--green),
+.book-highlight--green {
+  background-color: color-mix(in srgb, var(--a-color-success) 30%, transparent);
+}
+
+:deep(.book-highlight--blue),
+.book-highlight--blue {
+  background-color: color-mix(in srgb, var(--a-color-primary) 30%, transparent);
+}
+
+:deep(.book-highlight--pink),
+.book-highlight--pink {
+  background-color: color-mix(in srgb, var(--a-color-danger) 30%, transparent);
+}
+
+:deep(.book-highlight.is-underline),
+.book-highlight.is-underline {
+  background-color: transparent !important;
+  text-decoration: underline wavy var(--a-color-primary, #6366f1) !important;
+  text-underline-offset: 3px !important;
+}
+
+:deep(.book-highlight:hover),
+.book-highlight:hover {
+  filter: brightness(0.92);
+}
+
+:deep(.book-highlight--pulse),
+.book-highlight--pulse {
+  animation: pulse-highlight 2s ease;
+}
+
+@keyframes pulse-highlight {
+  0%, 100% {
+    outline: none;
+    box-shadow: none;
+  }
+  30%, 70% {
+    outline: 2px solid var(--a-color-primary);
+    box-shadow: none;
+  }
+}

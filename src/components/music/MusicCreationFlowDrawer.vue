@@ -10,6 +10,32 @@ const MusicCreationArtistStep = defineAsyncComponent(() => import('./MusicCreati
 const MusicCreationAlbumSeedStep = defineAsyncComponent(() => import('./MusicCreationAlbumSeedStep.vue'))
 const MusicCreationAlbumDetailsStep = defineAsyncComponent(() => import('./MusicCreationAlbumDetailsStep.vue'))
 const MusicCreationAlbumPreviewStep = defineAsyncComponent(() => import('./MusicCreationAlbumPreviewStep.vue'))
+import MusicCreationProgressNav from "./MusicCreationProgressNav.vue"
+import {
+  hasDatePartsValue,
+  formatDateFromParts,
+  deriveYearFromParts,
+  formatArtistDate,
+  formatStoredArtistDate,
+  parseStageNames,
+  contributorsFromSongDetail,
+  buildArtistMembers,
+  buildArtistMembersFromDraft,
+  buildSource,
+  buildNormalizedContributors,
+  primaryContributor,
+  primaryArtistDraft,
+  resolvedArtistSource,
+  requiresArtistSource,
+  hasRequiredArtistSource,
+  resolvedAlbumCoverUrl,
+  buildContributorPayload,
+  trackNumberWithinDisc,
+  hasTrackAudio,
+  buildCommitInput,
+  hasCreationDraft,
+} from "./musicCreationFlowBuilders"
+
 import type { MusicCreationAlbumContributorDraft } from './musicCreationTypes'
 import { activeArtistRequiresFullProfile, activeMusicArtistDraft } from './musicCreationTypes'
 import type { MusicSheetLayer } from './musicSheetTypes'
@@ -111,62 +137,6 @@ function captureEditDraftBaseline(flow: NonNullable<typeof creationFlow.value>) 
 function syncEditDraftDirty(flow: NonNullable<typeof creationFlow.value> | null) {
   if (!flow || flow.mode !== 'edit' || !editDraftBaseline.value) return
   flow.dirty = snapshotDraft(flow) !== editDraftBaseline.value
-}
-
-function parseStageNames(raw: string | undefined, fallbackName: string) {
-  try {
-    const parsed = JSON.parse(raw || '[]') as musicApi.MusicAlbumImportCommitStageName[]
-    if (Array.isArray(parsed) && parsed.length) {
-      return parsed.map((item, index) => ({
-        id: `stage-name-${index}`,
-        name: item.name || '',
-        isPrimary: item.is_primary || index === 0,
-        startDateParts: { year: '', month: '', day: '' },
-        endDateParts: { year: '', month: '', day: '' },
-        startDateText: item.start_date_text || '',
-        endDateText: item.end_date_text || '',
-      }))
-    }
-  } catch {
-    // Use the canonical name when legacy stage-name data is unavailable.
-  }
-  return [{
-    id: 'stage-name-primary',
-    name: fallbackName,
-    isPrimary: true,
-    startDateParts: { year: '', month: '', day: '' },
-    endDateParts: { year: '', month: '', day: '' },
-    startDateText: '',
-    endDateText: '',
-  }]
-}
-
-function formatStoredArtistDate(value?: string, precision?: string, fallbackYear?: number) {
-  const formatted = formatStoredPartialDate(value, precision)
-  if (formatted) return formatted
-  return fallbackYear && fallbackYear > 0 ? `${fallbackYear}/--/--` : ''
-}
-
-function contributorsFromSongDetail(detail: musicApi.MusicSongDetail) {
-  const contributors = new Map<string, MusicCreationAlbumContributorDraft>()
-  for (const credit of detail.artists) {
-    const current = contributors.get(credit.id) ?? {
-      id: `song-contributor-${credit.id}`,
-      artistId: credit.id,
-      name: credit.name,
-      avatarUrl: '',
-      kind: 'person' as const,
-      locked: false,
-      roles: [],
-    }
-    current.roles.push({
-      id: `song-role-${credit.id}-${credit.role}-${credit.custom_role ?? ''}`,
-      role: credit.role,
-      label: credit.custom_role ?? '',
-    })
-    contributors.set(credit.id, current)
-  }
-  return [...contributors.values()]
 }
 
 async function loadEditDraft() {
@@ -318,54 +288,6 @@ watch(
 )
 
 type CreationStepKey = 'artist' | 'albumImport' | 'albumDetails' | 'preview'
-
-function hasDatePartsValue(parts?: { year: string; month: string; day: string }) {
-  if (!parts) return false
-  return !!parts.year.trim() || !!parts.month.trim() || !!parts.day.trim()
-}
-
-function formatDateFromParts(parts?: { year: string; month: string; day: string }) {
-	return serializePartialDate(parts)
-}
-
-function deriveYearFromParts(parts?: { year: string; month: string; day: string }) {
-  if (!parts) return 0
-  return Number.parseInt(parts.year.trim(), 10) || 0
-}
-
-function hasCreationDraft(flow: NonNullable<typeof creationFlow.value>) {
-  if (flow.mode === 'edit') return flow.dirty
-
-  const { artist, albumImport, albumDetails, tracks } = flow.draft
-
-  return (
-    flow.dirty ||
-    !!artist.avatarUrl.trim() ||
-    !!artist.legalName.trim() ||
-    !!artist.disambiguation?.trim() ||
-    artist.stageNames.some((stageName) => !!stageName.name.trim()) ||
-    artist.members.some((member) => !!member.name.trim()) ||
-    !!artist.nationality.trim() ||
-    !!artist.birthPlace.trim() ||
-    hasDatePartsValue(artist.birthDateParts) ||
-    hasDatePartsValue(artist.activeStartDateParts) ||
-    hasDatePartsValue(artist.activeEndDateParts) ||
-    !!artist.bio.trim() ||
-    !!artist.source.trim() ||
-    !!albumImport.archiveName.trim() ||
-    albumImport.uploadProgress > 0 ||
-    !!albumImport.derivedAlbumTitle.trim() ||
-    albumImport.derivedTracks.length > 0 ||
-    !!albumDetails.coverUrl.trim() ||
-    !!albumDetails.title.trim() ||
-    (albumDetails.contributors?.length ?? 0) > 0 ||
-    hasDatePartsValue(albumDetails.releaseDateParts) ||
-    !!albumDetails.bio.trim() ||
-    albumDetails.tags.length > 0 ||
-    !!albumDetails.source.trim() ||
-    tracks.length > 0
-  )
-}
 
 const stepCopy: Record<CreationStepKey, { cta: string }> = {
   artist: {
@@ -571,258 +493,6 @@ const canGoForward = computed(() => {
 const commitMusicAlbumImport = (musicApi as typeof musicApi & {
   commitMusicAlbumImport?: (importId: string, input: musicApi.MusicAlbumImportCommitInput) => Promise<musicApi.MusicAlbumImport>
 }).commitMusicAlbumImport
-
-function formatArtistDate(parts?: { year: string; month: string; day: string }) {
-	return serializePartialDate(parts)
-}
-
-function buildArtistMembers(flow: NonNullable<typeof creationFlow.value>) {
-  return buildArtistMembersFromDraft(flow.draft.artist)
-}
-
-function buildArtistMembersFromDraft(artist: ReturnType<typeof activeMusicArtistDraft>) {
-  return artist.members
-    .filter((member) => member.name.trim())
-    .map((member) => ({
-      artist_id: member.artistId || '',
-		name: member.name.trim(),
-      join_date: formatArtistDate(member.joinDateParts),
-      leave_date: formatArtistDate(member.leaveDateParts),
-    }))
-}
-
-function buildSource(value: string): musicApi.MusicSource {
-  const normalized = value.trim()
-  return /^https?:\/\//i.test(normalized)
-    ? { type: 'url', url: normalized }
-    : { type: 'text', title: normalized }
-}
-
-function buildNormalizedContributors(flow: NonNullable<typeof creationFlow.value>) {
-  const contributors = [...(flow.draft.albumDetails.contributors ?? [])]
-  if (
-    flow.draft.artist.id
-    && contributors.length === 1
-    && !contributors[0].locked
-    && !contributors[0].artistId
-  ) {
-    contributors[0] = {
-      ...contributors[0],
-      id: `contributor-${flow.draft.artist.id}`,
-      artistId: flow.draft.artist.id,
-    }
-  }
-  return contributors
-}
-
-function primaryContributor(flow: NonNullable<typeof creationFlow.value>) {
-  return buildNormalizedContributors(flow).find((contributor) =>
-    contributor.roles.some((role) => role.role === 'primary'),
-  )
-}
-
-function primaryArtistDraft(flow: NonNullable<typeof creationFlow.value>) {
-  return primaryContributor(flow)?.newArtistDraft ?? flow.draft.artist
-}
-
-function resolvedArtistSource(flow: NonNullable<typeof creationFlow.value>) {
-  const primary = primaryContributor(flow)
-  const primarySource = normalizeMusicImportSource(primary?.source || primary?.newArtistDraft?.source)
-  const primaryDiffersFromFlowArtist = !!primary?.artistId && primary.artistId !== flow.draft.artist.id
-  return primaryDiffersFromFlowArtist
-    ? primarySource
-    : normalizeMusicImportSource(flow.draft.artist.source) || primarySource
-}
-
-function requiresArtistSource(flow: NonNullable<typeof creationFlow.value>) {
-  const primary = primaryContributor(flow)
-  if (primary?.newArtistDraft) return false
-  return !primary?.artistId || !primary.entryStatus || primary.entryStatus === 'draft'
-}
-
-function hasRequiredArtistSource(flow: NonNullable<typeof creationFlow.value>) {
-	if (flow.entity !== 'artist') return true
-  return !requiresArtistSource(flow) || !!resolvedArtistSource(flow)
-}
-
-function resolvedAlbumCoverUrl(flow: NonNullable<typeof creationFlow.value>) {
-  const coverAssetUrl = flow.draft.albumDetails.coverAsset?.url?.trim() || ''
-  if (coverAssetUrl && !/^(blob:|data:)/i.test(coverAssetUrl)) return coverAssetUrl
-
-  const coverUrl = flow.draft.albumDetails.coverUrl.trim()
-  if (coverUrl && !/^(blob:|data:)/i.test(coverUrl)) return coverUrl
-
-  return flow.draft.albumImport.coverUrl.trim() || flow.draft.albumImport.derivedCover.trim()
-}
-
-function buildContributorPayload(flow: NonNullable<typeof creationFlow.value>): NonNullable<musicApi.MusicAlbumImportCommitInput['artists']> {
-  return buildNormalizedContributors(flow).map((contributor) => {
-    if (!contributor.artistId) {
-      const artist = contributor.newArtistDraft ?? flow.draft.artist
-      const activeStartDate = formatArtistDate(artist.activeStartDateParts)
-      const activeEndDate = formatArtistDate(artist.activeEndDateParts)
-      const artistStageNames = artist.stageNames
-        .filter((item) => item.name.trim())
-        .map((item) => ({
-          name: item.name.trim(),
-          is_primary: item.isPrimary,
-          start_date_text: item.startDateText.trim(),
-          end_date_text: item.endDateText.trim(),
-        }))
-      return {
-        artist_id: '',
-		roles: contributor.roles.map((role) => ({
-			role: role.role,
-			...(role.role === 'custom' ? { label: role.label.trim() } : {}),
-		})),
-        name: contributor.name.trim(),
-        disambiguation: artist.disambiguation?.trim() || '',
-        legal_name: artist.legalName.trim(),
-        bio: artist.bio.trim(),
-        ...(contributor.avatarUrl.trim() ? { image_url: contributor.avatarUrl.trim() } : {}),
-        nationality: artist.nationality.trim(),
-        birth_date: formatDateFromParts(artist.birthDateParts),
-        stage_names: artistStageNames,
-        birth_place: artist.birthPlace.trim(),
-        artist_form: artist.kind,
-        active_start_date: activeStartDate,
-        active_end_date: activeEndDate,
-        members: buildArtistMembersFromDraft(artist),
-      }
-    }
-
-    return {
-      artist_id: contributor.artistId,
-		roles: contributor.roles.map((role) => ({
-			role: role.role,
-			...(role.role === 'custom' ? { label: role.label.trim() } : {}),
-		})),
-      name: contributor.name.trim(),
-      disambiguation: '',
-      legal_name: '',
-      bio: '',
-      stage_names: [],
-      birth_place: '',
-      nationality: '',
-      birth_date: '',
-      artist_form: contributor.kind,
-      active_start_date: '',
-      active_end_date: '',
-        members: [],
-      }
-  })
-}
-
-function trackNumberWithinDisc(tracks: Array<{ discNumber?: number }>, index: number) {
-  const discNumber = tracks[index]?.discNumber ?? 1
-  return tracks.slice(0, index + 1).filter((track) => (track.discNumber ?? 1) === discNumber).length
-}
-
-function hasTrackAudio(track: { audioUrl?: string; audioKey?: string; audioAssetId?: string; importFileId?: string; songId?: string }) {
-  // 文件仍在处理时可登记提交；后端只有验证实际处理结果后才发布。
-  return !!track.audioUrl?.trim() || !!track.audioKey?.trim() || !!track.audioAssetId?.trim() || !!track.importFileId || !!track.songId
-}
-
-function buildCommitInput(flow: NonNullable<typeof creationFlow.value>): musicApi.MusicAlbumImportCommitInput {
-  const primaryContributorDraft = primaryArtistDraft(flow)
-  const primary = primaryContributor(flow)
-  const primaryStageName = primaryContributorDraft.stageNames.find((item) => item.isPrimary && item.name.trim())
-    ?? primaryContributorDraft.stageNames.find((item) => item.name.trim())
-  const releaseDate = formatDateFromParts(flow.draft.albumDetails.releaseDateParts)
-  const derivedReleaseYear = deriveYearFromParts(flow.draft.albumDetails.releaseDateParts)
-  const artists = buildContributorPayload(flow)
-  const primaryArtistID = primaryContributor(flow)?.artistId || flow.draft.artist.id
-  const artistSource = resolvedArtistSource(flow)
-  const albumSource = normalizeMusicImportSource(flow.draft.albumDetails.source)
-  const isStandaloneSong = ['single', 'leak'].includes(flow.draft.albumDetails.type.trim().toLowerCase())
-  const deletedImportTrackKeys = flow.deletedImportTrackKeys ?? []
-  const coverAssetUrl = flow.draft.albumDetails.coverAsset?.url?.trim() || ''
-  const coverURL = coverAssetUrl
-    ? (/^(blob:|data:)/i.test(coverAssetUrl) ? '' : coverAssetUrl)
-    : resolvedAlbumCoverUrl(flow)
-
-  return {
-    ...(primaryArtistID ? { artist_id: primaryArtistID } : {}),
-    ...(flow.metadataConfirmed ? { metadata_confirmed:true } : {}),
-    draft_customization: {
-      title: !!flow.titleCustomized, tracks: !!flow.tracksCustomized,
-      releaseDate: !!flow.releaseDateCustomized, cover: !!flow.coverCustomized,
-      type: !!flow.typeCustomized, tags: !!flow.metadataTagsApplied,
-      country: !!flow.metadataCountryCustomized, source: !!flow.sourceCustomized,
-    },
-    artist: {
-      name: primary?.newArtistDraft
-        ? primary.name.trim()
-        : primaryStageName?.name.trim() || primaryContributorDraft.legalName.trim(),
-      legal_name: primaryContributorDraft.legalName.trim(),
-      bio: primaryContributorDraft.bio.trim(),
-      ...(primaryContributorDraft.avatarUrl.trim() ? { image_url: primaryContributorDraft.avatarUrl.trim() } : {}),
-      nationality: primaryContributorDraft.nationality.trim(),
-      birth_date: formatDateFromParts(primaryContributorDraft.birthDateParts),
-      stage_names: primaryContributorDraft.stageNames
-        .filter((item) => item.name.trim())
-        .map((item) => ({
-          name: item.name.trim(),
-          is_primary: item.isPrimary,
-          start_date_text: item.startDateText.trim(),
-          end_date_text: item.endDateText.trim(),
-        })),
-      birth_place: primaryContributorDraft.birthPlace.trim(),
-    },
-    artists,
-    artist_source: artistSource,
-    ...(artistSource ? { artist_sources: [buildSource(artistSource)] } : {}),
-    album: {
-      title: flow.draft.albumDetails.title.trim(),
-      description: flow.draft.albumDetails.bio.trim(),
-      album_type: flow.draft.albumDetails.type.trim() || 'album',
-      ...(coverURL && !/^(blob:|data:)/i.test(coverURL) ? { cover_url: coverURL } : {}),
-      ...(releaseDate ? { release_date: releaseDate } : {}),
-      release_year: derivedReleaseYear || 0,
-      metadata: {
-        genres: flow.draft.albumImport.metadataGenres ?? [],
-        styles: flow.draft.albumImport.metadataStyles ?? [],
-        labels: flow.draft.albumImport.metadataLabels ?? [],
-        country: flow.draft.albumImport.metadataCountry ?? '',
-        formats: flow.draft.albumImport.metadataFormats ?? [],
-      },
-      tracks: flow.draft.tracks.map((track, index) => ({
-        ...(track.songId ? { song_id: track.songId } : {}),
-        ...(track.importFileId ? { file_id: track.importFileId } : {}),
-        ...(track.audioAssetId ? { audio_asset_id: track.audioAssetId } : {}),
-        ...(track.audioKey ? { audio_key: track.audioKey } : {}),
-        title: isStandaloneSong ? flow.draft.albumDetails.title.trim() : track.title.trim(),
-        disc_number: track.discNumber ?? 1,
-        track_number: trackNumberWithinDisc(flow.draft.tracks, index),
-        ...(track.originalTitle ? { original_title: track.originalTitle } : {}),
-        ...(track.originalDiscNumber ? { original_disc_number: track.originalDiscNumber } : {}),
-        ...(track.originalTrackNumber ? { original_track_number: track.originalTrackNumber } : {}),
-        ...(track.matchStatus ? { match_status: track.matchStatus } : {}),
-        ...(track.matchProvider ? { match_provider: track.matchProvider } : {}),
-        ...(track.matchExternalId ? { match_external_id: track.matchExternalId } : {}),
-        ...(track.matchSourceUrl ? { match_source_url: track.matchSourceUrl } : {}),
-        ...(track.matchConfidence !== undefined ? { match_confidence: track.matchConfidence } : {}),
-        ...(track.titleCustomized ? { title_customized: true } : {}),
-        ...(track.sequenceCustomized ? { sequence_customized: true } : {}),
-        ...(track.lyricsDraft ? {
-          lyrics: {
-            content: track.lyricsDraft.content,
-            translation: track.lyricsDraft.translation,
-            format: track.lyricsDraft.format,
-            language: track.lyricsDraft.language,
-            edit_summary: track.lyricsDraft.editSummary,
-          },
-        } : {}),
-        ...(track.lyricsSource ? { lyrics_source: track.lyricsSource } : {}),
-      })),
-    },
-    ...(deletedImportTrackKeys.length > 0
-      ? { deleted_import_track_keys: [...deletedImportTrackKeys] }
-      : {}),
-    album_source: albumSource,
-    ...(albumSource ? { album_sources: [buildSource(albumSource)] } : {}),
-  }
-}
 
 function canAutosaveImportDetails(flow: NonNullable<typeof creationFlow.value>) {
   return flow.mode !== 'edit' && !!flow.draft.albumImport.importId && !['committed', 'canceled'].includes(flow.draft.albumImport.status)
@@ -1400,28 +1070,11 @@ async function completeCreation() {
     @activate="props.layer && returnToLayer(props.layer.key)"
   >
     <div v-if="creationFlow" class="creation-flow">
-      <nav
+      <MusicCreationProgressNav
         v-if="showFullAlbumCreationProgress"
-        class="creation-progress"
-        aria-label="创建专辑流程"
-        data-testid="creation-flow-progress"
-      >
-        <ol class="creation-progress__list">
-          <li
-            v-for="(progressStep, index) in fullAlbumCreationProgressSteps"
-            :key="progressStep.key"
-            :class="{
-              'is-active': fullAlbumCreationProgressIndex === index,
-              'is-done': fullAlbumCreationProgressIndex > index,
-            }"
-            :data-testid="`creation-flow-progress-step-${progressStep.key}`"
-            :data-state="fullAlbumCreationProgressIndex > index ? 'done' : fullAlbumCreationProgressIndex === index ? 'active' : 'upcoming'"
-          >
-            <span class="creation-progress__index">{{ index + 1 }}</span>
-            <span>{{ progressStep.label }}</span>
-          </li>
-        </ol>
-      </nav>
+        :steps="fullAlbumCreationProgressSteps"
+        :active-index="fullAlbumCreationProgressIndex"
+      />
       <div class="drawer-body">
         <p
           v-if="creationFlow.errorMessage"
@@ -1513,135 +1166,9 @@ async function completeCreation() {
 </template>
 
 <style scoped>
-.creation-flow { display: flex; flex-direction: column; min-height: 100%; }
-.creation-progress {
-  width: 100%;
-  padding: 1rem 0 0;
-}
-.creation-progress__list {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.creation-progress__list li {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  min-width: 0;
-  color: var(--a-color-muted);
-  font-family: var(--a-font-sans);
-  font-size: 0.72rem;
-  font-weight: 500;
-  white-space: nowrap;
-}
-.creation-progress__list li::after {
-  content: '';
-  height: 1px;
-  flex: 1;
-  min-width: 0.5rem;
-  background: var(--a-color-border-soft);
-}
-.creation-progress__list li:last-child::after { display: none; }
-.creation-progress__list li.is-active,
-.creation-progress__list li.is-done { color: var(--a-color-text); }
-.creation-progress__index {
-  display: grid;
-  flex: 0 0 1.45rem;
-  place-items: center;
-  width: 1.45rem;
-  height: 1.45rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  font-size: 0.68rem;
-}
-.creation-progress__list li.is-active .creation-progress__index {
-  border-color: var(--a-color-text);
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
-}
-.creation-progress__list li.is-done .creation-progress__index {
-  border-color: var(--a-color-text);
-}
-.drawer-body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 1.5rem;
-  width: 100%;
-  padding: 1.5rem 0 0;
-}
-.error-message {
-  margin: 0;
-  color: var(--a-color-danger);
-  font-family: var(--a-font-sans);
-  font-size: 0.82rem;
-  font-weight: 500;
-}
-.footer-actions {
-  background: var(--a-color-bg);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 1rem;
-  width: 100%;
-  margin: 0 auto;
-}
-.forward-block-reason {
-  margin: 0 auto 0 0;
-  color: var(--a-color-muted);
-  font-family: var(--a-font-sans);
-  font-size: 0.82rem;
-}
-[data-testid="music-creation-close-button"] { display: none !important; }
-.ui-action,
-.primary-action {
-  border: 0;
-  border-radius: var(--a-radius-control);
-  padding: 0.85rem 1.2rem;
-  font-family: var(--a-font-sans);
-  font-weight: 500;
-  cursor: pointer;
-}
-.ui-action {
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  color: var(--a-color-text);
-}
-.primary-action {
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
-  transition: background-color 0.15s ease;
-}
-.primary-action:hover {
-  background: color-mix(in srgb, var(--a-color-text) 86%, black);
-}
-
-.drawer-body :deep(.album-details-step .footer-actions) {
-  display: none;
-}
-
-/* 流程导航由外层统一显示，独立组件预览保留自己的进度。 */
-.drawer-body :deep(.progress-card) { display: none; }
+@import "./musicCreationFlowDrawer.css";
 
 :global(.creation-flow-drawer) {
   background: var(--a-color-bg) !important;
-  border-left: 1px solid var(--a-color-border-soft) !important;
-  box-shadow: none !important;
-}
-:global(.creation-flow-drawer.p-sheet-layer.is-right) {
-  bottom: var(--a-content-bottom-offset) !important;
-}
-:global(.creation-flow-drawer.p-sheet-mobile-page) {
-  bottom: calc(64px + env(safe-area-inset-bottom, 0px) + var(--mobile-app-player-reserved-height, 0px));
-  padding-bottom: 0;
-}
-:global(.creation-flow-drawer .p-sheet-mobile-page__content) { padding-bottom: 1rem; }
-@media (max-width: 48rem) {
-  .creation-progress__list { grid-template-columns: 1fr; gap: 0.55rem; }
-  .creation-progress__list li::after { display: none; }
 }
 </style>

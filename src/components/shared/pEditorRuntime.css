@@ -1,0 +1,433 @@
+.p-editor {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--a-color-bg);
+  position: relative;
+}
+
+.p-editor:not(.no-border) {
+  border: 1px solid var(--a-color-border-soft);
+}
+
+.p-editor-presence {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 1.25rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  flex-shrink: 0;
+}
+
+.presence-avatars {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.presence-dot {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 500;
+  font-size: 0.65rem;
+  border: 1px solid var(--a-color-text);
+  flex-shrink: 0;
+}
+
+.editor-mode-switches {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem 0;
+  flex-wrap: wrap;
+}
+
+.editor-reference-trigger {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  cursor: pointer;
+}
+
+.editor-reference-trigger:hover {
+  background: var(--a-color-surface-muted);
+}
+
+.editor-reference-trigger:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
+}
+
+.mode-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  min-width: 8.5rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+  color: var(--a-color-text);
+  font: inherit;
+  font-weight: var(--a-font-weight-strong, 700);
+  line-height: 1;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.mode-switch:hover {
+  background: var(--a-color-surface-muted);
+}
+
+.mode-switch-label {
+  font-size: 0.84rem;
+  letter-spacing: 0;
+}
+
+.mode-switch-state {
+  min-width: 2.2rem;
+  padding: 0.22rem 0.45rem;
+  border: 1px solid var(--a-color-text);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: var(--a-font-weight-strong, 700);
+  letter-spacing: 0;
+}
+
+.mode-switch.active {
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
+}
+
+.mode-switch.active .mode-switch-state {
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+}
+
+.p-editor-toolbar {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.tb-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.75rem;
+}
+
+.tb-row + .tb-row {
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
+.tb-row-label {
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--a-color-muted);
+  margin-right: 0.2rem;
+  flex-shrink: 0;
+}
+
+.tb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  font-size: 0.72rem;
+  font-weight: var(--a-font-weight-strong, 700);
+  font-family: inherit;
+  cursor: pointer;
+  letter-spacing: 0;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.tb-btn:hover,
+.tb-btn.active {
+  background: var(--a-color-fg);
+  color: var(--a-color-bg);
+}
+
+.tb-btn.uploading {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tb-sep {
+  display: inline-block;
+  width: 1px;
+  height: 1.2rem;
+  background: var(--a-color-border-soft);
+  margin: 0 0.2rem;
+  flex-shrink: 0;
+}
+
+.tb-hidden-input {
+  display: none;
+}
+
+.p-editor-sv-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.p-editor-normal-body {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  position: relative;
+}
+
+.p-editor-sv-body.dragging::after,
+.p-editor-normal-body.dragging::after {
+  content: '松开鼠标上传图片';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--a-color-border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  font-size: 1rem;
+  color: var(--a-color-fg);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.sv-pane {
+  min-height: 0;
+  overflow: auto;
+}
+
+.toast-container {
+  min-height: 20rem;
+  height: 100%;
+}
+
+.sv-source {
+  border-right: 1px solid var(--a-color-border-soft);
+  display: flex;
+  flex-direction: column;
+}
+
+.cm-source-pane {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.cm-container {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+}
+
+.p-editor-normal-body .cm-container {
+  min-height: 0;
+}
+
+:deep(.cm-editor) {
+  height: 100%;
+}
+
+:deep(.cm-scroller) {
+  overflow: auto;
+}
+
+:deep(.cm-highlightSpace),
+:deep(.cm-highlightTab) {
+  background-image: radial-gradient(circle at 50% 55%, #888 20%, transparent 5%);
+  background-position: center;
+  background-repeat: repeat-x;
+  background-size: 0.35rem 0.35rem;
+}
+
+:deep(.cm-markdown-strike) {
+  text-decoration: line-through;
+}
+
+:deep(.cm-markdown-widget) {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding-block: 0.5rem;
+  cursor: text;
+}
+
+:deep(.cm-markdown-widget > :first-child) {
+  margin-top: 0;
+}
+
+:deep(.cm-markdown-widget > :last-child) {
+  margin-bottom: 0;
+}
+
+:deep(.cm-markdown-widget img) {
+  display: block;
+  max-width: 100%;
+  max-height: 32rem;
+  object-fit: contain;
+}
+
+:deep(.cm-markdown-widget pre) {
+  overflow-x: auto;
+  padding: 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+}
+
+.sv-preview {
+  padding: 1.5rem 1.5rem 2rem;
+  background: var(--a-color-bg);
+  overflow: auto;
+  min-height: 16rem;
+}
+
+@media (max-width: 700px) {
+  .p-editor-sv-body {
+    grid-template-columns: 1fr;
+  }
+
+  .sv-source {
+    border-right: none;
+    border-bottom: 1px solid var(--a-color-border-soft);
+  }
+
+  .cm-container {
+    min-height: 10rem;
+  }
+}
+
+:deep(.sv-preview pre) {
+  position: relative;
+  padding-top: 2.5rem;
+  overflow: hidden;
+  background: #1e1e2e;
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: none;
+  color: #cdd6f4;
+}
+
+:deep(.sv-preview pre code),
+:deep(.sv-preview pre code.hljs) {
+  background: transparent;
+  color: inherit;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 0.82rem;
+  line-height: 1.8;
+}
+
+:deep(.code-block-titlebar) {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  padding: 0 0.85rem;
+  background: #2d2d2d;
+  border-bottom: 1px solid #3d3d3d;
+}
+
+:deep(.code-block-lights) {
+  display: flex;
+  gap: 0.42rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+:deep(.code-block-dot) {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+:deep(.dot-red) {
+  background: #ff5f57;
+  border: 1px solid #e0443e;
+}
+
+:deep(.dot-yellow) {
+  background: #ffbd2e;
+  border: 1px solid #dea123;
+}
+
+:deep(.dot-green) {
+  background: #28ca42;
+  border: 1px solid #1aab2e;
+}
+
+:deep(.code-block-lang) {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #9ca3af;
+  letter-spacing: 0;
+  text-transform: lowercase;
+  pointer-events: none;
+}
+
+:deep(.code-block-copy) {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid #4b5563;
+  color: #9ca3af;
+  font-size: 0.65rem;
+  font-weight: 500;
+  font-family: inherit;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+  letter-spacing: 0;
+  transition: background 150ms, color 150ms;
+}
+
+:deep(.code-block-copy:hover) {
+  background: #9ca3af;
+  color: #1a1a2e;
+  border-color: #9ca3af;
+}
+
+.p-editor-label {
+  font-size: var(--a-text-xs);
+  font-weight: 500;
+  letter-spacing: 0;
+}

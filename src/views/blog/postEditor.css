@@ -1,0 +1,339 @@
+.import-diagnostics {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.8rem;
+  border: var(--a-border);
+  border-left: 3px solid var(--a-color-warning, #b7791f);
+  background: var(--a-color-surface, var(--a-color-bg));
+  color: var(--a-color-muted);
+  font-size: 0.82rem;
+}
+
+.import-diagnostics p {
+  margin: 0;
+}
+
+.import-diagnostics p + p {
+  margin-top: 0.3rem;
+}
+
+.editor-page {
+  position: relative;
+  min-height: 0;
+  background: var(--a-color-bg);
+  overflow: hidden;
+}
+
+.editor-shell {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.editor-load-failure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--a-color-danger, #dc2626);
+  background: var(--a-color-surface, var(--a-color-bg));
+  color: var(--a-color-danger, #dc2626);
+}
+
+.editor-load-failure p {
+  margin: 0;
+}
+
+.editor-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.75rem;
+  padding: 0.9rem 1rem;
+}
+
+.editor-layout {
+  position: relative;
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.col-center {
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--a-color-bg);
+}
+
+.editor-loading {
+  color: var(--a-color-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.editor-workspace {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.editor-top-info {
+  display: flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 1rem;
+  border-top: var(--a-border);
+  background: var(--a-color-bg);
+  color: var(--a-color-muted);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.editor-top-info__group {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 1rem;
+}
+
+.editor-top-info__group span {
+  white-space: nowrap;
+}
+
+.editor-top-info__sync.is-ok {
+  color: var(--a-color-success);
+}
+
+.editor-top-info__sync.is-warn {
+  color: var(--a-color-danger);
+}
+
+.editor-format-row {
+  flex: 0 0 auto;
+  min-width: 0;
+  border-bottom: var(--a-border);
+  background: var(--a-color-bg);
+}
+
+.editor-format-row :deep(.post-format-toolbar) {
+  border-bottom: 0;
+}
+
+.editor-canvas {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--a-color-bg);
+}
+
+.editor-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.editor-body > * {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.editor-body :deep(.cm-editor) {
+  height: 100%;
+}
+
+.editor-body :deep(.cm-scroller) {
+  height: 100%;
+  overscroll-behavior: contain;
+  font-family: var(--a-font-sans, ui-sans-serif, system-ui, sans-serif) !important;
+  font-size: 1.0625rem;
+  line-height: 1.45 !important;
+}
+
+.editor-body :deep(.p-editor[data-live-preview="false"] .cm-scroller) {
+  line-height: 1.35 !important;
+}
+
+.editor-body :deep(.p-editor[data-live-preview="false"] .cm-line:first-child) {
+  padding-bottom: 0 !important;
+  font-size: 1em !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+}
+
+.editor-body :deep(.p-editor[data-live-preview="false"] .cm-line span) {
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+}
+
+.editor-body :deep(.cm-line:first-child) {
+  padding-bottom: 0.25rem;
+}
+
+.editor-body :deep(.cm-gutters),
+.editor-body :deep(.cm-gutter.cm-lineNumberGutter) {
+  min-width: 38px;
+}
+
+.editor-body :deep(.cm-lineNumbers .cm-gutterElement) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 38px !important;
+  padding: 0 4px !important;
+  line-height: 1;
+}
+
+.editor-body :deep(.cm-content) {
+  padding-inline: 0.75rem !important;
+}
+
+.editor-body :deep(.cm-activeLine) {
+  background-color: var(--a-color-surface-muted) !important;
+  box-shadow: none;
+}
+
+.editor-body :deep(.cm-activeLineGutter) {
+  background-color: var(--a-color-surface-muted) !important;
+}
+
+.draft-recovery-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 0 1.25rem 1.25rem;
+  flex-wrap: wrap;
+}
+
+.draft-manager-body,
+.leave-confirm-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.draft-manager-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.draft-manager-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1rem;
+}
+
+.draft-manager-card strong {
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.draft-manager-card .a-muted {
+  margin: 0;
+}
+
+.draft-manager-card-accent {
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+}
+
+.draft-manager-preview,
+.leave-confirm-text {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.7;
+  color: var(--a-color-fg);
+}
+
+.draft-manager-warning {
+  padding: 0.95rem 1rem;
+  border: 2px solid var(--a-color-danger);
+  background: color-mix(in srgb, var(--a-color-danger) 8%, var(--a-color-bg));
+  color: var(--a-color-danger);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.leave-confirm-body .a-muted {
+  margin: 0;
+}
+
+@media (max-width: 960px) {
+  .editor-layout {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .col-center {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .editor-body :deep(.p-editor.mode-split .sv-source) {
+    display: none;
+  }
+
+  .editor-body :deep(.p-editor.mode-split .sv-preview) {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .editor-error,
+  .editor-load-failure {
+    margin: 0.5rem;
+  }
+
+  .editor-load-failure {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .draft-manager-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .editor-top-info {
+    min-height: 2.75rem;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.2rem;
+    padding-block: 0.35rem;
+  }
+
+  .editor-top-info__group {
+    gap: 0.7rem;
+  }
+
+  .editor-top-info__group--secondary {
+    display: none;
+  }
+
+  .editor-format-row :deep(.post-format-toolbar) {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+}

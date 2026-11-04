@@ -1,0 +1,131 @@
+.creation-flow { display: flex; flex-direction: column; min-height: 100%; }
+.creation-progress {
+  width: 100%;
+  padding: 1rem 0 0;
+}
+.creation-progress__list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.creation-progress__list li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.creation-progress__list li::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  min-width: 0.5rem;
+  background: var(--a-color-border-soft);
+}
+.creation-progress__list li:last-child::after { display: none; }
+.creation-progress__list li.is-active,
+.creation-progress__list li.is-done { color: var(--a-color-text); }
+.creation-progress__index {
+  display: grid;
+  flex: 0 0 1.45rem;
+  place-items: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  font-size: 0.68rem;
+}
+.creation-progress__list li.is-active .creation-progress__index {
+  border-color: var(--a-color-text);
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+}
+.creation-progress__list li.is-done .creation-progress__index {
+  border-color: var(--a-color-text);
+}
+.drawer-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  padding: 1.5rem 0 0;
+}
+.error-message {
+  margin: 0;
+  color: var(--a-color-danger);
+  font-family: var(--a-font-sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+.footer-actions {
+  background: var(--a-color-bg);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  width: 100%;
+  margin: 0 auto;
+}
+.forward-block-reason {
+  margin: 0 auto 0 0;
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
+  font-size: 0.82rem;
+}
+[data-testid="music-creation-close-button"] { display: none !important; }
+.ui-action,
+.primary-action {
+  border: 0;
+  border-radius: var(--a-radius-control);
+  padding: 0.85rem 1.2rem;
+  font-family: var(--a-font-sans);
+  font-weight: 500;
+  cursor: pointer;
+}
+.ui-action {
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+}
+.primary-action {
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  transition: background-color 0.15s ease;
+}
+.primary-action:hover {
+  background: color-mix(in srgb, var(--a-color-text) 86%, black);
+}
+
+.drawer-body :deep(.album-details-step .footer-actions) {
+  display: none;
+}
+
+/* 流程导航由外层统一显示，独立组件预览保留自己的进度。 */
+.drawer-body :deep(.progress-card) { display: none; }
+
+:global(.creation-flow-drawer) {
+  background: var(--a-color-bg) !important;
+  border-left: 1px solid var(--a-color-border-soft) !important;
+  box-shadow: none !important;
+}
+:global(.creation-flow-drawer.p-sheet-layer.is-right) {
+  bottom: var(--a-content-bottom-offset) !important;
+}
+:global(.creation-flow-drawer.p-sheet-mobile-page) {
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px) + var(--mobile-app-player-reserved-height, 0px));
+  padding-bottom: 0;
+}
+:global(.creation-flow-drawer .p-sheet-mobile-page__content) { padding-bottom: 1rem; }
+@media (max-width: 48rem) {
+  .creation-progress__list { grid-template-columns: 1fr; gap: 0.55rem; }
+  .creation-progress__list li::after { display: none; }
+}

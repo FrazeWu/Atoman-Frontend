@@ -1,0 +1,383 @@
+.avatar-label-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.field-hint {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
+.artist-step {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.artist-step-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.artist-search-card,
+.artist-selected-card {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.artist-search-results {
+  display: grid;
+  gap: 0.5rem;
+  border-top: 1px solid var(--a-color-border-soft);
+  padding-top: 0.75rem;
+}
+
+.artist-search-result {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  width: 100%;
+  border: 1px solid var(--a-color-border-soft);
+  padding: 0.7rem 0.8rem;
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.artist-search-result:hover {
+  border-color: var(--a-color-text);
+}
+
+.artist-search-result small {
+  color: var(--a-color-muted);
+}
+
+.artist-selected-card {
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+}
+
+.artist-selected-card strong {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.05rem;
+}
+
+.artist-search-empty {
+  display: grid;
+  gap: 0.65rem;
+  justify-items: start;
+}
+
+.member-search-results {
+  display: grid;
+  border: 1px solid var(--a-color-border-soft);
+}
+.member-search-result {
+  border: 0;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  padding: 0.7rem;
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  text-align: left;
+  cursor: pointer;
+}
+.member-search-result:last-child {
+  border-bottom: 0;
+}
+.artist-hero {
+  display: none !important;
+  gap: 0.7rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.artist-hero__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.hero-kicker,
+.hero-step,
+.card-kicker,
+.field-label {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-family: var(--a-font-sans);
+  font-size: 0.76rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.artist-hero h4 {
+  margin: 0;
+  font-family: var(--a-font-sans);
+  font-size: 2rem;
+  line-height: 1.05;
+}
+
+.hero-copy,
+.card-copy {
+  margin: 0;
+  color: var(--a-color-muted);
+  line-height: 1.7;
+}
+
+.artist-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem 1.2rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+  background: var(--a-color-bg);
+}
+
+.artist-card--primary {
+  background: var(--a-color-bg);
+}
+
+.artist-card--soft {
+  background: var(--a-color-surface-muted);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.artist-kind-card {
+  grid-template-columns: max-content max-content;
+  justify-content: start;
+  align-items: center;
+}
+
+.artist-kind-card :deep(.p-segmented-control) {
+  justify-self: start;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.artist-profile-grid {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.avatar-upload-section {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.avatar-uploader {
+  position: relative;
+  justify-self: start;
+  cursor: pointer;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--a-color-border-soft);
+  padding: 4px;
+  transition: border-color 0.2s ease, transform 0.1s ease;
+}
+
+.artist-avatar-frame {
+  width: 8rem;
+  height: 8rem;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--a-color-surface-muted);
+}
+
+.artist-avatar-frame :deep(.p-avatar) {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+}
+
+.artist-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatar-uploader:hover {
+  border-color: var(--a-color-text);
+  transform: translateY(1px);
+}
+
+.avatar-uploader:active {
+  transform: translateY(2px);
+}
+
+.avatar-uploader-hover {
+  position: absolute;
+  inset: 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--a-font-sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.avatar-uploader:hover .avatar-uploader-hover,
+.avatar-uploader.is-uploading .avatar-uploader-hover {
+  opacity: 1;
+}
+
+.artist-basic-fields {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.field-stack { display: grid; gap: 1rem; }
+.field-group { display: grid; gap: 0.45rem; }
+.field-group--narrow { max-width: 16rem; }
+.single-line-field :deep(.p-field),
+.single-line-field :deep(.p-date-input-container),
+.single-line-field :deep(.country-field) {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+.single-line-field :deep(.p-field-label),
+.single-line-field :deep(.field-label-row),
+.single-line-field :deep(.country-field-label) {
+  margin: 0;
+  white-space: nowrap;
+}
+.single-line-field :deep(.p-field-error),
+.single-line-field :deep(.p-field-hint) {
+  grid-column: 2;
+}
+.stage-name-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: color-mix(in srgb, var(--a-color-surface-muted) 86%, var(--a-color-bg));
+}
+
+.stage-name-dates {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.member-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.member-card__title {
+  color: var(--a-color-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.member-card__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.member-card__dates,
+.supplementary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+:deep(.p-input:focus),
+:deep(.p-textarea:focus) {
+  border-bottom-color: var(--a-color-text);
+}
+
+.state-line {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.state-line--error {
+  color: var(--a-color-danger);
+}
+
+.step-actions {
+  display: none !important;
+}
+
+.ui-action,
+.primary-action {
+  border: 0;
+  border-radius: 0;
+  padding: 0.85rem 1.2rem;
+  font-family: var(--a-font-sans);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ui-action {
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  font-size: 0.78rem;
+}
+
+.primary-action {
+  background: var(--a-color-text);
+  color: var(--a-color-bg);
+  transition: background-color 0.15s ease;
+}
+
+.primary-action:hover {
+  background: color-mix(in srgb, var(--a-color-text) 86%, black);
+}
+
+@media (max-width: 720px) {
+  .stage-name-dates,
+  .member-card__dates,
+  .supplementary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .artist-profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .avatar-upload-section {
+    justify-items: start;
+  }
+
+  .single-line-field :deep(.p-field),
+  .single-line-field :deep(.p-date-input-container),
+  .single-line-field :deep(.country-field) {
+    grid-template-columns: 5rem minmax(0, 1fr);
+  }
+
+  .member-card__header {
+    align-items: flex-start;
+  }
+}

@@ -137,12 +137,12 @@
 import '@/assets/editor.css'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { AtSign, Quote } from 'lucide-vue-next'
-import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate, WidgetType, highlightActiveLine, highlightActiveLineGutter, highlightWhitespace, keymap, lineNumbers, placeholder as cmPlaceholder, scrollPastEnd } from '@codemirror/view'
-import { Compartment, EditorState, RangeSetBuilder, StateField, type Text } from '@codemirror/state'
-import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands'
+import { EditorView, highlightActiveLine, highlightActiveLineGutter, highlightWhitespace, keymap, lineNumbers, placeholder as cmPlaceholder, scrollPastEnd } from '@codemirror/view'
+import { Compartment, EditorState } from '@codemirror/state'
+import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
-import { HighlightStyle, syntaxHighlighting, syntaxTree } from '@codemirror/language'
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { tags } from '@lezer/highlight'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
@@ -167,100 +167,10 @@ import {
 } from './editor/resourceReferenceExtension'
 import { enhancePreviewCodeBlocks } from './editor/previewEnhancements'
 import type { PostEditorCommand } from '@/components/blog/postEditorCommands'
+import { createLivePreviewExtensions } from './pEditorLivePreview'
+import * as pEditorCommands from './pEditorCommands'
+import { executeEditorCommand } from './pEditorCommands'
 
-function markdownTableCells(line: string) {
-  const trimmed = line.trim().replace(/^\|/, '').replace(/\|$/, '')
-  return trimmed.split('|').map(cell => cell.trim())
-}
-
-function markdownTableDOM(source: string) {
-  const lines = source.split('\n').filter(line => line.trim())
-  if (lines.length < 2) return null
-  const headers = markdownTableCells(lines[0])
-  const dividers = markdownTableCells(lines[1])
-  if (headers.length !== dividers.length || !dividers.every(cell => /^:?-+:?$/.test(cell))) return null
-
-  const table = document.createElement('table')
-  const head = document.createElement('thead')
-  const headRow = document.createElement('tr')
-  const body = document.createElement('tbody')
-  const alignments = dividers.map(divider => {
-    if (divider.startsWith(':') && divider.endsWith(':')) return 'center'
-    if (divider.endsWith(':')) return 'right'
-    return 'left'
-  })
-
-  headers.forEach((header, index) => {
-    const cell = document.createElement('th')
-    cell.textContent = header
-    cell.style.textAlign = alignments[index]
-    headRow.append(cell)
-  })
-  head.append(headRow)
-  lines.slice(2).forEach(line => {
-    const row = document.createElement('tr')
-    markdownTableCells(line).forEach((value, index) => {
-      const cell = document.createElement('td')
-      cell.textContent = value
-      cell.style.textAlign = alignments[index] || 'left'
-      row.append(cell)
-    })
-    body.append(row)
-  })
-  table.append(head, body)
-  return table
-}
-
-class MarkdownPreviewWidget extends WidgetType {
-  constructor(
-    private readonly html: string,
-    private readonly sourcePosition: number,
-    private readonly source: string,
-  ) {
-    super()
-  }
-
-  eq(other: MarkdownPreviewWidget) {
-    return other.html === this.html
-      && other.sourcePosition === this.sourcePosition
-      && other.source === this.source
-  }
-
-  toDOM(view: EditorView) {
-    const wrapper = document.createElement('div')
-    wrapper.className = 'cm-markdown-widget prose-blog'
-    const fence = this.source.match(/^\s*(```+|~~~+)([^\n]*)\n([\s\S]*?)\n\s*\1\s*$/)
-    if (fence) {
-      const pre = document.createElement('pre')
-      const code = document.createElement('code')
-      const language = fence[2].trim()
-      if (language) code.className = `language-${language}`
-      code.textContent = fence[3]
-      pre.append(code)
-      wrapper.append(pre)
-    } else {
-      const table = markdownTableDOM(this.source)
-      if (table) {
-        wrapper.append(table)
-      } else {
-        const template = document.createElement('template')
-        // renderMarkdown sanitizes through DOMPurify before widgets receive the HTML.
-        template.innerHTML = this.html
-        wrapper.append(template.content.cloneNode(true))
-      }
-    }
-    wrapper.addEventListener('click', event => {
-      event.preventDefault()
-      view.dispatch({ selection: { anchor: this.sourcePosition } })
-      view.focus()
-    })
-    return wrapper
-  }
-
-  ignoreEvent() {
-    return false
-  }
-}
 
 interface Props {
   modelValue?: string
@@ -510,194 +420,8 @@ function replaceDocument(markdown: string) {
   })
 }
 
-function buildLivePreviewDecos(view: EditorView): DecorationSet {
-  const { state } = view
-  const cursor = state.selection.main.head
-  const ranges: Array<{ from: number; to: number; decoration: Decoration }> = []
-  const hiddenMark = Decoration.replace({})
-  const strikeText = Decoration.mark({ class: 'cm-markdown-strike' })
-
-  const hideMark = (from: number, to: number) => {
-    ranges.push({ from, to, decoration: hiddenMark })
-  }
-  const renderInlineWidget = (from: number, to: number) => {
-    if (cursor >= from && cursor <= to) return false
-    ranges.push({
-      from,
-      to,
-      decoration: Decoration.replace({
-        widget: new MarkdownPreviewWidget(
-          renderMarkdown(state.sliceDoc(from, to)),
-          from,
-          state.sliceDoc(from, to),
-        ),
-      }),
-    })
-    return true
-  }
-
-  for (const { from, to } of view.visibleRanges) {
-    syntaxTree(state).iterate({
-      from,
-      to,
-      enter(node) {
-        const { name } = node
-        if (name === 'Image') {
-          const line = state.doc.lineAt(node.from)
-          if (line.text.trim() === state.sliceDoc(node.from, node.to).trim()) {
-            return !renderInlineWidget(line.from, line.to)
-          }
-        }
-        if (name === 'HorizontalRule') return !renderInlineWidget(node.from, node.to)
-        if (name === 'HeaderMark' || name === 'QuoteMark' || name === 'ListMark' || name === 'TaskMarker') {
-          const line = state.doc.lineAt(node.from)
-          if (cursor < line.from || cursor > line.to) hideMark(node.from, node.to)
-          return
-        }
-        if (name === 'EmphasisMark' || name === 'StrikethroughMark' || name === 'CodeMark' || name === 'CodeInfo') {
-          const parent = node.node.parent
-          if (parent && (cursor < parent.from || cursor > parent.to)) hideMark(node.from, node.to)
-          return
-        }
-        if (name === 'LinkMark' || name === 'URL') {
-          let parent = node.node.parent
-          while (parent && parent.name !== 'Link' && parent.name !== 'Image') parent = parent.parent
-          if (parent && (cursor < parent.from || cursor > parent.to)) hideMark(node.from, node.to)
-        }
-      },
-    })
-
-    let line = state.doc.lineAt(from)
-    while (line.from <= to) {
-      if (cursor < line.from || cursor > line.to) {
-        for (const match of line.text.matchAll(/~~([^~\n]+)~~/g)) {
-          const start = line.from + (match.index || 0)
-          const contentFrom = start + 2
-          const contentTo = contentFrom + match[1].length
-          hideMark(start, contentFrom)
-          ranges.push({ from: contentFrom, to: contentTo, decoration: strikeText })
-          hideMark(contentTo, contentTo + 2)
-        }
-      }
-      if (line.number >= state.doc.lines) break
-      line = state.doc.line(line.number + 1)
-    }
-  }
-
-  ranges.sort((a, b) => a.from - b.from || b.to - a.to)
-  const builder = new RangeSetBuilder<Decoration>()
-  let lastTo = -1
-  for (const range of ranges) {
-    if (range.from < lastTo) continue
-    builder.add(range.from, range.to, range.decoration)
-    lastTo = range.to
-  }
-  return builder.finish()
-}
-
-function findClosingLine(doc: Text, startLine: number, marker: string) {
-  for (let lineNumber = startLine + 1; lineNumber <= doc.lines; lineNumber += 1) {
-    if (doc.line(lineNumber).text.trim() === marker) return lineNumber
-  }
-  return null
-}
-
-function findTableEndLine(doc: Text, startLine: number) {
-  let endLine = startLine + 1
-  for (let lineNumber = startLine + 2; lineNumber <= doc.lines; lineNumber += 1) {
-    if (!/^\s*\|/.test(doc.line(lineNumber).text)) break
-    endLine = lineNumber
-  }
-  return endLine
-}
-
-function buildBlockPreviewDecos(state: EditorState): DecorationSet {
-  const cursor = state.selection.main.head
-  const ranges: Array<{ from: number; to: number }> = []
-  const addRange = (from: number, to: number) => {
-    if (cursor < from || cursor > to) ranges.push({ from, to })
-  }
-
-  syntaxTree(state).iterate({
-    enter(node) {
-      if (node.name !== 'FencedCode') return
-      addRange(node.from, node.to)
-      return false
-    },
-  })
-
-  for (let lineNumber = 1; lineNumber <= state.doc.lines; lineNumber += 1) {
-    const line = state.doc.line(lineNumber)
-    const trimmed = line.text.trim()
-    const singleLineEmbed = /^:::(post|music|video)\{[^}\n]*\}\s*:::$/u.test(trimmed)
-    if (singleLineEmbed) {
-      addRange(line.from, line.to)
-      continue
-    }
-    if (trimmed === '$$' || /^:::(post|music|video)\{/.test(trimmed)) {
-      const closingLine = findClosingLine(state.doc, lineNumber, trimmed === '$$' ? '$$' : ':::')
-      if (closingLine) {
-        addRange(line.from, state.doc.line(closingLine).to)
-        lineNumber = closingLine
-      }
-      continue
-    }
-    if (!/^\s*\|/.test(line.text) || lineNumber >= state.doc.lines) continue
-    if (!/^\s*\|?\s*:?-+/.test(state.doc.line(lineNumber + 1).text)) continue
-    const endLine = findTableEndLine(state.doc, lineNumber)
-    addRange(line.from, state.doc.line(endLine).to)
-    lineNumber = endLine
-  }
-
-  ranges.sort((a, b) => a.from - b.from)
-  const builder = new RangeSetBuilder<Decoration>()
-  let lastTo = -1
-  for (const range of ranges) {
-    if (range.from < lastTo) continue
-    builder.add(range.from, range.to, Decoration.replace({
-      block: true,
-      widget: new MarkdownPreviewWidget(
-        renderMarkdown(state.sliceDoc(range.from, range.to)),
-        range.from,
-        state.sliceDoc(range.from, range.to),
-      ),
-    }))
-    lastTo = range.to
-  }
-  return builder.finish()
-}
-
-function makeBlockPreviewField() {
-  return StateField.define<DecorationSet>({
-    create: state => buildBlockPreviewDecos(state),
-    update: (decorations, transaction) => (
-      transaction.docChanged || transaction.selection
-        ? buildBlockPreviewDecos(transaction.state)
-        : decorations
-    ),
-    provide: field => EditorView.decorations.from(field),
-  })
-}
-
 function livePreviewExtensions() {
-  return [makeLivePreviewPlugin(), makeBlockPreviewField()]
-}
-
-function makeLivePreviewPlugin() {
-  return ViewPlugin.fromClass(
-    class {
-      decorations: DecorationSet
-      constructor(view: EditorView) {
-        this.decorations = buildLivePreviewDecos(view)
-      }
-      update(update: ViewUpdate) {
-        if (update.docChanged || update.selectionSet || update.viewportChanged) {
-          this.decorations = buildLivePreviewDecos(update.view)
-        }
-      }
-    },
-    { decorations: (v) => v.decorations },
-  )
+  return createLivePreviewExtensions(renderMarkdown)
 }
 
 function initCodeMirror() {
@@ -894,95 +618,48 @@ watch(() => props.editorAriaLabel, () => {
   })
 })
 
-function getCmSelection(): { from: number; to: number; selectedText: string } {
-  if (!cmView) return { from: 0, to: 0, selectedText: '' }
-  const { from, to } = cmView.state.selection.main
-  const selectedText = cmView.state.sliceDoc(from, to)
-  return { from, to, selectedText }
+function getCmSelection() {
+  return pEditorCommands.getCmSelection(cmView)
 }
 
 function cmInsert(from: number, to: number, text: string, cursorFrom?: number, cursorTo?: number) {
-  if (!cmView) return
-  cmView.dispatch({
-    changes: { from, to, insert: text },
-    selection: cursorFrom !== undefined
-      ? { anchor: cursorFrom, head: cursorTo ?? cursorFrom }
-      : undefined,
-  })
-  cmView.focus()
+  pEditorCommands.cmInsert(cmView, from, to, text, cursorFrom, cursorTo)
 }
 
 function sv_wrap(before: string, after: string, placeholder: string) {
-  const { from, to, selectedText } = getCmSelection()
-  const inserted = selectedText || placeholder
-  const newText = before + inserted + after
-  cmInsert(from, to, newText, from + before.length, from + before.length + inserted.length)
+  pEditorCommands.sv_wrap(cmView, before, after, placeholder)
 }
 
 function sv_wrapLinePrefix(prefix: string, placeholder: string) {
-  if (!cmView) return
-  const { from, to } = getCmSelection()
-  const firstLine = cmView.state.doc.lineAt(from)
-  const endPosition = to > from && to === cmView.state.doc.lineAt(to).from ? to - 1 : to
-  const lastLine = cmView.state.doc.lineAt(Math.max(from, endPosition))
-  const original = cmView.state.sliceDoc(firstLine.from, lastLine.to)
-  const lines = original.split('\n')
-  const shouldRemove = lines.every(line => !line.trim() || line.startsWith(prefix))
-  const replacement = lines.map(line => {
-    if (!line.trim()) return shouldRemove ? '' : `${prefix}${placeholder}`
-    if (shouldRemove) return line.startsWith(prefix) ? line.slice(prefix.length) : line
-    if (/^#{1,6}\s+$/.test(prefix) && /^#{1,6}\s+/.test(line)) {
-      return `${prefix}${line.replace(/^#{1,6}\s+/, '')}`
-    }
-    return `${prefix}${line}`
-  }).join('\n')
-  cmInsert(firstLine.from, lastLine.to, replacement, firstLine.from, firstLine.from + replacement.length)
+  pEditorCommands.sv_wrapLinePrefix(cmView, prefix, placeholder)
 }
 
 function sv_insertLink() {
-  const { from, to, selectedText } = getCmSelection()
-  const text = selectedText || '链接文字'
-  const md = `[${text}](url)`
-  cmInsert(from, to, md, from + 1, from + 1 + text.length)
+  pEditorCommands.sv_insertLink(cmView)
 }
 
 function sv_insertTable() {
-  const { from } = getCmSelection()
-  const table = '\n| 标题 | 标题 | 标题 |\n| --- | --- | --- |\n| 内容 | 内容 | 内容 |\n'
-  cmInsert(from, from, table)
+  pEditorCommands.sv_insertTable(cmView)
 }
 
 function sv_insertHr() {
-  const { from } = getCmSelection()
-  cmInsert(from, from, '\n---\n')
+  pEditorCommands.sv_insertHr(cmView)
 }
 
 function sv_insertCodeBlock() {
-  const { from, to, selectedText } = getCmSelection()
-  const body = selectedText || '代码'
-  const newText = `\n\`\`\`txt\n${body}\n\`\`\`\n`
-  const bodyStart = from + '\n```txt\n'.length
-  cmInsert(from, to, newText, bodyStart, bodyStart + body.length)
+  pEditorCommands.sv_insertCodeBlock(cmView)
 }
 
 function sv_insertMath() {
-  const { from, to, selectedText } = getCmSelection()
-  const body = selectedText || '公式'
-  const markdown = `\n$$\n${body}\n$$\n`
-  const bodyStart = from + '\n$$\n'.length
-  cmInsert(from, to, markdown, bodyStart, bodyStart + body.length)
+  pEditorCommands.sv_insertMath(cmView)
 }
 
 function sv_undo() {
-  if (!cmView) return
-  undo({ state: cmView.state, dispatch: cmView.dispatch.bind(cmView) })
-  cmView.focus()
+  pEditorCommands.sv_undo(cmView)
 }
 
 function sv_redo() {
-  if (!cmView) return
-  redo({ state: cmView.state, dispatch: cmView.dispatch.bind(cmView) })
-  cmView.focus()
+  pEditorCommands.sv_redo(cmView)
 }
 
 function toggleLineNumbers() {
@@ -1024,29 +701,11 @@ function handleMediaPickerSelect(item: MediaPickerItem) {
 }
 
 function executeCommand(command: PostEditorCommand) {
-  switch (command) {
-    case 'undo': sv_undo(); break
-    case 'redo': sv_redo(); break
-    case 'heading2': sv_wrapLinePrefix('## ', '标题'); break
-    case 'heading3': sv_wrapLinePrefix('### ', '标题'); break
-    case 'heading4': sv_wrapLinePrefix('#### ', '标题'); break
-    case 'bold': sv_wrap('**', '**', '粗体文字'); break
-    case 'italic': sv_wrap('*', '*', '斜体文字'); break
-    case 'strike': sv_wrap('~~', '~~', '删除线'); break
-    case 'blockquote': sv_wrapLinePrefix('> ', '引用内容'); break
-    case 'bulletList': sv_wrapLinePrefix('- ', '列表项'); break
-    case 'orderedList': sv_wrapLinePrefix('1. ', '列表项'); break
-    case 'link': sv_insertLink(); break
-    case 'image': triggerImageUpload(); break
-    case 'table': sv_insertTable(); break
-    case 'codeBlock': sv_insertCodeBlock(); break
-    case 'horizontalRule': sv_insertHr(); break
-    case 'math': sv_insertMath(); break
-    case 'postEmbed': insertEmbed('post'); break
-    case 'musicEmbed': insertEmbed('music'); break
-    case 'videoEmbed': insertEmbed('video'); break
-    case 'reference': insertReference(); break
-  }
+  executeEditorCommand(cmView, command, {
+    triggerImageUpload,
+    insertEmbed,
+    insertReference,
+  })
 }
 
 watch(() => props.lineNumbers, () => {
@@ -1196,437 +855,5 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.p-editor {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: var(--a-color-bg);
-  position: relative;
-}
-
-.p-editor:not(.no-border) {
-  border: 1px solid var(--a-color-border-soft);
-}
-
-.p-editor-presence {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.4rem 1.25rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  flex-shrink: 0;
-}
-
-.presence-avatars {
-  display: flex;
-  gap: 0.4rem;
-}
-
-.presence-dot {
-  width: 1.6rem;
-  height: 1.6rem;
-  border-radius: 9999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 500;
-  font-size: 0.65rem;
-  border: 1px solid var(--a-color-text);
-  flex-shrink: 0;
-}
-
-.editor-mode-switches {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem 0;
-  flex-wrap: wrap;
-}
-
-.editor-reference-trigger {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  color: var(--a-color-text);
-  cursor: pointer;
-}
-
-.editor-reference-trigger:hover {
-  background: var(--a-color-surface-muted);
-}
-
-.editor-reference-trigger:focus-visible {
-  outline: 2px solid var(--a-color-primary);
-  outline-offset: 2px;
-}
-
-.mode-switch {
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.8rem;
-  min-width: 8.5rem;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  padding: 0.55rem 0.75rem;
-  cursor: pointer;
-  color: var(--a-color-text);
-  font: inherit;
-  font-weight: var(--a-font-weight-strong, 700);
-  line-height: 1;
-  transition: background-color 0.12s ease, color 0.12s ease;
-}
-
-.mode-switch:hover {
-  background: var(--a-color-surface-muted);
-}
-
-.mode-switch-label {
-  font-size: 0.84rem;
-  letter-spacing: 0;
-}
-
-.mode-switch-state {
-  min-width: 2.2rem;
-  padding: 0.22rem 0.45rem;
-  border: 1px solid var(--a-color-text);
-  background: var(--a-color-bg);
-  color: var(--a-color-text);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.72rem;
-  font-weight: var(--a-font-weight-strong, 700);
-  letter-spacing: 0;
-}
-
-.mode-switch.active {
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
-}
-
-.mode-switch.active .mode-switch-state {
-  background: var(--a-color-bg);
-  color: var(--a-color-fg);
-}
-
-.p-editor-toolbar {
-  display: flex;
-  flex-direction: column;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.tb-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.4rem 0.75rem;
-}
-
-.tb-row + .tb-row {
-  border-top: 1px solid var(--a-color-border-soft);
-}
-
-.tb-row-label {
-  font-size: 0.58rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  text-transform: uppercase;
-  color: var(--a-color-muted);
-  margin-right: 0.2rem;
-  flex-shrink: 0;
-}
-
-.tb-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.35rem 0.6rem;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  color: var(--a-color-text);
-  font-size: 0.72rem;
-  font-weight: var(--a-font-weight-strong, 700);
-  font-family: inherit;
-  cursor: pointer;
-  letter-spacing: 0;
-  line-height: 1;
-  white-space: nowrap;
-  transition: background-color 0.12s ease, color 0.12s ease;
-}
-
-.tb-btn:hover,
-.tb-btn.active {
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
-}
-
-.tb-btn.uploading {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.tb-sep {
-  display: inline-block;
-  width: 1px;
-  height: 1.2rem;
-  background: var(--a-color-border-soft);
-  margin: 0 0.2rem;
-  flex-shrink: 0;
-}
-
-.tb-hidden-input {
-  display: none;
-}
-
-.p-editor-sv-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  flex: 1;
-  min-height: 0;
-  position: relative;
-}
-
-.p-editor-normal-body {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-  position: relative;
-}
-
-.p-editor-sv-body.dragging::after,
-.p-editor-normal-body.dragging::after {
-  content: '松开鼠标上传图片';
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.08);
-  border: 1px solid var(--a-color-border-soft);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 500;
-  font-size: 1rem;
-  color: var(--a-color-fg);
-  pointer-events: none;
-  z-index: 5;
-}
-
-.sv-pane {
-  min-height: 0;
-  overflow: auto;
-}
-
-.toast-container {
-  min-height: 20rem;
-  height: 100%;
-}
-
-.sv-source {
-  border-right: 1px solid var(--a-color-border-soft);
-  display: flex;
-  flex-direction: column;
-}
-
-.cm-source-pane {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-}
-
-.cm-container {
-  flex: 1;
-  height: 100%;
-  min-height: 0;
-}
-
-.p-editor-normal-body .cm-container {
-  min-height: 0;
-}
-
-:deep(.cm-editor) {
-  height: 100%;
-}
-
-:deep(.cm-scroller) {
-  overflow: auto;
-}
-
-:deep(.cm-highlightSpace),
-:deep(.cm-highlightTab) {
-  background-image: radial-gradient(circle at 50% 55%, #888 20%, transparent 5%);
-  background-position: center;
-  background-repeat: repeat-x;
-  background-size: 0.35rem 0.35rem;
-}
-
-:deep(.cm-markdown-strike) {
-  text-decoration: line-through;
-}
-
-:deep(.cm-markdown-widget) {
-  display: block;
-  width: 100%;
-  margin: 0;
-  padding-block: 0.5rem;
-  cursor: text;
-}
-
-:deep(.cm-markdown-widget > :first-child) {
-  margin-top: 0;
-}
-
-:deep(.cm-markdown-widget > :last-child) {
-  margin-bottom: 0;
-}
-
-:deep(.cm-markdown-widget img) {
-  display: block;
-  max-width: 100%;
-  max-height: 32rem;
-  object-fit: contain;
-}
-
-:deep(.cm-markdown-widget pre) {
-  overflow-x: auto;
-  padding: 1rem;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  color: var(--a-color-fg);
-}
-
-.sv-preview {
-  padding: 1.5rem 1.5rem 2rem;
-  background: var(--a-color-bg);
-  overflow: auto;
-  min-height: 16rem;
-}
-
-@media (max-width: 700px) {
-  .p-editor-sv-body {
-    grid-template-columns: 1fr;
-  }
-
-  .sv-source {
-    border-right: none;
-    border-bottom: 1px solid var(--a-color-border-soft);
-  }
-
-  .cm-container {
-    min-height: 10rem;
-  }
-}
-
-:deep(.sv-preview pre) {
-  position: relative;
-  padding-top: 2.5rem;
-  overflow: hidden;
-  background: #1e1e2e;
-  border: 1px solid var(--a-color-border-soft);
-  box-shadow: none;
-  color: #cdd6f4;
-}
-
-:deep(.sv-preview pre code),
-:deep(.sv-preview pre code.hljs) {
-  background: transparent;
-  color: inherit;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
-  font-size: 0.82rem;
-  line-height: 1.8;
-}
-
-:deep(.code-block-titlebar) {
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 2.5rem;
-  display: flex;
-  align-items: center;
-  padding: 0 0.85rem;
-  background: #2d2d2d;
-  border-bottom: 1px solid #3d3d3d;
-}
-
-:deep(.code-block-lights) {
-  display: flex;
-  gap: 0.42rem;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-:deep(.code-block-dot) {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-:deep(.dot-red) {
-  background: #ff5f57;
-  border: 1px solid #e0443e;
-}
-
-:deep(.dot-yellow) {
-  background: #ffbd2e;
-  border: 1px solid #dea123;
-}
-
-:deep(.dot-green) {
-  background: #28ca42;
-  border: 1px solid #1aab2e;
-}
-
-:deep(.code-block-lang) {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: 'SFMono-Regular', Consolas, monospace;
-  font-size: 0.7rem;
-  font-weight: 500;
-  color: #9ca3af;
-  letter-spacing: 0;
-  text-transform: lowercase;
-  pointer-events: none;
-}
-
-:deep(.code-block-copy) {
-  margin-left: auto;
-  background: transparent;
-  border: 1px solid #4b5563;
-  color: #9ca3af;
-  font-size: 0.65rem;
-  font-weight: 500;
-  font-family: inherit;
-  padding: 0.2rem 0.55rem;
-  cursor: pointer;
-  letter-spacing: 0;
-  transition: background 150ms, color 150ms;
-}
-
-:deep(.code-block-copy:hover) {
-  background: #9ca3af;
-  color: #1a1a2e;
-  border-color: #9ca3af;
-}
-
-.p-editor-label {
-  font-size: var(--a-text-xs);
-  font-weight: 500;
-  letter-spacing: 0;
-}
+@import "./pEditorRuntime.css";
 </style>

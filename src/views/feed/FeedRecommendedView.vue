@@ -108,34 +108,14 @@
     <!-- ═══════════════════════════════════════════════════════════════
          2. 主题与领域胶囊栏（Horizontal Category & Theme Pills）
          ═══════════════════════════════════════════════════════════════ -->
-    <div class="discovery-pills-bar">
-      <!-- 基础类型胶囊 -->
-      <button
-        v-for="cat in categoryOptions"
-        :key="cat.value"
-        type="button"
-        class="topic-pill"
-        :class="{ 'is-active': category === cat.value && theme === ALL_THEME }"
-        @click="selectCategory(cat.value)"
-      >
-        {{ cat.label }}
-      </button>
-
-      <!-- 主题标签分隔与动态主题列表 -->
-      <template v-if="themes.length">
-        <span class="topic-pill-divider" aria-hidden="true">|</span>
-        <button
-          v-for="t in themes"
-          :key="t.id"
-          type="button"
-          class="topic-pill"
-          :class="{ 'is-active': theme === t.id }"
-          @click="selectTheme(t.id)"
-        >
-          # {{ t.label }}
-        </button>
-      </template>
-    </div>
+    <FeedRecommendedTopicsBar
+      :category="category"
+      :theme="theme"
+      :category-options="categoryOptions"
+      :themes="themes"
+      @select-category="selectCategory"
+      @select-theme="selectTheme"
+    />
 
     <p v-if="currentThemeDescription" class="theme-desc-banner">{{ currentThemeDescription }}</p>
 
@@ -394,6 +374,8 @@ import SubscriptionAddSheet from '@/components/feed/SubscriptionAddSheet.vue'
 import FeedSourceIdentityCard from '@/components/feed/FeedSourceIdentityCard.vue'
 import FeedArticleSheet from '@/components/feed/FeedArticleSheet.vue'
 import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.vue'
+import FeedRecommendedTopicsBar from '@/components/feed/FeedRecommendedTopicsBar.vue'
+import { useFeedRecommendedPendingAuth } from '@/composables/feed/useFeedRecommendedPendingAuth'
 import { useApi } from '@/composables/useApi'
 import { formatPublicRating, hasPublicRating } from '@/utils/rating'
 import { useFeedStore } from '@/stores/feed'
@@ -410,61 +392,31 @@ import {
 } from '@/utils/recommendationLanguage'
 import type { AutoAddSubscriptionPayload, FeedArticleSource, FeedExploreRecentItem, FeedExploreSource, FeedItem, FeedRecommendationTheme, FeedSourceCategory, Post, TimelineItem } from '@/types'
 
-type RecommendationMode = 'featured' | 'random'
-
-const ALL_CATEGORY = 'all'
-const ALL_THEME = 'all'
-
-type FeedSourceFilterCategory = typeof ALL_CATEGORY | FeedSourceCategory
-type ExploreSourcePayload = Partial<FeedExploreSource> & {
-  rss_url?: string
-  cover_url?: string
-  subscription_count?: number
-  recent_item_count?: number
-  last_published_at?: string
-  language_code?: string
-  recent_items?: Array<{ id: string; title: string; published_at?: string }>
-}
-
-type RecommendationItem = {
-  id: string
-  title: string
-  summary?: string
-  description?: string
-  content_type?: string
-  language_code?: string
-  source_subscribed?: boolean
-  avatar_url?: string
-  image_url?: string
-  source_image_url?: string
-  target_path: string
-  source_id?: string
-  source_title?: string
-  source_type?: string
-  source_category?: string
-  platform?: 'youtube' | 'bilibili' | 'github'
-  source_content_type?: 'video' | 'project_update'
-  source_path?: string
-  rss_url?: string
-  score_label?: string
-  bookmark_count?: number
-  read_count?: number
-  view_count?: number
-  rating_score?: number
-  rating_count?: number
-  update_frequency_label?: string
-  last_published_at?: string
-	  subscribed?: boolean
-	  recent_items?: Array<{ id: string; title: string }>
-}
-
-type DiscoverySearchArticle = {
-  id: string
-  title: string
-  summary: string
-  sourceTitle: string
-  targetPath: string
-}
+import {
+  useFeedDiscoverySearch,
+  type DiscoverySearchArticle,
+} from '@/composables/feed/useFeedDiscoverySearch'
+import {
+  ALL_CATEGORY,
+  ALL_THEME,
+  type FeedSourceFilterCategory,
+  type RecommendationItem,
+  type RecommendationMode,
+  normalizeMode,
+  normalizeCategory,
+  normalizeLanguage,
+  normalizePage,
+  normalizedCategoryParam,
+  formatDate,
+  articleAvatarURL,
+  toRecommendedSource,
+  channelMetricLabel,
+  channelSummaryText,
+  channelMetadataText,
+  subscriptionSourceId,
+  sourceSubscriptionContext,
+  sourceFromRecommendation,
+} from '@/composables/feed/useFeedRecommendedHelpers'
 
 const router = useRouter()
 const route = useRoute()
@@ -528,21 +480,6 @@ function showRecommendationReason(item: RecommendationItem) {
   activeReasonItem.value = item
 }
 
-function normalizeMode(raw: unknown): RecommendationMode {
-  return raw === 'random' ? 'random' : 'featured'
-}
-
-function normalizeCategory(raw: unknown): FeedSourceFilterCategory {
-  return raw === 'blog' || raw === 'news' || raw === 'social' || raw === 'video' || raw === 'forum' || raw === 'podcast'
-    ? raw
-    : ALL_CATEGORY
-}
-
-function normalizeLanguage(raw: unknown): RecommendationLanguage {
-  if (raw === ALL_RECOMMENDATION_LANGUAGE) return ALL_RECOMMENDATION_LANGUAGE
-  return normalizeRecommendationLanguage(raw) ?? detectDefaultRecommendationLanguage()
-}
-
 // ── 核心响应式筛选状态 ──
 const mode = ref<RecommendationMode>(normalizeMode(route.query.mode))
 const category = ref<FeedSourceFilterCategory>(normalizeCategory(route.query.category))
@@ -554,16 +491,12 @@ const articlesLoading = ref(false)
 const channelsLoading = ref(false)
 const loading = computed(() => articlesLoading.value || channelsLoading.value)
 const subscribingChannelIds = ref<string[]>([])
+const isChannelSubscribeBusy = (id: string) => subscribingChannelIds.value.includes(id)
 const articlesError = ref('')
 const channelsError = ref('')
 let recommendationRequest = 0
 const articles = ref<RecommendationItem[]>([])
 const channels = ref<RecommendationItem[]>([])
-
-function normalizePage(value: unknown) {
-  const pageValue = Number.parseInt(String(value || '1'), 10)
-  return Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 1
-}
 
 const page = ref(normalizePage(route.query.page))
 const pageSize = 20
@@ -580,17 +513,19 @@ const channelArticleRequestId = ref(0)
 const showChannelArticleSheet = ref(false)
 const selectedChannelArticle = ref<TimelineItem | null>(null)
 
-// ── 全局搜索与快捷订阅 ──
-const discoverySearchQuery = ref('')
-const discoverySearchOpen = ref(false)
-const discoverySearchLoading = ref(false)
-const discoverySearchError = ref('')
-const discoverySearchSources = ref<FeedExploreSource[]>([])
-const discoverySearchArticles = ref<DiscoverySearchArticle[]>([])
-let discoverySearchTimer: ReturnType<typeof setTimeout> | null = null
-let discoverySearchCloseTimer: ReturnType<typeof setTimeout> | null = null
-let discoverySearchController: AbortController | null = null
-let discoverySearchRequestId = 0
+// ── 全局搜索 ──
+const {
+  discoverySearchQuery,
+  discoverySearchOpen,
+  discoverySearchLoading,
+  discoverySearchError,
+  discoverySearchSources,
+  discoverySearchArticles,
+  handleDiscoverySearchInput,
+  handleDiscoverySearchFocus,
+  handleDiscoverySearchBlur,
+  searchDiscovery,
+} = useFeedDiscoverySearch()
 
 const showAddModal = ref(false)
 const addingSubscription = ref(false)
@@ -599,7 +534,6 @@ const addSubscriptionResetKey = ref(0)
 const subscriptionToastVisible = ref(false)
 const subscriptionToastMessage = ref('')
 const subscriptionToastType = ref<'success' | 'error'>('success')
-const pendingSubscriptionRestored = ref(false)
 
 const modeOptions: Array<{ label: string; value: RecommendationMode }> = [
   { label: '精选', value: 'featured' },
@@ -620,35 +554,6 @@ const currentThemeDescription = computed(() => {
   if (theme.value === ALL_THEME) return ''
   return themes.value.find((item) => item.id === theme.value)?.description ?? ''
 })
-
-function normalizedCategoryParam(value: FeedSourceFilterCategory) {
-  return value === ALL_CATEGORY ? 'all' : value
-}
-
-function normalizeExploreSource(payload: ExploreSourcePayload): FeedExploreSource {
-  return {
-    id: payload.id || '',
-    title: payload.title || '',
-    rssUrl: payload.rssUrl ?? payload.rss_url,
-    coverUrl: payload.coverUrl ?? payload.cover_url,
-    category: payload.category || 'blog',
-    subscriptionCount: payload.subscriptionCount ?? payload.subscription_count ?? 0,
-    recentItemCount: payload.recentItemCount ?? payload.recent_item_count ?? 0,
-    lastPublishedAt: payload.lastPublishedAt ?? payload.last_published_at,
-    language_code: payload.language_code,
-    subscribed: Boolean(payload.subscribed),
-    platform: payload.platform,
-    content_type: payload.content_type,
-    recentItems: (payload.recentItems ?? payload.recent_items ?? []).map((item) => {
-      const recent = item as FeedExploreRecentItem & { published_at?: string }
-      return {
-        id: recent.id,
-        title: recent.title,
-        publishedAt: recent.publishedAt ?? recent.published_at,
-      }
-    }),
-  }
-}
 
 function syncQuery() {
   router.replace({
@@ -806,80 +711,6 @@ function refreshRecommendationBatch() {
 }
 
 // ── 格式化与辅助方法 ──
-function formatDate(dateStr?: string) {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return `${date.getMonth() + 1}月${date.getDate()}日`
-}
-
-function articleAvatarURL(item: RecommendationItem) {
-  const candidates = [
-    item.source_image_url,
-    buildSourceFaviconURL(item.rss_url),
-    item.avatar_url,
-    item.image_url,
-  ]
-  return candidates.find((value) => value?.trim())?.trim() || ''
-}
-
-function toRecommendedSource(item: RecommendationItem): FeedExploreSource {
-  return {
-    id: item.source_id || item.id,
-    title: item.title,
-    rssUrl: item.rss_url,
-    coverUrl: item.image_url,
-    category: (item.source_category as FeedSourceCategory) || 'blog',
-    subscriptionCount: item.bookmark_count ?? item.read_count ?? 0,
-    recentItemCount: item.recent_items?.length ?? 0,
-    lastPublishedAt: item.last_published_at,
-    subscribed: Boolean(item.subscribed),
-    recentItems: item.recent_items ?? [],
-    description: item.summary || item.description,
-    platform: item.platform,
-    content_type: item.source_content_type,
-  }
-}
-
-function channelMetricLabel(item: RecommendationItem) {
-  return item.source_category ? item.source_category.toUpperCase() : 'RECOMMENDED'
-}
-
-function channelSummaryText(item: RecommendationItem) {
-  return item.summary || item.description || ''
-}
-
-function channelMetadataText(item: RecommendationItem) {
-  const parts: string[] = []
-  if (item.bookmark_count !== undefined) parts.push(`${item.bookmark_count} 订阅`)
-  if (item.update_frequency_label) parts.push(item.update_frequency_label)
-  return parts.join(' · ')
-}
-
-function isChannelSubscribeBusy(id: string) {
-  return subscribingChannelIds.value.includes(id)
-}
-
-function subscriptionSourceId(item: RecommendationItem) {
-  return item.source_id || item.id
-}
-
-function sourceSubscriptionContext(source: RecommendationItem | FeedArticleSource) {
-  if ('type' in source) {
-    return {
-      id: source.id,
-      title: source.title,
-      type: source.type,
-      rssUrl: source.rssUrl,
-    }
-  }
-  return {
-    id: subscriptionSourceId(source),
-    title: source.title,
-    type: source.source_type === 'external_rss' ? 'external_rss' as const : 'internal_channel' as const,
-    rssUrl: source.rss_url,
-  }
-}
-
 function showSubscriptionFeedback(message: string, type: 'success' | 'error' = 'success') {
   subscriptionToastMessage.value = message
   subscriptionToastType.value = type
@@ -966,130 +797,27 @@ async function subscribeSelectedChannel() {
   }
 }
 
-function restorePendingSubscriptionSource() {
-  const sourceId = typeof route.query.subscribe_source_id === 'string'
-    ? route.query.subscribe_source_id
-    : ''
-  if (pendingSubscriptionRestored.value || !authStore.isAuthenticated || !sourceId) return
-
-  const item = channels.value.find((candidate) => subscriptionSourceId(candidate) === sourceId)
-  if (item) {
-    pendingSubscriptionRestored.value = true
-    openArticleSource(item)
-  } else {
-    const type = route.query.subscribe_source_type
-    const title = route.query.subscribe_source_title
-    if ((type !== 'internal_channel' && type !== 'external_rss') || typeof title !== 'string' || !title.trim()) return
-    pendingSubscriptionRestored.value = true
-    openSource({
-      id: sourceId,
-      title,
-      type,
-      rssUrl: typeof route.query.subscribe_source_url === 'string' ? route.query.subscribe_source_url : undefined,
-      subscribed: false,
-    })
-  }
-
-  const query = { ...route.query }
-  for (const key of ['subscribe_source_id', 'subscribe_source_type', 'subscribe_source_title', 'subscribe_source_url']) {
-    delete query[key]
-  }
-  void router.replace({ query })
-}
-
-const pendingArticleRestored = ref(false)
-
-function handleArticleRequireAuth(payload: { articleId: string; action: 'star' | 'read_later' }) {
-  if (authStore.isAuthenticated) return
-
-  const query = {
-    ...route.query,
-    read_article_id: payload.articleId,
-    article_action: payload.action,
-  } as Record<string, string | string[] | null | undefined>
-
-  if (selectedChannelSource.value) {
-    query.subscribe_source_id = selectedChannelSource.value.id
-    query.subscribe_source_type = selectedChannelSource.value.type
-    query.subscribe_source_title = selectedChannelSource.value.title
-    if (selectedChannelSource.value.rssUrl) {
-      query.subscribe_source_url = selectedChannelSource.value.rssUrl
-    }
-  }
-
-  const resolved = router.resolve?.({
-    path: route.path || '/feed',
-    query,
-    hash: route.hash,
-  })
-  const search = new URLSearchParams(query as Record<string, string>).toString()
-  const returnPath = resolved?.fullPath || `${route.path || '/feed'}${search ? `?${search}` : ''}`
-  void router.push({ path: '/login', query: { redirect: returnPath } })
-}
-
-async function restorePendingArticle() {
-  const articleId = typeof route.query.read_article_id === 'string'
-    ? route.query.read_article_id
-    : ''
-  if (pendingArticleRestored.value || !authStore.isAuthenticated || !articleId) return
-
-  pendingArticleRestored.value = true
-
-  const query = { ...route.query }
-  delete query.read_article_id
-  delete query.article_action
-  void router.replace({ query })
-
-  let article: TimelineItem | null = null
-  const fromChannel = channelArticles.value.find((candidate) => {
-    if (candidate.type === 'feed_item' && candidate.feed_item?.id === articleId) return true
-    if (candidate.type === 'post' && candidate.post?.id === articleId) return true
-    return false
-  })
-  if (fromChannel) {
-    article = fromChannel
-  } else {
-    try {
-      const res = await apiRequestResult(`${api.blog.posts}/${encodeURIComponent(articleId)}`)
-      const payload = res.data
-      const postData = payload?.data || payload
-      if (res.ok && postData && typeof postData === 'object' && 'id' in postData) {
-        const post = postData as Post
-        article = {
-          type: 'post',
-          post,
-          is_read: false,
-          published_at: post.published_at || post.created_at,
-        } as TimelineItem
-      }
-    } catch {
-      // fallback
-    }
-    if (!article) {
-      try {
-        const res = await apiRequestResult(`${api.url}/feed/items/${encodeURIComponent(articleId)}`)
-        const payload = res.data
-        const itemData = payload?.data || payload
-        if (res.ok && itemData && typeof itemData === 'object' && 'id' in itemData) {
-          const item = itemData as FeedItem
-          article = {
-            type: 'feed_item',
-            feed_item: item,
-            is_read: false,
-            published_at: item.published_at || (item as { created_at?: string }).created_at || '',
-          } as TimelineItem
-        }
-      } catch {
-        // ignore
-      }
-    }
-  }
-
-  if (article) {
+const {
+  pendingSubscriptionRestored,
+  pendingArticleRestored,
+  restorePendingSubscriptionSource,
+  handleArticleRequireAuth,
+  restorePendingArticle,
+} = useFeedRecommendedPendingAuth({
+  route,
+  router,
+  isAuthenticated: computed(() => authStore.isAuthenticated),
+  api,
+  channels,
+  channelArticles,
+  selectedChannelSource,
+  openArticleSource,
+  openSource,
+  onRestoreArticle: (article) => {
     selectedChannelArticle.value = article
     showChannelArticleSheet.value = true
-  }
-}
+  },
+})
 
 // ── 交互事件处理 ──
 function openArticle(item: RecommendationItem) {
@@ -1098,20 +826,6 @@ function openArticle(item: RecommendationItem) {
     return
   }
   void router.push(`/feed/item/${encodeURIComponent(item.id)}`)
-}
-
-function sourceFromRecommendation(item: RecommendationItem): FeedArticleSource {
-  const isInternalChannel = item.source_type === 'internal_channel' || item.target_path?.startsWith('/channels/')
-  return {
-    id: subscriptionSourceId(item),
-    title: item.source_title || item.title,
-    rssUrl: item.rss_url,
-    imageUrl: item.source_image_url || (item.source_title ? undefined : item.image_url),
-    type: isInternalChannel ? 'internal_channel' : 'external_rss',
-    subscribed: Boolean(item.source_subscribed || item.subscribed),
-    platform: item.platform,
-    contentType: item.source_content_type,
-  }
 }
 
 function openSource(source: FeedArticleSource) {
@@ -1219,79 +933,6 @@ function toggleChannelArticleStar(article: TimelineItem) {
 function toggleChannelArticleReadingList(article: TimelineItem) {
   if ((article.type === 'feed_item' || article.type === 'project_update') && article.feed_item) {
     void feedStore.toggleReadingListItem(article.feed_item.id)
-  }
-}
-
-// ── 搜索处理 ──
-function handleDiscoverySearchInput(value: string) {
-  discoverySearchQuery.value = value
-  discoverySearchOpen.value = true
-  if (discoverySearchCloseTimer) clearTimeout(discoverySearchCloseTimer)
-  if (discoverySearchTimer) clearTimeout(discoverySearchTimer)
-  if (value.trim().length < 2) {
-    discoverySearchSources.value = []
-    discoverySearchArticles.value = []
-    discoverySearchError.value = ''
-    discoverySearchLoading.value = false
-    return
-  }
-  discoverySearchTimer = setTimeout(() => {
-    void searchDiscovery(value)
-  }, 250)
-}
-
-function handleDiscoverySearchFocus() {
-  if (discoverySearchCloseTimer) clearTimeout(discoverySearchCloseTimer)
-  discoverySearchOpen.value = true
-}
-
-function handleDiscoverySearchBlur() {
-  if (discoverySearchCloseTimer) clearTimeout(discoverySearchCloseTimer)
-  discoverySearchCloseTimer = setTimeout(() => {
-    discoverySearchOpen.value = false
-  }, 150)
-}
-
-async function searchDiscovery(queryValue = discoverySearchQuery.value) {
-  discoverySearchController?.abort()
-  discoverySearchController = null
-  const query = queryValue.trim()
-  const requestId = ++discoverySearchRequestId
-  if (query.length < 2) return
-
-  discoverySearchLoading.value = true
-  discoverySearchError.value = ''
-  const controller = new AbortController()
-  discoverySearchController = controller
-
-  try {
-    const [sourceRes, articleRes] = await Promise.all([
-      apiRequestResult(`${api.url}/feed/explore/sources?page=1&limit=6&q=${encodeURIComponent(query)}`, { signal: controller.signal }),
-      apiRequestResult(`${api.url}/feed/explore?page=1&page_size=6&q=${encodeURIComponent(query)}&sort=recent`, { signal: controller.signal }),
-    ])
-    if (requestId !== discoverySearchRequestId) return
-
-    discoverySearchSources.value = sourceRes.ok && Array.isArray(sourceRes.data?.data)
-      ? sourceRes.data.data.map((item: ExploreSourcePayload) => normalizeExploreSource(item))
-      : []
-    discoverySearchArticles.value = articleRes.ok && Array.isArray(articleRes.data?.data)
-      ? (articleRes.data.data as TimelineItem[]).map((item: TimelineItem) => {
-        if (item.type === 'post' && item.post) {
-          return { id: item.post.id, title: item.post.title, summary: item.post.summary || '', sourceTitle: item.post.channel?.name || '', targetPath: `/posts/post/${item.post.id}` }
-        }
-        if ((item.type === 'feed_item' || item.type === 'project_update') && item.feed_item) {
-          return { id: item.feed_item.id, title: item.feed_item.title, summary: item.feed_item.summary || '', sourceTitle: item.feed_item.feed_source?.title || '', targetPath: `/feed/item/${item.feed_item.id}` }
-        }
-        return null
-      }).filter((item): item is DiscoverySearchArticle => Boolean(item))
-      : []
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') return
-    if (requestId !== discoverySearchRequestId) return
-    discoverySearchError.value = '搜索失败，请稍后重试'
-  } finally {
-    if (discoverySearchController === controller) discoverySearchController = null
-    if (requestId === discoverySearchRequestId) discoverySearchLoading.value = false
   }
 }
 
@@ -1427,231 +1068,9 @@ onUnmounted(() => { recommendationRequest++ })
 </script>
 
 <style scoped>
-.recommendation-skeleton {
-  display: grid;
-  gap: 0.5rem;
-  padding: 1rem;
-}
+@import "./feedRecommended.css";
 
-.feed-recommendation-actions {
-  display: flex;
-  justify-content: center;
-  padding: 1.25rem 0 0.5rem;
-}
-
-.feed-recommended-view {
-  max-width: 78rem;
-  margin: 0 auto;
-  padding: 0 1.25rem 5rem;
-  display: grid;
-  gap: 1.75rem;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   1. 顶部总控工具栏
-   ═══════════════════════════════════════════════════════════════ */
-.discovery-top-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-}
-
-.discovery-search-box {
-  flex: 1 1 auto;
-  min-width: 0;
-  height: var(--a-control-height-sm, 2.25rem);
-}
-
-.discovery-search-box :deep(.search-surface) {
-  height: var(--a-control-height-sm, 2.25rem);
-}
-
-.discovery-search-box :deep(.search-frame) {
-  height: var(--a-control-height-sm, 2.25rem);
-}
-
-.discovery-search-box :deep(.search-main) {
-  height: var(--a-control-height-sm, 2.25rem);
-}
-
-.discovery-search-box :deep(.search-btn) {
-  height: 100%;
-}
-
-.discovery-top-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-shrink: 0;
-  height: var(--a-control-height-sm, 2.25rem);
-}
-
-.discovery-lang-select {
-  width: 7.5rem;
-  height: var(--a-control-height-sm, 2.25rem);
-}
-
-.discovery-add-btn {
-  white-space: nowrap;
-  height: var(--a-control-height-sm, 2.25rem);
-}
-
-/* 搜索结果下拉 */
-.discovery-search-group {
-  display: grid;
-  gap: 0.35rem;
-  margin-bottom: 0.75rem;
-}
-.discovery-search-group__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.72rem;
-  color: var(--a-color-muted);
-}
-.discovery-search-result {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 0.5rem 0.65rem;
-  border: none;
-  border-radius: var(--a-radius-control);
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-.discovery-search-result:hover { background: var(--a-color-surface-muted); }
-.discovery-search-result__main { display: grid; min-width: 0; }
-.discovery-search-result__main strong { font-size: 0.85rem; color: var(--a-color-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.discovery-search-result__main small { font-size: 0.72rem; color: var(--a-color-muted); }
-.discovery-search-result__status { font-size: 0.7rem; color: var(--a-color-muted-soft); flex-shrink: 0; }
-.discovery-search-hint { font-size: 0.8rem; color: var(--a-color-muted); padding: 0.5rem; margin: 0; }
-.discovery-search-hint.error { color: var(--a-color-danger); }
-
-/* ═══════════════════════════════════════════════════════════════
-   2. 主题与领域胶囊栏
-   ═══════════════════════════════════════════════════════════════ */
-.discovery-pills-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.45rem;
-  padding-bottom: 0.25rem;
-}
-
-.topic-pill {
-  padding: 0.35rem 0.75rem;
-  border: none;
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-muted);
-  font-size: 0.78rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
-}
-.topic-pill:hover {
-  color: var(--a-color-fg);
-  background: color-mix(in srgb, var(--a-color-surface-muted) 80%, var(--a-color-border-soft));
-}
-.topic-pill.is-active {
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
-}
-
-.topic-pill-divider {
-  color: var(--a-color-border-soft);
-  padding: 0 0.25rem;
-  font-size: 0.8rem;
-}
-
-.theme-desc-banner {
-  margin: -0.75rem 0 0;
-  font-size: 0.8rem;
-  color: var(--a-color-muted);
-  background: var(--a-color-surface-muted);
-  padding: 0.45rem 0.85rem;
-  border-radius: var(--a-radius-control);
-}
-
-.state-line {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--a-color-muted);
-}
-.state-line--error { color: var(--a-color-danger); }
-
-/* ═══════════════════════════════════════════════════════════════
-   3. 左右双并列信息流
-   ═══════════════════════════════════════════════════════════════ */
-.dual-streams-container {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  align-items: start;
-  gap: 1.75rem;
-}
-
-.stream-column {
-  display: grid;
-  gap: 1rem;
-  min-width: 0;
-}
-
-.stream-column__head {
-  display: flex;
-  min-width: 0;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-  border-bottom: none;
-  padding-bottom: 0.25rem;
-}
-
-.stream-column__title-group {
-  display: flex;
-  min-width: 0;
-  flex: 1 1 auto;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.stream-column__title-group h2 {
-  min-width: 0;
-  margin: 0;
-  color: var(--a-color-fg);
-  font-size: 1.05rem;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.stream-count {
-  font-size: 0.74rem;
-  color: var(--a-color-muted-soft);
-}
-
-.section-badge {
-  font-size: 0.65rem;
-  font-weight: 500;
-  padding: 0.15em 0.5em;
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-text);
-  letter-spacing: 0.05em;
-}
-.section-badge--hot {
-  background: color-mix(in srgb, var(--a-color-warning) 15%, transparent);
-  color: var(--a-color-warning);
-}
-
-.stream-sub-filters {
-  display: flex;
-  align-items: center;
-}
-
-/* 文章流容器：文章条目自身提供分隔线，不再包裹卡片边框 */
+/* Contract rules verified by tests/unit/views/feed/FeedRecommendedView.spec.ts */
 .feed-timeline-box {
   border: 0;
   border-radius: 0;
@@ -1659,207 +1078,10 @@ onUnmounted(() => { recommendationRequest++ })
   background: transparent;
 }
 
-.feed-source-trigger {
-  appearance: none;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--a-color-fg);
-  cursor: pointer;
-  font: inherit;
-  font-weight: 500;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.16em;
-}
-.feed-source-trigger:hover {
-  color: var(--a-color-text);
-  text-decoration-thickness: 2px;
-}
-
-.feed-meta-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  color: var(--a-color-muted-soft);
-  font-size: 0.72rem;
-  font-weight: 500;
-}
-
-.feed-type-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.1em 0.45em;
-  border-radius: var(--a-radius-control);
-  font-size: 0.65rem;
-  font-weight: 600;
-  line-height: 1.5;
-}
-.feed-type-tag--blog {
-  background: color-mix(in srgb, var(--a-color-blog) 12%, transparent);
-  color: var(--a-color-blog);
-}
-.feed-type-tag--rss {
-  background: color-mix(in srgb, #1e40af 12%, transparent);
-  color: #1e40af;
-}
-
-/* 频道流容器：与文章流保持无外框的信息流样式 */
-.channels-stack {
-  display: grid;
-  gap: 0;
-}
-
 .channels-stack :deep(.feed-source-card) {
   border: 0;
   border-top: 1px solid var(--a-color-border-soft);
   border-radius: 0;
   background: transparent;
-}
-
-.channels-stack :deep(.feed-source-card:first-child) {
-  border-top: 0;
-}
-
-.recommendation-feedback {
-  position: relative;
-  display: inline-flex;
-}
-
-.recommendation-feedback summary {
-  display: grid;
-  place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  color: var(--a-color-muted);
-  border-radius: var(--a-radius-control);
-  cursor: pointer;
-  list-style: none;
-}
-
-.recommendation-feedback summary::-webkit-details-marker { display: none; }
-.recommendation-feedback summary:hover,
-.recommendation-feedback[open] summary { color: var(--a-color-primary); background: var(--a-color-surface-muted); }
-
-.recommendation-feedback__menu {
-  position: absolute;
-  z-index: 45;
-  right: 0;
-  top: calc(100% + 0.35rem);
-  display: grid;
-  min-width: 9rem;
-  padding: 0.3rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: 4px;
-  background: var(--a-color-bg);
-  box-shadow: none;
-}
-
-.recommendation-feedback__menu button {
-  padding: 0.45rem 0.6rem;
-  color: var(--a-color-fg);
-  text-align: left;
-  white-space: nowrap;
-}
-
-.recommendation-feedback__menu button:hover { background: var(--a-color-surface-muted); color: var(--a-color-primary); }
-
-@media (max-width: 880px) {
-  .dual-streams-container {
-    grid-template-columns: 1fr;
-  }
-
-  .discovery-top-toolbar {
-    flex-wrap: wrap;
-  }
-
-  .discovery-search-box {
-    width: 100%;
-    order: 2;
-  }
-
-  .discovery-top-actions {
-    width: 100%;
-    justify-content: flex-end;
-    order: 1;
-  }
-}
-
-@media (max-width: 720px) {
-  .feed-recommended-view {
-    gap: 1rem;
-    padding: 0 0 1rem;
-  }
-
-  .discovery-pills-bar {
-    flex-wrap: nowrap;
-    margin-right: -1rem;
-    padding-right: 1rem;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .discovery-pills-bar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .topic-pill {
-    flex: 0 0 auto;
-    min-height: 40px;
-  }
-
-  .stream-column__head {
-    display: grid;
-    align-items: start;
-  }
-
-  .stream-column__title-group {
-    width: 100%;
-  }
-
-  .stream-sub-filters {
-    width: 100%;
-    min-width: 0;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .stream-sub-filters :deep(.p-segmented-control) {
-    min-width: 0;
-    flex: 1 1 auto;
-  }
-
-  .stream-sub-filters :deep(.p-segmented-control-item) {
-    min-width: 0;
-    flex: 1 1 0;
-    padding-inline: 0.5rem;
-  }
-}
-
-.recommendation-reason-dialog {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.25rem 0;
-}
-
-.recommendation-reason-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--a-color-text);
-  margin: 0;
-}
-
-.recommendation-reason-body {
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--a-color-muted);
-  margin: 0;
-}
-
-.recommendation-reason-footer {
-  display: flex;
-  justify-content: flex-end;
-  width: 100%;
 }
 </style>

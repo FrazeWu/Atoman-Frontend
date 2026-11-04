@@ -1,0 +1,249 @@
+.public-reader {
+  display: grid;
+  gap: 1.25rem;
+  padding-top: var(--a-page-start-space);
+  --book-reader-surface: var(--a-color-bg);
+  --book-reader-text: var(--a-color-fg);
+  --book-reader-muted: var(--a-color-muted);
+}
+
+.public-reader--theme-paper {
+  --book-reader-surface: #ffffff;
+  --book-reader-text: #0f172a;
+  --book-reader-muted: #64748b;
+}
+
+.public-reader--theme-sepia,
+.public-reader--theme-dim {
+  --book-reader-surface: #fbf0d9;
+  --book-reader-text: #2d2013;
+  --book-reader-muted: #786c5e;
+}
+
+.public-reader--theme-slate {
+  --book-reader-surface: #f1f5f9;
+  --book-reader-text: #1e293b;
+  --book-reader-muted: #64748b;
+}
+
+.public-reader--theme-night {
+  --book-reader-surface: #18181b;
+  --book-reader-text: #e4e4e7;
+  --book-reader-muted: #a1a1aa;
+}
+
+.public-reader--font-serif {
+  font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", Georgia, serif;
+}
+
+.public-reader--font-sans {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif;
+}
+
+.public-reader--font-kaiti {
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
+}
+
+.public-reader__feedback {
+  margin: 0.25rem 0 0;
+  color: var(--a-color-muted);
+  font-size: 0.88rem;
+}
+
+.public-reader__feedback--error {
+  color: var(--a-color-danger);
+}
+
+.public-reader__surface {
+  display: grid;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.public-reader__text,
+.public-reader__epub,
+.public-reader__pdf {
+  min-height: min(68vh, 720px);
+  overflow: hidden;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--book-reader-surface);
+}
+
+.public-reader__text {
+  height: min(68vh, 720px);
+  overflow: auto;
+  padding: clamp(1.25rem, 4vw, 3rem);
+  background: var(--book-reader-surface);
+}
+
+.public-reader__text pre {
+  max-width: 72ch;
+  margin: 0 auto;
+  color: var(--book-reader-text);
+  font: inherit;
+  font-size: calc(1rem * var(--book-reader-font-scale, 1));
+  line-height: 1.85;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.public-reader__epub {
+  height: min(68vh, 720px);
+  padding: 1rem;
+  background: var(--book-reader-surface);
+}
+
+.public-reader__comic {
+  display: grid;
+  gap: 1rem;
+  max-height: min(78vh, 60rem);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--book-reader-surface);
+  scroll-behavior: smooth;
+}
+
+.public-reader__comic-page {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.public-reader__comic-page img {
+  display: block;
+  max-width: min(100%, 64rem);
+  height: auto;
+  border: 1px solid var(--a-color-border-soft);
+}
+
+.public-reader__comic-page figcaption {
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+}
+
+.public-reader__pdf {
+  display: block;
+  min-width: 0;
+  overflow: auto;
+  padding: 1rem;
+  background: var(--book-reader-surface);
+}
+.public-reader__pdf-page { position: relative; max-width: 100%; margin-inline: auto; }
+.public-reader__pdf-page.is-selectable { max-width: none; }
+.public-reader__pdf-page.is-selectable canvas { max-width: none; border: 0; }
+.public-reader__pdf-marks { position: absolute; inset: 0; pointer-events: none; }
+.public-reader__pdf-marks span { position: absolute; box-sizing: border-box; }
+.public-reader__text mark { font: inherit; cursor: pointer; }
+
+.public-reader__pdf canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  background: var(--book-reader-surface);
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: none;
+}
+
+.public-reader__bookmarks {
+  border-top: 1px solid var(--a-color-border-soft);
+  padding-top: 0.75rem;
+  color: var(--a-color-muted);
+  font-size: 0.88rem;
+}
+
+.public-reader__search {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 42rem;
+}
+
+.public-reader__search > label {
+  color: var(--a-color-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.public-reader__search-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.public-reader__search-row input {
+  min-width: 0;
+  flex: 1;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--book-reader-surface);
+  color: var(--book-reader-text);
+}
+
+.public-reader__search-row input:focus-visible,
+.public-reader__search-results button:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
+}
+
+.public-reader__search-status {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 0.8rem;
+}
+
+.public-reader__search-results {
+  display: grid;
+  gap: 0.35rem;
+  max-height: 12rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.public-reader__search-results button {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: color-mix(in srgb, var(--book-reader-surface) 92%, var(--book-reader-text));
+  color: var(--book-reader-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.public-reader__bookmarks ol {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.public-reader__bookmarks li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.public-reader__bookmarks button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.public-reader__bookmarks li button:first-child {
+  color: var(--a-color-primary);
+  text-align: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-reader__comic {
+    scroll-behavior: auto;
+  }
+}

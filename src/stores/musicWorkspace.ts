@@ -1,0 +1,1019 @@
+import { defineStore, getActivePinia } from "pinia";
+import { registerSessionReset } from "@/stores/sessionReset";
+import { useRouter } from "vue-router";
+import { isStandaloneMobileApp } from "@/utils/appRuntime";
+import { ref, computed, watch, toRaw, getCurrentInstance } from "vue";
+import type {
+	MusicAlbumImport,
+	MusicAlbumImportCommitInput,
+	MusicEntryStatus,
+	MusicSource,
+} from "@/api/musicV1";
+import {
+	createEmptyMusicArtistDraft,
+} from "@/components/music/musicCreationTypes";
+import type {
+	MusicCreationDraft,
+	MusicCreationFlowState,
+	MusicCreationFlowStep,
+} from "@/components/music/musicCreationTypes";
+import type {
+	MusicCreationFlowSeed,
+	MusicEditorState,
+	MusicSheetLayer,
+	MusicSongLayerOptions,
+	NestedActionType,
+} from "@/components/music/musicSheetTypes";
+import { createSheetStack } from "@/composables/useSheetStack";
+import { primaryAlbumRole } from "@/utils/musicAlbumCredits";
+import { parseMusicLyricDraft } from "@/utils/musicLyricsDraft";
+import { parsePartialDateParts } from "@/components/music/birthDateMask";
+import {
+	hasMusicBrainzSource,
+	isMusicBrainzSource,
+	normalizeMusicImportSource,
+} from "@/utils/musicImportSource";
+import { mergeImportedTracksIntoDraft } from "@/utils/musicImportTrackMerge";
+
+export type {
+	MusicEditorEntity,
+	MusicEditorMode,
+	MusicEditorState,
+} from "@/components/music/musicSheetTypes";
+
+export interface DrawerState {
+	artistId: string | null;
+	artistRefreshToken: number;
+	albumId: string | null;
+	songId: string | null;
+	playlistId: string | null;
+	albumRefreshToken: number;
+	songRefreshToken: number;
+	playlistRefreshToken: number;
+	nestedAction: NestedActionType;
+	nestedPayload: unknown;
+	musicEditor: MusicEditorState | null;
+	creationFlow: MusicCreationFlowState | null;
+	creationFlows: Record<string, MusicCreationFlowState>;
+}
+
+function createEmptyDateParts() {
+	return {
+		year: "",
+		month: "",
+		day: "",
+	};
+}
+
+function createSeededContributors(seed?: MusicCreationFlowSeed) {
+	if (!seed?.artistId) return [];
+
+	return [
+		{
+			id: `contributor-${seed.artistId}`,
+			artistId: seed.artistId,
+			name: seed.artistName ?? "",
+			avatarUrl: seed.artistAvatarUrl ?? "",
+			kind: seed.artistKind ?? "person",
+			locked: false,
+			roles: [primaryAlbumRole(`role-${seed.artistId}-primary`)],
+		},
+	];
+}
+
+function musicSourceValue(sources?: MusicSource[]) {
+	const source = sources?.find(
+		(item) => item.url?.trim() || item.title?.trim(),
+	);
+	return normalizeMusicImportSource(
+		source?.url?.trim() || source?.title?.trim(),
+	);
+}
+
+function importedArtistID(snapshot: MusicAlbumImport, contributors: Array<{ id: string }> = []) {
+	return (
+		snapshot.artistId?.trim() ||
+		snapshot.commitRequest?.artist_id?.trim() ||
+		snapshot.commitRequest?.artists?.find((artist) => artist.artist_id?.trim())?.artist_id?.trim() ||
+		contributors[0]?.id ||
+		""
+	);
+}
+
+function importedArtistName(snapshot: MusicAlbumImport, contributors: Array<{ name: string }> = []) {
+	return (
+		contributors[0]?.name?.trim() ||
+		snapshot.commitRequest?.artists?.find((artist) => artist.name?.trim())?.name?.trim() ||
+		snapshot.commitRequest?.artist.name?.trim() ||
+		""
+	);
+}
+
+function restoreCommittedAlbumImportDraft(
+	flow: MusicCreationFlowState,
+	request: MusicAlbumImportCommitInput,
+	fallbackArtistID: string,
+) {
+	const primary =
+		request.artists?.find(
+			(artist) => !artist.artist_id || artist.artist_id === request.artist_id,
+		) ?? request.artists?.[0];
+	const artist = primary ?? request.artist;
+	const stageNames = artist.stage_names ?? [];
+	flow.draft.artist.id = request.artist_id?.trim() || fallbackArtistID || null;
+	flow.draft.artist.avatarUrl = artist.image_url?.trim() || "";
+	flow.draft.artist.kind =
+		"artist_form" in artist && artist.artist_form === "group"
+			? "group"
+			: "person";
+	flow.draft.artist.legalName = artist.legal_name ?? "";
+	flow.draft.artist.stageNames = stageNames.length
+		? stageNames.map((name, index) => ({
+				id: `stage-name-${index}`,
+				name: name.name ?? "",
+				isPrimary: name.is_primary || index === 0,
+				startDateParts: createEmptyDateParts(),
+				endDateParts: createEmptyDateParts(),
+				startDateText: name.start_date_text ?? "",
+				endDateText: name.end_date_text ?? "",
+			}))
+		: flow.draft.artist.stageNames;
+	flow.draft.artist.nationality = artist.nationality ?? "";
+	flow.draft.artist.birthPlace = artist.birth_place ?? "";
+	flow.draft.artist.birthDateParts = parsePartialDateParts(
+		artist.birth_date ?? "",
+	);
+	flow.draft.artist.bio = artist.bio ?? "";
+	flow.draft.artist.source =
+		normalizeMusicImportSource(request.artist_source) ||
+		normalizeMusicImportSource(flow.draft.artist.source);
+	if (primary) {
+		flow.draft.artist.activeStartDateParts = parsePartialDateParts(
+			primary.active_start_date ?? "",
+		);
+		flow.draft.artist.activeEndDateParts = parsePartialDateParts(
+			primary.active_end_date ?? "",
+		);
+		flow.draft.artist.members = primary.members.map((member, index) => ({
+			id: `member-${member.artist_id || index}`,
+			artistId: member.artist_id || null,
+			name: member.name ?? "",
+			joinDateParts: parsePartialDateParts(member.join_date ?? ""),
+			leaveDateParts: parsePartialDateParts(member.leave_date ?? ""),
+		}));
+	}
+	flow.draft.albumDetails.title = request.album.title ?? "";
+	flow.draft.albumDetails.bio = request.album.description ?? "";
+	flow.draft.albumDetails.type = request.album.album_type?.trim() || "album";
+	const cover = request.album.cover_url?.trim() || "";
+	flow.draft.albumDetails.coverUrl = cover.startsWith('blob:') ? "" : cover;
+	flow.draft.albumDetails.releaseDateParts = parsePartialDateParts(
+		request.album.release_date ?? "",
+	);
+	flow.draft.albumDetails.releaseYear = String(
+		request.album.release_year || "",
+	);
+	flow.draft.albumDetails.source =
+		normalizeMusicImportSource(request.album_source) ||
+		normalizeMusicImportSource(flow.draft.albumDetails.source);
+	flow.draft.albumDetails.musicBrainzMatched =
+		isMusicBrainzSource(request.album_source) ||
+		hasMusicBrainzSource(request.album_sources);
+	flow.deletedImportTrackKeys = [...new Set(request.deleted_import_track_keys ?? [])];
+	if (request.artists?.length) {
+		flow.draft.albumDetails.contributors = request.artists.map(
+			(contributor, index) => ({
+				id: `contributor-${contributor.artist_id || index}`,
+				artistId: contributor.artist_id || null,
+				name: contributor.name ?? "",
+				avatarUrl: contributor.image_url ?? "",
+				kind: contributor.artist_form === "group" ? "group" : "person",
+				locked: !!contributor.artist_id,
+				...(!contributor.artist_id ? { newArtistDraft: {
+					...createEmptyMusicArtistDraft({ name: contributor.name, legalName: contributor.legal_name, kind: contributor.artist_form === 'group' ? 'group' : 'person' }),
+					avatarUrl: contributor.image_url || '',
+					disambiguation: contributor.disambiguation || '',
+					bio: contributor.bio || '', nationality: contributor.nationality || '',
+					birthPlace: contributor.birth_place || '', birthDateParts: parsePartialDateParts(contributor.birth_date || ''),
+					activeStartDateParts: parsePartialDateParts(contributor.active_start_date || ''),
+					activeEndDateParts: parsePartialDateParts(contributor.active_end_date || ''),
+					stageNames: contributor.stage_names.map((stage, stageIndex) => ({ id: `stage-${stageIndex}`, name: stage.name, isPrimary: stage.is_primary, startDateText: stage.start_date_text, endDateText: stage.end_date_text })),
+					members: contributor.members.map((member, memberIndex) => ({ id: `member-${memberIndex}`, artistId: member.artist_id || null, name: member.name || '', joinDateParts: parsePartialDateParts(member.join_date), leaveDateParts: parsePartialDateParts(member.leave_date) })),
+					...(contributor === primary ? { source: flow.draft.artist.source } : {}),
+				} } : {}),
+				roles: contributor.roles.map((role, roleIndex) => ({
+					id: `role-${contributor.artist_id || index}-${roleIndex}`,
+					role: role.role,
+					label: role.label ?? "",
+				})),
+			}),
+		);
+	}
+	flow.draft.tracks = request.album.tracks.map((track, index) => ({
+		id: `import-track-${index + 1}`,
+		...(track.song_id ? { songId: track.song_id } : {}),
+		...(track.file_id ? { importFileId: track.file_id } : {}),
+		sequence: track.track_number || index + 1,
+		discNumber: track.disc_number || 1,
+		title: track.title,
+		origin: "import",
+		...(track.audio_key ? { audioKey: track.audio_key } : {}),
+		...(track.audio_asset_id ? { audioAssetId: track.audio_asset_id } : {}),
+		...(track.original_title ? { originalTitle: track.original_title } : {}),
+		...(track.original_disc_number ? { originalDiscNumber: track.original_disc_number } : {}),
+		...(track.original_track_number ? { originalTrackNumber: track.original_track_number } : {}),
+		...(track.match_status ? { matchStatus: track.match_status } : {}),
+		...(track.match_provider ? { matchProvider: track.match_provider } : {}),
+		...(track.match_external_id ? { matchExternalId: track.match_external_id } : {}),
+		...(track.match_source_url ? { matchSourceUrl: track.match_source_url } : {}),
+		...(track.match_confidence !== undefined ? { matchConfidence: track.match_confidence } : {}),
+		...(track.title_customized ? { titleCustomized: true } : {}),
+		...(track.sequence_customized ? { sequenceCustomized: true } : {}),
+		...(track.audio_url ? { audioUrl: track.audio_url } : {}),
+		...(track.lyrics
+			? {
+					lyrics: track.lyrics.content,
+					lyricsDraft: {
+						content: track.lyrics.content,
+						translation: track.lyrics.translation,
+						format: track.lyrics.format,
+						language: track.lyrics.language,
+						editSummary: track.lyrics.edit_summary,
+						lines: parseMusicLyricDraft(
+							track.lyrics.content,
+							track.lyrics.translation,
+							track.lyrics.format,
+						).map((row) => ({
+							line_key: row.lineKey,
+							text: row.original,
+							translation: row.translation,
+							time_ms: row.timeMs,
+						})),
+					},
+				}
+			: {}),
+	}));
+	const customization = request.draft_customization;
+	flow.titleCustomized = customization?.title ?? true;
+	flow.tracksCustomized = customization?.tracks ?? true;
+	flow.releaseDateCustomized = customization?.releaseDate ?? true;
+	flow.coverCustomized = customization?.cover ?? true;
+	flow.typeCustomized = customization?.type ?? true;
+	flow.metadataCountryCustomized = customization?.country ?? true;
+	flow.sourceCustomized = customization?.source ?? true;
+	flow.metadataConfirmed = request.metadata_confirmed ?? false;
+	flow.metadataTagsApplied = customization?.tags ?? true;
+	const genres = new Set(request.album.metadata?.genres ?? []);
+	const styles = new Set(request.album.metadata?.styles ?? []);
+	flow.draft.albumDetails.tags = (request.album.tags ?? []).map((tag) => ({
+		kind: tag.kind,
+		name: tag.name,
+		...(tag.parent_name ? { parentName: tag.parent_name } : {}),
+		...(genres.has(tag.name) ? { metadataCategory: "genre" as const } : {}),
+		...(styles.has(tag.name) ? { metadataCategory: "style" as const } : {}),
+	}));
+}
+
+function createEmptyDraft(seed?: MusicCreationFlowSeed): MusicCreationDraft {
+	return {
+		artist: {
+			...createEmptyMusicArtistDraft({
+				name: seed?.artistName ?? "",
+				legalName: seed?.artistLegalName ?? "",
+				kind: seed?.artistKind,
+				source: seed?.artistSource?.trim() ?? "",
+			}),
+			id: seed?.artistId ?? null,
+		},
+		albumImport: {
+			importId: null,
+			inputMode: "auto",
+			archiveName: "",
+			status: "pending_upload",
+			stage: "upload",
+			uploadProgress: 0,
+			uploadSpeed: 0,
+			files: [],
+			totalBytesLoaded: 0,
+			totalBytesTotal: 0,
+			coverUrl: "",
+			coverKey: "",
+			derivedAlbumTitle: "",
+			derivedCover: "",
+			derivedTracks: [],
+			lastSyncedAt: "",
+			errorMessage: "",
+		},
+		albumSeed: {
+			title: "",
+			uploadedAssets: [],
+		},
+		albumDetails: {
+			coverUrl: "",
+			coverAsset: null,
+			title: "",
+			contributors: createSeededContributors(seed),
+			releaseDateParts: createEmptyDateParts(),
+			releaseDate: "",
+			type: "album",
+		releaseYear: "",
+			bio: "",
+			tags: [],
+			source: "",
+			existingSources: [],
+		},
+		tracks: [],
+	};
+}
+
+const artistLayer = (id: string): MusicSheetLayer => ({
+	key: `artist:${id}`,
+	kind: "artist",
+	title: "艺术家详情",
+	route: `/music/artist/${id}`,
+	payload: { artistId: id },
+});
+
+const albumLayer = (id: string): MusicSheetLayer => ({
+	key: `album:${id}`,
+	kind: "album",
+	title: "专辑详情",
+	route: `/music/album/${id}`,
+	payload: { albumId: id },
+});
+
+const songLayer = (id: string, options: MusicSongLayerOptions = {}): MusicSheetLayer => {
+	const query = new URLSearchParams();
+	if (options.focusAnnotationId?.trim()) {
+		query.set("annotation_id", options.focusAnnotationId.trim());
+	}
+	if (options.startRebind) query.set("rebind", "1");
+	const queryString = query.toString();
+
+	return {
+		key: `song:${id}`,
+		kind: "song",
+		title: "歌曲详情",
+		route: `/music/song/${encodeURIComponent(id)}${queryString ? `?${queryString}` : ""}`,
+		payload: {
+			songId: id,
+			...(options.focusAnnotationId?.trim() ? { focusAnnotationId: options.focusAnnotationId.trim() } : {}),
+			...(options.startRebind ? { startRebind: true } : {}),
+		},
+	};
+};
+
+const playlistLayer = (id: string): MusicSheetLayer => ({
+	key: `playlist:${id}`,
+	kind: "playlist",
+	title: "歌单详情",
+	route: `/music/playlist/${id}`,
+	payload: { playlistId: id },
+});
+
+function resolveShortestMusicPath(layer: MusicSheetLayer): MusicSheetLayer[] {
+	if (layer.kind !== "action") return [layer];
+	if (!layer.payload.data || typeof layer.payload.data !== "object")
+		return [layer];
+
+	if ("albumId" in layer.payload.data) {
+		return [albumLayer(String(layer.payload.data.albumId)), layer];
+	}
+	if ("artistId" in layer.payload.data) {
+		return [artistLayer(String(layer.payload.data.artistId)), layer];
+	}
+	return [layer];
+}
+
+export const useMusicWorkspaceStore = defineStore("musicWorkspace", () => {
+	const pinia = getActivePinia();
+	if (pinia) {
+		registerSessionReset(pinia, () => {
+			closeAll();
+		});
+	}
+	const router = getCurrentInstance() ? useRouter() : null;
+
+	const state = ref<DrawerState>({
+	artistId: null,
+	artistRefreshToken: 0,
+	albumId: null,
+	songId: null,
+	playlistId: null,
+	albumRefreshToken: 0,
+	songRefreshToken: 0,
+	playlistRefreshToken: 0,
+	nestedAction: null,
+	nestedPayload: null,
+	musicEditor: null,
+	creationFlow: null,
+	creationFlows: {},
+});
+
+function syncActiveCreationFlow() {
+	const activeLayer = sheetStack.top.value;
+	state.value.creationFlow =
+		activeLayer?.kind === "creation"
+			? (state.value.creationFlows[activeLayer.key] ?? null)
+			: null;
+}
+
+const sheetStack = createSheetStack<MusicSheetLayer>({
+	maxLayers: 4,
+	resolveOverflow: resolveShortestMusicPath,
+	overflowTransitionMs: 300,
+});
+
+watch(
+	sheetStack.layers,
+	(layers) => {
+		const reversed = [...layers].reverse();
+		const artist = reversed.find((layer) => layer.kind === "artist");
+		const album = reversed.find((layer) => layer.kind === "album");
+		const song = reversed.find((layer) => layer.kind === "song");
+		const playlist = reversed.find((layer) => layer.kind === "playlist");
+		const action = reversed.find((layer) => layer.kind === "action");
+		const editor = reversed.find((layer) => layer.kind === "editor");
+
+		state.value.artistId =
+			artist?.kind === "artist" ? artist.payload.artistId : null;
+		state.value.albumId =
+			album?.kind === "album" ? album.payload.albumId : null;
+		state.value.songId = song?.kind === "song" ? song.payload.songId : null;
+		state.value.playlistId =
+			playlist?.kind === "playlist" ? playlist.payload.playlistId : null;
+		state.value.nestedAction =
+			action?.kind === "action" ? action.payload.action : null;
+		state.value.nestedPayload =
+			action?.kind === "action" ? action.payload.data : null;
+		state.value.musicEditor = editor?.kind === "editor" ? editor.payload : null;
+		syncActiveCreationFlow();
+	},
+	{ flush: "sync" },
+);
+
+	const mobile = isStandaloneMobileApp();
+	const returnToLayer = (key: string) => {
+		const index = sheetStack.layers.value.findIndex(
+			(layer) => layer.key === key,
+		);
+		if (index < 0) return;
+		for (const layer of sheetStack.layers.value.slice(index + 1)) {
+			if (layer.kind === "creation" && (state.value.creationFlows[layer.key]?.contributorLayer || state.value.creationFlows[layer.key]?.parentKey !== key))
+				delete state.value.creationFlows[layer.key];
+		}
+		sheetStack.popTo(key);
+		syncActiveCreationFlow();
+	};
+
+	const closeLayerAndAbove = (key: string) => {
+		const index = sheetStack.layers.value.findIndex(
+			(layer) => layer.key === key,
+		);
+		if (index < 0) return;
+		for (const layer of sheetStack.layers.value.slice(index)) {
+			if (layer.kind === "creation") {
+				for (const [childKey, child] of Object.entries(state.value.creationFlows)) {
+					if (child.parentKey === layer.key) delete state.value.creationFlows[childKey];
+				}
+				delete state.value.creationFlows[layer.key];
+			}
+		}
+		sheetStack.popTo(key);
+		sheetStack.pop();
+		syncActiveCreationFlow();
+	};
+
+	const openArtist = (id: string) => {
+		const target = `/music/artist/${encodeURIComponent(id)}`;
+		if (mobile && router) {
+			if (router.currentRoute.value.path === target)
+				sheetStack.push(artistLayer(id));
+			else void router.push(target);
+			return;
+		}
+		sheetStack.push(artistLayer(id));
+	};
+	const closeArtist = (
+		key = [...sheetStack.layers.value]
+			.reverse()
+			.find((layer) => layer.kind === "artist")?.key ?? "",
+	) => closeLayerAndAbove(key);
+	const refreshArtist = () => {
+		state.value.artistRefreshToken += 1;
+	};
+	const replaceArtist = (id: string) => {
+		const target = artistLayer(id);
+		if (mobile && router) void router.replace(target.route!);
+		else sheetStack.replaceTop(target, true);
+	};
+
+	const openAlbum = (id: string) => {
+		const target = `/music/album/${encodeURIComponent(id)}`;
+		if (mobile && router) {
+			if (router.currentRoute.value.path === target)
+				sheetStack.push(albumLayer(id));
+			else void router.push(target);
+			return;
+		}
+		sheetStack.push(albumLayer(id));
+	};
+	const closeAlbum = (
+		key = [...sheetStack.layers.value]
+			.reverse()
+			.find((layer) => layer.kind === "album")?.key ?? "",
+	) => closeLayerAndAbove(key);
+	const refreshAlbum = () => {
+		state.value.albumRefreshToken += 1;
+	};
+	const replaceAlbum = (id: string) => {
+		const target = albumLayer(id);
+		if (mobile && router) void router.replace(target.route!);
+		else sheetStack.replaceTop(target, true);
+	};
+	const refreshSong = () => {
+		state.value.songRefreshToken += 1;
+	};
+
+	const openSong = (id: string, options: MusicSongLayerOptions = {}) => {
+		const layer = songLayer(id, options);
+		const target = layer.route!;
+		const hasFocus = Boolean(options.focusAnnotationId?.trim() || options.startRebind);
+		if (hasFocus && sheetStack.layers.value.some((item) => item.key === layer.key)) {
+			if (sheetStack.top.value?.key !== layer.key) sheetStack.popTo(layer.key);
+			sheetStack.replaceTop(layer, true);
+			return;
+		}
+		if (mobile && router) {
+			if (router.currentRoute.value.fullPath === target)
+				sheetStack.push(layer);
+			else void router.push(target);
+			return;
+		}
+		sheetStack.push(layer);
+	};
+	const closeSong = (
+		key = [...sheetStack.layers.value]
+			.reverse()
+			.find((layer) => layer.kind === "song")?.key ?? "",
+	) => closeLayerAndAbove(key);
+	const replaceSong = (id: string, options: MusicSongLayerOptions = {}) => {
+		const target = songLayer(id, options);
+		if (mobile && router) void router.replace(target.route!);
+		else sheetStack.replaceTop(target, true);
+	};
+
+	const openPlaylist = (id: string) => {
+		const target = `/music/playlist/${encodeURIComponent(id)}`;
+		const layer = playlistLayer(id);
+		if (mobile && router) {
+			if (router.currentRoute.value.path === target)
+				sheetStack.push(layer);
+			else void router.push(target);
+			return;
+		}
+		sheetStack.push(layer);
+	};
+	const closePlaylist = (key = sheetStack.top.value?.key ?? "") =>
+		closeLayerAndAbove(key);
+	const replacePlaylist = (id: string) => {
+		const target = playlistLayer(id);
+		if (mobile && router) void router.replace(target.route!);
+		else sheetStack.replaceTop(target, true);
+	};
+	const refreshPlaylists = () => {
+		state.value.playlistRefreshToken += 1;
+	};
+
+	const openNestedAction = (
+		action: Exclude<NestedActionType, null>,
+		payload: unknown = null,
+	) => {
+		const payloadOwner =
+			payload && typeof payload === "object"
+				? "albumId" in payload
+					? String(payload.albumId)
+					: "artistId" in payload
+						? String(payload.artistId)
+						: "songId" in payload
+							? String(payload.songId)
+							: null
+				: null;
+		const ownerId =
+			payloadOwner ?? state.value.albumId ?? state.value.artistId ?? "root";
+		sheetStack.push({
+			key: `action:${action}:${ownerId}`,
+			kind: "action",
+			title:
+				action === "history" ||
+				action === "artist_history" ||
+				action === "song_history"
+					? "历史记录"
+					: action === "link_album"
+						? "关联现有专辑"
+						: "操作",
+			payload: { action, data: payload },
+		});
+	};
+	const closeNestedAction = (key = sheetStack.top.value?.key ?? "") =>
+		closeLayerAndAbove(key);
+
+	const openMusicEditor = (editor: MusicEditorState) => {
+		state.value.creationFlow = null;
+		sheetStack.push({
+			key: `editor:${editor.entity}:${editor.mode}:${editor.id}`,
+			kind: "editor",
+			title: "修改条目",
+			payload: editor,
+		});
+	};
+
+	const closeMusicEditor = (keyOrEvent?: string | Event) => {
+		state.value.creationFlow = null;
+		const key = typeof keyOrEvent === "string" ? keyOrEvent : undefined;
+		const targetKey =
+			key ??
+			sheetStack.layers.value.find((layer) => layer.kind === "editor")?.key;
+		if (targetKey) closeLayerAndAbove(targetKey);
+	};
+
+	const openMusicCreationFlow = (
+		seed: MusicCreationFlowSeed = {},
+		options: { artistDraft?: MusicCreationDraft["artist"] } = {},
+	) => {
+		const previous = seed.parentKey && Object.entries(state.value.creationFlows)
+			.find(([, candidate]) => candidate.parentKey === seed.parentKey && candidate.entity === seed.entity && !candidate.contributorLayer);
+		if (previous) {
+			const [key, flow] = previous;
+			if (options.artistDraft) flow.draft.artist = options.artistDraft;
+			flow.step = seed.startStep ?? flow.step;
+			sheetStack.push({ key, kind: "creation", title: "创建专辑", payload: seed });
+			syncActiveCreationFlow();
+			return flow;
+		}
+		let targetId = seed.artistId ?? null;
+		if (seed.entity === "album") targetId = seed.albumId ?? null;
+		if (seed.entity === "song") targetId = seed.songId ?? null;
+		const flow: MusicCreationFlowState = {
+			mode: seed.mode ?? "create",
+			entity: seed.entity,
+			targetId,
+			parentKey: seed.parentKey,
+			loading: false,
+			step: seed.startStep ?? "albumImport",
+			artistFirstFlow:
+				seed.artistFirstFlow ??
+				(seed.startStep === "artist"
+					&& !seed.artistId
+					&& seed.entity !== "song"
+					&& seed.entity !== "artist"),
+			draft: createEmptyDraft(seed),
+			tracksCustomized: false,
+			deletedImportTrackKeys: [],
+			titleCustomized: false,
+			releaseDateCustomized: false,
+			coverCustomized: false,
+			dirty: false,
+			assetUploading: false,
+			submitting: false,
+			errorMessage: "",
+		};
+		if (options.artistDraft) flow.draft.artist = options.artistDraft;
+
+		const baseKey = `creation:${seed.mode ?? "create"}:${seed.entity ?? "album"}:${seed.songId ?? seed.albumId ?? seed.artistId ?? "new"}`;
+		const key = seed.parentKey ? `${baseKey}:child:${seed.parentKey}` : baseKey;
+		state.value.creationFlows[key] = flow;
+		sheetStack.push({
+			key,
+			kind: "creation",
+			title:
+				seed.startStep === "artist"
+					? "创建艺术家"
+					: seed.entity === "song"
+						? "创建歌曲"
+						: "创建专辑",
+			payload: seed,
+		});
+		syncActiveCreationFlow();
+		return flow;
+	};
+
+	const resumeMusicCreationFlow = (
+		snapshot: MusicAlbumImport,
+		contributors: Array<{
+			id: string;
+			name: string;
+			imageUrl?: string;
+			kind?: "person" | "group";
+			source?: string;
+			entryStatus?: MusicEntryStatus;
+		}> = [],
+		artistSource = "",
+	) => {
+		// 草稿比上一次提交请求更新，恢复时不登记正式提交。
+		snapshot = { ...snapshot, commitRequest: snapshot.draftRequest ?? snapshot.commitRequest };
+		const resolvedArtistSource =
+			normalizeMusicImportSource(artistSource) ||
+			normalizeMusicImportSource(snapshot.artistSource) ||
+			normalizeMusicImportSource(snapshot.commitRequest?.artist_source) ||
+			musicSourceValue(snapshot.commitRequest?.artist_sources);
+		const resolvedArtistID = importedArtistID(snapshot, contributors);
+		openMusicCreationFlow({
+			artistId: resolvedArtistID || undefined,
+			artistName: importedArtistName(snapshot, contributors),
+			artistSource: resolvedArtistSource,
+			startStep: ['matched', 'manual', 'ambiguous', 'unmatched'].includes(snapshot.metadataMatchStatus ?? '') ? "albumDetails" : "albumImport",
+		});
+		const flow = state.value.creationFlow;
+		if (!flow) return;
+		if (resolvedArtistID) {
+			const seededContributor = flow.draft.albumDetails.contributors.find(
+				(contributor) => contributor.artistId === resolvedArtistID,
+			);
+			if (seededContributor) seededContributor.locked = true;
+		}
+		flow.draft.albumDetails.musicBrainzMatched =
+			isMusicBrainzSource(snapshot.metadataSourceUrl) ||
+			isMusicBrainzSource(snapshot.albumSource) ||
+			isMusicBrainzSource(snapshot.commitRequest?.album_source) ||
+			hasMusicBrainzSource(snapshot.commitRequest?.album_sources);
+		flow.draft.albumImport = {
+			importId: snapshot.importId,
+			inputMode: snapshot.inputMode,
+			archiveName: snapshot.archiveName,
+			status: snapshot.status,
+			stage: snapshot.stage,
+			uploadProgress: snapshot.uploadProgress,
+			uploadSpeed: snapshot.uploadSpeed,
+			files: snapshot.files,
+			totalBytesLoaded: snapshot.progress.current,
+			totalBytesTotal: snapshot.progress.total,
+			coverUrl: snapshot.coverUrl,
+			coverKey: snapshot.coverKey,
+			derivedAlbumTitle: snapshot.derivedAlbumTitle,
+			derivedCover: snapshot.derivedCover,
+			derivedTracks: snapshot.derivedTracks,
+			derivedReleaseDate: snapshot.derivedReleaseDate,
+			derivedAlbumType: snapshot.derivedAlbumType,
+			metadataSourceUrl: snapshot.metadataSourceUrl,
+			metadataSource: snapshot.metadataSource,
+			metadataExternalId: snapshot.metadataExternalId,
+			metadataMatchStatus: snapshot.metadataMatchStatus,
+			metadataMatchConfidence: snapshot.metadataMatchConfidence,
+			metadataMatched: snapshot.metadataMatched ?? ['matched', 'manual'].includes(snapshot.metadataMatchStatus ?? ''),
+			metadataError: snapshot.metadataError,
+			metadataGenres: snapshot.metadataGenres ?? [],
+			metadataStyles: snapshot.metadataStyles ?? [],
+			metadataLabels: snapshot.metadataLabels ?? [],
+			metadataCountry: snapshot.draftRequest?.album.metadata?.country ?? snapshot.commitRequest?.album.metadata?.country ?? snapshot.metadataCountry ?? "",
+			metadataFormats: snapshot.metadataFormats ?? [],
+			metadataSources: snapshot.metadataSources ?? [],
+			metadataFieldSources: snapshot.metadataFieldSources ?? {},
+			missingArtists: snapshot.missingArtists ?? [],
+			lastSyncedAt: snapshot.lastSyncedAt,
+			errorMessage: snapshot.errorMessage,
+		};
+		// 恢复时包含主动清空的情况，后续异步匹配不得覆盖。
+		flow.metadataCountryCustomized = Boolean(snapshot.draftRequest || snapshot.commitRequest);
+		flow.draft.albumDetails.title =
+			snapshot.albumTitle?.trim() || snapshot.derivedAlbumTitle;
+		if (snapshot.derivedReleaseDate) {
+			flow.draft.albumDetails.releaseDateParts = parsePartialDateParts(
+				snapshot.derivedReleaseDate,
+			);
+		}
+		if (snapshot.derivedAlbumType)
+			flow.draft.albumDetails.type = snapshot.derivedAlbumType;
+		const importedCover =
+			snapshot.derivedCover?.trim() || snapshot.coverUrl?.trim();
+		if (importedCover) flow.draft.albumDetails.coverUrl = importedCover;
+		if (snapshot.metadataSourceUrl)
+			flow.draft.albumDetails.source = normalizeMusicImportSource(
+				snapshot.metadataSourceUrl,
+			);
+		if (snapshot.artistSource)
+			flow.draft.artist.source = normalizeMusicImportSource(
+				snapshot.artistSource,
+			);
+		if (snapshot.albumSource) {
+			const albumSource = normalizeMusicImportSource(snapshot.albumSource);
+			if (albumSource) flow.draft.albumDetails.source = albumSource;
+		}
+		if (snapshot.commitRequest) {
+			restoreCommittedAlbumImportDraft(
+				flow,
+				snapshot.commitRequest,
+				flow.draft.artist.id || "",
+			);
+			mergeImportedTracksIntoDraft(flow, snapshot.derivedTracks);
+			if (resolvedArtistSource) flow.draft.artist.source = resolvedArtistSource;
+		}
+		if (contributors.length > 0 && !snapshot.commitRequest) {
+			flow.draft.albumDetails.contributors = contributors.map((artist) => ({
+				id: `contributor-${artist.id}`,
+				artistId: artist.id,
+				name: artist.name,
+				avatarUrl: artist.imageUrl ?? "",
+				...(normalizeMusicImportSource(artist.source)
+					? { source: normalizeMusicImportSource(artist.source) }
+					: {}),
+				...(artist.entryStatus ? { entryStatus: artist.entryStatus } : {}),
+				kind: artist.kind ?? "person",
+				locked: true,
+				roles: [primaryAlbumRole(`role-${artist.id}-primary`)],
+			}));
+		}
+		if (!snapshot.commitRequest) {
+			flow.draft.tracks = snapshot.derivedTracks.map((track, index) => ({
+				id: `import-track-${index + 1}`,
+				...(track.songId ? { songId: track.songId } : {}),
+				...(track.fileId ? { importFileId: track.fileId } : {}),
+				sequence: track.trackNumber ?? index + 1,
+				...(track.discNumber ? { discNumber: track.discNumber } : {}),
+				title: track.title,
+				...(track.audioUrl ? { audioUrl: track.audioUrl } : {}),
+				audioKey: track.audioKey,
+				origin: track.origin,
+				...(track.originalTitle ? { originalTitle: track.originalTitle } : {}),
+				...(track.originalDiscNumber ? { originalDiscNumber: track.originalDiscNumber } : {}),
+				...(track.originalTrackNumber ? { originalTrackNumber: track.originalTrackNumber } : {}),
+				...(track.matchStatus ? { matchStatus: track.matchStatus } : {}),
+				...(track.matchProvider ? { matchProvider: track.matchProvider } : {}),
+				...(track.matchExternalId ? { matchExternalId: track.matchExternalId } : {}),
+				...(track.matchSourceUrl ? { matchSourceUrl: track.matchSourceUrl } : {}),
+				...(track.matchConfidence !== undefined ? { matchConfidence: track.matchConfidence } : {}),
+				...(track.lyrics
+					? {
+							lyrics: track.lyrics.content,
+							lyricsDraft: {
+								content: track.lyrics.content,
+								translation: track.lyrics.translation || "",
+								format: track.lyrics.format,
+								language: track.lyrics.language || "",
+								editSummary: track.lyrics.edit_summary || "自动匹配歌词",
+								lines: parseMusicLyricDraft(
+									track.lyrics.content,
+									track.lyrics.translation || "",
+									track.lyrics.format,
+								).map((row) => ({
+									line_key: row.lineKey,
+									text: row.original,
+									translation: row.translation,
+									time_ms: row.timeMs,
+								})),
+							},
+						}
+					: {}),
+			}));
+		}
+		return flow;
+	};
+
+	const setMusicCreationStep = (step: MusicCreationFlowStep) => {
+		if (state.value.creationFlow) state.value.creationFlow.step = step;
+	};
+
+	const closeMusicCreationFlow = (keyOrEvent?: string | Event) => {
+		const key = typeof keyOrEvent === "string" ? keyOrEvent : undefined;
+		const targetKey =
+			key ??
+			[...sheetStack.layers.value]
+				.reverse()
+				.find((layer) => layer.kind === "creation")?.key;
+		if (targetKey) {
+			closeLayerAndAbove(targetKey);
+			return;
+		}
+		state.value.creationFlow = null;
+	};
+
+	const openMusicContributorFlow = (parent: MusicCreationFlowState, name: string) => {
+		const parentKey = Object.entries(state.value.creationFlows).find(([, flow]) => toRaw(flow) === toRaw(parent))?.[0];
+		if (!parentKey || !name.trim()) return;
+		openMusicCreationFlow({ entity: "artist", startStep: "artist", parentKey });
+		const child = state.value.creationFlow!;
+		child.contributorLayer = true;
+		const id = `new-contributor-${crypto.randomUUID()}`;
+		child.editingContributorId = id;
+		child.draft.albumDetails.contributors = [{
+			id, artistId: null, name: name.trim(), avatarUrl: "", kind: "person", locked: false,
+			newArtistDraft: createEmptyMusicArtistDraft({ name: name.trim() }),
+			roles: parent.draft.albumDetails.contributors.some(row => row.roles.some(role => role.role === "primary"))
+				? [{ id: `role-${id}-featured`, role: "featured", label: "" }]
+				: [primaryAlbumRole(`role-${id}-primary`)],
+		}];
+		return child;
+	};
+
+	const completeMusicContributorFlow = (child: MusicCreationFlowState) => {
+		const parent = child.parentKey ? state.value.creationFlows[child.parentKey] : null;
+		const contributor = child.draft.albumDetails.contributors.find(row => row.id === child.editingContributorId);
+		if (!parent || !contributor) throw new Error("原创建页面已关闭");
+		parent.draft.albumDetails.contributors.push(contributor);
+		const childKey = Object.entries(state.value.creationFlows).find(([, flow]) => toRaw(flow) === toRaw(child))?.[0];
+		if (childKey) closeMusicCreationFlow(childKey);
+	};
+
+	const closeAll = () => {
+		sheetStack.clear();
+		state.value.artistId = null;
+		state.value.artistRefreshToken = 0;
+		state.value.albumId = null;
+		state.value.songId = null;
+		state.value.playlistId = null;
+		state.value.albumRefreshToken = 0;
+		state.value.songRefreshToken = 0;
+		state.value.playlistRefreshToken = 0;
+		state.value.nestedAction = null;
+		state.value.nestedPayload = null;
+		state.value.musicEditor = null;
+		state.value.creationFlow = null;
+		state.value.creationFlows = {};
+	};
+
+	const isMainShifted = computed(
+		() =>
+			state.value.artistId !== null ||
+			state.value.playlistId !== null ||
+			state.value.nestedAction === "add_artist" ||
+			state.value.creationFlow !== null ||
+			state.value.musicEditor !== null,
+	);
+	const isArtistShifted = computed(
+		() =>
+			state.value.albumId !== null ||
+			state.value.nestedAction === "add_album" ||
+			state.value.nestedAction === "revise_artist" ||
+			state.value.nestedAction === "artist_history" ||
+			state.value.nestedAction === "merge_artist" ||
+			state.value.nestedAction === "link_album" ||
+			state.value.creationFlow !== null,
+	);
+	const isAlbumShifted = computed(
+		() =>
+			state.value.nestedAction === "revise" ||
+			state.value.nestedAction === "history" ||
+			state.value.nestedAction === "merge_album",
+	);
+	const isCreationFlowOpen = computed(() => state.value.creationFlow !== null);
+	const isMusicEditorOpen = computed(() => state.value.musicEditor !== null);
+
+	const proxyState = new Proxy(state, {
+		get(target, prop, receiver) {
+			if (prop === "value") return target.value;
+			return Reflect.get(target.value, prop, receiver);
+		},
+		set(target, prop, val, receiver) {
+			if (prop === "value") {
+				target.value = val;
+				return true;
+			}
+			return Reflect.set(target.value, prop, val, receiver);
+		},
+	});
+
+	return {
+		state: proxyState,
+		openArtist,
+		closeArtist,
+		refreshArtist,
+		replaceArtist,
+		openAlbum,
+		closeAlbum,
+		refreshAlbum,
+		replaceAlbum,
+		refreshSong,
+		openSong,
+		closeSong,
+		replaceSong,
+		openPlaylist,
+		closePlaylist,
+		replacePlaylist,
+		refreshPlaylists,
+		openNestedAction,
+		closeNestedAction,
+		openMusicEditor,
+		closeMusicEditor,
+		openMusicCreationFlow,
+		openMusicContributorFlow,
+		completeMusicContributorFlow,
+		resumeMusicCreationFlow,
+		setMusicCreationStep,
+		closeMusicCreationFlow,
+		closeAll,
+		isMainShifted,
+		isArtistShifted,
+		isAlbumShifted,
+		isCreationFlowOpen,
+		isMusicEditorOpen,
+		layers: sheetStack.layers,
+		renderLayers: sheetStack.renderLayers,
+		topLayer: sheetStack.top,
+		popLayer: sheetStack.pop,
+		popToLayer: sheetStack.popTo,
+		returnToLayer,
+		isTopLayer: sheetStack.isTop,
+		isLayerActive: sheetStack.isActive,
+		isLayerShifted: sheetStack.isShifted,
+	};
+});

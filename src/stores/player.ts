@@ -6,17 +6,16 @@ import type { RepeatMode, TimelineItem, PodcastEpisode } from "@/types";
 import {
 	type Song,
 	fetchSongById,
-	saveMusicProgress as saveEntityMusicProgress,
-	restoreMusicSession as restoreEntityMusicSession,
 } from "@/entities/music";
 import { isPlayableFeedPodcast } from "@/utils/feedPodcast";
 import { useApi } from "@/composables/useApi";
-import {
-	getMusicPlaybackProgress,
-	recordMusicRecommendationEvents,
-	recordMusicSongPlay,
-	saveMusicPlaybackSession,
-} from "@/api/musicV1";
+import { createPlayerOfflineState } from "./player/offline";
+import { createPlayerAnalytics } from "./player/analytics";
+import { createPlayerProgressSync, isMusicSong } from "./player/progress";
+import { createPlayerQueue, type PlaybackMode } from "./player/queue";
+import { createPlayerAudioRecovery } from "./player/recovery";
+import { createPlayerMediaSession } from "./player/mediaSession";
+import { computeBufferedTime } from "./player/audioElement";
 import {
 	usePodcastPlaybackAdapter,
 	type PodcastTrackerInstance,
@@ -45,12 +44,8 @@ import {
 	shufflePlaybackItems,
 } from "@/utils/playerQueue";
 import {
-	cacheMediaForOffline,
 	getCachedMediaObjectURL,
 	initMediaOfflineCacheIndex,
-	isMediaCached,
-	isMediaCachedSync,
-	removeCachedMedia,
 } from "@/utils/mediaOfflineCache";
 
 const api = useApi();
@@ -66,8 +61,7 @@ import {
 } from "@/utils/audioEngine";
 
 export { computeActualVolume, fadeOutAudio };
-
-export type PlaybackMode = "loop" | "single" | "random";
+export type { PlaybackMode };
 
 function resolvePlaybackAudioUrl(url: string) {
 	return resolvePlayableAudioURL(resolveAudioEngineUrl(url), api.url);
@@ -92,9 +86,6 @@ export const usePlayerStore = defineStore("player", () => {
 	const currentSong = ref<Song | null>(null);
 	const playerPresence = usePlayerPresenceStore();
 	const isPlaying = ref(false);
-	const isShuffled = ref(false);
-	const repeatMode = ref<RepeatMode>("all");
-	const playbackMode = ref<PlaybackMode>("loop");
 	const INITIAL_VOLUME = 0.6;
 	const readInitialVolume = () => {
 		if (typeof localStorage === "undefined") return INITIAL_VOLUME;
@@ -121,9 +112,6 @@ export const usePlayerStore = defineStore("player", () => {
 	const bufferedTime = ref(0);
 	const duration = ref(0);
 	const isLoading = ref(false);
-	const isCurrentAudioCached = ref(false);
-	const isAudioCaching = ref(false);
-	const audioCacheError = ref("");
 	const playbackError = ref("");
 	const audioRecoveryNotice = ref("");
 	const songLibraryLoading = ref(false);
@@ -171,93 +159,61 @@ export const usePlayerStore = defineStore("player", () => {
 		}
 	});
 
-	// Album-based queue
-	const queue = ref<Song[]>([]);
-	const shuffledQueue = ref<Song[]>([]);
-	const currentAlbum = ref<Song[] | null>(null);
-
-	const recomputeShuffledQueue = () => {
-		if (!isShuffled.value) {
-			shuffledQueue.value = [];
-			return;
-		}
-		const list = queue.value.length > 0 ? queue.value : songs.value;
-		if (list.length === 0) return;
-
-		const newList = shufflePlaybackItems(list);
-		if (currentSong.value) {
-			const currentKey = playbackItemKey(currentSong.value);
-			const idx = newList.findIndex((s) => playbackItemKey(s) === currentKey);
-			if (idx > -1) {
-				newList.splice(idx, 1);
-				newList.unshift(currentSong.value);
-			}
-		}
-		shuffledQueue.value = newList;
-	};
-
-	const activeQueue = computed(() =>
-		isShuffled.value && shuffledQueue.value.length > 0
-			? shuffledQueue.value
-			: queue.value,
-	);
-
-	watch(isShuffled, () => {
-		recomputeShuffledQueue();
-		if (currentSongStartCached) prefetchQueueAudioStarts();
-	});
-	// Lyrics/waveform hydration replaces queue objects without changing their
-	// identity or order; it must not reshuffle the remaining playback sequence.
-	watch(
-		() => queue.value.map(playbackItemKey).join("|"),
-		() => {
-			if (isShuffled.value) recomputeShuffledQueue();
+	const {
+		queue,
+		shuffledQueue,
+		currentAlbum,
+		isShuffled,
+		repeatMode,
+		playbackMode,
+		activeQueue,
+		getActiveList,
+		recomputeShuffledQueue,
+		toggleShuffle,
+		toggleRepeat,
+		cyclePlaybackMode,
+		setQueueFromCurrentItems,
+		setQueueFromPodcastEpisodes,
+		resetForSession: resetQueueForSession,
+	} = createPlayerQueue({
+		getCurrentSong: () => currentSong.value,
+		getFallbackSongs: () => songs.value,
+		onQueueOrShuffleChanged: () => {
 			if (currentSongStartCached) prefetchQueueAudioStarts();
 		},
-	);
-
-	// Sync isShuffled and repeatMode based on playbackMode
-	watch(
-		playbackMode,
-		(mode) => {
-			switch (mode) {
-				case "loop":
-					isShuffled.value = false;
-					repeatMode.value = "all";
-					break;
-				case "single":
-					isShuffled.value = false;
-					repeatMode.value = "one";
-					break;
-				case "random":
-					isShuffled.value = true;
-					repeatMode.value = "all";
-					break;
-			}
-		},
-		{ immediate: true },
-	);
+		createPodcastSong: (feedItem) => podcastAdapter.createPodcastSong(feedItem),
+		createPodcastEpisodeSong: (episode) =>
+			podcastAdapter.createPodcastEpisodeSong(episode),
+	});
 
 	let audio: HTMLAudioElement | null = null;
 	let cachedAudioObjectUrl = "";
 	let playGeneration = 0;
 	let playRequested = false;
-	// Automatic recovery applies ONLY to HTMLAudioElement media-source failures
-	// in multi-song music queues; a play() rejection (e.g. gesture restriction)
-	// is deliberately not treated as a corrupt audio file.
-	let recoveryTimer: ReturnType<typeof setTimeout> | null = null;
-	const recoveryRetried = new Set<string>();
-	const recoveryFailed = new Set<string>();
-	const clearRecoveryTimer = () => {
-		if (recoveryTimer !== null) clearTimeout(recoveryTimer);
-		recoveryTimer = null;
-	};
-	const resetAudioRecovery = () => {
-		clearRecoveryTimer();
-		recoveryRetried.clear();
-		recoveryFailed.clear();
-		audioRecoveryNotice.value = "";
-	};
+	let reloadCurrentAudioFn = async (_automatic: boolean) => {};
+	let startSongFn = (_song: Song, _startAt?: number, _persistPrevious?: boolean, _fromRecovery?: boolean) => {};
+
+	const {
+		recoverFromMediaError,
+		resetAudioRecovery,
+		hasRecoveryTimer,
+		clearRecoveryTimer,
+	} = createPlayerAudioRecovery({
+		getCurrentSong: () => currentSong.value,
+		getActiveList: () => getActiveList(),
+		getPlayGeneration: () => playGeneration,
+		getAudio: () => audio,
+		setPlaybackError: (err) => {
+			playbackError.value = err;
+		},
+		setAudioRecoveryNotice: (notice) => {
+			audioRecoveryNotice.value = notice;
+		},
+		reloadCurrentAudio: (forceReload) => reloadCurrentAudioFn(forceReload),
+		startSong: (song, startAt, persistPrevious, fromRecovery) => startSongFn(song, startAt, persistPrevious, fromRecovery),
+	});
+
+	let registerMediaSessionHandlers = (_playerTarget?: HTMLAudioElement | null) => {};
 	let currentSongStartCached = false;
 	const audioPrefetcher = new AudioPrefetcher();
 	let audioStartPrefetchKey: string | null = null;
@@ -267,182 +223,69 @@ export const usePlayerStore = defineStore("player", () => {
 		URL.revokeObjectURL(cachedAudioObjectUrl);
 		cachedAudioObjectUrl = "";
 	}
+
+	const {
+		isCurrentAudioCached,
+		isAudioCaching,
+		audioCacheError,
+		syncCachedStatus,
+		checkAudioCache,
+		checkCurrentSongAudioCached,
+		cacheCurrentAudio,
+		removeCurrentAudio,
+		resetForSession: resetOfflineForSession,
+	} = createPlayerOfflineState({
+		getCurrentSong: () => currentSong.value,
+		getPlayGeneration: () => playGeneration,
+		releaseCachedAudioObjectUrl,
+	});
 	let songsRequest: Promise<void> | null = null;
-	let musicProgressLastSavedAt = 0;
-	let musicProgressRestored = false;
-	let musicSessionLastSavedAt = 0;
-	let musicSessionRestored = false;
 	let musicAccountGeneration = 0;
+
+	const {
+		saveMusicProgress,
+		saveMusicSession,
+		restoreMusicSession,
+		restoreMusicProgress,
+		restoreMusicPlayback,
+		resetForSession: resetProgressForSession,
+	} = createPlayerProgressSync({
+		getCurrentSong: () => currentSong.value,
+		setCurrentSong: (song) => {
+			currentSong.value = song;
+		},
+		getQueue: () => queue.value,
+		setQueue: (newQueue) => {
+			queue.value = newQueue;
+		},
+		setCurrentAlbum: (album) => {
+			currentAlbum.value = album;
+		},
+		getCurrentTime: () => currentTime.value,
+		setCurrentTime: (time) => {
+			currentTime.value = time;
+		},
+		getDuration: () => duration.value,
+		setDuration: (dur) => {
+			duration.value = dur;
+		},
+		getPlaybackMode: () => playbackMode.value,
+		setPlaybackMode: (mode) => {
+			playbackMode.value = mode;
+		},
+		setIsPlaying: (playing) => {
+			isPlaying.value = playing;
+		},
+		getAudio: () => audio,
+		getIsAuthenticated: () => authStore.isAuthenticated,
+		getUserUuid: () => authStore.user?.uuid,
+		getMusicAccountGeneration: () => musicAccountGeneration,
+		getPlayGeneration: () => playGeneration,
+		resolvePlaybackAudioUrl,
+	});
 
 	const shouldPauseAudio = (player: HTMLAudioElement) =>
 		!player.paused || isPlaying.value || playRequested;
-
-	const isMusicSong = (song: Song) =>
-		!song.source_type || song.source_type === "music";
-
-	const saveMusicProgress = (completed = false, force = false) => {
-		const song = currentSong.value;
-		if (!authStore.isAuthenticated || !song || !isMusicSong(song)) return;
-		const now = Date.now();
-		if (!force && now - musicProgressLastSavedAt < 15_000) return;
-		const position = audio?.currentTime ?? currentTime.value;
-		const total = audio?.duration ?? duration.value;
-		if (!Number.isFinite(position) || position < 0) return;
-		musicProgressLastSavedAt = now;
-		void saveEntityMusicProgress({
-			song_id: String(song.id),
-			position_seconds: position,
-			duration_seconds: Number.isFinite(total) && total > 0 ? total : 0,
-			completed,
-			reported_at: new Date(now).toISOString(),
-		}).catch((error) => {
-			reportError(error, "Failed to save music playback progress:");
-		});
-	};
-
-	const saveMusicSession = (force = false) => {
-		const song = currentSong.value;
-		const musicQueue = queue.value.filter(isMusicSong);
-		if (
-			!authStore.isAuthenticated ||
-			!song ||
-			!isMusicSong(song) ||
-			musicQueue.length === 0
-		)
-			return;
-		const songIDs = musicQueue.map((item) => String(item.id));
-		if (!songIDs.includes(String(song.id))) return;
-		const now = Date.now();
-		if (!force && now - musicSessionLastSavedAt < 15_000) return;
-		const position = audio?.currentTime ?? currentTime.value;
-		if (!Number.isFinite(position) || position < 0) return;
-		musicSessionLastSavedAt = now;
-		void saveMusicPlaybackSession({
-			song_ids: songIDs,
-			current_song_id: String(song.id),
-			position_seconds: position,
-			playback_mode: playbackMode.value,
-			reported_at: new Date(now).toISOString(),
-		}).catch((error) => {
-			reportError(error, "Failed to save music playback session:");
-		});
-	};
-
-	const musicSongFromAPI = (source: {
-		id: string;
-		title: string;
-		artists?: Array<{ name: string }>;
-		album?: { id: string; title: string; cover_url?: string };
-		audio_url?: string;
-		audio_status?: string;
-		cover_url?: string;
-		lyrics?: string;
-		waveform_peaks?: number[];
-		track_number?: number;
-		summary_only?: boolean;
-	}): Song =>
-		normalizePlaybackSong({
-			summary_only: source.summary_only,
-			id: source.id,
-			title: source.title,
-			artist:
-				source.artists?.map((artist) => artist.name).join(" / ") || "未知艺术家",
-			album: source.album?.title || "",
-			album_id: source.album?.id || "",
-			audio_url: source.audio_url || "",
-			audio_status: source.audio_status,
-			cover_url: source.cover_url || source.album?.cover_url || "",
-			lyrics: source.lyrics || "",
-			waveform_peaks: source.waveform_peaks,
-			track_number: source.track_number,
-			status: "open",
-		} as Song, resolvePlaybackAudioUrl);
-
-	const restoreMusicSession = async () => {
-		if (!authStore.isAuthenticated || musicSessionRestored) return false;
-		const generation = musicAccountGeneration;
-		const playbackGeneration = playGeneration;
-		const userID = authStore.user?.uuid;
-		try {
-			const session = await restoreEntityMusicSession();
-			if (
-				generation !== musicAccountGeneration ||
-				playbackGeneration !== playGeneration ||
-				!authStore.isAuthenticated ||
-				authStore.user?.uuid !== userID
-			)
-				return false;
-			if (!session?.queue?.length) {
-				musicSessionRestored = true;
-				return false;
-			}
-			const restoredQueue = session.queue
-				.map(musicSongFromAPI)
-				.filter(hasPlayableAudio);
-			const restoredCurrentSong = restoredQueue.find(
-				(song) => String(song.id) === session.current_song_id,
-			);
-			if (!restoredCurrentSong) {
-				musicSessionRestored = true;
-				return false;
-			}
-			queue.value = restoredQueue;
-			currentAlbum.value = null;
-			currentSong.value = restoredCurrentSong;
-			currentTime.value = session.position_seconds;
-			playbackMode.value = session.playback_mode;
-			isPlaying.value = false;
-			musicSessionRestored = true;
-			return true;
-		} catch (error) {
-			reportError(error, "Failed to restore music playback session:");
-			return false;
-		}
-	};
-
-	const restoreMusicProgress = async () => {
-		if (!authStore.isAuthenticated || musicProgressRestored) return;
-		const generation = musicAccountGeneration;
-		const playbackGeneration = playGeneration;
-		const userID = authStore.user?.uuid;
-		try {
-			const progress = await getMusicPlaybackProgress();
-			if (
-				generation !== musicAccountGeneration ||
-				playbackGeneration !== playGeneration ||
-				!authStore.isAuthenticated ||
-				authStore.user?.uuid !== userID
-			)
-				return;
-			if (!progress?.song?.audio_url || progress.completed) {
-				musicProgressRestored = true;
-				return;
-			}
-			const source = progress.song;
-			const song = musicSongFromAPI(source);
-			if (!hasPlayableAudio(song)) {
-				musicProgressRestored = true;
-				return;
-			}
-			currentSong.value = song;
-			queue.value = [song];
-			currentAlbum.value = null;
-			currentTime.value = progress.position_seconds;
-			duration.value = progress.duration_seconds;
-			isPlaying.value = false;
-			musicProgressRestored = true;
-		} catch (error) {
-			reportError(error, "Failed to restore music playback progress:");
-		}
-	};
-
-	const restoreMusicPlayback = async () => {
-		const generation = musicAccountGeneration;
-		const playbackGeneration = playGeneration;
-		if (await restoreMusicSession()) return;
-		if (generation !== musicAccountGeneration || playbackGeneration !== playGeneration) return;
-		await restoreMusicProgress();
-	};
 
 	if (typeof window !== "undefined") {
 		window.addEventListener("pagehide", () => {
@@ -457,8 +300,7 @@ export const usePlayerStore = defineStore("player", () => {
 		([isAuthenticated]) => {
 			if (isAuthenticated) void restoreMusicPlayback();
 			else {
-				musicProgressRestored = false;
-				musicSessionRestored = false;
+				resetProgressForSession();
 			}
 		},
 		{ immediate: true },
@@ -496,84 +338,20 @@ export const usePlayerStore = defineStore("player", () => {
 		pauseListening();
 		updateMediaSessionPlaybackState("paused");
 	});
-	const listeningThresholdMs = 5000;
-	let listeningTimer: ReturnType<typeof setTimeout> | null = null;
-	let listeningStartedAt: number | null = null;
-	let listenedMs = 0;
-	let listeningSongId: string | null = null;
-	let playReported = false;
-	let listeningEventId: string | null = null;
 	let podcastTracker: PodcastTrackerInstance | null = null;
 
-	const clearListeningTimer = () => {
-		if (listeningTimer === null) return;
-		clearTimeout(listeningTimer);
-		listeningTimer = null;
-	};
-
-	const pauseListening = () => {
-		if (listeningStartedAt !== null) {
-			listenedMs += Date.now() - listeningStartedAt;
-			listeningStartedAt = null;
-		}
-		clearListeningTimer();
-	};
-
-	const reportRecommendationEvent = (
-		song: Song | null,
-		event: "play_start" | "play_complete" | "skip",
-	) => {
-		const context = song?.recommendation_context;
-		if (!authStore.isAuthenticated || !song || !context) return;
-		void recordMusicRecommendationEvents({
-			request_id: context.request_id,
-			surface: context.surface,
-			events: [
-				{
-					event,
-					entity_type: "song",
-					entity_id: String(song.id),
-					position: context.position,
-					reason: context.reason,
-				},
-			],
-		}).catch((error) => {
-			reportError(error, "Failed to record music recommendation playback event:");
-		});
-	};
-
-	const reportCurrentPlay = () => {
-		const songId = currentSong.value?.id ? String(currentSong.value.id) : null;
-		if (!songId || songId !== listeningSongId || playReported) return;
-		playReported = true;
-		listeningStartedAt = null;
-		listeningTimer = null;
-		reportRecommendationEvent(currentSong.value, "play_start");
-		const playlistId = currentSong.value?.playlist_id;
-		const report = recordMusicSongPlay(songId, playlistId, listeningEventId ?? undefined);
-		void report.catch((error) => {
-			reportError(error, "Failed to record music play:");
-		});
-	};
-
-	const resumeListening = () => {
-		if (!listeningSongId || playReported || listeningStartedAt !== null) return;
-		listeningStartedAt = Date.now();
-		listeningTimer = setTimeout(
-			reportCurrentPlay,
-			Math.max(0, listeningThresholdMs - listenedMs),
-		);
-	};
-
-	const resetListening = (song: Song) => {
-		pauseListening();
-		listenedMs = 0;
-		listeningSongId =
-			!song.source_type || song.source_type === "music" ? String(song.id) : null;
-		// 同一次播放暂停、恢复和网络重试复用 ID；切歌或重新播放才创建新事件。
-		listeningEventId = listeningSongId ? crypto.randomUUID() : null;
-		playReported = false;
-	};
+	const {
+		pauseListening,
+		resumeListening,
+		resetListening,
+		ensureListening,
+		reportRecommendationEvent,
+		clearListeningTimer,
+		resetForSession: resetListeningForSession,
+	} = createPlayerAnalytics({
+		getCurrentSong: () => currentSong.value,
+		getIsAuthenticated: () => authStore.isAuthenticated,
+	});
 
 	const resetAudioStartPrefetch = () => {
 		audioPrefetcher.abortPending();
@@ -594,24 +372,15 @@ export const usePlayerStore = defineStore("player", () => {
 			previousAudio.load();
 		}
 		releaseCachedAudioObjectUrl();
-		clearListeningTimer();
-		listeningStartedAt = null;
-		listenedMs = 0;
-		listeningSongId = null;
-		listeningEventId = null;
-		playReported = false;
+		resetOfflineForSession();
+		resetListeningForSession();
 		podcastTracker = null;
 		currentSongStartCached = false;
 		audioPrefetcher.reset();
 		songsRequest = null;
-		musicProgressLastSavedAt = 0;
-		musicProgressRestored = false;
-		musicSessionLastSavedAt = 0;
-		musicSessionRestored = false;
+		resetProgressForSession();
 		songs.value = [];
-		queue.value = [];
-		shuffledQueue.value = [];
-		currentAlbum.value = null;
+		resetQueueForSession();
 		currentSong.value = null;
 		currentTime.value = 0;
 		duration.value = 0;
@@ -722,51 +491,6 @@ export const usePlayerStore = defineStore("player", () => {
 		updateMediaSessionPlaybackState("paused");
 	};
 
-	const recoverFromMediaError = (player: HTMLAudioElement): boolean => {
-		const failed = currentSong.value;
-		const list = getActiveList();
-		if (!failed || !isMusicSong(failed) || list.length < 2) return false;
-		// Browsers may fire multiple error events for the same failed source.
-		if (recoveryTimer !== null) return true;
-
-		const failedKey = playbackItemKey(failed);
-		const generation = playGeneration;
-		const schedule = (callback: () => void, delay: number) => {
-			recoveryTimer = setTimeout(() => {
-				recoveryTimer = null;
-				if (generation !== playGeneration || audio !== player ||
-					!currentSong.value || playbackItemKey(currentSong.value) !== failedKey) return;
-				callback();
-			}, delay);
-		};
-		if (!recoveryRetried.has(failedKey)) {
-			recoveryRetried.add(failedKey);
-			playbackError.value = "";
-			audioRecoveryNotice.value = "音源加载失败，正在自动重试一次…";
-			schedule(() => reloadCurrentAudio(true), 450);
-			return true;
-		}
-
-		// Never revisit a failed track until playback genuinely succeeds or the
-		// listener manually starts a new playback session.
-		recoveryFailed.add(failedKey);
-		const index = list.findIndex((item) => playbackItemKey(item) === failedKey);
-		const next = Array.from({ length: list.length - 1 }, (_, step) =>
-			list[(Math.max(0, index) + step + 1) % list.length],
-		).find((item) => item && isMusicSong(item) &&
-			!recoveryFailed.has(playbackItemKey(item)));
-
-		if (!next) {
-			audioRecoveryNotice.value = "";
-			playbackError.value = "队列音源均无法播放，请检查网络后手动重试";
-			return true;
-		}
-		playbackError.value = "";
-		audioRecoveryNotice.value = "已跳过无法加载的歌曲：" + failed.title;
-		schedule(() => startSong(next, undefined, false, true), 180);
-		return true;
-	};
-
 	const ensureAudio = () => {
 		if (audio) return audio;
 
@@ -807,7 +531,7 @@ export const usePlayerStore = defineStore("player", () => {
 			isLoading.value = false;
 			isPlaying.value = false;
 			pauseListening();
-			if (recoveryTimer !== null || (wasActive && recoverFromMediaError(nextAudio))) return;
+			if (hasRecoveryTimer() || (wasActive && recoverFromMediaError(nextAudio))) return;
 			playbackError.value = "音频加载失败，请重试";
 			updateMediaSessionPlaybackState("paused");
 		});
@@ -819,18 +543,7 @@ export const usePlayerStore = defineStore("player", () => {
 			prefetchQueueAudioStarts();
 		});
 		const updateBuffered = () => {
-			if (!nextAudio || !nextAudio.buffered || nextAudio.buffered.length === 0) {
-				bufferedTime.value = 0;
-				return;
-			}
-			const ct = nextAudio.currentTime;
-			for (let i = 0; i < nextAudio.buffered.length; i++) {
-				if (nextAudio.buffered.start(i) <= ct && ct <= nextAudio.buffered.end(i)) {
-					bufferedTime.value = nextAudio.buffered.end(i);
-					return;
-				}
-			}
-			bufferedTime.value = nextAudio.buffered.end(nextAudio.buffered.length - 1);
+			bufferedTime.value = computeBufferedTime(nextAudio);
 		};
 		nextAudio.addEventListener("progress", updateBuffered);
 		nextAudio.addEventListener("timeupdate", () => {
@@ -907,99 +620,6 @@ export const usePlayerStore = defineStore("player", () => {
 
 		audio = nextAudio;
 		return nextAudio;
-	};
-
-	const registerMediaSessionHandlers = (playerTarget?: HTMLAudioElement | null) => {
-		const targetAudio = playerTarget || audio;
-		const isIOS =
-			typeof navigator !== "undefined" &&
-			(/iPad|iPhone|iPod/.test(navigator.userAgent) ||
-				(navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1));
-
-		const isPodcast = currentSong.value?.source_type === "podcast_episode";
-		const allowSeekButtons = !isIOS || isPodcast;
-
-		setupMediaSession({
-			play: () => {
-				if (currentSong.value && !isPlaying.value && targetAudio) {
-					attemptPlay(targetAudio);
-				}
-			},
-			pause: () => {
-				if (targetAudio && shouldPauseAudio(targetAudio)) {
-					pauseCurrentAudio(targetAudio);
-				}
-			},
-			stop: () => {
-				if (targetAudio && shouldPauseAudio(targetAudio)) {
-					pauseCurrentAudio(targetAudio);
-				}
-				seek(0);
-				updateMediaSessionPlaybackState("none");
-			},
-			previoustrack: () => {
-				if (currentTime.value > 3) {
-					seek(0);
-					updateMediaSessionPosition({
-						duration: duration.value,
-						playbackRate: playbackRate.value,
-						position: 0,
-					});
-					return;
-				}
-				playPrevious();
-			},
-			nexttrack: playNext,
-			seekto: (details) => {
-				if (details.seekTime !== undefined) {
-					if (details.fastSeek && targetAudio && typeof (targetAudio as any).fastSeek === "function") {
-						try {
-							(targetAudio as any).fastSeek(details.seekTime);
-							currentTime.value = details.seekTime;
-						} catch {
-							seek(details.seekTime);
-						}
-					} else {
-						seek(details.seekTime);
-					}
-					updateMediaSessionPosition({
-						duration: duration.value,
-						playbackRate: playbackRate.value,
-						position: details.seekTime,
-					});
-				}
-			},
-			seekbackward: allowSeekButtons
-				? (details) => {
-						const offset = details.seekOffset || (isPodcast ? 15 : 10);
-						skip(-offset);
-						updateMediaSessionPosition({
-							duration: duration.value,
-							playbackRate: playbackRate.value,
-							position: currentTime.value,
-						});
-					}
-				: null,
-			seekforward: allowSeekButtons
-				? (details) => {
-						const offset = details.seekOffset || (isPodcast ? 15 : 10);
-						skip(offset);
-						updateMediaSessionPosition({
-							duration: duration.value,
-							playbackRate: playbackRate.value,
-							position: currentTime.value,
-						});
-					}
-				: null,
-			skip: (seconds) => {
-				skip(seconds);
-				updateMediaSessionPosition({
-					duration: duration.value,
-					playbackRate: playbackRate.value,
-					position: currentTime.value,
-				});
-			},
-		});
 	};
 
 	const syncCurrentSongFromLibrary = (library: Song[]) => {
@@ -1300,7 +920,7 @@ export const usePlayerStore = defineStore("player", () => {
 			if (generation !== playGeneration || audio !== player) return;
 			player.src = normalizedSong.audio_url;
 			player.playbackRate = playbackRate.value;
-			isCurrentAudioCached.value = isMediaCachedSync(normalizedSong.audio_url);
+			syncCachedStatus(normalizedSong.audio_url);
 			player.volume = computeActualVolume(volume.value);
 			applyResumePosition();
 			if (resumePosition > 0) {
@@ -1352,6 +972,7 @@ export const usePlayerStore = defineStore("player", () => {
 			podcastTracker.open();
 		}
 	};
+	startSongFn = startSong;
 
 	const playSong = (song: Song) => {
 		if (
@@ -1486,14 +1107,10 @@ export const usePlayerStore = defineStore("player", () => {
 		if (shouldPauseAudio(player)) {
 			pauseCurrentAudio(player);
 		} else {
-			if (listeningSongId !== String(currentSong.value.id))
-				resetListening(currentSong.value);
+			ensureListening(currentSong.value);
 			attemptPlay(player);
 		}
 	};
-
-	const getActiveList = () =>
-		activeQueue.value.length > 0 ? activeQueue.value : songs.value;
 
 	const advanceToNextSong = (completed = false) => {
 		if (!completed) reportRecommendationEvent(currentSong.value, "skip");
@@ -1543,40 +1160,11 @@ export const usePlayerStore = defineStore("player", () => {
 		startSong(list[prevIndex]);
 	};
 
-	const toggleShuffle = () => {
-		isShuffled.value = !isShuffled.value;
-	};
-
-	const toggleRepeat = () => {
-		const modes: RepeatMode[] = ["none", "all", "one"];
-		const nextMode = modes[(modes.indexOf(repeatMode.value) + 1) % modes.length];
-		repeatMode.value = nextMode;
-	};
-
-	const cyclePlaybackMode = () => {
-		const modes: PlaybackMode[] = ["loop", "single", "random"];
-		const currentIndex = modes.indexOf(playbackMode.value);
-		playbackMode.value = modes[(currentIndex + 1) % modes.length];
-	};
-
-	const createPodcastSong = podcastAdapter.createPodcastSong;
-	const createPodcastEpisodeSong = podcastAdapter.createPodcastEpisodeSong;
-	const readPodcastProgress = podcastAdapter.readPodcastProgress;
-
-	const setQueueFromCurrentItems = (items: TimelineItem[]) => {
-		const podcastSongs: Song[] = items
-			.filter(
-				(item) =>
-					(item.type === "feed_item" || item.type === "project_update") && isPlayableFeedPodcast(item.feed_item),
-			)
-			.map((item) => createPodcastSong(item.feed_item))
-			.filter((song): song is Song => Boolean(song));
-		queue.value = podcastSongs;
-	};
-
-	const setQueueFromPodcastEpisodes = (episodes: PodcastEpisode[]) => {
-		queue.value = episodes.map(createPodcastEpisodeSong);
-	};
+	const {
+		createPodcastSong,
+		createPodcastEpisodeSong,
+		readPodcastProgress,
+	} = podcastAdapter;
 
 	function savePodcastProgress(
 		completedOrSong: boolean | Song | null = false,
@@ -1720,54 +1308,36 @@ export const usePlayerStore = defineStore("player", () => {
 		}
 		attemptPlay(player);
 	};
+	reloadCurrentAudioFn = reloadCurrentAudio;
+
+	const { registerMediaSessionHandlers: setupMediaSessionHandlers } =
+		createPlayerMediaSession({
+			getCurrentSong: () => currentSong.value,
+			getIsPlaying: () => isPlaying.value,
+			getCurrentTime: () => currentTime.value,
+			getDuration: () => duration.value,
+			getPlaybackRate: () => playbackRate.value,
+			setCurrentTime: (time) => {
+				currentTime.value = time;
+			},
+			getAudio: () => audio,
+			setupMediaSession,
+			updateMediaSessionPosition,
+			updateMediaSessionPlaybackState,
+			updateMediaSessionMetadata,
+			attemptPlay: (audioTarget) => attemptPlay(audioTarget),
+			shouldPauseAudio: (audioTarget) => shouldPauseAudio(audioTarget),
+			pauseCurrentAudio: (audioTarget) => pauseCurrentAudio(audioTarget),
+			seek: (time) => seek(time),
+			skip: (seconds) => skip(seconds),
+			playPrevious: () => playPrevious(),
+			playNext: () => playNext(),
+		});
+	registerMediaSessionHandlers = setupMediaSessionHandlers;
 
 	// Deliberately no parameters: Vue @click may pass MouseEvent, which must
 	// never turn a manual retry into an automatic recovery attempt.
 	const retryPlayback = () => reloadCurrentAudio(false);
-
-	async function checkCurrentSongAudioCached(generation?: number) {
-		const song = currentSong.value;
-		if (!song || !song.audio_url) {
-			isCurrentAudioCached.value = false;
-			return false;
-		}
-		const url = song.audio_url;
-		const cached = await isMediaCached(url);
-		if (generation !== undefined && generation !== playGeneration) return cached;
-		isCurrentAudioCached.value = cached;
-		return cached;
-	}
-
-	async function cacheCurrentAudio(): Promise<boolean> {
-		const song = currentSong.value;
-		if (!song || !song.audio_url || isAudioCaching.value) return false;
-		isAudioCaching.value = true;
-		audioCacheError.value = "";
-		try {
-			const success = await cacheMediaForOffline(song.audio_url);
-			if (success) {
-				isCurrentAudioCached.value = true;
-				return true;
-			} else {
-				audioCacheError.value = "当前音源无法保存离线副本";
-				return false;
-			}
-		} catch (error) {
-			audioCacheError.value = error instanceof Error ? error.message : "离线保存失败";
-			return false;
-		} finally {
-			isAudioCaching.value = false;
-		}
-	}
-
-	async function removeCurrentAudio(): Promise<boolean> {
-		const song = currentSong.value;
-		if (!song || !song.audio_url) return false;
-		await removeCachedMedia(song.audio_url);
-		isCurrentAudioCached.value = false;
-		releaseCachedAudioObjectUrl();
-		return true;
-	}
 
 	const toggleLyrics = () => {
 		showLyrics.value = !showLyrics.value;

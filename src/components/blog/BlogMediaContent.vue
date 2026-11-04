@@ -49,6 +49,7 @@ function playMusicEmbed(event: MouseEvent) {
   event.stopPropagation()
   if (embed.kind === 'song') player.playSong(songs[0])
   else player.playAlbum(songs)
+  player.expandPlayer?.()
 }
 
 watch(() => [props.html, props.videoEmbeds], syncContent, { deep: true })

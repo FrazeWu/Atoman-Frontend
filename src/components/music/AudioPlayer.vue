@@ -236,6 +236,14 @@ watch(
   },
 );
 
+watch(
+  () => player.expandRequest,
+  (request, previousRequest) => {
+    if (request === previousRequest) return;
+    void setPlayerDisplayMode('full');
+  },
+);
+
 async function setPlayerDisplayMode(mode: "full" | "cover") {
   playerDisplayMode.value = mode;
   if (mode === "full") {

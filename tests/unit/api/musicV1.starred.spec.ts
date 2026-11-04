@@ -239,6 +239,27 @@ describe("music v1 starred and playlist adapters", () => {
 		]);
 	});
 
+	it("forced playlist refresh observes changes made in another session before the normal cache TTL", async () => {
+		let currentName = "Before desktop edit";
+		let reads = 0;
+		vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+			const path = String(input);
+			if (!path.startsWith("/api/v1/music/playlists")) throw new Error(`unexpected fetch: ${path}`);
+			reads += 1;
+			return new Response(JSON.stringify({ data: [{ id: "qa-cross-device", name: currentName }], meta: { page: 1, page_size: 100, total: 1, has_more: false } }), { status: 200, headers: { "Content-Type": "application/json" } });
+		}));
+		const filters = { page: 1, page_size: 100 };
+		const initial = await listMusicPlaylists(filters);
+		expect(initial.data[0].name).toBe("Before desktop edit");
+		currentName = "Updated from phone";
+		const cached = await listMusicPlaylists(filters);
+		expect(cached.data[0].name).toBe("Before desktop edit");
+		expect(reads).toBe(1);
+		const refreshed = await listMusicPlaylists(filters, { force: true });
+		expect(refreshed.data[0].name).toBe("Updated from phone");
+		expect(reads).toBe(2);
+	});
+
 	it("creates and deletes playlist bookmarks through the playlist bookmark endpoint", async () => {
 		vi.stubGlobal(
 			"fetch",

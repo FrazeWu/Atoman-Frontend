@@ -474,13 +474,14 @@ export async function deleteAlbumBookmark(
 
 export async function listPlaylistBookmarks(
 	filters: Pick<MusicListFilters, "sort" | "page" | "page_size"> = {},
+	options: { force?: boolean } = {},
 ) {
 	return queryCache.fetchWithCache(
 		musicListCacheKey("playlist-bookmarks", filters),
 		() => apiGetEnvelope<MusicPlaylistBookmark[], PaginationMeta>(
 			`${musicV1Endpoints.playlistBookmarks()}${queryString(filters)}`,
 		),
-		{ staleTime: musicListStaleTime },
+		{ staleTime: musicListStaleTime, force: options.force },
 	);
 }
 
@@ -507,13 +508,14 @@ export async function deletePlaylistBookmark(
 
 export async function listMusicPlaylists(
 	filters: Pick<MusicListFilters, "sort" | "page" | "page_size"> = {},
+	options: { force?: boolean } = {},
 ) {
 	return queryCache.fetchWithCache(
 		musicListCacheKey("playlists", filters),
 		() => apiGetEnvelope<MusicPlaylistSummary[], PaginationMeta>(
 			`${musicV1Endpoints.playlists()}${queryString(filters)}`,
 		),
-		{ staleTime: musicListStaleTime },
+		{ staleTime: musicListStaleTime, force: options.force },
 	);
 }
 

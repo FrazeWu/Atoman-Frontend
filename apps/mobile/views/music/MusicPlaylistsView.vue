@@ -230,8 +230,8 @@ async function loadPlaylists() {
   loading.value = true
   try {
     const [userRes, bookmarkRes] = await Promise.allSettled([
-      listMusicPlaylists({ page: 1, page_size: 100 }),
-      listPlaylistBookmarks({ page: 1, page_size: 100 }),
+      listMusicPlaylists({ page: 1, page_size: 100 }, { force: true }),
+      listPlaylistBookmarks({ page: 1, page_size: 100 }, { force: true }),
     ])
     if (version !== loadVersion) return
     // A partial response is not an empty collection. Preserve the last

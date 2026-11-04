@@ -40,8 +40,8 @@ async function loadPlaylists() {
   error.value = ''
   try {
     const [ownedResponse, bookmarkedResponse] = await Promise.all([
-      listMusicPlaylists({ page: 1, page_size: 100 }),
-      listPlaylistBookmarks({ page: 1, page_size: 100 }),
+      listMusicPlaylists({ page: 1, page_size: 100 }, { force: true }),
+      listPlaylistBookmarks({ page: 1, page_size: 100 }, { force: true }),
     ])
     ownedPlaylists.value = ownedResponse.data.filter(playlist => playlist.kind !== 'later')
     bookmarkedPlaylists.value = bookmarkedResponse.data

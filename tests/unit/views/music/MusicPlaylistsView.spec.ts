@@ -153,6 +153,8 @@ describe("MusicPlaylistsView", () => {
 		expect(wrapper.find('[role="alert"]').exists()).toBe(false);
 		expect(wrapper.text()).toContain("恢复后的歌单");
 		expect(mocks.listMusicPlaylists).toHaveBeenCalledTimes(2);
+		expect(mocks.listMusicPlaylists).toHaveBeenLastCalledWith({ page: 1, page_size: 100 }, { force: true });
+		expect(mocks.listPlaylistBookmarks).toHaveBeenLastCalledWith({ page: 1, page_size: 100 }, { force: true });
 	});
 
 	it("offers a create playlist action from the page", async () => {

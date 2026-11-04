@@ -5,6 +5,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import FeedStreamView from '@mobile/views/feed/FeedStreamView.vue'
 import FeedFollowingView from '@mobile/views/feed/FeedFollowingView.vue'
 import FeedStarredView from '@mobile/views/feed/FeedStarredView.vue'
+import { useFeedStore } from '@/stores/feed'
 import FeedMeView from '@mobile/views/feed/FeedMeView.vue'
 import FeedArticleReaderView from '@mobile/views/feed/FeedArticleReaderView.vue'
 
@@ -152,6 +153,7 @@ describe('Mobile Feed Space Overhaul (Option B)', () => {
     })
 
     it('unstarring an article removes it from the list', async () => {
+      vi.spyOn(useFeedStore(), 'toggleStar').mockResolvedValue(false)
       const wrapper = mount(FeedStarredView, {
         global: { plugins: [pinia, router] },
         props: { initialArticles: mockStarred },

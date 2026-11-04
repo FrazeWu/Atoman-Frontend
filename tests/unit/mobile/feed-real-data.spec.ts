@@ -170,9 +170,38 @@ describe('Feed & Subscription Real Data Wiring', () => {
   })
 
   describe('FeedStarredView.vue persistence', () => {
+    it('restores the article when the membership API returns null instead of throwing', async () => {
+      const feedStore = useFeedStore()
+      vi.spyOn(feedStore, 'toggleStar').mockResolvedValue(null)
+      const wrapper = mount(FeedStarredView, {
+        global: { plugins: [pinia] },
+        props: { initialArticles: [{ id: 'star-fail', title: 'Cannot remove this article', sourceName: 'RSS' }] },
+      })
+      await flushPromises()
+      await wrapper.get('[data-testid="unstar-btn-star-fail"]').trigger('click')
+      await flushPromises()
+      expect(wrapper.findAll('[data-testid="starred-article-item"]')).toHaveLength(1)
+      expect(wrapper.get('[data-testid="feed-unstar-error"]').text()).toContain('取消收藏失败')
+    })
+
+    it('removes the article only when the membership API confirms false', async () => {
+      const feedStore = useFeedStore()
+      vi.spyOn(feedStore, 'toggleStar').mockResolvedValue(false)
+      const wrapper = mount(FeedStarredView, {
+        global: { plugins: [pinia] },
+        props: { initialArticles: [{ id: 'star-ok', title: 'A saved article', sourceName: 'RSS' }] },
+      })
+      await flushPromises()
+      await wrapper.get('[data-testid="unstar-btn-star-ok"]').trigger('click')
+      await flushPromises()
+      expect(wrapper.findAll('[data-testid="starred-article-item"]')).toHaveLength(0)
+      expect(feedStore.starredItemIds.has('star-ok')).toBe(false)
+      expect(wrapper.find('[data-testid="feed-unstar-error"]').exists()).toBe(false)
+    })
+
     it('calls feedStore.toggleStar when unstarring article', async () => {
       const feedStore = useFeedStore()
-      const starSpy = vi.spyOn(feedStore, 'toggleStar').mockResolvedValue(true)
+      const starSpy = vi.spyOn(feedStore, 'toggleStar').mockResolvedValue(false)
 
       const wrapper = mount(FeedStarredView, {
         global: { plugins: [pinia] },

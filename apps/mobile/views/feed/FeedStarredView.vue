@@ -25,6 +25,7 @@
 
     <!-- Starred List -->
     <main class="feed-starred-content">
+      <div v-if="unstarError" role="alert" data-testid="feed-unstar-error" class="feed-starred-error">{{ unstarError }}</div>
       <div v-if="isGuest" class="feed-starred-empty" data-testid="feed-starred-guest-state">
         <div class="feed-starred-empty__icon"><MIcon name="bookmark" size="lg" /></div>
         <p class="feed-starred-empty__title">登录查看收藏</p>
@@ -55,6 +56,7 @@
               type="button"
               class="feed-starred-item__unstar-btn"
               :data-testid="`unstar-btn-${article.id}`"
+              :disabled="removingIds.has(article.id)"
               title="取消收藏"
               @click.stop="unstar(article.id)"
             >
@@ -113,6 +115,9 @@ const feedStore = getActivePinia() ? useFeedStore() : null
 const articles = ref<StarredArticleItem[]>(
   props.initialArticles ? [...props.initialArticles] : []
 )
+const unstarError = ref('')
+const removingIds = ref(new Set<string>())
+let previousPageIds: string[] = []
 
 const categories = ['全部', '技术', '设计', '思考']
 const activeCategory = ref('全部')
@@ -137,14 +142,25 @@ function openArticle(id: string) {
 }
 
 async function unstar(id: string) {
-  const prevArticles = [...articles.value]
+  if (removingIds.value.has(id)) return
+  removingIds.value = new Set([...removingIds.value, id])
+  unstarError.value = ''
+  const previous = [...articles.value]
   articles.value = articles.value.filter((a) => a.id !== id)
-  if (feedStore?.toggleStar) {
-    try {
-      await feedStore.toggleStar(id)
-    } catch {
-      articles.value = prevArticles
-    }
+  try {
+    // The membership action resolves null on API failure without throwing.
+    // Only false confirms that the server no longer has the star.
+    const starred = await feedStore?.toggleStar(id)
+    if (starred !== false) throw new Error('Unstar not confirmed')
+    // Keep the shared membership state aligned for feed cards on other pages.
+    feedStore?.syncStarredPageIds([id], [])
+  } catch {
+    articles.value = previous
+    unstarError.value = '取消收藏失败，请重试。'
+  } finally {
+    const next = new Set(removingIds.value)
+    next.delete(id)
+    removingIds.value = next
   }
 }
 
@@ -180,6 +196,9 @@ async function loadStarredArticles() {
       } else if (authStore.isAuthenticated) {
         articles.value = []
       }
+      const nextIds = articles.value.map((article) => article.id)
+      feedStore?.syncStarredPageIds(previousPageIds, nextIds)
+      previousPageIds = nextIds
     }
   } catch {
     // Graceful fallback
@@ -187,6 +206,11 @@ async function loadStarredArticles() {
 }
 
 onMounted(() => {
+  if (props.initialArticles) {
+    const ids = articles.value.map((article) => article.id)
+    feedStore?.syncStarredPageIds([], ids)
+    previousPageIds = ids
+  }
   void loadStarredArticles()
 })
 </script>

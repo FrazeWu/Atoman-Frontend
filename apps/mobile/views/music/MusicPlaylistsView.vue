@@ -111,6 +111,10 @@
 
         <!-- Playlists Content -->
         <section class="mobile-music-playlists__content" aria-label="歌单列表">
+          <div v-if="loadError" class="mobile-music-playlists__load-error" role="alert" data-testid="playlist-load-error">
+            <span>{{ loadError }}</span>
+            <button type="button" data-testid="playlist-load-retry" @click="loadPlaylists">重试</button>
+          </div>
           <div v-if="playlists.length > 0" class="mobile-music-playlists__list">
             <RouterLink
               v-for="playlist in playlists"
@@ -139,7 +143,7 @@
           </div>
 
           <!-- Empty State -->
-          <div v-else-if="!loading" class="mobile-music-playlists__empty" data-testid="empty-state">
+          <div v-else-if="!loading && !loadError" class="mobile-music-playlists__empty" data-testid="empty-state">
             <MIcon name="playlists" size="lg" class="mobile-music-playlists__empty-icon" />
             <p class="mobile-music-playlists__empty-title">暂无歌单</p>
             <p class="mobile-music-playlists__empty-desc">创建专属歌单，收藏你喜爱的曲目</p>
@@ -191,6 +195,8 @@ const activeTab = ref<'mine' | 'curated'>(!authStore.isAuthenticated && props.in
 const playlists = ref<MusicPlaylistSummary[]>([])
 const curatedPlaylists = ref<MusicPlaylistSummary[]>([])
 const loading = ref(false)
+const loadError = ref('')
+let loadVersion = 0
 const curatedLoading = ref(false)
 const curatedError = ref(false)
 const showCreateModal = ref(false)
@@ -213,9 +219,11 @@ async function loadCuratedPlaylists() {
 }
 
 async function loadPlaylists() {
+  const version = ++loadVersion
   void loadCuratedPlaylists()
   if (!authStore.isAuthenticated) {
     playlists.value = []
+    loadError.value = ''
     loading.value = false
     return
   }
@@ -225,24 +233,27 @@ async function loadPlaylists() {
       listMusicPlaylists({ page: 1, page_size: 100 }),
       listPlaylistBookmarks({ page: 1, page_size: 100 }),
     ])
-
-    const list: MusicPlaylistSummary[] = []
-    if (userRes.status === 'fulfilled' && userRes.value?.data?.length) {
-      list.push(...userRes.value.data.filter((p) => p.kind !== 'later'))
+    if (version !== loadVersion) return
+    // A partial response is not an empty collection. Preserve the last
+    // confirmed list until every source can be loaded successfully.
+    if (userRes.status === 'rejected' || bookmarkRes.status === 'rejected') {
+      loadError.value = '歌单加载失败，请重试。'
+      return
     }
-    if (bookmarkRes.status === 'fulfilled' && bookmarkRes.value?.data?.length) {
-      for (const b of bookmarkRes.value.data) {
-        const pl = b.playlist
-        if (pl && !list.some((existing) => existing.id === pl.id)) {
-          list.push(pl)
-        }
+    const list: MusicPlaylistSummary[] = []
+    list.push(...(userRes.value?.data ?? []).filter((p) => p.kind !== 'later'))
+    for (const bookmark of bookmarkRes.value?.data ?? []) {
+      const playlist = bookmark.playlist
+      if (playlist && !list.some((existing) => existing.id === playlist.id)) {
+        list.push(playlist)
       }
     }
     playlists.value = list
+    loadError.value = ''
   } catch {
-    playlists.value = []
+    if (version === loadVersion) loadError.value = '歌单加载失败，请重试。'
   } finally {
-    loading.value = false
+    if (version === loadVersion) loading.value = false
   }
 }
 

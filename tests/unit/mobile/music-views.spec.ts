@@ -399,6 +399,44 @@ describe('Mobile Independent Music Views & Player', () => {
     })
   })
 
+  describe('Music playlists read failures', () => {
+    it('distinguishes failed loading from an empty list and can recover', async () => {
+      const auth = (await import('@/stores/auth')).useAuthStore()
+      auth.user = { uuid: 'u-1', username: 'tester' } as any
+      auth.isAuthenticated = true
+      vi.mocked(musicApi.listMusicPlaylists)
+        .mockRejectedValueOnce(new Error('backend offline'))
+        .mockResolvedValueOnce({ data: mockPlaylists, total: 2 } as any)
+      vi.mocked(musicApi.listPlaylistBookmarks).mockResolvedValue({ data: [], total: 0 } as any)
+      vi.mocked(musicApi.listPublicMusicPlaylists).mockResolvedValue({ data: [], total: 0 } as any)
+      const wrapper = mount(MusicPlaylistsView, {
+        global: { plugins: [pinia, router], stubs: { MIcon: true } },
+      })
+      await flushPromises()
+      expect(wrapper.get('[data-testid="playlist-load-error"]').text()).toContain('歌单加载失败')
+      expect(wrapper.find('[data-testid="empty-state"]').exists()).toBe(false)
+      await wrapper.get('[data-testid="playlist-load-retry"]').trigger('click')
+      await flushPromises()
+      expect(wrapper.find('[data-testid="playlist-load-error"]').exists()).toBe(false)
+      expect(wrapper.findAll('[data-testid="playlist-item"]')).toHaveLength(2)
+    })
+
+    it('does not report empty when only bookmarked playlists fail', async () => {
+      const auth = (await import('@/stores/auth')).useAuthStore()
+      auth.user = { uuid: 'u-1', username: 'tester' } as any
+      auth.isAuthenticated = true
+      vi.mocked(musicApi.listMusicPlaylists).mockResolvedValue({ data: [], total: 0 } as any)
+      vi.mocked(musicApi.listPlaylistBookmarks).mockRejectedValueOnce(new Error('bookmark service failed'))
+      vi.mocked(musicApi.listPublicMusicPlaylists).mockResolvedValue({ data: [], total: 0 } as any)
+      const wrapper = mount(MusicPlaylistsView, {
+        global: { plugins: [pinia, router], stubs: { MIcon: true } },
+      })
+      await flushPromises()
+      expect(wrapper.find('[data-testid="playlist-load-error"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="empty-state"]').exists()).toBe(false)
+    })
+  })
+
   describe('MusicSearchView.vue', () => {
     const mockSongs = [
       { id: 's-1', title: 'Power', artist: 'Kanye West', album: 'MBDTF', duration: 292, audio_url: '/media/power.mp3', audio_status: 'ready' },

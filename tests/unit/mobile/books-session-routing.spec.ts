@@ -9,6 +9,13 @@ describe('mobile book session routes', () => {
     expect(route?.meta?.requiresAuth).not.toBe(true)
   })
 
+  it('resolves the public PDF/EPUB reader on mobile without a 404 fallback', () => {
+    const router = createRouter({ history: createMemoryHistory(), routes: mobileRoutes })
+    const route = router.resolve('/books/public-read/synthetic-pdf-or-epub')
+    expect(route.matched.some(record => record.path === '/books/public-read/:assetId')).toBe(true)
+    expect(route.meta.requiresAuth).not.toBe(true)
+  })
+
   it('resolves the canonical reader URL with an asset revision', () => {
     const router = createRouter({ history: createMemoryHistory(), routes: mobileRoutes })
     const route = router.resolve('/books/read/work-1/asset-1/revision-1')

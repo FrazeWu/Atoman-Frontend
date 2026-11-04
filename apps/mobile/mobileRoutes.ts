@@ -115,6 +115,10 @@ export const mobileRoutes: RouteRecordRaw[] = [
 		meta: { restoreSession: true },
 	},
 	{
+		path: "/books/public-read/:assetId",
+		component: () => import("@/components/books/BookPublicReaderView.vue"),
+	},
+	{
 		path: "/books/read/:assetId",
 		component: () => import("@/views/books/BookReaderView.vue"),
 	},

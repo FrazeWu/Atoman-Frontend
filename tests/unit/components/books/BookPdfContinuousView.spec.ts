@@ -79,3 +79,14 @@ it('PDF 恢复精确页内 35%，自然滚动与同页位移上报真实位置�
     expect(wrapper.emitted('position-change')?.at(-1)).toEqual([8, .528, true])
   } finally { wrapper.unmount() }
 })
+
+it('mobile default PDF page uses PDF.js page-width fit instead of horizontal clipping', async () => {
+  vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(390)
+  const wrapper = mount(BookPdfContinuousView, {
+    props: { document: { numPages: 2 } as never, initialPage: 1, zoom: 100, annotations: [] },
+  })
+  try {
+    await flushPromises()
+    expect(viewerMock.active.currentScaleValue).toBe('page-width')
+  } finally { wrapper.unmount() }
+})

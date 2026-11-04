@@ -35,6 +35,27 @@ const abort = new AbortController()
 const clamp = (value: number) => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0
 function markScrollInteraction() { suppressNaturalProgress = false }
 
+// On phones, 100% means a fully visible page rather than a clipped desktop-sized sheet.
+// Let PDF.js scale the canvas and text layer together (CSS transforms would break anchors).
+function applyReaderScale(percent: number) {
+  if (!pdfViewer) return
+  const zoom = Math.max(.5, Math.min(2, percent / 100))
+  if (window.innerWidth <= 640) {
+    pdfViewer.currentScaleValue = 'page-width'
+    if (zoom !== 1) pdfViewer.currentScale *= zoom
+  } else {
+    pdfViewer.currentScale = zoom * 1.35
+  }
+}
+
+function handleViewportResize() {
+  if (!initialized || disposed || !pdfViewer) return
+  restoration = visiblePosition()
+  suppressNaturalProgress = true
+  applyReaderScale(props.zoom)
+  requestAnimationFrame(restoreAnchor)
+}
+
 function paintPageMarks(pageNumber: number) {
   const pageView = pdfViewer?.getPageView?.(pageNumber - 1)
   const page = pageView?.div as HTMLElement | undefined
@@ -134,7 +155,7 @@ watch(() => props.zoom, value => {
   const anchor = visiblePosition()
   restoration = anchor
   suppressNaturalProgress = true
-  pdfViewer.currentScale = Math.max(.5, Math.min(2, value / 100)) * 1.35
+  applyReaderScale(value)
   requestAnimationFrame(restoreAnchor)
 })
 watch(() => props.annotations, () => {
@@ -157,11 +178,12 @@ onMounted(async () => {
       annotationMode: 0, textLayerMode: 1, abortSignal: abort.signal }
     const viewer = new PDFViewer(options)
     pdfViewer = viewer
+    window.addEventListener('resize', handleViewportResize)
     linkService.setViewer(viewer)
     eventBus.on('pagesinit', () => {
       if (disposed) return
       viewer.scrollMode = ScrollMode.VERTICAL
-      viewer.currentScale = Math.max(.5, Math.min(2, props.zoom / 100)) * 1.35
+      applyReaderScale(props.zoom)
       const page = Math.min(props.document.numPages, Math.max(1, props.initialPage))
       restoration = { page, offset: clamp(props.initialOffset || 0) }
       viewer.currentPageNumber = page
@@ -186,6 +208,7 @@ onMounted(async () => {
   }
 })
 onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleViewportResize)
   disposed = true
   if (pendingFrame) cancelAnimationFrame(pendingFrame)
   abort.abort()

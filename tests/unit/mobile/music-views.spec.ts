@@ -354,6 +354,51 @@ describe('Mobile Independent Music Views & Player', () => {
     })
   })
 
+  describe('Mobile playlist creation integrity', () => {
+    async function mountAuthenticatedPlaylists() {
+      const auth = (await import('@/stores/auth')).useAuthStore()
+      auth.user = { uuid: 'u-1', username: 'tester', email: 'tester@example.test' } as any
+      auth.isAuthenticated = true
+      vi.mocked(musicApi.listMusicPlaylists).mockResolvedValue({ data: [], total: 0 } as any)
+      vi.mocked(musicApi.listPublicMusicPlaylists).mockResolvedValue({ data: [], total: 0 } as any)
+      const wrapper = mount(MusicPlaylistsView, {
+        global: { plugins: [pinia, router], stubs: { MIcon: true } },
+      })
+      await flushPromises()
+      await wrapper.find('[data-testid="create-playlist-btn"]').trigger('click')
+      await wrapper.find('input[placeholder="歌单名称..."]').setValue(' 测试新歌单 ')
+      return wrapper
+    }
+
+    it('does not create a fake playlist after a failed server write, and keeps input for retry', async () => {
+      vi.mocked(musicApi.createMusicPlaylist).mockRejectedValueOnce(new Error('network unavailable'))
+      const wrapper = await mountAuthenticatedPlaylists()
+      await wrapper.find('.mobile-music-playlists__create-actions button:last-child').trigger('click')
+      await flushPromises()
+      expect(wrapper.findAll('[data-testid="playlist-item"]')).toHaveLength(0)
+      expect(wrapper.find('[data-testid="playlist-create-error"]').text()).toContain('创建歌单失败')
+      expect((wrapper.find('input[placeholder="歌单名称..."]').element as HTMLInputElement).value).toBe(' 测试新歌单 ')
+      expect(wrapper.find('[data-testid="create-panel"]').exists()).toBe(true)
+      expect(musicApi.createMusicPlaylist).toHaveBeenCalledWith({ name: '测试新歌单' })
+    })
+
+    it('succeeds on retry without duplicating the playlist', async () => {
+      vi.mocked(musicApi.createMusicPlaylist)
+        .mockRejectedValueOnce(new Error('network unavailable'))
+        .mockResolvedValueOnce({ id: 'playlist-created', name: '测试新歌单', song_count: 0 } as any)
+      const wrapper = await mountAuthenticatedPlaylists()
+      await wrapper.find('.mobile-music-playlists__create-actions button:last-child').trigger('click')
+      await flushPromises()
+      expect(wrapper.find('[data-testid="playlist-create-error"]').exists()).toBe(true)
+      await wrapper.find('.mobile-music-playlists__create-actions button:last-child').trigger('click')
+      await flushPromises()
+      expect(wrapper.find('[data-testid="playlist-create-error"]').exists()).toBe(false)
+      expect(wrapper.findAll('[data-testid="playlist-item"]')).toHaveLength(1)
+      expect(wrapper.find('[data-testid="create-panel"]').exists()).toBe(false)
+      expect(musicApi.createMusicPlaylist).toHaveBeenCalledTimes(2)
+    })
+  })
+
   describe('MusicSearchView.vue', () => {
     const mockSongs = [
       { id: 's-1', title: 'Power', artist: 'Kanye West', album: 'MBDTF', duration: 292, audio_url: '/media/power.mp3', audio_status: 'ready' },

@@ -101,9 +101,10 @@
               placeholder="歌单名称..."
               clearable
             />
+            <p v-if="createError" role="alert" data-testid="playlist-create-error" class="mobile-music-playlists__create-error">{{ createError }}</p>
             <div class="mobile-music-playlists__create-actions">
-              <MButton size="sm" variant="ghost" @click="showCreateModal = false">取消</MButton>
-              <MButton size="sm" variant="primary" :disabled="!newPlaylistName.trim()" @click="handleCreate">确定</MButton>
+              <MButton size="sm" variant="ghost" :disabled="creating" @click="showCreateModal = false">取消</MButton>
+              <MButton size="sm" variant="primary" :disabled="creating || !newPlaylistName.trim()" @click="handleCreate">{{ creating ? '创建中…' : '确定' }}</MButton>
             </div>
           </div>
         </div>
@@ -194,6 +195,8 @@ const curatedLoading = ref(false)
 const curatedError = ref(false)
 const showCreateModal = ref(false)
 const newPlaylistName = ref('')
+const createError = ref('')
+const creating = ref(false)
 
 async function loadCuratedPlaylists() {
   curatedLoading.value = true
@@ -245,23 +248,20 @@ async function loadPlaylists() {
 
 async function handleCreate() {
   const name = newPlaylistName.value.trim()
-  if (!name) return
+  if (!name || creating.value) return
+  creating.value = true
+  createError.value = ''
   try {
     const res = await createMusicPlaylist({ name })
-    if (res?.id) {
-      playlists.value.unshift(res)
-    }
+    if (!res?.id) throw new Error('Playlist creation returned no ID')
+    playlists.value.unshift(res)
     newPlaylistName.value = ''
     showCreateModal.value = false
   } catch {
-    playlists.value.unshift({
-      id: `local-${Date.now()}`,
-      name,
-      song_count: 0,
-      is_public: false,
-    })
-    newPlaylistName.value = ''
-    showCreateModal.value = false
+    // Failed writes must never manufacture local saved playlists.
+    createError.value = '创建歌单失败，请重试。'
+  } finally {
+    creating.value = false
   }
 }
 

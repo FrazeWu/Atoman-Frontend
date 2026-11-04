@@ -24,7 +24,7 @@ it('EPUB 恢复与排版产生的 relocated 不回写云端，主动翻页才提
   const wrapper = mount(BookPublicReaderView, { props: { source: {
     title: 'EPUB', backTo: '/books', progressKey: 'revision:epub-cloud', loadContent: async () => new Blob(['epub']),
     asset: { id: 'a', format: 'epub', file_name: 'test.epub', content_type: 'application/epub+zip', size: 4, status: 'published', created_at: '' },
-    initialPosition: { pdf_page: 0, current_percent: .6, epub_cfi: 'epubcfi(/6/2!/4/20/1:5)', txt_offset: 0 }, bookmarks: [], onPosition: observe,
+    initialPosition: { pdf_page: 0, current_percent: .6, epub_cfi: 'epubcfi(/6/2!/4/20/1:5)', txt_offset: 0 }, bookmarks: [], onPosition: observe, supportsChapterNotes: true,
   } }, global: { plugins: [router] } })
   try {
     await flushPromises()
@@ -39,6 +39,8 @@ it('EPUB 恢复与排版产生的 relocated 不回写云端，主动翻页才提
     await wrapper.get('button[aria-label="下一页"]').trigger('click')
     events.get('relocated')!({ start: { cfi: 'epubcfi(/6/2!/4/30/1:0)', percentage: .7 } })
     expect(observe).toHaveBeenCalledWith({ advance_furthest: true, epub_cfi: 'epubcfi(/6/2!/4/30/1:0)', current_percent: .7, pdf_page: 0, pdf_offset: 0, txt_offset: 0 })
+    await wrapper.get('button[aria-label="记录当前位置笔记"]').trigger('click')
+    expect(wrapper.emitted('chapter-note')?.[0]).toEqual([expect.objectContaining({ format: 'epub', epub_cfi: 'epubcfi(/6/2!/4/30/1:0)' })])
   } finally { wrapper.unmount() }
 })
 

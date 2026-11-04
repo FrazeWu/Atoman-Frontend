@@ -35,6 +35,7 @@
     >
       <template #actions>
         <PButton v-if="source?.annotations !== undefined && ['txt', 'epub', 'pdf'].includes(asset?.format || '')" type="button" variant="ghost" :disabled="!selectionCandidate || isLoading" @pointerdown.prevent @click="annotateCandidate">标注选中文字</PButton>
+        <PButton v-if="source?.supportsChapterNotes" type="button" variant="ghost" :disabled="isLoading" aria-label="记录当前位置笔记" @click="createChapterNote">章节笔记</PButton>
         <PButton type="button" variant="ghost" :disabled="!asset || isLoading || bookmarkBusy" aria-label="添加书签" title="添加书签" @click="addBookmark">
           <Bookmark :size="16" aria-hidden="true" />
           <span>书签</span>
@@ -139,6 +140,7 @@ import { getLocalBookReadingProgress, saveLocalBookReadingProgress, type LocalBo
 import { bookReaderPreferencesForFormat, parseBookReaderDisplayPreferences, type BookReaderBookmark, type BookReaderDisplayPreferences, type BookReaderScrollMode } from '@/utils/bookReaderPreferences'
 import { fetchPublishedBookAssetContent, getPublishedBookAsset, type BookPublishedAsset } from '@/api/books'
 import type { BookReaderSource } from '@/types/bookReaderSource'
+import type { BookChapterAnchor } from '@/api/bookPrivate'
 import type { ReadingMark, ReadingAnchor } from '@/api/bookReading'
 import type { BookAnnotation } from '@/api/books'
 import { textSelection, pdfSelection, epubSelection, epubMarkRange, textRange, highlightedText, highlightColors, type HighlightSelection } from '@/utils/bookMarkAnchors'
@@ -151,7 +153,7 @@ type EpubTOCItem = EpubTOCSource & { depth: number }
 
 const route = useRoute()
 const props = defineProps<{ source?: BookReaderSource }>()
-const emit = defineEmits<{ annotate: [selection: HighlightSelection]; 'annotation-edit': [mark: ReadingMark]; 'annotation-delete': [mark: ReadingMark] }>()
+const emit = defineEmits<{ annotate: [selection: HighlightSelection]; 'annotation-edit': [mark: ReadingMark]; 'annotation-delete': [mark: ReadingMark]; 'chapter-note': [anchor: BookChapterAnchor] }>()
 const readerStore = useBookReaderStore()
 const asset = ref<BookPublishedAsset | null>(null)
 const textContent = ref('')
@@ -318,6 +320,28 @@ function scrollToTextOffset(offset: number) {
   }
   viewport.scrollTop += range.getBoundingClientRect().top - viewport.getBoundingClientRect().top - parseFloat(getComputedStyle(viewport).paddingTop)
 }
+// Snapshot of the currently displayed content, never a guessed chapter boundary.
+function createChapterNote() {
+  if (!props.source?.supportsChapterNotes || isLoading.value || !asset.value) return
+  const format = asset.value.format
+  let anchor: BookChapterAnchor
+  if (format === 'epub') {
+    const current = epubRendition?.currentLocation?.()?.start
+    const cfi = current?.cfi || localProgress?.epub_cfi || ''
+    if (!cfi) { annotationMessage.value = 'EPUB 当前阅读位置尚未就绪，请打开正文后重试。'; return }
+    const href = String(current?.href || '')
+    const found = epubTOC.value.find(item => href && item.href.split('#')[0] === href.split('#')[0])
+    anchor = { format: 'epub', epub_cfi: cfi, epub_href: href, chapter_title: found?.label || 'EPUB 阅读位置' }
+  } else if (format === 'pdf') {
+    anchor = { format: 'pdf', pdf_page: Math.max(1, pdfPage.value), pdf_offset: pdfOffset.value, chapter_title: `第 ${pdfPage.value} 页` }
+  } else if (format === 'txt') {
+    anchor = { format: 'txt', txt_offset: textOffset(), chapter_title: '文本阅读位置' }
+  } else if (format === 'cbz' || format === 'cbr') {
+    anchor = { format, pdf_page: Math.max(1, comicPage.value), chapter_title: `第 ${comicPage.value} 页` }
+  } else return
+  emit('chapter-note', anchor)
+}
+
 function notifyPosition(advanceFurthest = true) {
   if (disposed || isLoading.value) return
   const format = asset.value?.format

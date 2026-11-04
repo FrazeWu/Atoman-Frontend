@@ -21,7 +21,7 @@ it('云端 PDF 精确页码优先于百分比，翻页提交对应页码', async
   const wrapper = mount(BookPublicReaderView, { props: { source: {
     title: 'PDF', backTo: '/books', progressKey: 'revision:pdf-cloud', loadContent: async () => new Blob(['PDF']),
     asset: { id: 'a', format: 'pdf', file_name: 'test.pdf', content_type: 'application/pdf', size: 3, status: 'published', created_at: '' },
-    initialPosition: { pdf_page: 3, pdf_offset: .62, current_percent: .9, epub_cfi: '', txt_offset: 0 }, bookmarks: [], onPosition: observe, onReady: ready,
+    initialPosition: { pdf_page: 3, pdf_offset: .62, current_percent: .9, epub_cfi: '', txt_offset: 0 }, bookmarks: [], onPosition: observe, onReady: ready, supportsChapterNotes: true,
   } }, global: { plugins: [router] } })
   try {
     await flushPromises()
@@ -36,6 +36,8 @@ it('云端 PDF 精确页码优先于百分比，翻页提交对应页码', async
     await wrapper.get('button[aria-label="下一页"]').trigger('click')
     await flushPromises()
     expect(observe).toHaveBeenLastCalledWith({ advance_furthest: true, pdf_page: 4, pdf_offset: 0, current_percent: .4, txt_offset: 0, epub_cfi: '' })
+    await wrapper.get('button[aria-label="记录当前位置笔记"]').trigger('click')
+    expect(wrapper.emitted('chapter-note')?.[0]).toEqual([{ format: 'pdf', pdf_page: 4, pdf_offset: 0, chapter_title: '第 4 页' }])
   } finally { wrapper.unmount() }
 })
 

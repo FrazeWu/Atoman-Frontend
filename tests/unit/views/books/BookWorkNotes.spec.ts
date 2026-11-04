@@ -17,6 +17,11 @@ const removed = {
   ...mark, id: 'mark-unavailable', note: '', quote: '不可访问但保留的记录',
   source: { ...mark.source, asset_id: 'asset-bad', revision_id: 'revision-bad', file_name: '历史文件.pdf', can_open: false },
 }
+const anchored = {
+  id: 'anchored-note', type: 'chapter_note' as const, title: '第七页的心得', note: '准确跳到源文件', quote: '',
+  chapter_anchor: { format: 'pdf' as const, pdf_page: 7, pdf_offset: .42, chapter_title: '第 7 页' },
+  created_at: '2026-11-03T00:00:00Z', updated_at: '2026-11-04T00:00:00Z', source: mark.source,
+}
 const chapter = {
   id: 'note-chapter', type: 'chapter_note' as const, title: '第三章思考', quote: '', note: '独立整理的读书心得',
   created_at: '2026-11-02T00:00:00Z', updated_at: '2026-11-02T00:00:00Z',
@@ -32,7 +37,7 @@ function createRouterForNotes() {
 beforeEach(() => {
   vi.resetAllMocks()
   vi.mocked(getCatalogWork).mockResolvedValue({ id: 'work-1', title: '测试作品' } as never)
-  vi.mocked(listWorkNotes).mockResolvedValue({ work_id: 'work-1', total: 3, limit: 30, offset: 0, items: [mark, removed, chapter] } as never)
+  vi.mocked(listWorkNotes).mockResolvedValue({ work_id: 'work-1', total: 4, limit: 30, offset: 0, items: [mark, removed, chapter, anchored] } as never)
 })
 
 it('汇总划线和独立笔记，保留旧文件精确跳转；不可用文件不能跳转', async () => {
@@ -42,7 +47,9 @@ it('汇总划线和独立笔记，保留旧文件精确跳转；不可用文件�
   try {
     await flushPromises()
     expect(getCatalogWork).toHaveBeenCalledWith('work-1')
-    expect(wrapper.findAll('.work-notes__entry')).toHaveLength(3)
+    expect(wrapper.findAll('.work-notes__entry')).toHaveLength(4)
+    expect(wrapper.get('[data-note-id="anchored-note"]').text()).toContain('第 7 页')
+    expect(wrapper.get('[data-note-id="anchored-note"]').findComponent({ name: 'RouterLinkStub' }).props('to')).toEqual({ path: '/books/read/work-1/asset-old/revision-old', query: { chapter_note: 'anchored-note' } })
     expect(wrapper.text()).toContain('独立整理的读书心得')
     const previousFile = wrapper.get('[data-note-id="mark-old"]')
     expect(previousFile.text()).toContain('旧版.pdf')

@@ -33,11 +33,12 @@
             <span v-if="item.source" class="work-notes__file">{{ item.source.file_name }}<span v-if="item.source.format"> · {{ item.source.format.toUpperCase() }}</span><span v-if="item.source.edition_label"> · {{ item.source.edition_label }}</span></span>
             <span v-else>作品级独立笔记 · 未关联电子书文件</span>
             <span v-if="item.anchor?.pdf_page">第 {{ item.anchor.pdf_page }} 页</span>
+            <span v-if="item.chapter_anchor">{{ item.chapter_anchor.chapter_title || (item.chapter_anchor.pdf_page ? `第 ${item.chapter_anchor.pdf_page} 页` : '已保存阅读位置') }}</span>
           </div>
           <div class="work-notes__actions">
-            <RouterLink v-if="item.type === 'highlight' && item.anchor && item.source?.can_open" :to="sourceLink(item)" class="work-notes__link">跳转原文</RouterLink>
+            <RouterLink v-if="item.source?.can_open && ((item.type === 'highlight' && item.anchor) || (item.type === 'chapter_note' && item.chapter_anchor))" :to="sourceLink(item)" class="work-notes__link">{{ item.type === 'highlight' ? '跳转原文' : '跳转笔记位置' }}</RouterLink>
             <span v-else-if="item.source && !item.source.can_open" class="work-notes__unavailable">原文件不可访问，笔记仍然保留</span>
-            <span v-else-if="item.type === 'chapter_note'" class="work-notes__muted">章节笔记尚未保存精确位置</span>
+            <span v-else-if="item.type === 'chapter_note' && !item.chapter_anchor" class="work-notes__muted">此旧笔记未保存精确位置</span>
             <button v-if="item.source && !selectedRevision" type="button" class="work-notes__link" @click="selectedRevision = item.source.revision_id">仅看此文件</button>
           </div>
         </article>
@@ -71,7 +72,7 @@ function formatTime(value: string) {
 }
 function sourceLink(item: WorkNoteItem) {
   const source = item.source!
-  return { path: `/books/read/${source.work_id}/${source.asset_id}/${source.revision_id}`, query: { mark: item.id } }
+  return { path: `/books/read/${source.work_id}/${source.asset_id}/${source.revision_id}`, query: item.type === 'chapter_note' ? { chapter_note: item.id } : { mark: item.id } }
 }
 async function load(reset: boolean) {
   const current = ++generation

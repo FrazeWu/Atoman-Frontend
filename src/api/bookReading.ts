@@ -1,5 +1,6 @@
 import { apiRequestEnvelope } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
+import type { BookChapterAnchor } from './bookPrivate'
 
 export interface ReadingPosition {
   current_percent: number
@@ -84,6 +85,7 @@ export interface WorkNoteItem {
   color?: string
   style?: string
   anchor?: ReadingAnchor
+  chapter_anchor?: BookChapterAnchor
   source?: WorkNoteSource
   created_at: string
   updated_at: string

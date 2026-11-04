@@ -8,7 +8,16 @@ export const shelfStatuses: { value: ShelfStatus; label: string }[] = [
   { value: 'read', label: '读完' }, { value: 'on_hold', label: '暂停' }, { value: 'dropped', label: '弃读' },
 ]
 export interface LibraryEntry { id: string; work_id: string; work_title: string; status: ShelfStatus; tags: string[]; version: number }
-export interface PrivateNote { id: string; work_id: string; source_revision_id?: string; title: string; body: string; tags: string[]; version: number; trashed_at?: string }
+export interface BookChapterAnchor {
+  format: 'epub' | 'pdf' | 'txt' | 'cbz' | 'cbr'
+  epub_cfi?: string
+  epub_href?: string
+  pdf_page?: number
+  pdf_offset?: number
+  txt_offset?: number
+  chapter_title?: string
+}
+export interface PrivateNote { id: string; work_id: string; source_revision_id?: string; chapter_anchor?: BookChapterAnchor; title: string; body: string; tags: string[]; version: number; trashed_at?: string }
 export type NoteInput = Omit<PrivateNote, 'id' | 'version' | 'trashed_at'> & { base_version: number }
 export interface NoteBackup { schema_version: 1; exported_at?: string; notes: Omit<PrivateNote, 'version' | 'trashed_at'>[] }
 export interface ReadingRecommendation { work_id: string; asset?: CatalogResource; revision_id?: string; available: boolean; reason?: string; source: string }
@@ -31,6 +40,7 @@ export const listPrivateNotes = (query: { q?: string; tag?: string; work_id?: st
   Object.entries(query).forEach(([key, value]) => { if (value !== undefined && value !== '') params.set(key, String(value)) })
   return privateBookRequest<{ items: PrivateNote[]; total: number }>(`/me/private-notes?${params}`)
 }
+export const getPrivateNote = (noteId: string) => privateBookRequest<PrivateNote>(`/me/private-notes/${id(noteId)}`)
 export const savePrivateNote = (noteId: string, input: NoteInput) => privateBookRequest<PrivateNote>(`/me/private-notes/${id(noteId)}`, 'PUT', input)
 export const deletePrivateNote = (note: PrivateNote) => privateBookRequest(`/me/private-notes/${id(note.id)}?base_version=${note.version}`, 'DELETE')
 export const restorePrivateNote = (note: PrivateNote) => privateBookRequest(`/me/private-notes/${id(note.id)}/restore`, 'POST', { base_version: note.version })

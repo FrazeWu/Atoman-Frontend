@@ -142,13 +142,17 @@ const hasMemberGroups = computed(() => (
 ))
 
 type AlbumSortMode = 'date-desc' | 'date-asc' | 'hot-desc'
-type ReleaseType = 'album' | 'song'
+type ReleaseType = 'album' | 'song' | 'group'
 const albumSortMode = ref<AlbumSortMode>('date-desc')
 const releaseType = ref<ReleaseType>('album')
-const releaseTypeOptions = [
+const groupWorkType = ref<'album' | 'song'>('album')
+const showingAlbums = computed(() => releaseType.value === 'album' || (releaseType.value === 'group' && groupWorkType.value === 'album'))
+const releaseTypeOptions = computed(() => [
   { label: '专辑', value: 'album', testid: 'artist-release-type-album' },
   { label: '歌曲', value: 'song', testid: 'artist-release-type-song' },
-]
+  ...(artist.value?.artist_form !== 'group' ? [{ label: '乐队作品', value: 'group', testid: 'artist-release-type-group' }] : []),
+])
+const groupWorkTypeOptions = [{ label: '专辑', value: 'album' }, { label: '歌曲', value: 'song' }]
 
 const albumSortOptions = [
   { label: '最新发布 (降序)', value: 'date-desc' },
@@ -320,7 +324,7 @@ function formatMemberPeriod(joinDate?: string, leaveDate?: string, joinPrecision
   return `${start} - ${end}`
 }
 
-async function loadArtistReleases(targetArtistId: string | null, page = 1) {
+async function loadArtistReleases(targetArtistId: string | null, page = 1, chooseDefault = false) {
   const { isCurrent } = releaseRequests.beginRequest()
   if (!targetArtistId) {
     if (isCurrent()) {
@@ -332,15 +336,18 @@ async function loadArtistReleases(targetArtistId: string | null, page = 1) {
   }
 
   const requestedType = releaseType.value
+  const requestedGroupType = groupWorkType.value
+  const isAlbumList = requestedType === 'album' || (requestedType === 'group' && requestedGroupType === 'album')
+  const relation = requestedType === 'group' ? { artist_relation: 'participating' as const } : {}
   const requestedSort = albumSortMode.value
   const isCurrentLoad = () => isCurrent() && artistId.value === targetArtistId
   const forceRefresh = state.value.artistRefreshToken > 0
-  const cacheKey = `${targetArtistId}:${requestedType}:${requestedSort}:${page}`
-  const cachedReleases = !forceRefresh ? moduleArtistReleasesCache.get(cacheKey) : null
+  const cacheKey = `${targetArtistId}:${requestedType}:${requestedGroupType}:${requestedSort}:${page}`
+  const cachedReleases = !forceRefresh && !chooseDefault ? moduleArtistReleasesCache.get(cacheKey) : null
   if (cachedReleases) {
     releaseLoading.value = false
     releaseMeta.value = cachedReleases.meta
-    if (requestedType === 'album' && cachedReleases.albums) {
+    if (isAlbumList && cachedReleases.albums) {
       albums.value = cachedReleases.albums
     } else if (requestedType !== 'album' && cachedReleases.songs) {
       songs.value = cachedReleases.songs
@@ -350,8 +357,8 @@ async function loadArtistReleases(targetArtistId: string | null, page = 1) {
   }
   releaseErrorMessage.value = ''
   try {
-    if (requestedType === 'album') {
-      const filters = { artist_id: targetArtistId, sort: albumSortQuery(requestedSort), page, page_size: artistAlbumPageSize }
+    if (isAlbumList) {
+      const filters = { artist_id: targetArtistId, ...relation, sort: albumSortQuery(requestedSort), page, page_size: artistAlbumPageSize }
       const response = forceRefresh
         ? await listMusicAlbums(filters, { force: true })
         : await listMusicAlbums(filters)
@@ -360,9 +367,23 @@ async function loadArtistReleases(targetArtistId: string | null, page = 1) {
       const deduped = dedupeArtistAlbums(response.data)
       albums.value = deduped
       moduleArtistReleasesCache.set(cacheKey, { albums: deduped, meta: response.meta })
+      if (chooseDefault && response.meta.total === 0) {
+        const directSongs = await listMusicSongs({ artist_id: targetArtistId, release_type: 'single,leak', page: 1, page_size: 1 })
+        if (!isCurrentLoad()) return
+        if (directSongs.meta.total > 0) { releaseType.value = 'song'; return }
+        if (artist.value?.artist_form !== 'group') {
+          const groupAlbums = await listMusicAlbums({ artist_id: targetArtistId, artist_relation: 'participating', page: 1, page_size: 1 })
+          if (!isCurrentLoad()) return
+          if (groupAlbums.meta.total > 0) { groupWorkType.value = 'album'; releaseType.value = 'group'; return }
+          const groupSongs = await listMusicSongs({ artist_id: targetArtistId, artist_relation: 'participating', release_type: 'single,leak', page: 1, page_size: 1 })
+          if (!isCurrentLoad()) return
+          if (groupSongs.meta.total > 0) { groupWorkType.value = 'song'; releaseType.value = 'group' }
+        }
+      }
     } else {
       const filters = {
         artist_id: targetArtistId,
+        ...relation,
         release_type: 'single,leak' as const,
         sort: albumSortQuery(requestedSort),
         page,
@@ -378,7 +399,7 @@ async function loadArtistReleases(targetArtistId: string | null, page = 1) {
     }
   } catch (error) {
     if (!isCurrentLoad()) return
-    releaseErrorMessage.value = requestedType === 'album' ? '专辑列表加载失败' : '歌曲列表加载失败'
+    releaseErrorMessage.value = requestedType === 'group' ? '乐队作品加载失败' : isAlbumList ? '专辑列表加载失败' : '歌曲列表加载失败'
     reportError(error, requestedType === 'album' ? 'Failed to load artist albums:' : 'Failed to load artist songs:')
   } finally {
     if (isCurrentLoad()) releaseLoading.value = false
@@ -434,6 +455,8 @@ async function loadArtist(targetArtistId: string | null) {
   const { isCurrent: isCurrentLoad } = artistRequests.beginRequest()
   releaseRequests.beginRequest()
   releaseLoading.value = false
+  releaseType.value = 'album'
+  groupWorkType.value = 'album'
   if (!targetArtistId) {
     if (isCurrentLoad()) {
       artist.value = null
@@ -485,7 +508,7 @@ async function loadArtist(targetArtistId: string | null) {
     queryClient?.setQueryData(musicKeys.artistDetail(targetArtistId), artistResponse)
     loading.value = false
     void Promise.all([
-      loadArtistReleases(targetArtistId),
+      loadArtistReleases(targetArtistId, 1, true),
       loadArtistContributors(targetArtistId, isCurrentLoad),
       loadArtistBookmarkState(targetArtistId, isCurrentLoad),
     ])
@@ -582,7 +605,8 @@ watch(
   { immediate: true },
 )
 
-watch([releaseType, albumSortMode], () => {
+watch([releaseType, groupWorkType, albumSortMode], () => {
+  if (loading.value || artist.value?.id !== artistId.value) return
   void loadArtistReleases(artistId.value, 1)
 })
 </script>
@@ -783,6 +807,11 @@ watch([releaseType, albumSortMode], () => {
         </div>
       </div>
 
+      <div v-if="!loading && releaseType === 'group'" class="state-line" data-testid="artist-group-works-notice">
+        <p>通过所属或曾加入的乐队关联，不代表个人署名或已确认参与录制。</p>
+        <PSegmentedControl v-model="groupWorkType" :options="groupWorkTypeOptions" aria-label="乐队作品类型" />
+      </div>
+
       <div
         v-if="!loading && releaseLoading && artist"
         class="artist-release-loading-skeleton"
@@ -791,7 +820,7 @@ watch([releaseType, albumSortMode], () => {
         aria-busy="true"
         aria-label="正在加载作品列表"
       >
-        <template v-if="releaseType === 'album'">
+        <template v-if="showingAlbums">
           <div v-for="index in 4" :key="index" class="album-row artist-skeleton-album-row" aria-hidden="true">
             <div class="album-row-left"><PSkeleton width="3rem" height="1rem" /></div>
             <div class="album-row-right">
@@ -818,11 +847,11 @@ watch([releaseType, albumSortMode], () => {
 
       <p v-if="!loading && errorMessage" class="state-line state-line--error">{{ errorMessage }}</p>
       <p v-else-if="!loading && !releaseLoading && releaseErrorMessage" class="state-line state-line--error">{{ releaseErrorMessage }}</p>
-      <p v-else-if="!loading && !releaseLoading && artist && !(releaseType === 'album' ? sortedAlbums.length : artistSongs.length)" class="state-line">
-        {{ releaseType === 'album' ? '暂无专辑，可以创建专辑/歌曲。' : '暂无歌曲。' }}
+      <p v-else-if="!loading && !releaseLoading && artist && !(showingAlbums ? sortedAlbums.length : artistSongs.length)" class="state-line">
+        {{ releaseType === 'group' ? '暂未收录关联乐队作品，请先确认成员关系是否完整。' : releaseType === 'album' ? '暂未收录直接署名的专辑。' : '暂未收录直接署名的独立歌曲。' }}
       </p>
 
-      <template v-if="!loading && !releaseLoading && artist && releaseType === 'album'">
+      <template v-if="!loading && !releaseLoading && artist && showingAlbums">
         <div
           v-for="album in sortedAlbums"
           :key="album.id"
@@ -839,6 +868,10 @@ watch([releaseType, albumSortMode], () => {
             </div>
             <div class="album-row-info">
               <div class="album-row-title">{{ album.title }}</div>
+              <div v-if="releaseType === 'group'" class="state-line">
+                <button v-for="group in album.artists" :key="group.id" type="button" class="artist-track-album" @click.stop="openArtist(group.id)">{{ group.name }}</button>
+                · 成员关联，参与情况待确认
+              </div>
               <div v-if="album.description" class="album-row-description">
                 {{ album.description }}
               </div>
@@ -885,6 +918,7 @@ watch([releaseType, albumSortMode], () => {
               {{ song.title }}
             </button>
             <div class="artist-track-artists">{{ formatSongArtists(song) }}</div>
+            <p v-if="releaseType === 'group'" class="state-line">成员关联，参与情况待确认</p>
             <div v-if="song.album" class="artist-track-album-line">
               <span>收录于</span>
               <button

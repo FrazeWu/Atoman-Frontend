@@ -1116,6 +1116,7 @@ export type MusicDiscoverItem =
 export type MusicListFilters = {
 	q?: string;
 	artist_id?: string;
+	artist_relation?: "participating";
 	album_id?: string;
 	tag_id?: string;
 	release_type?: MusicStandaloneSongType | "single,leak_song" | "single,leak";

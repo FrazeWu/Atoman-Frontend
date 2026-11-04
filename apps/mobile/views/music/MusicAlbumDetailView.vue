@@ -346,9 +346,15 @@
       </div>
     </Transition>
   </div>
+  <MobileSongPlaylistPicker
+    :song-id="pickerSongId"
+    @close="pickerSongId = ''"
+    @added="showToast('已添加到歌单')"
+  />
 </template>
 
 <script setup lang="ts">
+import MobileSongPlaylistPicker from '@mobile/components/music/MobileSongPlaylistPicker.vue'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getMusicAlbum } from '@/api/musicV1'
@@ -549,9 +555,10 @@ async function handleShareSong(song: Song) {
   }
 }
 
+const pickerSongId = ref('')
 function handleAddToPlaylist(song: Song) {
   closeSongMenu()
-  showToast('已加入稍后收听')
+  pickerSongId.value = String(song.id)
 }
 
 function handleGoArtistFromMenu(song: Song) {

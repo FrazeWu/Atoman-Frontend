@@ -82,6 +82,12 @@ type MusicPlaylistMutationResult = Record<string, unknown>;
 const queryCache = useQueryCache();
 const musicListStaleTime = 15_000;
 
+function invalidatePlaylistLists() {
+  queryCache.invalidate("music:list:playlists:");
+  queryCache.invalidate("music:list:public-playlists:");
+}
+
+
 function musicViewerCacheScope() {
 	const pinia = getActivePinia();
 	if (!pinia) return "anonymous";
@@ -620,7 +626,7 @@ export async function createMusicPlaylist(
 	input: CreateMusicPlaylistInput,
 ): Promise<MusicPlaylistDetail> {
 	const result = await apiPostJson<MusicPlaylistDetail>(musicV1Endpoints.playlists(), input);
-	queryCache.invalidate("music:list:playlists:");
+	invalidatePlaylistLists();
 	return result;
 }
 
@@ -632,7 +638,7 @@ export async function updateMusicPlaylist(
 		musicV1Endpoints.playlist(playlistId),
 		input,
 	);
-	queryCache.invalidate("music:list:playlists:");
+	invalidatePlaylistLists();
 	return result;
 }
 
@@ -642,7 +648,7 @@ export async function deleteMusicPlaylist(
 	const result = await apiDeleteJson<{ deleted: boolean }>(
 		musicV1Endpoints.playlist(playlistId),
 	);
-	queryCache.invalidate("music:list:playlists:");
+	invalidatePlaylistLists();
 	return result;
 }
 
@@ -686,10 +692,12 @@ export async function addMusicPlaylistSong(
 	playlistId: string,
 	songId: string,
 ): Promise<MusicPlaylistMutationResult> {
-	return apiPostJson<MusicPlaylistMutationResult>(
+	const result = await apiPostJson<MusicPlaylistMutationResult>(
 		musicV1Endpoints.playlistSongs(playlistId),
 		{ song_id: songId },
 	);
+	invalidatePlaylistLists();
+	return result;
 }
 
 export async function getMusicPlaylistSongStatus(
@@ -707,19 +715,23 @@ export async function removeMusicPlaylistSong(
 	playlistId: string,
 	songId: string,
 ): Promise<MusicPlaylistMutationResult> {
-	return apiDeleteJson<MusicPlaylistMutationResult>(
+	const result = await apiDeleteJson<MusicPlaylistMutationResult>(
 		musicV1Endpoints.playlistSong(playlistId, songId),
 	);
+	invalidatePlaylistLists();
+	return result;
 }
 
 export async function reorderMusicPlaylistSongs(
 	playlistId: string,
 	songIds: string[],
 ): Promise<{ reordered: boolean }> {
-	return apiPutJson<{ reordered: boolean }>(
+	const result = await apiPutJson<{ reordered: boolean }>(
 		musicV1Endpoints.playlistSongsOrder(playlistId),
 		{ song_ids: songIds },
 	);
+	invalidatePlaylistLists();
+	return result;
 }
 
 export async function recordMusicSongPlay(

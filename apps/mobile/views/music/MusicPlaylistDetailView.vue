@@ -420,9 +420,15 @@
       </div>
     </Transition>
   </div>
+  <MobileSongPlaylistPicker
+    :song-id="pickerSongId"
+    @close="pickerSongId = ''"
+    @added="showToast('已添加到歌单')"
+  />
 </template>
 
 <script setup lang="ts">
+import MobileSongPlaylistPicker from '@mobile/components/music/MobileSongPlaylistPicker.vue'
 import { onBeforeUnmount, onDeactivated, onMounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getMusicPlaylist, listMusicPlaylistSongs, searchMusicSongs, addMusicPlaylistSong, removeMusicPlaylistSong, deleteMusicPlaylist, updateMusicPlaylist, reorderMusicPlaylistSongs } from '@/api/musicV1'
@@ -538,9 +544,10 @@ async function handleToggleFavoriteFromMenu(song: Song) {
   await handleToggleFavorite(song)
 }
 
+const pickerSongId = ref('')
 function handleAddToPlaylist(song: Song) {
   closeSongMenu()
-  showToast('已加入稍后收听')
+  pickerSongId.value = String(song.id)
 }
 
 function handleAddToQueue(song: Song, playNext: boolean) {
@@ -562,6 +569,10 @@ async function handleRemoveFromThisPlaylist(song: Song) {
   if (!playlist.value || !canEditPlaylist.value) return
   try {
     await removeMusicPlaylistSong(playlist.value.id, String(song.id))
+    // Never reuse a complete queue snapshot after deleting one of its tracks.
+    fullQueueCache = null
+    queueGeneration += 1
+    queueLoading.value = false
     songs.value = songs.value.filter(s => String(s.id) !== String(song.id))
     if (playlist.value.song_count) {
       playlist.value.song_count = Math.max(0, playlist.value.song_count - 1)
@@ -624,6 +635,9 @@ async function moveSong(index: number, offset: number) {
   if (!current || !canReorderSongs.value || reordering.value || next < 0 || next >= songs.value.length) return
   reordering.value = true
   reorderError.value = ''
+  // Do not assemble playback from an unconfirmed optimistic order.
+  queueGeneration += 1
+  queueLoading.value = false
   const original = [...songs.value]
   const arranged = [...original]
   const [item] = arranged.splice(index, 1)
@@ -634,6 +648,7 @@ async function moveSong(index: number, offset: number) {
     const result = await reorderMusicPlaylistSongs(current.id, arranged.map(song => String(song.id)))
     if (result?.reordered !== true) throw new Error('Order not confirmed')
     fullQueueCache = null
+    queueGeneration += 1
   } catch {
     if (playlist.value?.id === current.id) songs.value = original
     reorderError.value = '歌单顺序保存失败，已恢复原顺序。'
@@ -679,6 +694,8 @@ async function addSong(id: string) {
   try {
     await addMusicPlaylistSong(playlist.value.id, id)
     fullQueueCache = null
+    queueGeneration += 1
+    queueLoading.value = false
     await loadPlaylistData()
     addMessage.value = '已添加到歌单'
   } catch { addMessage.value = '添加失败，请重试' }
@@ -865,7 +882,7 @@ async function loadMoreSongs() {
 
 async function startPlaylistPlayback(startSongId?: Song['id']) {
   const currentPlaylist = playlist.value
-  if (!currentPlaylist || queueLoading.value || unmounted) return
+  if (!currentPlaylist || queueLoading.value || reordering.value || unmounted) return
 
   const playlistId = String(currentPlaylist.id)
   const generation = ++queueGeneration

@@ -16,6 +16,7 @@ vi.mock('@/api/musicV1', () => ({
   getMusicPlaylist: vi.fn(),
   listMusicSongs: vi.fn(),
   listMusicPlaylistSongs: vi.fn(),
+  removeMusicPlaylistSong: vi.fn(),
   listMusicPlaylists: vi.fn().mockResolvedValue({ data: { playlists: [] } }),
 }))
 
@@ -161,6 +162,43 @@ describe('mobile complete music queues', () => {
     expect(queue).toHaveBeenCalledTimes(2)
     expect(api.listMusicPlaylistSongs).toHaveBeenCalledTimes(1)
     expect(queue.mock.calls[1][1]).toBe(0)
+    wrapper.unmount()
+  })
+
+  it('refetches the complete queue after a removed track instead of replaying a stale snapshot', async () => {
+    const { useAuthStore } = await import('@/stores/auth')
+    const auth = useAuthStore()
+    auth.user = { uuid: 'qa-owner', username: 'tester' } as never
+    auth.isAuthenticated = true
+    const queue = spyQueue()
+    await router.push('/music/playlist/queue-removal')
+    vi.mocked(api.getMusicPlaylist).mockResolvedValue({
+      id: 'queue-removal', name: '缓存失效测试', user_id: 'qa-owner', song_count: 3,
+      songs: [first, second, third],
+    } as never)
+    let serverSongs = [first, second, third]
+    vi.mocked(api.listMusicPlaylistSongs).mockImplementation(async () => ({
+      data: [...serverSongs],
+      meta: { page: 1, page_size: 100, total: serverSongs.length, has_more: false },
+    }) as never)
+    vi.mocked(api.removeMusicPlaylistSong).mockImplementation(async (_playlistId, id) => {
+      serverSongs = serverSongs.filter(song => String(song.id) !== String(id))
+      return { removed: true }
+    })
+    const wrapper = mount(MusicPlaylistDetailView, { global: { plugins: [pinia, router] } })
+    await flushPromises()
+    await wrapper.get('[data-testid="play-all-btn"]').trigger('click')
+    await flushPromises()
+    expect(queue.mock.calls[0][0].map(song => song.id)).toEqual(['first', 'second', 'third'])
+    await wrapper.findAll('[data-testid="song-more-btn"]')[1].trigger('click')
+    await wrapper.get('[data-testid="song-action-sheet"]').findAll('button').at(-1)!.trigger('click')
+    await flushPromises()
+    expect(api.removeMusicPlaylistSong).toHaveBeenCalledWith('queue-removal', 'second')
+    await wrapper.get('[data-testid="play-all-btn"]').trigger('click')
+    await flushPromises()
+    expect(queue).toHaveBeenCalledTimes(2)
+    expect(queue.mock.calls[1][0].map(song => song.id)).toEqual(['first', 'third'])
+    expect(api.listMusicPlaylistSongs).toHaveBeenCalledTimes(2)
     wrapper.unmount()
   })
 

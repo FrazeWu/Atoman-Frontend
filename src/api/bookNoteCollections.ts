@@ -41,8 +41,8 @@ export const listNoteCollections = (workId: string) =>
 export const getNoteCollection = (id: string) => apiGet<NoteCollection>(url(path(id)))
 export const saveNoteCollection = (id: string, workId: string, baseVersion: number, draft: NoteCollectionDraft) =>
   change<NoteCollection>(path(id), 'PUT', { work_id: workId, base_version: baseVersion, ...draft })
-export const publishNoteCollection = (id: string, baseVersion: number, visibility: 'link' | 'public', requestId: string) =>
-  change<NoteCollection>(`${path(id)}/publish`, 'POST', { base_version: baseVersion, request_id: requestId, visibility, confirm_publish: true })
+export const publishNoteCollection = (id: string, baseVersion: number, visibility: 'link' | 'public', requestId: string, previewDigest = '') =>
+  change<NoteCollection>(`${path(id)}/publish`, 'POST', { base_version: baseVersion, request_id: requestId, visibility, confirm_publish: true, ...(previewDigest ? { preview_digest: previewDigest } : {}) })
 export const revokeNoteCollection = (id: string, baseVersion: number) =>
   change<NoteCollection>(`${path(id)}/revoke`, 'POST', { base_version: baseVersion })
 export const getSharedNoteCollection = (shareKey: string) =>
@@ -53,3 +53,14 @@ export const getNoteShareImpact = (kind: NoteCollectionItemKind, id: string) =>
   apiGet<NoteShareImpact>(url(`/me/note-share-impact/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`))
 export interface PublicNoteShareCard { share_path: string; title: string; description: string; note_count: number; published_at: string }
 export const listPublicNoteShares = (offset = 0) => apiGet<{ items: PublicNoteShareCard[]; total: number }>(url(`/note-shares?limit=20&offset=${offset}`))
+
+export interface PublishedNotesContent { title: string; description: string; items: SharedNoteItem[] }
+export interface NotePreviewResult extends PublishedNotesContent { digest: string }
+export interface NoteShareHistoryItem { version: number; published_at: string; title: string; description: string; note_count: number; active: boolean }
+export interface NoteShareHistoryDetail extends PublishedNotesContent { version: number; published_at: string; active: boolean }
+export const previewNoteCollection = (workId: string, draft: NoteCollectionDraft) =>
+  change<NotePreviewResult>('/me/note-collections/preview', 'POST', { work_id: workId, ...draft })
+export const listNoteShareHistory = (collectionId: string, offset = 0) =>
+  apiGet<{ items: NoteShareHistoryItem[]; total: number }>(url(`${path(collectionId)}/history?limit=20&offset=${offset}`))
+export const getNoteShareHistoryVersion = (collectionId: string, version: number) =>
+  apiGet<NoteShareHistoryDetail>(url(`${path(collectionId)}/history/${encodeURIComponent(version)}`))

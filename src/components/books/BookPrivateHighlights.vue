@@ -124,6 +124,7 @@
             </button>
           </div>
 
+          <RouterLink :to="{ path:`/books/work/${item.work_id}/collections/new`, query:{kind:'highlight',note_id:item.id} }" class="book-private-highlights__action-link">单条分享 / 加入合集</RouterLink>
           <PButton variant="ghost" size="sm" @click="edit(item)">
             编辑批注
           </PButton>
@@ -156,8 +157,22 @@
       :error="editError"
       @close="draft = null"
       @save="save"
-      @delete="remove"
+      @delete="prepareDelete"
     />
+    <PSheet :show="!!deleteTarget" title="删除划线与公开分享" mode="partial" @close="deleteTarget=null">
+      <div v-if="deleteTarget" class="book-private-highlights__share-dialog">
+        <p>删除私人划线将默认撤销相关合集分享，保留私人草稿和历史版本。</p>
+        <template v-if="deleteImpact?.total">
+          <p role="status">此划线被 {{ deleteImpact.total }} 个有效分享合集使用：</p>
+          <ul><li v-for="item in deleteImpact.items" :key="item.collection_id">{{ item.title }}（{{ item.visibility==='public'?'完全公开':'通过链接访问' }}）</li></ul>
+          <label><input v-model="keepShared" type="checkbox" aria-label="保留已发布划线快照" /> 我明确选择保留已公开快照，即使原私人划线被删除。</label>
+        </template>
+        <div class="book-private-highlights__share-actions">
+          <PButton variant="secondary" @click="deleteTarget=null">取消</PButton>
+          <PButton variant="danger" :disabled="busy" @click="remove">{{ keepShared?'删除并保留分享':'删除并撤销相关分享' }}</PButton>
+        </div>
+      </div>
+    </PSheet>
   </div>
 </template>
 
@@ -168,7 +183,9 @@ import { ApiErrorResponseError } from '@/api/client'
 import { privateBookRequest, downloadBookData } from '@/api/bookPrivate'
 import { saveReadingMark, deleteReadingMark, type ReadingMark } from '@/api/bookReading'
 import { resourceReaderPath } from '@/api/bookResources'
+import { getNoteShareImpact, type NoteShareImpact } from '@/api/bookNoteCollections'
 import PButton from '@/components/ui/PButton.vue'
+import PSheet from '@/components/ui/PSheet.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import BookHighlightEditor from './BookHighlightEditor.vue'
 import { useToast } from '@/composables/useToast'
@@ -189,6 +206,9 @@ const loading = ref(false)
 const busy = ref(false)
 const conflict = ref(false)
 const draft = ref<Item | null>(null)
+const deleteTarget=ref<Item|null>(null)
+const deleteImpact=ref<NoteShareImpact|null>(null)
+const keepShared=ref(false)
 const copiedId = ref('')
 const toast = useToast()
 
@@ -259,18 +279,24 @@ async function save(value: { color: string; style: string; note: string }) {
   }
 }
 
-async function remove() {
-  if (!draft.value || busy.value) return
-  busy.value = true
-  try {
-    await deleteReadingMark(draft.value.revision_id, draft.value.id, draft.value.version)
-    draft.value = null
-    await load()
-  } catch {
-    editError.value = '删除失败，请重新加载后重试。'
-  } finally {
-    busy.value = false
-  }
+async function prepareDelete(){
+ const item=draft.value
+ if(!item||busy.value)return
+ busy.value=true;editError.value='';deleteImpact.value=null;keepShared.value=false
+ try{deleteImpact.value=await getNoteShareImpact('highlight',item.id);deleteTarget.value=item}
+ catch{editError.value='无法确认这条划线涉及的公开分享，暂不删除。请重试。'}
+ finally{busy.value=false}
+}
+async function remove(){
+ const item=deleteTarget.value
+ if(!item||busy.value)return
+ const keep=keepShared.value&&!!deleteImpact.value?.total
+ deleteTarget.value=null;deleteImpact.value=null;keepShared.value=false
+ busy.value=true
+ try{
+  await deleteReadingMark(item.revision_id,item.id,item.version,undefined,keep)
+  draft.value=null;await load()
+ }catch{editError.value='删除失败，请重新加载后重试。'}finally{busy.value=false}
 }
 
 async function exportMarks() {
@@ -518,4 +544,7 @@ onMounted(load)
 .book-private-highlights__copy-btn:hover {
   color: var(--a-color-text);
 }
+ .book-private-highlights__share-dialog{display:grid;gap:1rem;padding:1rem}
+ .book-private-highlights__share-dialog label{display:flex;gap:.6rem;align-items:flex-start}
+ .book-private-highlights__share-actions{display:flex;gap:.7rem;flex-wrap:wrap}
 </style>

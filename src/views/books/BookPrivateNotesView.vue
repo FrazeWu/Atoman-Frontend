@@ -77,9 +77,10 @@
            视图 2：长篇读书笔记与书评 (真实后端 /me/private-notes)
            ===================================================================== -->
       <div v-else class="space-y-4">
+        <BookHighlightTrash v-if="trash" />
         <PEmpty
           v-if="!notes.length"
-          :description="trash ? '回收站为空。删除的笔记保留 30 天。' : '暂无长篇笔记。点击上方“+ 写长篇笔记”开始记录。'"
+          :description="trash ? '没有已删除的独立笔记。已删除划线单独列在上方，统一保留 30 天。' : '暂无长篇笔记。点击上方“+ 写长篇笔记”开始记录。'"
         />
 
         <ul v-else class="book-catalog__list">
@@ -108,7 +109,7 @@
                 <PButton variant="secondary" size="sm" :disabled="busy" @click="restore(item)">
                   恢复笔记
                 </PButton>
-                <PButton variant="ghost" size="sm" :disabled="busy" @click="prepareDelete(item)">
+                <PButton variant="ghost" size="sm" :disabled="busy" @click="prepareErase(item)">
                   彻底销毁
                 </PButton>
               </template>
@@ -242,6 +243,8 @@
       </div>
     </PSheet>
 
+    <PConfirm :show="!!erasing" title="确认彻底销毁这条私人笔记？" message="立即擦除已删除的正文、标题、标签和阅读位置，之后无法恢复。原来明确保留的公开快照不会因此自动撤销。" :danger="true" confirm-text="确认永久销毁" :loading="busy" @confirm="erase" @cancel="erasing=null" />
+
     <!-- 未保存关闭拦截 -->
     <PConfirm
       :show="confirmClose"
@@ -260,6 +263,7 @@ import { apiGet } from '@/api/client'
 import { useApiUrl } from '@/composables/useApi'
 import {
   deletePrivateNote,
+  erasePrivateNote,
   downloadBookData,
   exportPrivateNotes,
   listPrivateNotes,
@@ -278,6 +282,7 @@ import PConfirm from '@/components/ui/PConfirm.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import BookPrivateHighlights from '@/components/books/BookPrivateHighlights.vue'
+import BookHighlightTrash from '@/components/books/BookHighlightTrash.vue'
 import './bookCatalog.css'
 import './bookPrivate.css'
 
@@ -316,6 +321,7 @@ const draftTags = ref('')
 const editError = ref('')
 const original = ref('')
 const deleting = ref<PrivateNote | null>(null)
+const erasing = ref<PrivateNote | null>(null)
 const shareImpact = ref<NoteShareImpact | null>(null)
 const keepShared = ref(false)
 const confirmClose = ref(false)
@@ -451,6 +457,9 @@ function finishClose(value: boolean) {
   closeResolve?.(value)
   closeResolve = undefined
 }
+
+function prepareErase(note: PrivateNote){if(busy.value)return;erasing.value=note}
+async function erase(){const note=erasing.value;erasing.value=null;if(!note||busy.value)return;busy.value=true;error.value='';try{await erasePrivateNote(note);notice.value='笔记正文及阅读位置已永久销毁。';await load()}catch{error.value='永久销毁失败，请刷新回收站后重试。'}finally{busy.value=false}}
 
 async function prepareDelete(note: PrivateNote) {
   if (busy.value) return

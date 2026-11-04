@@ -44,6 +44,7 @@ export const getPrivateNote = (noteId: string) => privateBookRequest<PrivateNote
 export const savePrivateNote = (noteId: string, input: NoteInput) => privateBookRequest<PrivateNote>(`/me/private-notes/${id(noteId)}`, 'PUT', input)
 export const deletePrivateNote = (note: PrivateNote, keepShared = false) => privateBookRequest(`/me/private-notes/${id(note.id)}?base_version=${note.version}&keep_shared=${keepShared}`, 'DELETE')
 export const restorePrivateNote = (note: PrivateNote) => privateBookRequest(`/me/private-notes/${id(note.id)}/restore`, 'POST', { base_version: note.version })
+export const erasePrivateNote = (note: PrivateNote) => privateBookRequest(`/me/private-notes/${id(note.id)}/erase`, 'POST', { base_version: note.version, confirm_erase: true })
 export const exportPrivateNotes = () => privateBookRequest<NoteBackup>('/me/private-notes/export')
 export const importPrivateNotes = (input: NoteBackup & { request_id: string }) => privateBookRequest<{ created: string[]; skipped: string[]; conflicts: string[] }>('/me/private-notes/import', 'POST', input)
 export const publishPrivateNote = (note: PrivateNote, channelId: string, requestId: string) => privateBookRequest<{ target_path: string }>(`/me/private-notes/${id(note.id)}/publish`, 'POST', { base_version: note.version, channel_id: channelId, request_id: requestId, confirm_public: true })

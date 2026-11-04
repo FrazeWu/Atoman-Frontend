@@ -25,7 +25,7 @@
   </article>
 </template>
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { getSharedNoteCollection, type SharedNoteCollection } from '@/api/bookNoteCollections'
 const route=useRoute()
@@ -33,7 +33,25 @@ const share=ref<SharedNoteCollection>()
 const loading=ref(true)
 const error=ref('')
 function date(value:string){const d=new Date(value);return Number.isNaN(d.getTime())?'':d.toLocaleDateString('zh-CN')}
-onMounted(async()=>{try{share.value=await getSharedNoteCollection(String(route.params.shareKey||''))}catch{error.value='分享可能已撤销、改为私有，或链接不正确。'}finally{loading.value=false}})
+let managedMeta:HTMLMetaElement|undefined
+let insertedMeta=false
+let oldRobots=''
+function protectUnlistedLink(){
+ let node=document.querySelector('meta[name="robots"]') as HTMLMetaElement|null
+ if(!node){node=document.createElement('meta');node.name='robots';document.head.appendChild(node);insertedMeta=true}
+ else oldRobots=node.content
+ node.content='noindex,nofollow'
+ managedMeta=node
+}
+onMounted(async()=>{
+ try{
+  share.value=await getSharedNoteCollection(String(route.params.shareKey||''))
+  if(share.value.visibility==='link')protectUnlistedLink()
+ }catch{error.value='分享可能已撤销、改为私有，或链接不正确。'}finally{loading.value=false}
+})
+onBeforeUnmount(()=>{
+ if(managedMeta){if(insertedMeta)managedMeta.remove();else managedMeta.content=oldRobots}
+})
 </script>
 <style scoped>
 .shared-notes{max-width:48rem;margin-inline:auto;padding:2.25rem 1.25rem 4rem}

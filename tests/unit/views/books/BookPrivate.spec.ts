@@ -58,6 +58,19 @@ it('回收站恢复使用删除后的版本，不把旧副本覆盖回云端', a
   await wrapper.findAll('button').find(button => button.text() === '恢复笔记')!.trigger('click'); await flushPromises()
   expect(restore).toHaveBeenCalledWith(expect.objectContaining({ id: 'note-1', version: 8 }))
 })
+it('回收站里的独立笔记必须二次确认后才能永久销毁',async()=>{
+ const stored={...note,version:8,trashed_at:'2026-10-17'}
+ vi.spyOn(api,'listPrivateNotes').mockResolvedValue({items:[stored],total:1})
+ const erase=vi.spyOn(api,'erasePrivateNote').mockResolvedValue({} as never)
+ const wrapper=await setup(BookPrivateNotesView)
+ await wrapper.get('input[type="checkbox"]').setValue(true)
+ await flushPromises()
+ await wrapper.findAll('button').find(x=>x.text()==='彻底销毁')!.trigger('click')
+ expect(erase).not.toHaveBeenCalled()
+ await wrapper.get('[data-confirm]').trigger('click')
+ await flushPromises()
+ expect(erase).toHaveBeenCalledWith(expect.objectContaining({id:'note-1',version:8}))
+})
 it('书架固定绑定具体文件，包含归档与历史书，点击直接续读', async () => {
   const list = vi.spyOn(fileShelf, 'listFileShelf').mockResolvedValue({
     items: [

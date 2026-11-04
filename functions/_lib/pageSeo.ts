@@ -71,6 +71,7 @@ const noIndexPrefixes = [
 	"/site/setting",
 	"/inbox",
 	"/messages",
+	"/mail",
 	"/dev",
 	"/__disabled__",
 	"/__not_found__",

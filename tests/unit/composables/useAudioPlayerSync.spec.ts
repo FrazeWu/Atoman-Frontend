@@ -56,6 +56,31 @@ describe("useAudioPlayerSync", () => {
 		expect(typeof callArg.timestamp).toBe("number");
 	});
 
+	it("deduplicates the same foreign play request delivered by both channel and storage", () => {
+		const sender = useAudioPlayerSync();
+		const receiver = useAudioPlayerSync();
+		const onForeignPlay = vi.fn();
+		receiver.setForeignPlayRequestCallback(onForeignPlay);
+		sender.broadcastPlayRequest();
+		const raw = localStorage.getItem("__atoman_audio_sync__");
+		expect(raw).toBeTruthy();
+		window.dispatchEvent(new StorageEvent("storage", {
+			key: "__atoman_audio_sync__", newValue: raw,
+		}));
+		expect(onForeignPlay).toHaveBeenCalledTimes(1);
+		sender.broadcastPlayRequest();
+		expect(onForeignPlay).toHaveBeenCalledTimes(2);
+		const latest = JSON.parse(localStorage.getItem("__atoman_audio_sync__")!);
+		const older = JSON.parse(raw!);
+		expect(latest.timestamp).toBeGreaterThan(older.timestamp);
+		window.dispatchEvent(new StorageEvent("storage", {
+			key: "__atoman_audio_sync__", newValue: raw,
+		}));
+		expect(onForeignPlay).toHaveBeenCalledTimes(2);
+		sender.closeChannel();
+		receiver.closeChannel();
+	});
+
 	it("filters out self broadcasts without triggering foreign callback", () => {
 		const sync = useAudioPlayerSync();
 		const foreignPlayCallback = vi.fn();

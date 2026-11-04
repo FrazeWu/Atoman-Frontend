@@ -30,6 +30,11 @@
           <span>通知</span>
           <ChevronRight :size="18" aria-hidden="true" />
         </RouterLink>
+        <RouterLink to="/mail" class="mobile-module-directory__row">
+          <Mail :size="20" aria-hidden="true" />
+          <span>电子邮件</span>
+          <ChevronRight :size="18" aria-hidden="true" />
+        </RouterLink>
         <RouterLink to="/inbox?tab=dm" class="mobile-module-directory__row">
           <MessageCircle :size="20" aria-hidden="true" />
           <span>私信</span>
@@ -58,7 +63,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { Bell, Check, ChevronRight, LogIn, MessageCircle, PenLine, Settings, UserRound } from 'lucide-vue-next'
+import { Bell, Check, ChevronRight, LogIn, Mail, MessageCircle, PenLine, Settings, UserRound } from 'lucide-vue-next'
 import { getMobileMoreItems } from '@/composables/useResponsiveShell'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'

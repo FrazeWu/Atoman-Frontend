@@ -28,6 +28,10 @@ export function useAudioPlayerSync() {
 	let channel: BroadcastChannel | null = null;
 	const tabId = Math.random().toString(36).substring(2, 9);
 	let storageListener: ((e: StorageEvent) => void) | null = null;
+	// The same request arrives through BroadcastChannel and storage events.
+	// Process each tab's play request only once, and reject stale arrivals.
+	const lastSeenByTab = new Map<string, number>();
+	let lastBroadcastTimestamp = 0;
 
 	const callbacks = {
 		onForeignPlayRequest: (_meta: { tabId: string; timestamp: number }) => {},
@@ -37,11 +41,17 @@ export function useAudioPlayerSync() {
 		if (!msg || typeof msg !== "object") return;
 		if (msg.tabId === tabId) return; // 过滤本标签页广播
 
-		if (msg.type === "PLAY_REQUEST") {
-			callbacks.onForeignPlayRequest({
-				tabId: msg.tabId,
-				timestamp: typeof msg.timestamp === "number" ? msg.timestamp : Date.now(),
-			});
+		if (msg.type === "PLAY_REQUEST" && typeof msg.tabId === "string") {
+			const timestamp = typeof msg.timestamp === "number" && Number.isFinite(msg.timestamp)
+				? msg.timestamp : Date.now();
+			if (timestamp <= (lastSeenByTab.get(msg.tabId) ?? -Infinity)) return;
+			// Bound memory if many different tabs visit over a long session.
+			if (lastSeenByTab.size >= 128 && !lastSeenByTab.has(msg.tabId)) {
+				const oldestTab = lastSeenByTab.keys().next().value;
+				if (oldestTab) lastSeenByTab.delete(oldestTab);
+			}
+			lastSeenByTab.set(msg.tabId, timestamp);
+			callbacks.onForeignPlayRequest({ tabId: msg.tabId, timestamp });
 		}
 	};
 
@@ -81,7 +91,8 @@ export function useAudioPlayerSync() {
 	}
 
 	const broadcastPlayRequest = () => {
-		const timestamp = Date.now();
+		const timestamp = Math.max(Date.now(), lastBroadcastTimestamp + 1);
+		lastBroadcastTimestamp = timestamp;
 		const message: AudioSyncMessage = {
 			type: "PLAY_REQUEST",
 			tabId,

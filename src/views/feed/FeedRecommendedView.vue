@@ -1067,9 +1067,9 @@ onMounted(() => {
 onUnmounted(() => { recommendationRequest++ })
 </script>
 
-<style scoped>
-@import "./feedRecommended.css";
+<style scoped src="./feedRecommended.css"></style>
 
+<style scoped>
 /* Contract rules verified by tests/unit/views/feed/FeedRecommendedView.spec.ts */
 .feed-timeline-box {
   border: 0;

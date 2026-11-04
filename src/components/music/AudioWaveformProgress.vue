@@ -369,8 +369,9 @@ function handleRangeInput(event: Event) {
 }
 
 .waveform-shape__played {
-  stroke: color-mix(in srgb, var(--a-color-primary) 82%, transparent);
+  stroke: color-mix(in srgb, var(--a-color-primary) 85%, transparent);
   transition: clip-path 80ms linear, stroke 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--a-color-primary) 28%, transparent));
 }
 
 .waveform-progress:hover .waveform-shape__played,
@@ -438,18 +439,21 @@ function handleRangeInput(event: Event) {
   height: 5px;
   border-radius: 50%;
   background: var(--a-color-primary);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--a-color-primary) 70%, transparent);
   content: '';
   transform: translate(-50%, -50%);
-  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms ease;
 }
 
 .waveform-progress:hover .waveform-playhead::after,
 .waveform-progress.is-hovering .waveform-playhead::after {
-  transform: translate(-50%, -50%) scale(1.25);
+  transform: translate(-50%, -50%) scale(1.35);
+  box-shadow: 0 0 10px var(--a-color-primary);
 }
 
 .waveform-progress.is-dragging .waveform-playhead::after {
-  transform: translate(-50%, -50%) scale(1.4);
+  transform: translate(-50%, -50%) scale(1.5);
+  box-shadow: 0 0 14px var(--a-color-primary);
 }
 
 .waveform-hover-line {

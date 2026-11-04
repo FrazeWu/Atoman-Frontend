@@ -135,4 +135,27 @@ describe('MusicLyricsScroller.vue', () => {
     expect(scrollIntoView).toHaveBeenCalled()
     vi.useRealTimers()
   })
+
+  it('displays resume follow button when user scrolls and snaps back on click', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(MusicLyricsScroller, {
+      props: defaultProps,
+    })
+
+    expect(wrapper.find('.music-lyrics-panel__resume-follow').exists()).toBe(false)
+
+    const linesContainer = wrapper.get('.music-lyrics-panel__lines')
+    await linesContainer.trigger('wheel')
+
+    expect(wrapper.find('.music-lyrics-panel__resume-follow').exists()).toBe(true)
+
+    const scrollIntoView = vi.fn()
+    window.HTMLElement.prototype.scrollIntoView = scrollIntoView
+
+    await wrapper.get('.music-lyrics-panel__resume-follow').trigger('click')
+
+    expect(scrollIntoView).toHaveBeenCalled()
+    expect(wrapper.find('.music-lyrics-panel__resume-follow').exists()).toBe(false)
+    vi.useRealTimers()
+  })
 })

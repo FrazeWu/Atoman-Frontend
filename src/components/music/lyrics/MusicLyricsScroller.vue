@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { LocateFixed } from 'lucide-vue-next'
 import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 
@@ -51,6 +52,15 @@ function handleUserScroll() {
   }, 2500)
 }
 
+function resumeAutoScroll() {
+  if (scrollLockTimer) {
+    clearTimeout(scrollLockTimer)
+    scrollLockTimer = null
+  }
+  isUserScrolling.value = false
+  scrollToActiveLine()
+}
+
 function scrollToActiveLine() {
   if (isUserScrolling.value || !lyricsLinesElement.value || !props.currentLineId) return
   const activeEl = lyricsLinesElement.value.querySelector('.music-lyrics-line.is-active') as HTMLElement | null
@@ -76,6 +86,7 @@ onBeforeUnmount(() => {
 defineExpose({
   lyricsLinesElement,
   scrollToActiveLine,
+  resumeAutoScroll,
 })
 </script>
 
@@ -125,6 +136,19 @@ defineExpose({
         />
       </template>
     </div>
+
+    <Transition name="resume-follow-fade">
+      <button
+        v-if="isUserScrolling && isPlayerMode && currentLineId"
+        type="button"
+        class="music-lyrics-panel__resume-follow"
+        aria-label="回到当前歌词"
+        @click="resumeAutoScroll"
+      >
+        <LocateFixed :size="13" aria-hidden="true" />
+        <span>回到当前歌词</span>
+      </button>
+    </Transition>
   </div>
 </template>
 
@@ -135,6 +159,7 @@ defineExpose({
 }
 
 .music-lyrics-panel__main {
+  position: relative;
   min-height: 0;
   overflow: hidden;
   padding-right: 1rem;
@@ -215,5 +240,47 @@ defineExpose({
   scroll-behavior: smooth;
   mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 90%, transparent 100%);
+}
+
+.music-lyrics-panel__resume-follow {
+  position: absolute;
+  bottom: 1.5rem;
+  right: 2rem;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.95rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--a-color-text);
+  background: color-mix(in srgb, var(--a-color-bg) 85%, var(--a-color-text));
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 9999px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease, border-color 0.2s ease;
+}
+
+.music-lyrics-panel__resume-follow:hover {
+  transform: scale(1.04);
+  border-color: var(--a-color-text);
+}
+
+.music-lyrics-panel__resume-follow:active {
+  transform: scale(0.97);
+}
+
+.resume-follow-fade-enter-active,
+.resume-follow-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.resume-follow-fade-enter-from,
+.resume-follow-fade-leave-to {
+  opacity: 0;
+  transform: translateY(8px) scale(0.95);
 }
 </style>

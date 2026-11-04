@@ -226,6 +226,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 					path: "tags",
 					redirect: "/books/lists",
 				},
+				{ path: "shelf", redirect: "/books/library" },
 				{
 					path: "library",
 					component: () => import("@/views/books/BookPrivateLibraryView.vue"),

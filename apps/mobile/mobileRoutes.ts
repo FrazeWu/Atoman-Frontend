@@ -147,6 +147,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 			{
 				path: "starred",
 				component: () => import("./views/feed/FeedStarredView.vue"),
+				meta: { restoreSession: true },
 			},
 			{
 				path: "me",

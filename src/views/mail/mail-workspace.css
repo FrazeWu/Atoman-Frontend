@@ -125,3 +125,12 @@
   .mail-workspace__message { padding: 17px 16px; }
 }
 @media (prefers-reduced-motion: reduce) { .mail-spin { animation: none; } }
+
+.mail-gate__redeem { display: grid; gap: 10px; }
+.mail-gate__redeem > label { margin-bottom: 0; }
+.mail-gate__redeem > input { width: 100%; }
+.mail-gate__redeem > .p-button { justify-self: start; margin-top: 4px; }
+.mail-gate__address-fields { display: flex; width: 100%; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-control); align-items: center; min-height: 42px; background: var(--a-color-bg); }
+.mail-gate__address-fields input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; padding: 0 12px; }
+.mail-gate__address-fields span { white-space: nowrap; color: var(--a-color-muted-soft); font-size: 13px; padding: 0 12px 0 4px; }
+.mail-gate__address-fields:focus-within { outline: 2px solid var(--a-color-primary); outline-offset: 1px; }

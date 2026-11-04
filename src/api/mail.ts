@@ -45,5 +45,21 @@ export function fetchMailSummaries(mailboxId: string, limit = 50): Promise<MailS
   return apiGet<MailSummary[]>(`${mailBase()}/messages?${query}`)
 }
 
-export const redeemMailInvitation = (token: string): Promise<MailAccountInfo> =>
-  apiPostJson<MailAccountInfo>(`${mailBase()}/activate`, { token })
+export interface IssuedMailInvitation {
+  id: string
+  token: string
+  expires_at: string
+  address?: string
+}
+
+export function issueMailInvitation(targetUserId: string): Promise<IssuedMailInvitation> {
+  return apiPostJson<IssuedMailInvitation>(`${mailBase()}/admin/invites`, { target_user_id: targetUserId })
+}
+
+export function reserveAdminMailAddress(localPart: string): Promise<MailAccountInfo> {
+  return apiPostJson<MailAccountInfo>(`${mailBase()}/admin/reserve-self`, { local_part: localPart })
+}
+
+export function redeemMailInvitation(token: string, localPart: string): Promise<MailAccountInfo> {
+  return apiPostJson<MailAccountInfo>(`${mailBase()}/activate`, { token, local_part: localPart })
+}

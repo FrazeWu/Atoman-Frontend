@@ -2,10 +2,16 @@
   <main class="setting-users">
     <div class="setting-users__heading">
       <PSectionHeader title="用户管理" description="管理账号、权限和登录状态。" />
-      <PButton v-if="view === 'users'" data-test="user-create" @click="openCreate">
-        <UserPlus :size="16" aria-hidden="true" />
-        新增用户
-      </PButton>
+      <div v-if="view === 'users'" class="setting-users__heading-actions">
+        <PButton data-test="mail-invites-open" variant="secondary" @click="openMailInvitation()">
+          <MailPlus :size="16" aria-hidden="true" />
+          发放邮箱邀请码
+        </PButton>
+        <PButton data-test="user-create" @click="openCreate">
+          <UserPlus :size="16" aria-hidden="true" />
+          新增用户
+        </PButton>
+      </div>
     </div>
 
     <nav class="setting-users__views" aria-label="用户管理视图">
@@ -87,6 +93,16 @@
               <td data-label="操作">
                 <div v-if="canManage(user)" class="setting-users__actions">
                   <PButton
+                    v-if="user.is_active"
+                    :data-test="`user-mail-invite-${user.uuid}`"
+                    class="setting-users__icon-button"
+                    variant="ghost"
+                    size="sm"
+                    title="发放邮箱邀请码"
+                    aria-label="发放邮箱邀请码"
+                    @click="openMailInvitation(user)"
+                  ><MailPlus :size="16" aria-hidden="true" /></PButton>
+                  <PButton
                     :data-test="`user-edit-${user.uuid}`"
                     class="setting-users__icon-button"
                     variant="ghost"
@@ -137,6 +153,11 @@
     </PSurface>
 
     <AdminUserAuditView v-else />
+
+    <SettingMailInvitationDialog
+      v-model="mailInvitationOpen"
+      :initial-user="mailInvitationTarget"
+    />
 
     <AdminUserDetailSheet
       :show="detailOpen"
@@ -267,7 +288,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ChevronRight, Eye, EyeOff, KeyRound, Pencil, Trash2, UserPlus, UserRoundCheck, UserRoundX } from 'lucide-vue-next'
+import { ChevronRight, Eye, EyeOff, KeyRound, MailPlus, Pencil, Trash2, UserPlus, UserRoundCheck, UserRoundX } from 'lucide-vue-next'
 
 import {
   createAdminUser,
@@ -282,6 +303,7 @@ import {
 } from '@/api/adminUsers'
 import AdminUserAuditView from '@/components/admin/AdminUserAuditView.vue'
 import AdminUserDetailSheet from '@/components/admin/AdminUserDetailSheet.vue'
+import SettingMailInvitationDialog from '@/components/setting/SettingMailInvitationDialog.vue'
 import AdminUserFilterBar from '@/components/admin/AdminUserFilterBar.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PBadge from '@/components/ui/PBadge.vue'
@@ -344,6 +366,8 @@ const initialPassword = ref('')
 const passwordError = ref('')
 const showResetPassword = ref(false)
 const confirmAction = ref<ConfirmAction | null>(null)
+const mailInvitationOpen = ref(false)
+const mailInvitationTarget = ref<AdminUser | null>(null)
 const detailOpen = ref(false)
 const selectedUserId = ref<string | null>(null)
 let usersRequestSequence = 0
@@ -428,6 +452,12 @@ function canManage(user: AdminUser) {
 
 function canInspect(user: AdminUser) {
   return isOwner.value || (authStore.user?.role === 'admin' && user.role === 'user')
+}
+
+function openMailInvitation(user?: AdminUser) {
+  if (user && (!user.is_active || !canInspect(user))) return
+  mailInvitationTarget.value = user || null
+  mailInvitationOpen.value = true
 }
 
 function openDetail(user: AdminUser) {

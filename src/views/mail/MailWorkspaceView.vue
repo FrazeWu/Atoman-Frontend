@@ -39,14 +39,27 @@
         <strong>{{ mailAccount.address }}</strong>
         <small>当前不可收发邮件</small>
       </div>
-      <form v-else-if="mailAccount?.status === 'not_invited'" class="mail-gate__redeem" @submit.prevent="redeemInvite">
-        <label for="mail-invitation">已有邀请码？</label>
-        <div class="mail-gate__redeem-fields">
-          <input id="mail-invitation" v-model.trim="invitation" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="100" placeholder="输入邮箱邀请码" :disabled="redeeming" />
-          <PButton size="sm" type="submit" :disabled="invitation.length !== 43 || redeeming" :loading="redeeming">兑换</PButton>
+      <form v-else-if="mailAccount?.status === 'not_invited' && isMailAdministrator" class="mail-gate__redeem" data-testid="mail-admin-self-form" @submit.prevent="reserveSelf">
+        <label for="mail-self-local">为自己选择邮箱名称</label>
+        <div class="mail-gate__address-fields">
+          <input id="mail-self-local" v-model.trim="chosenLocalPart" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="32" placeholder="例如 fazong.wu" aria-label="我的邮箱名称" :disabled="redeeming" />
+          <span>@atoman.org</span>
         </div>
+        <PButton size="sm" type="submit" :disabled="!isChosenLocalValid || redeeming" :loading="redeeming">预留我的邮箱地址</PButton>
         <p v-if="redeemError" class="mail-gate__form-error" role="alert">{{ redeemError }}</p>
-        <small>邀请码仅用于预留地址；完成邮箱服务配置后才能开始收发。</small>
+        <small>管理员无需邀请码。创建后会绑定到你的 Atoman 账号，不会随网站用户名变化；正式收发仍需等待服务开放。</small>
+      </form>
+      <form v-else-if="mailAccount?.status === 'not_invited'" class="mail-gate__redeem" data-testid="mail-invite-redeem-form" @submit.prevent="redeemInvite">
+        <label for="mail-invitation">邮箱邀请码</label>
+        <input id="mail-invitation" v-model.trim="invitation" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="100" placeholder="输入收到的邀请码" :disabled="redeeming" />
+        <label for="mail-chosen-local">自行选择邮箱名称</label>
+        <div class="mail-gate__address-fields">
+          <input id="mail-chosen-local" v-model.trim="chosenLocalPart" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="32" placeholder="例如 your.name" aria-label="邮箱名称" :disabled="redeeming" />
+          <span>@atoman.org</span>
+        </div>
+        <PButton size="sm" type="submit" :disabled="invitation.length !== 43 || !isChosenLocalValid || redeeming" :loading="redeeming">领取邮箱地址</PButton>
+        <p v-if="redeemError" class="mail-gate__form-error" role="alert">{{ redeemError }}</p>
+        <small>邮箱名与你的登录账号绑定，但由你自行填写，不必与用户名相同。领取仅预留地址，不能立即收发邮件。</small>
       </form>
       <p class="mail-gate__footnote"><ShieldCheck :size="15" aria-hidden="true" /> 与 Atoman 现有账号绑定，无需单独注册</p>
     </section>
@@ -163,9 +176,12 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Archive, ChevronLeft, CircleAlert, File, FileText, Inbox, Info, Mail, MailOpen, Paperclip, Pencil, RefreshCw, Search, Send, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import { ApiErrorResponseError } from '@/api/client'
-import { fetchMailFolders, fetchMailSummaries, fetchMyMailAccount, redeemMailInvitation, type MailAccountInfo, type MailFolder, type MailSummary } from '@/api/mail'
+import { useAuthStore } from '@/stores/auth'
+import { fetchMailFolders, fetchMailSummaries, fetchMyMailAccount, redeemMailInvitation, reserveAdminMailAddress, type MailAccountInfo, type MailFolder, type MailSummary } from '@/api/mail'
 
 type MobilePane = 'folders' | 'list' | 'reader'
+const authStore = useAuthStore()
+const isMailAdministrator = computed(() => authStore.user?.role === 'admin' || authStore.user?.role === 'owner')
 const mobilePane = ref<MobilePane>('list')
 const mailAccount = ref<MailAccountInfo | null>(null)
 const loadingAccount = ref(true)
@@ -180,6 +196,11 @@ const messagesError = ref('')
 const selectedMessageId = ref('')
 const localSearch = ref('')
 const invitation = ref('')
+const chosenLocalPart = ref('')
+const isChosenLocalValid = computed(() => {
+  const local = chosenLocalPart.value.trim().toLowerCase()
+  return /^[a-z0-9][a-z0-9._-]{1,30}[a-z0-9]$/.test(local) && !local.includes('..')
+})
 const redeeming = ref(false)
 const redeemError = ref('')
 let accountGeneration = 0
@@ -203,7 +224,7 @@ const statusTitle = computed(() => {
     case 'provisioning': return '邮箱正在准备中'
     case 'suspended': return '邮箱服务已暂停'
     case 'failed': return '邮箱尚未完成开通'
-    case 'not_invited': return '邮箱暂未向你的账号开放'
+    case 'not_invited': return isMailAdministrator.value ? '设置你的专属邮箱地址' : '邮箱暂未向你的账号开放'
     default: return '邮箱服务尚未开放'
   }
 })
@@ -213,7 +234,7 @@ const statusDescription = computed(() => {
     case 'provisioning': return '账户开通需要完成服务检查。在此期间还不能使用邮箱。'
     case 'suspended': return '当前地址的邮件访问已暂停。如需协助，请联系管理员。'
     case 'failed': return '邮箱开通过程尚未完成，请联系管理员核查。'
-    case 'not_invited': return 'Atoman 邮箱采用邀请制。获得邀请码后可以预留一个专属地址。'
+    case 'not_invited': return isMailAdministrator.value ? '管理员可以直接选择邮箱名称，无需等待邀请码。' : 'Atoman 邮箱采用邀请制。收到邀请码后，可以自主选择邮箱名称。'
     default: return '邮件服务仍在配置中。当前不能发送、接收或查看邮件。'
   }
 })
@@ -355,16 +376,33 @@ function openMessage(messageId: string) {
 
 async function redeemInvite() {
   const token = invitation.value.trim()
-  if (redeeming.value || token.length !== 43 || mailAccount.value?.status !== 'not_invited') return
+  if (redeeming.value || token.length !== 43 || !isChosenLocalValid.value || mailAccount.value?.status !== 'not_invited') return
   redeeming.value = true
   redeemError.value = ''
   try {
-    const result = await redeemMailInvitation(token)
+    const result = await redeemMailInvitation(token, chosenLocalPart.value.trim().toLowerCase())
     if (disposed) return
     mailAccount.value = result
     invitation.value = ''
+    chosenLocalPart.value = ''
   } catch (error) {
     if (!disposed) redeemError.value = messageForError(error, '邀请码无效或已失效，请检查后重试。')
+  } finally {
+    if (!disposed) redeeming.value = false
+  }
+}
+
+async function reserveSelf() {
+  if (redeeming.value || !isMailAdministrator.value || !isChosenLocalValid.value || mailAccount.value?.status !== 'not_invited') return
+  redeeming.value = true
+  redeemError.value = ''
+  try {
+    const result = await reserveAdminMailAddress(chosenLocalPart.value.trim().toLowerCase())
+    if (disposed) return
+    mailAccount.value = result
+    chosenLocalPart.value = ''
+  } catch {
+    if (!disposed) redeemError.value = '地址可能已被使用或不可预留。请换一个名称后再试。'
   } finally {
     if (!disposed) redeeming.value = false
   }

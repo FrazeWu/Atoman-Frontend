@@ -21,11 +21,12 @@ it('云端 PDF 精确页码优先于百分比，翻页提交对应页码', async
   const wrapper = mount(BookPublicReaderView, { props: { source: {
     title: 'PDF', backTo: '/books', progressKey: 'revision:pdf-cloud', loadContent: async () => new Blob(['PDF']),
     asset: { id: 'a', format: 'pdf', file_name: 'test.pdf', content_type: 'application/pdf', size: 3, status: 'published', created_at: '' },
-    initialPosition: { pdf_page: 3, current_percent: .9, epub_cfi: '', txt_offset: 0 }, bookmarks: [], onPosition: observe, onReady: ready,
+    initialPosition: { pdf_page: 3, pdf_offset: .62, current_percent: .9, epub_cfi: '', txt_offset: 0 }, bookmarks: [], onPosition: observe, onReady: ready,
   } }, global: { plugins: [router] } })
   try {
     await flushPromises()
     expect(wrapper.findComponent(BookPdfContinuousView).exists()).toBe(true)
+    expect(wrapper.findComponent(BookPdfContinuousView).props('initialOffset')).toBe(.62)
     expect(observe).not.toHaveBeenCalled()
     expect(ready).toHaveBeenCalledOnce()
     // Switch to paginated mode to access the single-page navigation buttons.
@@ -34,7 +35,7 @@ it('云端 PDF 精确页码优先于百分比，翻页提交对应页码', async
     expect(getPage).toHaveBeenLastCalledWith(3)
     await wrapper.get('button[aria-label="下一页"]').trigger('click')
     await flushPromises()
-    expect(observe).toHaveBeenLastCalledWith({ advance_furthest: true, pdf_page: 4, current_percent: .4, txt_offset: 0, epub_cfi: '' })
+    expect(observe).toHaveBeenLastCalledWith({ advance_furthest: true, pdf_page: 4, pdf_offset: 0, current_percent: .4, txt_offset: 0, epub_cfi: '' })
   } finally { wrapper.unmount() }
 })
 

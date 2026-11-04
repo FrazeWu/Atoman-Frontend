@@ -8,6 +8,7 @@ export interface ReadingPosition {
   advance_furthest?: boolean
   epub_cfi: string
   pdf_page: number
+  pdf_offset?: number // normalized fraction within the current PDF page (0..1)
   txt_offset: number
 }
 export interface CloudReadingState extends ReadingPosition {

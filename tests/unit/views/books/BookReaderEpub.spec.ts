@@ -38,7 +38,7 @@ it('EPUB 恢复与排版产生的 relocated 不回写云端，主动翻页才提
     expect(display).toHaveBeenLastCalledWith('epubcfi(/6/2!/4/18/1:0)')
     await wrapper.get('button[aria-label="下一页"]').trigger('click')
     events.get('relocated')!({ start: { cfi: 'epubcfi(/6/2!/4/30/1:0)', percentage: .7 } })
-    expect(observe).toHaveBeenCalledWith({ advance_furthest: true, epub_cfi: 'epubcfi(/6/2!/4/30/1:0)', current_percent: .7, pdf_page: 0, txt_offset: 0 })
+    expect(observe).toHaveBeenCalledWith({ advance_furthest: true, epub_cfi: 'epubcfi(/6/2!/4/30/1:0)', current_percent: .7, pdf_page: 0, pdf_offset: 0, txt_offset: 0 })
   } finally { wrapper.unmount() }
 })
 

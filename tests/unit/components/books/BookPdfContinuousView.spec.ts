@@ -1,59 +1,81 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import BookPdfContinuousView from '@/components/books/BookPdfContinuousView.vue'
 
-const mockPdfViewer = vi.hoisted(() => ({
+const viewerMock = vi.hoisted(() => ({
   handlers: {} as Record<string, (...args: any[]) => void>,
   active: null as any,
 }))
 
 vi.mock('pdfjs-dist/web/pdf_viewer.mjs', () => ({
-  EventBus: class {
-    on(event: string, callback: (...args: any[]) => void) { mockPdfViewer.handlers[event] = callback }
-  },
+  EventBus: class { on(event: string, callback: (...args: any[]) => void) { viewerMock.handlers[event] = callback } },
   PDFLinkService: class { setViewer() {}; setDocument() {} },
   ScrollMode: { VERTICAL: 1 },
   PDFViewer: class {
     scrollMode = 0
     currentScale = 1
     private page = 1
-    constructor() { mockPdfViewer.active = this }
+    private root: HTMLElement
+    constructor(options: { container: HTMLElement }) { this.root = options.container; viewerMock.active = this }
     get currentPageNumber() { return this.page }
     set currentPageNumber(value: number) {
-      if (this.page === value) return
       this.page = value
-      mockPdfViewer.handlers.pagechanging?.({ pageNumber: value })
+      this.root.scrollTop = (value - 1) * 1000
+      viewerMock.handlers.pagechanging?.({ pageNumber: value })
     }
-    setDocument(value: unknown) { if (value) mockPdfViewer.handlers.pagesinit?.() }
+    getPageView(index: number) {
+      const root = this.root
+      return { div: {
+        getBoundingClientRect() {
+          const top = index * 1000 - root.scrollTop
+          return { top, bottom: top + 1000, height: 1000 }
+        },
+      } }
+    }
+    setDocument(value: unknown) { if (value) viewerMock.handlers.pagesinit?.() }
     getCachedPageViews() { return [] }
   },
 }))
 
-afterEach(() => { mockPdfViewer.handlers = {}; mockPdfViewer.active = null })
+beforeEach(() => {
+  vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => {
+    queueMicrotask(() => callback(0))
+    return 1
+  })
+})
+afterEach(() => { viewerMock.handlers = {}; viewerMock.active = null; vi.restoreAllMocks() })
 
-it('PDF 连续模式真正使用多页 viewer，并区分跳页与自然滚动', async () => {
+it('PDF 恢复精确页内 35%，自然滚动与同页位移上报真实位置，缩放不会冒充阅读', async () => {
   const wrapper = mount(BookPdfContinuousView, {
-    props: { document: { numPages: 10 } as never, initialPage: 3, zoom: 100, annotations: [] },
+    props: { document: { numPages: 10 } as never, initialPage: 3, initialOffset: .35, zoom: 100, annotations: [] },
   })
   try {
     await flushPromises()
-    expect(mockPdfViewer.active).not.toBeNull()
-    expect(mockPdfViewer.active.scrollMode).toBe(1)
-    expect(mockPdfViewer.active.currentPageNumber).toBe(3)
-    expect(wrapper.emitted('page-change')).toBeUndefined() // opening at the last position is not reading
+    expect(viewerMock.active.scrollMode).toBe(1)
+    expect(viewerMock.active.currentPageNumber).toBe(3)
+    const root = wrapper.get('.book-pdf-continuous__scroll')
+    expect((root.element as HTMLElement).scrollTop).toBeCloseTo(2350, 0)
+    expect((wrapper.emitted('position-change') || []).every((value) => value[2] === false)).toBe(true)
 
     wrapper.vm.goToPage(8)
-    expect(mockPdfViewer.active.currentPageNumber).toBe(8)
-    expect(wrapper.emitted('page-change')).toEqual([[8, false]])
+    expect(viewerMock.active.currentPageNumber).toBe(8)
+    expect(wrapper.emitted('position-change')?.at(-1)).toEqual([8, 0, false])
 
-    await wrapper.get('.book-pdf-continuous__scroll').trigger('wheel')
-    mockPdfViewer.active.currentPageNumber = 9
-    expect(wrapper.emitted('page-change')).toEqual([[8, false], [9, true]])
+    await root.trigger('wheel')
+    ;(root.element as HTMLElement).scrollTop = 7480
+    await root.trigger('scroll')
+    await flushPromises()
+    expect(wrapper.emitted('position-change')?.at(-1)).toEqual([8, .488, true])
     await wrapper.setProps({ zoom: 120 })
-    mockPdfViewer.active.currentPageNumber = 10
-    expect(wrapper.emitted('page-change')).toEqual([[8, false], [9, true], [10, false]])
-    await wrapper.get('.book-pdf-continuous__scroll').trigger('wheel')
-    mockPdfViewer.active.currentPageNumber = 9
-    expect(wrapper.emitted('page-change')).toEqual([[8, false], [9, true], [10, false], [9, true]])
+    await flushPromises()
+    await root.trigger('scroll')
+    await flushPromises()
+    expect(wrapper.emitted('position-change')?.at(-1)?.[2]).toBe(false)
+
+    await root.trigger('wheel')
+    ;(root.element as HTMLElement).scrollTop = 7520
+    await root.trigger('scroll')
+    await flushPromises()
+    expect(wrapper.emitted('position-change')?.at(-1)).toEqual([8, .528, true])
   } finally { wrapper.unmount() }
 })

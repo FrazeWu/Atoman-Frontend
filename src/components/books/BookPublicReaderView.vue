@@ -76,7 +76,7 @@
       </div>
       <div v-else ref="pdfViewport" class="public-reader__pdf" :class="{ 'public-reader__pdf--continuous': displayPreferences.scroll_mode === 'continuous' }" @mouseup="captureSelection(true)" @keyup="captureSelection(true)">
         <BookReaderSkeleton v-if="isEngineLoading" format="pdf" />
-        <BookPdfContinuousView v-if="displayPreferences.scroll_mode === 'continuous' && pdfDocumentRef" ref="pdfContinuousReader" :document="pdfDocumentRef" :initial-page="pdfPage" :zoom="displayPreferences.zoom_level || 100" :annotations="annotations" @page-change="onContinuousPdfPageChange" />
+        <BookPdfContinuousView v-if="displayPreferences.scroll_mode === 'continuous' && pdfDocumentRef" ref="pdfContinuousReader" :document="pdfDocumentRef" :initial-page="pdfPage" :initial-offset="pdfOffset" :zoom="displayPreferences.zoom_level || 100" :annotations="annotations" @position-change="onContinuousPdfPositionChange" />
         <div v-else v-show="!isEngineLoading" class="public-reader__pdf-page" :class="{ 'is-selectable': source?.annotations !== undefined }" :style="pdfWidth ? { width: `${pdfWidth}px` } : {}">
           <canvas ref="pdfCanvas" aria-label="PDF 页面" />
           <div v-if="source?.annotations !== undefined" ref="pdfTextRoot" class="textLayer" aria-label="PDF 可选文字" />
@@ -159,6 +159,7 @@ const readingPercent = ref(0)
 const textPage = ref(1)
 const textPageCount = ref(1)
 const pdfPage = ref(1)
+const pdfOffset = ref(0)
 const pdfPageCount = ref(0)
 const comicPage = ref(1)
 const comicPages = ref<Array<ComicPage & { url: string }>>([])
@@ -320,7 +321,7 @@ function scrollToTextOffset(offset: number) {
 function notifyPosition(advanceFurthest = true) {
   if (disposed || isLoading.value) return
   const format = asset.value?.format
-  props.source?.onPosition?.({ current_percent: readingPercent.value, advance_furthest: advanceFurthest, epub_cfi: format === 'epub' ? localProgress?.epub_cfi || '' : '', pdf_page: format === 'pdf' ? pdfPage.value : format === 'cbz' || format === 'cbr' ? comicPage.value : 0, txt_offset: format === 'txt' ? textOffset() : 0 })
+  props.source?.onPosition?.({ current_percent: readingPercent.value, advance_furthest: advanceFurthest, epub_cfi: format === 'epub' ? localProgress?.epub_cfi || '' : '', pdf_page: format === 'pdf' ? pdfPage.value : format === 'cbz' || format === 'cbr' ? comicPage.value : 0, pdf_offset: format === 'pdf' ? pdfOffset.value : 0, txt_offset: format === 'txt' ? textOffset() : 0 })
 }
 
 const formatLabel = computed(() => asset.value?.format.toUpperCase() || '')
@@ -362,8 +363,14 @@ async function loadPDF() {
     if (disposed) return
     pdfDocumentRef.value = pdfDocument
     pdfPageCount.value = pdfDocument.numPages
-    if (localProgress) pdfPage.value = Math.min(pdfPageCount.value, Math.max(1, Math.round(localProgress.reading_percent * pdfPageCount.value)))
-    if (props.source?.initialPosition?.pdf_page) pdfPage.value = Math.min(pdfPageCount.value, props.source.initialPosition.pdf_page)
+    if (localProgress) {
+      pdfPage.value = Math.min(pdfPageCount.value, Math.max(1, localProgress.pdf_page || Math.round(localProgress.reading_percent * pdfPageCount.value)))
+      pdfOffset.value = localProgress.pdf_offset || 0
+    }
+    if (props.source?.initialPosition?.pdf_page) {
+      pdfPage.value = Math.min(pdfPageCount.value, props.source.initialPosition.pdf_page)
+      pdfOffset.value = props.source.initialPosition.pdf_offset || 0
+    }
     await nextTick()
     if (displayPreferences.value.scroll_mode === 'paginated') await renderPDFPage(false)
   } finally {
@@ -412,7 +419,7 @@ async function renderPDFPage(advanceFurthest = true) {
     if (disposed || current !== pdfRenderGeneration) return
     readingPercent.value = pdfPageCount.value > 0 ? pdfPage.value / pdfPageCount.value : 0
     if (!props.source) readerStore.updateProgress(pdfPage.value, pdfPageCount.value, `第 ${pdfPage.value} 页`)
-    saveLocalBookReadingProgress(progressKey(), { reading_percent: readingPercent.value, bookmarks: bookmarks.value, display: displayPreferences.value })
+    saveLocalBookReadingProgress(progressKey(), { reading_percent: readingPercent.value, pdf_page: pdfPage.value, pdf_offset: pdfOffset.value, bookmarks: bookmarks.value, display: displayPreferences.value })
     notifyPosition(advanceFurthest)
   } catch { if (!disposed && current === pdfRenderGeneration) errorMessage.value = 'PDF 页面显示失败，请重新载入文件。' }
 }
@@ -491,6 +498,11 @@ async function buildEpubRendition(target?: string) {
   })
   await rendition.display(target || undefined)
   if (disposed || generation !== epubBuildGeneration || rendition !== epubRendition) return
+  // EPUB iframe wheel input does not bubble to the outer Vue component.
+  // epub.js reports actual continuous viewport movement through the manager.
+  if (mode === 'continuous') rendition.manager?.on?.('scrolled', () => {
+    if (!disposed && !epubJumpPending) epubHasUserInteraction = true
+  })
   void paintEpubAnnotations()
 }
 
@@ -574,21 +586,24 @@ function updateTextPageCount() {
   textPageCount.value = Math.max(1, Math.ceil(viewport.scrollHeight / Math.max(1, viewport.clientHeight)))
 }
 
-function onContinuousPdfPageChange(page: number, advance: boolean) {
+function onContinuousPdfPositionChange(page: number, offset: number, advance: boolean) {
   if (!pdfPageCount.value || disposed) return
   pdfPage.value = Math.min(Math.max(1, page), pdfPageCount.value)
-  readingPercent.value = pdfPage.value / pdfPageCount.value
-  saveLocalBookReadingProgress(progressKey(), { reading_percent: readingPercent.value, bookmarks: bookmarks.value, display: displayPreferences.value })
+  pdfOffset.value = Math.max(0, Math.min(1, offset))
+  readingPercent.value = (pdfPage.value - 1 + pdfOffset.value) / pdfPageCount.value
+  saveLocalBookReadingProgress(progressKey(), { reading_percent: readingPercent.value, pdf_page: pdfPage.value, pdf_offset: pdfOffset.value, bookmarks: bookmarks.value, display: displayPreferences.value })
   notifyPosition(advance)
 }
 
 function changePdfPage(delta: number) {
   pdfPage.value = Math.min(Math.max(1, pdfPage.value + delta), pdfPageCount.value)
+  pdfOffset.value = 0
   void renderPDFPage()
 }
 
 function jumpToPdfPage(page: number) {
   pdfPage.value = Math.min(Math.max(1, page), pdfPageCount.value)
+  pdfOffset.value = 0
   if (displayPreferences.value.scroll_mode === 'continuous') pdfContinuousReader.value?.goToPage(pdfPage.value)
   else void renderPDFPage(false)
 }
@@ -748,7 +763,7 @@ onMounted(async () => {
     localProgress = getLocalBookReadingProgress(progressKey())
     if (props.source?.initialPosition) {
       const position = props.source.initialPosition
-      localProgress = { reading_percent: position.current_percent, epub_cfi: position.epub_cfi, bookmarks: [], display: bookReaderPreferencesForFormat(asset.value.format, localProgress?.display), updated_at: new Date().toISOString() }
+      localProgress = { reading_percent: position.current_percent, epub_cfi: position.epub_cfi, pdf_page: position.pdf_page, pdf_offset: position.pdf_offset || 0, bookmarks: [], display: bookReaderPreferencesForFormat(asset.value.format, localProgress?.display), updated_at: new Date().toISOString() }
     }
     readingPercent.value = localProgress?.reading_percent || 0
     bookmarks.value = props.source?.bookmarks ?? localProgress?.bookmarks ?? []

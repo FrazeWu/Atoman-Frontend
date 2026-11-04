@@ -9,6 +9,8 @@ import {
 export type LocalBookReadingProgress = {
   reading_percent: number
   epub_cfi?: string
+  pdf_page?: number
+  pdf_offset?: number
   bookmarks: BookReaderBookmark[]
   display: BookReaderDisplayPreferences
   updated_at: string
@@ -39,6 +41,8 @@ export function getLocalBookReadingProgress(assetID: string): LocalBookReadingPr
     return {
       ...value,
       epub_cfi: typeof value.epub_cfi === 'string' ? value.epub_cfi : '',
+      pdf_page: Number.isInteger(value.pdf_page) && (value.pdf_page || 0) >= 0 ? value.pdf_page : 0,
+      pdf_offset: typeof value.pdf_offset === 'number' && Number.isFinite(value.pdf_offset) ? Math.max(0, Math.min(1, value.pdf_offset)) : 0,
       bookmarks: parseBookReaderBookmarks(value.bookmarks),
       display: parseBookReaderDisplayPreferences(value.display),
     }
@@ -47,7 +51,7 @@ export function getLocalBookReadingProgress(assetID: string): LocalBookReadingPr
   }
 }
 
-export function saveLocalBookReadingProgress(assetID: string, progress: Pick<LocalBookReadingProgress, 'reading_percent' | 'epub_cfi'> & Partial<Pick<LocalBookReadingProgress, 'bookmarks' | 'display'>>) {
+export function saveLocalBookReadingProgress(assetID: string, progress: Pick<LocalBookReadingProgress, 'reading_percent' | 'epub_cfi'> & Partial<Pick<LocalBookReadingProgress, 'pdf_page' | 'pdf_offset' | 'bookmarks' | 'display'>>) {
   const store = storage()
   if (!store) return
   try {
@@ -55,6 +59,8 @@ export function saveLocalBookReadingProgress(assetID: string, progress: Pick<Loc
     store.setItem(progressKey(assetID), JSON.stringify({
       reading_percent: Math.max(0, Math.min(1, progress.reading_percent ?? existing?.reading_percent ?? 0)),
       epub_cfi: progress.epub_cfi ?? existing?.epub_cfi ?? '',
+      pdf_page: progress.pdf_page ?? existing?.pdf_page ?? 0,
+      pdf_offset: progress.pdf_offset ?? existing?.pdf_offset ?? 0,
       bookmarks: progress.bookmarks ?? existing?.bookmarks ?? [],
       display: progress.display ?? existing?.display ?? { ...defaultBookReaderDisplayPreferences },
       updated_at: new Date().toISOString(),

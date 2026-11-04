@@ -66,7 +66,7 @@ const localSource = computed<BookReaderSource>(() => ({ ...props.source, onPosit
 const linkedPosition = computed(() => {
   const mark = marks.value.find(item => item.id === route.query.mark)
   if (!mark) return reading.initialPosition.value
-  return { current_percent: 0, epub_cfi: mark.anchor.epub_start_cfi || '', pdf_page: mark.anchor.pdf_page || 0, txt_offset: mark.anchor.txt_offset_start || 0 }
+  return { current_percent: 0, epub_cfi: mark.anchor.epub_start_cfi || '', pdf_page: mark.anchor.pdf_page || 0, pdf_offset: 0, txt_offset: mark.anchor.txt_offset_start || 0 }
 })
 const cloudSource = computed<BookReaderSource>(() => ({
   ...props.source, initialPosition: linkedPosition.value, bookmarks: bookmarks.value,

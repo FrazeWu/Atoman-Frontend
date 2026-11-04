@@ -54,6 +54,14 @@ describe('修订级云阅读同步', () => {
     await reader.flush()
     expect(api.saveCloudReadingState).toHaveBeenLastCalledWith('rev-1', expect.objectContaining({ current_percent: .99, furthest_percent: .84, advance_furthest: false }), expect.any(AbortSignal))
   })
+  it('云端同步完整保留 PDF 页内位置和跳转标记', async () => {
+    const reader = make()
+    await reader.start()
+    reader.observe({ current_percent: .37, pdf_page: 4, pdf_offset: .725, txt_offset: 0, epub_cfi: '', advance_furthest: false })
+    await reader.flush()
+    expect(api.saveCloudReadingState).toHaveBeenLastCalledWith('rev-1', expect.objectContaining({ pdf_page: 4, pdf_offset: .725, current_percent: .37, advance_furthest: false, furthest_percent: .8 }), expect.any(AbortSignal))
+    expect(reader.status.value).toBe('saved')
+  })
   it('网络失败重试完全相同的请求收据，不递增序号或更换 request_id', async () => {
     vi.mocked(api.saveCloudReadingState).mockRejectedValueOnce(new Error('offline'))
     const reader = make()

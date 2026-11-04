@@ -65,6 +65,45 @@ export const saveCloudReadingState = (revisionId: string, input: ReadingWrite, s
   request<{ state: CloudReadingState; position_applied: boolean; duplicate: boolean; ignored_reason?: string }>(`/reading-states/${path(revisionId)}`, 'PUT', input, signal)
 export const sendReadingHeartbeat = (sessionId: string, input: { sequence: number; visible: boolean; active: boolean }, signal?: AbortSignal) =>
   request(`/reading-sessions/${path(sessionId)}/heartbeat`, 'POST', input, signal)
+export interface WorkNoteSource {
+  work_id: string
+  edition_id?: string
+  asset_id: string
+  revision_id: string
+  file_name: string
+  format: string
+  edition_label?: string
+  can_open: boolean
+}
+export interface WorkNoteItem {
+  id: string
+  type: 'highlight' | 'chapter_note'
+  title: string
+  quote: string
+  note: string
+  color?: string
+  style?: string
+  anchor?: ReadingAnchor
+  source?: WorkNoteSource
+  created_at: string
+  updated_at: string
+}
+export interface WorkNotesResult {
+  work_id: string
+  total: number
+  limit: number
+  offset: number
+  items: WorkNoteItem[]
+}
+export const listWorkNotes = (workId: string, options: { kind?: WorkNoteItem['type'] | 'all'; revisionId?: string; limit?: number; offset?: number } = {}, signal?: AbortSignal) => {
+  const params = new URLSearchParams()
+  if (options.kind && options.kind !== 'all') params.set('kind', options.kind)
+  if (options.revisionId) params.set('revision_id', options.revisionId)
+  params.set('limit', String(options.limit ?? 30))
+  params.set('offset', String(options.offset ?? 0))
+  return request<WorkNotesResult>(`/works/${path(workId)}/notes?${params.toString()}`, 'GET', undefined, signal)
+}
+
 export const listReadingMarks = (revisionId: string, signal?: AbortSignal) =>
   request<{ items: ReadingMark[]; deleted: { id: string; version: number }[] }>(`/reading-marks/${path(revisionId)}`, 'GET', undefined, signal)
 export const saveReadingMark = (revisionId: string, id: string, input: ReadingMarkInput, signal?: AbortSignal) =>

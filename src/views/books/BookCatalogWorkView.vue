@@ -53,6 +53,7 @@
 
           <div class="book-catalog__hero-actions">
             <p class="book-catalog__step-intro">阅读书架只收录具体电子书；请在下方出版版本中选择文件后加入。</p>
+            <PButton v-if="auth.isAuthenticated" variant="secondary" :to="`/books/work/${work.id}/notes`">我的笔记（跨版本）</PButton>
             <PButton
               v-if="auth.isAuthenticated"
               variant="secondary"

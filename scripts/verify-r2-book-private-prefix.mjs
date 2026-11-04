@@ -6,7 +6,7 @@
  */
 import { randomUUID } from 'node:crypto'
 
-const base = new URL(process.env.AT0MAN_ASSETS_URL || 'https://assets.atoman.org')
+const base = new URL(process.env.ATOMAN_ASSETS_URL || 'https://assets.atoman.org')
 const key = randomUUID()
 const checks = [
   { label: 'immutable book revisions', path: `/book/revisions/${key}/source.epub`, expected: 403 },

@@ -122,7 +122,7 @@ const otherFiles = computed(() => files.value.filter(item => item.revision_id !=
 const fields = computed(() => [
   { key: 'publisher', label: '出版社', value: edition.value?.publisher },
   { key: 'language', label: '语言', value: edition.value?.language },
-  { key: 'date', label: '出版日期', value: edition.value?.published_date?.slice(0, 10) },
+  { key: 'date', label: '出版年月', value: edition.value?.published_date?.slice(0, 7) },
   { key: 'edition', label: '版次', value: edition.value?.edition_statement },
   { key: 'isbn', label: 'ISBN', value: edition.value?.isbn13 || edition.value?.isbn10 },
   { key: 'pages', label: '页数', value: edition.value?.page_count ? String(edition.value.page_count) + ' 页' : undefined },

@@ -295,33 +295,78 @@
               </label>
             </div>
           </div>
-          <PInput
-            id="create-edition-language"
-            v-model="language"
-            label="版本语言代码（必填）"
-            placeholder="例如 zh 或 en"
-          />
-          <PInput
-            id="create-edition-publisher"
-            v-model="publisher"
-            list="publisher-suggestions"
-            label="出版社（选填）"
-            placeholder="输入或选择出版社，例如 商务印书馆"
-          />
-          <datalist id="publisher-suggestions">
-            <option value="商务印书馆" />
-            <option value="译林出版社" />
-            <option value="生活·读书·新知三联书店" />
-            <option value="中华书局" />
-            <option value="人民文学出版社" />
-            <option value="上海译文出版社" />
-            <option value="重庆出版社" />
-          </datalist>
+          <dl v-if="metadataEvidence.length" class="book-create__detected-metadata" aria-label="文件识别到的书目信息">
+            <dt>从文件中识别（可在下方修改）</dt>
+            <dd v-for="item in metadataEvidence" :key="item.label">
+              <span>{{ item.label }}：{{ item.value }}</span><small>PDF 第 {{ item.page }} 页</small>
+            </dd>
+          </dl>
+          <div ref="languageInputRoot" class="book-create__combobox" @focusout="onLanguageFocusOut">
+            <PInput
+              id="create-edition-language"
+              v-model="languageQuery"
+              label="版本语言（必填）"
+              placeholder="输入中文、英语或语言代码"
+              autocomplete="off"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls="book-create-language-results"
+              :aria-expanded="languageListOpen"
+              @focus="languageListOpen = true"
+              @keydown.esc="languageListOpen = false"
+            />
+            <div v-if="languageListOpen" id="book-create-language-results" class="book-create__suggestions" role="listbox" aria-label="语言候选">
+              <button v-for="item in filteredLanguageOptions" :key="item.code" type="button"
+                class="book-create__suggestion" role="option" :aria-selected="language === item.code"
+                @click="selectLanguage(item.code, item.name)">
+                <span class="book-create__suggestion-title">{{ item.name }}</span><small>{{ item.code }}</small>
+              </button>
+              <button v-if="canCreateLanguage" type="button" class="book-create__suggestion book-create__suggestion--create"
+                role="option" aria-selected="false" @click="selectLanguage(languageQuery.trim(), languageQuery.trim())">
+                ＋ 使用新语言代码 {{ languageQuery.trim() }}
+              </button>
+              <p v-if="!filteredLanguageOptions.length && !canCreateLanguage" class="book-create__suggestions-status">请输入标准语言代码，例如 zh-Hans</p>
+            </div>
+          </div>
+          <div ref="publisherInputRoot" class="book-create__combobox" @focusout="onPublisherFocusOut">
+            <PInput
+              id="create-edition-publisher"
+              v-model="publisherQuery"
+              label="出版社（选填）"
+              placeholder="输入出版社名称，自动搜索已有出版社"
+              autocomplete="off"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls="book-create-publisher-results"
+              :aria-expanded="publisherListOpen"
+              @focus="publisherListOpen = true"
+              @keydown.esc="publisherListOpen = false"
+            />
+            <div v-if="publisherListOpen && publisherQuery.trim()" id="book-create-publisher-results"
+              class="book-create__suggestions" role="listbox" aria-label="出版社候选">
+              <p v-if="publisherSearching" class="book-create__suggestions-status" role="status">正在搜索出版社…</p>
+              <template v-else>
+                <button v-for="item in publisherMatches" :key="item.id" type="button"
+                  class="book-create__suggestion" role="option" :aria-selected="publisher === item.name"
+                  @click="selectPublisher(item.name)">
+                  <span class="book-create__suggestion-title">{{ item.name }}</span><small>使用已有出版社</small>
+                </button>
+                <button v-if="canCreatePublisher" type="button" class="book-create__suggestion book-create__suggestion--create"
+                  role="option" aria-selected="false" @click="selectPublisher(publisherQuery.trim())">
+                  ＋ 新建出版社「{{ publisherQuery.trim() }}」
+                </button>
+              </template>
+              <button v-if="publisherSearchError" type="button" class="book-create__suggestion" @click="findPublishers">{{ publisherSearchError }}，点击重新查找</button>
+            </div>
+          </div>
 
-          <label class="book-catalog__date-label">
-            出版日期（选填，完整日期）
-            <PMaskedDateInput v-model="publishedDate" />
-          </label>
+          <PInput
+            id="create-edition-published-month"
+            v-model="publishedMonth"
+            type="month"
+            label="出版年月（选填，精确到月）"
+            placeholder="例如 2008-01"
+          />
           <PInput
             id="create-edition-statement"
             v-model="statement"
@@ -382,7 +427,7 @@
           返回作品
         </PButton>
         <PButton type="submit" :disabled="!editionChoice || busy || !file || !selectedCover || coverBusy">
-          {{ busy ? '正在保存…' : '确认版本并上传文件' }}
+          {{ busy ? '正在保存…' : '确认版本并开始上传' }}
         </PButton>
       </div>
     </form>
@@ -390,14 +435,14 @@
     <!-- Step 3: 关联文件与阅读 -->
     <section v-else-if="createdId && editionId" class="book-catalog__step3-card">
       <div class="book-catalog__step3-header">
-        <h2 class="book-catalog__step3-title">上传并验证电子书</h2>
+        <h2 class="book-catalog__step3-title">文件上传及安全检查</h2>
         <p class="book-catalog__step3-sub">
           <strong>{{ selectedWork?.title || title }}</strong> → {{ savedEditionTitle }}
         </p>
       </div>
 
       <div class="book-catalog__step3-actions">
-        <p>文件通过安全检查后，该出版版本才会正式创建并公开展示。</p>
+        <p>使用上一步选定的文件自动上传一次，上传成功后等待安全检查；默认仅自己可读。</p>
       </div>
 
       <div class="book-catalog__upload-wrap">
@@ -408,6 +453,7 @@
           :title="savedEditionTitle"
           :initial-file="file"
           :initial-language="savedLanguage"
+          :auto-start="true"
           @ready="onResourceReady"
         />
       </div>
@@ -424,7 +470,7 @@ import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vu
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import {
   checkCatalogEditionDuplicates, checkCatalogWorkDuplicates, createCatalogEdition, createCatalogWork,
-  getCatalogWork, searchCatalogWorks, type CatalogWork, type WorkDuplicateMatch, type EditionDuplicateMatch,
+  getCatalogWork, searchCatalogWorks, searchCatalogPublishers, type CatalogWork, type WorkDuplicateMatch, type EditionDuplicateMatch,
 } from '@/api/bookCatalog'
 import type { CreateCatalogEdition } from '@/entities/book/model/types'
 import type { BookPublicEdition, BookPublicWork } from '@/api/books'
@@ -437,7 +483,6 @@ import PConfirm from '@/components/ui/PConfirm.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import PMaskedDateInput from '@/components/ui/PMaskedDateInput.vue'
 import './bookCatalog.css'
 
 const router = useRouter(), route = useRoute()
@@ -457,7 +502,69 @@ let workDebounce: ReturnType<typeof setTimeout> | undefined
 let personDebounce: ReturnType<typeof setTimeout> | undefined
 let personRequestSequence = 0
 const editionTitle = ref(''), subtitle = ref(''), translators = ref(''), language = ref(''), publisher = ref(''), statement = ref(''), isbn = ref(''), pages = ref('')
-const publishedDate = ref({ year: '', month: '', day: '' })
+const publishedMonth = ref('')
+const metadataEvidence = ref<{label: string; value: string; page: number}[]>([])
+const languageQuery = ref(''), publisherQuery = ref('')
+const languageInputRoot = ref<HTMLElement | null>(null), publisherInputRoot = ref<HTMLElement | null>(null)
+const languageListOpen = ref(false), publisherListOpen = ref(false)
+const publisherSearching = ref(false), publisherSearched = ref(false), publisherSearchError = ref('')
+const publisherMatches = ref<{ id: string; name: string }[]>([])
+let publisherDebounce: ReturnType<typeof setTimeout> | undefined
+let publisherRequest: AbortController | undefined
+const languageOptions = [
+  { name:'中文', code:'zh' }, { name:'英语', code:'en' }, { name:'日语', code:'ja' },
+  { name:'韩语', code:'ko' }, { name:'法语', code:'fr' }, { name:'德语', code:'de' },
+  { name:'西班牙语', code:'es' }, { name:'俄语', code:'ru' }, { name:'意大利语', code:'it' },
+  { name:'葡萄牙语', code:'pt' }, { name:'阿拉伯语', code:'ar' },
+  { name:'繁体中文', code:'zh-Hant' }, { name:'简体中文', code:'zh-Hans' },
+]
+const filteredLanguageOptions = computed(() => languageOptions.filter(item => {
+  const query = languageQuery.value.trim().toLocaleLowerCase()
+  return !query || item.code.toLocaleLowerCase().includes(query) || item.name.includes(query)
+}).slice(0, 12))
+const canCreateLanguage = computed(() => /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(languageQuery.value.trim()) &&
+  !languageOptions.some(item => item.code.toLocaleLowerCase() === languageQuery.value.trim().toLocaleLowerCase()))
+const canCreatePublisher = computed(() => !!publisherQuery.value.trim() && publisherSearched.value && !publisherSearching.value && !publisherSearchError.value &&
+  !publisherMatches.value.some(item => item.name.trim().toLocaleLowerCase() === publisherQuery.value.trim().toLocaleLowerCase()))
+const onLanguageFocusOut = (event: FocusEvent) => {
+  if (!(event.relatedTarget instanceof Node) || !languageInputRoot.value?.contains(event.relatedTarget)) languageListOpen.value = false
+}
+const onPublisherFocusOut = (event: FocusEvent) => {
+  if (!(event.relatedTarget instanceof Node) || !publisherInputRoot.value?.contains(event.relatedTarget)) publisherListOpen.value = false
+}
+function selectLanguage(code: string, name: string) { language.value = code; languageQuery.value = name === code ? code : `${name} · ${code}`; languageListOpen.value = false }
+function selectPublisher(name: string) { publisher.value = name; publisherQuery.value = name; publisherListOpen.value = false }
+async function findPublishers() {
+  if (publisherDebounce) clearTimeout(publisherDebounce)
+  publisherRequest?.abort()
+  const q = publisherQuery.value.trim()
+  if (!q) { publisherMatches.value = []; publisherSearched.value = false; return }
+  const controller = new AbortController()
+  publisherRequest = controller
+  publisherSearching.value = true; publisherSearchError.value = ''
+  try {
+    const data = await searchCatalogPublishers(q, 24, 0, controller.signal)
+    if (alive && !controller.signal.aborted && publisherQuery.value.trim() === q) {
+      publisherMatches.value = data.items
+      publisherSearched.value = true
+    }
+  } catch {
+    if (alive && !controller.signal.aborted) publisherSearchError.value = '无法连接出版社目录'
+  } finally { if (alive && controller === publisherRequest) publisherSearching.value = false }
+}
+watch(languageQuery, value => {
+  if (value.trim() === language.value.trim()) return
+  const exact = languageOptions.find(item => item.code.toLowerCase() === value.trim().toLowerCase() ||
+    `${item.name} · ${item.code}` === value.trim() || item.name === value.trim())
+  language.value = exact?.code || ''
+})
+watch(publisherQuery, value => {
+  if (publisherDebounce) clearTimeout(publisherDebounce)
+  publisherRequest?.abort()
+  publisher.value = value.trim() === publisher.value ? publisher.value : ''
+  publisherMatches.value = []; publisherSearched.value = false; publisherSearchError.value = ''; publisherSearching.value = false
+  if (value.trim()) publisherDebounce = setTimeout(() => void findPublishers(), 260)
+})
 const busy = ref(false), error = ref(''), createdId = ref(''), editionId = ref(''), finished = ref(false), leaveOpen = ref(false)
 const savedEditionTitle = ref(''), savedLanguage = ref('')
 const duplicateWorkCandidates = ref<WorkDuplicateMatch[]>([])
@@ -621,13 +728,13 @@ function isValidISBN(value: string) {
   return false
 }
 watch([title, authors, originalTitle, selectedAuthors], () => { duplicateWorkCandidates.value = []; confirmDuplicateWork.value = false; nameConflicts.value = [] }, { deep: true })
-watch([editionTitle, translators, language, publisher, statement, isbn, publishedDate], () => { duplicateEditionCandidates.value = []; confirmDuplicateEdition.value = false; translatorConflicts.value = [] }, { deep: true })
+watch([editionTitle, translators, language, publisher, statement, isbn, publishedMonth], () => { duplicateEditionCandidates.value = []; confirmDuplicateEdition.value = false; translatorConflicts.value = [] }, { deep: true })
 const chosenEdition = computed(() => selectedWork.value?.editions.find(edition => edition.id === editionChoice.value))
 const matchText = (value: string) => value.replace(/[\s-]/g, '').toLowerCase()
 const matchingEditions = computed(() => (selectedWork.value?.editions || []).filter(edition => matchText(`${edition.title || ''} ${editionSummary(edition)}`).includes(matchText(editionQuery.value))))
 const dirty = computed(() => !finished.value && (!!workChoice.value || !!file.value || [title, authors, query].some(value => !!value.value)))
 watch(workChoice, () => { selectedWork.value = null; editionChoice.value = ''; editionQuery.value = ''; error.value = '' })
-function editionSummary(edition: BookPublicEdition) { return [edition.subtitle, edition.translators?.map(person => person.name).join(' / '), edition.language, edition.publisher, edition.published_date?.slice(0, 10), edition.edition_statement, edition.isbn13 || edition.isbn10].filter(Boolean).join(' · ') || '版本资料待补充' }
+function editionSummary(edition: BookPublicEdition) { return [edition.subtitle, edition.translators?.map(person => person.name).join(' / '), edition.language, edition.publisher, edition.published_date?.slice(0, 7), edition.edition_statement, edition.isbn13 || edition.isbn10].filter(Boolean).join(' · ') || '版本资料待补充' }
 async function findWorks() {
   if (workDebounce) clearTimeout(workDebounce)
   const term = query.value.trim()
@@ -677,6 +784,7 @@ async function chooseFile(event: Event) {
   coverCandidates.value = []
   selectedCover.value = ''
   coverExplanation.value = ''
+  metadataEvidence.value = []
   resourceReady.value = false
   error.value = ''
   coverBusy.value = true
@@ -688,8 +796,18 @@ async function chooseFile(event: Event) {
     const data = inspection.metadata
     // Existing user edits always win over file metadata.
     if (!editionTitle.value.trim() && data.title) editionTitle.value = data.title
-    if (!language.value.trim() && data.language) language.value = data.language
-    if (!publisher.value.trim() && data.publisher) publisher.value = data.publisher
+    if (!language.value.trim() && !languageQuery.value.trim() && data.language) {
+      const option = languageOptions.find(item => item.code === data.language)
+      selectLanguage(data.language, option?.name || data.language)
+    }
+    if (!publisher.value.trim() && !publisherQuery.value.trim() && data.publisher) selectPublisher(data.publisher)
+    if (!publishedMonth.value && data.publishedDate) publishedMonth.value = data.publishedDate
+    if (!statement.value.trim() && data.editionStatement) statement.value = data.editionStatement
+    metadataEvidence.value = Object.entries(data.sources || {}).filter((entry): entry is [string, { value: string; page: number }] =>
+      !!entry[1] && typeof entry[1].value === 'string').map(([field, data]) => ({
+      label: ({ title: '书名', author: '作者', isbn: 'ISBN', publisher: '出版社', publishedDate: '出版年月', editionStatement: '版次', language: '语言' } as Record<string, string>)[field] || field,
+      value: data.value, page: data.page,
+    }))
     if (!isbn.value.trim() && data.isbn) isbn.value = data.isbn
     if (!pages.value.trim() && data.pageCount) pages.value = String(data.pageCount)
   } catch (reason) {
@@ -739,15 +857,21 @@ async function save(withEdition: boolean) {
   if (newEdition && !isValidISBN(normalizedISBN)) { error.value = 'ISBN 校验位不正确，请核对 ISBN-10 或 ISBN-13。'; return }
   if (newEdition && !language.value.trim()) { error.value = '出版版本必须填写语言代码，例如 zh 或 en。'; return }
   if (newEdition && pages.value && (!Number.isInteger(Number(pages.value)) || Number(pages.value) < 1)) { error.value = '页数请输入正整数。'; return }
-  const date = publishedDate.value
-  const dateString = [date.year, date.month, date.day].join('-')
-  if (newEdition && [date.year, date.month, date.day].some(Boolean) && (!/^\d{4}-\d{2}-\d{2}$/.test(dateString) || Number.isNaN(Date.parse(dateString)) || new Date(dateString).toISOString().slice(0, 10) !== dateString)) { error.value = '请填写完整有效的出版日期，或留空。'; return }
+  const month = publishedMonth.value.trim()
+  if (newEdition && month && !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    error.value = '出版时间请精确到月份，例如 2008-01；不确定可留空。'; return
+  }
+  if (newEdition && publisherQuery.value.trim() && !publisher.value) { error.value = '请从出版社候选中选择，或点击“新建出版社”。'; return }
+  if (newEdition && languageQuery.value.trim() && !language.value) { error.value = '请从语言候选中选择，或选择有效的新语言代码。'; return }
+  // Database column is DATE; day=01 is a storage sentinel for month precision,
+  // not a claim that the book was published on the first day of that month.
+  const dateString = month ? `${month}-01` : ''
   const editionPayload: CreateCatalogEdition = {
     title: editionTitle.value.trim(), subtitle: subtitle.value.trim(), translators: names(translators.value),
     translator_ids: selectedTranslatorIDs.value, new_translator_names: newTranslatorNames.value,
     language: language.value.trim(), publisher: publisher.value.trim(), edition_statement: statement.value.trim(),
     isbn10: normalizedISBN.length === 10 ? normalizedISBN : '', isbn13: normalizedISBN.length === 13 ? normalizedISBN : '',
-    published_date: date.year ? dateString : '', page_count: Number(pages.value || 0), cover_url: '',
+    published_date: dateString, page_count: Number(pages.value || 0), cover_url: '',
   }
   if (newEdition && !normalizedISBN && !(
     (editionPayload.publisher && (editionPayload.published_date || editionPayload.edition_statement || editionPayload.translators?.length || editionPayload.translator_ids?.length)) ||
@@ -819,10 +943,14 @@ function resolveLeave(leave: boolean) { leaveOpen.value = false; leaveResolve?.(
 onBeforeRouteLeave(() => { if (finished.value) return true; if (busy.value) return false; if (!dirty.value) return true; leaveOpen.value = true; return new Promise<boolean>(resolve => { leaveResolve = resolve }) })
 function beforeUnload(event: BeforeUnloadEvent) { if (dirty.value || busy.value) { event.preventDefault(); event.returnValue = '' } }
 onMounted(async () => { window.addEventListener('beforeunload', beforeUnload); if (typeof route.query.work === 'string') { workChoice.value = route.query.work; await next() } })
-onBeforeUnmount(() => { alive = false; if (workDebounce) clearTimeout(workDebounce); if (personDebounce) clearTimeout(personDebounce); personRequestSequence++; searchController?.abort(); window.removeEventListener('beforeunload', beforeUnload); leaveResolve?.(false) })
+onBeforeUnmount(() => { if (publisherDebounce) clearTimeout(publisherDebounce); publisherRequest?.abort(); alive = false; if (workDebounce) clearTimeout(workDebounce); if (personDebounce) clearTimeout(personDebounce); personRequestSequence++; searchController?.abort(); window.removeEventListener('beforeunload', beforeUnload); leaveResolve?.(false) })
 </script>
 
 <style scoped>
+.book-create__detected-metadata { margin: 0 0 1rem; padding: .8rem 1rem; border: 1px solid var(--a-color-border-soft); border-radius: .65rem; }
+.book-create__detected-metadata dt { font-size: .85rem; font-weight: 650; margin-bottom: .6rem; }
+.book-create__detected-metadata dd { margin: .3rem 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: .35rem; font-size: .86rem; }
+.book-create__detected-metadata small { color: var(--a-color-muted); }
 .book-create__combobox { position: relative; min-width: 0; }
 .book-create__suggestions {
   position: absolute;

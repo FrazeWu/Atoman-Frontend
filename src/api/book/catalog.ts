@@ -26,6 +26,9 @@ async function post<T>(path: string, input: unknown, requestId?: string): Promis
 }
 export const searchCatalogWorks = (query = '', limit = 24, offset = 0, signal?: AbortSignal) =>
   apiGet<CatalogPage>(url(`/works?q=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`), { signal })
+export interface CatalogPublisherSuggestion { id: string; name: string }
+export const searchCatalogPublishers = (query = '', limit = 24, offset = 0, signal?: AbortSignal) =>
+  apiGet<{ items: CatalogPublisherSuggestion[]; total: number }>(url(`/publishers?q=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`), { signal })
 export const getCatalogWork = (id: string) => apiGet<CatalogWork>(url(`/works/${encodeURIComponent(id)}`))
 export async function checkCatalogWorkDuplicates(input: Pick<CreateCatalogWork, 'title' | 'original_title' | 'authors' | 'author_ids'>) {
   return await post<{ matches: WorkDuplicateMatch[] }>('/works/duplicate-check', input)

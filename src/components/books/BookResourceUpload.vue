@@ -4,12 +4,16 @@
     <p>支持 EPUB、PDF、TXT、CBZ、CBR。文件先通过自动安全检查，默认仅上传者可读；确认有权分享时可选择公开。</p>
     <form @submit.prevent="upload">
       <fieldset :disabled="busy || pending" class="resource-upload__fields">
-        <label :for="`resource-file${idSuffix}`">电子书文件</label>
-        <input :id="`resource-file${idSuffix}`" ref="fileInput" type="file" accept=".epub,.pdf,.txt,.cbz,.cbr" @change="chooseFile">
-        <p v-if="file">已选择：{{ file.name }}</p>
-        <PInput v-if="!replaceAsset" id="resource-language" v-model="language" label="文件语言代码" placeholder="例如 zh、en；不确定时留空" />
-        <label><input v-model="confirmed" type="checkbox"> 同时公开分享此文件（我确认拥有公开分享所需权利）</label>
-        <PButton type="submit" :loading="busy" :disabled="!file || (!!session && session.status !== 'uploading')">{{ session?.status === 'uploading' ? '继续本次上传' : (confirmed ? '上传并公开文件' : '上传文件（仅自己可读）') }}</PButton>
+        <label v-if="showFilePicker" :for="`resource-file${idSuffix}`">{{ autoStart ? '更换电子书文件' : '电子书文件' }}</label>
+        <input v-if="showFilePicker" :id="`resource-file${idSuffix}`" ref="fileInput" type="file" accept=".epub,.pdf,.txt,.cbz,.cbr" @change="chooseFile">
+        <p v-if="file">{{ autoStart ? '沿用上一步的文件（无需再次选择）：' : '已选择：' }}{{ file.name }}</p>
+        <PInput v-if="!replaceAsset && !autoStart" id="resource-language" v-model="language" label="文件语言代码" placeholder="例如 zh、en；不确定时留空" />
+        <label v-if="!autoStart"><input v-model="confirmed" type="checkbox"> 同时公开分享此文件（我确认拥有公开分享所需权利）</label>
+        <p v-if="autoStart">{{ busy ? '正在将选定文件上传到私有书架…' : '默认仅自己可读；公开分享需要另外确认版权与分享权限。' }}</p>
+        <PButton v-if="!autoStart || !initialFile || !!error" type="submit" :loading="busy"
+          :disabled="!file || (!!session && session.status !== 'uploading')">
+          {{ session?.status === 'uploading' ? '继续本次上传' : (confirmed ? '上传并公开文件' : '上传文件（仅自己可读）') }}
+        </PButton>
       </fieldset>
     </form>
     <div v-if="busy" role="status"><progress :value="percent" max="100" aria-label="文件上传进度" /> {{ percent }}% · {{ phase }}</div>
@@ -33,7 +37,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PInput from '@/components/ui/PInput.vue'
 
-const props = defineProps<{ workId: string; title: string; editionId?: string; initialFile?: File | null; initialLanguage?: string; replaceAsset?: CatalogResource }>()
+const props = defineProps<{ workId: string; title: string; editionId?: string; initialFile?: File | null; initialLanguage?: string; replaceAsset?: CatalogResource; autoStart?: boolean }>()
 const idSuffix = `-${props.replaceAsset?.id || props.editionId || props.workId}`
 const emit = defineEmits<{ ready: [] }>()
 const auth = useAuthStore()
@@ -55,6 +59,7 @@ let controller: AbortController | undefined
 let timer: ReturnType<typeof setTimeout> | undefined
 let alive = true
 const pending = computed(() => !!session.value && ['uploaded', 'scanning', 'completing'].includes(session.value.status))
+const showFilePicker = computed(() => !props.autoStart || !props.initialFile || (!!error.value && !busy.value && !pending.value) || ['failed', 'quarantined'].includes(session.value?.status || ''))
 const unsubmitted = computed(() => !!file.value && !pending.value && session.value?.status !== 'ready')
 const statusText = computed(() => {
   const status = session.value?.status
@@ -144,6 +149,7 @@ onMounted(async () => {
   let saved: string | null = null
   try { saved = localStorage.getItem(storageKey) } catch { /* best effort */ }
   if (saved) { session.value = { id: saved, status: 'scanning' } as ResourceUpload; await checkStatus() }
+  else if (props.autoStart && file.value && !session.value) void upload()
 })
 onBeforeUnmount(() => { alive = false; controller?.abort(); clearTimeout(timer); window.removeEventListener('beforeunload', beforeUnload); resolveLeave?.(false) })
 </script>

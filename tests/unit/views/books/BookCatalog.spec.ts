@@ -25,6 +25,7 @@ beforeEach(() => {
   vi.spyOn(api, 'checkCatalogWorkDuplicates').mockResolvedValue({ matches: [] } as never)
   vi.spyOn(api, 'checkCatalogEditionDuplicates').mockResolvedValue({ matches: [] } as never)
   vi.spyOn(api, 'searchCatalogWorks').mockResolvedValue({ items: [], total: 0, limit: 24, offset: 0 })
+  vi.spyOn(api, 'searchCatalogPublishers').mockResolvedValue({ items: [], total: 0 })
   vi.spyOn(wikiApi, 'searchWikiPeople').mockResolvedValue({ items: [], total: 0 } as never)
   vi.mocked(bookCoverCandidates.inspectBookCoverCandidates).mockResolvedValue({
     candidates: [{ label: '候选封面', dataUrl: 'data:image/jpeg;base64,AAAA' }],
@@ -79,8 +80,14 @@ async function chooseTestFile(wrapper: VueWrapper) {
   await input.trigger('change')
   await flushPromises()
   expect(bookCoverCandidates.inspectBookCoverCandidates).toHaveBeenCalledTimes(1)
-  expect(wrapper.text()).toContain('测试候选封面')
+  expect(wrapper.get('.book-catalog__cover-candidates button').exists()).toBe(true)
   await wrapper.get('.book-catalog__cover-candidates button').trigger('click')
+}
+async function chooseNewPublisher(wrapper: VueWrapper, name: string) {
+  await wrapper.get('#create-edition-publisher').trigger('focus')
+  await wrapper.get('#create-edition-publisher').setValue(name)
+  await waitForSuggestions()
+  await wrapper.get('#book-create-publisher-results .book-create__suggestion--create').trigger('click')
 }
 async function createWorkOnly(wrapper: VueWrapper) {
   await wrapper.findAll('button').find(button => button.text() === '仅创建并公开作品')!.trigger('click')
@@ -227,6 +234,57 @@ describe('搜索优先的作品与作者选择', () => {
   })
 })
 
+describe('版权页识别、出版社和出版年月', () => {
+  it('三体第6页版权资料自动填入版本字段并保留年月精度', async () => {
+    vi.mocked(bookCoverCandidates.inspectBookCoverCandidates).mockResolvedValueOnce({
+      candidates: [{ label: '第 1 页', dataUrl: 'data:image/jpeg;base64,AAAA' }],
+      metadata: { title:'三体', author:'刘慈欣', publisher:'重庆出版社', language:'zh',
+        isbn:'9787536692930', publishedDate:'2008-01', editionStatement:'第1版', pageCount:315,
+        sources:{ title:{page:6,value:'三体'}, author:{page:6,value:'刘慈欣'},
+          publisher:{page:6,value:'重庆出版社'}, isbn:{page:6,value:'9787536692930'},
+          publishedDate:{page:6,value:'2008-01'} } },
+      explanation:'PDF 第6页找到CIP书目信息',
+    })
+    const { wrapper } = await setup('/books/new')
+    await fill(wrapper)
+    await chooseNewEdition(wrapper)
+    await chooseTestFile(wrapper)
+    expect((wrapper.get('#create-edition-title').element as HTMLInputElement).value).toBe('三体')
+    expect((wrapper.get('#create-edition-language').element as HTMLInputElement).value).toContain('中文')
+    expect((wrapper.get('#create-edition-publisher').element as HTMLInputElement).value).toBe('重庆出版社')
+    expect((wrapper.get('#create-edition-published-month').element as HTMLInputElement).value).toBe('2008-01')
+    expect((wrapper.get('#create-edition-isbn').element as HTMLInputElement).value).toBe('9787536692930')
+    expect((wrapper.get('#create-edition-statement').element as HTMLInputElement).value).toBe('第1版')
+    expect(wrapper.get('[aria-label="文件识别到的书目信息"]').text()).toContain('PDF 第 6 页')
+  })
+  it('同名出版社优先使用目录候选，不自动新建重复实体', async () => {
+    vi.spyOn(api,'searchCatalogPublishers').mockResolvedValue({ items:[{id:'publisher-1',name:'重庆出版社'}],total:1 })
+    const { wrapper } = await setup('/books/new')
+    await fill(wrapper)
+    await chooseNewEdition(wrapper)
+    await wrapper.get('#create-edition-publisher').trigger('focus')
+    await wrapper.get('#create-edition-publisher').setValue('重庆')
+    await waitForSuggestions()
+    const list=wrapper.get('#book-create-publisher-results')
+    expect(list.text()).toContain('重庆出版社')
+    await list.findAll('button').find(button=>button.text().includes('重庆出版社'))!.trigger('click')
+    expect((wrapper.get('#create-edition-publisher').element as HTMLInputElement).value).toBe('重庆出版社')
+  })
+  it('新语言需要标准语言代码，常用语言从候选直接选择', async () => {
+    const { wrapper } = await setup('/books/new')
+    await fill(wrapper)
+    await chooseNewEdition(wrapper)
+    await wrapper.get('#create-edition-language').trigger('focus')
+    await wrapper.get('#create-edition-language').setValue('中文')
+    await wrapper.get('#book-create-language-results button[role="option"]').trigger('click')
+    expect((wrapper.get('#create-edition-language').element as HTMLInputElement).value).toContain('zh')
+    await wrapper.get('#create-edition-language').trigger('focus')
+    await wrapper.get('#create-edition-language').setValue('tl')
+    await wrapper.get('#book-create-language-results .book-create__suggestion--create').trigger('click')
+    expect((wrapper.get('#create-edition-language').element as HTMLInputElement).value).toBe('tl')
+  })
+})
+
 describe('无需文件创建公开作品', () => {
   it('不预先选中匹配作品，必须由用户明确确认', async () => {
     const create = vi.spyOn(api, 'createCatalogWork')
@@ -265,7 +323,7 @@ describe('无需文件创建公开作品', () => {
     await wrapper.get('#create-edition-subtitle').setValue('版本副标题')
     await wrapper.get('#create-edition-translators').setValue('译者甲\n译者乙')
     await wrapper.get('#create-edition-language').setValue('zh')
-    await wrapper.get('#create-edition-publisher').setValue('测试出版社')
+    await chooseNewPublisher(wrapper, '测试出版社')
     await wrapper.get('#create-edition-statement').setValue('修订版')
     await wrapper.findAll('button').find(button => button.text() === '返回作品')!.trigger('click')
     expect((wrapper.get('#create-book-title').element as HTMLInputElement).value).toBe('中国大历史')
@@ -330,7 +388,7 @@ describe('无需文件创建公开作品', () => {
     await flushPromises()
     expect(create).toHaveBeenCalledTimes(1)
     expect(edition).toHaveBeenLastCalledWith('work-1', expect.objectContaining({ isbn13: '9787511575920' }), expect.any(String))
-    expect(wrapper.text()).toContain('上传并验证电子书')
+    expect(wrapper.text()).toContain('文件上传及安全检查')
     expect(wrapper.findComponent(BookResourceUpload).exists()).toBe(true)
   })
   it('出版版本必须先选电子书文件和封面，不能创建空版本', async () => {
@@ -354,7 +412,7 @@ describe('无需文件创建公开作品', () => {
     await chooseNewEdition(wrapper)
     await chooseTestFile(wrapper)
     await wrapper.get('#create-edition-language').setValue('zh')
-    await wrapper.get('#create-edition-publisher').setValue('测试出版社')
+    await chooseNewPublisher(wrapper, '测试出版社')
     await wrapper.get('#create-edition-statement').setValue('修订版')
     await wrapper.get('form').trigger('submit')
     await flushPromises()

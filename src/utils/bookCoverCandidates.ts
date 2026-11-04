@@ -1,6 +1,7 @@
 import JSZip from 'jszip'
 import { extractComicPages } from './bookComicArchive'
 import { loadPdfEngine } from './bookReaderEngines'
+import { extractBookPdfMetadata, type BookPdfTextMetadata } from './bookPdfMetadata'
 
 export interface BookCoverCandidate { label: string; dataUrl: string }
 export interface BookIdentifiedMetadata {
@@ -9,8 +10,10 @@ export interface BookIdentifiedMetadata {
   language?: string
   publisher?: string
   isbn?: string
-  publishedDate?: string
+  publishedDate?: string // YYYY-MM
+  editionStatement?: string
   pageCount?: number
+  sources?: BookPdfTextMetadata['sources']
 }
 export interface BookInspection {
   candidates: BookCoverCandidate[]
@@ -84,34 +87,42 @@ async function inspectPdf(file: File): Promise<BookInspection> {
     const doc = await loader.promise
     const candidates: BookCoverCandidate[] = []
     const textFragments: string[] = []
-    for (let i = 1; i <= Math.min(5, doc.numPages); i++) {
+    // Cover previews and bibliographic detection are distinct tasks: the
+    // example 三体 has its copyright/CIP information on PDF page SIX.
+    const maxMetadataPages = Math.min(20, doc.numPages)
+    for (let i = 1; i <= maxMetadataPages; i++) {
       const page = await doc.getPage(i)
-      const width = page.getViewport({ scale: 1 }).width
-      const viewport = page.getViewport({ scale: Math.min(1.1, 460 / Math.max(width, 1)) })
-      const canvas = document.createElement('canvas')
-      canvas.width = Math.max(1, Math.ceil(viewport.width))
-      canvas.height = Math.max(1, Math.ceil(viewport.height))
-      const ctx = canvas.getContext('2d')
-      if (ctx) {
-        await page.render({ canvas, canvasContext: ctx, viewport }).promise
-        candidates.push({ label: '第 ' + i + ' 页', dataUrl: canvas.toDataURL('image/jpeg', 0.83) })
+      if (i <= 5) {
+        const width = page.getViewport({ scale: 1 }).width
+        const viewport = page.getViewport({ scale: Math.min(1.1, 460 / Math.max(width, 1)) })
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.max(1, Math.ceil(viewport.width))
+        canvas.height = Math.max(1, Math.ceil(viewport.height))
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          await page.render({ canvas, canvasContext: ctx, viewport }).promise
+          candidates.push({ label: '第 ' + i + ' 页', dataUrl: canvas.toDataURL('image/jpeg', 0.83) })
+        }
       }
       const content = await page.getTextContent()
-      textFragments.push(content.items.map(item => 'str' in item ? String(item.str) : '').join(' '))
+      textFragments.push(content.items.map(item => {
+        if (!('str' in item)) return ''
+        return String(item.str) + ('hasEOL' in item && item.hasEOL ? '\n' : ' ')
+      }).join(''))
       page.cleanup()
+      if (i >= 5) {
+        const found = extractBookPdfMetadata(textFragments)
+        if (found.title && found.author && found.isbn && found.publisher && found.publishedDate) break
+      }
     }
     const info = (await doc.getMetadata().catch(() => null))?.info as { Title?: string; Author?: string } | undefined
-    const text = textFragments.join('\n')
+    const data = extractBookPdfMetadata(textFragments, info)
+    const evidence = data.sources.isbn?.page || data.sources.title?.page
     return {
       candidates,
-      metadata: {
-        title: info?.Title || undefined,
-        author: info?.Author || undefined,
-        isbn: detectedISBN(text),
-        publisher: detectedPublisher(text),
-        pageCount: doc.numPages,
-      },
-      explanation: '从 PDF 前五页提取封面候选和可读文字；扫描件可能无法识别书目信息。',
+      metadata: { ...data, pageCount: doc.numPages },
+      explanation: `封面取自前五页；书目信息检查了前 ${textFragments.length} 页` +
+        (evidence ? `，在第 ${evidence} 页发现可提取的版权资料。` : '，未找到可确认的版权记录；可手动补充。'),
     }
   } finally {
     await loader.destroy()

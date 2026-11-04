@@ -184,4 +184,21 @@ onMounted(load)
 .file-library__tools details[open] { z-index: 2; }
 .file-library__tools details label { display: grid; gap: .3rem; }
 .file-library__tools details button { display: block; margin-top: .55rem; background: transparent; border: 0; color: inherit; cursor: pointer; padding: .2rem 0; }
+@media (max-width: 640px) {
+  .file-library__card {
+    grid-template-columns: minmax(0, 5.5rem) minmax(0, 1fr);
+    align-items: start;
+    gap: 0.85rem;
+  }
+  .file-library__cover {
+    aspect-ratio: 3 / 4;
+    align-self: start;
+  }
+  .file-library__body {
+    min-width: 0;
+  }
+  .file-library__tools {
+    flex-wrap: wrap;
+  }
+}
 </style>

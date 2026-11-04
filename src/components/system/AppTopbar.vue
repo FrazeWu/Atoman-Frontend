@@ -432,6 +432,30 @@ html.dark .topbar--auth {
   min-width: 0;
 }
 
+/* Tablet navigation keeps its full click targets; global search becomes an icon. */
+@media (min-width: 721px) and (max-width: 950px) {
+  .topbar-inner {
+    padding-right: 0.5rem;
+  }
+  .brand-link {
+    padding-left: 1rem;
+    padding-right: 0.5rem;
+  }
+  .nav {
+    gap: 0.15rem;
+  }
+  .nav-link {
+    padding-inline: 0.25rem;
+    font-size: 0.8125rem;
+  }
+  .nav-right {
+    gap: 0.25rem;
+  }
+  .topbar-search-slot {
+    flex: 0 0 2.25rem;
+  }
+}
+
 @media (max-width: 1280px) {
   .topbar-inner {
     padding-right: 1rem;

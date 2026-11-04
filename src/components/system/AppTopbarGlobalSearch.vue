@@ -5,6 +5,7 @@
       class="search-pill"
       type="button"
       data-testid="topbar-search-pill"
+      aria-label="全站搜索"
       @click="openSearch"
     >
       <PIcon name="search" size="sm" class="search-pill-icon" aria-hidden="true" />
@@ -381,6 +382,22 @@ onBeforeUnmount(() => {
   border-radius: var(--a-radius-control);
   border: 1px solid var(--a-color-border-soft);
   line-height: 1;
+}
+
+/* At tablet widths a full-width pill overlaps the adjacent module navigation. */
+@media (min-width: 721px) and (max-width: 950px) {
+  .search-pill {
+    width: 2.25rem;
+    min-width: 2.25rem;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+  }
+
+  .search-pill-text,
+  .search-pill-kbd {
+    display: none;
+  }
 }
 
 /* Command Palette 居中浮层 */

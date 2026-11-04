@@ -102,7 +102,8 @@
                 type="button"
                 :aria-pressed="activePanel === 'tools'"
                 @click="togglePanel('tools')"
-              >目录与检索</button>
+              aria-label="目录与检索"
+              ><span>目录</span><span class="book-reader-shell__tool-detail">与检索</span></button>
               <button
                 v-if="$slots.settings"
                 type="button"
@@ -705,12 +706,24 @@ function togglePanel(panel: 'tools' | 'settings') {
     padding: 0.85rem;
   }
 
+  .book-reader-shell__toolbar-right {
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
   .book-reader-shell__panel-tabs {
-    width: 100%;
+    width: auto;
+    gap: 0.15rem;
   }
 
   .book-reader-shell__panel-tabs button {
-    flex: 1;
+    flex: none;
+    white-space: nowrap;
+    padding-inline: 0.4rem;
+  }
+
+  .book-reader-shell__tool-detail {
+    display: none;
   }
 
   .book-reader-shell__content {

@@ -718,7 +718,8 @@ onMounted(() => {
   color: var(--a-color-text-secondary, #777777);
   margin: 0 0 20px 0;
   line-height: 1.5;
-  max-width: 260px;
+  max-width: min(100%, 18rem);
+  text-wrap: balance;
 }
 
 .mobile-books-discover__empty-action {

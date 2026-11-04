@@ -185,7 +185,7 @@ describe('mobile complete music queues', () => {
       serverSongs = serverSongs.filter(song => String(song.id) !== String(id))
       return { removed: true }
     })
-    const wrapper = mount(MusicPlaylistDetailView, { global: { plugins: [pinia, router] } })
+    const wrapper = mount(MusicPlaylistDetailView, { global: { plugins: [pinia, router], stubs: { Teleport: true } } })
     await flushPromises()
     await wrapper.get('[data-testid="play-all-btn"]').trigger('click')
     await flushPromises()

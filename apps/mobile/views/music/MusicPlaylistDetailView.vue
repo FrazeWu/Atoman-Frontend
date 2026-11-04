@@ -286,6 +286,7 @@
       <MButton size="sm" variant="secondary" @click="handleBack">返回歌单列表</MButton>
     </div>
 
+    <Teleport to="body">
     <!-- Spotify-style Bottom Action Sheet Drawer -->
     <Transition name="fade">
       <div
@@ -397,6 +398,7 @@
         </div>
       </div>
     </Transition>
+    </Teleport>
 
     <Teleport to="body">
     <div v-if="deletePending && canEditPlaylist" class="mobile-playlist-delete-confirm" data-testid="playlist-delete-confirm">
@@ -1376,7 +1378,7 @@ onBeforeUnmount(() => {
   position: fixed;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.45);
-  z-index: 150;
+  z-index: 10004;
 }
 
 .mobile-action-sheet {
@@ -1384,12 +1386,14 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 160;
+  z-index: 10005;
   background-color: #ffffff;
   border-top-left-radius: 14px;
   border-top-right-radius: 14px;
   padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 16px)) 16px;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+  max-height: 85dvh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }

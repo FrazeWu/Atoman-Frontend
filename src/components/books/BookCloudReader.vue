@@ -33,6 +33,20 @@
     <BookChapterNoteEditor v-if="chapterDraft" :key="`${chapterDraft.id}:${chapterDraft.version}`" ref="chapterEditor" :draft="chapterDraft" :busy="chapterBusy" :frozen="Boolean(chapterPending)" :conflict="chapterConflict" :error="chapterError" @save="saveChapterNote" @close="closeChapterNote" />
     <PButton v-if="chapterPending && !chapterConflict" variant="secondary" :disabled="chapterBusy" @click="performChapterNote">重试保存章节笔记</PButton>
     <BookHighlightEditor v-if="draft" :key="`${draft.id}:${draft.version}`" ref="editor" :draft="draft" :busy="markBusy" :frozen="Boolean(pendingMark)" :conflict="markConflict" :error="markError" allow-discussion @discuss="passages?.discuss(draft.anchor)" @save="saveHighlight" @delete="deleteHighlight(draft)" @close="draft = undefined" />
+    <PSheet :show="!!deletingHighlight" title="删除划线与公开分享" mode="partial" @close="deletingHighlight = undefined">
+      <div v-if="deletingHighlight" class="cloud-reader__share-warning">
+        <p>删除此私人划线后，默认撤销所有包含它的有效分享链接。已发布快照不会被自动修改。</p>
+        <template v-if="highlightShareImpact?.total">
+          <p role="status">有 {{ highlightShareImpact.total }} 个已发布合集受影响：</p>
+          <ul><li v-for="item in highlightShareImpact.items" :key="item.collection_id">{{ item.title }} · {{ item.visibility==='public'?'完全公开':'通过链接访问' }}</li></ul>
+          <label><input v-model="keepHighlightShared" type="checkbox" aria-label="明确保留已发布划线分享" /> 我明确同意保留公开快照，删除私人划线后仍允许他人访问。</label>
+        </template>
+        <div class="cloud-reader__share-actions">
+          <PButton variant="secondary" @click="deletingHighlight = undefined">取消</PButton>
+          <PButton variant="danger" :disabled="markBusy" @click="confirmDeleteHighlight">{{ keepHighlightShared?'删除并保留分享':'删除并撤销相关分享' }}</PButton>
+        </div>
+      </div>
+    </PSheet>
     <BookPassageDiscussions ref="passages" :revision-id="revisionId" />
   </div>
 </template>
@@ -43,11 +57,13 @@ import { onBeforeRouteLeave, useRoute } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
 import { deleteReadingMark, listReadingMarks, listWorkNotes, saveReadingMark, type ReadingMark, type ReadingMarkInput, type WorkNoteItem, type ReadingPosition } from '@/api/bookReading'
 import { getPrivateNote, savePrivateNote, type BookChapterAnchor, type PrivateNote, type NoteInput } from '@/api/bookPrivate'
+import { getNoteShareImpact, type NoteShareImpact } from '@/api/bookNoteCollections'
 import { useRevisionReading } from '@/composables/useRevisionReading'
 import type { BookReaderSource } from '@/types/bookReaderSource'
 import type { BookReaderBookmark } from '@/utils/bookReaderPreferences'
 import BookPublicReaderView from '@/components/books/BookPublicReaderView.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PSheet from '@/components/ui/PSheet.vue'
 import BookHighlightEditor, { type HighlightDraft } from '@/components/books/BookHighlightEditor.vue'
 import BookChapterNoteEditor from '@/components/books/BookChapterNoteEditor.vue'
 import type { HighlightSelection } from '@/utils/bookMarkAnchors'
@@ -65,9 +81,12 @@ const marksLoaded = ref(false)
 const markError = ref('')
 const markConflict = ref(false)
 const markBusy = ref(false)
-type MarkOperation = { id: string; input: ReadingMarkInput } | { id: string; version: number }
+type MarkOperation = { id: string; input: ReadingMarkInput } | { id: string; version: number; keepShared?: boolean }
 const pendingMark = shallowRef<MarkOperation>()
 const draft = shallowRef<HighlightDraft>()
+const deletingHighlight = shallowRef<{ id: string; version: number }>()
+const highlightShareImpact = shallowRef<NoteShareImpact>()
+const keepHighlightShared = ref(false)
 const editor = ref<InstanceType<typeof BookHighlightEditor>>()
 const chapterEditor = ref<InstanceType<typeof BookChapterNoteEditor>>()
 const chapterDraft = shallowRef<PrivateNote>()
@@ -231,9 +250,27 @@ async function saveHighlight(value: { color: string; style: string; note: string
   try { await performMark() } catch { /* 原选区和输入保留，原请求可幂等重试。 */ }
 }
 async function deleteHighlight(mark: { id: string; version: number }) {
-  if (pendingMark.value || markBusy.value) return
-  pendingMark.value = { id: mark.id, version: mark.version }
-  try { await performMark() } catch { /* 失败不提前移除划线。 */ }
+  if (pendingMark.value || markBusy.value || deletingHighlight.value) return
+  markBusy.value = true
+  markError.value = ''
+  keepHighlightShared.value = false
+  highlightShareImpact.value = undefined
+  try {
+    const impact = await getNoteShareImpact('highlight', mark.id)
+    if (!stopped) { highlightShareImpact.value = impact; deletingHighlight.value = { id: mark.id, version: mark.version } }
+  } catch {
+    if (!stopped) markError.value = '无法确认此划线关联的公开快照，暂不删除。请重试。'
+  } finally { markBusy.value = false }
+}
+async function confirmDeleteHighlight() {
+  const value = deletingHighlight.value
+  if (!value || markBusy.value || pendingMark.value) return
+  const keepShared = keepHighlightShared.value && !!highlightShareImpact.value?.total
+  deletingHighlight.value = undefined
+  highlightShareImpact.value = undefined
+  keepHighlightShared.value = false
+  pendingMark.value = { ...value, keepShared }
+  try { await performMark() } catch { /* 保留版本化删除请求与原始标记供重试。 */ }
 }
 async function performMark() {
   const operation = pendingMark.value
@@ -245,7 +282,8 @@ async function performMark() {
       const mark = await saveReadingMark(props.revisionId, operation.id, operation.input, reading.signal)
       if (!stopped) marks.value = [mark, ...marks.value.filter(item => item.id !== mark.id)]
     } else {
-      await deleteReadingMark(props.revisionId, operation.id, operation.version, reading.signal)
+      if ('keepShared' in operation) await deleteReadingMark(props.revisionId, operation.id, operation.version, reading.signal, operation.keepShared)
+      else await deleteReadingMark(props.revisionId, operation.id, operation.version, reading.signal)
       if (!stopped) marks.value = marks.value.filter(item => item.id !== operation.id)
     }
     if (!stopped) { pendingMark.value = undefined; if (draft.value?.id === operation.id) draft.value = undefined }
@@ -298,4 +336,8 @@ onBeforeUnmount(() => {
  .cloud-reader__chapter-list ul { list-style:none; padding:0; display:grid; gap:.6rem; }
  .cloud-reader__chapter-list li { display:flex; justify-content:space-between; align-items:center; gap:.6rem; }
  .cloud-reader__chapter-more { font-size:.83rem; color:var(--a-color-text-secondary); }
+ .cloud-reader__share-warning { display:grid; gap:1rem; padding:1rem; }
+ .cloud-reader__share-warning p { line-height:1.6; }
+ .cloud-reader__share-warning label { display:flex; align-items:flex-start; gap:.6rem; }
+ .cloud-reader__share-actions { display:flex; gap:.8rem; flex-wrap:wrap; }
 </style>

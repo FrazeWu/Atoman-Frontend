@@ -10,6 +10,7 @@ import type { ReadingMark } from '@/api/bookReading'
 import BookHighlightEditor from '@/components/books/BookHighlightEditor.vue'
 import BookChapterNoteEditor from '@/components/books/BookChapterNoteEditor.vue'
 import * as privateBook from '@/api/bookPrivate'
+import * as noteShares from '@/api/bookNoteCollections'
 
 const source: BookReaderSource = { title: '历史', backTo: '/books/work/work-1', progressKey: 'revision:user-1:rev-1', asset: { id: 'asset-1', work_id: 'work-1', title: '历史', author: '', format: 'txt', file_name: '历史.txt', content_type: 'text/plain', size: 1000, status: 'published', created_at: '' }, loadContent: async () => new Blob(['正文']) }
 const mark: ReadingMark = { id: 'mark-1', revision_id: 'rev-1', version: 2, kind: 'bookmark', anchor: { txt_offset_start: 120 }, label: '书签一', quote: '', note: '', color: '', style: '', created_at: '2026-10-17' }
@@ -21,6 +22,7 @@ beforeEach(() => {
   vi.spyOn(api, 'listReadingMarks').mockResolvedValue({ items: [mark], deleted: [] })
   vi.spyOn(api, 'saveReadingMark').mockResolvedValue({ ...mark, id: bookmark.id, version: 1, anchor: { txt_offset_start: 300 } })
   vi.spyOn(api, 'deleteReadingMark').mockResolvedValue({})
+  vi.spyOn(noteShares, 'getNoteShareImpact').mockResolvedValue({ total: 0, items: [] })
   vi.spyOn(api, 'sendReadingHeartbeat').mockResolvedValue({})
 })
 afterEach(() => { wrapper?.unmount(); wrapper = undefined; vi.restoreAllMocks() })
@@ -208,13 +210,31 @@ describe('云端阅读入口', () => {
     expect(editor.get('button[type="submit"]').attributes('disabled')).toBeDefined()
     expect(readerSource().annotations?.[0]?.note).toBe('旧笔记')
   })
+  it('公开划线删除前提醒受影响合集；明确勾选才能保留冻结分享',async()=>{
+    const highlight: ReadingMark = { ...mark, kind:'highlight', quote:'私人原文' }
+    vi.mocked(api.listReadingMarks).mockResolvedValue({items:[highlight],deleted:[]})
+    vi.mocked(noteShares.getNoteShareImpact).mockResolvedValue({total:1,items:[{collection_id:'coll-1',title:'已公开读书笔记',visibility:'public',share_path:'/books/note-shares/link'}]})
+    await setup()
+    wrapper!.findComponent(BookPublicReaderView).vm.$emit('annotation-delete',highlight)
+    await flushPromises()
+    expect(wrapper!.text()).toContain('已公开读书笔记')
+    expect(api.deleteReadingMark).not.toHaveBeenCalled()
+    await wrapper!.get('input[aria-label="明确保留已发布划线分享"]').setValue(true)
+    await wrapper!.findAll('button').find(x=>x.text()==='删除并保留分享')!.trigger('click')
+    await flushPromises()
+    expect(api.deleteReadingMark).toHaveBeenCalledWith('rev-1',highlight.id,highlight.version,expect.any(AbortSignal),true)
+  })
   it('删除划线携带版本，响应成功后才从原始标记列表移除', async () => {
     const highlight: ReadingMark = { ...mark, kind: 'highlight', quote: '原文' }
     vi.mocked(api.listReadingMarks).mockResolvedValue({ items: [highlight], deleted: [] })
     await setup()
     wrapper!.findComponent(BookPublicReaderView).vm.$emit('annotation-delete', highlight)
     await flushPromises()
-    expect(api.deleteReadingMark).toHaveBeenCalledWith('rev-1', highlight.id, highlight.version, expect.any(AbortSignal))
+    expect(noteShares.getNoteShareImpact).toHaveBeenCalledWith('highlight',highlight.id)
+    expect(api.deleteReadingMark).not.toHaveBeenCalled()
+    await wrapper!.findAll('button').find(x=>x.text()==='删除并撤销相关分享')!.trigger('click')
+    await flushPromises()
+    expect(api.deleteReadingMark).toHaveBeenCalledWith('rev-1',highlight.id,highlight.version,expect.any(AbortSignal),false)
     expect(readerSource().annotations).toEqual([])
   })
 })

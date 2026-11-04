@@ -217,6 +217,10 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				{ path: "new", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'create' } }, meta: { bookCatalog: true, requiresAuth: true } },
 				{ path: "work/:workId", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'work' } }, meta: { bookCatalog: true, restoreSession: true } },
 				{ path: "work/:workId/notes", component: () => import("@/views/books/BookWorkNotesView.vue"), meta: { requiresAuth: true } },
+				{ path: "work/:workId/collections", component: () => import("@/views/books/BookNoteCollectionsView.vue"), meta: { requiresAuth: true } },
+				{ path: "work/:workId/collections/:collectionId", component: () => import("@/views/books/BookNoteCollectionEditorView.vue"), meta: { requiresAuth: true } },
+				{ path: "note-shares/:shareKey", component: () => import("@/views/books/BookNoteShareView.vue") },
+				{ path: "shared-notes", component: () => import("@/views/books/BookNotePublicIndexView.vue") },
 				{ path: "edition/:editionId", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'edition' } }, meta: { bookCatalog: true } },
 				{
 					path: "tags",

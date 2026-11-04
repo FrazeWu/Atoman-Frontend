@@ -3,12 +3,13 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import * as api from '@/api/bookPrivate'
+import * as shareApi from '@/api/bookNoteCollections'
 import * as fileShelf from '@/api/bookFileShelf'
 import BookPrivateLibraryView from '@/views/books/BookPrivateLibraryView.vue'
 import BookPrivateNotesView from '@/views/books/BookPrivateNotesView.vue'
 const wrappers: VueWrapper[] = []
 const note: api.PrivateNote = { id: 'note-1', work_id: 'work-1', version: 7, title: '读书笔记', body: '私人内容', tags: ['历史'] }
-beforeEach(() => { setActivePinia(createPinia()); vi.spyOn(api, 'listPrivateNotes').mockResolvedValue({ items: [note], total: 1 }) })
+beforeEach(() => { setActivePinia(createPinia()); vi.spyOn(api, 'listPrivateNotes').mockResolvedValue({ items: [note], total: 1 }); vi.spyOn(shareApi, 'getNoteShareImpact').mockResolvedValue({ total: 0, items: [] }) })
 afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()); vi.restoreAllMocks() })
 async function setup(component: typeof BookPrivateNotesView | typeof BookPrivateLibraryView) {
   const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/books/notes', component }, { path: '/books', component: { template: '<p>发现</p>' } }, { path: '/books/read/:workId/:assetId/:revisionId', component: { template: '<p>阅读器</p>' } }] })
@@ -30,8 +31,25 @@ it('删除需确认且保留当前 CAS 版本', async () => {
   const remove = vi.spyOn(api, 'deletePrivateNote').mockResolvedValue({})
   const wrapper = await setup(BookPrivateNotesView)
   await wrapper.findAll('button').find(button => button.text() === '删除')!.trigger('click')
-  expect(remove).not.toHaveBeenCalled(); await wrapper.get('[data-confirm]').trigger('click'); await flushPromises()
-  expect(remove).toHaveBeenCalledWith(note)
+  await flushPromises()
+  expect(shareApi.getNoteShareImpact).toHaveBeenCalledWith('chapter_note', note.id)
+  expect(remove).not.toHaveBeenCalled()
+  await wrapper.findAll('button').find(button => button.text() === '删除并撤销相关分享')!.trigger('click')
+  await flushPromises()
+  expect(remove).toHaveBeenCalledWith(note, false)
+})
+it('删除关联分享时明确显示受影响合集，只有勾选才保留公开快照', async () => {
+  vi.spyOn(shareApi, 'getNoteShareImpact').mockResolvedValue({ total: 1, items: [{ collection_id: 'coll-1', title: '历史读书合集', visibility: 'link', share_path: '/books/note-shares/key' }] })
+  const remove = vi.spyOn(api, 'deletePrivateNote').mockResolvedValue({})
+  const wrapper = await setup(BookPrivateNotesView)
+  await wrapper.findAll('button').find(button => button.text() === '删除')!.trigger('click')
+  await flushPromises()
+  expect(wrapper.text()).toContain('历史读书合集')
+  expect(remove).not.toHaveBeenCalled()
+  await wrapper.get('input[aria-label="明确保留已发布快照"]').setValue(true)
+  await wrapper.findAll('button').find(button => button.text() === '删除并保留分享')!.trigger('click')
+  await flushPromises()
+  expect(remove).toHaveBeenCalledWith(note, true)
 })
 it('回收站恢复使用删除后的版本，不把旧副本覆盖回云端', async () => {
   vi.spyOn(api, 'listPrivateNotes').mockResolvedValue({ items: [{ ...note, version: 8, trashed_at: '2026-10-17' }], total: 1 })

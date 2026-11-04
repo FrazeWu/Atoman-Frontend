@@ -4,6 +4,7 @@
     <nav class="work-notes__navigation">
       <RouterLink :to="`/books/work/${workId}`">返回作品详情</RouterLink>
       <RouterLink to="/books/notes">管理独立笔记</RouterLink>
+      <RouterLink :to="`/books/work/${workId}/collections`">我的笔记合集</RouterLink>
     </nav>
     <div class="work-notes__toolbar">
       <label for="work-notes-filter">记录类型</label>
@@ -40,6 +41,7 @@
             <span v-else-if="item.source && !item.source.can_open" class="work-notes__unavailable">原文件不可访问，笔记仍然保留</span>
             <span v-else-if="item.type === 'chapter_note' && !item.chapter_anchor" class="work-notes__muted">此旧笔记未保存精确位置</span>
             <button v-if="item.source && !selectedRevision" type="button" class="work-notes__link" @click="selectedRevision = item.source.revision_id">仅看此文件</button>
+            <RouterLink :to="{ path: `/books/work/${workId}/collections/new`, query: { kind: item.type, note_id: item.id } }" class="work-notes__link">单条分享 / 加入合集</RouterLink>
           </div>
         </article>
       </li>

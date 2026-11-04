@@ -110,5 +110,5 @@ export const listReadingMarks = (revisionId: string, signal?: AbortSignal) =>
   request<{ items: ReadingMark[]; deleted: { id: string; version: number }[] }>(`/reading-marks/${path(revisionId)}`, 'GET', undefined, signal)
 export const saveReadingMark = (revisionId: string, id: string, input: ReadingMarkInput, signal?: AbortSignal) =>
   request<ReadingMark>(`/reading-marks/${path(revisionId)}/${path(id)}`, 'PUT', input, signal)
-export const deleteReadingMark = (revisionId: string, id: string, version: number, signal?: AbortSignal) =>
-  request(`/reading-marks/${path(revisionId)}/${path(id)}?base_version=${version}`, 'DELETE', undefined, signal)
+export const deleteReadingMark = (revisionId: string, id: string, version: number, signal?: AbortSignal, keepShared = false) =>
+  request(`/reading-marks/${path(revisionId)}/${path(id)}?base_version=${version}&keep_shared=${keepShared}`, 'DELETE', undefined, signal)

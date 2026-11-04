@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import {
   ApiErrorResponseError,
   createApiClient,
-} from "../../../packages/api-client/src/index.ts";
+} from "@atoman/api-client";
 import { apiRequestEnvelope } from "../../../src/api/client";
 
 afterEach(() => vi.restoreAllMocks());

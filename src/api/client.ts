@@ -1,8 +1,8 @@
 import {
   ApiErrorResponseError,
   createApiClient,
-} from '../../packages/api-client/src/index.ts'
-import type { ApiResponseResult, ApiResult, ApiSuccess } from '../../packages/api-client/src/index.ts'
+} from '@atoman/api-client'
+import type { ApiResponseResult, ApiResult, ApiSuccess } from '@atoman/api-client'
 import { apiFetch } from './transport'
 
 const apiClient = createApiClient(apiFetch)

@@ -6,7 +6,7 @@
     />
     <ol class="book-catalog__steps" aria-label="添加进度">
       <li
-        v-for="(label, index) in ['确认作品', '确认版本／译本', '关联文件与阅读']"
+        v-for="(label, index) in ['确认作品', '确认版本与文件']"
         :key="label"
         class="book-catalog__step-item"
         :aria-current="step === index + 1 ? 'step' : undefined"
@@ -179,7 +179,7 @@
         </PButton>
       </div>
     </form>
-    <form v-else-if="step === 2" class="book-catalog__form" @submit.prevent="save(true)">
+    <form v-else-if="step === 2 && !editionId" class="book-catalog__form" @submit.prevent="save(true)">
       <!-- 所属作品摘要卡片 -->
       <div class="book-catalog__summary-card">
         <div class="book-catalog__summary-badge">当前图书作品</div>
@@ -191,12 +191,16 @@
       </div>
 
       <div class="book-catalog__new-edition-card">
-        <h3>1. 先选择电子书文件</h3>
-        <label for="edition-source-file">电子书文件（必填）</label>
+        <h3>选择电子书文件</h3>
+        <label for="edition-source-file">选择电子书文件（只需一次）</label>
         <input id="edition-source-file" type="file" accept=".epub,.pdf,.txt,.cbz,.cbr" @change="chooseFile" />
         <p v-if="file">{{ file.name }} · {{ Math.round(file.size / 1024) }} KB</p>
-        <p v-if="coverBusy" role="status">正在分析文件前五页及书目元数据…</p>
+        <p v-if="coverBusy" role="status">正在提取封面和版权页书目信息…</p>
         <p v-if="coverExplanation">{{ coverExplanation }}</p>
+        <p v-if="identifiedBook.title || identifiedBook.author" class="book-catalog__empty-hint" role="status">
+          文件识别：{{ identifiedBook.title || '书名待确认' }} · {{ identifiedBook.author || '作者待确认' }}。
+          请核对是否与上一步所选作品一致；如果不一致，请返回作品页修改。
+        </p>
         <div v-if="coverCandidates.length" class="book-catalog__cover-candidates">
           <button v-for="(candidate,index) in coverCandidates" :key="index" type="button"
             :class="{ 'is-selected': selectedCover === candidate.dataUrl }"
@@ -214,7 +218,7 @@
         </div>
         <p v-else role="status">请选择以上候选之一，或手动上传出版封面。</p>
       </div>
-      <p class="book-catalog__step-intro">2. 核对出版版本与书目资料，自动识别结果均可修改。</p>
+      <p class="book-catalog__step-intro">核对出版版本与书目资料，自动识别结果均可修改。</p>
 
       <fieldset class="book-catalog__fields" :disabled="busy">
         <PInput
@@ -432,7 +436,7 @@
       </div>
     </form>
 
-    <!-- Step 3: 关联文件与阅读 -->
+    <!-- The same second step continues into transfer/scan progress; no third file-selection step. -->
     <section v-else-if="createdId && editionId" class="book-catalog__step3-card">
       <div class="book-catalog__step3-header">
         <h2 class="book-catalog__step3-title">文件上传及安全检查</h2>
@@ -491,6 +495,7 @@ const editionQuery = ref('')
 const query = ref(''), matches = ref<BookPublicWork[]>([]), searched = ref(false), searching = ref(false), searchError = ref('')
 const selectedWork = ref<CatalogWork | null>(null), file = shallowRef<File | null>(null)
 const coverCandidates = ref<BookCoverCandidate[]>([])
+const identifiedBook = ref({ title: '', author: '' })
 const selectedCover = ref(''), coverExplanation = ref(''), coverBusy = ref(false), coverSaving = ref(false), resourceReady = ref(false)
 const title = ref(''), authors = ref(''), originalTitle = ref(''), description = ref('')
 const personQuery = ref(''), selectedAuthors = ref<string[]>([]), availablePeople = ref<{ id: string; name: string }[]>([])
@@ -782,6 +787,7 @@ async function chooseFile(event: Event) {
   }
   file.value = selected
   coverCandidates.value = []
+  identifiedBook.value = { title: '', author: '' }
   selectedCover.value = ''
   coverExplanation.value = ''
   metadataEvidence.value = []
@@ -794,6 +800,7 @@ async function chooseFile(event: Event) {
     coverCandidates.value = inspection.candidates
     coverExplanation.value = inspection.explanation
     const data = inspection.metadata
+    identifiedBook.value = { title: data.title || '', author: data.author || '' }
     // Existing user edits always win over file metadata.
     if (!editionTitle.value.trim() && data.title) editionTitle.value = data.title
     if (!language.value.trim() && !languageQuery.value.trim() && data.language) {
@@ -809,7 +816,7 @@ async function chooseFile(event: Event) {
       value: data.value, page: data.page,
     }))
     if (!isbn.value.trim() && data.isbn) isbn.value = data.isbn
-    if (!pages.value.trim() && data.pageCount) pages.value = String(data.pageCount)
+    // PDF page count is not the printed book page count; do not silently fill it.
   } catch (reason) {
     if (alive) error.value = reason instanceof Error
       ? '自动分析失败：' + reason.message + '。可手动上传封面并填写资料。'
@@ -929,8 +936,7 @@ async function save(withEdition: boolean) {
     editionId.value = edition.id
     savedEditionTitle.value = edition.title || selectedWork.value?.title || title.value
     savedLanguage.value = edition.language || ''
-    step.value = 3
-    // Wait for the upload scan before treating an Edition as published.
+    // Stay on step 2; the saved edition swaps the form for an automatic upload/progress panel.
   } catch {
     error.value = createdId.value
       ? '作品已保存，但版本处理未完成。可重试或检查已有版本，避免重复创建。'

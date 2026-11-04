@@ -89,7 +89,7 @@ function chooseFile(event: Event) {
     file.value = null
   }
 }
-function chooseAnother() { if (fileInput.value) { fileInput.value.value = ''; fileInput.value.click() } }
+function chooseAnother() { if (fileInput.value) { fileInput.value.value = ''; fileInput.value.click() } else { error.value = '请选择下方文件输入框重新上传。' } }
 async function upload() {
   if (!file.value || busy.value || pending.value) return
   busy.value = true

@@ -60,6 +60,26 @@ function mockReader() {
   ] })
 }
 
+describe('添加图书向导的一次文件选择', () => {
+  it('已有文件从第二步传入，挂载自动创建且只创建一次上传会话', async () => {
+    mockUpload()
+    const send = vi.spyOn(api, 'uploadResourceFile').mockResolvedValue({ ...session, status: 'scanning' })
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/books/work/:workId', component: { template: '<div />' } }] })
+    await router.push('/books/work/work-1')
+    await router.isReady()
+    const uploadedFile = new File(['abcdef'], 'history.txt')
+    const wrapper = mount(BookResourceUpload, { props: { workId: 'work-1', editionId: 'edition-1', title: '历史', initialFile: uploadedFile, initialLanguage: 'zh', autoStart: true }, global: { plugins: [router], stubs: { PConfirm: true } } })
+    wrappers.push(wrapper)
+    await flushPromises()
+    expect(api.createCatalogResource).toHaveBeenCalledTimes(1)
+    expect(api.createResourceUpload).toHaveBeenCalledTimes(1)
+    expect(api.createResourceUpload).toHaveBeenCalledWith(asset.id, uploadedFile, false)
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(wrapper.find('input[type="file"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('沿用上一步的文件（无需再次选择）')
+  })
+})
+
 describe('文件上传与公开反馈', () => {
   it('未确认公开权限时仍可上传，但默认只有上传者可读', async () => {
     mockUpload()

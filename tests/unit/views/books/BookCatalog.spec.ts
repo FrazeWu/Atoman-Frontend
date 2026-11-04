@@ -391,6 +391,28 @@ describe('无需文件创建公开作品', () => {
     expect(wrapper.text()).toContain('文件上传及安全检查')
     expect(wrapper.findComponent(BookResourceUpload).exists()).toBe(true)
   })
+  it('三体 PDF 第六页版权信息自动回填版本且不误填纸质页数', async () => {
+    vi.mocked(bookCoverCandidates.inspectBookCoverCandidates).mockResolvedValueOnce({
+      candidates: [{ label: '第 1 页', dataUrl: 'data:image/jpeg;base64,AAAA' }],
+      explanation: '已从第 6 页读取版权／CIP 书目信息',
+      metadata: { title: '三体', author: '刘慈欣', publisher: '重庆出版社', language: 'zh',
+        isbn: '9787536692930', publishedDate: '2008-01', editionStatement: '第 1 版', pageCount: 315, sourcePage: 6 },
+    })
+    const { wrapper } = await setup('/books/new')
+    await fill(wrapper)
+    await chooseNewEdition(wrapper)
+    await chooseTestFile(wrapper)
+    expect((wrapper.get('#create-edition-title').element as HTMLInputElement).value).toBe('三体')
+    expect((wrapper.get('#create-edition-publisher').element as HTMLInputElement).value).toBe('重庆出版社')
+    expect((wrapper.get('#create-edition-language').element as HTMLInputElement).value).toBe('中文 · zh')
+    expect((wrapper.get('#create-edition-isbn').element as HTMLInputElement).value).toBe('9787536692930')
+    expect((wrapper.get('#create-edition-published-month').element as HTMLInputElement).value).toBe('2008-01')
+    expect((wrapper.get('#create-edition-statement').element as HTMLInputElement).value).toBe('第 1 版')
+    expect((wrapper.get('#create-edition-pages').element as HTMLInputElement).value).toBe('')
+    expect(wrapper.text()).toContain('第 6 页')
+    expect(wrapper.findAll('.book-catalog__step-item')).toHaveLength(2)
+  })
+
   it('出版版本必须先选电子书文件和封面，不能创建空版本', async () => {
     const create = vi.spyOn(api, 'createCatalogWork')
     const edition = vi.spyOn(api, 'createCatalogEdition')

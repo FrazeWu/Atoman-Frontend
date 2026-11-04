@@ -98,7 +98,7 @@
                 <span v-if="edition.translators?.length">{{ edition.translators.map(p => p.name).join(' / ') }} 译</span>
                 <span v-if="edition.language || edition.edition_statement">{{ [edition.language, edition.edition_statement].filter(Boolean).join(' · ') }}</span>
                 <span>{{ edition.publisher || '出版社待补充' }}</span>
-                <span v-if="edition.published_date">{{ edition.published_date.slice(0, 10) }}</span>
+                <span v-if="edition.published_date">{{ edition.published_date.slice(0, 7) }}</span>
                 <span v-if="edition.isbn13 || edition.isbn10">ISBN {{ edition.isbn13 || edition.isbn10 }}</span>
                 <span v-if="edition.page_count">{{ edition.page_count }} 页</span>
               </div>

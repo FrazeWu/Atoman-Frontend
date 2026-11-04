@@ -1,10 +1,13 @@
 import { mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
 
 describe('BookReaderShell', () => {
+  beforeEach(() => { vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1280) })
+  afterEach(() => vi.restoreAllMocks())
+
   it('统一渲染格式、进度、目录和分页操作', async () => {
     const router = createRouter({
       history: createMemoryHistory(),
@@ -47,6 +50,29 @@ describe('BookReaderShell', () => {
     expect(wrapper.emitted('previous')).toHaveLength(1)
     expect(wrapper.emitted('next')).toHaveLength(1)
     expect(wrapper.emitted('toc-select')).toEqual([['chapter-1']])
+  })
+
+  it('窄桌面默认收起设置而仍能随时打开', async () => {
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1024)
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/books', component: { template: '<div />' } }] })
+    await router.push('/books')
+    await router.isReady()
+    const wrapper = mount(BookReaderShell, {
+      global: { plugins: [router] },
+      props: { title: '适配宽度', backTo: '/books', format: 'pdf' },
+      slots: { settings: '<div>显示设置面板</div>', sidebar: '<div>章节目录</div>' },
+    })
+    expect(wrapper.find('aside[aria-label="显示设置"]').exists()).toBe(false)
+    await wrapper.find('button[aria-label="切换导览侧栏"]').trigger('click')
+    expect(wrapper.find('.book-reader-shell__sidebar-wrapper').exists()).toBe(false)
+    await wrapper.find('button[aria-label="切换导览侧栏"]').trigger('click')
+    expect(wrapper.find('.book-reader-shell__sidebar-wrapper').exists()).toBe(true)
+    const setting = wrapper.findAll('.book-reader-shell__panel-tabs button').find(item => item.text().includes('显示设置'))
+    expect(setting).toBeDefined()
+    await setting!.trigger('click')
+    expect(wrapper.find('aside[aria-label="显示设置"]').exists()).toBe(true)
+    await wrapper.find('button[aria-label="关闭阅读工具"]').trigger('click')
+    expect(wrapper.find('aside[aria-label="显示设置"]').exists()).toBe(false)
   })
 
   it('将显示设置和目录工具放入可切换侧栏', async () => {

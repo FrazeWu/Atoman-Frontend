@@ -35,17 +35,14 @@ const abort = new AbortController()
 const clamp = (value: number) => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0
 function markScrollInteraction() { suppressNaturalProgress = false }
 
-// On phones, 100% means a fully visible page rather than a clipped desktop-sized sheet.
-// Let PDF.js scale the canvas and text layer together (CSS transforms would break anchors).
+// At default zoom every viewport receives a fully visible page, including
+// desktops with sidebars; PDF.js scales its canvas and text layer together.
+// CSS-only transforms would break page geometry and annotation anchors.
 function applyReaderScale(percent: number) {
   if (!pdfViewer) return
   const zoom = Math.max(.5, Math.min(2, percent / 100))
-  if (window.innerWidth <= 640) {
-    pdfViewer.currentScaleValue = 'page-width'
-    if (zoom !== 1) pdfViewer.currentScale *= zoom
-  } else {
-    pdfViewer.currentScale = zoom * 1.35
-  }
+  pdfViewer.currentScaleValue = 'page-width'
+  if (zoom !== 1) pdfViewer.currentScale *= zoom
 }
 
 function handleViewportResize() {

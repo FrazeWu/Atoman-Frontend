@@ -1,5 +1,5 @@
 <template>
-  <main class="a-page-md books-reader" :class="`books-reader--theme-${displayPreferences.theme}`" :style="{ '--book-reader-font-scale': displayPreferences.font_scale }">
+  <main class="a-page-xl books-reader" :class="`books-reader--theme-${displayPreferences.theme}`" :style="{ '--book-reader-font-scale': displayPreferences.font_scale }">
     <BookReaderShell
       :title="asset?.title || '私有电子书'"
       :subtitle="asset ? `${asset.file_name} · ${statusLabel}` : ''"

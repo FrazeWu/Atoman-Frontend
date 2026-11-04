@@ -90,3 +90,14 @@ it('mobile default PDF page uses PDF.js page-width fit instead of horizontal cli
     expect(viewerMock.active.currentScaleValue).toBe('page-width')
   } finally { wrapper.unmount() }
 })
+
+it('desktop PDF page also fits the available reading column', async () => {
+  vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1280)
+  const wrapper = mount(BookPdfContinuousView, {
+    props: { document: { numPages: 2 } as never, initialPage: 1, zoom: 100, annotations: [] },
+  })
+  try {
+    await flushPromises()
+    expect(viewerMock.active.currentScaleValue).toBe('page-width')
+  } finally { wrapper.unmount() }
+})

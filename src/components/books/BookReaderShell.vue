@@ -226,13 +226,16 @@ const emit = defineEmits<{
 
 const progressPercent = computed(() => Math.round(Math.max(0, Math.min(1, props.progress)) * 100))
 const slots = useSlots()
-const desktopLayout = typeof window === 'undefined' || window.innerWidth > 640
+const initialViewportWidth = typeof window === 'undefined' ? 1440 : window.innerWidth
+const desktopLayout = initialViewportWidth > 640
+// On narrower desktops the tools remain one click away without hiding the book.
+const roomyLayout = initialViewportWidth >= 1120
 const activePanel = ref<'tools' | 'settings' | ''>(
-  props.initialPanel ?? (slots.settings && desktopLayout ? 'settings' : (props.toc.length || slots.tools ? 'tools' : '')),
+  props.initialPanel ?? (roomyLayout ? (slots.settings ? 'settings' : (props.toc.length || slots.tools ? 'tools' : '')) : ''),
 )
 const hasTools = computed(() => Boolean(props.toc.length || slots.tools || slots.settings))
 
-const showSidebar = ref(desktopLayout)
+const showSidebar = ref(desktopLayout && initialViewportWidth >= 960)
 const zoom = ref(props.initialZoom)
 const scrollMode = ref<BookReaderScrollMode>(props.initialScrollMode)
 
@@ -678,6 +681,21 @@ function togglePanel(panel: 'tools' | 'settings') {
 .book-reader-shell__toc button.is-nested {
   padding-left: 1rem;
   color: var(--a-color-muted);
+}
+
+/* At narrow desktop widths tools are a dismissible popover, not a third
+   permanent column that leaves no room for the actual document. */
+@media (min-width: 641px) and (max-width: 1119px) {
+  .book-reader-shell__workspace { position: relative; }
+  .book-reader-shell__panel {
+    position: absolute;
+    top: 3.5rem;
+    right: 0;
+    z-index: 4;
+    width: min(18rem, 48%);
+    max-height: min(75vh, 44rem);
+    box-shadow: 0 10px 32px rgb(0 0 0 / 10%);
+  }
 }
 
 @media (max-width: 640px) {

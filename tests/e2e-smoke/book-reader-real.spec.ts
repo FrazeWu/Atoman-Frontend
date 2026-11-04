@@ -70,3 +70,29 @@ test('real EPUB.js: continuous view and paginated mode reflow', async ({ page })
   await expect(page.getByRole('button', { name: '切换为单页翻页' })).toBeVisible()
   await expect.poll(async () => host.locator('iframe').count()).toBeGreaterThan(0)
 })
+
+test('desktop PDF reading area stays usable with sidebar and tools', async ({ page }) => {
+  for (const width of [1024, 1280]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/books/public-read/pdf-real')
+    await expect(page.locator('.pdfViewer .page canvas').first()).toBeVisible()
+    const geometry = await page.evaluate(() => {
+      const rect = (selector: string) => document.querySelector(selector)?.getBoundingClientRect()
+      const reader = rect('.book-reader-shell__reading-column')
+      const pdfPage = rect('.pdfViewer .page')
+      return { viewport: innerWidth, documentWidth: document.documentElement.scrollWidth,
+        pageWidth: pdfPage?.width || 0, readingWidth: reader?.width || 0 }
+    })
+    expect(geometry.documentWidth).toBeLessThanOrEqual(geometry.viewport + 1)
+    expect(geometry.readingWidth).toBeGreaterThan(560)
+    expect(geometry.pageWidth).toBeGreaterThan(0)
+    expect(geometry.pageWidth).toBeLessThanOrEqual(geometry.readingWidth + 3)
+    if (width === 1024) {
+      await page.getByRole('button', { name: '显示设置' }).click()
+      await expect(page.getByRole('complementary', { name: '显示设置' })).toBeVisible()
+      const openedWidth = await page.locator('.book-reader-shell__reading-column').evaluate(element => element.getBoundingClientRect().width)
+      expect(openedWidth).toBeGreaterThanOrEqual(geometry.readingWidth)
+      await page.getByRole('button', { name: '关闭阅读工具' }).click()
+    }
+  }
+})

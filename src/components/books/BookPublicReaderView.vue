@@ -5,7 +5,7 @@
     :class="[
       `public-reader--theme-${displayPreferences.theme}`,
       `public-reader--font-${displayPreferences.font_family || 'serif'}`,
-      { 'a-page-md': !source }
+      { 'a-page-xl': !source }
     ]"
     :style="{ '--book-reader-font-scale': displayPreferences.font_scale }"
   >

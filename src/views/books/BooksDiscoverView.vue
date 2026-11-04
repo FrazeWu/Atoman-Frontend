@@ -97,9 +97,19 @@
         </div>
         <PEmpty
           v-if="!works.length"
-          class="book-catalog__empty"
+          class="book-catalog__empty book-discover__empty-state"
+          align="center"
+          :title="route.query.q ? '没有找到相关图书' : '暂无收录图书'"
           :description="route.query.q ? '没有找到图书，试试其他关键词，或添加这本书。' : '还没有图书，添加第一本书即可公开展示。'"
-        />
+        >
+          <template #icon><BookOpen :size="26" :stroke-width="1.5" aria-hidden="true" /></template>
+          <template v-if="!route.query.q" #action>
+            <PButton
+              size="sm"
+              :to="auth.isAuthenticated ? { path: '/books/new', query: route.query } : { path: '/login', query: { redirect: '/books/new' } }"
+            >添加第一本图书</PButton>
+          </template>
+        </PEmpty>
         <ul v-else class="book-catalog__grid">
           <li v-for="(work, index) in works" :key="work.id">
             <BookCard :work="work" :eager="index < 6" />
@@ -120,6 +130,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { BookOpen } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { catalogRevision, searchCatalogWorks } from '@/api/bookCatalog'
 import { highRatedWorks, type WorkRating } from '@/api/bookCommunity'
@@ -229,6 +240,33 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.book-discover__empty-state {
+  box-sizing: border-box;
+  min-height: clamp(16rem, 33vh, 23rem);
+  margin-block: 1.25rem 1.75rem;
+  padding: 2rem;
+  align-content: center;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-surface-muted);
+}
+
+.book-discover__empty-state :deep(.p-empty__icon) {
+  width: 3.75rem;
+  height: 3.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+}
+
+.book-discover__empty-state :deep(.p-empty__description) {
+  max-width: 32rem;
+  text-align: center;
+}
+
 .book-discover__controls {
   display: flex;
   align-items: center;

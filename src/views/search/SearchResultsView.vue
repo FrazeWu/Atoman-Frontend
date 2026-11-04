@@ -34,8 +34,16 @@
       </button>
     </nav>
 
-    <!-- Modules tabs -->
-    <nav ref="moduleTabsRef" class="search-tabs search-tabs--modules" aria-label="搜索模块">
+    <!-- Keep swiping native, but make hidden modules discoverable at narrow widths. -->
+    <div class="search-module-tabs-wrap">
+      <button
+        v-if="moduleTabsCanScrollLeft"
+        class="search-module-tabs-arrow search-module-tabs-arrow--left"
+        type="button"
+        aria-label="向左查看更多搜索模块"
+        @click="scrollModuleTabs(-1)"
+      ><ChevronLeft :size="18" aria-hidden="true" /></button>
+      <nav ref="moduleTabsRef" class="search-tabs search-tabs--modules" aria-label="搜索模块" @scroll.passive="syncModuleTabArrows">
       <button
         type="button"
         class="search-tab-pill"
@@ -56,7 +64,15 @@
       >
         {{ module.label }}
       </button>
-    </nav>
+      </nav>
+      <button
+        v-if="moduleTabsCanScrollRight"
+        class="search-module-tabs-arrow search-module-tabs-arrow--right"
+        type="button"
+        aria-label="向右查看更多搜索模块"
+        @click="scrollModuleTabs(1)"
+      ><ChevronRight :size="18" aria-hidden="true" /></button>
+    </div>
 
     <!-- Sub-types tabs (if module selected) -->
     <nav v-if="search.selectedModule.value" class="search-tabs search-tabs--types" aria-label="结果类型">
@@ -221,9 +237,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Loader2 } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-vue-next'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import type { SearchScope, SearchState } from '@/api/search'
 import { useUnifiedSearch } from '@/composables/useUnifiedSearch'
@@ -236,6 +252,42 @@ const router = useRouter()
 const state = computed(() => readSearchQuery(route.query))
 const search = useUnifiedSearch(state)
 const moduleTabsRef = ref<HTMLElement | null>(null)
+const moduleTabsCanScrollLeft = ref(false)
+const moduleTabsCanScrollRight = ref(false)
+let moduleTabsObserver: ResizeObserver | null = null
+
+function syncModuleTabArrows() {
+  const tabs = moduleTabsRef.value
+  if (!tabs) {
+    moduleTabsCanScrollLeft.value = false
+    moduleTabsCanScrollRight.value = false
+    return
+  }
+  moduleTabsCanScrollLeft.value = tabs.scrollLeft > 3
+  moduleTabsCanScrollRight.value = tabs.scrollWidth - tabs.clientWidth - tabs.scrollLeft > 3
+}
+
+function scrollModuleTabs(direction: -1 | 1) {
+  const tabs = moduleTabsRef.value
+  if (!tabs) return
+  tabs.scrollBy({ left: Math.max(120, tabs.clientWidth * 0.7) * direction, behavior: 'smooth' })
+}
+
+onMounted(async () => {
+  await nextTick()
+  syncModuleTabArrows()
+  if (typeof ResizeObserver !== 'undefined' && moduleTabsRef.value) {
+    moduleTabsObserver = new ResizeObserver(syncModuleTabArrows)
+    moduleTabsObserver.observe(moduleTabsRef.value)
+  }
+  window.addEventListener('resize', syncModuleTabArrows)
+})
+
+onBeforeUnmount(() => {
+  moduleTabsObserver?.disconnect()
+  window.removeEventListener('resize', syncModuleTabArrows)
+})
+
 const selectedModuleLabel = computed(() => {
   const label = search.capabilities.value?.modules?.find(item => item.module === state.value.module)?.label
   return label ? label + '搜索' : ''
@@ -250,6 +302,7 @@ watch([() => state.value.module, () => search.capabilities.value?.modules], asyn
   if (left < container.scrollLeft || right > container.scrollLeft + container.clientWidth) {
     container.scrollLeft = Math.max(0, left - (container.clientWidth - selected.offsetWidth) / 2)
   }
+  syncModuleTabArrows()
 }, { immediate: true, flush: 'post' })
 
 const draft = ref('')
@@ -367,6 +420,15 @@ const hasResults = computed(
 }
 
 /* Tabs: Scopes, Modules, Types */
+.search-module-tabs-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.search-module-tabs-arrow {
+  display: none;
+}
+
 .search-tabs {
   display: flex;
   gap: 6px;
@@ -735,6 +797,41 @@ const hasResults = computed(
   .unified-search {
     padding: 1.25rem 1rem 3rem;
   }
+  .search-module-tabs-wrap {
+    margin-bottom: 0.75rem;
+  }
+
+  .search-module-tabs-arrow {
+    position: absolute;
+    top: 0;
+    bottom: 4px;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    padding: 0;
+    border: 0;
+    color: var(--a-color-text-secondary);
+    background: var(--a-color-bg);
+    cursor: pointer;
+  }
+
+  .search-module-tabs-arrow--left {
+    left: 0;
+    background: linear-gradient(to right, var(--a-color-bg) 70%, transparent);
+  }
+
+  .search-module-tabs-arrow--right {
+    right: 0;
+    background: linear-gradient(to left, var(--a-color-bg) 70%, transparent);
+  }
+
+  .search-module-tabs-arrow:focus-visible {
+    outline: 2px solid var(--a-color-primary);
+    outline-offset: -2px;
+  }
+
   .search-tabs--modules, .search-tabs--types {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -744,6 +841,9 @@ const hasResults = computed(
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     padding-bottom: 4px;
+  }
+  .search-tabs--modules {
+    margin-bottom: 0;
   }
   .search-tabs--modules::-webkit-scrollbar, .search-tabs--types::-webkit-scrollbar { display: none; }
   .search-tabs--modules > button, .search-tabs--types > button {

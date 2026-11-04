@@ -186,6 +186,32 @@ describe('SearchResultsView.vue', () => {
     expect(moduleBtns[1].text()).toBe('图书')
   })
 
+  it('makes horizontally hidden module tabs discoverable and keyboard-operable', async () => {
+    const wrapper = createWrapper()
+    const tabs = wrapper.find('nav[aria-label="搜索模块"]')
+    const el = tabs.element as HTMLElement
+    Object.defineProperty(el, 'clientWidth', { configurable: true, value: 160 })
+    Object.defineProperty(el, 'scrollWidth', { configurable: true, value: 560 })
+    Object.defineProperty(el, 'scrollLeft', { configurable: true, writable: true, value: 0 })
+    const scrollBy = vi.fn()
+    Object.defineProperty(el, 'scrollBy', { configurable: true, value: scrollBy })
+    await tabs.trigger('scroll')
+
+    const right = wrapper.find('button[aria-label="向右查看更多搜索模块"]')
+    expect(right.exists()).toBe(true)
+    await right.trigger('click')
+    expect(scrollBy).toHaveBeenCalledWith(expect.objectContaining({ left: expect.any(Number), behavior: 'smooth' }))
+
+    el.scrollLeft = 90
+    await tabs.trigger('scroll')
+    expect(wrapper.find('button[aria-label="向左查看更多搜索模块"]').exists()).toBe(true)
+
+    el.scrollLeft = 400
+    await tabs.trigger('scroll')
+    expect(wrapper.find('button[aria-label="向右查看更多搜索模块"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it('renders grouped results with module title and view all link', () => {
     mockResult.value = sampleGroupedResponse
     const wrapper = createWrapper()

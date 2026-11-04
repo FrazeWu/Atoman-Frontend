@@ -113,5 +113,8 @@ describe('BooksDiscoverView Skeletons and Empty States', () => {
     const empty = wrapper.findComponent(PEmpty)
     expect(empty.exists()).toBe(true)
     expect(empty.text()).toContain('还没有图书，添加第一本书即可公开展示。')
+    expect(empty.props('title')).toBe('暂无收录图书')
+    expect(wrapper.find('.book-discover__empty-state').exists()).toBe(true)
+    expect(empty.text()).toContain('添加第一本图书')
   })
 })

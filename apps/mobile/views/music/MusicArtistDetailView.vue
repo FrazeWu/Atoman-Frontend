@@ -118,10 +118,20 @@
             <span>专辑</span>
             <span class="mobile-artist-detail__tab-badge">{{ albums.length }}</span>
           </button>
+          <button
+            v-if="artistForm !== 'group'"
+            type="button"
+            class="mobile-artist-detail__tab-btn"
+            :class="{ 'is-active': activeTab === 'group' }"
+            role="tab"
+            :aria-selected="activeTab === 'group'"
+            data-testid="artist-tab-group"
+            @click="activeTab = 'group'"
+          >乐队作品</button>
         </div>
 
         <!-- Subheader: Count summary & Sort Switcher (热度 / 时间) -->
-        <div class="mobile-artist-detail__list-subheader">
+        <div v-if="activeTab !== 'group'" class="mobile-artist-detail__list-subheader">
           <span class="mobile-artist-detail__list-count-label">
             {{ activeTab === 'songs' ? `${displaySongs.length} 首单曲` : `${displayAlbums.length} 张专辑` }}
           </span>
@@ -150,6 +160,23 @@
         </div>
 
         <!-- Songs Tab Panel -->
+        <div v-if="activeTab === 'group'" class="mobile-artist-detail__tab-panel" role="tabpanel" aria-label="乐队作品">
+          <p class="mobile-artist-detail__empty-text">通过所属或曾加入的乐队关联，不代表个人署名或已确认参与录制。</p>
+          <p v-if="groupWorksError" role="alert">{{ groupWorksError }}</p>
+          <MButton v-if="groupWorksError" size="sm" variant="secondary" @click="loadGroupWorks()">重试</MButton>
+          <p v-else-if="groupWorksLoading" role="status">正在加载乐队作品…</p>
+          <p v-else-if="!groupAlbums.length && !groupSongs.length">暂未收录关联乐队作品，请先确认成员关系是否完整。</p>
+          <div v-for="album in groupAlbums" :key="album.id" class="mobile-artist-detail__group-work">
+            <button type="button" class="mobile-artist-detail__group-link" @click="openAlbum(album.id)">{{ album.title }}</button>
+            <span><button v-for="group in album.artists" :key="group.id" type="button" class="mobile-artist-detail__group-link" @click="router.push(`/music/artist/${group.id}`)">{{ group.name }}</button> · 成员关联</span>
+          </div>
+          <MButton v-if="groupAlbumHasMore" size="sm" variant="secondary" :disabled="groupWorksLoading" @click="loadGroupWorks(true)">更多乐队专辑</MButton>
+          <div v-for="song in groupSongs" :key="song.id" class="mobile-artist-detail__album-row">
+            <button type="button" class="mobile-artist-detail__tab-btn" @click="router.push(`/music/song/${song.id}`)">{{ song.title }}</button>
+            <span><button v-for="group in song.artists" :key="group.id" type="button" class="mobile-artist-detail__tab-btn" @click="router.push(`/music/artist/${group.id}`)">{{ group.name }}</button> · 成员关联</span>
+          </div>
+          <MButton v-if="groupSongHasMore" size="sm" variant="secondary" :disabled="groupWorksLoading" @click="loadGroupWorks(true)">更多乐队歌曲</MButton>
+        </div>
         <div v-show="activeTab === 'songs'" class="mobile-artist-detail__tab-panel" role="tabpanel" aria-label="单曲列表">
           <div v-if="songsError" class="mobile-artist-detail__empty" role="alert">
             <p class="mobile-artist-detail__empty-text">{{ songsError }}</p>
@@ -415,6 +442,9 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   getMusicArtist,
   listMusicSongs,
+  listMusicAlbums,
+  type MusicAlbumListItem,
+  type MusicSongListItem,
 } from '@/api/musicV1'
 import { useAudioPlayerStore } from '@/stores/player'
 import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist'
@@ -443,7 +473,7 @@ export interface MobileArtistAlbumItem {
 }
 
 type SortMode = 'popularity' | 'time'
-const activeTab = ref<'songs' | 'albums'>('songs')
+const activeTab = ref<'songs' | 'albums' | 'group'>('songs')
 const songSort = ref<SortMode>('popularity')
 const albumSort = ref<SortMode>('popularity')
 
@@ -575,7 +605,46 @@ const songsError = ref('')
 const artist = ref<MobileArtistDetailData | null>(props.initialArtist || null)
 const songs = ref<Song[]>(props.initialSongs || [])
 const albums = ref<MobileArtistAlbumItem[]>(props.initialAlbums || [])
+const artistForm = ref<'person' | 'group'>('person')
+const groupAlbums = ref<MusicAlbumListItem[]>([])
+const groupSongs = ref<MusicSongListItem[]>([])
+const groupWorksError = ref('')
+const groupWorksLoading = ref(false)
+const groupAlbumHasMore = ref(false)
+const groupSongHasMore = ref(false)
+let groupAlbumPage = 0
+let groupSongPage = 0
 let detailGeneration = 0
+
+async function loadGroupWorks(append = false) {
+  if (groupWorksLoading.value) return
+  const id = String(route.params.artistId || '')
+  const generation = detailGeneration
+  groupWorksLoading.value = true
+  groupWorksError.value = ''
+  try {
+    const filters = { artist_id: id, artist_relation: 'participating' as const, page_size: 20 }
+    const [relatedAlbums, relatedSongs] = await Promise.all([
+      !append || groupAlbumHasMore.value ? listMusicAlbums({ ...filters, page: append ? groupAlbumPage + 1 : 1 }) : null,
+      !append || groupSongHasMore.value ? listMusicSongs({ ...filters, release_type: 'single,leak', page: append ? groupSongPage + 1 : 1 }) : null,
+    ])
+    if (generation !== detailGeneration || String(route.params.artistId || '') !== id) return
+    if (relatedAlbums) {
+      groupAlbums.value = append ? [...groupAlbums.value, ...relatedAlbums.data] : relatedAlbums.data
+      groupAlbumPage = relatedAlbums.meta.page
+      groupAlbumHasMore.value = relatedAlbums.meta.has_more
+    }
+    if (relatedSongs) {
+      groupSongs.value = append ? [...groupSongs.value, ...relatedSongs.data] : relatedSongs.data
+      groupSongPage = relatedSongs.meta.page
+      groupSongHasMore.value = relatedSongs.meta.has_more
+    }
+  } catch {
+    if (generation === detailGeneration) groupWorksError.value = '乐队作品加载失败，请重试。'
+  } finally {
+    if (generation === detailGeneration) groupWorksLoading.value = false
+  }
+}
 
 const displaySongs = computed(() => {
   const list = [...songs.value]
@@ -677,10 +746,18 @@ async function loadArtistData(force = false) {
   artist.value = null
   songs.value = []
   albums.value = []
+  activeTab.value = 'songs'
+  groupAlbums.value = []
+  groupSongs.value = []
+  groupWorksError.value = ''
+  groupAlbumHasMore.value = false
+  groupSongHasMore.value = false
+  groupWorksLoading.value = false
   try {
     const data = await getMusicArtist(id, { force })
     if (generation !== detailGeneration || String(route.params.artistId || '') !== id) return
     if (!data?.id) { loadError.value = '未找到歌手信息。'; return }
+    artistForm.value = data.artist_form === 'group' ? 'group' : 'person'
     artist.value = {
       id: data.id,
       name: data.name || data.display_name || '歌手',
@@ -708,6 +785,13 @@ async function loadArtistData(force = false) {
       }
     } catch {
       if (generation === detailGeneration) songsError.value = '该歌手曲目加载失败，请重试。'
+    }
+    if (generation !== detailGeneration) return
+    if (albums.value.length) activeTab.value = 'albums'
+    if (artistForm.value !== 'group') {
+      await loadGroupWorks()
+      if (generation !== detailGeneration) return
+      if (!songsError.value && !albums.value.length && !songs.value.length && (groupAlbums.value.length || groupSongs.value.length)) activeTab.value = 'group'
     }
   } catch {
     if (generation === detailGeneration) loadError.value = '歌手加载失败，请检查网络后重试。'
@@ -1120,6 +1204,34 @@ watch(() => route.params.artistId, (id, previous) => {
   display: flex;
   flex-direction: column;
   padding: 0 16px;
+}
+
+.mobile-artist-detail__group-work {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 0;
+  overflow-wrap: anywhere;
+}
+
+.mobile-artist-detail__group-work > span {
+  color: var(--a-color-text-secondary);
+  font-size: 12px;
+}
+
+.mobile-artist-detail__group-link {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  padding: 8px 0;
+  cursor: pointer;
+}
+
+.mobile-artist-detail__group-work > .mobile-artist-detail__group-link {
+  font-weight: 600;
 }
 
 .mobile-artist-detail__album-row {

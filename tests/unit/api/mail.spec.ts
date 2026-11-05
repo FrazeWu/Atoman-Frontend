@@ -33,7 +33,8 @@ describe('Atoman Webmail API client', () => {
   it('reads a URL-encoded single-message detail and marks read in a separate POST', async () => {
     get.mockResolvedValue({ id:'msg-1',plainText:'synthetic' })
     post.mockResolvedValue({ read:true })
-    await fetchMailDetail('folder&=1', 'mail#x')
+    const detail = await fetchMailDetail('folder&=1', 'mail#x')
+    expect(detail).toMatchObject({from:[],to:[],cc:[],attachments:[]})
     expect(get).toHaveBeenCalledWith('/api/v1/mail/message?mailbox_id=folder%26%3D1&message_id=mail%23x')
     expect(post).not.toHaveBeenCalled()
     await markMailRead('folder&=1','mail#x')

@@ -1,0 +1,86 @@
+import { apiGet, apiPostJson, apiPutJson, apiDeleteJson, apiPostMultipart, apiRequest } from '@/api/client'
+import { useApiUrl } from '@/composables/useApiUrl'
+import type { MailSummary, MailAccountInfo } from '@/api/mail'
+const base = () => `${useApiUrl()}/mail`
+const key = (value: string) => encodeURIComponent(value)
+export interface MailUpload { id: string; name: string; type: string; size: number }
+export interface MailComposeFields { to: string[]; cc: string[]; bcc: string[]; subject: string; text: string; html?: string; in_reply_to?: string; references?: string[]; attachments: MailUpload[] }
+export interface MailDraft extends MailComposeFields { id: string; revision?: number; updated_at?: string }
+interface DraftResponse { id: string; revision: number; subject: string; updated_at: string; compose?: MailComposeFields }
+function readDraft(row: DraftResponse): MailDraft { const compose = row.compose; return { ...compose, id: row.id, revision: row.revision, updated_at: row.updated_at, to: compose?.to || [], cc: compose?.cc || [], bcc: compose?.bcc || [], text: compose?.text || '', attachments: compose?.attachments || [], subject: compose?.subject || row.subject || '' } }
+export interface MailOutbox { id: string; status: string; send_after: string; created_at: string; draft_id?: string; draft_revision?: number }
+export interface MailPage { items: MailSummary[]; has_more: boolean; next_position?: number; total?: number; position?: number }
+type ServerSummary = Omit<MailSummary, 'mailboxIds'> & { isStarred?: boolean; mailboxIds?: string[] | Record<string, boolean> }
+function readSummary(row: ServerSummary): MailSummary { return { ...row, isFlagged: row.isStarred ?? row.isFlagged, mailboxIds: Array.isArray(row.mailboxIds) ? row.mailboxIds : Object.keys(row.mailboxIds || {}).filter(id => (row.mailboxIds as Record<string, boolean>)[id]) } }
+export async function queryMailMessages(mailboxId: string, query = '', position = 0, limit = 50): Promise<MailPage> {
+  const params = new URLSearchParams({ mailbox_id: mailboxId, limit: String(limit), position: String(position) })
+  if (query.trim()) params.set('q', query.trim())
+  const result = await apiGet<MailPage & { items: ServerSummary[] }>(`${base()}/search?${params}`)
+  return { ...result, items: result.items.map(readSummary), next_position: (result.position ?? position) + result.items.length }
+}
+export async function fetchMailThread(_mailboxId: string, threadId: string): Promise<MailSummary[]> {
+  const messages: MailSummary[] = []
+  let position = 0
+  for (;;) {
+    const result = await apiGet<MailPage & { items: ServerSummary[] }>(`${base()}/search?${new URLSearchParams({ thread_id: threadId, limit: '100', position: String(position) })}`)
+    messages.push(...result.items.map(readSummary))
+    if (!result.has_more) return messages
+    const next = (result.position ?? position) + result.items.length
+    if (next <= position) throw new Error('完整会话暂时无法加载，请重试。')
+    position = next
+  }
+}
+export async function fetchMailDrafts() { return (await apiGet<DraftResponse[]>(`${base()}/drafts`)).map(readDraft) }
+export async function fetchMailDraft(id: string) { return readDraft(await apiGet<DraftResponse>(`${base()}/drafts/${key(id)}`)) }
+export async function saveMailDraft(draft: MailDraft) {
+  const { id, revision, updated_at: _updatedAt, ...compose } = draft
+  return readDraft(await apiPutJson<DraftResponse>(`${base()}/drafts/${key(id)}`, { revision: revision || 0, compose }))
+}
+export const deleteMailDraft = (id: string) => apiDeleteJson<{ deleted: boolean }>(`${base()}/drafts/${key(id)}`)
+export const queueMail = (fields: MailComposeFields, requestId: string, draftId?: string, draftRevision?: number) => { const { attachments, ...content } = fields; return apiPostJson<MailOutbox>(`${base()}/outbox`, { ...content, attachment_ids: attachments.map(file => file.id), request_id: requestId, draft_id: draftId, draft_revision: draftRevision }) }
+export const provisionMailAccount = () => apiPostJson<MailAccountInfo>(`${base()}/provision`, {})
+export const fetchMailOutbox = (id: string) => apiGet<MailOutbox>(`${base()}/outbox/${key(id)}`)
+export const fetchMailOutboxes = () => apiGet<MailOutbox[]>(`${base()}/outbox`)
+export const cancelMailOutbox = (id: string) => apiPostJson<MailOutbox>(`${base()}/outbox/${key(id)}/cancel`, {})
+export const reconcileMailOutbox = (id: string) => apiPostJson<MailOutbox>(`${base()}/outbox/${key(id)}/reconcile`, {})
+export async function uploadMailAttachment(file: File): Promise<MailUpload> { const form = new FormData(); form.append('file', file); return apiPostMultipart<MailUpload>(`${base()}/attachments`, form) }
+export const deleteMailUpload = (id: string) => apiDeleteJson<{ deleted: boolean }>(`${base()}/attachments/${key(id)}`)
+export async function fetchMailAttachmentBlob(messageId: string, partId: string): Promise<Blob> {
+  const params = new URLSearchParams({ message_id: messageId, part_id: partId })
+  const response = await apiRequest(`${base()}/attachment?${params}`, { credentials: 'include' })
+  if (!response.ok) throw new Error('无法下载附件，请重试。')
+  return response.blob()
+}
+function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob), link = document.createElement('a')
+  link.href = url; link.download = filename; link.click(); setTimeout(() => URL.revokeObjectURL(url), 60000)
+}
+export async function downloadMailAttachment(messageId: string, partId: string, filename: string): Promise<void> { saveBlob(await fetchMailAttachmentBlob(messageId, partId), filename || 'attachment') }
+export async function downloadMailSource(messageId: string): Promise<void> {
+  const response = await apiRequest(`${base()}/raw?${new URLSearchParams({ message_id: messageId })}`, { credentials: 'include' })
+  if (!response.ok) throw new Error('无法下载原始邮件，请重试。')
+  saveBlob(await response.blob(), 'message.eml')
+}
+export type MailAction = 'archive' | 'trash' | 'junk' | 'restore' | 'read' | 'unread' | 'flag' | 'unflag' | 'move'
+export interface MailActionResult { undo_id?: string; affected: number; updated?: string[]; failed?: string[] }
+interface ActionResponse { undo_token?: string; updated: string[]; failed?: string[] }
+export async function mutateMailMessages(_mailboxId: string, messageIds: string[], action: MailAction, targetMailboxId?: string): Promise<MailActionResult> {
+  const result = await apiPostJson<ActionResponse>(`${base()}/messages/actions`, { ids: messageIds, action: action === 'flag' ? 'star' : action === 'unflag' ? 'unstar' : action, mailbox_id: targetMailboxId || '' })
+  return { undo_id: result.undo_token, affected: result.updated.length, updated: result.updated, failed: result.failed }
+}
+export const undoMailAction = (token: string) => apiPostJson<ActionResponse>(`${base()}/messages/actions/undo`, { token })
+export const createMailFolder = (name: string) => apiPostJson<{ id: string }>(`${base()}/folders`, { name })
+export const deleteMailFolder = (id: string) => apiDeleteJson<{ deleted: boolean }>(`${base()}/folders/${key(id)}`)
+export interface MailFilterRule { id: string; name?: string; enabled: boolean; field: 'from' | 'to' | 'subject'; value: string; action: 'move' | 'junk' | 'archive' | 'trash'; mailbox_id?: string }
+export interface MailPreferences { conversation_mode?: boolean; rules: MailFilterRule[]; blocked_senders: string[]; vacation: { enabled: boolean; subject: string; text: string } }
+interface PreferencesResponse { conversation_mode: boolean; rules: Array<Omit<MailFilterRule, 'value'> & { contains: string }>; blocked_senders: string[]; auto_reply: MailPreferences['vacation'] }
+function readPreferences(row: PreferencesResponse): MailPreferences { return { conversation_mode: row.conversation_mode, blocked_senders: row.blocked_senders || [], vacation: row.auto_reply, rules: (row.rules || []).map(rule => ({ ...rule, value: rule.contains })) } }
+export async function fetchMailPreferences() { return readPreferences(await apiGet<PreferencesResponse>(`${base()}/settings`)) }
+export async function saveMailPreferences(settings: MailPreferences) {
+  const payload: PreferencesResponse = { conversation_mode: settings.conversation_mode ?? true, blocked_senders: settings.blocked_senders, auto_reply: settings.vacation, rules: settings.rules.map(({ value, ...rule }) => ({ ...rule, name: rule.name || value, contains: value })) }
+  return readPreferences(await apiPutJson<PreferencesResponse>(`${base()}/settings`, payload))
+}
+export interface MailAppPassword { id: string; name: string; created_at: string }
+export const fetchMailAppPasswords = () => apiGet<MailAppPassword[]>(`${base()}/app-passwords`)
+export const createMailAppPassword = (name: string) => apiPostJson<MailAppPassword & { password: string }>(`${base()}/app-passwords`, { name })
+export const revokeMailAppPassword = (id: string) => apiDeleteJson<{ revoked: boolean }>(`${base()}/app-passwords/${key(id)}`)

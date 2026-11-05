@@ -1,486 +1,74 @@
 <template>
-  <div class="mail-page" data-testid="mail-workspace">
+  <section class="mail-page" data-testid="mail-workspace">
     <header class="mail-page__header">
-      <div class="mail-page__identity">
-        <span class="mail-page__wordmark">ATOMAN <span>MAIL</span></span>
-        <h1>电子邮件</h1>
-        <p v-if="mailAccount?.address" class="mail-page__address">{{ mailAccount.address }}</p>
-        <p v-else class="mail-page__subtitle">一个账号，管理你的日常通信</p>
-      </div>
-      <div class="mail-page__actions">
-        <span v-if="mailIsActive" class="mail-page__status"><span class="mail-page__status-dot" /> 已开通</span>
-        <span v-else-if="mailAccount && !mailIsActive" class="mail-page__status">{{ statusLabel }}</span>
-        <button type="button" class="mail-icon-button" aria-label="刷新邮箱" title="刷新" :disabled="loadingAccount || redeeming || (mailIsActive && foldersLoading)" @click="refreshMailbox">
-          <RefreshCw :size="18" :class="{ 'mail-spin': loadingAccount || foldersLoading }" aria-hidden="true" />
-        </button>
-      </div>
+      <div class="mail-page__identity"><span class="mail-page__eyebrow">AToMAN / MAIL</span><h1>电子邮件</h1><p>{{ mailAccount?.address || '你的日常往来，井然有序。' }}</p></div>
+      <div class="mail-page__actions"><span v-if="mailIsActive" class="mail-page__status"><span /> 已连接</span><button v-if="mailIsActive" class="mail-icon-button" aria-label="邮箱设置" @click="settingsOpen = true"><Settings :size="19" /></button><button class="mail-icon-button" aria-label="刷新邮箱" :disabled="loadingAccount" @click="refreshMailbox"><RefreshCw :size="18" :class="{ 'mail-spin': loadingAccount }" /></button></div>
     </header>
-
-    <div v-if="loadingAccount" class="mail-gate" role="status" aria-live="polite" data-testid="mail-loading">
-      <div class="mail-gate__icon"><Mail :size="28" :stroke-width="1.5" /></div>
-      <h2>正在加载邮箱状态</h2>
-      <p>正在确认你的 Atoman 账号是否已开通电子邮件。</p>
-    </div>
-
-    <div v-else-if="accountError" class="mail-gate" role="alert" data-testid="mail-account-error">
-      <div class="mail-gate__icon"><CircleAlert :size="28" :stroke-width="1.5" /></div>
-      <h2>暂时无法连接邮箱</h2>
-      <p>{{ accountError }}</p>
-      <PButton variant="secondary" size="sm" @click="refreshMailbox">重新加载</PButton>
-    </div>
-
-    <section v-else-if="!mailIsActive" class="mail-gate" aria-labelledby="mail-unavailable-title" data-testid="mail-not-active">
-      <div class="mail-gate__icon"><Mail :size="29" :stroke-width="1.5" /></div>
-      <p class="mail-gate__eyebrow">ATOMAN MAIL</p>
-      <h2 id="mail-unavailable-title">{{ statusTitle }}</h2>
-      <p>{{ statusDescription }}</p>
-      <div v-if="mailAccount?.address" class="mail-gate__reserved">
-        <span>预留地址</span>
-        <strong>{{ mailAccount.address }}</strong>
-        <small>当前不可收发邮件</small>
-      </div>
-      <form v-else-if="mailAccount?.status === 'not_invited' && isMailAdministrator" class="mail-gate__redeem" data-testid="mail-admin-self-form" @submit.prevent="reserveSelf">
-        <label for="mail-self-local">为自己选择邮箱名称</label>
-        <div class="mail-gate__address-fields">
-          <input id="mail-self-local" v-model.trim="chosenLocalPart" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="32" placeholder="例如 fazong.wu" aria-label="我的邮箱名称" :disabled="redeeming" />
-          <span>@atoman.org</span>
-        </div>
-        <PButton size="sm" type="submit" :disabled="!isChosenLocalValid || redeeming" :loading="redeeming">预留我的邮箱地址</PButton>
-        <p v-if="redeemError" class="mail-gate__form-error" role="alert">{{ redeemError }}</p>
-        <small>管理员无需邀请码。创建后会绑定到你的 Atoman 账号，不会随网站用户名变化；正式收发仍需等待服务开放。</small>
+    <div v-if="loadingAccount && !mailAccount" class="mail-gate"><RefreshCw class="mail-spin" :size="24" /><p>正在连接邮箱…</p></div>
+    <div v-else-if="!mailIsActive" class="mail-gate" data-testid="mail-not-active">
+      <div class="mail-gate__icon"><Mail :size="30" :stroke-width="1.4" /></div><span class="mail-gate__eyebrow">{{ statusLabel }}</span><h2>{{ statusTitle }}</h2><p>{{ statusDescription }}</p>
+      <p v-if="accountError" role="alert" class="mail-error">{{ accountError }}</p>
+      <form v-if="mailAccount?.status === 'not_invited' || mailAccount?.status === 'not_ready'" class="mail-gate__redeem" :data-testid="isMailAdministrator ? 'mail-admin-reserve-form' : 'mail-invite-redeem-form'" @submit.prevent="claimAddress">
+        <label v-if="!isMailAdministrator" for="mail-invitation">邀请码</label><input v-if="!isMailAdministrator" id="mail-invitation" v-model="invitation" autocomplete="off" placeholder="输入你的邀请码" required />
+        <label for="mail-local-name">邮箱名称</label><div class="mail-gate__address-fields"><input id="mail-local-name" v-model="chosenLocalPart" autocapitalize="off" autocomplete="off" placeholder="你的邮箱名称" minlength="3" maxlength="32" required /><span>@atoman.org</span></div>
+        <p v-if="redeemError" class="mail-error" role="alert">{{ redeemError }}</p><PButton type="submit" :disabled="redeeming || !isChosenLocalValid || (!isMailAdministrator && !invitation.trim())">{{ redeeming ? '正在开通…' : '开通邮箱' }}</PButton>
       </form>
-      <form v-else-if="mailAccount?.status === 'not_invited'" class="mail-gate__redeem" data-testid="mail-invite-redeem-form" @submit.prevent="redeemInvite">
-        <label for="mail-invitation">邮箱邀请码</label>
-        <input id="mail-invitation" v-model.trim="invitation" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="100" placeholder="输入收到的邀请码" :disabled="redeeming" />
-        <label for="mail-chosen-local">自行选择邮箱名称</label>
-        <div class="mail-gate__address-fields">
-          <input id="mail-chosen-local" v-model.trim="chosenLocalPart" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="32" placeholder="例如 your.name" aria-label="邮箱名称" :disabled="redeeming" />
-          <span>@atoman.org</span>
-        </div>
-        <PButton size="sm" type="submit" :disabled="invitation.length !== 43 || !isChosenLocalValid || redeeming" :loading="redeeming">领取邮箱地址</PButton>
-        <p v-if="redeemError" class="mail-gate__form-error" role="alert">{{ redeemError }}</p>
-        <small>邮箱名与你的登录账号绑定，但由你自行填写，不必与用户名相同。领取仅预留地址，不能立即收发邮件。</small>
-      </form>
-      <p class="mail-gate__footnote"><ShieldCheck :size="15" aria-hidden="true" /> 与 Atoman 现有账号绑定，无需单独注册</p>
-    </section>
-
-    <section v-else class="mail-workspace" aria-label="Atoman 邮箱" data-testid="mail-active-workspace">
-      <aside class="mail-workspace__folders" :class="{ 'mail-mobile-visible': mobilePane === 'folders' }" aria-label="邮箱文件夹" data-testid="mail-folder-pane">
-        <div class="mail-workspace__folders-header">
-          <span class="mail-workspace__section-label">邮箱</span>
-          <button type="button" class="mail-workspace__new" disabled title="写邮件功能尚未开放"><Pencil :size="16" aria-hidden="true" /> 写邮件</button>
-        </div>
-        <div class="mail-workspace__folder-title">文件夹</div>
-        <div v-if="foldersLoading" class="mail-workspace__subtle" role="status">正在获取文件夹…</div>
-        <div v-else-if="foldersError" class="mail-workspace__inline-error" role="alert">
-          {{ foldersError }}
-          <button type="button" @click="loadFolders">重试</button>
-        </div>
-        <nav v-else class="mail-workspace__folder-list" aria-label="邮件文件夹列表">
-          <button
-            v-for="folder in folders"
-            :key="folder.id"
-            type="button"
-            class="mail-workspace__folder"
-            :class="{ 'is-active': currentFolderId === folder.id }"
-            :aria-current="currentFolderId === folder.id ? 'page' : undefined"
-            @click="selectFolder(folder.id)"
-          >
-            <component :is="folderIcon(folder.role)" :size="17" :stroke-width="1.8" aria-hidden="true" />
-            <span class="mail-workspace__folder-name">{{ folderLabel(folder) }}</span>
-            <span v-if="folder.unreadEmails > 0" class="mail-workspace__folder-count">{{ folder.unreadEmails > 999 ? '999+' : folder.unreadEmails }}</span>
-          </button>
-          <p v-if="folders.length === 0" class="mail-workspace__subtle">尚未建立邮件文件夹</p>
-        </nav>
-        <div class="mail-workspace__sidebar-foot">Atoman Mail · 预览版本</div>
-      </aside>
-
-      <section class="mail-workspace__list" :class="{ 'mail-mobile-visible': mobilePane === 'list' }" aria-label="邮件列表" data-testid="mail-list-pane">
-        <div class="mail-workspace__list-header">
-          <button type="button" class="mail-workspace__mobile-back mail-icon-button" aria-label="返回文件夹" @click="mobilePane = 'folders'"><ChevronLeft :size="21" /></button>
-          <div class="mail-workspace__heading">
-            <h2>{{ currentFolder ? folderLabel(currentFolder) : '邮件' }}</h2>
-            <small v-if="currentFolder">{{ currentFolder.totalEmails }} 封邮件</small>
+      <PButton v-else-if="mailAccount?.status === 'reserved'" :disabled="loadingAccount" @click="provisionAccount">{{ loadingAccount ? '正在开通…' : '完成开通' }}</PButton><PButton v-else variant="secondary" @click="refreshMailbox">重新检查</PButton>
+    </div>
+    <template v-else>
+      <div v-if="notice || actionUndo" class="mail-workspace__notice" role="status"><span>{{ notice }}</span><button v-if="actionUndo" :disabled="actionBusy" @click="undoAction">撤销操作</button><button class="mail-icon-button" aria-label="关闭提示" @click="notice = ''; actionUndo = ''"><X :size="15" /></button></div>
+      <div v-for="item in pendingSends" :key="item.id" class="mail-workspace__queue" role="status"><span>{{ queueLabel(item) }}</span><button v-if="item.status === 'queued'" :disabled="cancelBusy === item.id || remainingSeconds(item) === 0" @click="undoSend(item)">{{ cancelBusy === item.id ? '正在撤销…' : '撤销发送' }}<span v-if="remainingSeconds(item) > 0"> · {{ remainingSeconds(item) }}s</span></button><button v-if="item.status === 'uncertain'" :disabled="cancelBusy === item.id" @click="checkSend(item)">检查发送结果</button><button v-if="!['dispatching', 'sending', 'queued'].includes(item.status)" class="mail-icon-button" aria-label="关闭发送状态" @click="pendingSends = pendingSends.filter(row => row.id !== item.id)"><X :size="15" /></button></div>
+      <div class="mail-workspace" data-testid="mail-active-workspace">
+        <aside class="mail-workspace__folders" :class="{ 'mail-mobile-visible': mobilePane === 'folders' }" data-testid="mail-folder-pane">
+          <div class="mail-workspace__folders-header"><span>邮箱</span><button class="mail-workspace__new" @click="newMessage"><Pencil :size="16" /> 写邮件</button></div>
+          <p v-if="foldersError" class="mail-error" role="alert">{{ foldersError }}</p><p v-if="foldersLoading && !folders.length" class="mail-workspace__list-state">正在加载文件夹…</p>
+          <nav aria-label="邮件文件夹"><button v-for="folder in folders" :key="folder.id" class="mail-workspace__folder" :class="{ 'is-active': currentFolderId === folder.id }" :aria-current="currentFolderId === folder.id ? 'page' : undefined" @click="selectFolder(folder.id)"><component :is="folderIcon(folder.role)" :size="17" /><span>{{ folderLabel(folder) }}</span><small v-if="folder.unreadEmails">{{ folder.unreadEmails > 999 ? '999+' : folder.unreadEmails }}</small></button></nav>
+          <div class="mail-workspace__folder-tools"><button @click="folderDialog = true"><Plus :size="14" /> 新建文件夹</button><button v-if="currentFolder && !currentFolder.role" @click="deleteFolderDialog = true"><Trash2 :size="14" /> 删除当前文件夹</button></div>
+          <p class="mail-workspace__folder-note">回收站和垃圾邮件保留 30 天</p>
+        </aside>
+        <section class="mail-workspace__list" :class="{ 'mail-mobile-visible': mobilePane === 'list' }" data-testid="mail-list-pane">
+          <header class="mail-workspace__list-header"><div><button class="mail-icon-button mail-workspace__mobile-back" aria-label="显示文件夹" @click="mobilePane = 'folders'"><ChevronLeft :size="18" /></button><h2>{{ currentFolder ? folderLabel(currentFolder) : '邮件' }}</h2><small>{{ isDraftFolder ? drafts.length : totalMessages }} 封</small></div><button class="mail-icon-button" aria-label="刷新邮件列表" :disabled="loadingMessages" @click="loadMessages(false, true)"><RefreshCw :size="15" :class="{ 'mail-spin': loadingMessages }" /></button></header>
+          <form v-if="!isDraftFolder" class="mail-workspace__search" role="search" @submit.prevent="runSearch"><Search :size="16" /><input v-model="searchText" aria-label="搜索邮件" placeholder="搜索发件人、主题或正文" maxlength="512" /><button type="submit" aria-label="执行搜索"><ChevronRight :size="16" /></button></form>
+          <div v-if="!isDraftFolder" class="mail-workspace__list-options"><label><input type="checkbox" :checked="allSelected" aria-label="选择当前列表全部邮件" @change="selectAll" /><span>{{ selection.size ? `已选 ${selection.size} 封` : '选择' }}</span></label><button class="mail-workspace__view-mode" @click="conversationMode = !conversationMode">{{ conversationMode ? '会话视图' : '单封视图' }}<ChevronsUpDown :size="13" /></button></div>
+          <div v-if="selection.size" class="mail-workspace__bulk" aria-label="批量操作"><button aria-label="归档所选邮件" :disabled="actionBusy" @click="performAction('archive')"><Archive :size="16" /></button><button aria-label="将所选邮件标为已读" :disabled="actionBusy" @click="performAction('read')"><MailOpen :size="16" /></button><button aria-label="将所选邮件标为未读" :disabled="actionBusy" @click="performAction('unread')"><Mail :size="16" /></button><button aria-label="删除所选邮件" :disabled="actionBusy" @click="performAction('trash')"><Trash2 :size="16" /></button><select aria-label="移动所选邮件" :disabled="actionBusy" @change="moveSelected"><option value="">移动到…</option><option v-for="folder in folders.filter(row => row.id !== currentFolderId)" :key="folder.id" :value="folder.id">{{ folderLabel(folder) }}</option></select></div>
+          <div class="mail-workspace__messages">
+            <div v-if="messagesError" class="mail-workspace__list-state" role="alert"><CircleAlert :size="22" /><p>{{ messagesError }}</p><button @click="loadMessages()">重试</button></div>
+            <div v-else-if="loadingMessages && !messages.length && !drafts.length" class="mail-workspace__list-state"><RefreshCw class="mail-spin" :size="22" /><p>正在加载…</p></div>
+            <template v-else-if="isDraftFolder"><button v-for="draft in drafts" :key="draft.id" class="mail-workspace__message" @click="editDraft(draft)"><span class="mail-workspace__message-first"><span class="mail-workspace__message-subject">{{ draft.subject || '未命名草稿' }}</span><small>{{ mailTime(draft.updated_at || '') }}</small></span><span class="mail-workspace__message-preview">{{ draft.text || '继续编辑' }}</span></button><div v-if="!drafts.length" class="mail-workspace__list-state"><FileText :size="26" /><p>这里还没有草稿</p></div></template>
+            <template v-else><div v-for="group in conversations" :key="group.id" class="mail-workspace__message-row" :class="{ 'is-selected': selectedGroupId === group.id, 'is-unread': group.messages.some(row => row.isRead === false) }"><label class="mail-workspace__row-check"><input type="checkbox" :checked="group.messages.every(row => selection.has(row.id))" :aria-label="`选择：${group.latest.subject || '无主题'}`" @change="toggleGroup(group)" /></label><button class="mail-workspace__message" :data-testid="`mail-message-${group.latest.id}`" @click="openConversation(group)"><span class="mail-workspace__sender">{{ addressText(group.latest.from || []) || '邮件' }}<span v-if="group.messages.length > 1"> · {{ group.messages.length }}</span><Star v-if="group.latest.isFlagged" :size="12" fill="currentColor" /></span><span class="mail-workspace__message-first"><span class="mail-workspace__message-subject">{{ group.latest.subject || '无主题' }}</span><small>{{ mailTime(group.latest.receivedAt) }}</small></span><span class="mail-workspace__message-preview">{{ group.latest.preview || '没有摘要' }}</span><span v-if="group.latest.hasAttachment" class="mail-workspace__attachment"><Paperclip :size="12" /> 附件</span></button></div><div v-if="!conversations.length" class="mail-workspace__list-state"><Inbox :size="28" /><p>{{ committedSearch ? '没有找到匹配的邮件' : '此文件夹暂无邮件' }}</p></div><button v-if="hasMore" class="mail-workspace__load-more" :disabled="loadingMessages" @click="loadMessages(true)">{{ loadingMessages ? '加载中…' : '加载更多' }}</button></template>
           </div>
-          <button type="button" class="mail-icon-button" aria-label="刷新邮件列表" :disabled="!currentFolderId || loadingMessages" @click="reloadMessages"><RefreshCw :size="18" :class="{ 'mail-spin': loadingMessages }" /></button>
-        </div>
-        <label class="mail-workspace__search">
-          <Search :size="17" aria-hidden="true" />
-          <input v-model="localSearch" type="search" aria-label="筛选已加载的邮件" placeholder="筛选当前列表" :disabled="!currentFolderId || loadingMessages" />
-        </label>
-        <p class="mail-workspace__search-note">仅筛选当前加载的前 50 封邮件</p>
-        <div class="mail-workspace__message-scroll" :aria-busy="loadingMessages" role="region" aria-label="邮件条目">
-          <div v-if="loadingMessages" class="mail-workspace__list-state" role="status">正在加载邮件…</div>
-          <div v-else-if="messagesError" class="mail-workspace__list-state" role="alert">
-            <p>{{ messagesError }}</p>
-            <PButton size="sm" variant="secondary" @click="reloadMessages">重试</PButton>
-          </div>
-          <div v-else-if="!currentFolderId" class="mail-workspace__list-state">请先选择一个文件夹</div>
-          <div v-else-if="visibleMessages.length === 0" class="mail-workspace__list-state">
-            <MailOpen :size="24" :stroke-width="1.5" aria-hidden="true" />
-            {{ localSearch ? '当前列表没有匹配的邮件' : '这里还没有邮件' }}
-          </div>
-          <button
-            v-for="message in !loadingMessages && !messagesError ? visibleMessages : []"
-            :key="message.id"
-            type="button"
-            class="mail-workspace__message"
-            :class="{ 'is-selected': selectedMessageId === message.id }"
-            :aria-pressed="selectedMessageId === message.id"
-            :data-testid="`mail-message-${message.id}`"
-            @click="openMessage(message.id)"
-          >
-            <span class="mail-workspace__message-first">
-              <span class="mail-workspace__message-subject">{{ message.subject || '（无主题）' }}</span>
-              <small>{{ messageTime(message.receivedAt) }}</small>
-            </span>
-            <span class="mail-workspace__message-preview">{{ message.preview || '暂无预览内容' }}</span>
-            <span v-if="message.hasAttachment" class="mail-workspace__attachment"><Paperclip :size="13" aria-hidden="true" /> 含附件</span>
-          </button>
-        </div>
-      </section>
-
-      <section class="mail-workspace__reader" :class="{ 'mail-mobile-visible': mobilePane === 'reader' }" aria-label="邮件预览" data-testid="mail-reader-pane">
-        <template v-if="selectedMessage">
-          <div class="mail-workspace__reader-head">
-            <button type="button" class="mail-icon-button mail-workspace__mobile-back" aria-label="返回邮件列表" @click="mobilePane = 'list'"><ChevronLeft :size="21" /></button>
-            <span>邮件内容</span>
-            <span class="mail-workspace__read-tag">只读</span>
-          </div>
-          <article class="mail-workspace__reader-body" data-testid="mail-selected-preview" :aria-busy="loadingDetail">
-            <h2>{{ selectedMessage.subject || '（无主题）' }}</h2>
-            <div v-if="loadingDetail" class="mail-workspace__detail-status" role="status">正在读取邮件正文…</div>
-            <div v-else-if="detailError" class="mail-workspace__detail-status" role="alert">
-              <p>{{ detailError }}</p>
-              <PButton size="sm" variant="secondary" @click="openMessage(selectedMessage.id)">重试</PButton>
-            </div>
-            <template v-else-if="currentDetail">
-              <div class="mail-workspace__meta">
-                <div><span>发件人</span><strong>{{ formatMailAddresses(currentDetail.from) }}</strong></div>
-                <div><span>收件人</span><strong>{{ formatMailAddresses(currentDetail.to) }}</strong></div>
-                <div v-if="currentDetail.cc.length"><span>抄送</span><strong>{{ formatMailAddresses(currentDetail.cc) }}</strong></div>
-                <div><span>接收时间</span><strong>{{ fullMessageTime(currentDetail.receivedAt) }}</strong></div>
-                <div v-if="currentDetail.attachments.length"><span>附件</span><strong>{{ currentDetail.attachments.length }} 个</strong></div>
-              </div>
-              <div class="mail-workspace__body-preview">
-                <p class="mail-workspace__body-label">纯文本正文</p>
-                <p v-if="currentDetail.hasPlainText" data-testid="mail-plain-text">{{ currentDetail.plainText || '（空正文）' }}</p>
-                <p v-else>这封邮件没有可安全显示的纯文本内容。HTML 正文暂不直接渲染。</p>
-                <p v-if="currentDetail.bodyTruncated" class="mail-workspace__reader-note">正文过长，当前仅显示前 64 KiB。</p>
-              </div>
-              <div v-if="currentDetail.attachments.length" class="mail-workspace__attachments">
-                <p class="mail-workspace__body-label">附件清单</p>
-                <div v-for="(attachment, index) in currentDetail.attachments" :key="index" class="mail-workspace__attachment-row">
-                  <Paperclip :size="15" aria-hidden="true" />
-                  <span>{{ attachment.name || '未命名附件' }} · {{ readableSize(attachment.size) }}</span>
+        </section>
+        <article class="mail-workspace__reader" :class="{ 'mail-mobile-visible': mobilePane === 'reader' }" data-testid="mail-reader-pane">
+          <template v-if="readerMessages.length"><header class="mail-workspace__reader-head"><button class="mail-icon-button mail-workspace__mobile-back" aria-label="返回邮件列表" @click="mobilePane = 'list'"><ChevronLeft :size="18" /></button><div class="mail-workspace__reader-tools"><button class="mail-icon-button" aria-label="归档会话" :disabled="actionBusy" @click="performAction('archive', readerMessages.map(row => row.id))"><Archive :size="17" /></button><button v-if="currentFolder?.role === 'trash' || currentFolder?.role === 'junk'" class="mail-icon-button" aria-label="恢复到收件箱" :disabled="actionBusy" @click="performAction('restore', readerMessages.map(row => row.id))"><Undo2 :size="17" /></button><button class="mail-icon-button" aria-label="移到垃圾邮件" :disabled="actionBusy" @click="performAction('junk', readerMessages.map(row => row.id))"><ShieldAlert :size="17" /></button><button class="mail-icon-button" aria-label="删除会话" :disabled="actionBusy" @click="performAction('trash', readerMessages.map(row => row.id))"><Trash2 :size="17" /></button></div><span class="mail-workspace__read-tag">{{ readerMessages.length > 1 ? `${readerMessages.length} 封邮件` : '邮件' }}</span></header>
+            <div class="mail-workspace__reader-body" data-testid="mail-selected-preview"><h2>{{ readerMessages[readerMessages.length - 1]?.subject || '无主题' }}</h2><p v-if="threadError" class="mail-error" role="alert">{{ threadError }}</p>
+              <section v-for="message in readerMessages" :key="message.id" class="mail-workspace__thread-card"><button class="mail-workspace__thread-summary" :aria-expanded="expanded.has(message.id)" @click="toggleExpanded(message)"><span><strong>{{ addressText(message.from || []) || '邮件' }}</strong><small v-if="!expanded.has(message.id)">{{ message.preview }}</small></span><time>{{ mailTime(message.receivedAt, true) }}</time><ChevronDown v-if="expanded.has(message.id)" :size="16" /><ChevronRight v-else :size="16" /></button>
+                <div v-if="expanded.has(message.id)" class="mail-workspace__thread-content"><div v-if="detailLoading.has(message.id)" class="mail-workspace__detail-status"><RefreshCw class="mail-spin" :size="18" /> 正在打开邮件…</div><div v-else-if="detailErrors[message.id]" class="mail-workspace__detail-status" role="alert"><p>{{ detailErrors[message.id] }}</p><button @click="loadDetail(message)">重新打开</button></div>
+                  <template v-else-if="details[message.id]"><dl class="mail-workspace__address-meta"><div><dt>发件人</dt><dd>{{ addressText(details[message.id]!.from) }}</dd></div><div><dt>收件人</dt><dd>{{ addressText(details[message.id]!.to) }}</dd></div><div v-if="details[message.id]!.cc.length"><dt>抄送</dt><dd>{{ addressText(details[message.id]!.cc) }}</dd></div></dl><div v-if="details[message.id]!.html" class="mail-workspace__format-choice"><button @click="htmlShown[message.id] = !htmlShown[message.id]">{{ htmlShown[message.id] ? '显示纯文本' : '显示排版' }}</button><span v-if="htmlShown[message.id]">外部图片已隐藏</span></div><iframe v-if="htmlShown[message.id] && details[message.id]!.html" class="mail-workspace__html-frame" title="邮件正文" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" :srcdoc="mailFrameDocument(details[message.id]!.html || '')" /><p v-else class="mail-workspace__plain-body" data-testid="mail-plain-text">{{ details[message.id]!.plainText || (details[message.id]!.html ? '此邮件只有排版正文，请选择「显示排版」。' : '这封邮件没有正文。') }}</p><p v-if="details[message.id]!.bodyTruncated" class="mail-workspace__body-warning">正文较长，当前显示部分内容。<button @click="downloadSource(details[message.id]!)">下载完整邮件</button></p>
+                    <div v-if="details[message.id]!.attachments.length" class="mail-workspace__attachments"><button v-for="(attachment, index) in details[message.id]!.attachments" :key="`${attachment.partId || index}-${attachment.name}`" class="mail-workspace__attachment-row" @click="downloadAttachment(message, attachment)"><Paperclip :size="14" /><span>{{ attachment.name || '附件' }} · {{ fileSize(attachment.size) }}</span><Download :size="14" /></button></div>
+                    <div class="mail-workspace__reply-actions"><button @click="replyTo(details[message.id]!, false)"><Reply :size="15" /> 回复</button><button @click="replyTo(details[message.id]!, true)"><ReplyAll :size="15" /> 全部回复</button><button :disabled="actionBusy" @click="forwardMessage(details[message.id]!)"><Forward :size="15" /> 转发</button><button :aria-label="message.isFlagged ? '取消星标' : '添加星标'" :disabled="actionBusy" @click="performAction(message.isFlagged ? 'unflag' : 'flag', [message.id])"><Star :size="15" :fill="message.isFlagged ? 'currentColor' : 'none'" /></button><button v-if="details[message.id]!.from[0]?.email !== mailAccount?.address" title="拦截发件人并移到垃圾邮件" :disabled="actionBusy" @click="blockSender(details[message.id]!)"><ShieldAlert :size="15" /> 拦截</button></div>
+                  </template>
                 </div>
-              </div>
-              <p class="mail-workspace__reader-note"><Info :size="16" aria-hidden="true" /> 仅纯文本安全呈现；HTML、远程图片与附件下载尚未开放。只有实际展开正文后才标为已读。</p>
-              <p v-if="seenError" class="mail-workspace__reader-note" role="status">{{ seenError }}</p>
-            </template>
-          </article>
-        </template>
-        <div v-else class="mail-workspace__reader-empty">
-          <MailOpen :size="32" :stroke-width="1.4" aria-hidden="true" />
-          <h2>选择一封邮件</h2>
-          <p>从左侧邮件列表中选择，即可查看现有摘要信息。</p>
-        </div>
-      </section>
-    </section>
-  </div>
+              </section>
+            </div>
+          </template><div v-else class="mail-workspace__reader-empty"><MailOpen :size="43" :stroke-width="1.15" /><h2>选择一封邮件</h2><p>在这里阅读和回复你的日常往来。</p><button class="mail-workspace__mobile-back" @click="mobilePane = 'list'">返回邮件列表</button></div>
+        </article>
+      </div>
+      <MailComposer v-if="composeDraft" :key="composeDraft.id" :address="mailAccount?.address || ''" :draft="composeDraft" :warning="composeWarning" @close="composeDraft = null" @saved="onDraftSaved" @queued="onQueued" />
+      <MailSettings v-if="settingsOpen" :address="mailAccount?.address || ''" :folders="folders" @close="settingsOpen = false" />
+      <PModal :show="folderDialog" title="新建文件夹" size="sm" @close="folderDialog = false"><form class="mail-workspace__folder-form" @submit.prevent="addFolder"><label for="new-mail-folder">文件夹名称</label><input id="new-mail-folder" v-model="newFolderName" maxlength="100" required autofocus /><p v-if="folderError" class="mail-error" role="alert">{{ folderError }}</p><PButton type="submit" :disabled="folderWorking || !newFolderName.trim()">{{ folderWorking ? '创建中…' : '创建' }}</PButton></form></PModal>
+      <PModal :show="deleteFolderDialog" title="删除文件夹" size="sm" @close="deleteFolderDialog = false"><p>删除「{{ currentFolder?.name }}」？只有空文件夹可以删除。</p><p v-if="folderError" class="mail-error" role="alert">{{ folderError }}</p><template #footer><PButton variant="secondary" @click="deleteFolderDialog = false">取消</PButton><PButton :disabled="folderWorking" @click="removeFolder">删除文件夹</PButton></template></PModal>
+    </template>
+  </section>
 </template>
-
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { Archive, ChevronLeft, CircleAlert, File, FileText, Inbox, Info, Mail, MailOpen, Paperclip, Pencil, RefreshCw, Search, Send, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-vue-next'
+import { Archive, ChevronLeft, ChevronRight, ChevronDown, ChevronsUpDown, CircleAlert, Download, FileText, Folder, Forward, Inbox, Mail, MailOpen, Paperclip, Pencil, Plus, RefreshCw, Reply, ReplyAll, Search, Send, Settings, ShieldAlert, Star, Trash2, Undo2, X } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
-import { ApiErrorResponseError } from '@/api/client'
-import { useAuthStore } from '@/stores/auth'
-import { fetchMailFolders, fetchMailSummaries, fetchMailDetail, markMailRead, fetchMyMailAccount, redeemMailInvitation, reserveAdminMailAddress, type MailAccountInfo, type MailFolder, type MailSummary, type MailDetail, type MailAddress } from '@/api/mail'
-
-type MobilePane = 'folders' | 'list' | 'reader'
-const authStore = useAuthStore()
-const isMailAdministrator = computed(() => authStore.user?.role === 'admin' || authStore.user?.role === 'owner')
-const mobilePane = ref<MobilePane>('list')
-const mailAccount = ref<MailAccountInfo | null>(null)
-const loadingAccount = ref(true)
-const accountError = ref('')
-const folders = ref<MailFolder[]>([])
-const foldersLoading = ref(false)
-const foldersError = ref('')
-const currentFolderId = ref('')
-const messages = ref<MailSummary[]>([])
-const loadingMessages = ref(false)
-const messagesError = ref('')
-const selectedMessageId = ref('')
-const currentDetail = ref<MailDetail | null>(null)
-const loadingDetail = ref(false)
-const detailError = ref('')
-const seenError = ref('')
-let detailGeneration = 0
-const localSearch = ref('')
-const invitation = ref('')
-const chosenLocalPart = ref('')
-const isChosenLocalValid = computed(() => {
-  const local = chosenLocalPart.value.trim().toLowerCase()
-  return /^[a-z0-9][a-z0-9._-]{1,30}[a-z0-9]$/.test(local) && !local.includes('..')
-})
-const redeeming = ref(false)
-const redeemError = ref('')
-let accountGeneration = 0
-let folderGeneration = 0
-let messageGeneration = 0
-let disposed = false
-
-const mailIsActive = computed(() => mailAccount.value?.status === 'active' && mailAccount.value.available === true)
-const statusLabel = computed(() => {
-  switch (mailAccount.value?.status) {
-    case 'reserved': return '地址已预留'
-    case 'provisioning': return '正在准备邮箱'
-    case 'suspended': return '邮箱已暂停'
-    case 'failed': return '开通未完成'
-    default: return '未开通'
-  }
-})
-const statusTitle = computed(() => {
-  switch (mailAccount.value?.status) {
-    case 'reserved': return '邮箱地址已预留'
-    case 'provisioning': return '邮箱正在准备中'
-    case 'suspended': return '邮箱服务已暂停'
-    case 'failed': return '邮箱尚未完成开通'
-    case 'not_invited': return isMailAdministrator.value ? '设置你的专属邮箱地址' : '邮箱暂未向你的账号开放'
-    default: return '邮箱服务尚未开放'
-  }
-})
-const statusDescription = computed(() => {
-  switch (mailAccount.value?.status) {
-    case 'reserved': return '你的专属地址已保存。邮件基础设施准备就绪后才能开始收发邮件。'
-    case 'provisioning': return '账户开通需要完成服务检查。在此期间还不能使用邮箱。'
-    case 'suspended': return '当前地址的邮件访问已暂停。如需协助，请联系管理员。'
-    case 'failed': return '邮箱开通过程尚未完成，请联系管理员核查。'
-    case 'not_invited': return isMailAdministrator.value ? '管理员可以直接选择邮箱名称，无需等待邀请码。' : 'Atoman 邮箱采用邀请制。收到邀请码后，可以自主选择邮箱名称。'
-    default: return '邮件服务仍在配置中。当前不能发送、接收或查看邮件。'
-  }
-})
-
-const currentFolder = computed(() => folders.value.find(item => item.id === currentFolderId.value) || null)
-const selectedMessage = computed(() => messages.value.find(item => item.id === selectedMessageId.value) || null)
-const visibleMessages = computed(() => {
-  const term = localSearch.value.trim().toLocaleLowerCase()
-  return term ? messages.value.filter(message => `${message.subject} ${message.preview}`.toLocaleLowerCase().includes(term)) : messages.value
-})
-
-function folderIcon(role: string | null) {
-  switch (role) {
-    case 'inbox': return Inbox
-    case 'sent': return Send
-    case 'drafts': return FileText
-    case 'trash': return Trash2
-    case 'junk': return ShieldAlert
-    case 'archive': return Archive
-    default: return File
-  }
-}
-function folderLabel(folder: MailFolder) {
-  switch (folder.role) {
-    case 'inbox': return '收件箱'
-    case 'sent': return '已发送'
-    case 'drafts': return '草稿箱'
-    case 'trash': return '已删除'
-    case 'junk': return '垃圾邮件'
-    case 'archive': return '归档'
-    default: return folder.name
-  }
-}
-function formatMessageTime(value: string, full = false) {
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return '时间未知'
-  return new Intl.DateTimeFormat('zh-CN', full ? { dateStyle: 'medium', timeStyle: 'short' } : { month: '2-digit', day: '2-digit' }).format(parsed)
-}
-const messageTime = (value: string) => formatMessageTime(value)
-const fullMessageTime = (value: string) => formatMessageTime(value, true)
-const formatMailAddresses = (addresses: MailAddress[]) =>
-  addresses.length ? addresses.map(a => a.name ? `${a.name} <${a.email}>` : a.email).join(', ') : '未提供'
-const readableSize = (size: number) => `${(Math.max(0, size) / 1024).toFixed(1)} KiB`
-
-function resetDetail() {
-  ++detailGeneration
-  currentDetail.value = null
-  loadingDetail.value = false
-  detailError.value = ''
-  seenError.value = ''
-}
-
-
-function messageForError(error: unknown, fallback: string) {
-  if (error instanceof ApiErrorResponseError) {
-    if (error.status === 404 || error.status === 503) return '邮箱功能尚未就绪，请稍后重试。'
-    if (error.status === 401) return '登录状态已失效，请重新登录后访问邮箱。'
-    if (error.status === 403) return '当前账号没有此邮箱的访问权限。'
-  }
-  return fallback
-}
-
-async function loadMessages(folderId: string) {
-  const generation = ++messageGeneration
-  messages.value = []
-  selectedMessageId.value = ''
-  resetDetail()
-  localSearch.value = ''
-  messagesError.value = ''
-  if (!folderId || !mailIsActive.value) { loadingMessages.value = false; return }
-  loadingMessages.value = true
-  try {
-    const result = await fetchMailSummaries(folderId, 50)
-    if (disposed || generation !== messageGeneration || currentFolderId.value !== folderId) return
-    messages.value = Array.isArray(result) ? result : []
-  } catch (error) {
-    if (disposed || generation !== messageGeneration || currentFolderId.value !== folderId) return
-    messagesError.value = messageForError(error, '无法加载邮件列表，请重试。')
-  } finally {
-    if (!disposed && generation === messageGeneration) loadingMessages.value = false
-  }
-}
-
-async function loadFolders() {
-  const generation = ++folderGeneration
-  ++messageGeneration
-  foldersLoading.value = true
-  foldersError.value = ''
-  folders.value = []
-  currentFolderId.value = ''
-  messages.value = []
-  selectedMessageId.value = ''
-  resetDetail()
-  localSearch.value = ''
-  loadingMessages.value = false
-  if (!mailIsActive.value) { foldersLoading.value = false; return }
-  try {
-    const result = await fetchMailFolders()
-    if (disposed || generation !== folderGeneration || !mailIsActive.value) return
-    folders.value = Array.isArray(result) ? result : []
-    const preferred = folders.value.find(folder => folder.role === 'inbox') || folders.value[0]
-    if (preferred) {
-      currentFolderId.value = preferred.id
-      // 文件夹列表应立即可交互，不必等待首个邮件请求完成。
-      void loadMessages(preferred.id)
-    }
-  } catch (error) {
-    if (disposed || generation !== folderGeneration) return
-    foldersError.value = messageForError(error, '无法读取文件夹，请重试。')
-  } finally {
-    if (!disposed && generation === folderGeneration) foldersLoading.value = false
-  }
-}
-
-async function refreshMailbox() {
-  const generation = ++accountGeneration
-  ++folderGeneration
-  ++messageGeneration
-  loadingAccount.value = true
-  accountError.value = ''
-  folders.value = []
-  currentFolderId.value = ''
-  messages.value = []
-  selectedMessageId.value = ''
-  resetDetail()
-  try {
-    const next = await fetchMyMailAccount()
-    if (disposed || generation !== accountGeneration) return
-    mailAccount.value = next
-    if (mailIsActive.value) await loadFolders()
-  } catch (error) {
-    if (disposed || generation !== accountGeneration) return
-    mailAccount.value = null
-    accountError.value = messageForError(error, '无法确认邮箱状态，请检查网络后重试。')
-  } finally {
-    if (!disposed && generation === accountGeneration) loadingAccount.value = false
-  }
-}
-
-function selectFolder(folderId: string) {
-  if (!folders.value.some(folder => folder.id === folderId)) return
-  if (currentFolderId.value !== folderId) {
-    currentFolderId.value = folderId
-    void loadMessages(folderId)
-  }
-  mobilePane.value = 'list'
-}
-function reloadMessages() { if (currentFolderId.value) void loadMessages(currentFolderId.value) }
-async function openMessage(messageId: string) {
-  if (!messages.value.some(message => message.id === messageId) || !currentFolderId.value) return
-  resetDetail()
-  const generation = detailGeneration
-  const folderID = currentFolderId.value
-  selectedMessageId.value = messageId
-  mobilePane.value = 'reader'
-  loadingDetail.value = true
-  try {
-    const detail = await fetchMailDetail(folderID, messageId)
-    if (disposed || generation !== detailGeneration || currentFolderId.value !== folderID || selectedMessageId.value !== messageId) return
-    currentDetail.value = detail
-    loadingDetail.value = false
-    await nextTick()
-    // On narrow screens, a quick Back action must not mark a message as read.
-    const mobile = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 950px)').matches
-    if (disposed || generation !== detailGeneration || (mobile && mobilePane.value !== 'reader')) return
-    if (!detail.isRead) {
-      try {
-        await markMailRead(folderID, messageId)
-      } catch {
-        if (!disposed && generation === detailGeneration) seenError.value = '已显示正文，但更新已读状态失败。'
-      }
-    }
-  } catch (error) {
-    if (disposed || generation !== detailGeneration) return
-    loadingDetail.value = false
-    detailError.value = messageForError(error, '无法读取邮件正文，请重试。')
-  }
-}
-
-async function redeemInvite() {
-  const token = invitation.value.trim()
-  if (redeeming.value || token.length !== 43 || !isChosenLocalValid.value || mailAccount.value?.status !== 'not_invited') return
-  redeeming.value = true
-  redeemError.value = ''
-  try {
-    const result = await redeemMailInvitation(token, chosenLocalPart.value.trim().toLowerCase())
-    if (disposed) return
-    mailAccount.value = result
-    invitation.value = ''
-    chosenLocalPart.value = ''
-  } catch (error) {
-    if (!disposed) redeemError.value = messageForError(error, '邀请码无效或已失效，请检查后重试。')
-  } finally {
-    if (!disposed) redeeming.value = false
-  }
-}
-
-async function reserveSelf() {
-  if (redeeming.value || !isMailAdministrator.value || !isChosenLocalValid.value || mailAccount.value?.status !== 'not_invited') return
-  redeeming.value = true
-  redeemError.value = ''
-  try {
-    const result = await reserveAdminMailAddress(chosenLocalPart.value.trim().toLowerCase())
-    if (disposed) return
-    mailAccount.value = result
-    chosenLocalPart.value = ''
-  } catch {
-    if (!disposed) redeemError.value = '地址可能已被使用或不可预留。请换一个名称后再试。'
-  } finally {
-    if (!disposed) redeeming.value = false
-  }
-}
-
-onMounted(() => { void refreshMailbox() })
-onBeforeUnmount(() => {
-  disposed = true
-  ++accountGeneration
-  ++folderGeneration
-  ++messageGeneration
-  resetDetail()
-  messages.value = []
-})
+import PModal from '@/components/ui/PModal.vue'
+import MailComposer from './MailComposer.vue'
+import MailSettings from './MailSettings.vue'
+import { addressText, fileSize, mailFrameDocument, mailTime } from './mail-helpers'
+import { useMailWorkspace } from './useMailWorkspace'
+const { mailAccount, loadingAccount, accountError, mailIsActive, isMailAdministrator, statusLabel, statusTitle, statusDescription, invitation, chosenLocalPart, isChosenLocalValid, redeeming, redeemError, claimAddress, folders, foldersLoading, foldersError, currentFolder, currentFolderId, folderLabel, mobilePane, messages, drafts, loadingMessages, messagesError, searchText, committedSearch, totalMessages, conversations, conversationMode, selection, selectedGroupId, allSelected, selectAll, toggleGroup, selectFolder, loadMessages, refreshMailbox, runSearch, hasMore, openConversation, readerMessages, expanded, details, detailErrors, detailLoading, htmlShown, threadError, toggleExpanded, loadDetail, newMessage, editDraft, composeDraft, composeWarning, settingsOpen, replyTo, forwardMessage, onDraftSaved, onQueued, pendingSends, remainingSeconds, queueLabel, undoSend, checkSend, provisionAccount, cancelBusy, notice, actionUndo, actionBusy, performAction, undoAction, moveSelected, downloadAttachment, downloadSource, blockSender, folderDialog, deleteFolderDialog, newFolderName, folderError, folderWorking, addFolder, removeFolder, isDraftFolder } = useMailWorkspace()
+const folderIcon = (role: string | null) => ({ inbox: Inbox, sent: Send, drafts: FileText, trash: Trash2, junk: ShieldAlert, archive: Archive }[role || ''] || Folder)
 </script>
-
-<style scoped src="./mail-workspace.css"></style>
+<style src="./mail-workspace.css"></style>

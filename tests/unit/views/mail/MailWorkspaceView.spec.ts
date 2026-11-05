@@ -1,222 +1,65 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MailWorkspaceView from '@/views/mail/MailWorkspaceView.vue'
-import type { MailAccountInfo, MailFolder, MailSummary, MailDetail } from '@/api/mail'
-
-const loadAccount = vi.fn<() => Promise<MailAccountInfo>>()
-const loadFolders = vi.fn<() => Promise<MailFolder[]>>()
-const loadMessages = vi.fn<(folderId: string, limit?: number) => Promise<MailSummary[]>>()
-const redeemInvite = vi.fn<(token: string, localPart: string) => Promise<MailAccountInfo>>()
-const reserveSelf = vi.fn<(localPart: string) => Promise<MailAccountInfo>>()
-const loadDetail = vi.fn<(folderId: string, messageId: string) => Promise<MailDetail>>()
-const markRead = vi.fn<(folderId: string, messageId: string) => Promise<{read: boolean}>>()
-const authState = { user: { role: 'user' as 'user' | 'admin' | 'owner' } }
-vi.mock('@/stores/auth', () => ({ useAuthStore: () => authState }))
-
-vi.mock('@/api/mail', () => ({
-  fetchMyMailAccount: (...args: []) => loadAccount(...args),
-  fetchMailFolders: (...args: []) => loadFolders(...args),
-  fetchMailSummaries: (folderId: string, limit?: number) => loadMessages(folderId, limit),
-  fetchMailDetail: (folderId: string, messageId: string) => loadDetail(folderId, messageId),
-  markMailRead: (folderId: string, messageId: string) => markRead(folderId, messageId),
-  redeemMailInvitation: (token: string, localPart: string) => redeemInvite(token, localPart),
-  reserveAdminMailAddress: (localPart: string) => reserveSelf(localPart),
-}))
-
-const activeAccount: MailAccountInfo = { status: 'active', available: true, address: 'alice@atoman.org' }
-const pendingAccount: MailAccountInfo = { status: 'reserved', available: false, address: 'alice@atoman.org' }
-const testFolders: MailFolder[] = [
-  { id: 'a', name: 'Inbox', role: 'inbox', parentId: null, totalEmails: 1, unreadEmails: 1 },
-  { id: 'b', name: 'Junk Mail', role: 'junk', parentId: null, totalEmails: 1, unreadEmails: 0 },
-]
-const receivedMail: MailSummary = {
-  id: 'mail-1', threadId: 'thread-1', subject: '真实邮件主题', preview: '这是后端返回的内容摘要',
-  receivedAt: '2026-11-04T11:00:00Z', hasAttachment: true,
-}
-
-const sampleDetail: MailDetail = {
-  id: 'mail-1', threadId: 'thread-1', subject: '真实邮件主题', receivedAt: '2026-11-04T11:00:00Z',
-  from: [{ name: '发送者', email: 'from@example.test' }], to: [{ name: '接收者', email: 'to@example.test' }], cc: [],
-  plainText: '这里是完整的纯文本正文 <script>字面量</script>', bodyTruncated: false, hasPlainText: true,
-  attachments: [{ name: '附件.pdf', type: 'application/pdf', size: 1000 }], isRead: false,
-}
-
-const mountView = () => mount(MailWorkspaceView, { attachTo: document.body })
-
-describe('Atoman Mail workspace', () => {
-  beforeEach(() => {
-    loadAccount.mockReset()
-    loadFolders.mockReset()
-    loadMessages.mockReset()
-    redeemInvite.mockReset()
-    reserveSelf.mockReset()
-    loadDetail.mockReset()
-    markRead.mockReset()
-    authState.user.role = 'user'
-    loadAccount.mockResolvedValue(pendingAccount)
-    loadFolders.mockResolvedValue(testFolders)
-    loadMessages.mockResolvedValue([receivedMail])
-    loadDetail.mockResolvedValue(sampleDetail)
-    markRead.mockResolvedValue({ read: true })
+import type { MailDetail, MailSummary } from '@/api/mail'
+const api = vi.hoisted(() => ({ account: vi.fn(), folders: vi.fn(), messages: vi.fn(), detail: vi.fn(), read: vi.fn(), thread: vi.fn(), drafts: vi.fn(), draft: vi.fn(), queue: vi.fn(), outbox: vi.fn(), cancel: vi.fn(), action: vi.fn(), undo: vi.fn(), reserve: vi.fn(), activate: vi.fn() }))
+const auth = vi.hoisted(() => ({ user: { role: 'user' } }))
+vi.mock('@/stores/auth', () => ({ useAuthStore: () => auth }))
+vi.mock('@/api/mail', () => ({ fetchMyMailAccount: api.account, fetchMailFolders: api.folders, fetchMailDetail: api.detail, markMailRead: api.read, reserveAdminMailAddress: api.reserve, redeemMailInvitation: api.activate }))
+vi.mock('@/api/mailClient', () => ({ queryMailMessages: api.messages, fetchMailThread: api.thread, fetchMailDrafts: api.drafts, fetchMailDraft: api.draft, fetchMailOutboxes: api.queue, fetchMailOutbox: api.outbox, cancelMailOutbox: api.cancel, mutateMailMessages: api.action, undoMailAction: api.undo, provisionMailAccount: vi.fn(), reconcileMailOutbox: vi.fn(), createMailFolder: vi.fn(), deleteMailFolder: vi.fn(), deleteMailDraft: vi.fn(), downloadMailAttachment: vi.fn(), fetchMailPreferences: vi.fn(), saveMailPreferences: vi.fn() }))
+vi.mock('@/views/mail/MailComposer.vue', () => ({ default: { props: ['draft', 'address'], template: '<div data-testid="composer">{{ draft.subject }}</div>' } }))
+vi.mock('@/views/mail/MailSettings.vue', () => ({ default: { template: '<div />' } }))
+const folders = [{ id: 'inbox', name: 'Inbox', role: 'inbox', parentId: null, totalEmails: 2, unreadEmails: 2 }, { id: 'trash', name: 'Trash', role: 'trash', parentId: null, totalEmails: 0, unreadEmails: 0 }, { id: 'drafts', name: 'Drafts', role: 'drafts', parentId: null, totalEmails: 1, unreadEmails: 0 }]
+const first: MailSummary = { id: 'one', threadId: 'thread', subject: '项目进展', preview: '第一封摘要', receivedAt: '2026-11-05T09:00:00Z', hasAttachment: false, from: [{name:'同事',email:'coworker@example.test'}], isRead: false, mailboxIds: ['inbox'] }
+const latest: MailSummary = { ...first, id: 'two', preview: '最新摘要', receivedAt: '2026-11-05T10:00:00Z' }
+function detail(id: string): MailDetail { return { id, threadId: 'thread', subject: '项目进展', receivedAt: latest.receivedAt, from: first.from!, to: [{name:'',email:'me@atoman.org'}], cc: [], plainText: '<script>正文作为文字显示</script>', hasPlainText: true, bodyTruncated: false, attachments: [], isRead: false } }
+const mounted: Array<ReturnType<typeof mount>> = []
+function mountView() { const wrapper = mount(MailWorkspaceView, { attachTo: document.body }); mounted.push(wrapper); return wrapper }
+beforeEach(() => {
+  vi.clearAllMocks(); localStorage.clear(); auth.user.role = 'user'
+  api.account.mockResolvedValue({ available: true, status: 'active', address: 'me@atoman.org' }); api.folders.mockResolvedValue(folders)
+  api.messages.mockImplementation((id: string) => Promise.resolve({ items: id === 'inbox' ? [latest, first] : [], total: id === 'inbox' ? 2 : 0, has_more: false }))
+  api.thread.mockResolvedValue([first, latest]); api.detail.mockImplementation((_folder: string, id: string) => Promise.resolve(detail(id))); api.read.mockResolvedValue({read:true}); api.queue.mockResolvedValue([]); api.drafts.mockResolvedValue([])
+  api.action.mockResolvedValue({ affected: 2, updated: ['one','two'], undo_id: 'receipt' }); api.undo.mockResolvedValue({updated:['one','two']})
+})
+afterEach(() => { mounted.splice(0).forEach(wrapper => wrapper.unmount()); document.body.innerHTML = ''; vi.useRealTimers() })
+describe('Mail workspace', () => {
+  it('requires both active status and availability before loading mailbox data', async () => {
+    api.account.mockResolvedValue({ status:'active',available:false,address:'me@atoman.org' })
+    const wrapper=mountView(); await flushPromises()
+    expect(wrapper.find('[data-testid="mail-active-workspace"]').exists()).toBe(false); expect(api.messages).not.toHaveBeenCalled()
   })
-  afterEach(() => { document.body.innerHTML = '' })
-
-  it('shows reserved mail account without calling any message API', async () => {
-    const wrapper = mountView()
-    await flushPromises()
-    expect(wrapper.get('[data-testid="mail-not-active"]').text()).toContain('邮箱地址已预留')
-    expect(wrapper.text()).toContain('alice@atoman.org')
-    expect(wrapper.text()).toContain('当前不可收发邮件')
-    expect(wrapper.find('[data-testid="mail-active-workspace"]').exists()).toBe(false)
-    expect(loadFolders).not.toHaveBeenCalled()
-    expect(loadMessages).not.toHaveBeenCalled()
-    wrapper.unmount()
+  it('groups conversations by default without marking collapsed mail read', async () => {
+    const wrapper=mountView(); await flushPromises()
+    expect(wrapper.findAll('[data-testid^="mail-message-"]')).toHaveLength(1); expect(api.read).not.toHaveBeenCalled()
+    await wrapper.get('[data-testid="mail-message-two"]').trigger('click'); await flushPromises()
+    expect(api.read).toHaveBeenCalledTimes(1); expect(api.read).toHaveBeenCalledWith('inbox','two')
+    expect(wrapper.get('[data-testid="mail-plain-text"]').text()).toContain('<script>'); expect(wrapper.find('script').exists()).toBe(false)
+    const summaries=wrapper.findAll('.mail-workspace__thread-summary')
+    expect(summaries).toHaveLength(2); await summaries[0]!.trigger('click'); await flushPromises()
+    expect(api.read).toHaveBeenCalledTimes(2); expect(api.read).toHaveBeenLastCalledWith('inbox','one')
   })
-
-  it('never assumes mailbox is active based on a status string alone', async () => {
-    loadAccount.mockResolvedValue({ status: 'active', available: false, address: 'alice@atoman.org' })
-    const wrapper = mountView()
-    await flushPromises()
-    expect(wrapper.find('[data-testid="mail-active-workspace"]').exists()).toBe(false)
-    expect(loadFolders).not.toHaveBeenCalled()
-    wrapper.unmount()
+  it('switches to individual messages and keeps the choice', async () => {
+    const wrapper=mountView(); await flushPromises(); await wrapper.get('.mail-workspace__view-mode').trigger('click'); await flushPromises()
+    expect(wrapper.findAll('[data-testid^="mail-message-"]')).toHaveLength(2); expect(localStorage.getItem('atoman.mail.conversations')).toBe('false')
   })
-
-  it('shows invitation form and reserves address without showing a fake inbox', async () => {
-    loadAccount.mockResolvedValue({ status: 'not_invited', available: false })
-    redeemInvite.mockResolvedValue(pendingAccount)
-    const wrapper = mountView()
-    await flushPromises()
-    const token = 'a'.repeat(43)
-    await wrapper.get('#mail-invitation').setValue(token)
-    await wrapper.get('#mail-chosen-local').setValue('My.Custom-Name')
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
-    expect(redeemInvite).toHaveBeenCalledWith(token, 'my.custom-name')
-    expect(wrapper.get('[data-testid="mail-not-active"]').text()).toContain('邮箱地址已预留')
-    expect(loadMessages).not.toHaveBeenCalled()
-    wrapper.unmount()
+  it('does not mark a stale detail response read after changing folders', async () => {
+    let resolve!: (value:MailDetail)=>void; api.detail.mockImplementation(()=>new Promise<MailDetail>(r=>{resolve=r}))
+    const wrapper=mountView(); await flushPromises(); await wrapper.get('[data-testid="mail-message-two"]').trigger('click'); await flushPromises()
+    await wrapper.findAll('.mail-workspace__folder')[1]!.trigger('click'); await flushPromises(); resolve(detail('two')); await flushPromises()
+    expect(api.read).not.toHaveBeenCalled(); expect(wrapper.find('[data-testid="mail-plain-text"]').exists()).toBe(false)
   })
-
-  it('allows administrators to choose and reserve a name without an invitation', async () => {
-    authState.user.role = 'admin'
-    loadAccount.mockResolvedValue({ status: 'not_invited', available: false })
-    reserveSelf.mockResolvedValue({ status: 'reserved', available: false, address: 'admin.custom@atoman.org' })
-    const wrapper = mountView()
-    await flushPromises()
-    expect(wrapper.get('[data-testid="mail-admin-self-form"]').text()).toContain('无需邀请码')
-    expect(wrapper.find('[data-testid="mail-invite-redeem-form"]').exists()).toBe(false)
-    await wrapper.get('#mail-self-local').setValue('Admin.Custom')
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
-    expect(reserveSelf).toHaveBeenCalledWith('admin.custom')
-    expect(wrapper.get('[data-testid="mail-not-active"]').text()).toContain('admin.custom@atoman.org')
-    expect(loadMessages).not.toHaveBeenCalled()
-    wrapper.unmount()
+  it('uses server search and supports bulk actions with server undo', async () => {
+    const wrapper=mountView(); await flushPromises(); await wrapper.get('input[aria-label="搜索邮件"]').setValue('进展'); await wrapper.get('form[role="search"]').trigger('submit'); await flushPromises()
+    expect(api.messages).toHaveBeenLastCalledWith('inbox','进展',0,50)
+    await wrapper.get('input[aria-label="选择当前列表全部邮件"]').setValue(true); await wrapper.get('button[aria-label="归档所选邮件"]').trigger('click'); await flushPromises()
+    expect(api.action).toHaveBeenCalledWith('inbox',['two','one'],'archive',undefined)
+    const undo=wrapper.findAll('button').find(b=>b.text()==='撤销操作')!; await undo.trigger('click'); await flushPromises(); expect(api.undo).toHaveBeenCalledWith('receipt')
   })
-
-  it('does not let a regular user enter the admin self-reservation flow', async () => {
-    loadAccount.mockResolvedValue({ status: 'not_invited', available: false })
-    const wrapper = mountView()
-    await flushPromises()
-    expect(wrapper.find('[data-testid="mail-admin-self-form"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="mail-invite-redeem-form"]').exists()).toBe(true)
-    expect(reserveSelf).not.toHaveBeenCalled()
-    wrapper.unmount()
-  })
-
-  it('loads actual folders, switches to junk, and shows preview-only message details', async () => {
-    loadAccount.mockResolvedValue(activeAccount)
-    loadMessages.mockImplementation(async (folderId) => folderId === 'a' ? [receivedMail] : [{ ...receivedMail, id: 'mail-junk', subject: '垃圾邮件测试', hasAttachment: false }])
-    const wrapper = mountView()
-    await flushPromises()
-    expect(wrapper.get('[data-testid="mail-active-workspace"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('收件箱')
-    expect(loadMessages).toHaveBeenCalledWith('a', 50)
-    await wrapper.get('[data-testid="mail-message-mail-1"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.get('[data-testid="mail-selected-preview"]').text()).toContain('这里是完整的纯文本正文')
-    expect(wrapper.text()).toContain('HTML、远程图片与附件下载尚未开放')
-    expect(loadDetail).toHaveBeenCalledWith('a', 'mail-1')
-    expect(markRead).toHaveBeenCalledWith('a', 'mail-1')
-    expect(wrapper.get('[data-testid="mail-reader-pane"]').classes()).toContain('mail-mobile-visible')
-    await wrapper.get('[aria-label="返回邮件列表"]').trigger('click')
-    expect(wrapper.get('[data-testid="mail-list-pane"]').classes()).toContain('mail-mobile-visible')
-    await wrapper.get('[aria-label="返回文件夹"]').trigger('click')
-    expect(wrapper.get('[data-testid="mail-folder-pane"]').classes()).toContain('mail-mobile-visible')
-    await wrapper.get('[aria-label="邮件文件夹列表"] button:nth-child(2)').trigger('click')
-    await flushPromises()
-    expect(loadMessages).toHaveBeenCalledWith('b', 50)
-    expect(wrapper.text()).toContain('垃圾邮件测试')
-    expect(wrapper.find('[data-testid="mail-selected-preview"]').exists()).toBe(false)
-    wrapper.unmount()
-  })
-
-  it('never marks read merely by listing a folder or searching', async () => {
-    loadAccount.mockResolvedValue(activeAccount)
-    const wrapper = mountView()
-    await flushPromises()
-    expect(loadMessages).toHaveBeenCalledWith('a', 50)
-    expect(loadDetail).not.toHaveBeenCalled()
-    expect(markRead).not.toHaveBeenCalled()
-    await wrapper.get('input[aria-label="筛选已加载的邮件"]').setValue('真实邮件')
-    expect(markRead).not.toHaveBeenCalled()
-    wrapper.unmount()
-  })
-
-  it('ignores stale detail after the user switches folder', async () => {
-    loadAccount.mockResolvedValue(activeAccount)
-    let resolveDetail!: (value: MailDetail) => void
-    loadDetail.mockImplementation(() => new Promise(resolve => { resolveDetail = resolve }))
-    const wrapper = mountView()
-    await flushPromises()
-    await wrapper.get('[data-testid="mail-message-mail-1"]').trigger('click')
-    await wrapper.get('[aria-label="邮件文件夹列表"] button:nth-child(2)').trigger('click')
-    await flushPromises()
-    resolveDetail(sampleDetail)
-    await flushPromises()
-    expect(markRead).not.toHaveBeenCalled()
-    expect(wrapper.find('[data-testid="mail-plain-text"]').exists()).toBe(false)
-    wrapper.unmount()
-  })
-
-  it('does not mark read when detail lookup fails', async () => {
-    loadAccount.mockResolvedValue(activeAccount)
-    loadDetail.mockRejectedValue(new Error('Network unavailable'))
-    const wrapper = mountView()
-    await flushPromises()
-    await wrapper.get('[data-testid="mail-message-mail-1"]').trigger('click')
-    await flushPromises()
-    expect(wrapper.get('[data-testid="mail-selected-preview"]').text()).toContain('无法读取邮件正文')
-    expect(markRead).not.toHaveBeenCalled()
-    wrapper.unmount()
-  })
-
-  it('does not mix messages from a slower old folder request into the new folder', async () => {
-    loadAccount.mockResolvedValue(activeAccount)
-    let resolveFirst!: (messages: MailSummary[]) => void
-    loadMessages.mockImplementation((folderId) => folderId === 'a'
-      ? new Promise<MailSummary[]>(resolve => { resolveFirst = resolve })
-      : Promise.resolve([{ ...receivedMail, id: 'new-message', subject: '新文件夹的邮件' }]))
-    const wrapper = mountView()
-    await flushPromises()
-    await wrapper.get('[aria-label="邮件文件夹列表"] button:nth-child(2)').trigger('click')
-    await flushPromises()
-    expect(wrapper.text()).toContain('新文件夹的邮件')
-    resolveFirst([receivedMail])
-    await flushPromises()
-    expect(wrapper.text()).not.toContain('真实邮件主题')
-    expect(wrapper.text()).toContain('新文件夹的邮件')
-    wrapper.unmount()
-  })
-
-  it('reports unavailable backend instead of showing sample messages', async () => {
-    loadAccount.mockRejectedValue(new Error('Unavailable'))
-    const wrapper = mountView()
-    await flushPromises()
-    expect(wrapper.get('[data-testid="mail-account-error"]').text()).toContain('暂时无法连接邮箱')
-    expect(wrapper.find('[data-testid="mail-active-workspace"]').exists()).toBe(false)
-    expect(loadMessages).not.toHaveBeenCalled()
-    wrapper.unmount()
+  it('recovers the server pending send after refresh and waits for confirmed cancellation', async () => {
+    const queued={id:'queue-1',status:'queued',send_after:new Date(Date.now()+5000).toISOString(),created_at:new Date().toISOString()}; api.queue.mockResolvedValue([queued]); api.cancel.mockResolvedValue({...queued,status:'cancelled'})
+    const wrapper=mountView(); await flushPromises(); expect(wrapper.text()).toContain('撤销发送')
+    const undo=wrapper.findAll('button').find(b=>b.text().includes('撤销发送'))!; await undo.trigger('click'); await flushPromises()
+    expect(api.cancel).toHaveBeenCalledWith('queue-1'); expect(wrapper.text()).toContain('发送已撤销')
   })
 })

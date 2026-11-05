@@ -19,7 +19,7 @@ export interface MailFolder {
   unreadEmails: number
 }
 
-/** List preview only; full mail body/attachments are not available yet. */
+/** User-scoped JMAP message summary. */
 export interface MailSummary {
   id: string
   threadId: string
@@ -27,10 +27,14 @@ export interface MailSummary {
   receivedAt: string
   preview: string
   hasAttachment: boolean
+  from?: MailAddress[]
+  isRead?: boolean
+  isFlagged?: boolean
+  mailboxIds?: string[]
 }
 
 export interface MailAddress { name: string; email: string }
-export interface MailAttachmentInfo { name: string; type: string; size: number }
+export interface MailAttachmentInfo { name: string; type: string; size: number; blobId?: string; partId?: string }
 export interface MailDetail {
   id: string
   threadId: string
@@ -40,6 +44,10 @@ export interface MailDetail {
   to: MailAddress[]
   cc: MailAddress[]
   plainText: string
+  html?: string
+  replyTo?: MailAddress[]
+  messageId?: string[]
+  inReplyTo?: string[]
   bodyTruncated: boolean
   hasPlainText: boolean
   attachments: MailAttachmentInfo[]
@@ -68,7 +76,7 @@ export function fetchMailDetail(mailboxId: string, messageId: string): Promise<M
     return Promise.reject(new Error('无效的邮件标识'))
   }
   const query = new URLSearchParams({ mailbox_id: mailboxId, message_id: messageId })
-  return apiGet<MailDetail>(`${mailBase()}/message?${query}`)
+  return apiGet<MailDetail>(`${mailBase()}/message?${query}`).then(detail => ({ ...detail, from: detail.from || [], to: detail.to || [], cc: detail.cc || [], attachments: detail.attachments || [], plainText: detail.plainText || '' }))
 }
 
 /** Only call after the selected message has actually been displayed. */

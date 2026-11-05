@@ -35,7 +35,10 @@ const canonicalSitemapPathPatterns = [
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, '')
 
 export function resolveApiBase(configuredUrl: string | undefined, origin: string) {
-  const base = trimTrailingSlash(configuredUrl?.trim() || `${origin}/api/v1`)
+  const fallback = origin.includes('atoman.org')
+    ? 'https://api.atoman.org/api'
+    : `${origin}/api/v1`
+  const base = trimTrailingSlash(configuredUrl?.trim() || fallback)
   return base.endsWith('/api') ? `${base}/v1` : base
 }
 

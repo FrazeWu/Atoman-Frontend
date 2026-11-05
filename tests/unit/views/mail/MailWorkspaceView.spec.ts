@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import MailWorkspaceView from '@/views/mail/MailWorkspaceView.vue'
-import type { MailAccountInfo, MailFolder, MailSummary } from '@/api/mail'
+import type { MailAccountInfo, MailFolder, MailSummary, MailDetail } from '@/api/mail'
 
 const loadAccount = vi.fn<() => Promise<MailAccountInfo>>()
 const loadFolders = vi.fn<() => Promise<MailFolder[]>>()
 const loadMessages = vi.fn<(folderId: string, limit?: number) => Promise<MailSummary[]>>()
 const redeemInvite = vi.fn<(token: string, localPart: string) => Promise<MailAccountInfo>>()
 const reserveSelf = vi.fn<(localPart: string) => Promise<MailAccountInfo>>()
+const loadDetail = vi.fn<(folderId: string, messageId: string) => Promise<MailDetail>>()
+const markRead = vi.fn<(folderId: string, messageId: string) => Promise<{read: boolean}>>()
 const authState = { user: { role: 'user' as 'user' | 'admin' | 'owner' } }
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => authState }))
 
@@ -15,6 +17,8 @@ vi.mock('@/api/mail', () => ({
   fetchMyMailAccount: (...args: []) => loadAccount(...args),
   fetchMailFolders: (...args: []) => loadFolders(...args),
   fetchMailSummaries: (folderId: string, limit?: number) => loadMessages(folderId, limit),
+  fetchMailDetail: (folderId: string, messageId: string) => loadDetail(folderId, messageId),
+  markMailRead: (folderId: string, messageId: string) => markRead(folderId, messageId),
   redeemMailInvitation: (token: string, localPart: string) => redeemInvite(token, localPart),
   reserveAdminMailAddress: (localPart: string) => reserveSelf(localPart),
 }))
@@ -30,6 +34,13 @@ const receivedMail: MailSummary = {
   receivedAt: '2026-11-04T11:00:00Z', hasAttachment: true,
 }
 
+const sampleDetail: MailDetail = {
+  id: 'mail-1', threadId: 'thread-1', subject: '真实邮件主题', receivedAt: '2026-11-04T11:00:00Z',
+  from: [{ name: '发送者', email: 'from@example.test' }], to: [{ name: '接收者', email: 'to@example.test' }], cc: [],
+  plainText: '这里是完整的纯文本正文 <script>字面量</script>', bodyTruncated: false, hasPlainText: true,
+  attachments: [{ name: '附件.pdf', type: 'application/pdf', size: 1000 }], isRead: false,
+}
+
 const mountView = () => mount(MailWorkspaceView, { attachTo: document.body })
 
 describe('Atoman Mail workspace', () => {
@@ -39,10 +50,14 @@ describe('Atoman Mail workspace', () => {
     loadMessages.mockReset()
     redeemInvite.mockReset()
     reserveSelf.mockReset()
+    loadDetail.mockReset()
+    markRead.mockReset()
     authState.user.role = 'user'
     loadAccount.mockResolvedValue(pendingAccount)
     loadFolders.mockResolvedValue(testFolders)
     loadMessages.mockResolvedValue([receivedMail])
+    loadDetail.mockResolvedValue(sampleDetail)
+    markRead.mockResolvedValue({ read: true })
   })
   afterEach(() => { document.body.innerHTML = '' })
 
@@ -120,8 +135,10 @@ describe('Atoman Mail workspace', () => {
     expect(loadMessages).toHaveBeenCalledWith('a', 50)
     await wrapper.get('[data-testid="mail-message-mail-1"]').trigger('click')
     await flushPromises()
-    expect(wrapper.get('[data-testid="mail-selected-preview"]').text()).toContain('这是后端返回的内容摘要')
-    expect(wrapper.text()).toContain('完整正文、附件下载、回复和转发尚未开放')
+    expect(wrapper.get('[data-testid="mail-selected-preview"]').text()).toContain('这里是完整的纯文本正文')
+    expect(wrapper.text()).toContain('HTML、远程图片与附件下载尚未开放')
+    expect(loadDetail).toHaveBeenCalledWith('a', 'mail-1')
+    expect(markRead).toHaveBeenCalledWith('a', 'mail-1')
     expect(wrapper.get('[data-testid="mail-reader-pane"]').classes()).toContain('mail-mobile-visible')
     await wrapper.get('[aria-label="返回邮件列表"]').trigger('click')
     expect(wrapper.get('[data-testid="mail-list-pane"]').classes()).toContain('mail-mobile-visible')
@@ -132,6 +149,46 @@ describe('Atoman Mail workspace', () => {
     expect(loadMessages).toHaveBeenCalledWith('b', 50)
     expect(wrapper.text()).toContain('垃圾邮件测试')
     expect(wrapper.find('[data-testid="mail-selected-preview"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('never marks read merely by listing a folder or searching', async () => {
+    loadAccount.mockResolvedValue(activeAccount)
+    const wrapper = mountView()
+    await flushPromises()
+    expect(loadMessages).toHaveBeenCalledWith('a', 50)
+    expect(loadDetail).not.toHaveBeenCalled()
+    expect(markRead).not.toHaveBeenCalled()
+    await wrapper.get('input[aria-label="筛选已加载的邮件"]').setValue('真实邮件')
+    expect(markRead).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('ignores stale detail after the user switches folder', async () => {
+    loadAccount.mockResolvedValue(activeAccount)
+    let resolveDetail!: (value: MailDetail) => void
+    loadDetail.mockImplementation(() => new Promise(resolve => { resolveDetail = resolve }))
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.get('[data-testid="mail-message-mail-1"]').trigger('click')
+    await wrapper.get('[aria-label="邮件文件夹列表"] button:nth-child(2)').trigger('click')
+    await flushPromises()
+    resolveDetail(sampleDetail)
+    await flushPromises()
+    expect(markRead).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="mail-plain-text"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('does not mark read when detail lookup fails', async () => {
+    loadAccount.mockResolvedValue(activeAccount)
+    loadDetail.mockRejectedValue(new Error('Network unavailable'))
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.get('[data-testid="mail-message-mail-1"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="mail-selected-preview"]').text()).toContain('无法读取邮件正文')
+    expect(markRead).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 

@@ -17,6 +17,7 @@ async function run() {
   try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
   let account = currentAccount
+  let readMutationCount = 0
   await context.route('**/api/v1/**', async route => {
     const url = new URL(route.request().url())
     let result = { data: {} }
@@ -26,6 +27,17 @@ async function run() {
       result = account
     } else if (url.pathname.endsWith('/mail/folders')) {
       result = sampleFolders
+    } else if (url.pathname.endsWith('/mail/message')) {
+      result = { data: {
+        id: 'synthetic-1', threadId: 'thread-1', subject: '页面布局验收', receivedAt: '2026-11-04T10:00:00Z',
+        from: [{ name: 'Test Sender', email: 'sender@example.test' }],
+        to: [{ name: 'Test Recipient', email: 'preview@atoman.org' }], cc: [],
+        plainText: '安全的纯文本正文 <script>alert(1)</script>', bodyTruncated: false, hasPlainText: true,
+        attachments: [{ name: 'synthetic.pdf', type: 'application/pdf', size: 1024 }], isRead: false,
+      } }
+    } else if (url.pathname.endsWith('/mail/messages/read')) {
+      readMutationCount += 1
+      result = { data: { read: true } }
     } else if (url.pathname.endsWith('/mail/messages')) {
       result = url.searchParams.get('mailbox_id') === 'inbox-id' ? sampleMail : { data: [] }
     }
@@ -34,8 +46,15 @@ async function run() {
   const page = await context.newPage()
   await page.goto(`${root}/mail`, { waitUntil: 'domcontentloaded' })
   await page.getByTestId('mail-active-workspace').waitFor({ timeout: 20000 })
+  assert.equal(readMutationCount, 0, 'Listing a folder must not mark messages read')
   await page.getByTestId('mail-message-synthetic-1').click()
   await page.getByTestId('mail-selected-preview').waitFor()
+  await page.getByTestId('mail-plain-text').waitFor({ state: 'visible', timeout: 15000 })
+  assert.ok((await page.getByTestId('mail-plain-text').innerText()).includes('<script>alert(1)</script>'))
+  assert.equal(await page.locator('.mail-workspace__reader-body script').count(), 0, 'Plain-text HTML must not become DOM nodes')
+  await page.waitForFunction(() => true, null, { timeout: 1000 })
+  assert.equal(readMutationCount, 1, 'Reading detail, not listing, marks the message seen')
+  console.log('MAIL_PLAINTEXT_ESCAPED_AND_EXPAND_ONLY_READ_OK')
   let rects = await page.evaluate(() => {
     const items = ['mail-folder-pane', 'mail-list-pane', 'mail-reader-pane'].map(name => document.querySelector(`[data-testid="${name}"]`).getBoundingClientRect())
     return items.map(box => ({ x: box.x, width: box.width, height: box.height, right: box.right }))

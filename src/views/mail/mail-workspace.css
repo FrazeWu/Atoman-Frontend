@@ -134,3 +134,8 @@
 .mail-gate__address-fields input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; padding: 0 12px; }
 .mail-gate__address-fields span { white-space: nowrap; color: var(--a-color-muted-soft); font-size: 13px; padding: 0 12px 0 4px; }
 .mail-gate__address-fields:focus-within { outline: 2px solid var(--a-color-primary); outline-offset: 1px; }
+
+.mail-workspace__detail-status { font-size: 13px; color: var(--a-color-muted); display: flex; flex-direction: column; gap: 13px; padding: 26px 0; }
+.mail-workspace__detail-status p { margin: 0; }
+.mail-workspace__attachments { max-width: 65ch; border-top: 1px solid var(--mail-divider); padding: 16px 0 26px; }
+.mail-workspace__attachment-row { display: flex; gap: 9px; align-items: center; padding: 8px 0; overflow-wrap: anywhere; color: var(--a-color-muted-soft); font-size: 12px; }

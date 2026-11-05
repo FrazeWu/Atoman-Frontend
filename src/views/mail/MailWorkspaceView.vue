@@ -144,21 +144,40 @@
         <template v-if="selectedMessage">
           <div class="mail-workspace__reader-head">
             <button type="button" class="mail-icon-button mail-workspace__mobile-back" aria-label="返回邮件列表" @click="mobilePane = 'list'"><ChevronLeft :size="21" /></button>
-            <span>邮件预览</span>
+            <span>邮件内容</span>
             <span class="mail-workspace__read-tag">只读</span>
           </div>
-          <article class="mail-workspace__reader-body" data-testid="mail-selected-preview">
+          <article class="mail-workspace__reader-body" data-testid="mail-selected-preview" :aria-busy="loadingDetail">
             <h2>{{ selectedMessage.subject || '（无主题）' }}</h2>
-            <div class="mail-workspace__meta">
-              <div><span>接收时间</span><strong>{{ fullMessageTime(selectedMessage.receivedAt) }}</strong></div>
-              <div><span>会话</span><strong>{{ selectedMessage.threadId ? '已归入会话' : '单封邮件' }}</strong></div>
-              <div v-if="selectedMessage.hasAttachment"><span>附件</span><strong>包含附件</strong></div>
+            <div v-if="loadingDetail" class="mail-workspace__detail-status" role="status">正在读取邮件正文…</div>
+            <div v-else-if="detailError" class="mail-workspace__detail-status" role="alert">
+              <p>{{ detailError }}</p>
+              <PButton size="sm" variant="secondary" @click="openMessage(selectedMessage.id)">重试</PButton>
             </div>
-            <div class="mail-workspace__body-preview">
-              <p class="mail-workspace__body-label">内容摘要</p>
-              <p>{{ selectedMessage.preview || '暂无内容摘要' }}</p>
-            </div>
-            <p class="mail-workspace__reader-note"><Info :size="16" aria-hidden="true" /> 这里仅显示服务器提供的邮件列表摘要。完整正文、附件下载、回复和转发尚未开放。</p>
+            <template v-else-if="currentDetail">
+              <div class="mail-workspace__meta">
+                <div><span>发件人</span><strong>{{ formatMailAddresses(currentDetail.from) }}</strong></div>
+                <div><span>收件人</span><strong>{{ formatMailAddresses(currentDetail.to) }}</strong></div>
+                <div v-if="currentDetail.cc.length"><span>抄送</span><strong>{{ formatMailAddresses(currentDetail.cc) }}</strong></div>
+                <div><span>接收时间</span><strong>{{ fullMessageTime(currentDetail.receivedAt) }}</strong></div>
+                <div v-if="currentDetail.attachments.length"><span>附件</span><strong>{{ currentDetail.attachments.length }} 个</strong></div>
+              </div>
+              <div class="mail-workspace__body-preview">
+                <p class="mail-workspace__body-label">纯文本正文</p>
+                <p v-if="currentDetail.hasPlainText" data-testid="mail-plain-text">{{ currentDetail.plainText || '（空正文）' }}</p>
+                <p v-else>这封邮件没有可安全显示的纯文本内容。HTML 正文暂不直接渲染。</p>
+                <p v-if="currentDetail.bodyTruncated" class="mail-workspace__reader-note">正文过长，当前仅显示前 64 KiB。</p>
+              </div>
+              <div v-if="currentDetail.attachments.length" class="mail-workspace__attachments">
+                <p class="mail-workspace__body-label">附件清单</p>
+                <div v-for="(attachment, index) in currentDetail.attachments" :key="index" class="mail-workspace__attachment-row">
+                  <Paperclip :size="15" aria-hidden="true" />
+                  <span>{{ attachment.name || '未命名附件' }} · {{ readableSize(attachment.size) }}</span>
+                </div>
+              </div>
+              <p class="mail-workspace__reader-note"><Info :size="16" aria-hidden="true" /> 仅纯文本安全呈现；HTML、远程图片与附件下载尚未开放。只有实际展开正文后才标为已读。</p>
+              <p v-if="seenError" class="mail-workspace__reader-note" role="status">{{ seenError }}</p>
+            </template>
           </article>
         </template>
         <div v-else class="mail-workspace__reader-empty">
@@ -172,12 +191,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Archive, ChevronLeft, CircleAlert, File, FileText, Inbox, Info, Mail, MailOpen, Paperclip, Pencil, RefreshCw, Search, Send, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
-import { fetchMailFolders, fetchMailSummaries, fetchMyMailAccount, redeemMailInvitation, reserveAdminMailAddress, type MailAccountInfo, type MailFolder, type MailSummary } from '@/api/mail'
+import { fetchMailFolders, fetchMailSummaries, fetchMailDetail, markMailRead, fetchMyMailAccount, redeemMailInvitation, reserveAdminMailAddress, type MailAccountInfo, type MailFolder, type MailSummary, type MailDetail, type MailAddress } from '@/api/mail'
 
 type MobilePane = 'folders' | 'list' | 'reader'
 const authStore = useAuthStore()
@@ -194,6 +213,11 @@ const messages = ref<MailSummary[]>([])
 const loadingMessages = ref(false)
 const messagesError = ref('')
 const selectedMessageId = ref('')
+const currentDetail = ref<MailDetail | null>(null)
+const loadingDetail = ref(false)
+const detailError = ref('')
+const seenError = ref('')
+let detailGeneration = 0
 const localSearch = ref('')
 const invitation = ref('')
 const chosenLocalPart = ref('')
@@ -275,6 +299,18 @@ function formatMessageTime(value: string, full = false) {
 }
 const messageTime = (value: string) => formatMessageTime(value)
 const fullMessageTime = (value: string) => formatMessageTime(value, true)
+const formatMailAddresses = (addresses: MailAddress[]) =>
+  addresses.length ? addresses.map(a => a.name ? `${a.name} <${a.email}>` : a.email).join(', ') : '未提供'
+const readableSize = (size: number) => `${(Math.max(0, size) / 1024).toFixed(1)} KiB`
+
+function resetDetail() {
+  ++detailGeneration
+  currentDetail.value = null
+  loadingDetail.value = false
+  detailError.value = ''
+  seenError.value = ''
+}
+
 
 function messageForError(error: unknown, fallback: string) {
   if (error instanceof ApiErrorResponseError) {
@@ -289,6 +325,7 @@ async function loadMessages(folderId: string) {
   const generation = ++messageGeneration
   messages.value = []
   selectedMessageId.value = ''
+  resetDetail()
   localSearch.value = ''
   messagesError.value = ''
   if (!folderId || !mailIsActive.value) { loadingMessages.value = false; return }
@@ -314,6 +351,7 @@ async function loadFolders() {
   currentFolderId.value = ''
   messages.value = []
   selectedMessageId.value = ''
+  resetDetail()
   localSearch.value = ''
   loadingMessages.value = false
   if (!mailIsActive.value) { foldersLoading.value = false; return }
@@ -345,6 +383,7 @@ async function refreshMailbox() {
   currentFolderId.value = ''
   messages.value = []
   selectedMessageId.value = ''
+  resetDetail()
   try {
     const next = await fetchMyMailAccount()
     if (disposed || generation !== accountGeneration) return
@@ -368,10 +407,35 @@ function selectFolder(folderId: string) {
   mobilePane.value = 'list'
 }
 function reloadMessages() { if (currentFolderId.value) void loadMessages(currentFolderId.value) }
-function openMessage(messageId: string) {
-  if (!messages.value.some(message => message.id === messageId)) return
+async function openMessage(messageId: string) {
+  if (!messages.value.some(message => message.id === messageId) || !currentFolderId.value) return
+  resetDetail()
+  const generation = detailGeneration
+  const folderID = currentFolderId.value
   selectedMessageId.value = messageId
   mobilePane.value = 'reader'
+  loadingDetail.value = true
+  try {
+    const detail = await fetchMailDetail(folderID, messageId)
+    if (disposed || generation !== detailGeneration || currentFolderId.value !== folderID || selectedMessageId.value !== messageId) return
+    currentDetail.value = detail
+    loadingDetail.value = false
+    await nextTick()
+    // On narrow screens, a quick Back action must not mark a message as read.
+    const mobile = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 950px)').matches
+    if (disposed || generation !== detailGeneration || (mobile && mobilePane.value !== 'reader')) return
+    if (!detail.isRead) {
+      try {
+        await markMailRead(folderID, messageId)
+      } catch {
+        if (!disposed && generation === detailGeneration) seenError.value = '已显示正文，但更新已读状态失败。'
+      }
+    }
+  } catch (error) {
+    if (disposed || generation !== detailGeneration) return
+    loadingDetail.value = false
+    detailError.value = messageForError(error, '无法读取邮件正文，请重试。')
+  }
 }
 
 async function redeemInvite() {
@@ -414,6 +478,7 @@ onBeforeUnmount(() => {
   ++accountGeneration
   ++folderGeneration
   ++messageGeneration
+  resetDetail()
   messages.value = []
 })
 </script>

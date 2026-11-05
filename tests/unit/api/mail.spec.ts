@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fetchMailFolders, fetchMailSummaries, fetchMyMailAccount, redeemMailInvitation, issueMailInvitation, reserveAdminMailAddress } from '@/api/mail'
+import { fetchMailFolders, fetchMailSummaries, fetchMyMailAccount, redeemMailInvitation, issueMailInvitation, reserveAdminMailAddress, fetchMailDetail, markMailRead } from '@/api/mail'
 
 const { get, post } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }))
 vi.mock('@/api/client', () => ({ apiGet: get, apiPostJson: post }))
@@ -28,6 +28,18 @@ describe('Atoman Webmail API client', () => {
     await expect(fetchMailSummaries('inbox', 0)).rejects.toThrow()
     await expect(fetchMailSummaries('inbox', 2.5)).rejects.toThrow()
     expect(get).toHaveBeenCalledTimes(1)
+  })
+
+  it('reads a URL-encoded single-message detail and marks read in a separate POST', async () => {
+    get.mockResolvedValue({ id:'msg-1',plainText:'synthetic' })
+    post.mockResolvedValue({ read:true })
+    await fetchMailDetail('folder&=1', 'mail#x')
+    expect(get).toHaveBeenCalledWith('/api/v1/mail/message?mailbox_id=folder%26%3D1&message_id=mail%23x')
+    expect(post).not.toHaveBeenCalled()
+    await markMailRead('folder&=1','mail#x')
+    expect(post).toHaveBeenCalledWith('/api/v1/mail/messages/read',{ mailbox_id:'folder&=1',message_id:'mail#x' })
+    await expect(fetchMailDetail('', 'x')).rejects.toThrow()
+    await expect(markMailRead('a','')).rejects.toThrow()
   })
 
   it('supports admin invite issuance and own address reservation via protected site APIs', async () => {

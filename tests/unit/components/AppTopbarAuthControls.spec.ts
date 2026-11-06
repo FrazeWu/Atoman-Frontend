@@ -46,6 +46,7 @@ const createTestRouter = () =>
 			{ path: "/podcasts", component: { template: "<div />" } },
 			{ path: "/inbox", component: { template: "<div />" } },
 			{ path: "/messages", component: { template: "<div />" } },
+			{ path: "/mail", component: { template: "<div />" } },
 			{ path: "/posts/bookmarks", component: { template: "<div />" } },
 			{ path: "/site/setting", component: { template: "<div />" } },
 			{ path: "/users/:handle/settings", component: { template: "<div />" } },
@@ -169,6 +170,15 @@ describe("AppTopbarAuthControls", () => {
 
 		expect(wrapper.find(".user-avatar img").exists()).toBe(false);
 		expect(wrapper.find(".user-avatar").text()).toBe("A");
+	});
+
+	it("provides a labeled mail entry in the top bar", async () => {
+		const wrapper = await mountTopbar();
+		const entries = wrapper.findAll('[data-testid="topbar-mail-link"]');
+		expect(entries).toHaveLength(1);
+		expect(entries[0]?.attributes("href")).toBe("/mail");
+		expect(entries[0]?.attributes("aria-label")).toBe("电子邮件");
+		expect(entries[0]?.find(".mail-btn__label").text()).toBe("邮箱");
 	});
 
 	it("renders one creator entry that points to Studio", async () => {

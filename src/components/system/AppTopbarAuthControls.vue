@@ -48,6 +48,7 @@
     @click="closeDropdown"
   >
     <Mail :size="19" class="notif-btn__icon" aria-hidden="true" />
+    <span class="mail-btn__label">邮箱</span>
   </RouterLink>
 
   <RouterLink
@@ -246,6 +247,24 @@ const logout = async () => {
   transition: color 0.2s, background 0.2s;
   text-decoration: none;
   flex-shrink: 0;
+}
+
+.mail-btn {
+  width: auto;
+  min-width: 2.75rem;
+  gap: 0.35rem;
+  padding-inline: 0.625rem;
+}
+
+.mail-btn__label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+@media (max-width: 960px) {
+  .mail-btn { width: 2.75rem; padding-inline: 0; }
+  .mail-btn__label { display: none; }
 }
 
 .notif-btn__icon {

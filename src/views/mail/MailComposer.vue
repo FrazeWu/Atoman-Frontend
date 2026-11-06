@@ -1,16 +1,19 @@
 <template>
   <PSheet :show="true" title="写邮件" mode="full" close-type="header" @close="closeComposer">
     <form class="mail-compose" @submit.prevent="sendMessage">
-      <div class="mail-compose__identity">发件人 <strong>{{ address }}</strong><span role="status">{{ saving ? '正在保存…' : dirty ? '有未保存内容' : '草稿已保存' }}</span></div>
-      <label>收件人<input v-model="toText" type="text" placeholder="收件人邮箱，多个地址用逗号分隔" aria-label="收件人" :disabled="contentLocked" /></label>
-      <div class="mail-compose__copies"><label>抄送<input v-model="ccText" type="text" placeholder="抄送邮箱" aria-label="抄送" :disabled="contentLocked" /></label><label>密送<input v-model="bccText" type="text" placeholder="密送邮箱" aria-label="密送" :disabled="contentLocked" /></label></div>
-      <label>主题<input v-model="subject" type="text" placeholder="邮件主题" maxlength="998" aria-label="邮件主题" :disabled="contentLocked" /></label>
-      <div class="mail-compose__format"><button type="button" :disabled="contentLocked" :aria-pressed="!rich" @click="setRich(false)">纯文本</button><button type="button" :disabled="contentLocked" :aria-pressed="rich" @click="setRich(true)">格式文本</button><template v-if="rich"><button type="button" :disabled="contentLocked" aria-label="加粗" @mousedown.prevent="format('bold')"><strong>B</strong></button><button type="button" :disabled="contentLocked" aria-label="斜体" @mousedown.prevent="format('italic')"><em>I</em></button><button type="button" :disabled="contentLocked" aria-label="项目符号" @mousedown.prevent="format('insertUnorderedList')">列表</button><button type="button" :disabled="contentLocked" @mousedown.prevent="format('removeFormat')">清除格式</button></template></div>
+      <div class="mail-compose__identity"><div><span>发件人</span><strong>{{ address }}</strong></div><PBadge role="status" :type="dirty ? 'warning' : 'success'" :label="saving ? '正在保存…' : dirty ? '有未保存内容' : '草稿已保存'" /></div>
+      <PInput v-model="toText" label="收件人" type="text" placeholder="收件人邮箱，多个地址用逗号分隔" aria-label="收件人" :disabled="contentLocked" />
+      <div class="mail-compose__copies"><PInput v-model="ccText" label="抄送" type="text" placeholder="抄送邮箱" aria-label="抄送" :disabled="contentLocked" /><PInput v-model="bccText" label="密送" type="text" placeholder="密送邮箱" aria-label="密送" :disabled="contentLocked" /></div>
+      <PInput v-model="subject" label="主题" type="text" placeholder="邮件主题" maxlength="998" aria-label="邮件主题" :disabled="contentLocked" />
+      <div class="mail-compose__format">
+        <PSegmentedControl :model-value="rich ? 'rich' : 'plain'" :options="[{ label: '纯文本', value: 'plain' }, { label: '格式文本', value: 'rich' }]" :disabled="contentLocked" @update:model-value="setRich($event === 'rich')" />
+        <div v-if="rich" class="mail-compose__format-tools"><PButton type="button" variant="ghost" size="sm" :disabled="contentLocked" aria-label="加粗" @mousedown.prevent="format('bold')"><strong>B</strong></PButton><PButton type="button" variant="ghost" size="sm" :disabled="contentLocked" aria-label="斜体" @mousedown.prevent="format('italic')"><em>I</em></PButton><PButton type="button" variant="ghost" size="sm" :disabled="contentLocked" aria-label="项目符号" @mousedown.prevent="format('insertUnorderedList')">列表</PButton><PButton type="button" variant="ghost" size="sm" :disabled="contentLocked" @mousedown.prevent="format('removeFormat')">清除格式</PButton></div>
+      </div>
       <div v-if="rich" ref="editor" class="mail-compose__editor" :contenteditable="!contentLocked" role="textbox" aria-label="邮件正文" aria-multiline="true" @input="captureRich" @paste="pastePlain"></div>
-      <textarea v-else v-model="text" class="mail-compose__body" aria-label="邮件正文" placeholder="写下邮件内容…" :disabled="contentLocked"></textarea>
+      <PTextarea v-else v-model="text" class="mail-compose__body" label="正文" aria-label="邮件正文" :rows="13" placeholder="写下邮件内容…" :disabled="contentLocked" />
       <div class="mail-compose__attachments"><div v-for="item in attachments" :key="item.id"><Paperclip :size="15" /><span>{{ item.name }} · {{ fileSize(item.size) }}</span><button type="button" :aria-label="`移除附件 ${item.name}`" :disabled="contentLocked" @click="attachments = attachments.filter(file => file.id !== item.id)"><X :size="15" /></button></div></div>
       <p v-if="warning" role="alert" class="mail-compose__error">{{ warning }}</p><p v-if="error" role="alert" class="mail-compose__error">{{ error }}</p><PButton v-if="conflicted" variant="secondary" :loading="saving" @click="saveAsCopy">另存为新草稿</PButton>
-      <div class="mail-compose__actions"><PButton type="submit" :loading="sending" :disabled="uploading || sending || conflicted">{{ ambiguousSend ? '确认发送状态' : '发送' }}</PButton><label class="mail-compose__upload"><Paperclip :size="17" />{{ uploading ? '正在上传…' : '添加附件' }}<input type="file" multiple :disabled="uploading || contentLocked" @change="addAttachments" /></label><PButton type="button" variant="secondary" :disabled="sending || saving" @click="closeComposer">保存并关闭</PButton><button type="button" class="mail-compose__discard" :disabled="contentLocked || conflicted" @click="confirmDiscard = true">删除草稿</button></div>
+      <div class="mail-compose__actions"><PButton type="submit" :loading="sending" :disabled="uploading || sending || conflicted">{{ ambiguousSend ? '确认发送状态' : '发送' }}</PButton><PButton tag="label" variant="secondary" class="mail-compose__upload" :disabled="uploading || contentLocked"><Paperclip :size="17" />{{ uploading ? '正在上传…' : '添加附件' }}<input type="file" multiple :disabled="uploading || contentLocked" @change="addAttachments" /></PButton><PButton type="button" variant="secondary" :disabled="sending || saving" @click="closeComposer">保存并关闭</PButton><PButton type="button" variant="ghost" class="mail-compose__discard" :disabled="contentLocked || conflicted" @click="confirmDiscard = true">删除草稿</PButton></div>
       <p class="mail-compose__hint">发送后有 5 秒可以撤销。</p>
     </form>
   </PSheet>
@@ -25,6 +28,10 @@ import { Paperclip, X } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PBadge from '@/components/ui/PBadge.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import { deleteMailDraft, queueMail, saveMailDraft, uploadMailAttachment, type MailComposeFields, type MailDraft, type MailOutbox } from '@/api/mailClient'
 import { fileSize, newRequestID, parseRecipients } from './mail-helpers'
 const props = defineProps<{ address: string; draft: MailDraft; warning?: string }>()
@@ -136,9 +143,30 @@ onMounted(async () => { try { ambiguousSend.value = Boolean(localStorage.getItem
 onBeforeUnmount(() => { disposed = true; clearTimeout(saveTimer); window.removeEventListener('beforeunload', beforeUnload) })
 </script>
 <style scoped>
-.mail-compose{padding:24px clamp(18px,5vw,68px);max-width:1100px;margin:0 auto;color:var(--a-color-fg)}
-.mail-compose__identity{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--a-color-muted);padding-bottom:22px}.mail-compose__identity strong{font-weight:500;color:var(--a-color-fg)}.mail-compose__identity span{margin-left:auto}
-.mail-compose label{display:flex;align-items:center;gap:18px;font-size:13px;border-bottom:1px solid var(--a-color-border-soft);padding:12px 0}.mail-compose input:not([type=file]){flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;padding:6px;outline-offset:3px}.mail-compose__copies{display:grid;grid-template-columns:1fr 1fr;gap:20px}.mail-compose__format{display:flex;gap:8px;padding:16px 0}.mail-compose__format button{border:1px solid var(--a-color-border-soft);border-radius:4px;background:transparent;padding:5px 10px;font:inherit;font-size:12px;cursor:pointer}.mail-compose__format button[aria-pressed=true]{background:var(--a-color-surface-muted);color:var(--a-color-primary)}
-.mail-compose__body,.mail-compose__editor{display:block;width:100%;min-height:320px;border:0;background:transparent;color:inherit;font:15px/1.8 inherit;padding:8px;resize:vertical;outline:1px solid var(--a-color-border-soft);overflow-wrap:anywhere}.mail-compose__editor{font-size:15px;line-height:1.8}.mail-compose__attachments{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.mail-compose__attachments>div{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid var(--a-color-border-soft);font-size:12px}.mail-compose__attachments span{overflow-wrap:anywhere}.mail-compose__attachments button{border:0;background:none;color:var(--a-color-muted);cursor:pointer}.mail-compose__actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.mail-compose__upload{position:relative;border:0!important;cursor:pointer}.mail-compose__upload input{position:absolute;width:1px;height:1px;opacity:0}.mail-compose__discard{border:0;background:none;color:var(--a-color-danger);font-size:13px;cursor:pointer;margin-left:auto}.mail-compose__hint{font-size:12px;color:var(--a-color-muted)}.mail-compose__error{color:var(--a-color-danger);font-size:13px}
-@media(max-width:600px){.mail-compose__copies{grid-template-columns:1fr;gap:0}.mail-compose__body,.mail-compose__editor{min-height:260px}.mail-compose__identity span{margin-left:0;width:100%}.mail-compose__actions{gap:10px}.mail-compose__discard{margin-left:0}}
+.mail-compose { display:grid; gap:20px; max-width:960px; margin:0 auto; padding:28px clamp(18px,5vw,60px) 74px; color:var(--a-color-fg); }
+.mail-compose__identity { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding-bottom:16px; border-bottom:1px solid var(--a-color-border-soft); }
+.mail-compose__identity > div { display:flex; align-items:center; gap:12px; min-width:0; color:var(--a-color-muted); font-size:12px; }
+.mail-compose__identity strong { color:var(--a-color-fg); font-weight:600; overflow-wrap:anywhere; }
+.mail-compose__copies { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.mail-compose__format { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:4px; }
+.mail-compose__format-tools { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+.mail-compose__editor { display:block; min-height:310px; width:100%; padding:16px; border:1px solid var(--a-color-border-soft); border-radius:var(--a-radius-control); background:var(--a-color-bg); color:var(--a-color-fg); font-size:14px; line-height:1.85; font-family:inherit; overflow-wrap:anywhere; }
+.mail-compose__editor:focus-visible { outline:2px solid var(--a-color-primary); outline-offset:2px; }
+.mail-compose__body :deep(.p-textarea) { min-height:310px; line-height:1.85; resize:vertical; }
+.mail-compose__attachments { display:flex; flex-wrap:wrap; gap:9px; }
+.mail-compose__attachments > div { display:flex; align-items:center; gap:8px; max-width:100%; padding:9px 11px; border:1px solid var(--a-color-border-soft); border-radius:var(--a-radius-control); background:var(--a-color-surface); font-size:12px; }
+.mail-compose__attachments span { min-width:0; overflow-wrap:anywhere; }
+.mail-compose__attachments button { display:inline-flex; flex-shrink:0; border:0; padding:2px; background:transparent; color:var(--a-color-muted); cursor:pointer; }
+.mail-compose__actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding-top:15px; border-top:1px solid var(--a-color-border-soft); }
+.mail-compose__upload { position:relative; display:inline-flex; align-items:center; gap:8px; cursor:pointer; }
+.mail-compose__upload input { position:absolute; width:1px; height:1px; opacity:0; }
+.mail-compose__discard { margin-left:auto; color:var(--a-color-danger); }
+.mail-compose__hint { margin:-11px 0 0; font-size:12px; color:var(--a-color-muted); }
+.mail-compose__error { margin:0; color:var(--a-color-danger); font-size:13px; }
+@media(max-width:600px) {
+ .mail-compose { padding:20px 16px 60px; gap:18px; }
+ .mail-compose__copies { grid-template-columns:1fr; gap:18px; }
+ .mail-compose__editor,.mail-compose__body :deep(.p-textarea) { min-height:240px; }
+ .mail-compose__discard { margin-left:0; }
+}
 </style>

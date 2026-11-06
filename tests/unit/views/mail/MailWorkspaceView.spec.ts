@@ -40,7 +40,7 @@ describe('Mail workspace', () => {
     expect(api.read).toHaveBeenCalledTimes(2); expect(api.read).toHaveBeenLastCalledWith('inbox','one')
   })
   it('switches to individual messages and keeps the choice', async () => {
-    const wrapper=mountView(); await flushPromises(); await wrapper.get('.mail-workspace__view-mode').trigger('click'); await flushPromises()
+    const wrapper=mountView(); await flushPromises(); await wrapper.get('[data-testid="mode-single"]').trigger('click'); await flushPromises()
     expect(wrapper.findAll('[data-testid^="mail-message-"]')).toHaveLength(2); expect(localStorage.getItem('atoman.mail.conversations')).toBe('false')
   })
   it('does not mark a stale detail response read after changing folders', async () => {
@@ -50,11 +50,18 @@ describe('Mail workspace', () => {
     expect(api.read).not.toHaveBeenCalled(); expect(wrapper.find('[data-testid="mail-plain-text"]').exists()).toBe(false)
   })
   it('uses server search and supports bulk actions with server undo', async () => {
-    const wrapper=mountView(); await flushPromises(); await wrapper.get('input[aria-label="搜索邮件"]').setValue('进展'); await wrapper.get('form[role="search"]').trigger('submit'); await flushPromises()
+    const wrapper=mountView(); await flushPromises(); await wrapper.get('input[aria-label="搜索邮件"]').setValue('进展'); await wrapper.get('.p-search-input__action-btn').trigger('click'); await flushPromises()
     expect(api.messages).toHaveBeenLastCalledWith('inbox','进展',0,50)
     await wrapper.get('input[aria-label="选择当前列表全部邮件"]').setValue(true); await wrapper.get('button[aria-label="归档所选邮件"]').trigger('click'); await flushPromises()
     expect(api.action).toHaveBeenCalledWith('inbox',['two','one'],'archive',undefined)
     const undo=wrapper.findAll('button').find(b=>b.text()==='撤销操作')!; await undo.trigger('click'); await flushPromises(); expect(api.undo).toHaveBeenCalledWith('receipt')
+  })
+  it('keeps compose reachable from the mobile list and shows accessible folder counts', async () => {
+    const wrapper=mountView(); await flushPromises()
+    expect(wrapper.get('.mail-workspace__mobile-compose').attributes('aria-label')).toBe('写邮件')
+    expect(wrapper.get('.mail-workspace__folder-count').attributes('aria-label')).toBe('2 封未读')
+    await wrapper.get('.mail-workspace__mobile-compose').trigger('click'); await flushPromises()
+    expect(wrapper.find('[data-testid="composer"]').exists()).toBe(true)
   })
   it('recovers the server pending send after refresh and waits for confirmed cancellation', async () => {
     const queued={id:'queue-1',status:'queued',send_after:new Date(Date.now()+5000).toISOString(),created_at:new Date().toISOString()}; api.queue.mockResolvedValue([queued]); api.cancel.mockResolvedValue({...queued,status:'cancelled'})

@@ -33,6 +33,7 @@
         <RouterLink to="/mail" class="mobile-module-directory__row">
           <Mail :size="20" aria-hidden="true" />
           <span>电子邮件</span>
+          <span v-if="mailUnread.active && mailUnread.count > 0" class="mobile-module-directory__unread">{{ mailUnread.unreadLabel }}</span>
           <ChevronRight :size="18" aria-hidden="true" />
         </RouterLink>
         <RouterLink to="/inbox?tab=dm" class="mobile-module-directory__row">
@@ -66,11 +67,13 @@ import { RouterLink, useRoute } from 'vue-router'
 import { Bell, Check, ChevronRight, LogIn, Mail, MessageCircle, PenLine, Settings, UserRound } from 'lucide-vue-next'
 import { getMobileMoreItems } from '@/composables/useResponsiveShell'
 import { useAuthStore } from '@/stores/auth'
+import { useMailUnreadStore } from '@/stores/mailUnread'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { MOBILE_MODULES } from './mobileRoutes'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const mailUnread = useMailUnreadStore()
 const siteAccessStore = useSiteAccessStore()
 const moduleSet = new Set<string>(MOBILE_MODULES)
 const moduleItems = computed(() => getMobileMoreItems().filter((item) => (
@@ -91,6 +94,7 @@ const currentModule = computed(() => {
 </script>
 
 <style scoped>
+.mobile-module-directory__unread { display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 5px;color:var(--a-color-bg);background:var(--a-color-primary);font-size:11px;font-variant-numeric:tabular-nums;border-radius:var(--a-radius-control);margin-left:auto; }
 .mobile-module-directory {
   min-height: calc(100dvh - var(--a-topbar-height));
   padding: 1rem 1rem calc(2rem + env(safe-area-inset-bottom, 0px));

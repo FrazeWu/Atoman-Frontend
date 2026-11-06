@@ -54,6 +54,7 @@ import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch 
 import { useRoute, useRouter } from 'vue-router'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useAuthStore } from '@/stores/auth'
+import { useMailUnreadStore } from '@/stores/mailUnread'
 import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { apiRequest } from '@/api/client'
@@ -91,6 +92,7 @@ const route = useRoute()
 const router = useRouter()
 const siteAccessStore = useSiteAccessStore()
 const authStore = useAuthStore()
+const mailUnread = useMailUnreadStore()
 const playerPresence = usePlayerPresenceStore()
 const apiUrl = useApiUrl()
 
@@ -293,6 +295,9 @@ onMounted(() => {
 onBeforeUnmount(() => {
   cancelStartupTasks?.()
 })
+// Stay updated when the user is browsing outside Webmail.
+onMounted(() => mailUnread.start())
+onBeforeUnmount(() => mailUnread.stop())
 </script>
 
 <style>

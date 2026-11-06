@@ -3,7 +3,21 @@
     <div class="mail-settings">
       <div v-if="loading" role="status">正在读取设置…</div>
       <p v-if="error" role="alert" class="mail-settings__error">{{ error }}</p>
+      <section class="mail-settings__notifications">
+        <h2>新邮件提醒</h2>
+        <p>在 Atoman 其他页面显示新邮件提示，邮箱入口同时显示未读数量。</p>
+        <label class="mail-settings__check"><input type="checkbox" :checked="mailUnread.enabled" @change="mailUnread.setEnabled(($event.target as HTMLInputElement).checked)" />启用站内新邮件提醒</label>
+        <PButton v-if="mailUnread.browserPermission !== 'granted'" variant="secondary" size="sm" @click="enableBrowserNotifications">允许浏览器通知（可选）</PButton>
+        <PBadge v-else type="success" label="已允许浏览器通知" />
+      </section>
+      <MailContactsPanel />
       <template v-if="settings">
+        <section><h2>自动签名</h2><p>写信时自动在正文中插入签名，可为回复单独选择是否启用。</p>
+          <label class="mail-settings__check"><input v-model="settings.signature!.enabled" type="checkbox" />开启自动签名</label>
+          <label class="mail-settings__check"><input v-model="settings.signature!.on_reply" type="checkbox" :disabled="!settings.signature!.enabled" />回复时也插入签名</label>
+          <PTextarea v-model="settings.signature!.text" label="纯文本签名" placeholder="例如：姓名 · 团队" :rows="3" maxlength="4096" />
+          <PTextarea v-model="settings.signature!.html" label="HTML 签名（可选）" placeholder="可用简单的文字格式，危险标签会自动清除。" :rows="3" maxlength="8192" />
+        </section>
         <section><h2>自动回复</h2><p>外出或暂时无法处理邮件时，自动向发件人回复。</p><label class="mail-settings__check"><input v-model="settings.vacation.enabled" type="checkbox" />启用自动回复</label><PInput v-model="settings.vacation.subject" label="主题" maxlength="200" placeholder="例如：暂时无法回复" /><PTextarea v-model="settings.vacation.text" label="回复内容" :rows="4" maxlength="8192" placeholder="写下你的自动回复…" /></section>
         <section><h2>拦截发件人</h2><p>这些地址发来的邮件会移至垃圾邮件。</p><PTextarea v-model="blockedText" label="邮箱地址" :rows="3" placeholder="每行一个邮箱地址" /></section>
         <section><h2>邮件规则</h2><p>按顺序处理新收到的邮件。</p><div v-for="(rule,index) in settings.rules" :key="rule.id" class="mail-rule"><div class="mail-rule__head"><label class="mail-settings__check"><input v-model="rule.enabled" type="checkbox" />规则 {{ index + 1 }}</label><PButton type="button" variant="ghost" size="sm" aria-label="删除规则" @click="settings.rules.splice(index,1)"><Trash2 :size="16" /></PButton></div><div class="mail-rule__fields"><PSelect v-model="rule.field" label="匹配字段" :options="[{ value: 'from', label: '发件人' }, { value: 'to', label: '收件人' }, { value: 'subject', label: '主题' }]" /><PInput v-model="rule.value" label="包含" placeholder="关键词或地址" maxlength="500" /><PSelect v-model="rule.action" label="执行" :options="[{ value: 'move', label: '移至文件夹' }, { value: 'archive', label: '归档' }, { value: 'junk', label: '移至垃圾邮件' }, { value: 'trash', label: '移至回收站' }]" /><PSelect v-if="rule.action==='move'" v-model="rule.mailbox_id" label="目标文件夹" :options="folders.map(folder => ({ value:folder.id, label:folder.name }))" /></div></div><PButton variant="secondary" size="sm" :disabled="settings.rules.length >= 30" @click="addRule"><Plus :size="15" /> 添加规则</PButton></section>
@@ -27,11 +41,19 @@ import PSelect from '@/components/ui/PSelect.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PModal from '@/components/ui/PModal.vue'
+import MailContactsPanel from './MailContactsPanel.vue'
+import { useMailUnreadStore } from '@/stores/mailUnread'
 import PButton from '@/components/ui/PButton.vue'
 import type { MailFolder } from '@/api/mail'
 import { fetchMailPreferences, saveMailPreferences, fetchMailAppPasswords, createMailAppPassword, revokeMailAppPassword, type MailPreferences, type MailAppPassword } from '@/api/mailClient'
 import { mailTime, newRequestID, parseRecipients } from './mail-helpers'
 const props = defineProps<{ address: string; folders: MailFolder[] }>()
+const mailUnread=useMailUnreadStore()
+async function enableBrowserNotifications(){
+  const status=await mailUnread.requestBrowserPermission()
+  if(status==='denied')error.value='浏览器已拒绝通知权限，请在网站权限设置中手动调整。'
+}
+
 const emit = defineEmits<{ close: [] }>()
 const settings = ref<MailPreferences | null>(null), passwords = ref<MailAppPassword[]>([])
 const loading = ref(true), saving = ref(false), saved = ref(false), error = ref(''), blockedText = ref('')

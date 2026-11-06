@@ -4,17 +4,25 @@ import type { MailSummary, MailAccountInfo } from '@/api/mail'
 const base = () => `${useApiUrl()}/mail`
 const key = (value: string) => encodeURIComponent(value)
 export interface MailUpload { id: string; name: string; type: string; size: number }
-export interface MailComposeFields { to: string[]; cc: string[]; bcc: string[]; subject: string; text: string; html?: string; in_reply_to?: string; references?: string[]; attachments: MailUpload[] }
+export interface MailComposeFields { to: string[]; cc: string[]; bcc: string[]; subject: string; text: string; html?: string; send_at?: string; in_reply_to?: string; references?: string[]; attachments: MailUpload[] }
 export interface MailDraft extends MailComposeFields { id: string; revision?: number; updated_at?: string }
 interface DraftResponse { id: string; revision: number; subject: string; updated_at: string; compose?: MailComposeFields }
 function readDraft(row: DraftResponse): MailDraft { const compose = row.compose; return { ...compose, id: row.id, revision: row.revision, updated_at: row.updated_at, to: compose?.to || [], cc: compose?.cc || [], bcc: compose?.bcc || [], text: compose?.text || '', attachments: compose?.attachments || [], subject: compose?.subject || row.subject || '' } }
-export interface MailOutbox { id: string; status: string; send_after: string; created_at: string; draft_id?: string; draft_revision?: number }
+export interface MailOutbox { id: string; scheduled?: boolean; status: string; send_after: string; created_at: string; draft_id?: string; draft_revision?: number }
 export interface MailPage { items: MailSummary[]; has_more: boolean; next_position?: number; total?: number; position?: number }
 type ServerSummary = Omit<MailSummary, 'mailboxIds'> & { isStarred?: boolean; mailboxIds?: string[] | Record<string, boolean> }
 function readSummary(row: ServerSummary): MailSummary { return { ...row, isFlagged: row.isStarred ?? row.isFlagged, mailboxIds: Array.isArray(row.mailboxIds) ? row.mailboxIds : Object.keys(row.mailboxIds || {}).filter(id => (row.mailboxIds as Record<string, boolean>)[id]) } }
-export async function queryMailMessages(mailboxId: string, query = '', position = 0, limit = 50): Promise<MailPage> {
+export interface MailAdvancedFilters {
+ from?: string; to?: string; subject?: string; after?: string; before?: string
+ unread?: boolean | null; starred?: boolean | null; attachment?: boolean | null
+}
+export async function queryMailMessages(mailboxId: string, query = '', position = 0, limit = 50, filters?: MailAdvancedFilters): Promise<MailPage> {
   const params = new URLSearchParams({ mailbox_id: mailboxId, limit: String(limit), position: String(position) })
   if (query.trim()) params.set('q', query.trim())
+  if (filters) {
+    for (const field of ['from','to','subject','after','before'] as const) if (filters[field]) params.set(field, filters[field])
+    for (const field of ['unread','starred','attachment'] as const) if (filters[field] !== undefined && filters[field] !== null) params.set(field, String(filters[field]))
+  }
   const result = await apiGet<MailPage & { items: ServerSummary[] }>(`${base()}/search?${params}`)
   return { ...result, items: result.items.map(readSummary), next_position: (result.position ?? position) + result.items.length }
 }
@@ -37,7 +45,7 @@ export async function saveMailDraft(draft: MailDraft) {
   return readDraft(await apiPutJson<DraftResponse>(`${base()}/drafts/${key(id)}`, { revision: revision || 0, compose }))
 }
 export const deleteMailDraft = (id: string) => apiDeleteJson<{ deleted: boolean }>(`${base()}/drafts/${key(id)}`)
-export const queueMail = (fields: MailComposeFields, requestId: string, draftId?: string, draftRevision?: number) => { const { attachments, ...content } = fields; return apiPostJson<MailOutbox>(`${base()}/outbox`, { ...content, attachment_ids: attachments.map(file => file.id), request_id: requestId, draft_id: draftId, draft_revision: draftRevision }) }
+export const queueMail = (fields: MailComposeFields, requestId: string, draftId?: string, draftRevision?: number, sendAt?: string) => { const { attachments, ...content } = fields; return apiPostJson<MailOutbox>(`${base()}/outbox`, { ...content, attachment_ids: attachments.map(file => file.id), request_id: requestId, draft_id: draftId, draft_revision: draftRevision, ...(sendAt ? { send_at: sendAt } : {}) }) }
 export const provisionMailAccount = () => apiPostJson<MailAccountInfo>(`${base()}/provision`, {})
 export const fetchMailOutbox = (id: string) => apiGet<MailOutbox>(`${base()}/outbox/${key(id)}`)
 export const fetchMailOutboxes = () => apiGet<MailOutbox[]>(`${base()}/outbox`)
@@ -72,15 +80,23 @@ export const undoMailAction = (token: string) => apiPostJson<ActionResponse>(`${
 export const createMailFolder = (name: string) => apiPostJson<{ id: string }>(`${base()}/folders`, { name })
 export const deleteMailFolder = (id: string) => apiDeleteJson<{ deleted: boolean }>(`${base()}/folders/${key(id)}`)
 export interface MailFilterRule { id: string; name?: string; enabled: boolean; field: 'from' | 'to' | 'subject'; value: string; action: 'move' | 'junk' | 'archive' | 'trash'; mailbox_id?: string }
-export interface MailPreferences { conversation_mode?: boolean; rules: MailFilterRule[]; blocked_senders: string[]; vacation: { enabled: boolean; subject: string; text: string } }
-interface PreferencesResponse { conversation_mode: boolean; rules: Array<Omit<MailFilterRule, 'value'> & { contains: string }>; blocked_senders: string[]; auto_reply: MailPreferences['vacation'] }
-function readPreferences(row: PreferencesResponse): MailPreferences { return { conversation_mode: row.conversation_mode, blocked_senders: row.blocked_senders || [], vacation: row.auto_reply, rules: (row.rules || []).map(rule => ({ ...rule, value: rule.contains })) } }
+export interface MailSignature { enabled: boolean; text: string; html: string; on_reply: boolean }
+export interface MailPreferences { signature?: MailSignature; mail_notifications?: boolean; conversation_mode?: boolean; rules: MailFilterRule[]; blocked_senders: string[]; vacation: { enabled: boolean; subject: string; text: string } }
+interface PreferencesResponse { conversation_mode: boolean; rules: Array<Omit<MailFilterRule, 'value'> & { contains: string }>; blocked_senders: string[]; signature?: MailSignature; auto_reply: MailPreferences['vacation'] }
+function readPreferences(row: PreferencesResponse): MailPreferences { return { conversation_mode: row.conversation_mode, signature: row.signature || { enabled:false,text:'',html:'',on_reply:true }, blocked_senders: row.blocked_senders || [], vacation: row.auto_reply, rules: (row.rules || []).map(rule => ({ ...rule, value: rule.contains })) } }
 export async function fetchMailPreferences() { return readPreferences(await apiGet<PreferencesResponse>(`${base()}/settings`)) }
 export async function saveMailPreferences(settings: MailPreferences) {
-  const payload: PreferencesResponse = { conversation_mode: settings.conversation_mode ?? true, blocked_senders: settings.blocked_senders, auto_reply: settings.vacation, rules: settings.rules.map(({ value, ...rule }) => ({ ...rule, name: rule.name || value, contains: value })) }
+  const payload: PreferencesResponse = { conversation_mode: settings.conversation_mode ?? true, signature: settings.signature || { enabled:false,text:'',html:'',on_reply:true }, blocked_senders: settings.blocked_senders, auto_reply: settings.vacation, rules: settings.rules.map(({ value, ...rule }) => ({ ...rule, name: rule.name || value, contains: value })) }
   return readPreferences(await apiPutJson<PreferencesResponse>(`${base()}/settings`, payload))
 }
 export interface MailAppPassword { id: string; name: string; created_at: string }
 export const fetchMailAppPasswords = () => apiGet<MailAppPassword[]>(`${base()}/app-passwords`)
 export const createMailAppPassword = (name: string) => apiPostJson<MailAppPassword & { password: string }>(`${base()}/app-passwords`, { name })
 export const revokeMailAppPassword = (id: string) => apiDeleteJson<{ revoked: boolean }>(`${base()}/app-passwords/${key(id)}`)
+
+export interface MailContact { id: string; name: string; email: string; notes: string; revision: number; updated_at: string }
+export const fetchMailContacts = () => apiGet<MailContact[]>(base()+'/contacts')
+export const createMailContact = (item: Pick<MailContact,'name'|'email'|'notes'>) => apiPostJson<MailContact>(base()+'/contacts', item)
+export const updateMailContact = (item: MailContact) => apiPutJson<MailContact>(base()+'/contacts/'+key(item.id), item)
+export const deleteMailContact = (id: string) => apiDeleteJson<{ deleted:boolean }>(base()+'/contacts/'+key(id))
+export const fetchMailUnread = () => apiGet<{count:number;latest_id?:string}>(base()+'/unread')

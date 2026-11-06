@@ -44,11 +44,12 @@
     class="notif-btn mail-btn"
     data-testid="topbar-mail-link"
     title="电子邮件"
-    aria-label="电子邮件"
+    :aria-label="mailUnread.active && mailUnread.count > 0 ? '电子邮件，' + mailUnread.count + ' 封未读' : '电子邮件'"
     @click="closeDropdown"
   >
     <Mail :size="19" class="notif-btn__icon" aria-hidden="true" />
     <span class="mail-btn__label">邮箱</span>
+    <span v-if="mailUnread.active && mailUnread.count > 0" class="notif-count notif-count--mail" data-testid="mail-unread-badge">{{ mailUnread.unreadLabel }}</span>
   </RouterLink>
 
   <RouterLink
@@ -91,6 +92,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useInboxStore } from '@/stores/inbox'
 import { useNotificationStore } from '@/stores/notification'
 import { useDMStore } from '@/stores/dm'
+import { useMailUnreadStore } from '@/stores/mailUnread'
 import { notificationRoom } from '@/config/moduleRooms'
 import { isAdminRole } from '@/utils/roles'
 import { resolveMediaURL } from '@/utils/mediaUrl'
@@ -102,6 +104,7 @@ const authStore = useAuthStore()
 const inboxStore = useInboxStore()
 const notificationStore = useNotificationStore()
 const dmStore = useDMStore()
+const mailUnread = useMailUnreadStore()
 const router = useRouter()
 
 const dmUnreadCount = computed(() => {
@@ -184,6 +187,7 @@ onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   window.addEventListener('atoman:global-overlay-open', handleGlobalOverlayOpen)
   inboxStore.bootstrap()
+  mailUnread.start()
 })
 
 onBeforeUnmount(() => {
@@ -194,6 +198,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
   window.removeEventListener('atoman:global-overlay-open', handleGlobalOverlayOpen)
   inboxStore.disconnect()
+  mailUnread.stop()
 })
 
 const logout = async () => {
@@ -344,6 +349,8 @@ const logout = async () => {
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
+
+.notif-count--mail { background: var(--a-color-primary); }
 
 .notif-count--dm {
   background: var(--a-color-primary, #2563eb);

@@ -51,7 +51,7 @@ describe('Mail workspace', () => {
   })
   it('uses server search and supports bulk actions with server undo', async () => {
     const wrapper=mountView(); await flushPromises(); await wrapper.get('input[aria-label="搜索邮件"]').setValue('进展'); await wrapper.get('.p-search-input__action-btn').trigger('click'); await flushPromises()
-    expect(api.messages).toHaveBeenLastCalledWith('inbox','进展',0,50)
+    expect(api.messages).toHaveBeenLastCalledWith('inbox','进展',0,50,{})
     await wrapper.get('input[aria-label="选择当前列表全部邮件"]').setValue(true); await wrapper.get('button[aria-label="归档所选邮件"]').trigger('click'); await flushPromises()
     expect(api.action).toHaveBeenCalledWith('inbox',['two','one'],'archive',undefined)
     const undo=wrapper.findAll('button').find(b=>b.text()==='撤销操作')!; await undo.trigger('click'); await flushPromises(); expect(api.undo).toHaveBeenCalledWith('receipt')

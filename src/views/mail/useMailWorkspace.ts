@@ -3,6 +3,7 @@ import { ApiErrorResponseError } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { fetchMailFolders, fetchMailDetail, markMailRead, fetchMyMailAccount, redeemMailInvitation, reserveAdminMailAddress, type MailAccountInfo, type MailFolder, type MailSummary, type MailDetail, type MailAttachmentInfo } from '@/api/mail'
 import { queryMailMessages, fetchMailThread, fetchMailDrafts, fetchMailDraft, provisionMailAccount, reconcileMailOutbox, fetchMailOutbox, fetchMailOutboxes, cancelMailOutbox, mutateMailMessages, undoMailAction, createMailFolder, deleteMailFolder, downloadMailAttachment, downloadMailSource, fetchMailAttachmentBlob, uploadMailAttachment, fetchMailPreferences, saveMailPreferences, type MailDraft, type MailOutbox, type MailAction } from '@/api/mailClient'
+import type { MailAdvancedFilters } from '@/api/mailClient'
 import { addressText, groupConversations, mailTime, newRequestID, replyRecipients, type MailConversation } from './mail-helpers'
 
 export function useMailWorkspace() {
@@ -16,6 +17,7 @@ export function useMailWorkspace() {
   const currentFolder = computed(() => folders.value.find(row => row.id === currentFolderId.value))
   const isDraftFolder = computed(() => currentFolder.value?.role === 'drafts')
   const messages = ref<MailSummary[]>([]), drafts = ref<MailDraft[]>([]), loadingMessages = ref(false), messagesError = ref('')
+  const advancedOpen=ref(false), advancedFilters=ref<MailAdvancedFilters>({}), allFolders=ref(false)
   const searchText = ref(''), committedSearch = ref(''), position = ref(0), hasMore = ref(false), totalMessages = ref(0)
   const conversationMode = ref(true), selection = ref(new Set<string>()), selectedGroupId = ref('')
   const conversations = computed(() => groupConversations(messages.value, conversationMode.value))
@@ -68,7 +70,7 @@ export function useMailWorkspace() {
         drafts.value = result; messages.value = []; hasMore.value = false
       } else {
         const start = more ? position.value : 0
-        const result = await queryMailMessages(folderId, committedSearch.value, start, 50)
+        const result = await queryMailMessages(allFolders.value ? '' : folderId, committedSearch.value, start, 50, advancedFilters.value)
         if (disposed || generation !== messageGeneration || folderId !== currentFolderId.value) return
         messages.value = more ? [...messages.value, ...result.items.filter(row => !messages.value.some(old => old.id === row.id))] : result.items
         drafts.value = []; hasMore.value = result.has_more; position.value = result.next_position ?? start + result.items.length; totalMessages.value = result.total ?? messages.value.length
@@ -88,8 +90,14 @@ export function useMailWorkspace() {
     } catch (error) { if (!disposed && generation === accountGeneration) accountError.value = messageError(error, '暂时无法连接邮箱，请稍后重试。') }
     finally { if (generation === accountGeneration) loadingAccount.value = false }
   }
-  function selectFolder(id: string) { currentFolderId.value = id; searchText.value = ''; committedSearch.value = ''; mobilePane.value = 'list'; void loadMessages() }
+  function selectFolder(id: string) { advancedFilters.value = {}; allFolders.value = false; currentFolderId.value = id; searchText.value = ''; committedSearch.value = ''; mobilePane.value = 'list'; void loadMessages() }
   function runSearch() { committedSearch.value = searchText.value.trim(); void loadMessages() }
+  function setAdvancedSearch(filters:MailAdvancedFilters, all:boolean) {
+    advancedFilters.value=filters;allFolders.value=all;advancedOpen.value=false
+    void loadMessages()
+  }
+  function clearAdvancedSearch() {advancedFilters.value={};allFolders.value=false;void loadMessages()}
+
   function selectAll() { selection.value = allSelected.value ? new Set() : new Set(messages.value.slice(0, 100).map(row => row.id)) }
   function toggleGroup(group: MailConversation) { const next = new Set(selection.value); const remove = group.messages.every(row => next.has(row.id)); for (const row of group.messages) { if (remove) next.delete(row.id); else if (next.size < 100) next.add(row.id) }; selection.value = next }
   async function openConversation(group: MailConversation) {
@@ -176,7 +184,7 @@ export function useMailWorkspace() {
   function onQueued(outbox: MailOutbox, draft: MailDraft) { sendDrafts.set(outbox.id, draft); pendingSends.value = [outbox, ...pendingSends.value.filter(row => row.id !== outbox.id)]; now.value = Date.now() }
   function remainingSeconds(item: MailOutbox) { return Math.max(0, Math.ceil((new Date(item.send_after).getTime() - now.value) / 1000)) }
   function queueLabel(item: MailOutbox) {
-    const labels: Record<string, string> = { queued: remainingSeconds(item) ? '邮件准备发送，可撤销。' : '等待提交发送…', dispatching: '正在提交邮件…', sending: '正在提交邮件…', sent: '邮件已提交发送。', submitted: '邮件已提交发送。', cancelled: '发送已撤销，草稿已保留。', blocked: '邮件尚未发出，请检查草稿后重试。', failed: '发送未成功，请打开草稿检查。', uncertain: '发送结果正在确认，请勿重复发送。' }
+    const labels: Record<string, string> = { queued: item.scheduled ? '已安排在 '+new Date(item.send_after).toLocaleString()+' 定时发送，可在发送前取消。' : remainingSeconds(item) ? '邮件准备发送，可撤销。' : '等待提交发送…', dispatching: '正在提交邮件…', sending: '正在提交邮件…', sent: '邮件已提交发送。', submitted: '邮件已提交发送。', cancelled: '发送已撤销，草稿已保留。', blocked: '邮件尚未发出，请检查草稿后重试。', failed: '发送未成功，请打开草稿检查。', uncertain: '发送结果正在确认，请勿重复发送。' }
     return labels[item.status] || '正在确认发送状态…'
   }
   async function refreshQueue() {
@@ -298,5 +306,5 @@ export function useMailWorkspace() {
     document.addEventListener('visibilitychange', onVisibilityChange)
   })
   onBeforeUnmount(() => { disposed = true; accountGeneration++; folderGeneration++; messageGeneration++; readerGeneration++; clearInterval(refreshTimer); clearInterval(clockTimer); document.removeEventListener('visibilitychange', onVisibilityChange) })
-  return { mailAccount, loadingAccount, accountError, mailIsActive, isMailAdministrator, statusLabel, statusTitle, statusDescription, invitation, chosenLocalPart, isChosenLocalValid, redeeming, redeemError, claimAddress, folders, foldersLoading, foldersError, currentFolder, currentFolderId, folderLabel, mobilePane, messages, drafts, loadingMessages, messagesError, searchText, committedSearch, totalMessages, conversations, conversationMode, selection, selectedGroupId, allSelected, selectAll, toggleGroup, selectFolder, loadMessages, refreshMailbox, runSearch, hasMore, openConversation, readerMessages, expanded, details, detailErrors, detailLoading, htmlShown, threadError, toggleExpanded, loadDetail, newMessage, editDraft, composeDraft, composeWarning, settingsOpen, replyTo, forwardMessage, onDraftSaved, onQueued, pendingSends, remainingSeconds, queueLabel, undoSend, checkSend, provisionAccount, cancelBusy, notice, actionUndo, actionBusy, performAction, undoAction, moveSelected, downloadAttachment, downloadSource, blockSender, folderDialog, deleteFolderDialog, newFolderName, folderError, folderWorking, addFolder, removeFolder, isDraftFolder }
+  return { advancedOpen,advancedFilters,allFolders,setAdvancedSearch,clearAdvancedSearch, mailAccount, loadingAccount, accountError, mailIsActive, isMailAdministrator, statusLabel, statusTitle, statusDescription, invitation, chosenLocalPart, isChosenLocalValid, redeeming, redeemError, claimAddress, folders, foldersLoading, foldersError, currentFolder, currentFolderId, folderLabel, mobilePane, messages, drafts, loadingMessages, messagesError, searchText, committedSearch, totalMessages, conversations, conversationMode, selection, selectedGroupId, allSelected, selectAll, toggleGroup, selectFolder, loadMessages, refreshMailbox, runSearch, hasMore, openConversation, readerMessages, expanded, details, detailErrors, detailLoading, htmlShown, threadError, toggleExpanded, loadDetail, newMessage, editDraft, composeDraft, composeWarning, settingsOpen, replyTo, forwardMessage, onDraftSaved, onQueued, pendingSends, remainingSeconds, queueLabel, undoSend, checkSend, refreshQueue, provisionAccount, cancelBusy, notice, actionUndo, actionBusy, performAction, undoAction, moveSelected, downloadAttachment, downloadSource, blockSender, folderDialog, deleteFolderDialog, newFolderName, folderError, folderWorking, addFolder, removeFolder, isDraftFolder }
 }

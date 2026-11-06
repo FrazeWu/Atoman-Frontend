@@ -23,12 +23,13 @@
           <div class="mail-workspace__folders-header"><span class="mail-workspace__section-label">邮件文件夹</span><PButton class="mail-workspace__new" block @click="newMessage"><Pencil :size="16" /> 写邮件</PButton></div>
           <p v-if="foldersError" class="mail-error" role="alert">{{ foldersError }}</p><p v-if="foldersLoading && !folders.length" class="mail-workspace__list-state">正在加载文件夹…</p>
           <nav class="mail-workspace__folder-list" aria-label="邮件文件夹"><button v-for="folder in folders" :key="folder.id" class="mail-workspace__folder" :class="{ 'is-active': currentFolderId === folder.id }" :aria-current="currentFolderId === folder.id ? 'page' : undefined" @click="selectFolder(folder.id)"><component :is="folderIcon(folder.role)" :size="17" aria-hidden="true" /><span class="mail-workspace__folder-name">{{ folderLabel(folder) }}</span><small v-if="folder.unreadEmails" class="mail-workspace__folder-count" :aria-label="`${folder.unreadEmails} 封未读`">{{ folder.unreadEmails > 999 ? '999+' : folder.unreadEmails }}</small></button></nav>
-          <div class="mail-workspace__folder-tools"><button @click="folderDialog = true"><Plus :size="14" /> 新建文件夹</button><button v-if="currentFolder && !currentFolder.role" @click="deleteFolderDialog = true"><Trash2 :size="14" /> 删除当前文件夹</button></div>
+          <div class="mail-workspace__folder-tools"><button @click="scheduledOpen=true"><Clock :size="14" /> 定时发送与状态</button><button @click="folderDialog = true"><Plus :size="14" /> 新建文件夹</button><button v-if="currentFolder && !currentFolder.role" @click="deleteFolderDialog = true"><Trash2 :size="14" /> 删除当前文件夹</button></div>
           <p class="mail-workspace__sidebar-foot">回收站和垃圾邮件保留 30 天</p>
         </aside>
         <section class="mail-workspace__list" :class="{ 'mail-mobile-visible': mobilePane === 'list' }" data-testid="mail-list-pane">
           <header class="mail-workspace__list-header"><button class="mail-icon-button mail-workspace__mobile-back" aria-label="显示文件夹" @click="mobilePane = 'folders'"><ChevronLeft :size="18" /></button><div class="mail-workspace__heading"><h2>{{ currentFolder ? folderLabel(currentFolder) : '邮件' }}</h2><small>{{ isDraftFolder ? drafts.length : totalMessages }} 封邮件</small></div><PButton class="mail-workspace__mobile-compose" size="sm" variant="secondary" aria-label="写邮件" @click="newMessage"><Pencil :size="15" /> 写邮件</PButton><button class="mail-icon-button" title="刷新邮件列表" aria-label="刷新邮件列表" :disabled="loadingMessages" @click="loadMessages(false, true)"><RefreshCw :size="17" :class="{ 'mail-spin': loadingMessages }" /></button></header>
-          <PSearchInput v-if="!isDraftFolder" v-model="searchText" class="mail-workspace__search" variant="inline" size="sm" placeholder="搜索发件人、主题或正文" aria-label="搜索邮件" :show-shortcut-badge="false" :show-action-button="true" action-button-text="搜索" @search="runSearch" @clear="runSearch" />
+          <div v-if="!isDraftFolder" class="mail-workspace__search-container"><PSearchInput v-model="searchText" class="mail-workspace__search" variant="inline" size="sm" placeholder="搜索发件人、主题或正文" aria-label="搜索邮件" :show-shortcut-badge="false" :show-action-button="true" action-button-text="搜索" @search="runSearch" @clear="runSearch" /><PButton type="button" variant="secondary" size="sm" class="mail-workspace__advanced-trigger" :aria-label="allFolders || Object.values(advancedFilters).some(v=>v !== undefined && v !== '') ? '编辑高级筛选' : '高级筛选'" @click="advancedOpen=true"><SlidersHorizontal :size="16" /></PButton></div>
+          <button v-if="allFolders || Object.values(advancedFilters).some(v=>v !== undefined && v !== '')" class="mail-workspace__filter-note" @click="clearAdvancedSearch">高级筛选已启用 · 点击清除</button>
           <div v-if="!isDraftFolder" class="mail-workspace__list-options"><label><input type="checkbox" :checked="allSelected" aria-label="选择当前列表全部邮件" @change="selectAll" /><span>{{ selection.size ? `已选 ${selection.size} 封` : '选择' }}</span></label><PSegmentedControl class="mail-workspace__view-mode" :model-value="conversationMode ? 'thread' : 'single'" :options="[{ label: '会话', value: 'thread' }, { label: '单封', value: 'single' }]" @update:model-value="conversationMode = $event === 'thread'" /></div>
           <div v-if="selection.size" class="mail-workspace__bulk" aria-label="批量操作"><PButton variant="ghost" size="sm" title="归档" aria-label="归档所选邮件" :disabled="actionBusy" @click="performAction('archive')"><Archive :size="17" /></PButton><PButton variant="ghost" size="sm" title="标为已读" aria-label="将所选邮件标为已读" :disabled="actionBusy" @click="performAction('read')"><MailOpen :size="17" /></PButton><PButton variant="ghost" size="sm" title="标为未读" aria-label="将所选邮件标为未读" :disabled="actionBusy" @click="performAction('unread')"><Mail :size="17" /></PButton><PButton variant="ghost" size="sm" title="移到回收站" aria-label="删除所选邮件" :disabled="actionBusy" @click="performAction('trash')"><Trash2 :size="17" /></PButton><PSelect class="mail-workspace__move-select" label="移动所选邮件" :model-value="null" placeholder="移动到…" :disabled="actionBusy" :options="folders.filter(row => row.id !== currentFolderId).map(row => ({ value: row.id, label: folderLabel(row) }))" @update:model-value="performAction('move', undefined, String($event))" /></div>
           <div class="mail-workspace__messages" aria-live="polite">
@@ -44,7 +45,7 @@
               <section v-for="message in readerMessages" :key="message.id" class="mail-workspace__thread-card"><button class="mail-workspace__thread-summary" :aria-expanded="expanded.has(message.id)" @click="toggleExpanded(message)"><span><strong>{{ addressText(message.from || []) || '邮件' }}</strong><small v-if="!expanded.has(message.id)">{{ message.preview }}</small></span><time>{{ mailTime(message.receivedAt, true) }}</time><ChevronDown v-if="expanded.has(message.id)" :size="16" /><ChevronRight v-else :size="16" /></button>
                 <div v-if="expanded.has(message.id)" class="mail-workspace__thread-content"><div v-if="detailLoading.has(message.id)" class="mail-workspace__detail-status"><RefreshCw class="mail-spin" :size="18" /> 正在打开邮件…</div><div v-else-if="detailErrors[message.id]" class="mail-workspace__detail-status" role="alert"><p>{{ detailErrors[message.id] }}</p><button @click="loadDetail(message)">重新打开</button></div>
                   <template v-else-if="details[message.id]"><dl class="mail-workspace__address-meta"><div><dt>发件人</dt><dd>{{ addressText(details[message.id]!.from) }}</dd></div><div><dt>收件人</dt><dd>{{ addressText(details[message.id]!.to) }}</dd></div><div v-if="details[message.id]!.cc.length"><dt>抄送</dt><dd>{{ addressText(details[message.id]!.cc) }}</dd></div></dl><div v-if="details[message.id]!.html" class="mail-workspace__format-choice"><button @click="htmlShown[message.id] = !htmlShown[message.id]">{{ htmlShown[message.id] ? '显示纯文本' : '显示排版' }}</button><span v-if="htmlShown[message.id]">外部图片已隐藏</span></div><iframe v-if="htmlShown[message.id] && details[message.id]!.html" class="mail-workspace__html-frame" title="邮件正文" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" :srcdoc="mailFrameDocument(details[message.id]!.html || '')" /><p v-else class="mail-workspace__plain-body" data-testid="mail-plain-text">{{ details[message.id]!.plainText || (details[message.id]!.html ? '此邮件只有排版正文，请选择「显示排版」。' : '这封邮件没有正文。') }}</p><p v-if="details[message.id]!.bodyTruncated" class="mail-workspace__body-warning">正文较长，当前显示部分内容。<button @click="downloadSource(details[message.id]!)">下载完整邮件</button></p>
-                    <div v-if="details[message.id]!.attachments.length" class="mail-workspace__attachments"><button v-for="(attachment, index) in details[message.id]!.attachments" :key="`${attachment.partId || index}-${attachment.name}`" class="mail-workspace__attachment-row" @click="downloadAttachment(message, attachment)"><Paperclip :size="14" /><span>{{ attachment.name || '附件' }} · {{ fileSize(attachment.size) }}</span><Download :size="14" /></button></div>
+                    <div v-if="details[message.id]!.attachments.length" class="mail-workspace__attachments"><button v-for="(attachment, index) in details[message.id]!.attachments" :key="`${attachment.partId || index}-${attachment.name}`" class="mail-workspace__attachment-row" @click="previewAttachment(message, attachment)" :aria-label="'预览或下载附件 '+(attachment.name||'附件')"><Paperclip :size="14" /><span>{{ attachment.name || '附件' }} · {{ fileSize(attachment.size) }}</span><Download :size="14" /></button></div>
                     <div class="mail-workspace__reply-actions"><PButton size="sm" variant="secondary" @click="replyTo(details[message.id]!, false)"><Reply :size="15" /> 回复</PButton><PButton size="sm" variant="secondary" @click="replyTo(details[message.id]!, true)"><ReplyAll :size="15" /> 全部回复</PButton><PButton size="sm" variant="secondary" :disabled="actionBusy" @click="forwardMessage(details[message.id]!)"><Forward :size="15" /> 转发</PButton><PButton size="sm" variant="ghost" :aria-label="message.isFlagged ? '取消星标' : '添加星标'" :disabled="actionBusy" @click="performAction(message.isFlagged ? 'unflag' : 'flag', [message.id])"><Star :size="15" :fill="message.isFlagged ? 'currentColor' : 'none'" /></PButton><PButton v-if="details[message.id]!.from[0]?.email !== mailAccount?.address" size="sm" variant="ghost" title="拦截发件人并移到垃圾邮件" :disabled="actionBusy" @click="blockSender(details[message.id]!)"><ShieldAlert :size="15" /> 拦截</PButton></div>
                   </template>
                 </div>
@@ -53,7 +54,13 @@
           </template><div v-else class="mail-workspace__reader-empty"><PEmpty align="center" title="选择一封邮件" description="在这里阅读和回复你的日常往来。"><template #icon><MailOpen :size="40" :stroke-width="1.25" /></template><template #action><PButton class="mail-workspace__mobile-back" variant="secondary" size="sm" @click="mobilePane = 'list'">返回邮件列表</PButton></template></PEmpty></div>
         </article>
       </div>
+      <PModal :show="shortcutHelp" title="邮箱快捷键" size="sm" @close="shortcutHelp=false">
+        <dl class="mail-shortcuts"><dt>C</dt><dd>写邮件</dd><dt>J / K</dt><dd>下一封 / 上一封</dd><dt>R</dt><dd>回复当前邮件</dd><dt>E</dt><dd>归档当前邮件</dd><dt>S</dt><dd>标记或取消星标</dd><dt>/</dt><dd>聚焦搜索</dd><dt>?</dt><dd>快捷键帮助</dd><dt>Esc</dt><dd>返回邮件列表</dd></dl>
+      </PModal>
+      <MailScheduledPanel v-if="scheduledOpen" :items="pendingSends" :busy-id="cancelBusy" @close="scheduledOpen=false" @refresh="refreshQueue" @cancel="undoSend" />
+      <MailAttachmentPreview v-if="attachmentPreview" :key="attachmentPreview.messageId+attachmentPreview.attachment.partId" :message-id="attachmentPreview.messageId" :attachment="attachmentPreview.attachment" @close="attachmentPreview=null" />
       <MailComposer v-if="composeDraft" :key="composeDraft.id" :address="mailAccount?.address || ''" :draft="composeDraft" :warning="composeWarning" @close="composeDraft = null" @saved="onDraftSaved" @queued="onQueued" />
+      <MailAdvancedSearch v-if="advancedOpen" :filters="advancedFilters" :everywhere="allFolders" @close="advancedOpen=false" @apply="setAdvancedSearch" />
       <MailSettings v-if="settingsOpen" :address="mailAccount?.address || ''" :folders="folders" @close="settingsOpen = false" />
       <PModal :show="folderDialog" title="新建文件夹" size="sm" @close="folderDialog = false"><form class="mail-workspace__folder-form" @submit.prevent="addFolder"><PInput id="new-mail-folder" v-model="newFolderName" label="文件夹名称" maxlength="100" required autofocus /><p v-if="folderError" class="mail-error" role="alert">{{ folderError }}</p><PButton type="submit" :disabled="folderWorking || !newFolderName.trim()">{{ folderWorking ? '创建中…' : '创建' }}</PButton></form></PModal>
       <PModal :show="deleteFolderDialog" title="删除文件夹" size="sm" @close="deleteFolderDialog = false"><p>删除「{{ currentFolder?.name }}」？只有空文件夹可以删除。</p><p v-if="folderError" class="mail-error" role="alert">{{ folderError }}</p><template #footer><PButton variant="secondary" @click="deleteFolderDialog = false">取消</PButton><PButton :disabled="folderWorking" @click="removeFolder">删除文件夹</PButton></template></PModal>
@@ -61,7 +68,7 @@
   </section>
 </template>
 <script setup lang="ts">
-import { Archive, ChevronLeft, ChevronRight, ChevronDown, CircleAlert, Download, FileText, Folder, Forward, Inbox, Mail, MailOpen, Paperclip, Pencil, Plus, RefreshCw, Reply, ReplyAll, Send, Settings, ShieldAlert, Star, Trash2, Undo2, X } from 'lucide-vue-next'
+import { Clock, SlidersHorizontal, Archive, ChevronLeft, ChevronRight, ChevronDown, CircleAlert, Download, FileText, Folder, Forward, Inbox, Mail, MailOpen, Paperclip, Pencil, Plus, RefreshCw, Reply, ReplyAll, Send, Settings, ShieldAlert, Star, Trash2, Undo2, X } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PBadge from '@/components/ui/PBadge.vue'
@@ -71,10 +78,64 @@ import PSearchInput from '@/components/ui/PSearchInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import MailComposer from './MailComposer.vue'
+import MailAdvancedSearch from './MailAdvancedSearch.vue'
+import MailAttachmentPreview from './MailAttachmentPreview.vue'
+import MailScheduledPanel from './MailScheduledPanel.vue'
+import { onMounted, onBeforeUnmount, ref } from 'vue'
+import type { MailSummary, MailAttachmentInfo } from '@/api/mail'
 import MailSettings from './MailSettings.vue'
 import { addressText, fileSize, mailFrameDocument, mailTime } from './mail-helpers'
 import { useMailWorkspace } from './useMailWorkspace'
-const { mailAccount, loadingAccount, accountError, mailIsActive, isMailAdministrator, statusLabel, statusTitle, statusDescription, invitation, chosenLocalPart, isChosenLocalValid, redeeming, redeemError, claimAddress, folders, foldersLoading, foldersError, currentFolder, currentFolderId, folderLabel, mobilePane, messages, drafts, loadingMessages, messagesError, searchText, committedSearch, totalMessages, conversations, conversationMode, selection, selectedGroupId, allSelected, selectAll, toggleGroup, selectFolder, loadMessages, refreshMailbox, runSearch, hasMore, openConversation, readerMessages, expanded, details, detailErrors, detailLoading, htmlShown, threadError, toggleExpanded, loadDetail, newMessage, editDraft, composeDraft, composeWarning, settingsOpen, replyTo, forwardMessage, onDraftSaved, onQueued, pendingSends, remainingSeconds, queueLabel, undoSend, checkSend, provisionAccount, cancelBusy, notice, actionUndo, actionBusy, performAction, undoAction, downloadAttachment, downloadSource, blockSender, folderDialog, deleteFolderDialog, newFolderName, folderError, folderWorking, addFolder, removeFolder, isDraftFolder } = useMailWorkspace()
+const { advancedOpen,advancedFilters,allFolders,setAdvancedSearch,clearAdvancedSearch, mailAccount, loadingAccount, accountError, mailIsActive, isMailAdministrator, statusLabel, statusTitle, statusDescription, invitation, chosenLocalPart, isChosenLocalValid, redeeming, redeemError, claimAddress, folders, foldersLoading, foldersError, currentFolder, currentFolderId, folderLabel, mobilePane, messages, drafts, loadingMessages, messagesError, searchText, committedSearch, totalMessages, conversations, conversationMode, selection, selectedGroupId, allSelected, selectAll, toggleGroup, selectFolder, loadMessages, refreshMailbox, runSearch, hasMore, openConversation, readerMessages, expanded, details, detailErrors, detailLoading, htmlShown, threadError, toggleExpanded, loadDetail, newMessage, editDraft, composeDraft, composeWarning, settingsOpen, replyTo, forwardMessage, onDraftSaved, onQueued, pendingSends, remainingSeconds, queueLabel, undoSend, checkSend, refreshQueue, provisionAccount, cancelBusy, notice, actionUndo, actionBusy, performAction, undoAction, downloadAttachment, downloadSource, blockSender, folderDialog, deleteFolderDialog, newFolderName, folderError, folderWorking, addFolder, removeFolder, isDraftFolder } = useMailWorkspace()
+const shortcutHelp=ref(false)
+const scheduledOpen=ref(false)
+// The mailbox owns its shortcuts only while it is visible. Never intercept
+// composing, dialogs, keyboard IME, or other forms.
+function handleMailShortcut(event:KeyboardEvent) {
+ if(event.defaultPrevented || event.isComposing || event.metaKey || event.ctrlKey || event.altKey || event.repeat)return
+ const target=event.target as HTMLElement|null
+ if(target?.closest('input,textarea,select,[contenteditable="true"],[role="dialog"],.p-sheet-layer,.p-sheet-mobile-page')) {
+  if(event.key==='Escape' && shortcutHelp.value){shortcutHelp.value=false;event.preventDefault()}
+  return
+ }
+ if(composeDraft.value || settingsOpen.value || advancedOpen.value || attachmentPreview.value || folderDialog.value || deleteFolderDialog.value)return
+ const key=event.key.toLowerCase()
+ if(event.key==='?'){shortcutHelp.value=!shortcutHelp.value;event.preventDefault();return}
+ if(shortcutHelp.value){if(event.key==='Escape')shortcutHelp.value=false;return}
+ if(key==='c'){newMessage();event.preventDefault();return}
+ if(key==='/'){
+  if(isDraftFolder.value)return
+  const input=document.querySelector<HTMLInputElement>('.mail-workspace__search input')
+  if(input){input.focus();event.preventDefault()}
+  return
+ }
+ if(event.key==='Escape'){
+  if(mobilePane.value==='reader'){mobilePane.value='list';event.preventDefault()}
+  else if(mobilePane.value==='list'){mobilePane.value='folders';event.preventDefault()}
+  return
+ }
+ if(key==='j' || key==='k'){
+  const groups=conversations.value
+  if(!groups.length || isDraftFolder.value)return
+  const current=groups.findIndex(group=>group.id===selectedGroupId.value)
+  const next=current===-1?0:Math.max(0,Math.min(groups.length-1,current+(key==='j'?1:-1)))
+  const group=groups[next]
+  if(group){void openConversation(group);event.preventDefault()}
+  return
+ }
+ if(!readerMessages.value.length || actionBusy.value)return
+ const current=readerMessages.value[readerMessages.value.length-1]
+ if(!current)return
+ if(key==='e'){void performAction('archive',readerMessages.value.map(row=>row.id));event.preventDefault()}
+ else if(key==='s'){void performAction(current.isFlagged?'unflag':'flag',[current.id]);event.preventDefault()}
+ else if(key==='r' && details.value[current.id]){replyTo(details.value[current.id]!,false);event.preventDefault()}
+}
+onMounted(()=>document.addEventListener('keydown',handleMailShortcut))
+onBeforeUnmount(()=>document.removeEventListener('keydown',handleMailShortcut))
+const attachmentPreview=ref<{messageId:string;attachment:MailAttachmentInfo}|null>(null)
+function previewAttachment(message:MailSummary,attachment:MailAttachmentInfo){
+ attachmentPreview.value={messageId:message.id,attachment}
+}
 const folderIcon = (role: string | null) => ({ inbox: Inbox, sent: Send, drafts: FileText, trash: Trash2, junk: ShieldAlert, archive: Archive }[role || ''] || Folder)
 </script>
 <style src="./mail-workspace.css"></style>

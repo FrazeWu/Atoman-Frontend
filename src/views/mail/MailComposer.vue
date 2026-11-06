@@ -2,8 +2,8 @@
   <PSheet :show="true" title="写邮件" mode="full" close-type="header" @close="closeComposer">
     <form class="mail-compose" @submit.prevent="sendMessage">
       <div class="mail-compose__identity"><div><span>发件人</span><strong>{{ address }}</strong></div><PBadge role="status" :type="dirty ? 'warning' : 'success'" :label="saving ? '正在保存…' : dirty ? '有未保存内容' : '草稿已保存'" /></div>
-      <PInput v-model="toText" label="收件人" type="text" placeholder="收件人邮箱，多个地址用逗号分隔" aria-label="收件人" :disabled="contentLocked" />
-      <div class="mail-compose__copies"><PInput v-model="ccText" label="抄送" type="text" placeholder="抄送邮箱" aria-label="抄送" :disabled="contentLocked" /><PInput v-model="bccText" label="密送" type="text" placeholder="密送邮箱" aria-label="密送" :disabled="contentLocked" /></div>
+      <MailRecipientField v-model="toText" label="收件人" placeholder="收件人邮箱，多个地址用逗号分隔" :contacts="contacts" :disabled="contentLocked" />
+      <div class="mail-compose__copies"><MailRecipientField v-model="ccText" label="抄送" placeholder="抄送邮箱" :contacts="contacts" :disabled="contentLocked" /><MailRecipientField v-model="bccText" label="密送" placeholder="密送邮箱" :contacts="contacts" :disabled="contentLocked" /></div>
       <PInput v-model="subject" label="主题" type="text" placeholder="邮件主题" maxlength="998" aria-label="邮件主题" :disabled="contentLocked" />
       <div class="mail-compose__format">
         <PSegmentedControl :model-value="rich ? 'rich' : 'plain'" :options="[{ label: '纯文本', value: 'plain' }, { label: '格式文本', value: 'rich' }]" :disabled="contentLocked" @update:model-value="setRich($event === 'rich')" />
@@ -11,9 +11,14 @@
       </div>
       <div v-if="rich" ref="editor" class="mail-compose__editor" :contenteditable="!contentLocked" role="textbox" aria-label="邮件正文" aria-multiline="true" @input="captureRich" @paste="pastePlain"></div>
       <PTextarea v-else v-model="text" class="mail-compose__body" label="正文" aria-label="邮件正文" :rows="13" placeholder="写下邮件内容…" :disabled="contentLocked" />
+      <div class="mail-compose__schedule">
+        <label class="mail-settings__check"><input v-model="scheduleMode" type="checkbox" :disabled="contentLocked" />定时发送</label>
+        <PDatetimePicker v-if="scheduleMode" v-model="scheduledLocal" label="发送时间（本地时区）" :disabled="contentLocked" />
+        <p v-if="scheduleMode">发件将在所选时间由服务器自动执行；发送前可以取消。</p>
+      </div>
       <div class="mail-compose__attachments"><div v-for="item in attachments" :key="item.id"><Paperclip :size="15" /><span>{{ item.name }} · {{ fileSize(item.size) }}</span><button type="button" :aria-label="`移除附件 ${item.name}`" :disabled="contentLocked" @click="attachments = attachments.filter(file => file.id !== item.id)"><X :size="15" /></button></div></div>
       <p v-if="warning" role="alert" class="mail-compose__error">{{ warning }}</p><p v-if="error" role="alert" class="mail-compose__error">{{ error }}</p><PButton v-if="conflicted" variant="secondary" :loading="saving" @click="saveAsCopy">另存为新草稿</PButton>
-      <div class="mail-compose__actions"><PButton type="submit" :loading="sending" :disabled="uploading || sending || conflicted">{{ ambiguousSend ? '确认发送状态' : '发送' }}</PButton><PButton tag="label" variant="secondary" class="mail-compose__upload" :disabled="uploading || contentLocked"><Paperclip :size="17" />{{ uploading ? '正在上传…' : '添加附件' }}<input type="file" multiple :disabled="uploading || contentLocked" @change="addAttachments" /></PButton><PButton type="button" variant="secondary" :disabled="sending || saving" @click="closeComposer">保存并关闭</PButton><PButton type="button" variant="ghost" class="mail-compose__discard" :disabled="contentLocked || conflicted" @click="confirmDiscard = true">删除草稿</PButton></div>
+      <div class="mail-compose__actions"><PButton type="submit" :loading="sending" :disabled="uploading || sending || conflicted">{{ ambiguousSend ? '确认发送状态' : scheduleMode ? '确认定时发送' : '发送' }}</PButton><PButton tag="label" variant="secondary" class="mail-compose__upload" :disabled="uploading || contentLocked"><Paperclip :size="17" />{{ uploading ? '正在上传…' : '添加附件' }}<input type="file" multiple :disabled="uploading || contentLocked" @change="addAttachments" /></PButton><PButton type="button" variant="secondary" :disabled="sending || saving" @click="closeComposer">保存并关闭</PButton><PButton type="button" variant="ghost" class="mail-compose__discard" :disabled="contentLocked || conflicted" @click="confirmDiscard = true">删除草稿</PButton></div>
       <p class="mail-compose__hint">发送后有 5 秒可以撤销。</p>
     </form>
   </PSheet>
@@ -32,17 +37,36 @@ import PBadge from '@/components/ui/PBadge.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import PDatetimePicker from '@/components/ui/PDatetimePicker.vue'
+import MailRecipientField from './MailRecipientField.vue'
+import { fetchMailContacts, fetchMailPreferences, type MailContact } from '@/api/mailClient'
 import { deleteMailDraft, queueMail, saveMailDraft, uploadMailAttachment, type MailComposeFields, type MailDraft, type MailOutbox } from '@/api/mailClient'
 import { fileSize, newRequestID, parseRecipients } from './mail-helpers'
 const props = defineProps<{ address: string; draft: MailDraft; warning?: string }>()
 const emit = defineEmits<{ close: []; saved: []; queued: [outbox: MailOutbox, draft: MailDraft] }>()
+const contacts = ref<MailContact[]>([])
+const scheduleMode = ref(Boolean(props.draft.send_at))
+const scheduledLocal = ref(props.draft.send_at ? toLocalDateTime(props.draft.send_at) : '')
+function toLocalDateTime(iso:string) {
+  const d=new Date(iso)
+  if(!Number.isFinite(d.getTime()))return ''
+  const local=new Date(d.getTime()-d.getTimezoneOffset()*60000)
+  return local.toISOString().slice(0,16)
+}
+function getSendAt():string|undefined {
+  if(!scheduleMode.value)return undefined
+  const stamp=Date.parse(scheduledLocal.value)
+  if(!Number.isFinite(stamp) || stamp <= Date.now()+5000 || stamp > Date.now()+90*86400000) throw new Error('请选择 5 秒后至 90 天内的有效发送时间。')
+  return new Date(stamp).toISOString()
+}
+
 const toText = ref(props.draft.to.join(', ')), ccText = ref(props.draft.cc.join(', ')), bccText = ref(props.draft.bcc.join(', '))
 const subject = ref(props.draft.subject), text = ref(props.draft.text), html = ref(props.draft.html || '')
 const attachments = ref([...props.draft.attachments]), rich = ref(Boolean(html.value)), editor = ref<HTMLElement | null>(null)
 const draftId = ref(props.draft.id), conflicted = ref(false), ambiguousSend = ref(false)
 const saving = ref(false), sending = ref(false), uploading = ref(false), error = ref(''), confirmDiscard = ref(false)
 const contentLocked = computed(() => sending.value || ambiguousSend.value)
-const changedSnapshot = computed(() => JSON.stringify({ to: toText.value, cc: ccText.value, bcc: bccText.value, subject: subject.value, text: text.value, html: html.value, attachments: attachments.value }))
+const changedSnapshot = computed(() => JSON.stringify({ to: toText.value, cc: ccText.value, bcc: bccText.value, subject: subject.value, text: text.value, html: html.value, attachments: attachments.value, sendAt: scheduleMode.value ? scheduledLocal.value : null }))
 const initiallyEmpty = !props.draft.subject && !props.draft.text && !props.draft.html && !props.draft.to.length && !props.draft.cc.length && !props.draft.bcc.length && !props.draft.attachments.length
 const savedSnapshot = ref(props.draft.updated_at || initiallyEmpty ? changedSnapshot.value : '')
 const revision = ref(props.draft.revision || 0), updatedAt = ref(props.draft.updated_at || '')
@@ -53,7 +77,7 @@ let disposed = false, discarding = false
 let submissionId = newRequestID(), submissionSnapshot = ''
 function looseRecipients(value: string) { return value.split(/[,;\n，；]+/).map(v => v.trim()).filter(Boolean) }
 function fields(strict = false): MailComposeFields {
-  return { to: strict ? parseRecipients(toText.value) : looseRecipients(toText.value), cc: strict ? parseRecipients(ccText.value) : looseRecipients(ccText.value), bcc: strict ? parseRecipients(bccText.value) : looseRecipients(bccText.value), subject: subject.value, text: text.value, html: rich.value ? html.value : undefined, attachments: [...attachments.value], in_reply_to: props.draft.in_reply_to, references: props.draft.references }
+  return { to: strict ? parseRecipients(toText.value) : looseRecipients(toText.value), cc: strict ? parseRecipients(ccText.value) : looseRecipients(ccText.value), bcc: strict ? parseRecipients(bccText.value) : looseRecipients(bccText.value), subject: subject.value, text: text.value, html: rich.value ? html.value : undefined, attachments: [...attachments.value], send_at: scheduleMode.value && scheduledLocal.value ? new Date(scheduledLocal.value).toISOString() : undefined, in_reply_to: props.draft.in_reply_to, references: props.draft.references }
 }
 async function persist() {
   if (discarding || disposed) return
@@ -94,6 +118,7 @@ async function sendMessage() {
   if (sending.value || uploading.value || conflicted.value) return
   let queueAttempted = false
   try {
+    const sendAt=getSendAt()
     const content = fields(true)
     if (!content.to.length && !content.cc.length && !content.bcc.length) throw new Error('请填写至少一个收件人、抄送或密送地址。')
     if (content.to.length + content.cc.length + content.bcc.length > 50) throw new Error('请将收件人总数控制在 50 人以内。')
@@ -105,7 +130,7 @@ async function sendMessage() {
     try { submissionId = localStorage.getItem(sendKey) || submissionId; localStorage.setItem(sendKey, submissionId) } catch { /* In-memory retries still preserve this submission. */ }
     // The same request ID is retried after an ambiguous response; the server owns deduplication.
     queueAttempted = true; ambiguousSend.value = true
-    const queued = await queueMail(content, submissionId, draftId.value, revision.value)
+    const queued = await queueMail(content, submissionId, draftId.value, revision.value, sendAt)
     ambiguousSend.value = false
     if (queued.status === 'cancelled' || queued.status === 'blocked') { try { localStorage.removeItem(sendKey) } catch { /* optional storage */ }; submissionId = newRequestID(); error.value = queued.status === 'cancelled' ? '上次发送已撤销，请再次点击发送。' : '上次邮件未发出，请检查后再次发送。'; return }
     emit('queued', queued, { id: draftId.value, revision: revision.value, updated_at: updatedAt.value, ...content })
@@ -139,7 +164,29 @@ async function setRich(enabled: boolean) {
 }
 function beforeUnload(event: BeforeUnloadEvent) { if (dirty.value || uploading.value || sending.value) { event.preventDefault(); event.returnValue = '' } }
 onBeforeRouteLeave(async () => { if (sending.value || uploading.value) return false; try { await persist(); return true } catch { return false } })
-onMounted(async () => { try { ambiguousSend.value = Boolean(localStorage.getItem(`atoman.mail.send.${draftId.value}.${revision.value}`)); if (ambiguousSend.value) error.value = '这封草稿有待确认的发送记录，请先确认发送状态。' } catch { /* optional storage */ }; await nextTick(); if (editor.value) editor.value.innerHTML = DOMPurify.sanitize(html.value, { ALLOWED_TAGS: ['p', 'br', 'div', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'blockquote'], ALLOWED_ATTR: [] }); window.addEventListener('beforeunload', beforeUnload) })
+// Load only the current user's private contacts and encrypted signature.
+// Never overwrite a draft that has been saved or edited while loading.
+async function loadComposerEnhancements(){
+ try {contacts.value=await fetchMailContacts()} catch {contacts.value=[]}
+ try {
+  const prefs=await fetchMailPreferences()
+  const sig=prefs.signature
+  if (!sig?.enabled || revision.value!==0 || text.value!==props.draft.text || subject.value!==props.draft.subject) return
+  if (props.draft.in_reply_to && !sig.on_reply) return
+  const lines=sig.text?.trim()
+  if (!lines) return
+  const block='\n\n--\n'+lines+'\n'
+  if(props.draft.in_reply_to && text.value.trim()) text.value=block+text.value
+  else text.value=(text.value.trim() ? text.value.trim() : '')+block
+  // Rich signature is sanitized locally before the existing draft sanitizer.
+  if (rich.value && sig.html) {
+   const safe=DOMPurify.sanitize(sig.html,{ALLOWED_TAGS:['p','br','div','strong','b','em','i','u','ul','ol','li'],ALLOWED_ATTR:[]})
+   html.value=safe+html.value
+   if(editor.value)editor.value.innerHTML=html.value
+  }
+ } catch {/* Signature lookup is optional; do not block composing. */}
+}
+onMounted(async () => { try { ambiguousSend.value = Boolean(localStorage.getItem(`atoman.mail.send.${draftId.value}.${revision.value}`)); if (ambiguousSend.value) error.value = '这封草稿有待确认的发送记录，请先确认发送状态。' } catch { /* optional storage */ }; await nextTick(); if (editor.value) editor.value.innerHTML = DOMPurify.sanitize(html.value, { ALLOWED_TAGS: ['p', 'br', 'div', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'blockquote'], ALLOWED_ATTR: [] }); window.addEventListener('beforeunload', beforeUnload); void loadComposerEnhancements() })
 onBeforeUnmount(() => { disposed = true; clearTimeout(saveTimer); window.removeEventListener('beforeunload', beforeUnload) })
 </script>
 <style scoped>
@@ -153,6 +200,10 @@ onBeforeUnmount(() => { disposed = true; clearTimeout(saveTimer); window.removeE
 .mail-compose__editor { display:block; min-height:310px; width:100%; padding:16px; border:1px solid var(--a-color-border-soft); border-radius:var(--a-radius-control); background:var(--a-color-bg); color:var(--a-color-fg); font-size:14px; line-height:1.85; font-family:inherit; overflow-wrap:anywhere; }
 .mail-compose__editor:focus-visible { outline:2px solid var(--a-color-primary); outline-offset:2px; }
 .mail-compose__body :deep(.p-textarea) { min-height:310px; line-height:1.85; resize:vertical; }
+.mail-compose__schedule {display:grid;gap:10px;align-items:start;}
+.mail-compose__schedule label {display:flex;align-items:center;gap:9px;font-size:13px;cursor:pointer;}
+.mail-compose__schedule input[type=checkbox] {width:16px;height:16px;accent-color:var(--a-color-primary);}
+.mail-compose__schedule p {margin:0;color:var(--a-color-muted);font-size:12px;}
 .mail-compose__attachments { display:flex; flex-wrap:wrap; gap:9px; }
 .mail-compose__attachments > div { display:flex; align-items:center; gap:8px; max-width:100%; padding:9px 11px; border:1px solid var(--a-color-border-soft); border-radius:var(--a-radius-control); background:var(--a-color-surface); font-size:12px; }
 .mail-compose__attachments span { min-width:0; overflow-wrap:anywhere; }

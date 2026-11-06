@@ -76,6 +76,7 @@ describe("AppTopbarAuthControls", () => {
 		authStore.isAuthenticated = true;
 		vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
 			const url = String(input);
+			if (url.endsWith("/mail/unread")) return new Response(JSON.stringify({data:{count:0}}),{status:200});
 			if (url.endsWith("/notifications/unread-counts")) {
 				return new Response(JSON.stringify({ data: { total: 0, items: {} } }), {
 					status: 200,

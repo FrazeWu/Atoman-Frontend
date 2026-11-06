@@ -124,6 +124,30 @@ async function run(){
   assert.equal(contacts.length,1)
   console.log('MAIL_PRIVATE_CONTACT_CREATE_VISIBLE_OK')
 
+  await page.getByLabel('选择 CSV 或 vCard 联系人文件').setInputFiles({
+    name:'owned-contacts.csv',mimeType:'text/csv',buffer:Buffer.from('name,email,notes\nExisting,CONTACT@EXAMPLE.TEST,skip\nImported,imported@example.org,Private\n','utf8')
+  })
+  await page.getByText('预计新增').waitFor()
+  await page.getByRole('button',{name:'确认新增 1 条'}).click()
+  await page.getByText('imported@example.org',{exact:true}).waitFor()
+  assert.equal(contacts.length,2,'Duplicate imports must be skipped without overwriting originals')
+  assert.equal(contacts[0].name,'验收联系人','Existing contact must retain its original name')
+  const [csvDownload]=await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button',{name:'导出 CSV'}).click()
+  ])
+  assert.equal(csvDownload.suggestedFilename(),'atoman-mail-contacts.csv')
+  const csvBody=require('node:fs').readFileSync(await csvDownload.path(),'utf8')
+  assert.ok(csvBody.includes('imported@example.org')&&csvBody.includes('contact@example.test'))
+  const [vcfDownload]=await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button',{name:'导出 vCard'}).click()
+  ])
+  assert.equal(vcfDownload.suggestedFilename(),'atoman-mail-contacts.vcf')
+  const vcfBody=require('node:fs').readFileSync(await vcfDownload.path(),'utf8')
+  assert.ok(vcfBody.includes('BEGIN:VCARD')&&vcfBody.includes('imported@example.org'))
+  console.log('MAIL_CSV_VCARD_CONTACT_IMPORT_PREVIEW_EXPORT_OK')
+
   await page.getByLabel('启用自动回复').check()
   await page.getByPlaceholder('例如：暂时无法回复').fill('暂时外出')
   await page.getByPlaceholder('写下你的自动回复…').fill('我会在回来后回复你。')

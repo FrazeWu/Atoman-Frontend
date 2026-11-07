@@ -90,7 +90,7 @@ export function useMailWorkspace() {
     } catch (error) { if (!disposed && generation === accountGeneration) accountError.value = messageError(error, '暂时无法连接邮箱，请稍后重试。') }
     finally { if (generation === accountGeneration) loadingAccount.value = false }
   }
-  function selectFolder(id: string) { advancedFilters.value = {}; allFolders.value = false; currentFolderId.value = id; searchText.value = ''; committedSearch.value = ''; mobilePane.value = 'list'; void loadMessages() }
+  function selectFolder(id: string) { advancedFilters.value = {}; allFolders.value = false; currentFolderId.value = id; searchText.value = ''; committedSearch.value = ''; mobilePane.value = 'list'; return loadMessages() }
   function runSearch() { committedSearch.value = searchText.value.trim(); void loadMessages() }
   function setAdvancedSearch(filters:MailAdvancedFilters, all:boolean) {
     advancedFilters.value=filters;allFolders.value=all;advancedOpen.value=false

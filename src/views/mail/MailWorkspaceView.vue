@@ -23,7 +23,7 @@
           <div class="mail-workspace__folders-header"><span class="mail-workspace__section-label">邮件文件夹</span><PButton class="mail-workspace__new" block @click="newMessage"><Pencil :size="16" /> 写邮件</PButton></div>
           <p v-if="foldersError" class="mail-error" role="alert">{{ foldersError }}</p><p v-if="foldersLoading && !folders.length" class="mail-workspace__list-state">正在加载文件夹…</p>
           <nav class="mail-workspace__folder-list" aria-label="邮件文件夹"><button v-for="folder in folders" :key="folder.id" class="mail-workspace__folder" :class="{ 'is-active': currentFolderId === folder.id }" :aria-current="currentFolderId === folder.id ? 'page' : undefined" @click="selectFolder(folder.id)"><component :is="folderIcon(folder.role)" :size="17" aria-hidden="true" /><span class="mail-workspace__folder-name">{{ folderLabel(folder) }}</span><small v-if="folder.unreadEmails" class="mail-workspace__folder-count" :aria-label="`${folder.unreadEmails} 封未读`">{{ folder.unreadEmails > 999 ? '999+' : folder.unreadEmails }}</small></button></nav>
-          <div class="mail-workspace__folder-tools"><button @click="scheduledOpen=true"><Clock :size="14" /> 定时发送与状态</button><button @click="folderDialog = true"><Plus :size="14" /> 新建文件夹</button><button v-if="currentFolder && !currentFolder.role" @click="deleteFolderDialog = true"><Trash2 :size="14" /> 删除当前文件夹</button></div>
+          <div class="mail-workspace__folder-tools"><button @click="externalOpen=true"><Inbox :size="14" /> 聚合邮箱</button><button @click="scheduledOpen=true"><Clock :size="14" /> 定时发送与状态</button><button @click="folderDialog = true"><Plus :size="14" /> 新建文件夹</button><button v-if="currentFolder && !currentFolder.role" @click="deleteFolderDialog = true"><Trash2 :size="14" /> 删除当前文件夹</button></div>
           <p class="mail-workspace__sidebar-foot">回收站和垃圾邮件保留 30 天</p>
         </aside>
         <section class="mail-workspace__list" :class="{ 'mail-mobile-visible': mobilePane === 'list' }" data-testid="mail-list-pane">
@@ -57,6 +57,7 @@
       <PModal :show="shortcutHelp" title="邮箱快捷键" size="sm" @close="shortcutHelp=false">
         <dl class="mail-shortcuts"><dt>C</dt><dd>写邮件</dd><dt>J / K</dt><dd>下一封 / 上一封</dd><dt>R</dt><dd>回复当前邮件</dd><dt>E</dt><dd>归档当前邮件</dd><dt>S</dt><dd>标记或取消星标</dd><dt>/</dt><dd>聚焦搜索</dd><dt>?</dt><dd>快捷键帮助</dd><dt>Esc</dt><dd>返回邮件列表</dd></dl>
       </PModal>
+      <MailExternalAccounts v-if="externalOpen" @close="externalOpen=false" @open-native="openNativeFromAggregate" />
       <MailScheduledPanel v-if="scheduledOpen" :items="pendingSends" :busy-id="cancelBusy" @close="scheduledOpen=false" @refresh="refreshQueue" @cancel="undoSend" />
       <MailAttachmentPreview v-if="attachmentPreview" :key="attachmentPreview.messageId+attachmentPreview.attachment.partId" :message-id="attachmentPreview.messageId" :attachment="attachmentPreview.attachment" @close="attachmentPreview=null" />
       <MailComposer v-if="composeDraft" :key="composeDraft.id" :address="mailAccount?.address || ''" :draft="composeDraft" :warning="composeWarning" @close="composeDraft = null" @saved="onDraftSaved" @queued="onQueued" />
@@ -84,11 +85,23 @@ import MailScheduledPanel from './MailScheduledPanel.vue'
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import type { MailSummary, MailAttachmentInfo } from '@/api/mail'
 import MailSettings from './MailSettings.vue'
+import MailExternalAccounts from './MailExternalAccounts.vue'
 import { addressText, fileSize, mailFrameDocument, mailTime } from './mail-helpers'
 import { useMailWorkspace } from './useMailWorkspace'
 const { advancedOpen,advancedFilters,allFolders,setAdvancedSearch,clearAdvancedSearch, mailAccount, loadingAccount, accountError, mailIsActive, isMailAdministrator, statusLabel, statusTitle, statusDescription, invitation, chosenLocalPart, isChosenLocalValid, redeeming, redeemError, claimAddress, folders, foldersLoading, foldersError, currentFolder, currentFolderId, folderLabel, mobilePane, messages, drafts, loadingMessages, messagesError, searchText, committedSearch, totalMessages, conversations, conversationMode, selection, selectedGroupId, allSelected, selectAll, toggleGroup, selectFolder, loadMessages, refreshMailbox, runSearch, hasMore, openConversation, readerMessages, expanded, details, detailErrors, detailLoading, htmlShown, threadError, toggleExpanded, loadDetail, newMessage, editDraft, composeDraft, composeWarning, settingsOpen, replyTo, forwardMessage, onDraftSaved, onQueued, pendingSends, remainingSeconds, queueLabel, undoSend, checkSend, refreshQueue, provisionAccount, cancelBusy, notice, actionUndo, actionBusy, performAction, undoAction, downloadAttachment, downloadSource, blockSender, folderDialog, deleteFolderDialog, newFolderName, folderError, folderWorking, addFolder, removeFolder, isDraftFolder } = useMailWorkspace()
 const shortcutHelp=ref(false)
 const scheduledOpen=ref(false)
+const externalOpen=ref(false)
+async function openNativeFromAggregate(id:string){
+  externalOpen.value=false
+  const inbox=folders.value.find(row=>row.role==='inbox')
+  if(!inbox)return
+  if(currentFolderId.value!==inbox.id) await selectFolder(inbox.id)
+  else if(!messages.value.some(row=>row.id===id)) await loadMessages()
+  const group=conversations.value.find(row=>row.messages.some(message=>message.id===id))
+  if(group) await openConversation(group)
+  else {mobilePane.value='list';notice.value='已切换至 Atoman 收件箱，目标邮件可能不在当前页。'}
+}
 // The mailbox owns its shortcuts only while it is visible. Never intercept
 // composing, dialogs, keyboard IME, or other forms.
 function handleMailShortcut(event:KeyboardEvent) {
@@ -98,7 +111,7 @@ function handleMailShortcut(event:KeyboardEvent) {
   if(event.key==='Escape' && shortcutHelp.value){shortcutHelp.value=false;event.preventDefault()}
   return
  }
- if(composeDraft.value || settingsOpen.value || advancedOpen.value || attachmentPreview.value || folderDialog.value || deleteFolderDialog.value)return
+ if(composeDraft.value || settingsOpen.value || externalOpen.value || advancedOpen.value || attachmentPreview.value || folderDialog.value || deleteFolderDialog.value)return
  const key=event.key.toLowerCase()
  if(event.key==='?'){shortcutHelp.value=!shortcutHelp.value;event.preventDefault();return}
  if(shortcutHelp.value){if(event.key==='Escape')shortcutHelp.value=false;return}

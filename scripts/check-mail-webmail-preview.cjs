@@ -6,6 +6,14 @@ const files = new Map()
 let account = {status:'active',available:true,address:'preview@atoman.org'}
 let readIds=[],actionCalls=[],queued=null,settingsWrites=0,passwords=[]
 let contacts=[],searchHistory=[]
+let externalAccounts=[],externalSecretSeen='',externalSyncCalls=0
+const externalSample={
+  account_id:'fixture-external-1',account_address:'external@example.org',
+  provider:'gmail',uid:77,uid_validity:42,
+  subject:'外部只读邮件',from:'colleague@example.net',from_name:'External Colleague',
+  date:'2026-11-06T12:15:00Z',seen:false,size:500
+}
+
 const folders=[
  {id:'inbox',name:'Inbox',role:'inbox',parentId:null,totalEmails:2,unreadEmails:2},
  {id:'sent',name:'Sent',role:'sent',parentId:null,totalEmails:1,unreadEmails:0},
@@ -28,6 +36,30 @@ async function run(){
    const request=route.request(),url=new URL(request.url()),path=url.pathname,method=request.method()
    let data={},status=200,result
    if(path.endsWith('/auth/session')) result={csrf_token:'fixture-csrf',user:{username:'layout-preview',uuid:'11111111-1111-4111-8111-111111111111',email:'preview@example.test',role:'user',is_active:true}}
+   else if(path.endsWith('/mail/external/providers'))data=[{id:'gmail',label:'Gmail',host:'imap.gmail.com',port:993}]
+   else if(path.endsWith('/mail/external/unified'))data={accounts:externalAccounts,messages:externalAccounts.length?[externalSample]:[]}
+   else if(path.endsWith('/mail/external/accounts')){
+     if(method==='POST'){
+       const body=request.postDataJSON()
+       assert.equal(body.provider,'gmail')
+       assert.equal(body.address,'external@example.org')
+       assert.equal(body.app_password,'fixture-app-password')
+       externalSecretSeen='received'
+       const info={id:'fixture-external-1',provider:body.provider,address:body.address,
+         revision:1,messages_count:1,unread_count:1,last_synced_at:new Date().toISOString()}
+       externalAccounts=[info];data=info
+     }else data=externalAccounts
+   }
+   else if(path.endsWith('/mail/external/accounts/fixture-external-1/sync')){
+     externalSyncCalls++;data={...externalAccounts[0],revision:2}
+   }
+   else if(path.endsWith('/mail/external/accounts/fixture-external-1')&&method==='DELETE'){
+     externalAccounts=[];data={deleted:true}
+   }
+   else if(path.endsWith('/mail/external/accounts/fixture-external-1/messages/77')){
+     assert.equal(url.searchParams.get('uid_validity'),'42')
+     data={text:'外部邮件纯文本 <script>alert(1)</script>'}
+   }
    else if(path.endsWith('/mail/me'))data=account
    else if(path.endsWith('/mail/folders')) data=folders
    else if(path.endsWith('/mail/unread')) data={count:2,latest_id:'two'}
@@ -92,6 +124,33 @@ async function run(){
   assert.ok(rects.every(r=>r.width>160));assert.ok(rects[0].right<=rects[1].x+2&&rects[1].right<=rects[2].x+2)
   await page.screenshot({path:'/tmp/atoman-mail-complete-desktop.png',fullPage:true})
   console.log('MAIL_DESKTOP_THREE_PANES_AND_EXPAND_ONLY_READ_OK',JSON.stringify(rects))
+  await page.getByRole('button',{name:'聚合邮箱'}).click()
+  await page.getByTestId('mail-external-accounts').waitFor()
+  await page.getByText('你的订单已确认',{exact:true}).first().waitFor()
+  await page.getByRole('radio',{name:'管理账户'}).click()
+  await page.getByRole('textbox',{name:'完整邮箱地址'}).fill('external@example.org')
+  await page.getByRole('textbox',{name:'IMAP 应用专用密码或授权码'}).fill('fixture-app-password')
+  await page.getByRole('button',{name:'验证并连接'}).click()
+  await page.getByTestId('external-account-fixture-external-1').waitFor()
+  assert.equal(externalAccounts.length,1)
+  assert.equal(externalSecretSeen,'received')
+  assert.equal(await page.getByRole('textbox',{name:'IMAP 应用专用密码或授权码'}).inputValue(),'')
+  await page.getByRole('radio',{name:'统一收件箱'}).click()
+  await page.getByRole('button',{name:/外部只读邮件/}).click()
+  const externalPreview=page.getByTestId('external-plain-preview')
+  await externalPreview.waitFor()
+  assert.ok((await externalPreview.textContent()).includes('<script>'))
+  assert.equal(await externalPreview.locator('script').count(),0)
+  console.log('MAIL_EXTERNAL_IMAP_FIXED_PROVIDER_CONNECT_UNIFIED_SAFE_PREVIEW_OK')
+  await page.getByRole('radio',{name:'管理账户'}).click()
+  await page.getByTestId('external-account-fixture-external-1').getByRole('button',{name:'同步'}).click()
+  assert.equal(externalSyncCalls,1)
+  await page.getByTestId('external-account-fixture-external-1').getByRole('button',{name:'移除'}).click()
+  await page.getByRole('button',{name:'确认移除'}).click()
+  assert.equal(externalAccounts.length,0)
+  await page.getByRole('button',{name:'关闭聚合邮箱'}).click()
+  console.log('MAIL_EXTERNAL_SYNC_UNLINK_AND_SECRET_NOT_REDISPLAYED_OK')
+
   await page.getByRole('button',{name:'高级筛选'}).click()
   await page.getByRole('textbox',{name:'发件人'}).fill('lin@example.test')
   await page.getByRole('textbox',{name:'主题包含'}).fill('周末')

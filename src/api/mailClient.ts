@@ -100,3 +100,51 @@ export const createMailContact = (item: Pick<MailContact,'name'|'email'|'notes'>
 export const updateMailContact = (item: MailContact) => apiPutJson<MailContact>(base()+'/contacts/'+key(item.id), item)
 export const deleteMailContact = (id: string) => apiDeleteJson<{ deleted:boolean }>(base()+'/contacts/'+key(id))
 export const fetchMailUnread = () => apiGet<{count:number;latest_id?:string}>(base()+'/unread')
+
+// Remote IMAP accounts are owned by the active Atoman session. The provider
+// authorization secret is accepted once, never returned by any read route.
+export type ExternalIMAPProvider = 'gmail' | 'qq' | '163' | 'icloud' | 'yahoo'
+export interface MailExternalProvider { id: ExternalIMAPProvider; label: string; host: string; port: number }
+export interface MailExternalAccount {
+  id: string
+  provider: ExternalIMAPProvider
+  address: string
+  last_synced_at?: string
+  last_error_code?: string
+  messages_count: number
+  unread_count: number
+  has_more: boolean
+  revision: number
+}
+export interface MailExternalMessage {
+  account_id: string
+  account_address: string
+  provider: ExternalIMAPProvider
+  uid: number
+  uid_validity: number
+  subject: string
+  from: string
+  from_name: string
+  date: string
+  seen: boolean
+  size: number
+}
+export interface MailExternalUnifiedInbox {
+  accounts: MailExternalAccount[]
+  messages: MailExternalMessage[]
+}
+export const fetchExternalProviders = () => apiGet<MailExternalProvider[]>(base()+'/external/providers')
+export const fetchExternalAccounts = () => apiGet<MailExternalAccount[]>(base()+'/external/accounts')
+export const connectExternalAccount = (provider: ExternalIMAPProvider,address:string,app_password:string) =>
+  apiPostJson<MailExternalAccount>(base()+'/external/accounts',{provider,address,app_password})
+export const syncExternalAccount = (id:string) =>
+  apiPostJson<MailExternalAccount>(base()+'/external/accounts/'+key(id)+'/sync',{})
+export const disconnectExternalAccount = (id:string) =>
+  apiDeleteJson<{deleted:boolean}>(base()+'/external/accounts/'+key(id))
+export const fetchExternalUnifiedInbox = () =>
+  apiGet<MailExternalUnifiedInbox>(base()+'/external/unified')
+export const fetchExternalMessagePlain = (accountId:string,uid:number,validity:number) => {
+  const url=base()+'/external/accounts/'+key(accountId)+'/messages/'+key(String(uid))+
+    '?'+new URLSearchParams({uid_validity:String(validity)})
+  return apiGet<{text:string}>(url)
+}

@@ -1,7 +1,7 @@
 <template>
   <PSheet :show="true" title="写邮件" mode="full" close-type="header" @close="closeComposer">
     <form class="mail-compose" @submit.prevent="sendMessage">
-      <div class="mail-compose__identity"><div><span>发件人</span><strong>{{ address }}</strong></div><PBadge role="status" :type="dirty ? 'warning' : 'success'" :label="saving ? '正在保存…' : dirty ? '有未保存内容' : '草稿已保存'" /></div>
+      <div class="mail-compose__identity"><div><label for="mail-sender">发件人</label><select id="mail-sender" v-model="selectedSender" :disabled="contentLocked" aria-label="发件人" data-testid="mail-sender-select"><option value="">{{ address }}（Atoman）</option><option v-for="sender in externalSenders" :key="sender.alias_id || sender.external_account_id" :value="sender.alias_id ? `alias:${sender.alias_id}` : sender.external_account_id">{{ sender.address }}（{{ sender.provider==='atoman-alias'?'Atoman 别名':sender.provider }}）</option><option v-if="senderMissing" :value="selectedSender" disabled>原发件地址已停用或不可用，请重新选择</option></select></div><PBadge role="status" :type="dirty ? 'warning' : 'success'" :label="saving ? '正在保存…' : dirty ? '有未保存内容' : '草稿已保存'" /></div>
       <MailRecipientField v-model="toText" label="收件人" placeholder="收件人邮箱，多个地址用逗号分隔" :contacts="contacts" :disabled="contentLocked" />
       <div class="mail-compose__copies"><MailRecipientField v-model="ccText" label="抄送" placeholder="抄送邮箱" :contacts="contacts" :disabled="contentLocked" /><MailRecipientField v-model="bccText" label="密送" placeholder="密送邮箱" :contacts="contacts" :disabled="contentLocked" /></div>
       <PInput v-model="subject" label="主题" type="text" placeholder="邮件主题" maxlength="998" aria-label="邮件主题" :disabled="contentLocked" />
@@ -39,12 +39,21 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PDatetimePicker from '@/components/ui/PDatetimePicker.vue'
 import MailRecipientField from './MailRecipientField.vue'
-import { fetchMailContacts, fetchMailPreferences, type MailContact } from '@/api/mailClient'
+import { fetchMailContacts, fetchMailPreferences, fetchMailSenders, type MailContact, type MailSenderIdentity } from '@/api/mailClient'
 import { deleteMailDraft, queueMail, saveMailDraft, uploadMailAttachment, type MailComposeFields, type MailDraft, type MailOutbox } from '@/api/mailClient'
 import { fileSize, newRequestID, parseRecipients } from './mail-helpers'
 const props = defineProps<{ address: string; draft: MailDraft; warning?: string }>()
 const emit = defineEmits<{ close: []; saved: []; queued: [outbox: MailOutbox, draft: MailDraft] }>()
 const contacts = ref<MailContact[]>([])
+const externalSenders=ref<MailSenderIdentity[]>([])
+const senderLoaded=ref(false)
+const selectedSender=ref(props.draft.alias_id ? `alias:${props.draft.alias_id}` : props.draft.external_account_id || '')
+const senderMissing=computed(()=>Boolean(selectedSender.value) && senderLoaded.value && !externalSenders.value.some(row=>row.alias_id ? selectedSender.value===`alias:${row.alias_id}` : selectedSender.value===row.external_account_id))
+async function loadSenderChoices(){
+  try {externalSenders.value=(await fetchMailSenders()).filter(row=>Boolean(row.external_account_id || row.alias_id))}
+  catch {externalSenders.value=[]}
+  finally {senderLoaded.value=true}
+}
 const scheduleMode = ref(Boolean(props.draft.send_at))
 const scheduledLocal = ref(props.draft.send_at ? toLocalDateTime(props.draft.send_at) : '')
 function toLocalDateTime(iso:string) {
@@ -66,7 +75,7 @@ const attachments = ref([...props.draft.attachments]), rich = ref(Boolean(html.v
 const draftId = ref(props.draft.id), conflicted = ref(false), ambiguousSend = ref(false)
 const saving = ref(false), sending = ref(false), uploading = ref(false), error = ref(''), confirmDiscard = ref(false)
 const contentLocked = computed(() => sending.value || ambiguousSend.value)
-const changedSnapshot = computed(() => JSON.stringify({ to: toText.value, cc: ccText.value, bcc: bccText.value, subject: subject.value, text: text.value, html: html.value, attachments: attachments.value, sendAt: scheduleMode.value ? scheduledLocal.value : null }))
+const changedSnapshot = computed(() => JSON.stringify({ to: toText.value, cc: ccText.value, bcc: bccText.value, subject: subject.value, text: text.value, html: html.value, attachments: attachments.value, sender: selectedSender.value, sendAt: scheduleMode.value ? scheduledLocal.value : null }))
 const initiallyEmpty = !props.draft.subject && !props.draft.text && !props.draft.html && !props.draft.to.length && !props.draft.cc.length && !props.draft.bcc.length && !props.draft.attachments.length
 const savedSnapshot = ref(props.draft.updated_at || initiallyEmpty ? changedSnapshot.value : '')
 const revision = ref(props.draft.revision || 0), updatedAt = ref(props.draft.updated_at || '')
@@ -77,7 +86,7 @@ let disposed = false, discarding = false
 let submissionId = newRequestID(), submissionSnapshot = ''
 function looseRecipients(value: string) { return value.split(/[,;\n，；]+/).map(v => v.trim()).filter(Boolean) }
 function fields(strict = false): MailComposeFields {
-  return { to: strict ? parseRecipients(toText.value) : looseRecipients(toText.value), cc: strict ? parseRecipients(ccText.value) : looseRecipients(ccText.value), bcc: strict ? parseRecipients(bccText.value) : looseRecipients(bccText.value), subject: subject.value, text: text.value, html: rich.value ? html.value : undefined, attachments: [...attachments.value], send_at: scheduleMode.value && scheduledLocal.value ? new Date(scheduledLocal.value).toISOString() : undefined, in_reply_to: props.draft.in_reply_to, references: props.draft.references }
+  return { ...(selectedSender.value.startsWith('alias:') ? {alias_id:selectedSender.value.slice(6)} : selectedSender.value ? {external_account_id:selectedSender.value}: {}), to: strict ? parseRecipients(toText.value) : looseRecipients(toText.value), cc: strict ? parseRecipients(ccText.value) : looseRecipients(ccText.value), bcc: strict ? parseRecipients(bccText.value) : looseRecipients(bccText.value), subject: subject.value, text: text.value, html: rich.value ? html.value : undefined, attachments: [...attachments.value], send_at: scheduleMode.value && scheduledLocal.value ? new Date(scheduledLocal.value).toISOString() : undefined, in_reply_to: props.draft.in_reply_to, references: props.draft.references }
 }
 async function persist() {
   if (discarding || disposed) return
@@ -118,6 +127,7 @@ async function sendMessage() {
   if (sending.value || uploading.value || conflicted.value) return
   let queueAttempted = false
   try {
+    if(senderMissing.value) throw new Error('原发件地址已停用或不可用，请重新选择发件人。')
     const sendAt=getSendAt()
     const content = fields(true)
     if (!content.to.length && !content.cc.length && !content.bcc.length) throw new Error('请填写至少一个收件人、抄送或密送地址。')
@@ -186,7 +196,7 @@ async function loadComposerEnhancements(){
   }
  } catch {/* Signature lookup is optional; do not block composing. */}
 }
-onMounted(async () => { try { ambiguousSend.value = Boolean(localStorage.getItem(`atoman.mail.send.${draftId.value}.${revision.value}`)); if (ambiguousSend.value) error.value = '这封草稿有待确认的发送记录，请先确认发送状态。' } catch { /* optional storage */ }; await nextTick(); if (editor.value) editor.value.innerHTML = DOMPurify.sanitize(html.value, { ALLOWED_TAGS: ['p', 'br', 'div', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'blockquote'], ALLOWED_ATTR: [] }); window.addEventListener('beforeunload', beforeUnload); void loadComposerEnhancements() })
+onMounted(async () => { try { ambiguousSend.value = Boolean(localStorage.getItem(`atoman.mail.send.${draftId.value}.${revision.value}`)); if (ambiguousSend.value) error.value = '这封草稿有待确认的发送记录，请先确认发送状态。' } catch { /* optional storage */ }; await nextTick(); if (editor.value) editor.value.innerHTML = DOMPurify.sanitize(html.value, { ALLOWED_TAGS: ['p', 'br', 'div', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'blockquote'], ALLOWED_ATTR: [] }); window.addEventListener('beforeunload', beforeUnload); void loadComposerEnhancements(); void loadSenderChoices() })
 onBeforeUnmount(() => { disposed = true; clearTimeout(saveTimer); window.removeEventListener('beforeunload', beforeUnload) })
 </script>
 <style scoped>
@@ -194,6 +204,8 @@ onBeforeUnmount(() => { disposed = true; clearTimeout(saveTimer); window.removeE
 .mail-compose__identity { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding-bottom:16px; border-bottom:1px solid var(--a-color-border-soft); }
 .mail-compose__identity > div { display:flex; align-items:center; gap:12px; min-width:0; color:var(--a-color-muted); font-size:12px; }
 .mail-compose__identity strong { color:var(--a-color-fg); font-weight:600; overflow-wrap:anywhere; }
+.mail-compose__identity select{max-width:min(100%,420px);min-height:36px;padding:5px 9px;border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-control);color:var(--a-color-fg);background:var(--a-color-bg);font:inherit;font-size:13px}
+.mail-compose__identity select:focus-visible{outline:2px solid var(--a-color-primary);outline-offset:2px}
 .mail-compose__copies { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 .mail-compose__format { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:4px; }
 .mail-compose__format-tools { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }

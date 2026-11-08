@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const http=vi.hoisted(()=>({get:vi.fn(),post:vi.fn(),put:vi.fn(),del:vi.fn(),multipart:vi.fn(),request:vi.fn()}))
 vi.mock('@/api/client',()=>({apiGet:http.get,apiPostJson:http.post,apiPutJson:http.put,apiDeleteJson:http.del,apiPostMultipart:http.multipart,apiRequest:http.request}))
 vi.mock('@/composables/useApiUrl',()=>({useApiUrl:()=>'/api/v1'}))
-import { queryMailMessages, fetchMailThread, fetchMailDraft, saveMailDraft, queueMail, mutateMailMessages, undoMailAction, fetchMailPreferences, saveMailPreferences } from '@/api/mailClient'
+import { queryMailMessages, fetchMailThread, fetchMailDraft, saveMailDraft, queueMail, fetchMailSenders, fetchMailAliases, createMailAlias, setMailAliasEnabled, fetchExternalFlagPreview, configureExternalFlagSync, fetchExternalFlagAttempts, reconcileExternalFlagAttempt, fetchExternalLocationCases, scanExternalLocation, decideExternalLocation, fetchExternalLocationActions, reconcileExternalLocation, mutateMailMessages, undoMailAction, fetchMailPreferences, saveMailPreferences } from '@/api/mailClient'
 const compose={to:['a@example.test'],cc:[],bcc:[],subject:'hello',text:'body',attachments:[{id:'upload',name:'notes.txt',type:'text/plain',size:5}]}
 beforeEach(()=>vi.clearAllMocks())
 describe('mail client contract',()=>{
@@ -28,6 +28,54 @@ describe('mail client contract',()=>{
   http.post.mockResolvedValue({id:'outbox',status:'queued'});await queueMail(compose,'attempt','draft')
   expect(http.post).toHaveBeenCalledWith('/api/v1/mail/outbox',{to:compose.to,cc:[],bcc:[],subject:'hello',text:'body',attachment_ids:['upload'],request_id:'attempt',draft_id:'draft',draft_revision:undefined})
  })
+ it('lists only server-approved sender identities and queues opaque external sender id',async()=>{
+  http.get.mockResolvedValue([{provider:'atoman',address:'me@atoman.org'},{provider:'gmail',address:'alice@gmail.com',external_account_id:'ext-id'}])
+  const senders=await fetchMailSenders()
+  expect(senders[1].external_account_id).toBe('ext-id')
+  expect(http.get).toHaveBeenCalledWith('/api/v1/mail/senders')
+  http.post.mockResolvedValue({id:'outbox'})
+  await queueMail({...compose,external_account_id:'ext-id'},'fresh-request')
+  expect(http.post.mock.calls[0][1]).toMatchObject({external_account_id:'ext-id',request_id:'fresh-request'})
+ })
+ it('calls owner-scoped alias lifecycle endpoints without admin credentials',async()=>{
+  http.get.mockResolvedValue([{id:'a',address:'my.alias@atoman.org',status:'active'}])
+  expect((await fetchMailAliases())[0].address).toBe('my.alias@atoman.org')
+  expect(http.get).toHaveBeenCalledWith('/api/v1/mail/aliases')
+  http.post.mockResolvedValue({id:'a',address:'my.alias@atoman.org',status:'active'})
+  await createMailAlias('my.alias')
+  expect(http.post).toHaveBeenCalledWith('/api/v1/mail/aliases',{local_part:'my.alias'})
+  await setMailAliasEnabled('a',false)
+  expect(http.post).toHaveBeenLastCalledWith('/api/v1/mail/aliases/a/action',{action:'disable'})
+ })
+ it('requests read-only source/native flag comparison by scoped job and offset',async()=>{
+  http.get.mockResolvedValue({job_id:'job',items:[],has_more:false,next_position:8})
+  expect((await fetchExternalFlagPreview('account','job',8)).next_position).toBe(8)
+  expect(http.get).toHaveBeenCalledWith('/api/v1/mail/external/accounts/account/imports/job/flag-preview?position=8')
+ })
+ it('uses scoped, authenticated job-level flag consent and read-only reconciliation endpoints',async()=>{
+  http.post.mockResolvedValue({id:'job',flag_sync_enabled:true})
+  http.get.mockResolvedValue([{id:'receipt',status:'needs_review'}])
+  await configureExternalFlagSync('account','job',true)
+  expect(http.post).toHaveBeenCalledWith('/api/v1/mail/external/accounts/account/imports/job/flag-sync',{enabled:true})
+  expect((await fetchExternalFlagAttempts('account','job'))[0].status).toBe('needs_review')
+  expect(http.get).toHaveBeenCalledWith('/api/v1/mail/external/accounts/account/imports/job/flag-attempts')
+  await reconcileExternalFlagAttempt('account','job','receipt')
+  expect(http.post).toHaveBeenLastCalledWith('/api/v1/mail/external/accounts/account/imports/job/flag-attempts/receipt/reconcile',{})
+ })
+ it('scopes source location checks and explicit native-only decisions to one owner job and receipt',async()=>{
+  http.post.mockResolvedValue({job_id:'job',next_source_uid:17,has_more:true,items:[]})
+  http.get.mockResolvedValue([{id:'case-1',source_uid:17,status:'observed'}])
+  expect((await scanExternalLocation('account','job',8)).next_source_uid).toBe(17)
+  expect(http.post).toHaveBeenCalledWith('/api/v1/mail/external/accounts/account/imports/job/location-scan',{after_uid:8})
+  expect((await fetchExternalLocationCases('account','job'))[0].status).toBe('observed')
+  expect(http.get).toHaveBeenLastCalledWith('/api/v1/mail/external/accounts/account/imports/job/location-cases')
+  await decideExternalLocation('account','job','case-1','trash_native')
+  expect(http.post).toHaveBeenLastCalledWith('/api/v1/mail/external/accounts/account/imports/job/location-cases/case-1/action',{action:'trash_native',confirmed:true})
+  await fetchExternalLocationActions('account','job','case-1')
+  expect(http.get).toHaveBeenLastCalledWith('/api/v1/mail/external/accounts/account/imports/job/location-cases/case-1/actions')
+  await reconcileExternalLocation('account','job','case-1','receipt-1')
+  expect(http.post).toHaveBeenLastCalledWith('/api/v1/mail/external/accounts/account/imports/job/location-cases/case-1/actions/receipt-1/reconcile',{})
+ })
  it('uses action receipts and the backend star action',async()=>{
   http.post.mockResolvedValue({updated:['one'],undo_token:'receipt'});expect(await mutateMailMessages('inbox',['one'],'flag')).toMatchObject({affected:1,undo_id:'receipt'})
   expect(http.post).toHaveBeenCalledWith('/api/v1/mail/messages/actions',{ids:['one'],action:'star',mailbox_id:''})
@@ -37,6 +85,6 @@ describe('mail client contract',()=>{
   const wire={conversation_mode:false,blocked_senders:['blocked@example.test'],auto_reply:{enabled:true,subject:'Away',text:'Back soon'},rules:[{id:'r',name:'Receipts',enabled:true,field:'subject',contains:'receipt',action:'archive'}]}
   http.get.mockResolvedValue(wire);http.put.mockResolvedValue(wire)
   const settings=await fetchMailPreferences();expect(settings.vacation.text).toBe('Back soon');expect(settings.rules[0]?.value).toBe('receipt')
-  await saveMailPreferences(settings);expect(http.put).toHaveBeenCalledWith('/api/v1/mail/settings',wire)
+  await saveMailPreferences(settings);expect(http.put).toHaveBeenCalledWith('/api/v1/mail/settings',{...wire,signature:{enabled:false,text:'',html:'',on_reply:true}})
  })
 })

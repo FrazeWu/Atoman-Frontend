@@ -84,6 +84,7 @@ export function formatNotificationTitle(notification: Notification): string {
 }
 
 export function formatNotificationBody(notification: Notification): string {
+  if (notification.type === 'mail_followup') return notification.meta?.body || '你设置的一封邮件已到跟进时间。'
   if (notification.type === 'forum_topic_comment' || notification.type === 'forum_follow') {
     return notification.meta?.topic_title || notification.meta?.title || '查看帖子'
   }
@@ -111,6 +112,10 @@ export function formatNotificationTime(dateStr?: string | null): string {
 }
 
 export function notificationTargetPath(notification: Notification): RouteLocationRaw | string | null {
+  // Mail reminder notifications contain no private mail content and always
+  // navigate to the authenticated mail workspace. Ignore arbitrary metadata
+  // paths or source URLs supplied by older clients.
+  if (notification.type === 'mail_followup') return '/mail'
   if (notification.source_url) {
     if (
       typeof notification.source_url === 'string' &&

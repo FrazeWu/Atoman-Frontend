@@ -4,7 +4,7 @@
       <header class="mail-external__intro">
         <div>
           <h2>一个地方，查看所有收件箱</h2>
-          <p>Atoman 邮件与你主动授权的其他邮箱并排展示。外部邮箱只读同步，不会移动、删除或修改原始邮件。</p>
+          <p>Atoman 邮件与你主动授权的其他邮箱并排展示。可以按文件夹浏览，并显式同步已读状态；预览不会修改原始邮件。</p>
         </div>
         <PButton variant="secondary" size="sm" :disabled="loading" @click="refresh"><RefreshCw :size="16" /> 刷新列表</PButton>
       </header>
@@ -33,16 +33,7 @@
             <span class="mail-external__source"><Mail :size="13" /> {{ message.source }}</span>
           </button>
         </div>
-        <section v-if="selected" class="mail-external__reader" aria-label="外部邮件预览">
-          <div class="mail-external__section-head">
-            <div><h3>{{ selected.subject || '无主题' }}</h3><p>{{ selected.from }} · {{ selected.source }}</p></div>
-            <PButton variant="ghost" size="sm" @click="selected = null; plainText = ''">关闭预览</PButton>
-          </div>
-          <p v-if="reading" role="status">正在从外部邮箱读取邮件…</p>
-          <p v-else-if="readError" role="alert" class="mail-external__error">{{ readError }}</p>
-          <div v-else class="mail-external__plain" data-testid="external-plain-preview">{{ plainText }}</div>
-          <p class="mail-external__hint">仅加载纯文本内容，不执行外部 HTML、远程图片或脚本；此处阅读不会改变外部邮箱的已读状态。</p>
-        </section>
+
       </section>
 
       <section v-else class="mail-external__accounts" aria-label="外部邮箱账户">
@@ -56,10 +47,125 @@
             <small v-if="account.last_error_code" role="status" class="mail-external__warning">上次同步失败，旧邮件缓存仍保留。请检查应用专用密码。</small>
           </div>
           <div class="mail-external__account-actions">
+            <PButton size="sm" variant="secondary" :loading="folderLoading && browsingAccount?.id === account.id" :disabled="Boolean(busy)" @click="openFolders(account)">文件夹</PButton>
             <PButton size="sm" variant="secondary" :loading="busy === account.id" :disabled="Boolean(busy)" @click="syncOne(account)"><RefreshCw :size="14" /> 同步</PButton>
             <PButton size="sm" variant="ghost" :disabled="Boolean(busy)" @click="removeTarget = account">移除</PButton>
           </div>
         </div>
+
+        <section v-if="browsingAccount" class="mail-external__browser" aria-label="外部邮箱文件夹" data-testid="external-folder-browser">
+          <div class="mail-external__section-head">
+            <div><h3>{{ browsingAccount.address }} · 文件夹</h3><p>直接从原服务商读取，每页最多 50 封；此处浏览不会修改原邮箱。</p></div>
+            <PButton size="sm" variant="ghost" @click="closeFolders">关闭文件夹</PButton>
+          </div>
+          <p v-if="folderError" role="alert" class="mail-external__error">{{ folderError }}</p>
+          <p v-if="folderLoading" role="status">正在读取外部邮箱文件夹…</p>
+          <div v-if="folders.length" class="mail-external__folder-nav" aria-label="选择文件夹">
+            <PButton v-for="folder in folders" :key="folder.name" size="sm" :variant="folderName===folder.name ? 'primary' : 'secondary'" :disabled="folderLoading" @click="loadFolder(folder.name)">{{ folder.name }}</PButton>
+          </div>
+          <section class="mail-external__history" aria-label="历史邮件迁移" data-testid="external-history">
+            <div class="mail-external__section-head">
+              <div><h3>导入历史邮件到 Atoman</h3><p>按文件夹迁移完整邮件与附件，保留原始邮件，不会删除来源。支持暂停和断点续传。</p></div>
+              <PButton size="sm" variant="secondary" :disabled="historyBusy || folderLoading" @click="refreshHistory">刷新进度</PButton>
+            </div>
+            <p v-if="historyError" role="alert" class="mail-external__error">{{ historyError }}</p>
+            <div v-if="!historyAvailable" class="mail-external__hint">历史迁移功能暂不可用；仍可正常浏览外部邮箱。</div>
+            <template v-else>
+              <div v-if="folderName && !activeHistoryJob" class="mail-external__account-actions">
+                <PButton variant="secondary" size="sm" :disabled="historyBusy" @click="confirmHistoryStart=true">导入当前文件夹历史</PButton>
+              </div>
+              <p v-else-if="activeHistoryJob" class="mail-external__hint">当前文件夹已有迁移任务：{{ historyStatusLabel(activeHistoryJob.status) }}</p>
+              <div v-if="historyJobs.length" class="mail-external__history-jobs">
+                <div v-for="job in historyJobs" :key="job.id" class="mail-external__history-job" :data-testid="'external-history-'+job.id">
+                  <div><strong>{{ job.folder }}</strong><small>{{ historyStatusLabel(job.status) }} · 已导入 {{ job.imported }} 封 · 跳过 {{ job.skipped }} 封 · UID 进度 {{ Math.min(job.next_uid,job.upper_uid+1) }} / {{ job.upper_uid+1 }}</small><small v-if="job.last_polled_at">最近检查：{{ formattedDate(job.last_polled_at) }}</small><small v-if="job.last_error_code">原因代码：{{ job.last_error_code }}</small><small v-if="job.flag_sync_enabled">已单独授权已读/星标双向同步 · 每轮最多检查 8 封</small><small v-if="job.flag_last_polled_at">最近状态同步：{{ formattedDate(job.flag_last_polled_at) }}</small><small v-if="job.flag_last_error_code">状态同步已暂停：{{ job.flag_last_error_code }}，请检查回执</small></div>
+                  <div class="mail-external__account-actions">
+                    <PButton v-if="job.imported>0" variant="secondary" size="sm" :disabled="flagPreviewBusy" @click="reviewFlags(job)">只读检查状态差异</PButton>
+                    <PButton v-if="job.flag_sync_enabled" variant="secondary" size="sm" :disabled="flagSyncBusy" @click="setFlagSync(job,false)">暂停已读/星标双向同步</PButton>
+                    <PButton v-else-if="job.imported>0 && (job.status==='completed'||job.status==='watching')" variant="secondary" size="sm" :disabled="flagSyncBusy" @click="confirmFlagSyncJob=job;flagSyncAcknowledged=false">开启双向状态同步</PButton>
+                    <PButton v-if="job.imported>0" variant="ghost" size="sm" :disabled="flagAttemptsBusy" @click="loadFlagAttempts(job)">查看状态回执</PButton>
+                    <PButton v-if="job.imported>0 && (job.status==='completed'||job.status==='watching')" variant="secondary" size="sm" :disabled="locationScanBusy" @click="scanLocations(job)">检查移动与删除异常</PButton>
+                    <PButton v-if="job.status==='completed' && !job.continuous" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'enable_live')">开启新增邮件同步</PButton>
+                    <PButton v-if="job.status==='watching' || (job.continuous && ['queued','paused','failed'].includes(job.status))" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'disable_live')">关闭新增邮件同步</PButton>
+                    <PButton v-if="job.status==='queued'||job.status==='running'||job.status==='watching'" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'pause')">暂停</PButton>
+                    <PButton v-if="job.status==='paused'||job.status==='failed'" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'resume')">继续</PButton>
+                    <PButton v-if="job.status==='paused'||job.status==='failed'||job.status==='queued'||job.status==='needs_review'" variant="ghost" size="sm" :disabled="historyBusy" @click="historyAction(job,'cancel')">取消</PButton>
+                  </div>
+                </div>
+              </div>
+              <p v-if="locationError" role="alert" class="mail-external__error">{{ locationError }}</p>
+              <section v-if="locationCaseJob" class="mail-external__flag-preview" aria-label="邮件位置异常核对" data-testid="external-location-cases">
+                <strong>移动 / 删除异常核对 · {{ locationCurrentJob?.folder }}</strong>
+                <p>源 UID 消失不代表删除。首次发现后需至少隔 5 分钟再次扫描；匹配到相同邮件内容也只能说明可能移动。扫描只读取来源邮箱并保存核对记录，不会自动移动或删除邮件。</p>
+                <div v-if="!locationCases.length" class="mail-external__hint">尚无需要核对的异常记录。</div>
+                <div v-for="entry in locationCases" :key="entry.id" class="mail-external__flag-item" :data-testid="'location-case-'+entry.source_uid">
+                  <span>来源 UID {{ entry.source_uid }} · {{ locationStatusLabel(entry.status) }}</span>
+                  <small>缺失观察 {{ entry.missing_observations }} 次 · 最近核对 {{ formattedDate(entry.last_checked_at) }}<template v-if="entry.returned_at"> · 原 UID 于 {{ formattedDate(entry.returned_at) }} 重新出现，请核对</template><template v-if="entry.candidate_folder"> · 疑似目标文件夹 {{ entry.candidate_folder }}</template></small>
+                  <div class="mail-external__account-actions">
+                    <PButton v-if="entry.missing_observations>=2 && ['missing_unclassified','possible_move','ambiguous_candidates','candidate_unverified'].includes(entry.status)" variant="secondary" size="sm" :disabled="locationActionBusy || Boolean(locationCurrentJob?.flag_sync_enabled)" @click="proposeLocationAction(entry,'keep_native')">保留旧副本</PButton>
+                    <PButton v-if="entry.missing_observations>=2 && ['missing_unclassified','possible_move'].includes(entry.status)" variant="secondary" size="sm" :disabled="locationActionBusy || Boolean(locationCurrentJob?.flag_sync_enabled)" @click="proposeLocationAction(entry,'trash_native')">旧副本移入回收站</PButton>
+                    <PButton v-if="entry.status==='possible_move'" variant="secondary" size="sm" :disabled="locationActionBusy || Boolean(locationCurrentJob?.flag_sync_enabled)" @click="proposeLocationAction(entry,'resolve_move')">确认候选，旧副本入回收站</PButton>
+                    <PButton v-if="entry.status==='trashed'||entry.status==='moved_resolved'" variant="secondary" size="sm" :disabled="locationActionBusy || Boolean(locationCurrentJob?.flag_sync_enabled)" @click="proposeLocationAction(entry,'restore_native')">恢复原文件夹</PButton>
+                    <PButton v-if="entry.action_id || ['trashed','moved_resolved','restored','action_needs_review'].includes(entry.status)" variant="ghost" size="sm" :disabled="locationActionBusy" @click="loadLocationActions(entry)">查看操作回执</PButton>
+                  </div>
+                </div>
+                <div v-if="locationActionsCase" class="mail-external__flag-preview" data-testid="external-location-receipts">
+                  <strong>位置操作回执</strong>
+                  <p>核对只重新读取 Atoman 目标文件夹，不会执行第二次移动。</p>
+                  <div v-for="attempt in locationActions" :key="attempt.id" class="mail-external__flag-item">
+                    <span>{{ locationDecisionLabel(attempt.action) }} · {{ attempt.status==='applied'?'已确认':attempt.status==='aborted_prewrite'?'写入前已取消':'待核对' }}</span>
+                    <small v-if="attempt.error_code">{{ attempt.error_code }}</small>
+                    <PButton v-if="attempt.status==='needs_review'||attempt.status==='dispatching'" variant="secondary" size="sm" :disabled="locationActionBusy" @click="reconcileLocationAction(attempt)">只读核对回执</PButton>
+                  </div>
+                  <PButton variant="ghost" size="sm" @click="locationActionsCase='';locationActions=[]">关闭回执</PButton>
+                </div>
+                <div class="mail-external__account-actions">
+                  <PButton v-if="locationHasMore && locationCurrentJob" variant="secondary" size="sm" :loading="locationScanBusy" @click="scanLocations(locationCurrentJob,locationCursor)">继续扫描下一批 8 封</PButton>
+                  <PButton v-if="locationCurrentJob" variant="secondary" size="sm" :disabled="locationScanBusy" @click="scanLocations(locationCurrentJob,0)">从头重新检查</PButton>
+                  <PButton variant="ghost" size="sm" @click="locationCaseJob='';locationCases=[];locationActionsCase='';locationActions=[]">关闭核对</PButton>
+                </div>
+              </section>
+              <p v-if="flagSyncError" role="alert" class="mail-external__error">{{ flagSyncError }}</p>
+              <div v-if="flagAttemptsJob" class="mail-external__flag-preview" data-testid="external-flag-attempts">
+                <strong>双向同步操作回执（最近 40 项）</strong>
+                <p>远程结果不确定时不会再次自动写入；核对只重新读取状态，不会发送 STORE 或 Email/set。</p>
+                <div v-if="!flagAttempts.length" class="mail-external__hint">暂无同步写入记录。</div>
+                <div v-for="attempt in flagAttempts" :key="attempt.id" class="mail-external__flag-item">
+                  <span>UID {{ attempt.source_uid }} · {{ attempt.flag==='seen'?'已读':'星标' }} · {{ attempt.direction==='copy_to_source'?'同步至原邮箱':'同步至 Atoman' }}</span>
+                  <small>{{ flagAttemptLabel(attempt) }}<template v-if="attempt.error_code"> · {{ attempt.error_code }}</template></small>
+                  <PButton v-if="attempt.status==='needs_review'||attempt.status==='dispatching'" variant="secondary" size="sm" :disabled="flagSyncBusy" @click="reconcileFlag(attempt)">只读核对回执</PButton>
+                </div>
+                <PButton variant="ghost" size="sm" @click="flagAttemptsJob='';flagAttempts=[]">关闭回执</PButton>
+              </div>
+              <p v-if="flagPreviewError" role="alert" class="mail-external__error">{{ flagPreviewError }}</p>
+              <div v-if="flagPreview" class="mail-external__flag-preview" data-testid="external-flag-preview">
+                <strong>状态差异预览 · {{ flagPreview.folder }}</strong>
+                <p>只读对比，不会修改已读、星标、移动或删除任何邮件。建议需要人工确认后才能执行。</p>
+                <div v-if="!flagPreview.items.length" class="mail-external__hint">该页没有已导入邮件。</div>
+                <div v-for="item in flagPreview.items" :key="item.source_uid" class="mail-external__flag-item">
+                  <span>来源 UID {{ item.source_uid }} · {{ previewItemLabel(item.status) }}</span>
+                  <template v-if="item.status==='ready'">
+                    <small>已读：{{ flagDecisionLabel(item.seen) }}（原邮箱 {{ item.seen.source?'已读':'未读' }}，Atoman {{ item.seen.native?'已读':'未读' }}）</small>
+                    <small>星标：{{ flagDecisionLabel(item.flagged) }}（原邮箱 {{ item.flagged.source?'有':'无' }}，Atoman {{ item.flagged.native?'有':'无' }}）</small>
+                  </template>
+                </div>
+                <PButton v-if="flagPreview.has_more && currentPreviewJob" variant="secondary" size="sm" :loading="flagPreviewBusy" @click="reviewFlags(currentPreviewJob,flagPreview.next_position)">检查下一页</PButton>
+                <PButton type="button" variant="ghost" size="sm" @click="flagPreview=null">关闭预览</PButton>
+              </div>
+              <p class="mail-external__hint">历史导入每轮最多处理 40 封，每封上限 40 MiB。新增邮件同步与已读/星标状态同步是两个独立的开关。状态双向写入需明确授权、服务器启用且服务商支持条件修改；不会同步移动或删除。出现不确定回执时会自动暂停。</p>
+            </template>
+          </section>
+          <div v-if="folderPage && !folderLoading" class="mail-external__folder-results">
+            <p>{{ folderPage.folder }} · 共 {{ folderPage.total }} 封</p>
+            <PEmpty v-if="!folderPage.messages.length" title="没有邮件" description="该文件夹没有可显示的邮件。" compact />
+            <div v-else class="mail-external__rows">
+              <button v-for="msg in folderPage.messages" :key="msg.uid" type="button" class="mail-external__message" :class="{ 'is-unread': !msg.seen }" @click="openFolderMessage(msg)">
+                <span class="mail-external__sender"><span>{{ msg.from_name || msg.from || '未知发件人' }}</span><small>{{ formattedDate(msg.date) }}</small></span>
+                <strong>{{ msg.subject || '无主题' }}</strong>
+              </button>
+            </div>
+            <PButton v-if="folderPage.has_more" size="sm" variant="secondary" :disabled="folderLoading" @click="loadFolder(folderName,folderPage.next_position)">加载下一页</PButton>
+          </div>
+        </section>
 
         <form class="mail-external__connect" autocomplete="off" @submit.prevent="connect">
           <h3>连接新的 IMAP 邮箱</h3>
@@ -67,15 +173,66 @@
           <PSelect v-model="provider" label="服务商" :options="providerOptions" :disabled="Boolean(busy)"/>
           <PInput v-model="address" label="完整邮箱地址" type="email" inputmode="email" autocomplete="off" placeholder="you@gmail.com" :disabled="Boolean(busy)" required maxlength="254" />
           <PInput v-model="appPassword" label="IMAP 应用专用密码或授权码" type="password" autocomplete="new-password" placeholder="从邮箱服务商生成的专用密码" :disabled="Boolean(busy)" required maxlength="256" />
-          <p class="mail-external__hint">通过 993 端口建立强制 TLS 连接，服务器地址由系统固定。新增账户时会验证密码并同步最近邮件。当前不支持通过本界面发送外部邮箱邮件。</p>
+          <p class="mail-external__hint">通过 993 端口建立强制 TLS 连接，服务器地址由系统固定。新增账户时会验证密码并同步最近邮件。外部邮箱发信须由服务器启用 SMTP，并在写信界面选择已连接的发件身份。</p>
           <PButton type="submit" :loading="busy === 'connect'" :disabled="Boolean(busy) || accounts.length >= 5 || !address.trim() || !appPassword.trim()">
             <Plus :size="16" /> 验证并连接
           </PButton>
         </form>
       </section>
+        <section v-if="selected" class="mail-external__reader" aria-label="外部邮件预览">
+          <div class="mail-external__section-head">
+            <div><h3>{{ selected.subject || '无主题' }}</h3><p>{{ selected.from }} · {{ selected.source }}</p></div>
+            <PButton variant="ghost" size="sm" @click="selected = null; plainText = ''">关闭预览</PButton>
+          </div>
+          <p v-if="reading" role="status">正在从外部邮箱读取邮件…</p>
+          <p v-else-if="readError" role="alert" class="mail-external__error">{{ readError }}</p>
+          <div v-else class="mail-external__plain" data-testid="external-plain-preview">{{ plainText }}</div>
+          <div v-if="!reading && !readError && selected.accountId" class="mail-external__account-actions">
+            <PButton variant="secondary" size="sm" :loading="busy === 'flag'" :disabled="Boolean(busy)" @click="toggleSeen(selected)">{{ selected.seen ? '标记为未读' : '标记为已读' }}</PButton>
+          </div>
+          <div v-if="browsingAccount?.id===selected.accountId && selected.folder && folders.length>1" class="mail-external__move-actions">
+            <PSelect v-model="moveDestination" label="移动到文件夹" :options="folders.filter(item=>item.name!==selected?.folder).map(item=>({value:item.name,label:item.name}))" :disabled="Boolean(busy)" />
+            <PButton variant="secondary" size="sm" :disabled="Boolean(busy) || !moveDestination" @click="showMoveConfirm=true">移动邮件</PButton>
+          </div>
+          <p class="mail-external__hint">纯文本安全预览不会自动修改原邮箱；只有点击上方按钮才会写入外部邮箱已读状态。</p>
+        </section>
     </main>
   </PSheet>
 
+  <PModal :show="confirmHistoryStart" title="导入当前文件夹历史邮件" size="sm" @close="confirmHistoryStart=false">
+    <p>确认将 {{ folderName }} 的历史邮件复制到 Atoman 吗？已有邮件不会被移除，迁移进度会保留。最多处理 40 MiB 的单封邮件，超过限制的邮件会明确计为跳过。</p>
+    <label class="mail-external__live-optin"><input v-model="continuousAfterImport" type="checkbox" data-testid="history-live-optin" /> <span>导入完成后，继续自动同步此文件夹的新增邮件（每隔约 5 分钟检查）</span></label>
+    <p class="mail-external__hint">持续模式仅复制新增邮件，不会自动修改或删除原邮箱中的邮件；原有邮件的状态变更暂不自动双向覆盖。</p>
+    <template #footer>
+      <PButton variant="secondary" :disabled="historyBusy" @click="confirmHistoryStart=false">取消</PButton>
+      <PButton variant="primary" :loading="historyBusy" @click="startHistory">确认创建任务</PButton>
+    </template>
+  </PModal>
+  <PModal :show="Boolean(confirmFlagSyncJob)" title="开启已读/星标双向状态同步" size="sm" @close="confirmFlagSyncJob=null;flagSyncAcknowledged=false">
+    <p>确认自动同步 {{ confirmFlagSyncJob?.folder }} 中已导入邮件的已读、未读和星标吗？原邮箱的状态变化可写入 Atoman，Atoman 的状态变化也可能实际写回原服务商。每轮最多扫描 8 封，服务商必须支持安全的条件更新。</p>
+    <label class="mail-external__live-optin"><input v-model="flagSyncAcknowledged" type="checkbox" data-testid="external-flag-sync-optin" /><span>我确认允许修改原邮箱和 Atoman 的已读、星标状态，且理解异常会暂停并要求人工核对。不会自动移动或删除邮件。</span></label>
+    <p class="mail-external__hint">与仅复制新增邮件不同，此功能会写入状态。服务器开关未启用时请求会被拒绝；正在进行的一条修改可能在点击暂停后完成。</p>
+    <template #footer>
+      <PButton variant="secondary" :disabled="flagSyncBusy" @click="confirmFlagSyncJob=null">取消</PButton>
+      <PButton variant="primary" :loading="flagSyncBusy" :disabled="!flagSyncAcknowledged || flagSyncBusy" @click="confirmFlagSyncJob && setFlagSync(confirmFlagSyncJob,true)">确认开启双向同步</PButton>
+    </template>
+  </PModal>
+  <PModal :show="Boolean(confirmLocationAction)" title="确认邮件位置处理" size="sm" @close="confirmLocationAction=null;locationActionAcknowledged=false">
+    <p><strong>{{ confirmLocationAction ? locationDecisionLabel(confirmLocationAction.action) : '' }}</strong></p>
+    <p>{{ locationDecisionDescription() }}</p>
+    <label class="mail-external__live-optin"><input v-model="locationActionAcknowledged" type="checkbox" data-testid="external-location-confirm" /><span>我确认这是针对这条位置异常的手动处理。系统不会自动删除原邮箱邮件；结果不明确时应先核对回执。</span></label>
+    <template #footer>
+      <PButton variant="secondary" :disabled="locationActionBusy" @click="confirmLocationAction=null">取消</PButton>
+      <PButton variant="primary" :loading="locationActionBusy" :disabled="!locationActionAcknowledged||locationActionBusy" @click="applyLocationAction">确认处理</PButton>
+    </template>
+  </PModal>
+  <PModal :show="showMoveConfirm" title="移动外部邮件" size="sm" @close="showMoveConfirm=false">
+    <p>将此邮件移动到 {{ moveDestination }}？这会实际修改原邮箱。只有服务商支持安全 IMAP MOVE 时才会执行；不会永久删除邮件。</p>
+    <template #footer>
+      <PButton variant="secondary" :disabled="Boolean(busy)" @click="showMoveConfirm=false">取消</PButton>
+      <PButton variant="primary" :loading="busy==='move'" :disabled="Boolean(busy)" @click="performMove">确认移动</PButton>
+    </template>
+  </PModal>
   <PModal :show="Boolean(removeTarget)" title="移除外部邮箱" size="sm" @close="removeTarget=null">
     <p>确认移除 {{ removeTarget?.address }}？这只会删除 Atoman 保存的授权凭据和同步缓存，不会删除原邮箱内的邮件。移除后建议到原服务商撤销对应的应用专用密码。</p>
     <template #footer>
@@ -96,7 +253,7 @@ import PModal from '@/components/ui/PModal.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import { fetchMailFolders } from '@/api/mail'
-import { queryMailMessages, fetchExternalProviders, fetchExternalUnifiedInbox, connectExternalAccount, syncExternalAccount, disconnectExternalAccount, fetchExternalMessagePlain, type ExternalIMAPProvider, type MailExternalAccount, type MailExternalMessage, type MailExternalProvider } from '@/api/mailClient'
+import { queryMailMessages, fetchExternalProviders, fetchExternalUnifiedInbox, connectExternalAccount, syncExternalAccount, disconnectExternalAccount, fetchExternalMessagePlain, setExternalMessageSeen, type ExternalIMAPProvider, type MailExternalAccount, type MailExternalMessage, type MailExternalProvider, fetchExternalFolders, fetchExternalFolderPage, type MailExternalFolder, type MailExternalFolderPage, moveExternalMessage, fetchExternalHistoryJobs, startExternalHistoryJob, actionExternalHistoryJob, type MailExternalHistoryJob, fetchExternalFlagPreview, type MailFlagPreviewPage, type MailFlagDiff, configureExternalFlagSync, fetchExternalFlagAttempts, reconcileExternalFlagAttempt, type ExternalFlagAttempt, fetchExternalLocationCases, scanExternalLocation, decideExternalLocation, fetchExternalLocationActions, reconcileExternalLocation, type MailLocationCase, type MailLocationDecision, type MailLocationAction } from '@/api/mailClient'
 import type { MailSummary } from '@/api/mail'
 import { mailTime } from './mail-helpers'
 
@@ -109,6 +266,196 @@ const externalMessages=ref<MailExternalMessage[]>([])
 const nativeMessages=ref<MailSummary[]>([])
 const provider=ref<ExternalIMAPProvider>('gmail'),address=ref(''),appPassword=ref('')
 const removeTarget=ref<MailExternalAccount|null>(null)
+const browsingAccount=ref<MailExternalAccount|null>(null)
+const folders=ref<MailExternalFolder[]>([])
+const folderName=ref('')
+const folderPage=ref<MailExternalFolderPage|null>(null)
+const folderLoading=ref(false),folderError=ref('')
+const moveDestination=ref(''),showMoveConfirm=ref(false)
+const historyJobs=ref<MailExternalHistoryJob[]>([])
+const historyAvailable=ref(false),historyBusy=ref(false),historyError=ref('')
+const confirmHistoryStart=ref(false)
+const continuousAfterImport=ref(false)
+const flagPreview=ref<MailFlagPreviewPage|null>(null)
+const flagPreviewBusy=ref(false)
+const flagPreviewError=ref('')
+const flagPreviewJob=ref('')
+const confirmFlagSyncJob=ref<MailExternalHistoryJob|null>(null)
+const flagSyncAcknowledged=ref(false)
+const flagSyncBusy=ref(false)
+const flagSyncError=ref('')
+const flagAttempts=ref<ExternalFlagAttempt[]>([])
+const flagAttemptsJob=ref('')
+const flagAttemptsBusy=ref(false)
+const locationCaseJob=ref('')
+const locationCases=ref<MailLocationCase[]>([])
+const locationCursor=ref(0)
+const locationHasMore=ref(false)
+const locationScanBusy=ref(false)
+const locationActionBusy=ref(false)
+const locationError=ref('')
+const confirmLocationAction=ref<{entry:MailLocationCase;action:MailLocationDecision}|null>(null)
+const locationActionAcknowledged=ref(false)
+const locationActions=ref<MailLocationAction[]>([])
+const locationActionsCase=ref('')
+const locationCurrentJob=computed(()=>historyJobs.value.find(row=>row.id===locationCaseJob.value))
+function locationStatusLabel(status:MailLocationCase['status']){
+ return ({observed:'首次缺失，需至少 5 分钟后再次确认',missing_unclassified:'来源缺失，不能判定删除',possible_move:'可能移至其他文件夹（需人工确认）',ambiguous_candidates:'多个相同内容候选，不自动选择',candidate_unverified:'候选邮件的身份尚未确认',native_missing:'Atoman 原副本不可用',native_unavailable:'Atoman 副本暂时无法核对',source_returned:'原 UID 再次出现，请核对',kept:'已选择保留 Atoman 旧副本',trashed:'旧副本已进入 Atoman 回收站',moved_resolved:'保留新位置副本，旧副本已入回收站',restored:'已恢复到原导入文件夹',action_needs_review:'移动操作结果不明确，禁止重试'} as Record<MailLocationCase['status'],string>)[status]||'待核对'
+}
+function locationDecisionLabel(action:MailLocationDecision){
+ return ({keep_native:'保留 Atoman 原副本',trash_native:'把 Atoman 旧副本移入回收站',resolve_move:'保留新文件夹副本，将旧副本移入回收站',restore_native:'从回收站恢复原导入文件夹'} as const)[action]
+}
+function locationDecisionDescription(){
+ const selected=confirmLocationAction.value
+ if(!selected)return ''
+ if(selected.action==='keep_native')return '只保留当前 Atoman 副本并记录处理选择，不会修改任何远程邮件。'
+ if(selected.action==='restore_native')return '仅把原 Atoman 导入副本恢复到之前的文件夹，不会修改原邮箱。若邮箱已被其他客户端移动，会拒绝覆盖。'
+ if(selected.action==='resolve_move')return `内容完全相同的邮件可能位于 ${selected.entry.candidate_folder||'其他文件夹'}，但无法仅凭哈希证明是移动。确认保留新文件夹中的候选邮件，将 Atoman 旧副本移入回收站。不会删除候选或修改原邮箱。`
+ return '原 UID 连续缺失并不一定意味着已删除。确认仅将 Atoman 的旧导入副本移入回收站；不会修改或删除原邮箱。恢复能力与实际保留期限受 Stalwart 回收站策略约束。'
+}
+async function refreshLocationCases(job:MailExternalHistoryJob){
+ const account=browsingAccount.value
+ if(!account)return
+ const rows=await fetchExternalLocationCases(account.id,job.id)
+ if(browsingAccount.value?.id!==account.id)return
+ locationCases.value=rows;locationCaseJob.value=job.id
+}
+async function scanLocations(job:MailExternalHistoryJob,afterUID=0){
+ const account=browsingAccount.value
+ if(!account||locationScanBusy.value || !['completed','watching'].includes(job.status))return
+ locationScanBusy.value=true;locationError.value=''
+ try{
+  const page=await scanExternalLocation(account.id,job.id,afterUID)
+  if(browsingAccount.value?.id!==account.id)return
+  if(locationCaseJob.value && locationCaseJob.value!==job.id){
+    locationActionsCase.value=''
+    locationActions.value=[]
+  }
+  locationCursor.value=page.next_source_uid
+  locationHasMore.value=page.has_more
+  await refreshLocationCases(job)
+ }catch{
+  if(browsingAccount.value?.id===account.id)locationError.value='无法检查来源 UID。可能尚未启用位置核对、来源文件夹已变化或服务暂时不可用；不会修改任何邮件。'
+ }finally{locationScanBusy.value=false}
+}
+function proposeLocationAction(entry:MailLocationCase,action:MailLocationDecision){
+ confirmLocationAction.value={entry,action};locationActionAcknowledged.value=false
+}
+async function applyLocationAction(){
+ const account=browsingAccount.value,selected=confirmLocationAction.value,job=locationCurrentJob.value
+ if(!account||!selected||!job||!locationActionAcknowledged.value||locationActionBusy.value)return
+ locationActionBusy.value=true;locationError.value=''
+ try {
+  await decideExternalLocation(account.id,job.id,selected.entry.id,selected.action)
+  if(browsingAccount.value?.id!==account.id)return
+  confirmLocationAction.value=null;locationActionAcknowledged.value=false
+  await refreshLocationCases(job)
+  notice.value='已完成已确认的位置处理。原邮箱没有被移动或删除。'
+ }catch{
+  if(browsingAccount.value?.id===account.id){
+   confirmLocationAction.value=null;locationError.value='操作未获确认，可能需要只读核对回执。请查看位置异常记录；不要重复点击。'
+   try{await refreshLocationCases(job)}catch{}
+  }
+ }finally{locationActionBusy.value=false}
+}
+async function loadLocationActions(entry:MailLocationCase){
+ const account=browsingAccount.value,job=locationCurrentJob.value
+ if(!account||!job||locationActionBusy.value)return
+ locationActionBusy.value=true;locationError.value=''
+ try {
+  const result=await fetchExternalLocationActions(account.id,job.id,entry.id)
+  if(browsingAccount.value?.id!==account.id)return
+  locationActionsCase.value=entry.id;locationActions.value=result
+ }catch{
+  if(browsingAccount.value?.id===account.id)locationError.value='无法读取位置操作回执，未修改邮件。'
+ }finally{locationActionBusy.value=false}
+}
+async function reconcileLocationAction(attempt:MailLocationAction){
+ const account=browsingAccount.value,job=locationCurrentJob.value,caseID=locationActionsCase.value
+ if(!account||!job||!caseID||locationActionBusy.value)return
+ locationActionBusy.value=true;locationError.value=''
+ try {
+  await reconcileExternalLocation(account.id,job.id,caseID,attempt.id)
+  if(browsingAccount.value?.id!==account.id)return
+  const entry=locationCases.value.find(v=>v.id===caseID)
+  if(entry){
+   const actions=await fetchExternalLocationActions(account.id,job.id,caseID)
+   if(browsingAccount.value?.id===account.id)locationActions.value=actions
+  }
+  await refreshLocationCases(job)
+ }catch{
+  if(browsingAccount.value?.id===account.id)locationError.value='状态仍不能安全确认，回执将保持锁定，不会重发移动请求。'
+ }finally{locationActionBusy.value=false}
+}
+const currentPreviewJob=computed(()=>historyJobs.value.find(job=>job.id===flagPreviewJob.value))
+function flagAttemptLabel(row:ExternalFlagAttempt){
+  if(row.status==='applied')return '已确认同步'
+  if(row.status==='aborted_prewrite')return '写入前已取消'
+  return '需要核对，未自动重试'
+}
+async function setFlagSync(job:MailExternalHistoryJob,enabled:boolean){
+ const account=browsingAccount.value
+ if(!account||flagSyncBusy.value)return
+ flagSyncBusy.value=true;flagSyncError.value=''
+ try {
+  await configureExternalFlagSync(account.id,job.id,enabled)
+  if(browsingAccount.value?.id!==account.id)return
+  confirmFlagSyncJob.value=null;flagSyncAcknowledged.value=false
+  await refreshHistory()
+  notice.value=enabled?'已请求开启双向已读/星标同步（需服务器功能开关）。':'已暂停后续状态同步任务。正在执行的单条操作可能继续完成。'
+ } catch {
+  if(browsingAccount.value?.id===account.id)flagSyncError.value='无法切换状态同步。请检查服务器是否启用功能，以及是否有需要核对的操作回执。'
+ } finally {flagSyncBusy.value=false}
+}
+async function loadFlagAttempts(job:MailExternalHistoryJob){
+ const account=browsingAccount.value
+ if(!account||flagAttemptsBusy.value)return
+ flagAttemptsBusy.value=true;flagSyncError.value=''
+ try {
+  const result=await fetchExternalFlagAttempts(account.id,job.id)
+  if(browsingAccount.value?.id!==account.id)return
+  flagAttempts.value=result;flagAttemptsJob.value=job.id
+ } catch {
+  if(browsingAccount.value?.id===account.id)flagSyncError.value='无法读取状态同步回执，请稍后重试。'
+ } finally {flagAttemptsBusy.value=false}
+}
+async function reconcileFlag(attempt:ExternalFlagAttempt){
+ const account=browsingAccount.value, jobID=flagAttemptsJob.value
+ if(!account||!jobID||flagSyncBusy.value)return
+ flagSyncBusy.value=true;flagSyncError.value=''
+ try {
+  await reconcileExternalFlagAttempt(account.id,jobID,attempt.id)
+  if(browsingAccount.value?.id!==account.id)return
+  const job=historyJobs.value.find(v=>v.id===jobID)
+  if(job)await loadFlagAttempts(job)
+  await refreshHistory()
+ } catch {
+  if(browsingAccount.value?.id===account.id)flagSyncError.value='尚不能安全核对该回执。源邮件与副本可能不一致，不会执行第二次写入。'
+ } finally {flagSyncBusy.value=false}
+}
+function flagDecisionLabel(diff:MailFlagDiff){
+ return ({in_sync:'一致',copy_to_native:'建议更新 Atoman',copy_to_source:'建议更新原邮箱',conflict:'状态冲突，请核对'} as const)[diff.decision]
+}
+function previewItemLabel(status:string){
+ return ({ready:'可比较',baseline_unknown:'缺少初始状态，需核对',source_missing:'原邮箱已找不到该邮件',native_missing:'Atoman 中已找不到副本',sync_needs_review:'已有同步操作待核对'} as Record<string,string>)[status]||'需核对'
+}
+async function reviewFlags(job:MailExternalHistoryJob,position=0){
+ const account=browsingAccount.value
+ if(!account||flagPreviewBusy.value||job.imported===0)return
+ flagPreviewBusy.value=true;flagPreviewError.value=''
+ try{
+  const preview=await fetchExternalFlagPreview(account.id,job.id,position)
+  if(browsingAccount.value?.id!==account.id)return
+  flagPreview.value=preview;flagPreviewJob.value=job.id
+ }catch{
+  if(browsingAccount.value?.id===account.id)flagPreviewError.value='无法读取状态差异，可能是源文件夹已变化或服务暂时不可用。不会修改任何邮件。'
+ }finally{flagPreviewBusy.value=false}
+}
+const activeHistoryJob=computed(()=>historyJobs.value.find(job=>job.folder===folderName.value))
+function historyStatusLabel(status:MailExternalHistoryJob['status']):string {
+  return ({queued:'排队中',running:'正在导入',paused:'已暂停',failed:'导入失败',needs_review:'需人工核对',cancelled:'已取消',completed:'已完成',watching:'持续检查新增邮件'} as const)[status] || status
+}
+let folderGeneration=0
 const selected=ref<UnifiedRow|null>(null),plainText=ref(''),reading=ref(false),readError=ref('')
 let readGeneration=0
 
@@ -128,6 +475,7 @@ interface UnifiedRow {
   accountId?:string
   uid?:number
   uidValidity?:number
+  folder?:string
   nativeId?:string
   from:string
   fromName:string
@@ -202,6 +550,7 @@ async function disconnect(){
     await disconnectExternalAccount(target.id)
     removeTarget.value=null
     if(selected.value?.accountId===target.id){selected.value=null;plainText.value=''}
+    if(browsingAccount.value?.id===target.id)closeFolders()
     notice.value='已移除外部邮箱，本地授权和同步缓存已删除。'
     await refresh()
   }catch{error.value='无法移除外部邮箱，请重试。'}
@@ -213,12 +562,175 @@ async function openMessage(row:UnifiedRow){
   selected.value=row;plainText.value='';readError.value='';reading.value=true
   const generation=++readGeneration
   try{
-    const response=await fetchExternalMessagePlain(row.accountId,row.uid,row.uidValidity)
+    const response=await fetchExternalMessagePlain(row.accountId,row.uid,row.uidValidity,row.folder)
     if(generation!==readGeneration)return
     plainText.value=response.text
   }catch{
     if(generation===readGeneration)readError.value='无法读取外部邮件，请尝试同步账户后重试。'
   }finally{if(generation===readGeneration)reading.value=false}
+}
+async function toggleSeen(row:UnifiedRow){
+  if(busy.value || !row.accountId || !row.uid || !row.uidValidity)return
+  busy.value='flag';error.value='';notice.value=''
+  try {
+    await setExternalMessageSeen(row.accountId,row.uid,row.uidValidity,!row.seen,row.folder)
+    const updated = !row.seen
+    externalMessages.value=externalMessages.value.map(item=> item.account_id===row.accountId && item.uid===row.uid && item.uid_validity===row.uidValidity ? {...item,seen:updated}:item)
+    selected.value={...row,seen:updated}
+    if(folderPage.value && browsingAccount.value?.id===row.accountId && folderName.value===row.folder){
+      folderPage.value={...folderPage.value,messages:folderPage.value.messages.map(msg=>msg.uid===row.uid?{...msg,seen:updated}:msg)}
+    }
+    notice.value=updated?'已同步标记为已读':'已同步标记为未读'
+    await refresh()
+  } catch {error.value='外部邮箱未确认状态变更，请同步后重试。'}
+  finally {busy.value=''}
+}
+function closeFolders(){
+  folderGeneration++
+  browsingAccount.value=null
+  folders.value=[]
+  folderName.value=''
+  folderPage.value=null
+  folderError.value=''
+  folderLoading.value=false
+  moveDestination.value=''
+  showMoveConfirm.value=false
+  historyJobs.value=[]
+  flagPreview.value=null
+  flagPreviewJob.value=''
+  flagPreviewError.value=''
+  locationCaseJob.value=''
+  locationCases.value=[]
+  locationCursor.value=0
+  locationHasMore.value=false
+  locationError.value=''
+  locationActions.value=[]
+  locationActionsCase.value=''
+  confirmLocationAction.value=null
+  locationActionAcknowledged.value=false
+  flagSyncError.value=''
+  flagAttempts.value=[]
+  flagAttemptsJob.value=''
+  confirmFlagSyncJob.value=null
+  flagSyncAcknowledged.value=false
+  historyAvailable.value=false
+  historyError.value=''
+  confirmHistoryStart.value=false
+  continuousAfterImport.value=false
+}
+async function openFolders(account:MailExternalAccount){
+  if(folderLoading.value)return
+  closeFolders()
+  browsingAccount.value=account
+  folderLoading.value=true
+  const generation=++folderGeneration
+  try{
+    const response=await fetchExternalFolders(account.id)
+    if(generation!==folderGeneration)return
+    folders.value=response
+    folderLoading.value=false
+    // Import progress is auxiliary: never block ordinary folder browsing.
+    void refreshHistory()
+    const inbox=response.find(item=>item.role==='inbox') || response[0]
+    if(inbox)await loadFolder(inbox.name)
+  }catch{
+    if(generation===folderGeneration)folderError.value='无法列出文件夹，请检查外部邮箱授权与网络。'
+  }finally{if(generation===folderGeneration)folderLoading.value=false}
+}
+async function refreshHistory(){
+  const account=browsingAccount.value
+  if(!account)return
+  historyError.value=''
+  try{
+    const jobs=await fetchExternalHistoryJobs(account.id)
+    if(browsingAccount.value?.id!==account.id)return
+    historyJobs.value=jobs || []
+    historyAvailable.value=true
+  }catch{
+    if(browsingAccount.value?.id===account.id){historyAvailable.value=false;historyError.value='历史导入服务尚未就绪，文件夹浏览仍可使用。'}
+  }
+}
+async function startHistory(){
+  const account=browsingAccount.value,folder=folderName.value
+  if(!account || !folder || historyBusy.value || activeHistoryJob.value || !historyAvailable.value)return
+  historyBusy.value=true;historyError.value=''
+  try{
+    await startExternalHistoryJob(account.id,folder,continuousAfterImport.value)
+    confirmHistoryStart.value=false
+    continuousAfterImport.value=false
+    await refreshHistory()
+    notice.value='历史导入任务已创建；实际复制由后台任务逐批进行。'
+  }catch{historyError.value='无法创建任务，可能已经有相同文件夹的迁移任务，请刷新进度。'}
+  finally{historyBusy.value=false}
+}
+async function historyAction(job:MailExternalHistoryJob, action:'pause'|'resume'|'cancel'|'enable_live'|'disable_live'){
+  const account=browsingAccount.value
+  if(!account || historyBusy.value)return
+  historyBusy.value=true;historyError.value=''
+  try{
+    await actionExternalHistoryJob(account.id,job.id,action)
+    await refreshHistory()
+  }catch{historyError.value='无法执行此操作，任务状态可能已变化；请刷新进度。'}
+  finally{historyBusy.value=false}
+}
+async function loadFolder(name:string,position=0){
+  if(!browsingAccount.value || folderLoading.value || !folders.value.some(f=>f.name===name))return
+  const accountId=browsingAccount.value.id
+  if(position===0){folderPage.value=null;folderName.value=name;selected.value=null;moveDestination.value=''}
+  folderLoading.value=true;folderError.value=''
+  const generation=++folderGeneration
+  try {
+    const response=await fetchExternalFolderPage(accountId,name,position)
+    if(generation!==folderGeneration)return
+    if(position>0 && folderPage.value && folderPage.value.folder===name && folderPage.value.uid_validity===response.uid_validity){
+      const existing=new Set(folderPage.value.messages.map(item=>item.uid))
+      folderPage.value={...response,messages:[...folderPage.value.messages,...response.messages.filter(item=>!existing.has(item.uid))]}
+    }else{folderPage.value=response}
+    folderName.value=name
+  }catch{if(generation===folderGeneration)folderError.value='读取文件夹失败，请刷新后重试。'}
+  finally{if(generation===folderGeneration)folderLoading.value=false}
+}
+function openFolderMessage(msg:MailExternalFolderPage['messages'][number]){
+  const account=browsingAccount.value, page=folderPage.value
+  if(!account || !page)return
+  moveDestination.value=''
+  openMessage({
+    key:'folder:'+account.id+':'+page.folder+':'+msg.uid,
+    source:account.address+' / '+page.folder,accountId:account.id,folder:page.folder,
+    uid:msg.uid,uidValidity:page.uid_validity,from:msg.from,
+    fromName:msg.from_name,subject:msg.subject,date:msg.date,seen:msg.seen
+  })
+}
+async function performMove(){
+  const row=selected.value
+  if(busy.value || !row?.accountId || !row.uid || !row.uidValidity || !row.folder || !moveDestination.value ||
+     !folders.value.some(item=>item.name===moveDestination.value) || moveDestination.value===row.folder)return
+  busy.value='move';error.value='';notice.value=''
+  let receipt
+  try {
+    receipt=await moveExternalMessage(row.accountId,row.uid,row.uidValidity,row.folder,moveDestination.value)
+  }catch{
+    error.value='无法确认服务商是否完成移动，请先刷新文件夹检查，不要直接重复提交。'
+    busy.value=''
+    return
+  }
+  // The mutation succeeded; subsequent read failures cannot reverse that fact.
+  showMoveConfirm.value=false
+  selected.value=null;plainText.value='';moveDestination.value=''
+  const source=folderName.value
+  if(source)await loadFolderAfterMove(source)
+  try{await refresh()}catch{/* post-write read failure does not imply move failure */}
+  notice.value=receipt.refresh_recommended ? '邮件已移动，收件箱缓存可能稍有延迟，请手动同步账户。' : '邮件已移动到目标文件夹。'
+  busy.value=''
+}
+async function loadFolderAfterMove(folder:string){
+  // The write is already confirmed. A failed browse must not be described as
+  // a failed move or trigger an automatic retry of that mutation.
+  folderPage.value=null
+  const account=browsingAccount.value
+  if(!account)return
+  try {folderPage.value=await fetchExternalFolderPage(account.id,folder,0)}
+  catch{folderError.value='邮件已移动，但重新载入文件夹失败，请点击文件夹刷新。'}
 }
 onMounted(refresh)
 </script>
@@ -246,6 +758,25 @@ onMounted(refresh)
 .mail-external__sender small,.mail-external__source{font-size:11px;color:var(--a-color-muted)}
 .mail-external__source{display:inline-flex;align-items:center;gap:6px}
 .mail-external__reader{padding:20px;border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-card);display:grid;gap:16px}
+.mail-external__browser{display:grid;gap:14px;min-width:0;padding:18px;border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-card)}
+.mail-external__history{display:grid;gap:12px;padding:16px;border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-card)}
+.mail-external__live-optin{display:flex;align-items:start;gap:10px;margin:15px 0;font-size:13px;line-height:1.5;cursor:pointer}
+.mail-external__live-optin input{margin-top:2px;flex-shrink:0;accent-color:var(--a-color-primary)}
+.mail-external__history-jobs{display:grid;gap:6px}
+.mail-external__flag-preview{display:grid;gap:10px;border-top:1px solid var(--a-color-border-soft);padding:12px 0}
+.mail-external__flag-preview>strong{font-size:13px}
+.mail-external__flag-preview>p{font-size:12px;color:var(--a-color-muted);line-height:1.7;margin:0}
+.mail-external__flag-item{display:grid;gap:4px;padding:9px 0;border-top:1px solid var(--a-color-border-soft);font-size:12px}
+.mail-external__flag-item small{font-size:11px;color:var(--a-color-muted)}
+.mail-external__history-job{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:12px 0;border-top:1px solid var(--a-color-border-soft)}
+.mail-external__history-job>div:first-child{display:grid;gap:5px;min-width:0}
+.mail-external__history-job strong{font-size:13px;overflow-wrap:anywhere}
+.mail-external__history-job small{font-size:11px;color:var(--a-color-muted)}
+@media(max-width:640px){.mail-external__history-job{flex-direction:column;align-items:stretch}}
+.mail-external__folder-nav{display:flex;gap:8px;flex-wrap:wrap;max-height:180px;overflow-y:auto}
+.mail-external__folder-results{display:grid;gap:12px;min-width:0}
+.mail-external__folder-results>.p-button{justify-self:start}
+.mail-external__move-actions{display:flex;flex-wrap:wrap;align-items:end;gap:10px;max-width:500px}
 .mail-external__reader h3{overflow-wrap:anywhere}
 .mail-external__plain{font-size:14px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;max-width:75ch;max-height:460px;overflow-y:auto}
 .mail-external__hint{font-size:12px!important}

@@ -109,6 +109,21 @@ describe('notificationHelpers', () => {
       expect(notificationTargetPath({ ...baseNotification, source_url: 'javascript:alert(1)' })).toBe(null)
     })
 
+    it('routes a server mail follow-up to the signed-in mail workspace only', () => {
+      const mailReminder: Notification = {
+        ...baseNotification,
+        type: 'mail_followup',
+        source_type: 'mail_followup',
+        category: 'system',
+        source_url: 'https://example.test/phishing',
+        meta: {title: '邮件跟进提醒',body: '需要处理邮件', path: '//evil.example/track'},
+      }
+      expect(notificationTargetPath(mailReminder)).toBe('/mail')
+      expect(formatNotificationTitle(mailReminder)).toBe('邮件跟进提醒')
+      expect(formatNotificationBody(mailReminder)).toBe('需要处理邮件')
+      expect(notificationActionType(mailReminder)).toBe('system')
+    })
+
     it('resolves site announcement path', () => {
       expect(notificationTargetPath({ ...baseNotification, type: 'site_announcement', meta: { path: '/updates/new' } })).toBe('/updates/new')
     })

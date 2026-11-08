@@ -4,7 +4,7 @@ import type { MailSummary, MailAccountInfo } from '@/api/mail'
 const base = () => `${useApiUrl()}/mail`
 const key = (value: string) => encodeURIComponent(value)
 export interface MailUpload { id: string; name: string; type: string; size: number }
-export interface MailComposeFields { to: string[]; cc: string[]; bcc: string[]; subject: string; text: string; html?: string; send_at?: string; in_reply_to?: string; references?: string[]; attachments: MailUpload[] }
+export interface MailComposeFields { external_account_id?: string; alias_id?: string; to: string[]; cc: string[]; bcc: string[]; subject: string; text: string; html?: string; send_at?: string; in_reply_to?: string; references?: string[]; attachments: MailUpload[] }
 export interface MailDraft extends MailComposeFields { id: string; revision?: number; updated_at?: string }
 interface DraftResponse { id: string; revision: number; subject: string; updated_at: string; compose?: MailComposeFields }
 function readDraft(row: DraftResponse): MailDraft { const compose = row.compose; return { ...compose, id: row.id, revision: row.revision, updated_at: row.updated_at, to: compose?.to || [], cc: compose?.cc || [], bcc: compose?.bcc || [], text: compose?.text || '', attachments: compose?.attachments || [], subject: compose?.subject || row.subject || '' } }
@@ -46,6 +46,12 @@ export async function saveMailDraft(draft: MailDraft) {
 }
 export const deleteMailDraft = (id: string) => apiDeleteJson<{ deleted: boolean }>(`${base()}/drafts/${key(id)}`)
 export const queueMail = (fields: MailComposeFields, requestId: string, draftId?: string, draftRevision?: number, sendAt?: string) => { const { attachments, ...content } = fields; return apiPostJson<MailOutbox>(`${base()}/outbox`, { ...content, attachment_ids: attachments.map(file => file.id), request_id: requestId, draft_id: draftId, draft_revision: draftRevision, ...(sendAt ? { send_at: sendAt } : {}) }) }
+export interface MailSenderIdentity {address:string; provider:string; external_account_id?:string; alias_id?:string}
+export const fetchMailSenders = () => apiGet<MailSenderIdentity[]>(`${base()}/senders`)
+export interface MailAlias {id:string; address:string; status:'active'|'disabled'|'needs_review';error_code?:string; created_at:string}
+export const fetchMailAliases = () => apiGet<MailAlias[]>(`${base()}/aliases`)
+export const createMailAlias = (local_part:string) => apiPostJson<MailAlias>(`${base()}/aliases`,{local_part})
+export const setMailAliasEnabled = (id:string,enabled:boolean) => apiPostJson<MailAlias>(`${base()}/aliases/${key(id)}/action`,{action:enabled?'enable':'disable'})
 export const provisionMailAccount = () => apiPostJson<MailAccountInfo>(`${base()}/provision`, {})
 export const fetchMailOutbox = (id: string) => apiGet<MailOutbox>(`${base()}/outbox/${key(id)}`)
 export const fetchMailOutboxes = () => apiGet<MailOutbox[]>(`${base()}/outbox`)
@@ -143,11 +149,124 @@ export const disconnectExternalAccount = (id:string) =>
   apiDeleteJson<{deleted:boolean}>(base()+'/external/accounts/'+key(id))
 export const fetchExternalUnifiedInbox = () =>
   apiGet<MailExternalUnifiedInbox>(base()+'/external/unified')
-export const fetchExternalMessagePlain = (accountId:string,uid:number,validity:number) => {
+export const setExternalMessageSeen = (accountId:string,uid:number,validity:number,seen:boolean,folder?:string) =>
+  apiPostJson<MailExternalAccount | {updated:boolean}>(base()+'/external/accounts/'+key(accountId)+'/messages/'+key(String(uid))+'/seen', {uid_validity:validity,seen,...(folder ? {folder} : {})})
+export interface MailExternalFolder { name: string; delimiter?: string; role?: string }
+export interface MailExternalFolderPage {
+  folder:string
+  uid_validity:number
+  messages:Array<{uid:number;subject:string;from:string;from_name:string;date:string;seen:boolean;size:number}>
+  total:number
+  has_more:boolean
+  next_position:number
+}
+export const fetchExternalFolders = (accountId:string) =>
+  apiGet<MailExternalFolder[]>(base()+'/external/accounts/'+key(accountId)+'/folders')
+export const fetchExternalFolderPage = (accountId:string,folder:string,position=0) =>
+  apiGet<MailExternalFolderPage>(base()+'/external/accounts/'+key(accountId)+'/folder-messages?'+new URLSearchParams({folder,position:String(position)}))
+export interface ExternalMoveReceipt {moved:boolean;inbox_cache_updated:boolean;refresh_recommended:boolean}
+export const moveExternalMessage = (accountId:string,uid:number,validity:number,source:string,destination:string) =>
+  apiPostJson<ExternalMoveReceipt>(base()+'/external/accounts/'+key(accountId)+'/messages/'+key(String(uid))+'/move',
+    {uid_validity:validity,source,destination})
+export const fetchExternalMessagePlain = (accountId:string,uid:number,validity:number,folder?:string) => {
   const url=base()+'/external/accounts/'+key(accountId)+'/messages/'+key(String(uid))+
-    '?'+new URLSearchParams({uid_validity:String(validity)})
+    '?'+new URLSearchParams({uid_validity:String(validity),...(folder ? {folder} : {})})
   return apiGet<{text:string}>(url)
 }
+
+// The import source is always an explicitly authorized provider account.
+// Only public progress counts and user-owned source folder names are returned.
+export type MailExternalHistoryStatus = 'queued' | 'running' | 'paused' | 'failed' | 'needs_review' | 'cancelled' | 'completed' | 'watching'
+export interface MailExternalHistoryJob {
+ id:string
+ account_id:string
+ folder:string
+ status:MailExternalHistoryStatus
+ continuous:boolean
+ flag_sync_enabled?:boolean
+ flag_sync_generation?:number
+ flag_sync_cursor_uid?:number
+ flag_last_polled_at?:string
+ flag_last_error_code?:string
+ last_polled_at?:string
+ uid_validity:number
+ upper_uid:number
+ next_uid:number
+ imported:number
+ skipped:number
+ last_error_code?:string
+ created_at:string
+ updated_at:string
+}
+export const fetchExternalHistoryJobs = (accountId:string) =>
+  apiGet<MailExternalHistoryJob[]>(base()+'/external/accounts/'+key(accountId)+'/imports')
+export const startExternalHistoryJob = (accountId:string,folder:string,continuous=false) =>
+  apiPostJson<MailExternalHistoryJob>(base()+'/external/accounts/'+key(accountId)+'/imports',{folder,continuous})
+export const actionExternalHistoryJob = (accountId:string,jobId:string,action:'pause'|'resume'|'cancel'|'enable_live'|'disable_live') =>
+  apiPostJson<MailExternalHistoryJob>(base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)+'/action',{action})
+
+// A read-only flag-diff preview never invokes IMAP STORE or JMAP Email/set.
+export interface MailFlagDiff {source:boolean;native:boolean;baseline:boolean;decision:'in_sync'|'copy_to_native'|'copy_to_source'|'conflict'}
+export interface MailFlagPreviewItem {source_uid:number;native_email_id:string;status:'ready'|'baseline_unknown'|'source_missing'|'native_missing'|'sync_needs_review';seen:MailFlagDiff;flagged:MailFlagDiff}
+export interface MailFlagPreviewPage {job_id:string;folder:string;items:MailFlagPreviewItem[];next_position:number;has_more:boolean;checked_at:string}
+export const fetchExternalFlagPreview = (accountId:string,jobId:string,position=0) =>
+  apiGet<MailFlagPreviewPage>(base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)+'/flag-preview?'+new URLSearchParams({position:String(position)}))
+
+// Explicit per-import-job opt-in; the server also requires a separately
+// enabled operational gate. No send, move or permanent-delete effects.
+export interface ExternalFlagAttempt {id:string;source_uid:number;flag:'seen'|'flagged';direction:'copy_to_source'|'copy_to_native';desired:boolean;status:'dispatching'|'needs_review'|'applied'|'aborted_prewrite';error_code?:string;created_at:string}
+export const configureExternalFlagSync = (accountId:string,jobId:string,enabled:boolean) =>
+  apiPostJson<MailExternalHistoryJob>(base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)+'/flag-sync',{enabled})
+export const fetchExternalFlagAttempts = (accountId:string,jobId:string) =>
+  apiGet<ExternalFlagAttempt[]>(base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)+'/flag-attempts')
+export const reconcileExternalFlagAttempt = (accountId:string,jobId:string,attemptId:string) =>
+  apiPostJson<ExternalFlagAttempt>(base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)+'/flag-attempts/'+key(attemptId)+'/reconcile',{})
+
+// A missing source UID is never proof of deletion. Cross-folder comparisons
+// are only source observations; native changes require one explicit choice.
+export type MailLocationCaseStatus = 'observed'|'missing_unclassified'|'possible_move'|'ambiguous_candidates'|'candidate_unverified'|'native_missing'|'native_unavailable'|'source_returned'|'kept'|'trashed'|'moved_resolved'|'restored'|'action_needs_review'
+export interface MailLocationCase {
+ id:string
+ job_id:string
+ source_uid:number
+ status:MailLocationCaseStatus
+ missing_observations:number
+ first_missing_at:string
+ last_observed_at:string
+ last_checked_at:string
+ returned_at?:string
+ candidate_folder?:string
+ action_id?:string
+ resolved_at?:string
+}
+export interface MailLocationScanPage {
+ job_id:string
+ items:MailLocationCase[]
+ next_source_uid:number
+ has_more:boolean
+ checked_at:string
+}
+export type MailLocationDecision = 'keep_native'|'trash_native'|'resolve_move'|'restore_native'
+export interface MailLocationAction {
+ id:string
+ case_id:string
+ action:MailLocationDecision
+ status:'dispatching'|'needs_review'|'aborted_prewrite'|'applied'
+ error_code?:string
+ created_at:string
+}
+const locationPath = (accountId:string,jobId:string) => base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)
+const locationCasePath=(accountId:string,jobId:string,caseId:string)=>locationPath(accountId,jobId)+'/location-cases/'+key(caseId)
+export const fetchExternalLocationCases=(accountId:string,jobId:string)=>
+  apiGet<MailLocationCase[]>(locationPath(accountId,jobId)+'/location-cases')
+export const scanExternalLocation=(accountId:string,jobId:string,afterUID=0)=>
+  apiPostJson<MailLocationScanPage>(locationPath(accountId,jobId)+'/location-scan',{after_uid:afterUID})
+export const decideExternalLocation=(accountId:string,jobId:string,caseId:string,action:MailLocationDecision)=>
+  apiPostJson<MailLocationCase>(locationCasePath(accountId,jobId,caseId)+'/action',{action,confirmed:true})
+export const fetchExternalLocationActions=(accountId:string,jobId:string,caseId:string)=>
+  apiGet<MailLocationAction[]>(locationCasePath(accountId,jobId,caseId)+'/actions')
+export const reconcileExternalLocation=(accountId:string,jobId:string,caseId:string,actionId:string)=>
+  apiPostJson<MailLocationAction>(locationCasePath(accountId,jobId,caseId)+'/actions/'+key(actionId)+'/reconcile',{})
 
 // Atoman-private encrypted mail organizer metadata; independent from remote IMAP flags.
 export type MailOrganizerColor = 'slate' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink'

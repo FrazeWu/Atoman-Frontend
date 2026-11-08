@@ -11,6 +11,7 @@
         <PBadge v-else type="success" label="已允许浏览器通知" />
       </section>
       <MailContactsPanel />
+      <MailAliasesPanel />
       <template v-if="settings">
         <section><h2>自动签名</h2><p>写信时自动在正文中插入签名，可为回复单独选择是否启用。</p>
           <label class="mail-settings__check"><input v-model="settings.signature!.enabled" type="checkbox" />开启自动签名</label>
@@ -42,6 +43,7 @@ import PBadge from '@/components/ui/PBadge.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PModal from '@/components/ui/PModal.vue'
 import MailContactsPanel from './MailContactsPanel.vue'
+import MailAliasesPanel from './MailAliasesPanel.vue'
 import { useMailUnreadStore } from '@/stores/mailUnread'
 import PButton from '@/components/ui/PButton.vue'
 import type { MailFolder } from '@/api/mail'

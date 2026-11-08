@@ -41,7 +41,10 @@
           <p v-if="reading" role="status">正在从外部邮箱读取邮件…</p>
           <p v-else-if="readError" role="alert" class="mail-external__error">{{ readError }}</p>
           <div v-else class="mail-external__plain" data-testid="external-plain-preview">{{ plainText }}</div>
-          <p class="mail-external__hint">仅加载纯文本内容，不执行外部 HTML、远程图片或脚本；此处阅读不会改变外部邮箱的已读状态。</p>
+          <div v-if="!reading && !readError && selected.accountId" class="mail-external__account-actions">
+            <PButton variant="secondary" size="sm" :loading="busy === 'flag'" :disabled="Boolean(busy)" @click="toggleSeen(selected)">{{ selected.seen ? '标记为未读' : '标记为已读' }}</PButton>
+          </div>
+          <p class="mail-external__hint">纯文本安全预览不会自动修改原邮箱；只有点击上方按钮才会写入外部邮箱已读状态。</p>
         </section>
       </section>
 
@@ -96,7 +99,7 @@ import PModal from '@/components/ui/PModal.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import { fetchMailFolders } from '@/api/mail'
-import { queryMailMessages, fetchExternalProviders, fetchExternalUnifiedInbox, connectExternalAccount, syncExternalAccount, disconnectExternalAccount, fetchExternalMessagePlain, type ExternalIMAPProvider, type MailExternalAccount, type MailExternalMessage, type MailExternalProvider } from '@/api/mailClient'
+import { queryMailMessages, fetchExternalProviders, fetchExternalUnifiedInbox, connectExternalAccount, syncExternalAccount, disconnectExternalAccount, fetchExternalMessagePlain, setExternalMessageSeen, type ExternalIMAPProvider, type MailExternalAccount, type MailExternalMessage, type MailExternalProvider } from '@/api/mailClient'
 import type { MailSummary } from '@/api/mail'
 import { mailTime } from './mail-helpers'
 
@@ -219,6 +222,19 @@ async function openMessage(row:UnifiedRow){
   }catch{
     if(generation===readGeneration)readError.value='无法读取外部邮件，请尝试同步账户后重试。'
   }finally{if(generation===readGeneration)reading.value=false}
+}
+async function toggleSeen(row:UnifiedRow){
+  if(busy.value || !row.accountId || !row.uid || !row.uidValidity)return
+  busy.value='flag';error.value='';notice.value=''
+  try {
+    await setExternalMessageSeen(row.accountId,row.uid,row.uidValidity,!row.seen)
+    const updated = !row.seen
+    externalMessages.value=externalMessages.value.map(item=> item.account_id===row.accountId && item.uid===row.uid && item.uid_validity===row.uidValidity ? {...item,seen:updated}:item)
+    selected.value={...row,seen:updated}
+    notice.value=updated?'已同步标记为已读':'已同步标记为未读'
+    await refresh()
+  } catch {error.value='外部邮箱未确认状态变更，请同步后重试。'}
+  finally {busy.value=''}
 }
 onMounted(refresh)
 </script>

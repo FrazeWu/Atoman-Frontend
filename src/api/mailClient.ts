@@ -143,6 +143,8 @@ export const disconnectExternalAccount = (id:string) =>
   apiDeleteJson<{deleted:boolean}>(base()+'/external/accounts/'+key(id))
 export const fetchExternalUnifiedInbox = () =>
   apiGet<MailExternalUnifiedInbox>(base()+'/external/unified')
+export const setExternalMessageSeen = (accountId:string,uid:number,validity:number,seen:boolean) =>
+  apiPostJson<MailExternalAccount>(base()+'/external/accounts/'+key(accountId)+'/messages/'+key(String(uid))+'/seen', {uid_validity:validity,seen})
 export const fetchExternalMessagePlain = (accountId:string,uid:number,validity:number) => {
   const url=base()+'/external/accounts/'+key(accountId)+'/messages/'+key(String(uid))+
     '?'+new URLSearchParams({uid_validity:String(validity)})

@@ -25,10 +25,29 @@ type MiddlewareContext = {
 	next: () => Promise<Response>;
 };
 
+// Match the Vue Router's legacy URL redirects at the HTTP layer. Crawlers must
+// see the permanent redirect without executing the SPA JavaScript bundle.
 const legacyRouteRedirects: Record<string, string> = {
 	"/podcast": "/podcasts",
 	"/video": "/videos",
+	"/blog": "/posts",
+	"/notes": "/posts/notes",
+	"/bookmarks": "/posts/bookmarks",
+	"/modules": "/",
+	"/books/tags": "/books/lists",
 };
+
+function legacyRedirectDestination(pathname: string) {
+	const direct = legacyRouteRedirects[pathname];
+	if (direct) return direct;
+	if (pathname.startsWith("/blog/")) return `/posts/${pathname.slice(6)}`;
+
+	const post = pathname.match(/^\/post\/([^/]+)$/);
+	if (post) return `/posts/post/${post[1]}`;
+	const watch = pathname.match(/^\/watch\/([^/]+)$/);
+	if (watch) return `/videos/watch/${watch[1]}`;
+	return undefined;
+}
 
 function redirectLegacyRoute(request: Request) {
 	if (request.method !== "GET" && request.method !== "HEAD") return undefined;
@@ -36,7 +55,7 @@ function redirectLegacyRoute(request: Request) {
 	try {
 		const requestUrl = new URL(request.url);
 		const pathname = requestUrl.pathname.replace(/\/+$/, "") || "/";
-		const destination = legacyRouteRedirects[pathname];
+		const destination = legacyRedirectDestination(pathname);
 		if (!destination) return undefined;
 
 		requestUrl.pathname = destination;

@@ -80,6 +80,7 @@ const noIndexPrefixes = [
 	"/inbox",
 	"/messages",
 	"/mail",
+	"/me",
 	"/dev",
 	"/__disabled__",
 	"/__not_found__",

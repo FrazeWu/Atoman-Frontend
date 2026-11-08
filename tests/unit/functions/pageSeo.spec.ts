@@ -112,7 +112,7 @@ describe("static page SEO", () => {
 		expect(html).not.toContain('rel="canonical"');
 	});
 
-	it.each(["/search?module=books", "/modules"])(
+	it.each(["/search?module=books"])(
 		"serves the valid application route %s as 200 without indexing it",
 		async (pagePath) => {
 			const response = await pageMiddleware({
@@ -150,6 +150,36 @@ describe("static page SEO", () => {
 			"https://www.atoman.org/podcasts?source=legacy",
 		);
 		expect(next).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		["/blog", "/posts"],
+		["/blog/articles", "/posts/articles"],
+		["/blog/notes/", "/posts/notes"],
+		["/post/post-123", "/posts/post/post-123"],
+		["/watch/video-456", "/videos/watch/video-456"],
+		["/notes", "/posts/notes"],
+		["/bookmarks", "/posts/bookmarks"],
+		["/modules", "/"],
+		["/books/tags", "/books/lists"],
+	])("redirects the old public route %s to its canonical path %s before returning HTML", async (source, target) => {
+		const next = vi.fn(async () => new Response(shell));
+		const response = await pageMiddleware({
+			request: new Request(`https://www.atoman.org${source}?source=legacy`),
+			next,
+		});
+		expect(response.status).toBe(301);
+		expect(response.headers.get("location")).toBe(`https://www.atoman.org${target}?source=legacy`);
+		expect(next).not.toHaveBeenCalled();
+	});
+
+	it("serves the existing private /me route with noindex rather than a misleading 404", async () => {
+		const response = await pageMiddleware({
+			request: new Request("https://www.atoman.org/me"),
+			next: async () => new Response(shell, { headers: { "content-type": "text/html" } }),
+		});
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain('<meta name="robots" content="noindex, nofollow">');
 	});
 
 	it("only redirects legacy routes for safe navigation methods", async () => {

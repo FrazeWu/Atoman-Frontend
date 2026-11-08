@@ -114,7 +114,7 @@ const isMessageSnoozed=(message:MailSummary)=> {
 const visibleConversations=computed(()=>{
   const scoped=organizerFilterId.value ? conversations.value.filter(group=>group.messages.some(msg=>organizerById.value.get(msg.id)?.label_ids.includes(organizerFilterId.value))) : conversations.value
   if(organizerFilterId.value || currentFolder.value?.role!=='inbox' || committedSearch.value || allFolders.value)return scoped
-  return scoped.filter(group=>!group.messages.every(isMessageSnoozed))
+  return scoped.filter(group=>!isMessageSnoozed(group.latest))
 })
 const allVisibleSelected=computed(()=>visibleConversations.value.length>0 && visibleConversations.value.every(group=>group.messages.every(m=>selection.value.has(m.id))))
 function selectVisibleAll(){

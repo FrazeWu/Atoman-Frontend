@@ -79,7 +79,6 @@ describe('Mail workspace', () => {
   it('hides future snoozed conversation and omits hidden messages from select-all', async () => {
     const future=new Date(Date.now()+60*60*1000).toISOString()
     api.organizer.mockResolvedValue({labels:[],records:[
-      {message_id:'one',snooze_until:future,label_ids:[],revision:1},
       {message_id:'two',snooze_until:future,label_ids:[],revision:1}
     ]})
     const wrapper=mountView(); await flushPromises()

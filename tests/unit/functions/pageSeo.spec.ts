@@ -89,6 +89,18 @@ describe("static page SEO", () => {
 		expect(html).not.toContain('https://www.atoman.org/"');
 	});
 
+	it.each(["/debate/search", "/debate/me", "/music/artist/new"])(
+		"serves the valid reserved route %s as noindex 200 instead of mistaken 404",
+		async (path) => {
+			const response = await pageMiddleware({
+				request: new Request("https://www.atoman.org" + path),
+				next: async () => new Response(shell, { headers: { "content-type": "text/html" } }),
+			});
+			expect(response.status).toBe(200);
+			expect(await response.text()).toContain('<meta name="robots" content="noindex, nofollow">');
+		},
+	);
+
 	it("recognizes Webmail as a private route instead of returning 404", async () => {
 		const response = await pageMiddleware({
 			request: new Request("https://www.atoman.org/mail"),

@@ -91,6 +91,15 @@ describe("public content SEO", () => {
 		expect(html).not.toContain("noindex, nofollow");
 	});
 
+	it("does not interpret existing app routes as dynamic content IDs", async () => {
+		const fetcher = vi.fn(async () => json({ error: "not found" }, 404)) as unknown as typeof fetch;
+		for (const path of ["/debate/search", "/debate/me", "/debate/rules", "/music/artist/new"]) {
+			const result = await resolvePublicContentSeo(path, undefined, "https://www.atoman.org", fetcher);
+			expect(result).toEqual({ matched: false });
+		}
+		expect(fetcher).not.toHaveBeenCalled();
+	});
+
 	it("returns a 404 for a matched but unavailable detail route", async () => {
 		const fetcher = vi.fn(async () =>
 			json({ error: "not found" }, 404),

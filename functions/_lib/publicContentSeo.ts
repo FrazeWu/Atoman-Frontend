@@ -590,11 +590,11 @@ export async function resolvePublicContentSeo(
 		[/^\/books\/work\/([^/]+)$/, (id) => loadBookWork(apiBase, id, fetcher)],
 		[/^\/books\/edition\/([^/]+)$/, (id) => loadBookEdition(apiBase, id, fetcher)],
 		[/^\/books\/lists\/(?!new$)([^/]+)$/, (id) => loadBookList(apiBase, id, fetcher)],
-		[/^\/music\/artist\/([^/]+)$/, (id) => loadArtist(apiBase, id, fetcher)],
+		[/^\/music\/artist\/(?!new$)([^/]+)$/, (id) => loadArtist(apiBase, id, fetcher)],
 		[/^\/music\/album\/([^/]+)$/, (id) => loadAlbum(apiBase, id, fetcher)],
 		[/^\/music\/song\/([^/]+)$/, (id) => loadSong(apiBase, id, fetcher)],
 		[/^\/forum\/topic\/([^/]+)$/, (id) => loadForumTopic(apiBase, id, fetcher)],
-		[/^\/debate\/(?!rules$)([^/]+)$/, (id) => loadDebate(apiBase, id, fetcher)],
+		[/^\/debate\/(?!(?:rules|search|me)$)([^/]+)$/, (id) => loadDebate(apiBase, id, fetcher)],
 		[
 			/^\/podcasts\/show\/([^/]+)$/,
 			(slug) => loadPodcastShow(apiBase, slug, fetcher),

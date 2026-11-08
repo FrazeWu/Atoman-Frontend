@@ -4,7 +4,7 @@ import MailExternalAccounts from '@/views/mail/MailExternalAccounts.vue'
 
 const api = vi.hoisted(() => ({
   providers: vi.fn(), unified: vi.fn(), connect: vi.fn(), sync: vi.fn(), disconnect: vi.fn(),
-  read: vi.fn(), folders: vi.fn(), messages: vi.fn()
+  read: vi.fn(), folders: vi.fn(), messages: vi.fn(), folderList: vi.fn(), folderPage: vi.fn(), flag: vi.fn(), move: vi.fn()
 }))
 vi.mock('@/api/mail', () => ({ fetchMailFolders: api.folders }))
 vi.mock('@/api/mailClient', () => ({
@@ -14,6 +14,10 @@ vi.mock('@/api/mailClient', () => ({
   syncExternalAccount: api.sync,
   disconnectExternalAccount: api.disconnect,
   fetchExternalMessagePlain: api.read,
+  fetchExternalFolders: api.folderList,
+  fetchExternalFolderPage: api.folderPage,
+  setExternalMessageSeen: api.flag,
+  moveExternalMessage: api.move,
   queryMailMessages: api.messages
 }))
 vi.mock('@/components/ui/PSheet.vue', () => ({
@@ -41,6 +45,14 @@ beforeEach(() => {
   api.messages.mockResolvedValue({items:[{id:'native',receivedAt:'2026-11-07T11:00:00Z',
     subject:'Atoman own email',isRead:false,from:[{name:'Atoman',email:'sender@atoman.org'}]}],total:1})
   api.read.mockResolvedValue({text:'This is text <script>alert(1)</script>'})
+  api.folderList.mockResolvedValue([{name:'INBOX',role:'inbox'},{name:'Archive/2026',role:'archive'}])
+  api.folderPage.mockImplementation(async (_account:string,folder:string) => ({
+    folder,uid_validity:folder==='INBOX'?33:72,
+    messages:[{uid:folder==='INBOX'?88:321,subject:'Archived mail',from:'source@example.test',from_name:'Source',date:'2026-11-07T10:30:00Z',seen:false,size:80}],
+    total:1,has_more:false,next_position:1
+  }))
+  api.flag.mockResolvedValue({updated:true})
+  api.move.mockResolvedValue({moved:true,inbox_cache_updated:false,refresh_recommended:false})
   api.connect.mockResolvedValue({...external,id:'new2'})
   api.sync.mockResolvedValue({...external,revision:2})
   api.disconnect.mockResolvedValue({deleted:true})
@@ -54,7 +66,7 @@ describe('External IMAP unified inbox', () => {
     expect(buttons[1]!.text()).toContain('外部主题')
     expect(wrapper.find('script').exists()).toBe(false)
     await buttons[1]!.trigger('click');await flushPromises()
-    expect(api.read).toHaveBeenCalledWith('ext1',88,33)
+    expect(api.read).toHaveBeenCalledWith('ext1',88,33,undefined)
     expect(wrapper.get('[data-testid="external-plain-preview"]').text()).toContain('<script>')
     expect(wrapper.find('script').exists()).toBe(false)
     wrapper.unmount()
@@ -78,6 +90,40 @@ describe('External IMAP unified inbox', () => {
     const confirm=wrapper.findAll('button').find(x=>x.text()==='确认移除')!
     await confirm.trigger('click');await flushPromises()
     expect(api.disconnect).toHaveBeenCalledWith('ext1')
+    wrapper.unmount()
+  })
+  it('lists and pages provider folders without changing remote message state on preview', async () => {
+    const wrapper=setup();await flushPromises()
+    await wrapper.get('[data-testid="mode-accounts"]').trigger('click');await flushPromises()
+    const foldersButton=wrapper.findAll('button').find(b=>b.text()==='文件夹')!
+    await foldersButton.trigger('click');await flushPromises()
+    expect(api.folderList).toHaveBeenCalledWith('ext1')
+    expect(api.folderPage).toHaveBeenCalledWith('ext1','INBOX',0)
+    const archived=wrapper.findAll('.mail-external__folder-nav button').find(b=>b.text()==='Archive/2026')!
+    await archived.trigger('click');await flushPromises()
+    expect(api.folderPage).toHaveBeenLastCalledWith('ext1','Archive/2026',0)
+    await wrapper.get('.mail-external__browser .mail-external__message').trigger('click')
+    await flushPromises()
+    expect(api.read).toHaveBeenCalledWith('ext1',321,72,'Archive/2026')
+    expect(api.flag).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+  it('requires explicit confirmation before a provider MOVE', async () => {
+    const wrapper=setup();await flushPromises()
+    await wrapper.get('[data-testid="mode-accounts"]').trigger('click')
+    await wrapper.findAll('button').find(b=>b.text()==='文件夹')!.trigger('click')
+    await flushPromises()
+    await wrapper.findAll('.mail-external__folder-nav button').find(b=>b.text()==='Archive/2026')!.trigger('click')
+    await flushPromises()
+    await wrapper.get('.mail-external__browser .mail-external__message').trigger('click')
+    await flushPromises()
+    await wrapper.get('.mail-external__move-actions .p-select-trigger').trigger('click')
+    await wrapper.findAll('.mail-external__move-actions .p-select-option').find(b=>b.text()==='INBOX')!.trigger('click')
+    await wrapper.findAll('button').find(b=>b.text()==='移动邮件')!.trigger('click')
+    expect(api.move).not.toHaveBeenCalled()
+    await wrapper.findAll('button').find(b=>b.text()==='确认移动')!.trigger('click')
+    await flushPromises()
+    expect(api.move).toHaveBeenCalledWith('ext1',321,72,'Archive/2026','INBOX')
     wrapper.unmount()
   })
   it('provider errors retain native Inbox and show safe status', async () => {

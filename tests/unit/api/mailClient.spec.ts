@@ -37,6 +37,6 @@ describe('mail client contract',()=>{
   const wire={conversation_mode:false,blocked_senders:['blocked@example.test'],auto_reply:{enabled:true,subject:'Away',text:'Back soon'},rules:[{id:'r',name:'Receipts',enabled:true,field:'subject',contains:'receipt',action:'archive'}]}
   http.get.mockResolvedValue(wire);http.put.mockResolvedValue(wire)
   const settings=await fetchMailPreferences();expect(settings.vacation.text).toBe('Back soon');expect(settings.rules[0]?.value).toBe('receipt')
-  await saveMailPreferences(settings);expect(http.put).toHaveBeenCalledWith('/api/v1/mail/settings',wire)
+  await saveMailPreferences(settings);expect(http.put).toHaveBeenCalledWith('/api/v1/mail/settings',{...wire,signature:{enabled:false,text:'',html:'',on_reply:true}})
  })
 })

@@ -4,7 +4,7 @@
       <header class="mail-external__intro">
         <div>
           <h2>一个地方，查看所有收件箱</h2>
-          <p>Atoman 邮件与你主动授权的其他邮箱并排展示。外部邮箱只读同步，不会移动、删除或修改原始邮件。</p>
+          <p>Atoman 邮件与你主动授权的其他邮箱并排展示。可以按文件夹浏览，并显式同步已读状态；预览不会修改原始邮件。</p>
         </div>
         <PButton variant="secondary" size="sm" :disabled="loading" @click="refresh"><RefreshCw :size="16" /> 刷新列表</PButton>
       </header>
@@ -33,19 +33,7 @@
             <span class="mail-external__source"><Mail :size="13" /> {{ message.source }}</span>
           </button>
         </div>
-        <section v-if="selected" class="mail-external__reader" aria-label="外部邮件预览">
-          <div class="mail-external__section-head">
-            <div><h3>{{ selected.subject || '无主题' }}</h3><p>{{ selected.from }} · {{ selected.source }}</p></div>
-            <PButton variant="ghost" size="sm" @click="selected = null; plainText = ''">关闭预览</PButton>
-          </div>
-          <p v-if="reading" role="status">正在从外部邮箱读取邮件…</p>
-          <p v-else-if="readError" role="alert" class="mail-external__error">{{ readError }}</p>
-          <div v-else class="mail-external__plain" data-testid="external-plain-preview">{{ plainText }}</div>
-          <div v-if="!reading && !readError && selected.accountId" class="mail-external__account-actions">
-            <PButton variant="secondary" size="sm" :loading="busy === 'flag'" :disabled="Boolean(busy)" @click="toggleSeen(selected)">{{ selected.seen ? '标记为未读' : '标记为已读' }}</PButton>
-          </div>
-          <p class="mail-external__hint">纯文本安全预览不会自动修改原邮箱；只有点击上方按钮才会写入外部邮箱已读状态。</p>
-        </section>
+
       </section>
 
       <section v-else class="mail-external__accounts" aria-label="外部邮箱账户">
@@ -59,10 +47,34 @@
             <small v-if="account.last_error_code" role="status" class="mail-external__warning">上次同步失败，旧邮件缓存仍保留。请检查应用专用密码。</small>
           </div>
           <div class="mail-external__account-actions">
+            <PButton size="sm" variant="secondary" :loading="folderLoading && browsingAccount?.id === account.id" :disabled="Boolean(busy)" @click="openFolders(account)">文件夹</PButton>
             <PButton size="sm" variant="secondary" :loading="busy === account.id" :disabled="Boolean(busy)" @click="syncOne(account)"><RefreshCw :size="14" /> 同步</PButton>
             <PButton size="sm" variant="ghost" :disabled="Boolean(busy)" @click="removeTarget = account">移除</PButton>
           </div>
         </div>
+
+        <section v-if="browsingAccount" class="mail-external__browser" aria-label="外部邮箱文件夹" data-testid="external-folder-browser">
+          <div class="mail-external__section-head">
+            <div><h3>{{ browsingAccount.address }} · 文件夹</h3><p>直接从原服务商读取，每页最多 50 封；此处浏览不会修改原邮箱。</p></div>
+            <PButton size="sm" variant="ghost" @click="closeFolders">关闭文件夹</PButton>
+          </div>
+          <p v-if="folderError" role="alert" class="mail-external__error">{{ folderError }}</p>
+          <p v-if="folderLoading" role="status">正在读取外部邮箱文件夹…</p>
+          <div v-if="folders.length" class="mail-external__folder-nav" aria-label="选择文件夹">
+            <PButton v-for="folder in folders" :key="folder.name" size="sm" :variant="folderName===folder.name ? 'primary' : 'secondary'" :disabled="folderLoading" @click="loadFolder(folder.name)">{{ folder.name }}</PButton>
+          </div>
+          <div v-if="folderPage && !folderLoading" class="mail-external__folder-results">
+            <p>{{ folderPage.folder }} · 共 {{ folderPage.total }} 封</p>
+            <PEmpty v-if="!folderPage.messages.length" title="没有邮件" description="该文件夹没有可显示的邮件。" compact />
+            <div v-else class="mail-external__rows">
+              <button v-for="msg in folderPage.messages" :key="msg.uid" type="button" class="mail-external__message" :class="{ 'is-unread': !msg.seen }" @click="openFolderMessage(msg)">
+                <span class="mail-external__sender"><span>{{ msg.from_name || msg.from || '未知发件人' }}</span><small>{{ formattedDate(msg.date) }}</small></span>
+                <strong>{{ msg.subject || '无主题' }}</strong>
+              </button>
+            </div>
+            <PButton v-if="folderPage.has_more" size="sm" variant="secondary" :disabled="folderLoading" @click="loadFolder(folderName,folderPage.next_position)">加载下一页</PButton>
+          </div>
+        </section>
 
         <form class="mail-external__connect" autocomplete="off" @submit.prevent="connect">
           <h3>连接新的 IMAP 邮箱</h3>
@@ -76,9 +88,33 @@
           </PButton>
         </form>
       </section>
+        <section v-if="selected" class="mail-external__reader" aria-label="外部邮件预览">
+          <div class="mail-external__section-head">
+            <div><h3>{{ selected.subject || '无主题' }}</h3><p>{{ selected.from }} · {{ selected.source }}</p></div>
+            <PButton variant="ghost" size="sm" @click="selected = null; plainText = ''">关闭预览</PButton>
+          </div>
+          <p v-if="reading" role="status">正在从外部邮箱读取邮件…</p>
+          <p v-else-if="readError" role="alert" class="mail-external__error">{{ readError }}</p>
+          <div v-else class="mail-external__plain" data-testid="external-plain-preview">{{ plainText }}</div>
+          <div v-if="!reading && !readError && selected.accountId" class="mail-external__account-actions">
+            <PButton variant="secondary" size="sm" :loading="busy === 'flag'" :disabled="Boolean(busy)" @click="toggleSeen(selected)">{{ selected.seen ? '标记为未读' : '标记为已读' }}</PButton>
+          </div>
+          <div v-if="browsingAccount?.id===selected.accountId && selected.folder && folders.length>1" class="mail-external__move-actions">
+            <PSelect v-model="moveDestination" label="移动到文件夹" :options="folders.filter(item=>item.name!==selected?.folder).map(item=>({value:item.name,label:item.name}))" :disabled="Boolean(busy)" />
+            <PButton variant="secondary" size="sm" :disabled="Boolean(busy) || !moveDestination" @click="showMoveConfirm=true">移动邮件</PButton>
+          </div>
+          <p class="mail-external__hint">纯文本安全预览不会自动修改原邮箱；只有点击上方按钮才会写入外部邮箱已读状态。</p>
+        </section>
     </main>
   </PSheet>
 
+  <PModal :show="showMoveConfirm" title="移动外部邮件" size="sm" @close="showMoveConfirm=false">
+    <p>将此邮件移动到 {{ moveDestination }}？这会实际修改原邮箱。只有服务商支持安全 IMAP MOVE 时才会执行；不会永久删除邮件。</p>
+    <template #footer>
+      <PButton variant="secondary" :disabled="Boolean(busy)" @click="showMoveConfirm=false">取消</PButton>
+      <PButton variant="primary" :loading="busy==='move'" :disabled="Boolean(busy)" @click="performMove">确认移动</PButton>
+    </template>
+  </PModal>
   <PModal :show="Boolean(removeTarget)" title="移除外部邮箱" size="sm" @close="removeTarget=null">
     <p>确认移除 {{ removeTarget?.address }}？这只会删除 Atoman 保存的授权凭据和同步缓存，不会删除原邮箱内的邮件。移除后建议到原服务商撤销对应的应用专用密码。</p>
     <template #footer>
@@ -99,7 +135,7 @@ import PModal from '@/components/ui/PModal.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import { fetchMailFolders } from '@/api/mail'
-import { queryMailMessages, fetchExternalProviders, fetchExternalUnifiedInbox, connectExternalAccount, syncExternalAccount, disconnectExternalAccount, fetchExternalMessagePlain, setExternalMessageSeen, type ExternalIMAPProvider, type MailExternalAccount, type MailExternalMessage, type MailExternalProvider } from '@/api/mailClient'
+import { queryMailMessages, fetchExternalProviders, fetchExternalUnifiedInbox, connectExternalAccount, syncExternalAccount, disconnectExternalAccount, fetchExternalMessagePlain, setExternalMessageSeen, type ExternalIMAPProvider, type MailExternalAccount, type MailExternalMessage, type MailExternalProvider, fetchExternalFolders, fetchExternalFolderPage, type MailExternalFolder, type MailExternalFolderPage, moveExternalMessage } from '@/api/mailClient'
 import type { MailSummary } from '@/api/mail'
 import { mailTime } from './mail-helpers'
 
@@ -112,6 +148,13 @@ const externalMessages=ref<MailExternalMessage[]>([])
 const nativeMessages=ref<MailSummary[]>([])
 const provider=ref<ExternalIMAPProvider>('gmail'),address=ref(''),appPassword=ref('')
 const removeTarget=ref<MailExternalAccount|null>(null)
+const browsingAccount=ref<MailExternalAccount|null>(null)
+const folders=ref<MailExternalFolder[]>([])
+const folderName=ref('')
+const folderPage=ref<MailExternalFolderPage|null>(null)
+const folderLoading=ref(false),folderError=ref('')
+const moveDestination=ref(''),showMoveConfirm=ref(false)
+let folderGeneration=0
 const selected=ref<UnifiedRow|null>(null),plainText=ref(''),reading=ref(false),readError=ref('')
 let readGeneration=0
 
@@ -131,6 +174,7 @@ interface UnifiedRow {
   accountId?:string
   uid?:number
   uidValidity?:number
+  folder?:string
   nativeId?:string
   from:string
   fromName:string
@@ -205,6 +249,7 @@ async function disconnect(){
     await disconnectExternalAccount(target.id)
     removeTarget.value=null
     if(selected.value?.accountId===target.id){selected.value=null;plainText.value=''}
+    if(browsingAccount.value?.id===target.id)closeFolders()
     notice.value='已移除外部邮箱，本地授权和同步缓存已删除。'
     await refresh()
   }catch{error.value='无法移除外部邮箱，请重试。'}
@@ -216,7 +261,7 @@ async function openMessage(row:UnifiedRow){
   selected.value=row;plainText.value='';readError.value='';reading.value=true
   const generation=++readGeneration
   try{
-    const response=await fetchExternalMessagePlain(row.accountId,row.uid,row.uidValidity)
+    const response=await fetchExternalMessagePlain(row.accountId,row.uid,row.uidValidity,row.folder)
     if(generation!==readGeneration)return
     plainText.value=response.text
   }catch{
@@ -227,14 +272,104 @@ async function toggleSeen(row:UnifiedRow){
   if(busy.value || !row.accountId || !row.uid || !row.uidValidity)return
   busy.value='flag';error.value='';notice.value=''
   try {
-    await setExternalMessageSeen(row.accountId,row.uid,row.uidValidity,!row.seen)
+    await setExternalMessageSeen(row.accountId,row.uid,row.uidValidity,!row.seen,row.folder)
     const updated = !row.seen
     externalMessages.value=externalMessages.value.map(item=> item.account_id===row.accountId && item.uid===row.uid && item.uid_validity===row.uidValidity ? {...item,seen:updated}:item)
     selected.value={...row,seen:updated}
+    if(folderPage.value && browsingAccount.value?.id===row.accountId && folderName.value===row.folder){
+      folderPage.value={...folderPage.value,messages:folderPage.value.messages.map(msg=>msg.uid===row.uid?{...msg,seen:updated}:msg)}
+    }
     notice.value=updated?'已同步标记为已读':'已同步标记为未读'
     await refresh()
   } catch {error.value='外部邮箱未确认状态变更，请同步后重试。'}
   finally {busy.value=''}
+}
+function closeFolders(){
+  folderGeneration++
+  browsingAccount.value=null
+  folders.value=[]
+  folderName.value=''
+  folderPage.value=null
+  folderError.value=''
+  folderLoading.value=false
+  moveDestination.value=''
+  showMoveConfirm.value=false
+}
+async function openFolders(account:MailExternalAccount){
+  if(folderLoading.value)return
+  closeFolders()
+  browsingAccount.value=account
+  folderLoading.value=true
+  const generation=++folderGeneration
+  try{
+    const response=await fetchExternalFolders(account.id)
+    if(generation!==folderGeneration)return
+    folders.value=response
+    folderLoading.value=false
+    const inbox=response.find(item=>item.role==='inbox') || response[0]
+    if(inbox)await loadFolder(inbox.name)
+  }catch{
+    if(generation===folderGeneration)folderError.value='无法列出文件夹，请检查外部邮箱授权与网络。'
+  }finally{if(generation===folderGeneration)folderLoading.value=false}
+}
+async function loadFolder(name:string,position=0){
+  if(!browsingAccount.value || folderLoading.value || !folders.value.some(f=>f.name===name))return
+  const accountId=browsingAccount.value.id
+  if(position===0){folderPage.value=null;folderName.value=name;selected.value=null;moveDestination.value=''}
+  folderLoading.value=true;folderError.value=''
+  const generation=++folderGeneration
+  try {
+    const response=await fetchExternalFolderPage(accountId,name,position)
+    if(generation!==folderGeneration)return
+    if(position>0 && folderPage.value && folderPage.value.folder===name && folderPage.value.uid_validity===response.uid_validity){
+      const existing=new Set(folderPage.value.messages.map(item=>item.uid))
+      folderPage.value={...response,messages:[...folderPage.value.messages,...response.messages.filter(item=>!existing.has(item.uid))]}
+    }else{folderPage.value=response}
+    folderName.value=name
+  }catch{if(generation===folderGeneration)folderError.value='读取文件夹失败，请刷新后重试。'}
+  finally{if(generation===folderGeneration)folderLoading.value=false}
+}
+function openFolderMessage(msg:MailExternalFolderPage['messages'][number]){
+  const account=browsingAccount.value, page=folderPage.value
+  if(!account || !page)return
+  moveDestination.value=''
+  openMessage({
+    key:'folder:'+account.id+':'+page.folder+':'+msg.uid,
+    source:account.address+' / '+page.folder,accountId:account.id,folder:page.folder,
+    uid:msg.uid,uidValidity:page.uid_validity,from:msg.from,
+    fromName:msg.from_name,subject:msg.subject,date:msg.date,seen:msg.seen
+  })
+}
+async function performMove(){
+  const row=selected.value
+  if(busy.value || !row?.accountId || !row.uid || !row.uidValidity || !row.folder || !moveDestination.value ||
+     !folders.value.some(item=>item.name===moveDestination.value) || moveDestination.value===row.folder)return
+  busy.value='move';error.value='';notice.value=''
+  let receipt
+  try {
+    receipt=await moveExternalMessage(row.accountId,row.uid,row.uidValidity,row.folder,moveDestination.value)
+  }catch{
+    error.value='无法确认服务商是否完成移动，请先刷新文件夹检查，不要直接重复提交。'
+    busy.value=''
+    return
+  }
+  // The mutation succeeded; subsequent read failures cannot reverse that fact.
+  showMoveConfirm.value=false
+  selected.value=null;plainText.value='';moveDestination.value=''
+  const source=folderName.value
+  if(source)await loadFolderAfterMove(source)
+  try{await refresh()}catch{/* post-write read failure does not imply move failure */}
+  notice.value=receipt.refresh_recommended ? '邮件已移动，收件箱缓存可能稍有延迟，请手动同步账户。' : '邮件已移动到目标文件夹。'
+  busy.value=''
+}
+async function loadFolderAfterMove(folder:string){
+  // The write is already confirmed. A failed browse must not be described as
+  // a failed move or trigger an automatic retry of that mutation.
+  folderPage.value=null
+  const account=browsingAccount.value
+  if(!account)return
+  try {folderPage.value=await fetchExternalFolderPage(account.id,folder,0)}
+  catch{folderError.value='邮件已移动，但重新载入文件夹失败，请点击文件夹刷新。'}
 }
 onMounted(refresh)
 </script>
@@ -262,6 +397,11 @@ onMounted(refresh)
 .mail-external__sender small,.mail-external__source{font-size:11px;color:var(--a-color-muted)}
 .mail-external__source{display:inline-flex;align-items:center;gap:6px}
 .mail-external__reader{padding:20px;border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-card);display:grid;gap:16px}
+.mail-external__browser{display:grid;gap:14px;min-width:0;padding:18px;border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-card)}
+.mail-external__folder-nav{display:flex;gap:8px;flex-wrap:wrap;max-height:180px;overflow-y:auto}
+.mail-external__folder-results{display:grid;gap:12px;min-width:0}
+.mail-external__folder-results>.p-button{justify-self:start}
+.mail-external__move-actions{display:flex;flex-wrap:wrap;align-items:end;gap:10px;max-width:500px}
 .mail-external__reader h3{overflow-wrap:anywhere}
 .mail-external__plain{font-size:14px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;max-width:75ch;max-height:460px;overflow-y:auto}
 .mail-external__hint{font-size:12px!important}

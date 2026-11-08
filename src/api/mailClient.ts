@@ -143,11 +143,28 @@ export const disconnectExternalAccount = (id:string) =>
   apiDeleteJson<{deleted:boolean}>(base()+'/external/accounts/'+key(id))
 export const fetchExternalUnifiedInbox = () =>
   apiGet<MailExternalUnifiedInbox>(base()+'/external/unified')
-export const setExternalMessageSeen = (accountId:string,uid:number,validity:number,seen:boolean) =>
-  apiPostJson<MailExternalAccount>(base()+'/external/accounts/'+key(accountId)+'/messages/'+key(String(uid))+'/seen', {uid_validity:validity,seen})
-export const fetchExternalMessagePlain = (accountId:string,uid:number,validity:number) => {
+export const setExternalMessageSeen = (accountId:string,uid:number,validity:number,seen:boolean,folder?:string) =>
+  apiPostJson<MailExternalAccount | {updated:boolean}>(base()+'/external/accounts/'+key(accountId)+'/messages/'+key(String(uid))+'/seen', {uid_validity:validity,seen,...(folder ? {folder} : {})})
+export interface MailExternalFolder { name: string; delimiter?: string; role?: string }
+export interface MailExternalFolderPage {
+  folder:string
+  uid_validity:number
+  messages:Array<{uid:number;subject:string;from:string;from_name:string;date:string;seen:boolean;size:number}>
+  total:number
+  has_more:boolean
+  next_position:number
+}
+export const fetchExternalFolders = (accountId:string) =>
+  apiGet<MailExternalFolder[]>(base()+'/external/accounts/'+key(accountId)+'/folders')
+export const fetchExternalFolderPage = (accountId:string,folder:string,position=0) =>
+  apiGet<MailExternalFolderPage>(base()+'/external/accounts/'+key(accountId)+'/folder-messages?'+new URLSearchParams({folder,position:String(position)}))
+export interface ExternalMoveReceipt {moved:boolean;inbox_cache_updated:boolean;refresh_recommended:boolean}
+export const moveExternalMessage = (accountId:string,uid:number,validity:number,source:string,destination:string) =>
+  apiPostJson<ExternalMoveReceipt>(base()+'/external/accounts/'+key(accountId)+'/messages/'+key(String(uid))+'/move',
+    {uid_validity:validity,source,destination})
+export const fetchExternalMessagePlain = (accountId:string,uid:number,validity:number,folder?:string) => {
   const url=base()+'/external/accounts/'+key(accountId)+'/messages/'+key(String(uid))+
-    '?'+new URLSearchParams({uid_validity:String(validity)})
+    '?'+new URLSearchParams({uid_validity:String(validity),...(folder ? {folder} : {})})
   return apiGet<{text:string}>(url)
 }
 

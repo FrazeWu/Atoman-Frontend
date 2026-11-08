@@ -4,7 +4,7 @@ import type { MailSummary, MailAccountInfo } from '@/api/mail'
 const base = () => `${useApiUrl()}/mail`
 const key = (value: string) => encodeURIComponent(value)
 export interface MailUpload { id: string; name: string; type: string; size: number }
-export interface MailComposeFields { to: string[]; cc: string[]; bcc: string[]; subject: string; text: string; html?: string; send_at?: string; in_reply_to?: string; references?: string[]; attachments: MailUpload[] }
+export interface MailComposeFields { external_account_id?: string; to: string[]; cc: string[]; bcc: string[]; subject: string; text: string; html?: string; send_at?: string; in_reply_to?: string; references?: string[]; attachments: MailUpload[] }
 export interface MailDraft extends MailComposeFields { id: string; revision?: number; updated_at?: string }
 interface DraftResponse { id: string; revision: number; subject: string; updated_at: string; compose?: MailComposeFields }
 function readDraft(row: DraftResponse): MailDraft { const compose = row.compose; return { ...compose, id: row.id, revision: row.revision, updated_at: row.updated_at, to: compose?.to || [], cc: compose?.cc || [], bcc: compose?.bcc || [], text: compose?.text || '', attachments: compose?.attachments || [], subject: compose?.subject || row.subject || '' } }
@@ -46,6 +46,8 @@ export async function saveMailDraft(draft: MailDraft) {
 }
 export const deleteMailDraft = (id: string) => apiDeleteJson<{ deleted: boolean }>(`${base()}/drafts/${key(id)}`)
 export const queueMail = (fields: MailComposeFields, requestId: string, draftId?: string, draftRevision?: number, sendAt?: string) => { const { attachments, ...content } = fields; return apiPostJson<MailOutbox>(`${base()}/outbox`, { ...content, attachment_ids: attachments.map(file => file.id), request_id: requestId, draft_id: draftId, draft_revision: draftRevision, ...(sendAt ? { send_at: sendAt } : {}) }) }
+export interface MailSenderIdentity {address:string; provider:string; external_account_id?:string}
+export const fetchMailSenders = () => apiGet<MailSenderIdentity[]>(`${base()}/senders`)
 export const provisionMailAccount = () => apiPostJson<MailAccountInfo>(`${base()}/provision`, {})
 export const fetchMailOutbox = (id: string) => apiGet<MailOutbox>(`${base()}/outbox/${key(id)}`)
 export const fetchMailOutboxes = () => apiGet<MailOutbox[]>(`${base()}/outbox`)

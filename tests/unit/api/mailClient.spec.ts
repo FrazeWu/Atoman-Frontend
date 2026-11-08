@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const http=vi.hoisted(()=>({get:vi.fn(),post:vi.fn(),put:vi.fn(),del:vi.fn(),multipart:vi.fn(),request:vi.fn()}))
 vi.mock('@/api/client',()=>({apiGet:http.get,apiPostJson:http.post,apiPutJson:http.put,apiDeleteJson:http.del,apiPostMultipart:http.multipart,apiRequest:http.request}))
 vi.mock('@/composables/useApiUrl',()=>({useApiUrl:()=>'/api/v1'}))
-import { queryMailMessages, fetchMailThread, fetchMailDraft, saveMailDraft, queueMail, mutateMailMessages, undoMailAction, fetchMailPreferences, saveMailPreferences } from '@/api/mailClient'
+import { queryMailMessages, fetchMailThread, fetchMailDraft, saveMailDraft, queueMail, fetchMailSenders, mutateMailMessages, undoMailAction, fetchMailPreferences, saveMailPreferences } from '@/api/mailClient'
 const compose={to:['a@example.test'],cc:[],bcc:[],subject:'hello',text:'body',attachments:[{id:'upload',name:'notes.txt',type:'text/plain',size:5}]}
 beforeEach(()=>vi.clearAllMocks())
 describe('mail client contract',()=>{
@@ -27,6 +27,15 @@ describe('mail client contract',()=>{
  it('queues only attachment IDs with the persistent request identity',async()=>{
   http.post.mockResolvedValue({id:'outbox',status:'queued'});await queueMail(compose,'attempt','draft')
   expect(http.post).toHaveBeenCalledWith('/api/v1/mail/outbox',{to:compose.to,cc:[],bcc:[],subject:'hello',text:'body',attachment_ids:['upload'],request_id:'attempt',draft_id:'draft',draft_revision:undefined})
+ })
+ it('lists only server-approved sender identities and queues opaque external sender id',async()=>{
+  http.get.mockResolvedValue([{provider:'atoman',address:'me@atoman.org'},{provider:'gmail',address:'alice@gmail.com',external_account_id:'ext-id'}])
+  const senders=await fetchMailSenders()
+  expect(senders[1].external_account_id).toBe('ext-id')
+  expect(http.get).toHaveBeenCalledWith('/api/v1/mail/senders')
+  http.post.mockResolvedValue({id:'outbox'})
+  await queueMail({...compose,external_account_id:'ext-id'},'fresh-request')
+  expect(http.post.mock.calls[0][1]).toMatchObject({external_account_id:'ext-id',request_id:'fresh-request'})
  })
  it('uses action receipts and the backend star action',async()=>{
   http.post.mockResolvedValue({updated:['one'],undo_token:'receipt'});expect(await mutateMailMessages('inbox',['one'],'flag')).toMatchObject({affected:1,undo_id:'receipt'})

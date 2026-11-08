@@ -25,6 +25,9 @@ export type SeoFallbackOptions = {
 
 const canonicalSitemapPathPatterns = [
   /^\/posts\/post\/[^/?#]+$/,
+  /^\/books\/work\/[^/?#]+$/,
+  /^\/books\/edition\/[^/?#]+$/,
+  /^\/books\/lists\/(?!new$)[^/?#]+$/,
   /^\/music\/(?:artist|album|song)\/[^/?#]+$/,
   /^\/forum\/topic\/[^/?#]+$/,
   /^\/debate\/(?!rules$)[^/?#]+$/,

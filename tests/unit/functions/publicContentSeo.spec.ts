@@ -280,4 +280,70 @@ describe("public content SEO", () => {
 			expect.any(Object),
 		);
 	});
+
+
+	it("builds crawlable book work and edition metadata from public catalog APIs", async () => {
+		const work = {
+			id: "work-1", title: "三体", lifecycle_status: "active",
+			authors: [{ name: "刘慈欣" }],
+			editions: [{ id: "edition-1", title: "三体", isbn13: "9787536692930", publisher: "重庆出版社", cover_url: "/api/v1/books/editions/edition-1/cover" }],
+		};
+		const fetcher = vi.fn(async (input: RequestInfo | URL) =>
+			String(input).includes("/books/wiki/edition/")
+				? json({ data: { entity_id: "edition-1", fields: { work_id: "work-1", updated_at: "2026-11-04T08:00:00Z" } } })
+				: json({ data: work }),
+		) as unknown as typeof fetch;
+		const workLookup = await resolvePublicContentSeo("/books/work/work-1", undefined, "https://www.atoman.org", fetcher);
+		expect(workLookup.matched).toBe(true);
+		expect(workLookup.content?.title).toContain("三体");
+		const workHtml = buildPublicContentHtml(shell, workLookup.content!);
+		expect(workHtml).toContain('rel="canonical" href="https://www.atoman.org/books/work/work-1"');
+		expect(workHtml).toContain('<main data-seo-fallback="content">');
+		expect(workHtml).toContain('"@type":"Book"');
+		expect(workHtml).toContain("刘慈欣");
+		expect(workHtml).toContain("https://api.atoman.org/api/v1/books/editions/edition-1/cover");
+		const editionLookup = await resolvePublicContentSeo("/books/edition/edition-1", undefined, "https://www.atoman.org", fetcher);
+		expect(editionLookup.matched).toBe(true);
+		const editionHtml = buildPublicContentHtml(shell, editionLookup.content!);
+		expect(editionHtml).toContain('rel="canonical" href="https://www.atoman.org/books/edition/edition-1"');
+		expect(editionHtml).toContain("9787536692930");
+		expect(editionHtml).toContain("重庆出版社");
+		expect(fetcher).toHaveBeenCalledWith(
+			"https://api.atoman.org/api/v1/books/wiki/edition/edition-1", expect.any(Object),
+		);
+	});
+
+	it("indexes only public booklists and skips invalid private book routes", async () => {
+		const fetcher = vi.fn(async () => json({ data: { id: "list-1", title: "科幻推荐", description: "科幻阅读书单", visibility: "public", items: [{ title: "三体", available: true, canonical_work_id: "work-1" }] } })) as unknown as typeof fetch;
+		const lookup = await resolvePublicContentSeo("/books/lists/list-1", undefined, "https://www.atoman.org", fetcher);
+		expect(lookup.matched).toBe(true);
+		const html = buildPublicContentHtml(shell, lookup.content!);
+		expect(html).toContain("科幻推荐");
+		expect(html).toContain('"@type":"ItemList"');
+		expect(html).toContain("https://www.atoman.org/books/work/work-1");
+		expect((await resolvePublicContentSeo("/books/lists/new", undefined, "https://www.atoman.org", fetcher)).matched).toBe(false);
+		const hidden = await resolvePublicContentSeo("/books/lists/private-1", undefined, "https://www.atoman.org", vi.fn(async () => json({ data: { id: "private-1", title: "私密书单", visibility: "private" } })) as unknown as typeof fetch);
+		expect(hidden).toEqual({ matched: true, content: undefined });
+	});
+
+	it("adds active book works, editions and public booklists to sitemap only", async () => {
+		const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+			const url = String(input);
+			if (url.includes("/books/works?")) return json({ data: { items: [
+				{ id: "work-1", title: "三体", lifecycle_status: "active", editions: [{ id: "edition-1" }] },
+				{ id: "work-deleted", title: "隐藏作品", lifecycle_status: "removed" },
+			], total: 2 } });
+			if (url.includes("/books/booklists?")) return json({ data: { items: [
+				{ id: "list-1", title: "科幻推荐", visibility: "public" },
+				{ id: "list-private", title: "私人书单", visibility: "private" },
+			], total: 2 } });
+			return json({ data: [] });
+		}) as unknown as typeof fetch;
+		const items = await collectPublicSitemapItems("https://api.atoman.org/api/v1", fetcher);
+		expect(items.map(({ path }) => path)).toEqual([
+			"/books/work/work-1", "/books/edition/edition-1", "/books/lists/list-1",
+		]);
+		expect(fetcher).toHaveBeenCalledWith("https://api.atoman.org/api/v1/books/works?limit=50&offset=0", expect.any(Object));
+	});
+
 });

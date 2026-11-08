@@ -23,7 +23,7 @@ describe('blog SEO helpers', () => {
   it('normalizes the configured API root', () => {
     expect(resolveApiBase('https://api.atoman.org/api', 'https://atoman.org')).toBe('https://api.atoman.org/api/v1')
     expect(resolveApiBase('https://api.atoman.org/api/v1/', 'https://atoman.org')).toBe('https://api.atoman.org/api/v1')
-    expect(resolveApiBase(undefined, 'https://atoman.org')).toBe('https://atoman.org/api/v1')
+    expect(resolveApiBase(undefined, 'https://atoman.org')).toBe('https://api.atoman.org/api/v1')
   })
 
   it('injects escaped article metadata and script-safe JSON-LD', () => {

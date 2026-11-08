@@ -22,6 +22,14 @@ const pageMeta: Record<string, StaticPageMeta> = {
 		title: "博客 | Atoman",
 		description: "发现并阅读 Atoman 上的独立文章与专题内容。",
 	},
+	"/books": {
+		title: "图书馆 | Atoman",
+		description: "探索作品、出版版本与书单，参与开放的图书资料维护和讨论。",
+	},
+	"/books/lists": {
+		title: "公开书单 | Atoman",
+		description: "发现社区公开书单和阅读推荐。",
+	},
 	"/music": {
 		title: "音乐档案 | Atoman",
 		description: "浏览和整理专辑、歌曲与艺人资料。",
@@ -80,6 +88,20 @@ const noIndexPrefixes = [
 	"/feed/stats",
 	"/feed/starred",
 	"/feed/reading-list",
+	"/books/search",
+	"/books/new",
+	"/books/library",
+	"/books/shelf",
+	"/books/notes",
+	"/books/read",
+	"/books/public-read",
+	"/books/annotations",
+	"/books/lists/new",
+];
+
+const privateRoutePatterns = [
+	/^\/books\/work\/[^/]+\/(?:notes|collections)(?:\/|$)/,
+	/^\/books\/lists\/[^/]+\/edit(?:\/|$)/,
 ];
 
 const publicRoutePrefixes = [
@@ -124,7 +146,7 @@ export function isKnownPagePath(pathname: string) {
 	if (
 		noIndexPrefixes.some(
 			(prefix) => path === prefix || path.startsWith(`${prefix}/`),
-		)
+		) || privateRoutePatterns.some((pattern) => pattern.test(path))
 	)
 		return true;
 	return publicRoutePrefixes.some(
@@ -143,7 +165,7 @@ export function buildStaticPageHtml(
 		hostname.endsWith(".pages.dev") ||
 		noIndexPrefixes.some(
 			(prefix) => path === prefix || path.startsWith(`${prefix}/`),
-		);
+		) || privateRoutePatterns.some((pattern) => pattern.test(path));
 	if (!meta && !noIndex && isCanonicalSitemapPath(path)) return html;
 
 	const tags: string[] = [];

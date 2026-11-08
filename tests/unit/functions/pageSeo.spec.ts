@@ -249,4 +249,18 @@ describe("static page SEO", () => {
 
 		expect(response.headers.get("cache-control")).toBe("no-transform");
 	});
+
+	it("indexes public book pages and excludes private reader and editor routes", () => {
+		const discover = buildStaticPageHtml(shell, "/books", "www.atoman.org");
+		expect(discover).toContain("图书馆 | Atoman");
+		expect(discover).toContain('rel="canonical" href="https://www.atoman.org/books"');
+		const lists = buildStaticPageHtml(shell, "/books/lists", "www.atoman.org");
+		expect(lists).toContain("公开书单 | Atoman");
+		for (const route of ["/books/library", "/books/read/file-1", "/books/work/work-1/notes", "/books/work/work-1/collections", "/books/lists/list-1/edit", "/books/lists/new"]) {
+			const html = buildStaticPageHtml(shell, route, "www.atoman.org");
+			expect(html).toContain('<meta name="robots" content="noindex, nofollow">');
+			expect(html).not.toContain('rel="canonical"');
+		}
+	});
+
 });

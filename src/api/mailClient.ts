@@ -170,12 +170,14 @@ export const fetchExternalMessagePlain = (accountId:string,uid:number,validity:n
 
 // The import source is always an explicitly authorized provider account.
 // Only public progress counts and user-owned source folder names are returned.
-export type MailExternalHistoryStatus = 'queued' | 'running' | 'paused' | 'failed' | 'needs_review' | 'cancelled' | 'completed'
+export type MailExternalHistoryStatus = 'queued' | 'running' | 'paused' | 'failed' | 'needs_review' | 'cancelled' | 'completed' | 'watching'
 export interface MailExternalHistoryJob {
  id:string
  account_id:string
  folder:string
  status:MailExternalHistoryStatus
+ continuous:boolean
+ last_polled_at?:string
  uid_validity:number
  upper_uid:number
  next_uid:number
@@ -187,9 +189,9 @@ export interface MailExternalHistoryJob {
 }
 export const fetchExternalHistoryJobs = (accountId:string) =>
   apiGet<MailExternalHistoryJob[]>(base()+'/external/accounts/'+key(accountId)+'/imports')
-export const startExternalHistoryJob = (accountId:string,folder:string) =>
-  apiPostJson<MailExternalHistoryJob>(base()+'/external/accounts/'+key(accountId)+'/imports',{folder})
-export const actionExternalHistoryJob = (accountId:string,jobId:string,action:'pause'|'resume'|'cancel') =>
+export const startExternalHistoryJob = (accountId:string,folder:string,continuous=false) =>
+  apiPostJson<MailExternalHistoryJob>(base()+'/external/accounts/'+key(accountId)+'/imports',{folder,continuous})
+export const actionExternalHistoryJob = (accountId:string,jobId:string,action:'pause'|'resume'|'cancel'|'enable_live'|'disable_live') =>
   apiPostJson<MailExternalHistoryJob>(base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)+'/action',{action})
 
 // Atoman-private encrypted mail organizer metadata; independent from remote IMAP flags.

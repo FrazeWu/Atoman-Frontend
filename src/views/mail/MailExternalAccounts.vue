@@ -77,15 +77,17 @@
               <p v-else-if="activeHistoryJob" class="mail-external__hint">当前文件夹已有迁移任务：{{ historyStatusLabel(activeHistoryJob.status) }}</p>
               <div v-if="historyJobs.length" class="mail-external__history-jobs">
                 <div v-for="job in historyJobs" :key="job.id" class="mail-external__history-job" :data-testid="'external-history-'+job.id">
-                  <div><strong>{{ job.folder }}</strong><small>{{ historyStatusLabel(job.status) }} · 已导入 {{ job.imported }} 封 · 跳过 {{ job.skipped }} 封 · UID 进度 {{ Math.min(job.next_uid,job.upper_uid+1) }} / {{ job.upper_uid+1 }}</small><small v-if="job.last_error_code">原因代码：{{ job.last_error_code }}</small></div>
+                  <div><strong>{{ job.folder }}</strong><small>{{ historyStatusLabel(job.status) }} · 已导入 {{ job.imported }} 封 · 跳过 {{ job.skipped }} 封 · UID 进度 {{ Math.min(job.next_uid,job.upper_uid+1) }} / {{ job.upper_uid+1 }}</small><small v-if="job.last_polled_at">最近检查：{{ formattedDate(job.last_polled_at) }}</small><small v-if="job.last_error_code">原因代码：{{ job.last_error_code }}</small></div>
                   <div class="mail-external__account-actions">
-                    <PButton v-if="job.status==='queued'||job.status==='running'" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'pause')">暂停</PButton>
+                    <PButton v-if="job.status==='completed' && !job.continuous" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'enable_live')">开启新增邮件同步</PButton>
+                    <PButton v-if="job.status==='watching' || (job.continuous && ['queued','paused','failed'].includes(job.status))" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'disable_live')">关闭新增邮件同步</PButton>
+                    <PButton v-if="job.status==='queued'||job.status==='running'||job.status==='watching'" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'pause')">暂停</PButton>
                     <PButton v-if="job.status==='paused'||job.status==='failed'" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'resume')">继续</PButton>
                     <PButton v-if="job.status==='paused'||job.status==='failed'||job.status==='queued'||job.status==='needs_review'" variant="ghost" size="sm" :disabled="historyBusy" @click="historyAction(job,'cancel')">取消</PButton>
                   </div>
                 </div>
               </div>
-              <p class="mail-external__hint">每轮最多处理 40 封，每封上限 40 MiB。遇到写入结果不明会停在“需人工核对”，绝不盲目重复导入。</p>
+              <p class="mail-external__hint">每轮最多处理 40 封，每封上限 40 MiB。开启持续模式后仅复制新增 UID，不会同步删除、移动或自动覆盖双方的已读状态。遇到不确定写入会停止并等待人工核对。</p>
             </template>
           </section>
           <div v-if="folderPage && !folderLoading" class="mail-external__folder-results">
@@ -135,6 +137,8 @@
 
   <PModal :show="confirmHistoryStart" title="导入当前文件夹历史邮件" size="sm" @close="confirmHistoryStart=false">
     <p>确认将 {{ folderName }} 的历史邮件复制到 Atoman 吗？已有邮件不会被移除，迁移进度会保留。最多处理 40 MiB 的单封邮件，超过限制的邮件会明确计为跳过。</p>
+    <label class="mail-external__live-optin"><input v-model="continuousAfterImport" type="checkbox" data-testid="history-live-optin" /> <span>导入完成后，继续自动同步此文件夹的新增邮件（每隔约 5 分钟检查）</span></label>
+    <p class="mail-external__hint">持续模式仅复制新增邮件，不会自动修改或删除原邮箱中的邮件；原有邮件的状态变更暂不自动双向覆盖。</p>
     <template #footer>
       <PButton variant="secondary" :disabled="historyBusy" @click="confirmHistoryStart=false">取消</PButton>
       <PButton variant="primary" :loading="historyBusy" @click="startHistory">确认创建任务</PButton>
@@ -189,9 +193,10 @@ const moveDestination=ref(''),showMoveConfirm=ref(false)
 const historyJobs=ref<MailExternalHistoryJob[]>([])
 const historyAvailable=ref(false),historyBusy=ref(false),historyError=ref('')
 const confirmHistoryStart=ref(false)
+const continuousAfterImport=ref(false)
 const activeHistoryJob=computed(()=>historyJobs.value.find(job=>job.folder===folderName.value))
 function historyStatusLabel(status:MailExternalHistoryJob['status']):string {
-  return ({queued:'排队中',running:'正在导入',paused:'已暂停',failed:'导入失败',needs_review:'需人工核对',cancelled:'已取消',completed:'已完成'} as const)[status] || status
+  return ({queued:'排队中',running:'正在导入',paused:'已暂停',failed:'导入失败',needs_review:'需人工核对',cancelled:'已取消',completed:'已完成',watching:'持续检查新增邮件'} as const)[status] || status
 }
 let folderGeneration=0
 const selected=ref<UnifiedRow|null>(null),plainText=ref(''),reading=ref(false),readError=ref('')
@@ -337,6 +342,7 @@ function closeFolders(){
   historyAvailable.value=false
   historyError.value=''
   confirmHistoryStart.value=false
+  continuousAfterImport.value=false
 }
 async function openFolders(account:MailExternalAccount){
   if(folderLoading.value)return
@@ -375,14 +381,15 @@ async function startHistory(){
   if(!account || !folder || historyBusy.value || activeHistoryJob.value || !historyAvailable.value)return
   historyBusy.value=true;historyError.value=''
   try{
-    await startExternalHistoryJob(account.id,folder)
+    await startExternalHistoryJob(account.id,folder,continuousAfterImport.value)
     confirmHistoryStart.value=false
+    continuousAfterImport.value=false
     await refreshHistory()
     notice.value='历史导入任务已创建；实际复制由后台任务逐批进行。'
   }catch{historyError.value='无法创建任务，可能已经有相同文件夹的迁移任务，请刷新进度。'}
   finally{historyBusy.value=false}
 }
-async function historyAction(job:MailExternalHistoryJob, action:'pause'|'resume'|'cancel'){
+async function historyAction(job:MailExternalHistoryJob, action:'pause'|'resume'|'cancel'|'enable_live'|'disable_live'){
   const account=browsingAccount.value
   if(!account || historyBusy.value)return
   historyBusy.value=true;historyError.value=''
@@ -479,6 +486,8 @@ onMounted(refresh)
 .mail-external__reader{padding:20px;border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-card);display:grid;gap:16px}
 .mail-external__browser{display:grid;gap:14px;min-width:0;padding:18px;border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-card)}
 .mail-external__history{display:grid;gap:12px;padding:16px;border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-card)}
+.mail-external__live-optin{display:flex;align-items:start;gap:10px;margin:15px 0;font-size:13px;line-height:1.5;cursor:pointer}
+.mail-external__live-optin input{margin-top:2px;flex-shrink:0;accent-color:var(--a-color-primary)}
 .mail-external__history-jobs{display:grid;gap:6px}
 .mail-external__history-job{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:12px 0;border-top:1px solid var(--a-color-border-soft)}
 .mail-external__history-job>div:first-child{display:grid;gap:5px;min-width:0}

@@ -148,3 +148,22 @@ export const fetchExternalMessagePlain = (accountId:string,uid:number,validity:n
     '?'+new URLSearchParams({uid_validity:String(validity)})
   return apiGet<{text:string}>(url)
 }
+
+// Atoman-private encrypted mail organizer metadata; independent from remote IMAP flags.
+export type MailOrganizerColor = 'slate' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink'
+export interface MailOrganizerLabel { id: string; name: string; color: MailOrganizerColor; revision: number }
+export interface MailOrganizerRecord { message_id: string; snooze_until?: string; follow_up_at?: string; label_ids: string[]; revision: number }
+export interface MailOrganizerState { labels: MailOrganizerLabel[]; records: MailOrganizerRecord[] }
+export type MailOrganizerAction = 'snooze' | 'unsnooze' | 'follow_up' | 'clear_follow_up' | 'label_add' | 'label_remove'
+export interface MailOrganizerMutation {
+  message_id: string
+  action: MailOrganizerAction
+  due_at?: string
+  label_id?: string
+  revision?: number
+}
+export const fetchMailOrganizer = (): Promise<MailOrganizerState> => apiGet<MailOrganizerState>(base()+'/organize')
+export const createMailOrganizerLabel = (name: string, color: MailOrganizerColor) => apiPostJson<MailOrganizerLabel>(base()+'/organize/labels', {name,color})
+export const updateMailOrganizerLabel = (row: MailOrganizerLabel) => apiPutJson<MailOrganizerLabel>(base()+'/organize/labels/'+key(row.id), row)
+export const deleteMailOrganizerLabel = (id: string) => apiDeleteJson<{deleted:boolean}>(base()+'/organize/labels/'+key(id))
+export const mutateMailOrganizer = (input: MailOrganizerMutation) => apiPostJson<MailOrganizerRecord>(base()+'/organize/messages', input)

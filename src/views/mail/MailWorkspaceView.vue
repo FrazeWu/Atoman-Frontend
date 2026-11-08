@@ -23,24 +23,29 @@
           <div class="mail-workspace__folders-header"><span class="mail-workspace__section-label">邮件文件夹</span><PButton class="mail-workspace__new" block @click="newMessage"><Pencil :size="16" /> 写邮件</PButton></div>
           <p v-if="foldersError" class="mail-error" role="alert">{{ foldersError }}</p><p v-if="foldersLoading && !folders.length" class="mail-workspace__list-state">正在加载文件夹…</p>
           <nav class="mail-workspace__folder-list" aria-label="邮件文件夹"><button v-for="folder in folders" :key="folder.id" class="mail-workspace__folder" :class="{ 'is-active': currentFolderId === folder.id }" :aria-current="currentFolderId === folder.id ? 'page' : undefined" @click="selectFolder(folder.id)"><component :is="folderIcon(folder.role)" :size="17" aria-hidden="true" /><span class="mail-workspace__folder-name">{{ folderLabel(folder) }}</span><small v-if="folder.unreadEmails" class="mail-workspace__folder-count" :aria-label="`${folder.unreadEmails} 封未读`">{{ folder.unreadEmails > 999 ? '999+' : folder.unreadEmails }}</small></button></nav>
-          <div class="mail-workspace__folder-tools"><button @click="externalOpen=true"><Inbox :size="14" /> 聚合邮箱</button><button @click="scheduledOpen=true"><Clock :size="14" /> 定时发送与状态</button><button @click="folderDialog = true"><Plus :size="14" /> 新建文件夹</button><button v-if="currentFolder && !currentFolder.role" @click="deleteFolderDialog = true"><Trash2 :size="14" /> 删除当前文件夹</button></div>
+          <div v-if="organizerState.labels.length" class="mail-organizer__sidebar-labels">
+            <small>我的标签（当前文件夹）</small>
+            <button v-for="label in organizerState.labels" :key="label.id" :aria-pressed="organizerFilterId===label.id" @click="organizerFilterId=organizerFilterId===label.id?'':label.id"># {{ label.name }}</button>
+            <button v-if="organizerFilterId" @click="organizerFilterId=''">清除标签筛选</button>
+          </div>
+          <div class="mail-workspace__folder-tools"><button @click="externalOpen=true"><Inbox :size="14" /> 聚合邮箱</button><button @click="openMailOrganizer()"><Tags :size="14" /> 提醒与标签<span v-if="dueOrganizerCount"> · {{ dueOrganizerCount }}</span></button><button @click="scheduledOpen=true"><Clock :size="14" /> 定时发送与状态</button><button @click="folderDialog = true"><Plus :size="14" /> 新建文件夹</button><button v-if="currentFolder && !currentFolder.role" @click="deleteFolderDialog = true"><Trash2 :size="14" /> 删除当前文件夹</button></div>
           <p class="mail-workspace__sidebar-foot">回收站和垃圾邮件保留 30 天</p>
         </aside>
         <section class="mail-workspace__list" :class="{ 'mail-mobile-visible': mobilePane === 'list' }" data-testid="mail-list-pane">
           <header class="mail-workspace__list-header"><button class="mail-icon-button mail-workspace__mobile-back" aria-label="显示文件夹" @click="mobilePane = 'folders'"><ChevronLeft :size="18" /></button><div class="mail-workspace__heading"><h2>{{ currentFolder ? folderLabel(currentFolder) : '邮件' }}</h2><small>{{ isDraftFolder ? drafts.length : totalMessages }} 封邮件</small></div><PButton class="mail-workspace__mobile-compose" size="sm" variant="secondary" aria-label="写邮件" @click="newMessage"><Pencil :size="15" /> 写邮件</PButton><button class="mail-icon-button" title="刷新邮件列表" aria-label="刷新邮件列表" :disabled="loadingMessages" @click="loadMessages(false, true)"><RefreshCw :size="17" :class="{ 'mail-spin': loadingMessages }" /></button></header>
           <div v-if="!isDraftFolder" class="mail-workspace__search-container"><PSearchInput v-model="searchText" class="mail-workspace__search" variant="inline" size="sm" placeholder="搜索发件人、主题或正文" aria-label="搜索邮件" :show-shortcut-badge="false" :show-action-button="true" action-button-text="搜索" @search="runSearch" @clear="runSearch" /><PButton type="button" variant="secondary" size="sm" class="mail-workspace__advanced-trigger" :aria-label="allFolders || Object.values(advancedFilters).some(v=>v !== undefined && v !== '') ? '编辑高级筛选' : '高级筛选'" @click="advancedOpen=true"><SlidersHorizontal :size="16" /></PButton></div>
           <button v-if="allFolders || Object.values(advancedFilters).some(v=>v !== undefined && v !== '')" class="mail-workspace__filter-note" @click="clearAdvancedSearch">高级筛选已启用 · 点击清除</button>
-          <div v-if="!isDraftFolder" class="mail-workspace__list-options"><label><input type="checkbox" :checked="allSelected" aria-label="选择当前列表全部邮件" @change="selectAll" /><span>{{ selection.size ? `已选 ${selection.size} 封` : '选择' }}</span></label><PSegmentedControl class="mail-workspace__view-mode" :model-value="conversationMode ? 'thread' : 'single'" :options="[{ label: '会话', value: 'thread' }, { label: '单封', value: 'single' }]" @update:model-value="conversationMode = $event === 'thread'" /></div>
+          <div v-if="!isDraftFolder" class="mail-workspace__list-options"><label><input type="checkbox" :checked="allVisibleSelected" aria-label="选择当前列表全部邮件" @change="selectVisibleAll" /><span>{{ selection.size ? `已选 ${selection.size} 封` : '选择' }}</span></label><PSegmentedControl class="mail-workspace__view-mode" :model-value="conversationMode ? 'thread' : 'single'" :options="[{ label: '会话', value: 'thread' }, { label: '单封', value: 'single' }]" @update:model-value="conversationMode = $event === 'thread'" /></div>
           <div v-if="selection.size" class="mail-workspace__bulk" aria-label="批量操作"><PButton variant="ghost" size="sm" title="归档" aria-label="归档所选邮件" :disabled="actionBusy" @click="performAction('archive')"><Archive :size="17" /></PButton><PButton variant="ghost" size="sm" title="标为已读" aria-label="将所选邮件标为已读" :disabled="actionBusy" @click="performAction('read')"><MailOpen :size="17" /></PButton><PButton variant="ghost" size="sm" title="标为未读" aria-label="将所选邮件标为未读" :disabled="actionBusy" @click="performAction('unread')"><Mail :size="17" /></PButton><PButton variant="ghost" size="sm" title="移到回收站" aria-label="删除所选邮件" :disabled="actionBusy" @click="performAction('trash')"><Trash2 :size="17" /></PButton><PSelect class="mail-workspace__move-select" label="移动所选邮件" :model-value="null" placeholder="移动到…" :disabled="actionBusy" :options="folders.filter(row => row.id !== currentFolderId).map(row => ({ value: row.id, label: folderLabel(row) }))" @update:model-value="performAction('move', undefined, String($event))" /></div>
           <div class="mail-workspace__messages" aria-live="polite">
             <div v-if="messagesError" class="mail-workspace__list-state" role="alert"><CircleAlert :size="22" /><p>{{ messagesError }}</p><button @click="loadMessages()">重试</button></div>
             <div v-else-if="loadingMessages && !messages.length && !drafts.length" class="mail-workspace__list-state"><RefreshCw class="mail-spin" :size="22" /><p>正在加载…</p></div>
             <template v-else-if="isDraftFolder"><button v-for="draft in drafts" :key="draft.id" class="mail-workspace__message" @click="editDraft(draft)"><span class="mail-workspace__message-first"><span class="mail-workspace__message-subject">{{ draft.subject || '未命名草稿' }}</span><small>{{ mailTime(draft.updated_at || '') }}</small></span><span class="mail-workspace__message-preview">{{ draft.text || '继续编辑' }}</span></button><div v-if="!drafts.length" class="mail-workspace__list-state"><PEmpty compact align="center" title="这里还没有草稿" description="写邮件时会自动保存草稿。"><template #icon><FileText :size="26" /></template></PEmpty></div></template>
-            <template v-else><div v-for="group in conversations" :key="group.id" class="mail-workspace__message-row" :class="{ 'is-selected': selectedGroupId === group.id, 'is-unread': group.messages.some(row => row.isRead === false) }"><label class="mail-workspace__row-check"><input type="checkbox" :checked="group.messages.every(row => selection.has(row.id))" :aria-label="`选择：${group.latest.subject || '无主题'}`" @change="toggleGroup(group)" /></label><button class="mail-workspace__message" :data-testid="`mail-message-${group.latest.id}`" @click="openConversation(group)"><span class="mail-workspace__sender">{{ addressText(group.latest.from || []) || '邮件' }}<span v-if="group.messages.length > 1"> · {{ group.messages.length }}</span><Star v-if="group.latest.isFlagged" :size="12" fill="currentColor" /></span><span class="mail-workspace__message-first"><span class="mail-workspace__message-subject">{{ group.latest.subject || '无主题' }}</span><small>{{ mailTime(group.latest.receivedAt) }}</small></span><span class="mail-workspace__message-preview">{{ group.latest.preview || '没有摘要' }}</span><span v-if="group.latest.hasAttachment" class="mail-workspace__attachment"><Paperclip :size="12" /> 附件</span></button></div><div v-if="!conversations.length" class="mail-workspace__list-state"><PEmpty compact align="center" :title="committedSearch ? '没有找到匹配的邮件' : '此文件夹暂无邮件'" :description="committedSearch ? '试试更短的关键词或清空搜索。' : '新的邮件会显示在这里。'"><template #icon><Inbox :size="28" /></template></PEmpty></div><button v-if="hasMore" class="mail-workspace__load-more" :disabled="loadingMessages" @click="loadMessages(true)">{{ loadingMessages ? '加载中…' : '加载更多' }}</button></template>
+            <template v-else><div v-for="group in visibleConversations" :key="group.id" class="mail-workspace__message-row" :class="{ 'is-selected': selectedGroupId === group.id, 'is-unread': group.messages.some(row => row.isRead === false) }"><label class="mail-workspace__row-check"><input type="checkbox" :checked="group.messages.every(row => selection.has(row.id))" :aria-label="`选择：${group.latest.subject || '无主题'}`" @change="toggleGroup(group)" /></label><button class="mail-workspace__message" :data-testid="`mail-message-${group.latest.id}`" @click="openConversation(group)"><span class="mail-workspace__sender">{{ addressText(group.latest.from || []) || '邮件' }}<span v-if="group.messages.length > 1"> · {{ group.messages.length }}</span><Star v-if="group.latest.isFlagged" :size="12" fill="currentColor" /></span><span class="mail-workspace__message-first"><span class="mail-workspace__message-subject">{{ group.latest.subject || '无主题' }}</span><small>{{ mailTime(group.latest.receivedAt) }}</small></span><span class="mail-workspace__message-preview">{{ group.latest.preview || '没有摘要' }}</span><span v-if="group.latest.hasAttachment" class="mail-workspace__attachment"><Paperclip :size="12" /> 附件</span></button></div><div v-if="!visibleConversations.length" class="mail-workspace__list-state"><PEmpty compact align="center" :title="committedSearch ? '没有找到匹配的邮件' : '此文件夹暂无邮件'" :description="committedSearch ? '试试更短的关键词或清空搜索。' : '新的邮件会显示在这里。'"><template #icon><Inbox :size="28" /></template></PEmpty></div><button v-if="hasMore" class="mail-workspace__load-more" :disabled="loadingMessages" @click="loadMessages(true)">{{ loadingMessages ? '加载中…' : '加载更多' }}</button></template>
           </div>
         </section>
         <article class="mail-workspace__reader" :class="{ 'mail-mobile-visible': mobilePane === 'reader' }" data-testid="mail-reader-pane">
-          <template v-if="readerMessages.length"><header class="mail-workspace__reader-head"><button class="mail-icon-button mail-workspace__mobile-back" aria-label="返回邮件列表" @click="mobilePane = 'list'"><ChevronLeft :size="18" /></button><div class="mail-workspace__reader-tools"><button class="mail-icon-button" aria-label="归档会话" :disabled="actionBusy" @click="performAction('archive', readerMessages.map(row => row.id))"><Archive :size="17" /></button><button v-if="currentFolder?.role === 'trash' || currentFolder?.role === 'junk'" class="mail-icon-button" aria-label="恢复到收件箱" :disabled="actionBusy" @click="performAction('restore', readerMessages.map(row => row.id))"><Undo2 :size="17" /></button><button class="mail-icon-button" aria-label="移到垃圾邮件" :disabled="actionBusy" @click="performAction('junk', readerMessages.map(row => row.id))"><ShieldAlert :size="17" /></button><button class="mail-icon-button" aria-label="删除会话" :disabled="actionBusy" @click="performAction('trash', readerMessages.map(row => row.id))"><Trash2 :size="17" /></button></div><PBadge class="mail-workspace__read-tag" type="info" no-dot :label="readerMessages.length > 1 ? `${readerMessages.length} 封邮件` : '邮件'" /></header>
+          <template v-if="readerMessages.length"><header class="mail-workspace__reader-head"><button class="mail-icon-button mail-workspace__mobile-back" aria-label="返回邮件列表" @click="mobilePane = 'list'"><ChevronLeft :size="18" /></button><div class="mail-workspace__reader-tools"><button class="mail-icon-button" aria-label="为邮件添加提醒或标签" :disabled="organizerBusy" @click="openMailOrganizer(readerMessages[readerMessages.length-1])"><Tags :size="17" /></button><button class="mail-icon-button" aria-label="归档会话" :disabled="actionBusy" @click="performAction('archive', readerMessages.map(row => row.id))"><Archive :size="17" /></button><button v-if="currentFolder?.role === 'trash' || currentFolder?.role === 'junk'" class="mail-icon-button" aria-label="恢复到收件箱" :disabled="actionBusy" @click="performAction('restore', readerMessages.map(row => row.id))"><Undo2 :size="17" /></button><button class="mail-icon-button" aria-label="移到垃圾邮件" :disabled="actionBusy" @click="performAction('junk', readerMessages.map(row => row.id))"><ShieldAlert :size="17" /></button><button class="mail-icon-button" aria-label="删除会话" :disabled="actionBusy" @click="performAction('trash', readerMessages.map(row => row.id))"><Trash2 :size="17" /></button></div><PBadge class="mail-workspace__read-tag" type="info" no-dot :label="readerMessages.length > 1 ? `${readerMessages.length} 封邮件` : '邮件'" /></header>
             <div class="mail-workspace__reader-body" data-testid="mail-selected-preview"><h2>{{ readerMessages[readerMessages.length - 1]?.subject || '无主题' }}</h2><p v-if="threadError" class="mail-error" role="alert">{{ threadError }}</p>
               <section v-for="message in readerMessages" :key="message.id" class="mail-workspace__thread-card"><button class="mail-workspace__thread-summary" :aria-expanded="expanded.has(message.id)" @click="toggleExpanded(message)"><span><strong>{{ addressText(message.from || []) || '邮件' }}</strong><small v-if="!expanded.has(message.id)">{{ message.preview }}</small></span><time>{{ mailTime(message.receivedAt, true) }}</time><ChevronDown v-if="expanded.has(message.id)" :size="16" /><ChevronRight v-else :size="16" /></button>
                 <div v-if="expanded.has(message.id)" class="mail-workspace__thread-content"><div v-if="detailLoading.has(message.id)" class="mail-workspace__detail-status"><RefreshCw class="mail-spin" :size="18" /> 正在打开邮件…</div><div v-else-if="detailErrors[message.id]" class="mail-workspace__detail-status" role="alert"><p>{{ detailErrors[message.id] }}</p><button @click="loadDetail(message)">重新打开</button></div>
@@ -57,6 +62,7 @@
       <PModal :show="shortcutHelp" title="邮箱快捷键" size="sm" @close="shortcutHelp=false">
         <dl class="mail-shortcuts"><dt>C</dt><dd>写邮件</dd><dt>J / K</dt><dd>下一封 / 上一封</dd><dt>R</dt><dd>回复当前邮件</dd><dt>E</dt><dd>归档当前邮件</dd><dt>S</dt><dd>标记或取消星标</dd><dt>/</dt><dd>聚焦搜索</dd><dt>?</dt><dd>快捷键帮助</dd><dt>Esc</dt><dd>返回邮件列表</dd></dl>
       </PModal>
+      <MailOrganizerPanel v-if="organizerOpen" :state="organizerState" :target="organizerTarget" :messages="messages" :now="organizerNow" :busy="organizerBusy" :error="organizerError" @close="organizerOpen=false" @action="onOrganizerAction" @create-label="onCreateOrganizerLabel" @delete-label="onDeleteOrganizerLabel" @update-label="onUpdateOrganizerLabel" />
       <MailExternalAccounts v-if="externalOpen" @close="externalOpen=false" @open-native="openNativeFromAggregate" />
       <MailScheduledPanel v-if="scheduledOpen" :items="pendingSends" :busy-id="cancelBusy" @close="scheduledOpen=false" @refresh="refreshQueue" @cancel="undoSend" />
       <MailAttachmentPreview v-if="attachmentPreview" :key="attachmentPreview.messageId+attachmentPreview.attachment.partId" :message-id="attachmentPreview.messageId" :attachment="attachmentPreview.attachment" @close="attachmentPreview=null" />
@@ -69,7 +75,7 @@
   </section>
 </template>
 <script setup lang="ts">
-import { Clock, SlidersHorizontal, Archive, ChevronLeft, ChevronRight, ChevronDown, CircleAlert, Download, FileText, Folder, Forward, Inbox, Mail, MailOpen, Paperclip, Pencil, Plus, RefreshCw, Reply, ReplyAll, Send, Settings, ShieldAlert, Star, Trash2, Undo2, X } from 'lucide-vue-next'
+import { Clock, Tags, SlidersHorizontal, Archive, ChevronLeft, ChevronRight, ChevronDown, CircleAlert, Download, FileText, Folder, Forward, Inbox, Mail, MailOpen, Paperclip, Pencil, Plus, RefreshCw, Reply, ReplyAll, Send, Settings, ShieldAlert, Star, Trash2, Undo2, X } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PBadge from '@/components/ui/PBadge.vue'
@@ -82,16 +88,115 @@ import MailComposer from './MailComposer.vue'
 import MailAdvancedSearch from './MailAdvancedSearch.vue'
 import MailAttachmentPreview from './MailAttachmentPreview.vue'
 import MailScheduledPanel from './MailScheduledPanel.vue'
-import { onMounted, onBeforeUnmount, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import type { MailSummary, MailAttachmentInfo } from '@/api/mail'
 import MailSettings from './MailSettings.vue'
 import MailExternalAccounts from './MailExternalAccounts.vue'
+import MailOrganizerPanel from './MailOrganizerPanel.vue'
+import { fetchMailOrganizer, createMailOrganizerLabel, updateMailOrganizerLabel, deleteMailOrganizerLabel, mutateMailOrganizer, type MailOrganizerState, type MailOrganizerMutation, type MailOrganizerColor } from '@/api/mailClient'
 import { addressText, fileSize, mailFrameDocument, mailTime } from './mail-helpers'
 import { useMailWorkspace } from './useMailWorkspace'
 const { advancedOpen,advancedFilters,allFolders,setAdvancedSearch,clearAdvancedSearch, mailAccount, loadingAccount, accountError, mailIsActive, isMailAdministrator, statusLabel, statusTitle, statusDescription, invitation, chosenLocalPart, isChosenLocalValid, redeeming, redeemError, claimAddress, folders, foldersLoading, foldersError, currentFolder, currentFolderId, folderLabel, mobilePane, messages, drafts, loadingMessages, messagesError, searchText, committedSearch, totalMessages, conversations, conversationMode, selection, selectedGroupId, allSelected, selectAll, toggleGroup, selectFolder, loadMessages, refreshMailbox, runSearch, hasMore, openConversation, readerMessages, expanded, details, detailErrors, detailLoading, htmlShown, threadError, toggleExpanded, loadDetail, newMessage, editDraft, composeDraft, composeWarning, settingsOpen, replyTo, forwardMessage, onDraftSaved, onQueued, pendingSends, remainingSeconds, queueLabel, undoSend, checkSend, refreshQueue, provisionAccount, cancelBusy, notice, actionUndo, actionBusy, performAction, undoAction, downloadAttachment, downloadSource, blockSender, folderDialog, deleteFolderDialog, newFolderName, folderError, folderWorking, addFolder, removeFolder, isDraftFolder } = useMailWorkspace()
 const shortcutHelp=ref(false)
 const scheduledOpen=ref(false)
 const externalOpen=ref(false)
+const organizerOpen=ref(false),organizerFilterId=ref('')
+const organizerTarget=ref<MailSummary|null>(null)
+const organizerState=ref<MailOrganizerState>({labels:[],records:[]})
+const organizerBusy=ref(false),organizerError=ref('')
+const organizerNow=ref(Date.now())
+const organizerById=computed(()=>new Map(organizerState.value.records.map(item=>[item.message_id,item])))
+const dueOrganizerCount=computed(()=>organizerState.value.records.filter(item=>item.follow_up_at && new Date(item.follow_up_at).getTime()<=organizerNow.value).length)
+const isMessageSnoozed=(message:MailSummary)=> {
+  const when=organizerById.value.get(message.id)?.snooze_until
+  return !!when && new Date(when).getTime()>organizerNow.value
+}
+const visibleConversations=computed(()=>{
+  const scoped=organizerFilterId.value ? conversations.value.filter(group=>group.messages.some(msg=>organizerById.value.get(msg.id)?.label_ids.includes(organizerFilterId.value))) : conversations.value
+  if(organizerFilterId.value || currentFolder.value?.role!=='inbox' || committedSearch.value || allFolders.value)return scoped
+  return scoped.filter(group=>!group.messages.every(isMessageSnoozed))
+})
+const allVisibleSelected=computed(()=>visibleConversations.value.length>0 && visibleConversations.value.every(group=>group.messages.every(m=>selection.value.has(m.id))))
+function selectVisibleAll(){
+  const next=new Set(selection.value)
+  if(allVisibleSelected.value){
+    for(const group of visibleConversations.value)for(const m of group.messages)next.delete(m.id)
+  }else{
+    for(const group of visibleConversations.value)for(const m of group.messages)if(next.size<100)next.add(m.id)
+  }
+  selection.value=next
+}
+let organizerVersion=0
+async function loadOrganizer(){
+  const version=++organizerVersion
+  try {
+    const next=await fetchMailOrganizer()
+    if(version!==organizerVersion)return
+    organizerState.value=next
+    organizerError.value=''
+  } catch {
+    if(version===organizerVersion)organizerError.value='提醒和标签未能加载，收件箱仍可正常使用。'
+  }
+}
+function openMailOrganizer(target?:MailSummary) {
+  organizerTarget.value=target || null
+  organizerOpen.value=true
+  if(mailIsActive.value)void loadOrganizer()
+}
+async function onOrganizerAction(input:MailOrganizerMutation){
+  if(organizerBusy.value)return
+  organizerBusy.value=true;organizerError.value='';organizerVersion++
+  try {
+    const updated=await mutateMailOrganizer(input)
+    const rows=organizerState.value.records.filter(x=>x.message_id!==updated.message_id)
+    organizerState.value={...organizerState.value,records:[updated,...rows]}
+    if(input.action==='snooze') selection.value=new Set()
+    notice.value='提醒和标签已保存。'
+  }catch {
+    organizerError.value='操作未保存，请刷新邮件后重试。'
+  }finally{organizerBusy.value=false}
+}
+async function onCreateOrganizerLabel(input:{name:string;color:MailOrganizerColor}){
+  if(organizerBusy.value)return
+  organizerBusy.value=true;organizerError.value='';organizerVersion++
+  try{
+    const label=await createMailOrganizerLabel(input.name,input.color)
+    organizerState.value={...organizerState.value,labels:[...organizerState.value.labels,label]}
+  }catch{
+    organizerError.value='标签未能创建，可能是名称重复或达到数量限制。'
+  }finally{organizerBusy.value=false}
+}
+async function onUpdateOrganizerLabel(input:import('@/api/mailClient').MailOrganizerLabel){
+  if(organizerBusy.value)return
+  organizerBusy.value=true;organizerError.value='';organizerVersion++
+  try{
+    const label=await updateMailOrganizerLabel(input)
+    organizerState.value={...organizerState.value,labels:organizerState.value.labels.map(old=>old.id===label.id?label:old)}
+  }catch{organizerError.value='标签修改未保存，请检查名称和其他设备上的修改。'}
+  finally{organizerBusy.value=false}
+}
+async function onDeleteOrganizerLabel(id:string){
+  if(organizerBusy.value)return
+  organizerBusy.value=true;organizerError.value='';organizerVersion++
+  try{
+    await deleteMailOrganizerLabel(id)
+    if(organizerFilterId.value===id)organizerFilterId.value=''
+    organizerState.value={
+      labels:organizerState.value.labels.filter(item=>item.id!==id),
+      records:organizerState.value.records.map(row=>({...row,label_ids:row.label_ids.filter(v=>v!==id)}))
+    }
+  }catch{
+    organizerError.value='标签未能删除，请刷新后重试。'
+  }finally{organizerBusy.value=false}
+}
+let organizerTick:ReturnType<typeof setInterval>|undefined
+watch(mailIsActive, active=>{
+  if(active)void loadOrganizer()
+  else{organizerVersion++;organizerState.value={labels:[],records:[]}}
+},{immediate:true})
+onMounted(()=>{organizerTick=setInterval(()=>{organizerNow.value=Date.now()},30000)})
+onBeforeUnmount(()=>{organizerVersion++;clearInterval(organizerTick)})
+
 async function openNativeFromAggregate(id:string){
   externalOpen.value=false
   const inbox=folders.value.find(row=>row.role==='inbox')
@@ -111,7 +216,7 @@ function handleMailShortcut(event:KeyboardEvent) {
   if(event.key==='Escape' && shortcutHelp.value){shortcutHelp.value=false;event.preventDefault()}
   return
  }
- if(composeDraft.value || settingsOpen.value || externalOpen.value || advancedOpen.value || attachmentPreview.value || folderDialog.value || deleteFolderDialog.value)return
+ if(composeDraft.value || settingsOpen.value || externalOpen.value || organizerOpen.value || advancedOpen.value || attachmentPreview.value || folderDialog.value || deleteFolderDialog.value)return
  const key=event.key.toLowerCase()
  if(event.key==='?'){shortcutHelp.value=!shortcutHelp.value;event.preventDefault();return}
  if(shortcutHelp.value){if(event.key==='Escape')shortcutHelp.value=false;return}
@@ -128,7 +233,7 @@ function handleMailShortcut(event:KeyboardEvent) {
   return
  }
  if(key==='j' || key==='k'){
-  const groups=conversations.value
+  const groups=visibleConversations.value
   if(!groups.length || isDraftFolder.value)return
   const current=groups.findIndex(group=>group.id===selectedGroupId.value)
   const next=current===-1?0:Math.max(0,Math.min(groups.length-1,current+(key==='j'?1:-1)))

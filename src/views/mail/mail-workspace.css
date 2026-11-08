@@ -277,3 +277,9 @@
 .mail-shortcuts {display:grid;grid-template-columns:auto 1fr;column-gap:18px;row-gap:12px;margin:0 0 8px;font-size:13px;}
 .mail-shortcuts dt {min-width:34px;padding:3px 6px;background:var(--a-color-surface);border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-control);text-align:center;font-family:ui-monospace,monospace;}
 .mail-shortcuts dd {display:flex;align-items:center;margin:0;color:var(--a-color-muted-soft);}
+
+/* Mail organizer labels reuse the native folder/sidebar affordances. */
+.mail-organizer__sidebar-labels{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 12px;border-top:1px solid var(--a-color-border-soft)}
+.mail-organizer__sidebar-labels small{width:100%;font-size:11px;color:var(--a-color-muted)}
+.mail-organizer__sidebar-labels button{background:transparent;border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-control);padding:6px 8px;font-size:11px;text-align:left;color:var(--a-color-text);cursor:pointer;max-width:100%;overflow-wrap:anywhere}
+.mail-organizer__sidebar-labels button[aria-pressed=true]{background:var(--a-color-surface);border-color:var(--a-color-primary);font-weight:600}

@@ -7,6 +7,7 @@ let account = {status:'active',available:true,address:'preview@atoman.org'}
 let readIds=[],actionCalls=[],queued=null,settingsWrites=0,passwords=[]
 let contacts=[],searchHistory=[]
 let externalAccounts=[],externalSecretSeen='',externalSyncCalls=0
+let organizerLabels=[],organizerRecords=[],organizerActions=[]
 const externalSample={
   account_id:'fixture-external-1',account_address:'external@example.org',
   provider:'gmail',uid:77,uid_validity:42,
@@ -59,6 +60,33 @@ async function run(){
    else if(path.endsWith('/mail/external/accounts/fixture-external-1/messages/77')){
      assert.equal(url.searchParams.get('uid_validity'),'42')
      data={text:'外部邮件纯文本 <script>alert(1)</script>'}
+   }
+   else if(path.endsWith('/mail/organize')){
+     data={labels:organizerLabels,records:organizerRecords}
+   }
+   else if(path.endsWith('/mail/organize/labels')&&method==='POST'){
+     const input=request.postDataJSON()
+     const row={...input,id:'organizer-label-'+(organizerLabels.length+1),revision:1}
+     organizerLabels.push(row); data=row;status=201
+   }
+   else if(/\/mail\/organize\/labels\/[^/]+$/.test(path)&&method==='DELETE'){
+     const id=path.split('/').at(-1)
+     organizerLabels=organizerLabels.filter(row=>row.id!==id);data={deleted:true}
+   }
+   else if(path.endsWith('/mail/organize/messages')&&method==='POST'){
+     const input=request.postDataJSON()
+     organizerActions.push(input)
+     let row=organizerRecords.find(r=>r.message_id===input.message_id)
+     if(!row){row={message_id:input.message_id,label_ids:[],revision:0};organizerRecords.push(row)}
+     assert.equal(input.revision||0,row.revision,'Organizer must pass optimistic revision')
+     if(input.action==='label_add'&&!row.label_ids.includes(input.label_id))row.label_ids.push(input.label_id)
+     if(input.action==='label_remove')row.label_ids=row.label_ids.filter(id=>id!==input.label_id)
+     if(input.action==='snooze')row.snooze_until=input.due_at
+     if(input.action==='unsnooze')delete row.snooze_until
+     if(input.action==='follow_up')row.follow_up_at=input.due_at
+     if(input.action==='clear_follow_up')delete row.follow_up_at
+     row.revision++
+     data={...row,label_ids:[...row.label_ids]}
    }
    else if(path.endsWith('/mail/me'))data=account
    else if(path.endsWith('/mail/folders')) data=folders
@@ -124,6 +152,23 @@ async function run(){
   assert.ok(rects.every(r=>r.width>160));assert.ok(rects[0].right<=rects[1].x+2&&rects[1].right<=rects[2].x+2)
   await page.screenshot({path:'/tmp/atoman-mail-complete-desktop.png',fullPage:true})
   console.log('MAIL_DESKTOP_THREE_PANES_AND_EXPAND_ONLY_READ_OK',JSON.stringify(rects))
+  await page.getByRole('button',{name:'为邮件添加提醒或标签'}).click()
+  await page.getByText('这封邮件的标签').waitFor()
+  await page.getByRole('textbox',{name:'新标签名称'}).fill('项目')
+  await page.getByRole('button',{name:'新增标签'}).click()
+  await page.locator('.mail-organizer__label').getByRole('checkbox').check()
+  await page.getByRole('button',{name:'设置稍后处理'}).click()
+  await page.waitForTimeout(150)
+  assert.equal(organizerLabels.length,1)
+  assert.ok(organizerRecords.some(r=>r.message_id==='two'&&r.label_ids.length===1&&r.snooze_until))
+  await page.getByRole('button',{name:'关闭提醒与标签'}).click()
+  await page.getByRole('button',{name:'提醒与标签'}).click()
+  await page.getByText('待跟进与稍后处理').waitFor()
+  await page.getByRole('button',{name:'恢复显示'}).click()
+  await page.waitForTimeout(150)
+  assert.ok(organizerActions.some(r=>r.action==='unsnooze'))
+  await page.getByRole('button',{name:'关闭提醒与标签'}).click()
+  console.log('MAIL_PRIVATE_ORGANIZER_LABEL_SNOOZE_RESTORE_BROWSER_OK')
   await page.getByRole('button',{name:'聚合邮箱'}).click()
   await page.getByTestId('mail-external-accounts').waitFor()
   await page.getByText('你的订单已确认',{exact:true}).first().waitFor()

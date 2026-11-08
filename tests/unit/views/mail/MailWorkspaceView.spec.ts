@@ -2,11 +2,11 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MailWorkspaceView from '@/views/mail/MailWorkspaceView.vue'
 import type { MailDetail, MailSummary } from '@/api/mail'
-const api = vi.hoisted(() => ({ account: vi.fn(), folders: vi.fn(), messages: vi.fn(), detail: vi.fn(), read: vi.fn(), thread: vi.fn(), drafts: vi.fn(), draft: vi.fn(), queue: vi.fn(), outbox: vi.fn(), cancel: vi.fn(), action: vi.fn(), undo: vi.fn(), reserve: vi.fn(), activate: vi.fn() }))
+const api = vi.hoisted(() => ({ organizer:vi.fn(),organizerAction:vi.fn(),labelCreate:vi.fn(),labelDelete:vi.fn(),account: vi.fn(), folders: vi.fn(), messages: vi.fn(), detail: vi.fn(), read: vi.fn(), thread: vi.fn(), drafts: vi.fn(), draft: vi.fn(), queue: vi.fn(), outbox: vi.fn(), cancel: vi.fn(), action: vi.fn(), undo: vi.fn(), reserve: vi.fn(), activate: vi.fn() }))
 const auth = vi.hoisted(() => ({ user: { role: 'user' } }))
 vi.mock('@/stores/auth', () => ({ useAuthStore: () => auth }))
 vi.mock('@/api/mail', () => ({ fetchMyMailAccount: api.account, fetchMailFolders: api.folders, fetchMailDetail: api.detail, markMailRead: api.read, reserveAdminMailAddress: api.reserve, redeemMailInvitation: api.activate }))
-vi.mock('@/api/mailClient', () => ({ queryMailMessages: api.messages, fetchMailThread: api.thread, fetchMailDrafts: api.drafts, fetchMailDraft: api.draft, fetchMailOutboxes: api.queue, fetchMailOutbox: api.outbox, cancelMailOutbox: api.cancel, mutateMailMessages: api.action, undoMailAction: api.undo, provisionMailAccount: vi.fn(), reconcileMailOutbox: vi.fn(), createMailFolder: vi.fn(), deleteMailFolder: vi.fn(), deleteMailDraft: vi.fn(), downloadMailAttachment: vi.fn(), fetchMailPreferences: vi.fn(), saveMailPreferences: vi.fn() }))
+vi.mock('@/api/mailClient', () => ({ fetchMailOrganizer:api.organizer,mutateMailOrganizer:api.organizerAction,createMailOrganizerLabel:api.labelCreate,deleteMailOrganizerLabel:api.labelDelete,queryMailMessages: api.messages, fetchMailThread: api.thread, fetchMailDrafts: api.drafts, fetchMailDraft: api.draft, fetchMailOutboxes: api.queue, fetchMailOutbox: api.outbox, cancelMailOutbox: api.cancel, mutateMailMessages: api.action, undoMailAction: api.undo, provisionMailAccount: vi.fn(), reconcileMailOutbox: vi.fn(), createMailFolder: vi.fn(), deleteMailFolder: vi.fn(), deleteMailDraft: vi.fn(), downloadMailAttachment: vi.fn(), fetchMailPreferences: vi.fn(), saveMailPreferences: vi.fn() }))
 vi.mock('@/views/mail/MailComposer.vue', () => ({ default: { props: ['draft', 'address'], template: '<div data-testid="composer">{{ draft.subject }}</div>' } }))
 vi.mock('@/views/mail/MailSettings.vue', () => ({ default: { template: '<div />' } }))
 const folders = [{ id: 'inbox', name: 'Inbox', role: 'inbox', parentId: null, totalEmails: 2, unreadEmails: 2 }, { id: 'trash', name: 'Trash', role: 'trash', parentId: null, totalEmails: 0, unreadEmails: 0 }, { id: 'drafts', name: 'Drafts', role: 'drafts', parentId: null, totalEmails: 1, unreadEmails: 0 }]
@@ -17,6 +17,8 @@ const mounted: Array<ReturnType<typeof mount>> = []
 function mountView() { const wrapper = mount(MailWorkspaceView, { attachTo: document.body }); mounted.push(wrapper); return wrapper }
 beforeEach(() => {
   vi.clearAllMocks(); localStorage.clear(); auth.user.role = 'user'
+  api.organizer.mockResolvedValue({labels:[],records:[]}); api.organizerAction.mockResolvedValue({message_id:'two',label_ids:[],revision:2})
+  api.labelCreate.mockResolvedValue({id:'label-created',name:'项目',color:'blue',revision:1}); api.labelDelete.mockResolvedValue({deleted:true})
   api.account.mockResolvedValue({ available: true, status: 'active', address: 'me@atoman.org' }); api.folders.mockResolvedValue(folders)
   api.messages.mockImplementation((id: string) => Promise.resolve({ items: id === 'inbox' ? [latest, first] : [], total: id === 'inbox' ? 2 : 0, has_more: false }))
   api.thread.mockResolvedValue([first, latest]); api.detail.mockImplementation((_folder: string, id: string) => Promise.resolve(detail(id))); api.read.mockResolvedValue({read:true}); api.queue.mockResolvedValue([]); api.drafts.mockResolvedValue([])
@@ -62,6 +64,38 @@ describe('Mail workspace', () => {
     expect(wrapper.get('.mail-workspace__folder-count').attributes('aria-label')).toBe('2 封未读')
     await wrapper.get('.mail-workspace__mobile-compose').trigger('click'); await flushPromises()
     expect(wrapper.find('[data-testid="composer"]').exists()).toBe(true)
+  })
+  it('filters current folder by Atoman encrypted labels',async()=>{
+    api.organizer.mockResolvedValue({labels:[{id:'l1',name:'重要',color:'red',revision:1}],records:[
+      {message_id:'one',label_ids:['l1'],revision:1}
+    ]})
+    const w=mountView();await flushPromises()
+    await w.get('[data-testid="mode-single"]').trigger('click');await flushPromises()
+    expect(w.findAll('[data-testid^="mail-message-"]')).toHaveLength(2)
+    await w.get('.mail-organizer__sidebar-labels button[aria-pressed="false"]').trigger('click');await flushPromises()
+    expect(w.findAll('[data-testid^="mail-message-"]')).toHaveLength(1)
+    expect(w.get('[data-testid="mail-message-one"]').exists()).toBe(true)
+  })
+  it('hides future snoozed conversation and omits hidden messages from select-all', async () => {
+    const future=new Date(Date.now()+60*60*1000).toISOString()
+    api.organizer.mockResolvedValue({labels:[],records:[
+      {message_id:'one',snooze_until:future,label_ids:[],revision:1},
+      {message_id:'two',snooze_until:future,label_ids:[],revision:1}
+    ]})
+    const wrapper=mountView(); await flushPromises()
+    expect(wrapper.findAll('[data-testid^="mail-message-"]')).toHaveLength(0)
+    await wrapper.get('input[aria-label="选择当前列表全部邮件"]').setValue(true)
+    await flushPromises()
+    expect(wrapper.find('button[aria-label="归档所选邮件"]').exists()).toBe(false)
+  })
+  it('restores expired snoozed conversations to the Inbox list', async () => {
+    const past=new Date(Date.now()-60*60*1000).toISOString()
+    api.organizer.mockResolvedValue({labels:[],records:[
+      {message_id:'one',snooze_until:past,label_ids:[],revision:1},
+      {message_id:'two',snooze_until:past,label_ids:[],revision:1}
+    ]})
+    const wrapper=mountView();await flushPromises()
+    expect(wrapper.findAll('[data-testid^="mail-message-"]')).toHaveLength(1)
   })
   it('recovers the server pending send after refresh and waits for confirmed cancellation', async () => {
     const queued={id:'queue-1',status:'queued',send_after:new Date(Date.now()+5000).toISOString(),created_at:new Date().toISOString()}; api.queue.mockResolvedValue([queued]); api.cancel.mockResolvedValue({...queued,status:'cancelled'})

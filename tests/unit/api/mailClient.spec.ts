@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const http=vi.hoisted(()=>({get:vi.fn(),post:vi.fn(),put:vi.fn(),del:vi.fn(),multipart:vi.fn(),request:vi.fn()}))
 vi.mock('@/api/client',()=>({apiGet:http.get,apiPostJson:http.post,apiPutJson:http.put,apiDeleteJson:http.del,apiPostMultipart:http.multipart,apiRequest:http.request}))
 vi.mock('@/composables/useApiUrl',()=>({useApiUrl:()=>'/api/v1'}))
-import { queryMailMessages, fetchMailThread, fetchMailDraft, saveMailDraft, queueMail, fetchMailSenders, mutateMailMessages, undoMailAction, fetchMailPreferences, saveMailPreferences } from '@/api/mailClient'
+import { queryMailMessages, fetchMailThread, fetchMailDraft, saveMailDraft, queueMail, fetchMailSenders, fetchMailAliases, createMailAlias, setMailAliasEnabled, mutateMailMessages, undoMailAction, fetchMailPreferences, saveMailPreferences } from '@/api/mailClient'
 const compose={to:['a@example.test'],cc:[],bcc:[],subject:'hello',text:'body',attachments:[{id:'upload',name:'notes.txt',type:'text/plain',size:5}]}
 beforeEach(()=>vi.clearAllMocks())
 describe('mail client contract',()=>{
@@ -36,6 +36,16 @@ describe('mail client contract',()=>{
   http.post.mockResolvedValue({id:'outbox'})
   await queueMail({...compose,external_account_id:'ext-id'},'fresh-request')
   expect(http.post.mock.calls[0][1]).toMatchObject({external_account_id:'ext-id',request_id:'fresh-request'})
+ })
+ it('calls owner-scoped alias lifecycle endpoints without admin credentials',async()=>{
+  http.get.mockResolvedValue([{id:'a',address:'my.alias@atoman.org',status:'active'}])
+  expect((await fetchMailAliases())[0].address).toBe('my.alias@atoman.org')
+  expect(http.get).toHaveBeenCalledWith('/api/v1/mail/aliases')
+  http.post.mockResolvedValue({id:'a',address:'my.alias@atoman.org',status:'active'})
+  await createMailAlias('my.alias')
+  expect(http.post).toHaveBeenCalledWith('/api/v1/mail/aliases',{local_part:'my.alias'})
+  await setMailAliasEnabled('a',false)
+  expect(http.post).toHaveBeenLastCalledWith('/api/v1/mail/aliases/a/action',{action:'disable'})
  })
  it('uses action receipts and the backend star action',async()=>{
   http.post.mockResolvedValue({updated:['one'],undo_token:'receipt'});expect(await mutateMailMessages('inbox',['one'],'flag')).toMatchObject({affected:1,undo_id:'receipt'})

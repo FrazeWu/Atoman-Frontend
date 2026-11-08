@@ -1,7 +1,7 @@
 <template>
   <PSheet :show="true" title="写邮件" mode="full" close-type="header" @close="closeComposer">
     <form class="mail-compose" @submit.prevent="sendMessage">
-      <div class="mail-compose__identity"><div><label for="mail-sender">发件人</label><select id="mail-sender" v-model="selectedSender" :disabled="contentLocked" aria-label="发件人" data-testid="mail-sender-select"><option value="">{{ address }}（Atoman）</option><option v-for="sender in externalSenders" :key="sender.external_account_id" :value="sender.external_account_id">{{ sender.address }}（{{ sender.provider }}）</option><option v-if="senderMissing" :value="selectedSender" disabled>原外部邮箱已断开，请重新选择</option></select></div><PBadge role="status" :type="dirty ? 'warning' : 'success'" :label="saving ? '正在保存…' : dirty ? '有未保存内容' : '草稿已保存'" /></div>
+      <div class="mail-compose__identity"><div><label for="mail-sender">发件人</label><select id="mail-sender" v-model="selectedSender" :disabled="contentLocked" aria-label="发件人" data-testid="mail-sender-select"><option value="">{{ address }}（Atoman）</option><option v-for="sender in externalSenders" :key="sender.alias_id || sender.external_account_id" :value="sender.alias_id ? `alias:${sender.alias_id}` : sender.external_account_id">{{ sender.address }}（{{ sender.provider==='atoman-alias'?'Atoman 别名':sender.provider }}）</option><option v-if="senderMissing" :value="selectedSender" disabled>原发件地址已停用或不可用，请重新选择</option></select></div><PBadge role="status" :type="dirty ? 'warning' : 'success'" :label="saving ? '正在保存…' : dirty ? '有未保存内容' : '草稿已保存'" /></div>
       <MailRecipientField v-model="toText" label="收件人" placeholder="收件人邮箱，多个地址用逗号分隔" :contacts="contacts" :disabled="contentLocked" />
       <div class="mail-compose__copies"><MailRecipientField v-model="ccText" label="抄送" placeholder="抄送邮箱" :contacts="contacts" :disabled="contentLocked" /><MailRecipientField v-model="bccText" label="密送" placeholder="密送邮箱" :contacts="contacts" :disabled="contentLocked" /></div>
       <PInput v-model="subject" label="主题" type="text" placeholder="邮件主题" maxlength="998" aria-label="邮件主题" :disabled="contentLocked" />
@@ -47,10 +47,10 @@ const emit = defineEmits<{ close: []; saved: []; queued: [outbox: MailOutbox, dr
 const contacts = ref<MailContact[]>([])
 const externalSenders=ref<MailSenderIdentity[]>([])
 const senderLoaded=ref(false)
-const selectedSender=ref(props.draft.external_account_id || '')
-const senderMissing=computed(()=>Boolean(selectedSender.value) && senderLoaded.value && !externalSenders.value.some(row=>row.external_account_id===selectedSender.value))
+const selectedSender=ref(props.draft.alias_id ? `alias:${props.draft.alias_id}` : props.draft.external_account_id || '')
+const senderMissing=computed(()=>Boolean(selectedSender.value) && senderLoaded.value && !externalSenders.value.some(row=>row.alias_id ? selectedSender.value===`alias:${row.alias_id}` : selectedSender.value===row.external_account_id))
 async function loadSenderChoices(){
-  try {externalSenders.value=(await fetchMailSenders()).filter(row=>Boolean(row.external_account_id))}
+  try {externalSenders.value=(await fetchMailSenders()).filter(row=>Boolean(row.external_account_id || row.alias_id))}
   catch {externalSenders.value=[]}
   finally {senderLoaded.value=true}
 }
@@ -86,7 +86,7 @@ let disposed = false, discarding = false
 let submissionId = newRequestID(), submissionSnapshot = ''
 function looseRecipients(value: string) { return value.split(/[,;\n，；]+/).map(v => v.trim()).filter(Boolean) }
 function fields(strict = false): MailComposeFields {
-  return { ...(selectedSender.value ? {external_account_id: selectedSender.value}: {}), to: strict ? parseRecipients(toText.value) : looseRecipients(toText.value), cc: strict ? parseRecipients(ccText.value) : looseRecipients(ccText.value), bcc: strict ? parseRecipients(bccText.value) : looseRecipients(bccText.value), subject: subject.value, text: text.value, html: rich.value ? html.value : undefined, attachments: [...attachments.value], send_at: scheduleMode.value && scheduledLocal.value ? new Date(scheduledLocal.value).toISOString() : undefined, in_reply_to: props.draft.in_reply_to, references: props.draft.references }
+  return { ...(selectedSender.value.startsWith('alias:') ? {alias_id:selectedSender.value.slice(6)} : selectedSender.value ? {external_account_id:selectedSender.value}: {}), to: strict ? parseRecipients(toText.value) : looseRecipients(toText.value), cc: strict ? parseRecipients(ccText.value) : looseRecipients(ccText.value), bcc: strict ? parseRecipients(bccText.value) : looseRecipients(bccText.value), subject: subject.value, text: text.value, html: rich.value ? html.value : undefined, attachments: [...attachments.value], send_at: scheduleMode.value && scheduledLocal.value ? new Date(scheduledLocal.value).toISOString() : undefined, in_reply_to: props.draft.in_reply_to, references: props.draft.references }
 }
 async function persist() {
   if (discarding || disposed) return
@@ -127,7 +127,7 @@ async function sendMessage() {
   if (sending.value || uploading.value || conflicted.value) return
   let queueAttempted = false
   try {
-    if(senderMissing.value) throw new Error('原外部邮箱不可用，请重新选择发件人。')
+    if(senderMissing.value) throw new Error('原发件地址已停用或不可用，请重新选择发件人。')
     const sendAt=getSendAt()
     const content = fields(true)
     if (!content.to.length && !content.cc.length && !content.bcc.length) throw new Error('请填写至少一个收件人、抄送或密送地址。')

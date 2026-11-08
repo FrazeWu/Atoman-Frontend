@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const http=vi.hoisted(()=>({get:vi.fn(),post:vi.fn(),put:vi.fn(),del:vi.fn(),multipart:vi.fn(),request:vi.fn()}))
 vi.mock('@/api/client',()=>({apiGet:http.get,apiPostJson:http.post,apiPutJson:http.put,apiDeleteJson:http.del,apiPostMultipart:http.multipart,apiRequest:http.request}))
 vi.mock('@/composables/useApiUrl',()=>({useApiUrl:()=>'/api/v1'}))
-import { queryMailMessages, fetchMailThread, fetchMailDraft, saveMailDraft, queueMail, fetchMailSenders, fetchMailAliases, createMailAlias, setMailAliasEnabled, fetchExternalFlagPreview, mutateMailMessages, undoMailAction, fetchMailPreferences, saveMailPreferences } from '@/api/mailClient'
+import { queryMailMessages, fetchMailThread, fetchMailDraft, saveMailDraft, queueMail, fetchMailSenders, fetchMailAliases, createMailAlias, setMailAliasEnabled, fetchExternalFlagPreview, configureExternalFlagSync, fetchExternalFlagAttempts, reconcileExternalFlagAttempt, mutateMailMessages, undoMailAction, fetchMailPreferences, saveMailPreferences } from '@/api/mailClient'
 const compose={to:['a@example.test'],cc:[],bcc:[],subject:'hello',text:'body',attachments:[{id:'upload',name:'notes.txt',type:'text/plain',size:5}]}
 beforeEach(()=>vi.clearAllMocks())
 describe('mail client contract',()=>{
@@ -51,6 +51,16 @@ describe('mail client contract',()=>{
   http.get.mockResolvedValue({job_id:'job',items:[],has_more:false,next_position:8})
   expect((await fetchExternalFlagPreview('account','job',8)).next_position).toBe(8)
   expect(http.get).toHaveBeenCalledWith('/api/v1/mail/external/accounts/account/imports/job/flag-preview?position=8')
+ })
+ it('uses scoped, authenticated job-level flag consent and read-only reconciliation endpoints',async()=>{
+  http.post.mockResolvedValue({id:'job',flag_sync_enabled:true})
+  http.get.mockResolvedValue([{id:'receipt',status:'needs_review'}])
+  await configureExternalFlagSync('account','job',true)
+  expect(http.post).toHaveBeenCalledWith('/api/v1/mail/external/accounts/account/imports/job/flag-sync',{enabled:true})
+  expect((await fetchExternalFlagAttempts('account','job'))[0].status).toBe('needs_review')
+  expect(http.get).toHaveBeenCalledWith('/api/v1/mail/external/accounts/account/imports/job/flag-attempts')
+  await reconcileExternalFlagAttempt('account','job','receipt')
+  expect(http.post).toHaveBeenLastCalledWith('/api/v1/mail/external/accounts/account/imports/job/flag-attempts/receipt/reconcile',{})
  })
  it('uses action receipts and the backend star action',async()=>{
   http.post.mockResolvedValue({updated:['one'],undo_token:'receipt'});expect(await mutateMailMessages('inbox',['one'],'flag')).toMatchObject({affected:1,undo_id:'receipt'})

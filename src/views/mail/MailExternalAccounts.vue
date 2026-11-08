@@ -77,9 +77,12 @@
               <p v-else-if="activeHistoryJob" class="mail-external__hint">当前文件夹已有迁移任务：{{ historyStatusLabel(activeHistoryJob.status) }}</p>
               <div v-if="historyJobs.length" class="mail-external__history-jobs">
                 <div v-for="job in historyJobs" :key="job.id" class="mail-external__history-job" :data-testid="'external-history-'+job.id">
-                  <div><strong>{{ job.folder }}</strong><small>{{ historyStatusLabel(job.status) }} · 已导入 {{ job.imported }} 封 · 跳过 {{ job.skipped }} 封 · UID 进度 {{ Math.min(job.next_uid,job.upper_uid+1) }} / {{ job.upper_uid+1 }}</small><small v-if="job.last_polled_at">最近检查：{{ formattedDate(job.last_polled_at) }}</small><small v-if="job.last_error_code">原因代码：{{ job.last_error_code }}</small></div>
+                  <div><strong>{{ job.folder }}</strong><small>{{ historyStatusLabel(job.status) }} · 已导入 {{ job.imported }} 封 · 跳过 {{ job.skipped }} 封 · UID 进度 {{ Math.min(job.next_uid,job.upper_uid+1) }} / {{ job.upper_uid+1 }}</small><small v-if="job.last_polled_at">最近检查：{{ formattedDate(job.last_polled_at) }}</small><small v-if="job.last_error_code">原因代码：{{ job.last_error_code }}</small><small v-if="job.flag_sync_enabled">已单独授权已读/星标双向同步 · 每轮最多检查 8 封</small><small v-if="job.flag_last_polled_at">最近状态同步：{{ formattedDate(job.flag_last_polled_at) }}</small><small v-if="job.flag_last_error_code">状态同步已暂停：{{ job.flag_last_error_code }}，请检查回执</small></div>
                   <div class="mail-external__account-actions">
                     <PButton v-if="job.imported>0" variant="secondary" size="sm" :disabled="flagPreviewBusy" @click="reviewFlags(job)">只读检查状态差异</PButton>
+                    <PButton v-if="job.flag_sync_enabled" variant="secondary" size="sm" :disabled="flagSyncBusy" @click="setFlagSync(job,false)">暂停已读/星标双向同步</PButton>
+                    <PButton v-else-if="job.imported>0 && (job.status==='completed'||job.status==='watching')" variant="secondary" size="sm" :disabled="flagSyncBusy" @click="confirmFlagSyncJob=job;flagSyncAcknowledged=false">开启双向状态同步</PButton>
+                    <PButton v-if="job.imported>0" variant="ghost" size="sm" :disabled="flagAttemptsBusy" @click="loadFlagAttempts(job)">查看状态回执</PButton>
                     <PButton v-if="job.status==='completed' && !job.continuous" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'enable_live')">开启新增邮件同步</PButton>
                     <PButton v-if="job.status==='watching' || (job.continuous && ['queued','paused','failed'].includes(job.status))" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'disable_live')">关闭新增邮件同步</PButton>
                     <PButton v-if="job.status==='queued'||job.status==='running'||job.status==='watching'" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'pause')">暂停</PButton>
@@ -87,6 +90,18 @@
                     <PButton v-if="job.status==='paused'||job.status==='failed'||job.status==='queued'||job.status==='needs_review'" variant="ghost" size="sm" :disabled="historyBusy" @click="historyAction(job,'cancel')">取消</PButton>
                   </div>
                 </div>
+              </div>
+              <p v-if="flagSyncError" role="alert" class="mail-external__error">{{ flagSyncError }}</p>
+              <div v-if="flagAttemptsJob" class="mail-external__flag-preview" data-testid="external-flag-attempts">
+                <strong>双向同步操作回执（最近 40 项）</strong>
+                <p>远程结果不确定时不会再次自动写入；核对只重新读取状态，不会发送 STORE 或 Email/set。</p>
+                <div v-if="!flagAttempts.length" class="mail-external__hint">暂无同步写入记录。</div>
+                <div v-for="attempt in flagAttempts" :key="attempt.id" class="mail-external__flag-item">
+                  <span>UID {{ attempt.source_uid }} · {{ attempt.flag==='seen'?'已读':'星标' }} · {{ attempt.direction==='copy_to_source'?'同步至原邮箱':'同步至 Atoman' }}</span>
+                  <small>{{ flagAttemptLabel(attempt) }}<template v-if="attempt.error_code"> · {{ attempt.error_code }}</template></small>
+                  <PButton v-if="attempt.status==='needs_review'||attempt.status==='dispatching'" variant="secondary" size="sm" :disabled="flagSyncBusy" @click="reconcileFlag(attempt)">只读核对回执</PButton>
+                </div>
+                <PButton variant="ghost" size="sm" @click="flagAttemptsJob='';flagAttempts=[]">关闭回执</PButton>
               </div>
               <p v-if="flagPreviewError" role="alert" class="mail-external__error">{{ flagPreviewError }}</p>
               <div v-if="flagPreview" class="mail-external__flag-preview" data-testid="external-flag-preview">
@@ -103,7 +118,7 @@
                 <PButton v-if="flagPreview.has_more && currentPreviewJob" variant="secondary" size="sm" :loading="flagPreviewBusy" @click="reviewFlags(currentPreviewJob,flagPreview.next_position)">检查下一页</PButton>
                 <PButton type="button" variant="ghost" size="sm" @click="flagPreview=null">关闭预览</PButton>
               </div>
-              <p class="mail-external__hint">每轮最多处理 40 封，每封上限 40 MiB。开启持续模式后仅复制新增 UID，不会同步删除、移动或自动覆盖双方的已读状态。遇到不确定写入会停止并等待人工核对。</p>
+              <p class="mail-external__hint">历史导入每轮最多处理 40 封，每封上限 40 MiB。新增邮件同步与已读/星标状态同步是两个独立的开关。状态双向写入需明确授权、服务器启用且服务商支持条件修改；不会同步移动或删除。出现不确定回执时会自动暂停。</p>
             </template>
           </section>
           <div v-if="folderPage && !folderLoading" class="mail-external__folder-results">
@@ -125,7 +140,7 @@
           <PSelect v-model="provider" label="服务商" :options="providerOptions" :disabled="Boolean(busy)"/>
           <PInput v-model="address" label="完整邮箱地址" type="email" inputmode="email" autocomplete="off" placeholder="you@gmail.com" :disabled="Boolean(busy)" required maxlength="254" />
           <PInput v-model="appPassword" label="IMAP 应用专用密码或授权码" type="password" autocomplete="new-password" placeholder="从邮箱服务商生成的专用密码" :disabled="Boolean(busy)" required maxlength="256" />
-          <p class="mail-external__hint">通过 993 端口建立强制 TLS 连接，服务器地址由系统固定。新增账户时会验证密码并同步最近邮件。当前不支持通过本界面发送外部邮箱邮件。</p>
+          <p class="mail-external__hint">通过 993 端口建立强制 TLS 连接，服务器地址由系统固定。新增账户时会验证密码并同步最近邮件。外部邮箱发信须由服务器启用 SMTP，并在写信界面选择已连接的发件身份。</p>
           <PButton type="submit" :loading="busy === 'connect'" :disabled="Boolean(busy) || accounts.length >= 5 || !address.trim() || !appPassword.trim()">
             <Plus :size="16" /> 验证并连接
           </PButton>
@@ -160,6 +175,15 @@
       <PButton variant="primary" :loading="historyBusy" @click="startHistory">确认创建任务</PButton>
     </template>
   </PModal>
+  <PModal :show="Boolean(confirmFlagSyncJob)" title="开启已读/星标双向状态同步" size="sm" @close="confirmFlagSyncJob=null;flagSyncAcknowledged=false">
+    <p>确认自动同步 {{ confirmFlagSyncJob?.folder }} 中已导入邮件的已读、未读和星标吗？原邮箱的状态变化可写入 Atoman，Atoman 的状态变化也可能实际写回原服务商。每轮最多扫描 8 封，服务商必须支持安全的条件更新。</p>
+    <label class="mail-external__live-optin"><input v-model="flagSyncAcknowledged" type="checkbox" data-testid="external-flag-sync-optin" /><span>我确认允许修改原邮箱和 Atoman 的已读、星标状态，且理解异常会暂停并要求人工核对。不会自动移动或删除邮件。</span></label>
+    <p class="mail-external__hint">与仅复制新增邮件不同，此功能会写入状态。服务器开关未启用时请求会被拒绝；正在进行的一条修改可能在点击暂停后完成。</p>
+    <template #footer>
+      <PButton variant="secondary" :disabled="flagSyncBusy" @click="confirmFlagSyncJob=null">取消</PButton>
+      <PButton variant="primary" :loading="flagSyncBusy" :disabled="!flagSyncAcknowledged || flagSyncBusy" @click="confirmFlagSyncJob && setFlagSync(confirmFlagSyncJob,true)">确认开启双向同步</PButton>
+    </template>
+  </PModal>
   <PModal :show="showMoveConfirm" title="移动外部邮件" size="sm" @close="showMoveConfirm=false">
     <p>将此邮件移动到 {{ moveDestination }}？这会实际修改原邮箱。只有服务商支持安全 IMAP MOVE 时才会执行；不会永久删除邮件。</p>
     <template #footer>
@@ -187,7 +211,7 @@ import PModal from '@/components/ui/PModal.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import { fetchMailFolders } from '@/api/mail'
-import { queryMailMessages, fetchExternalProviders, fetchExternalUnifiedInbox, connectExternalAccount, syncExternalAccount, disconnectExternalAccount, fetchExternalMessagePlain, setExternalMessageSeen, type ExternalIMAPProvider, type MailExternalAccount, type MailExternalMessage, type MailExternalProvider, fetchExternalFolders, fetchExternalFolderPage, type MailExternalFolder, type MailExternalFolderPage, moveExternalMessage, fetchExternalHistoryJobs, startExternalHistoryJob, actionExternalHistoryJob, type MailExternalHistoryJob, fetchExternalFlagPreview, type MailFlagPreviewPage, type MailFlagDiff } from '@/api/mailClient'
+import { queryMailMessages, fetchExternalProviders, fetchExternalUnifiedInbox, connectExternalAccount, syncExternalAccount, disconnectExternalAccount, fetchExternalMessagePlain, setExternalMessageSeen, type ExternalIMAPProvider, type MailExternalAccount, type MailExternalMessage, type MailExternalProvider, fetchExternalFolders, fetchExternalFolderPage, type MailExternalFolder, type MailExternalFolderPage, moveExternalMessage, fetchExternalHistoryJobs, startExternalHistoryJob, actionExternalHistoryJob, type MailExternalHistoryJob, fetchExternalFlagPreview, type MailFlagPreviewPage, type MailFlagDiff, configureExternalFlagSync, fetchExternalFlagAttempts, reconcileExternalFlagAttempt, type ExternalFlagAttempt } from '@/api/mailClient'
 import type { MailSummary } from '@/api/mail'
 import { mailTime } from './mail-helpers'
 
@@ -214,12 +238,64 @@ const flagPreview=ref<MailFlagPreviewPage|null>(null)
 const flagPreviewBusy=ref(false)
 const flagPreviewError=ref('')
 const flagPreviewJob=ref('')
+const confirmFlagSyncJob=ref<MailExternalHistoryJob|null>(null)
+const flagSyncAcknowledged=ref(false)
+const flagSyncBusy=ref(false)
+const flagSyncError=ref('')
+const flagAttempts=ref<ExternalFlagAttempt[]>([])
+const flagAttemptsJob=ref('')
+const flagAttemptsBusy=ref(false)
 const currentPreviewJob=computed(()=>historyJobs.value.find(job=>job.id===flagPreviewJob.value))
+function flagAttemptLabel(row:ExternalFlagAttempt){
+  if(row.status==='applied')return '已确认同步'
+  if(row.status==='aborted_prewrite')return '写入前已取消'
+  return '需要核对，未自动重试'
+}
+async function setFlagSync(job:MailExternalHistoryJob,enabled:boolean){
+ const account=browsingAccount.value
+ if(!account||flagSyncBusy.value)return
+ flagSyncBusy.value=true;flagSyncError.value=''
+ try {
+  await configureExternalFlagSync(account.id,job.id,enabled)
+  if(browsingAccount.value?.id!==account.id)return
+  confirmFlagSyncJob.value=null;flagSyncAcknowledged.value=false
+  await refreshHistory()
+  notice.value=enabled?'已请求开启双向已读/星标同步（需服务器功能开关）。':'已暂停后续状态同步任务。正在执行的单条操作可能继续完成。'
+ } catch {
+  if(browsingAccount.value?.id===account.id)flagSyncError.value='无法切换状态同步。请检查服务器是否启用功能，以及是否有需要核对的操作回执。'
+ } finally {flagSyncBusy.value=false}
+}
+async function loadFlagAttempts(job:MailExternalHistoryJob){
+ const account=browsingAccount.value
+ if(!account||flagAttemptsBusy.value)return
+ flagAttemptsBusy.value=true;flagSyncError.value=''
+ try {
+  const result=await fetchExternalFlagAttempts(account.id,job.id)
+  if(browsingAccount.value?.id!==account.id)return
+  flagAttempts.value=result;flagAttemptsJob.value=job.id
+ } catch {
+  if(browsingAccount.value?.id===account.id)flagSyncError.value='无法读取状态同步回执，请稍后重试。'
+ } finally {flagAttemptsBusy.value=false}
+}
+async function reconcileFlag(attempt:ExternalFlagAttempt){
+ const account=browsingAccount.value, jobID=flagAttemptsJob.value
+ if(!account||!jobID||flagSyncBusy.value)return
+ flagSyncBusy.value=true;flagSyncError.value=''
+ try {
+  await reconcileExternalFlagAttempt(account.id,jobID,attempt.id)
+  if(browsingAccount.value?.id!==account.id)return
+  const job=historyJobs.value.find(v=>v.id===jobID)
+  if(job)await loadFlagAttempts(job)
+  await refreshHistory()
+ } catch {
+  if(browsingAccount.value?.id===account.id)flagSyncError.value='尚不能安全核对该回执。源邮件与副本可能不一致，不会执行第二次写入。'
+ } finally {flagSyncBusy.value=false}
+}
 function flagDecisionLabel(diff:MailFlagDiff){
  return ({in_sync:'一致',copy_to_native:'建议更新 Atoman',copy_to_source:'建议更新原邮箱',conflict:'状态冲突，请核对'} as const)[diff.decision]
 }
 function previewItemLabel(status:string){
- return ({ready:'可比较',baseline_unknown:'缺少初始状态，需核对',source_missing:'原邮箱已找不到该邮件',native_missing:'Atoman 中已找不到副本'} as Record<string,string>)[status]||'需核对'
+ return ({ready:'可比较',baseline_unknown:'缺少初始状态，需核对',source_missing:'原邮箱已找不到该邮件',native_missing:'Atoman 中已找不到副本',sync_needs_review:'已有同步操作待核对'} as Record<string,string>)[status]||'需核对'
 }
 async function reviewFlags(job:MailExternalHistoryJob,position=0){
  const account=browsingAccount.value
@@ -381,6 +457,11 @@ function closeFolders(){
   flagPreview.value=null
   flagPreviewJob.value=''
   flagPreviewError.value=''
+  flagSyncError.value=''
+  flagAttempts.value=[]
+  flagAttemptsJob.value=''
+  confirmFlagSyncJob.value=null
+  flagSyncAcknowledged.value=false
   historyAvailable.value=false
   historyError.value=''
   confirmHistoryStart.value=false

@@ -4,7 +4,7 @@ import MailExternalAccounts from '@/views/mail/MailExternalAccounts.vue'
 
 const api = vi.hoisted(() => ({
   providers: vi.fn(), unified: vi.fn(), connect: vi.fn(), sync: vi.fn(), disconnect: vi.fn(),
-  read: vi.fn(), folders: vi.fn(), messages: vi.fn(), folderList: vi.fn(), folderPage: vi.fn(), flag: vi.fn(), move: vi.fn(), historyList: vi.fn(), historyStart: vi.fn(), historyAction: vi.fn(), flagPreview: vi.fn()
+  read: vi.fn(), folders: vi.fn(), messages: vi.fn(), folderList: vi.fn(), folderPage: vi.fn(), flag: vi.fn(), move: vi.fn(), historyList: vi.fn(), historyStart: vi.fn(), historyAction: vi.fn(), flagPreview: vi.fn(),flagConfig:vi.fn(),flagAttempts:vi.fn(),flagReconcile:vi.fn()
 }))
 vi.mock('@/api/mail', () => ({ fetchMailFolders: api.folders }))
 vi.mock('@/api/mailClient', () => ({
@@ -22,6 +22,9 @@ vi.mock('@/api/mailClient', () => ({
   startExternalHistoryJob: api.historyStart,
   actionExternalHistoryJob: api.historyAction,
   fetchExternalFlagPreview: api.flagPreview,
+  configureExternalFlagSync:api.flagConfig,
+  fetchExternalFlagAttempts:api.flagAttempts,
+  reconcileExternalFlagAttempt:api.flagReconcile,
   queryMailMessages: api.messages
 }))
 vi.mock('@/components/ui/PSheet.vue', () => ({
@@ -59,6 +62,9 @@ beforeEach(() => {
   api.move.mockResolvedValue({moved:true,inbox_cache_updated:false,refresh_recommended:false})
   api.historyList.mockResolvedValue([])
   api.historyStart.mockResolvedValue({id:'hist1',account_id:'ext1',folder:'INBOX',status:'queued',imported:0,skipped:0,next_uid:1,upper_uid:30})
+  api.flagConfig.mockResolvedValue({id:'hist1',flag_sync_enabled:true})
+  api.flagAttempts.mockResolvedValue([])
+  api.flagReconcile.mockResolvedValue({status:'applied'})
   api.flagPreview.mockResolvedValue({job_id:'hist1',folder:'INBOX',checked_at:'2026-11-08T12:00:00Z',next_position:1,has_more:false,items:[{source_uid:88,native_email_id:'native-import',status:'ready',seen:{baseline:false,source:true,native:false,decision:'copy_to_native'},flagged:{baseline:false,source:false,native:false,decision:'in_sync'}}]})
   api.historyAction.mockResolvedValue({id:'hist1',account_id:'ext1',folder:'INBOX',status:'paused',imported:0,skipped:0,next_uid:1,upper_uid:30})
   api.connect.mockResolvedValue({...external,id:'new2'})
@@ -188,6 +194,48 @@ describe('External IMAP unified inbox', () => {
     expect(wrapper.text()).not.toContain('own-app-password')
     expect(wrapper.findAll('button').some(b=>b.text()==='继续')).toBe(false)
     wrapper.unmount()
+  })
+  it('requires explicit user confirmation before enabling real two-way flag writes',async()=>{
+    api.historyList.mockResolvedValue([{id:'hist1',account_id:'ext1',folder:'INBOX',status:'completed',imported:1,skipped:0,upper_uid:88,next_uid:89,flag_sync_enabled:false}])
+    const w=setup();await flushPromises()
+    await w.get('[data-testid="mode-accounts"]').trigger('click')
+    await w.findAll('button').find(b=>b.text()==='文件夹')!.trigger('click');await flushPromises()
+    expect(api.flagConfig).not.toHaveBeenCalled()
+    await w.findAll('button').find(b=>b.text()==='开启双向状态同步')!.trigger('click');await flushPromises()
+    const confirm=()=>w.findAll('button').find(b=>b.text()==='确认开启双向同步')!
+    expect(confirm().attributes('disabled')).toBeDefined()
+    expect(w.text()).toContain('可能实际写回原服务商')
+    await w.get('[data-testid="external-flag-sync-optin"]').setValue(true)
+    expect(confirm().attributes('disabled')).toBeUndefined()
+    await confirm().trigger('click');await flushPromises()
+    expect(api.flagConfig).toHaveBeenCalledWith('ext1','hist1',true)
+    expect(api.move).not.toHaveBeenCalled()
+    expect(api.flag).not.toHaveBeenCalled()
+    w.unmount()
+  })
+  it('pauses future writes without asking for permission again',async()=>{
+    api.historyList.mockResolvedValue([{id:'hist1',account_id:'ext1',folder:'INBOX',status:'watching',imported:2,skipped:0,upper_uid:88,next_uid:89,flag_sync_enabled:true}])
+    const w=setup();await flushPromises()
+    await w.get('[data-testid="mode-accounts"]').trigger('click')
+    await w.findAll('button').find(b=>b.text()==='文件夹')!.trigger('click');await flushPromises()
+    await w.findAll('button').find(b=>b.text()==='暂停已读/星标双向同步')!.trigger('click');await flushPromises()
+    expect(api.flagConfig).toHaveBeenCalledWith('ext1','hist1',false)
+    expect(api.flagReconcile).not.toHaveBeenCalled()
+    w.unmount()
+  })
+  it('only re-reads uncertain remote receipts instead of repeating mutations',async()=>{
+    api.historyList.mockResolvedValue([{id:'hist1',account_id:'ext1',folder:'INBOX',status:'completed',imported:1,skipped:0,upper_uid:88,next_uid:89,flag_sync_enabled:false,flag_last_error_code:'conditional_write_unknown'}])
+    api.flagAttempts.mockResolvedValue([{id:'receipt-1',source_uid:88,flag:'seen',direction:'copy_to_native',desired:true,status:'needs_review',error_code:'conditional_write_unknown',created_at:'2026-11-08T10:00:00Z'}])
+    const w=setup();await flushPromises()
+    await w.get('[data-testid="mode-accounts"]').trigger('click')
+    await w.findAll('button').find(b=>b.text()==='文件夹')!.trigger('click');await flushPromises()
+    await w.findAll('button').find(b=>b.text()==='查看状态回执')!.trigger('click');await flushPromises()
+    expect(w.get('[data-testid="external-flag-attempts"]').text()).toContain('需要核对，未自动重试')
+    await w.findAll('button').find(b=>b.text()==='只读核对回执')!.trigger('click');await flushPromises()
+    expect(api.flagReconcile).toHaveBeenCalledWith('ext1','hist1','receipt-1')
+    expect(api.flag).not.toHaveBeenCalled()
+    expect(api.move).not.toHaveBeenCalled()
+    w.unmount()
   })
   it('compares source and native flag changes without issuing any write', async () => {
     api.historyList.mockResolvedValue([{id:'hist1',account_id:'ext1',folder:'INBOX',status:'completed',continuous:false,upper_uid:88,next_uid:89,imported:1,skipped:0}])

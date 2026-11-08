@@ -183,6 +183,11 @@ export interface MailExternalHistoryJob {
  folder:string
  status:MailExternalHistoryStatus
  continuous:boolean
+ flag_sync_enabled?:boolean
+ flag_sync_generation?:number
+ flag_sync_cursor_uid?:number
+ flag_last_polled_at?:string
+ flag_last_error_code?:string
  last_polled_at?:string
  uid_validity:number
  upper_uid:number
@@ -202,10 +207,20 @@ export const actionExternalHistoryJob = (accountId:string,jobId:string,action:'p
 
 // A read-only flag-diff preview never invokes IMAP STORE or JMAP Email/set.
 export interface MailFlagDiff {source:boolean;native:boolean;baseline:boolean;decision:'in_sync'|'copy_to_native'|'copy_to_source'|'conflict'}
-export interface MailFlagPreviewItem {source_uid:number;native_email_id:string;status:'ready'|'baseline_unknown'|'source_missing'|'native_missing';seen:MailFlagDiff;flagged:MailFlagDiff}
+export interface MailFlagPreviewItem {source_uid:number;native_email_id:string;status:'ready'|'baseline_unknown'|'source_missing'|'native_missing'|'sync_needs_review';seen:MailFlagDiff;flagged:MailFlagDiff}
 export interface MailFlagPreviewPage {job_id:string;folder:string;items:MailFlagPreviewItem[];next_position:number;has_more:boolean;checked_at:string}
 export const fetchExternalFlagPreview = (accountId:string,jobId:string,position=0) =>
   apiGet<MailFlagPreviewPage>(base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)+'/flag-preview?'+new URLSearchParams({position:String(position)}))
+
+// Explicit per-import-job opt-in; the server also requires a separately
+// enabled operational gate. No send, move or permanent-delete effects.
+export interface ExternalFlagAttempt {id:string;source_uid:number;flag:'seen'|'flagged';direction:'copy_to_source'|'copy_to_native';desired:boolean;status:'dispatching'|'needs_review'|'applied'|'aborted_prewrite';error_code?:string;created_at:string}
+export const configureExternalFlagSync = (accountId:string,jobId:string,enabled:boolean) =>
+  apiPostJson<MailExternalHistoryJob>(base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)+'/flag-sync',{enabled})
+export const fetchExternalFlagAttempts = (accountId:string,jobId:string) =>
+  apiGet<ExternalFlagAttempt[]>(base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)+'/flag-attempts')
+export const reconcileExternalFlagAttempt = (accountId:string,jobId:string,attemptId:string) =>
+  apiPostJson<ExternalFlagAttempt>(base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)+'/flag-attempts/'+key(attemptId)+'/reconcile',{})
 
 // Atoman-private encrypted mail organizer metadata; independent from remote IMAP flags.
 export type MailOrganizerColor = 'slate' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink'

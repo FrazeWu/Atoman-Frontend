@@ -79,6 +79,7 @@
                 <div v-for="job in historyJobs" :key="job.id" class="mail-external__history-job" :data-testid="'external-history-'+job.id">
                   <div><strong>{{ job.folder }}</strong><small>{{ historyStatusLabel(job.status) }} · 已导入 {{ job.imported }} 封 · 跳过 {{ job.skipped }} 封 · UID 进度 {{ Math.min(job.next_uid,job.upper_uid+1) }} / {{ job.upper_uid+1 }}</small><small v-if="job.last_polled_at">最近检查：{{ formattedDate(job.last_polled_at) }}</small><small v-if="job.last_error_code">原因代码：{{ job.last_error_code }}</small></div>
                   <div class="mail-external__account-actions">
+                    <PButton v-if="job.imported>0" variant="secondary" size="sm" :disabled="flagPreviewBusy" @click="reviewFlags(job)">只读检查状态差异</PButton>
                     <PButton v-if="job.status==='completed' && !job.continuous" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'enable_live')">开启新增邮件同步</PButton>
                     <PButton v-if="job.status==='watching' || (job.continuous && ['queued','paused','failed'].includes(job.status))" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'disable_live')">关闭新增邮件同步</PButton>
                     <PButton v-if="job.status==='queued'||job.status==='running'||job.status==='watching'" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'pause')">暂停</PButton>
@@ -86,6 +87,21 @@
                     <PButton v-if="job.status==='paused'||job.status==='failed'||job.status==='queued'||job.status==='needs_review'" variant="ghost" size="sm" :disabled="historyBusy" @click="historyAction(job,'cancel')">取消</PButton>
                   </div>
                 </div>
+              </div>
+              <p v-if="flagPreviewError" role="alert" class="mail-external__error">{{ flagPreviewError }}</p>
+              <div v-if="flagPreview" class="mail-external__flag-preview" data-testid="external-flag-preview">
+                <strong>状态差异预览 · {{ flagPreview.folder }}</strong>
+                <p>只读对比，不会修改已读、星标、移动或删除任何邮件。建议需要人工确认后才能执行。</p>
+                <div v-if="!flagPreview.items.length" class="mail-external__hint">该页没有已导入邮件。</div>
+                <div v-for="item in flagPreview.items" :key="item.source_uid" class="mail-external__flag-item">
+                  <span>来源 UID {{ item.source_uid }} · {{ previewItemLabel(item.status) }}</span>
+                  <template v-if="item.status==='ready'">
+                    <small>已读：{{ flagDecisionLabel(item.seen) }}（原邮箱 {{ item.seen.source?'已读':'未读' }}，Atoman {{ item.seen.native?'已读':'未读' }}）</small>
+                    <small>星标：{{ flagDecisionLabel(item.flagged) }}（原邮箱 {{ item.flagged.source?'有':'无' }}，Atoman {{ item.flagged.native?'有':'无' }}）</small>
+                  </template>
+                </div>
+                <PButton v-if="flagPreview.has_more && currentPreviewJob" variant="secondary" size="sm" :loading="flagPreviewBusy" @click="reviewFlags(currentPreviewJob,flagPreview.next_position)">检查下一页</PButton>
+                <PButton type="button" variant="ghost" size="sm" @click="flagPreview=null">关闭预览</PButton>
               </div>
               <p class="mail-external__hint">每轮最多处理 40 封，每封上限 40 MiB。开启持续模式后仅复制新增 UID，不会同步删除、移动或自动覆盖双方的已读状态。遇到不确定写入会停止并等待人工核对。</p>
             </template>
@@ -171,7 +187,7 @@ import PModal from '@/components/ui/PModal.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import { fetchMailFolders } from '@/api/mail'
-import { queryMailMessages, fetchExternalProviders, fetchExternalUnifiedInbox, connectExternalAccount, syncExternalAccount, disconnectExternalAccount, fetchExternalMessagePlain, setExternalMessageSeen, type ExternalIMAPProvider, type MailExternalAccount, type MailExternalMessage, type MailExternalProvider, fetchExternalFolders, fetchExternalFolderPage, type MailExternalFolder, type MailExternalFolderPage, moveExternalMessage, fetchExternalHistoryJobs, startExternalHistoryJob, actionExternalHistoryJob, type MailExternalHistoryJob } from '@/api/mailClient'
+import { queryMailMessages, fetchExternalProviders, fetchExternalUnifiedInbox, connectExternalAccount, syncExternalAccount, disconnectExternalAccount, fetchExternalMessagePlain, setExternalMessageSeen, type ExternalIMAPProvider, type MailExternalAccount, type MailExternalMessage, type MailExternalProvider, fetchExternalFolders, fetchExternalFolderPage, type MailExternalFolder, type MailExternalFolderPage, moveExternalMessage, fetchExternalHistoryJobs, startExternalHistoryJob, actionExternalHistoryJob, type MailExternalHistoryJob, fetchExternalFlagPreview, type MailFlagPreviewPage, type MailFlagDiff } from '@/api/mailClient'
 import type { MailSummary } from '@/api/mail'
 import { mailTime } from './mail-helpers'
 
@@ -194,6 +210,29 @@ const historyJobs=ref<MailExternalHistoryJob[]>([])
 const historyAvailable=ref(false),historyBusy=ref(false),historyError=ref('')
 const confirmHistoryStart=ref(false)
 const continuousAfterImport=ref(false)
+const flagPreview=ref<MailFlagPreviewPage|null>(null)
+const flagPreviewBusy=ref(false)
+const flagPreviewError=ref('')
+const flagPreviewJob=ref('')
+const currentPreviewJob=computed(()=>historyJobs.value.find(job=>job.id===flagPreviewJob.value))
+function flagDecisionLabel(diff:MailFlagDiff){
+ return ({in_sync:'一致',copy_to_native:'建议更新 Atoman',copy_to_source:'建议更新原邮箱',conflict:'状态冲突，请核对'} as const)[diff.decision]
+}
+function previewItemLabel(status:string){
+ return ({ready:'可比较',baseline_unknown:'缺少初始状态，需核对',source_missing:'原邮箱已找不到该邮件',native_missing:'Atoman 中已找不到副本'} as Record<string,string>)[status]||'需核对'
+}
+async function reviewFlags(job:MailExternalHistoryJob,position=0){
+ const account=browsingAccount.value
+ if(!account||flagPreviewBusy.value||job.imported===0)return
+ flagPreviewBusy.value=true;flagPreviewError.value=''
+ try{
+  const preview=await fetchExternalFlagPreview(account.id,job.id,position)
+  if(browsingAccount.value?.id!==account.id)return
+  flagPreview.value=preview;flagPreviewJob.value=job.id
+ }catch{
+  if(browsingAccount.value?.id===account.id)flagPreviewError.value='无法读取状态差异，可能是源文件夹已变化或服务暂时不可用。不会修改任何邮件。'
+ }finally{flagPreviewBusy.value=false}
+}
 const activeHistoryJob=computed(()=>historyJobs.value.find(job=>job.folder===folderName.value))
 function historyStatusLabel(status:MailExternalHistoryJob['status']):string {
   return ({queued:'排队中',running:'正在导入',paused:'已暂停',failed:'导入失败',needs_review:'需人工核对',cancelled:'已取消',completed:'已完成',watching:'持续检查新增邮件'} as const)[status] || status
@@ -339,6 +378,9 @@ function closeFolders(){
   moveDestination.value=''
   showMoveConfirm.value=false
   historyJobs.value=[]
+  flagPreview.value=null
+  flagPreviewJob.value=''
+  flagPreviewError.value=''
   historyAvailable.value=false
   historyError.value=''
   confirmHistoryStart.value=false
@@ -489,6 +531,11 @@ onMounted(refresh)
 .mail-external__live-optin{display:flex;align-items:start;gap:10px;margin:15px 0;font-size:13px;line-height:1.5;cursor:pointer}
 .mail-external__live-optin input{margin-top:2px;flex-shrink:0;accent-color:var(--a-color-primary)}
 .mail-external__history-jobs{display:grid;gap:6px}
+.mail-external__flag-preview{display:grid;gap:10px;border-top:1px solid var(--a-color-border-soft);padding:12px 0}
+.mail-external__flag-preview>strong{font-size:13px}
+.mail-external__flag-preview>p{font-size:12px;color:var(--a-color-muted);line-height:1.7;margin:0}
+.mail-external__flag-item{display:grid;gap:4px;padding:9px 0;border-top:1px solid var(--a-color-border-soft);font-size:12px}
+.mail-external__flag-item small{font-size:11px;color:var(--a-color-muted)}
 .mail-external__history-job{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:12px 0;border-top:1px solid var(--a-color-border-soft)}
 .mail-external__history-job>div:first-child{display:grid;gap:5px;min-width:0}
 .mail-external__history-job strong{font-size:13px;overflow-wrap:anywhere}

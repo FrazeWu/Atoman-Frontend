@@ -4,7 +4,7 @@ import MailExternalAccounts from '@/views/mail/MailExternalAccounts.vue'
 
 const api = vi.hoisted(() => ({
   providers: vi.fn(), unified: vi.fn(), connect: vi.fn(), sync: vi.fn(), disconnect: vi.fn(),
-  read: vi.fn(), folders: vi.fn(), messages: vi.fn(), folderList: vi.fn(), folderPage: vi.fn(), flag: vi.fn(), move: vi.fn(), historyList: vi.fn(), historyStart: vi.fn(), historyAction: vi.fn()
+  read: vi.fn(), folders: vi.fn(), messages: vi.fn(), folderList: vi.fn(), folderPage: vi.fn(), flag: vi.fn(), move: vi.fn(), historyList: vi.fn(), historyStart: vi.fn(), historyAction: vi.fn(), flagPreview: vi.fn()
 }))
 vi.mock('@/api/mail', () => ({ fetchMailFolders: api.folders }))
 vi.mock('@/api/mailClient', () => ({
@@ -21,6 +21,7 @@ vi.mock('@/api/mailClient', () => ({
   fetchExternalHistoryJobs: api.historyList,
   startExternalHistoryJob: api.historyStart,
   actionExternalHistoryJob: api.historyAction,
+  fetchExternalFlagPreview: api.flagPreview,
   queryMailMessages: api.messages
 }))
 vi.mock('@/components/ui/PSheet.vue', () => ({
@@ -58,6 +59,7 @@ beforeEach(() => {
   api.move.mockResolvedValue({moved:true,inbox_cache_updated:false,refresh_recommended:false})
   api.historyList.mockResolvedValue([])
   api.historyStart.mockResolvedValue({id:'hist1',account_id:'ext1',folder:'INBOX',status:'queued',imported:0,skipped:0,next_uid:1,upper_uid:30})
+  api.flagPreview.mockResolvedValue({job_id:'hist1',folder:'INBOX',checked_at:'2026-11-08T12:00:00Z',next_position:1,has_more:false,items:[{source_uid:88,native_email_id:'native-import',status:'ready',seen:{baseline:false,source:true,native:false,decision:'copy_to_native'},flagged:{baseline:false,source:false,native:false,decision:'in_sync'}}]})
   api.historyAction.mockResolvedValue({id:'hist1',account_id:'ext1',folder:'INBOX',status:'paused',imported:0,skipped:0,next_uid:1,upper_uid:30})
   api.connect.mockResolvedValue({...external,id:'new2'})
   api.sync.mockResolvedValue({...external,revision:2})
@@ -185,6 +187,34 @@ describe('External IMAP unified inbox', () => {
     expect(wrapper.get('[data-testid="external-history-hist1"]').text()).toContain('2 封')
     expect(wrapper.text()).not.toContain('own-app-password')
     expect(wrapper.findAll('button').some(b=>b.text()==='继续')).toBe(false)
+    wrapper.unmount()
+  })
+  it('compares source and native flag changes without issuing any write', async () => {
+    api.historyList.mockResolvedValue([{id:'hist1',account_id:'ext1',folder:'INBOX',status:'completed',continuous:false,upper_uid:88,next_uid:89,imported:1,skipped:0}])
+    const wrapper=setup();await flushPromises()
+    await wrapper.get('[data-testid="mode-accounts"]').trigger('click')
+    await wrapper.findAll('button').find(b=>b.text()==='文件夹')!.trigger('click');await flushPromises()
+    await wrapper.findAll('button').find(b=>b.text()==='只读检查状态差异')!.trigger('click');await flushPromises()
+    expect(api.flagPreview).toHaveBeenCalledWith('ext1','hist1',0)
+    expect(wrapper.get('[data-testid="external-flag-preview"]').text()).toContain('建议更新 Atoman')
+    expect(wrapper.text()).toContain('只读对比，不会修改')
+    expect(api.flag).not.toHaveBeenCalled()
+    expect(api.move).not.toHaveBeenCalled()
+    expect(api.historyAction).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+  it('shows unknown baseline and missing source without recommending writes', async () => {
+    api.historyList.mockResolvedValue([{id:'hist1',account_id:'ext1',folder:'INBOX',status:'completed',upper_uid:88,next_uid:89,imported:1,skipped:0}])
+    api.flagPreview.mockResolvedValue({job_id:'hist1',folder:'INBOX',next_position:2,has_more:false,checked_at:'2026-11-08T12:00:00Z',items:[
+      {source_uid:2,native_email_id:'old',status:'baseline_unknown'},
+      {source_uid:3,native_email_id:'missing',status:'source_missing'}]})
+    const wrapper=setup();await flushPromises()
+    await wrapper.get('[data-testid="mode-accounts"]').trigger('click')
+    await wrapper.findAll('button').find(b=>b.text()==='文件夹')!.trigger('click');await flushPromises()
+    await wrapper.findAll('button').find(b=>b.text()==='只读检查状态差异')!.trigger('click');await flushPromises()
+    expect(wrapper.text()).toContain('缺少初始状态，需核对')
+    expect(wrapper.text()).toContain('原邮箱已找不到该邮件')
+    expect(api.move).not.toHaveBeenCalled()
     wrapper.unmount()
   })
   it('provider errors retain native Inbox and show safe status', async () => {

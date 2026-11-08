@@ -200,6 +200,13 @@ export const startExternalHistoryJob = (accountId:string,folder:string,continuou
 export const actionExternalHistoryJob = (accountId:string,jobId:string,action:'pause'|'resume'|'cancel'|'enable_live'|'disable_live') =>
   apiPostJson<MailExternalHistoryJob>(base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)+'/action',{action})
 
+// A read-only flag-diff preview never invokes IMAP STORE or JMAP Email/set.
+export interface MailFlagDiff {source:boolean;native:boolean;baseline:boolean;decision:'in_sync'|'copy_to_native'|'copy_to_source'|'conflict'}
+export interface MailFlagPreviewItem {source_uid:number;native_email_id:string;status:'ready'|'baseline_unknown'|'source_missing'|'native_missing';seen:MailFlagDiff;flagged:MailFlagDiff}
+export interface MailFlagPreviewPage {job_id:string;folder:string;items:MailFlagPreviewItem[];next_position:number;has_more:boolean;checked_at:string}
+export const fetchExternalFlagPreview = (accountId:string,jobId:string,position=0) =>
+  apiGet<MailFlagPreviewPage>(base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)+'/flag-preview?'+new URLSearchParams({position:String(position)}))
+
 // Atoman-private encrypted mail organizer metadata; independent from remote IMAP flags.
 export type MailOrganizerColor = 'slate' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink'
 export interface MailOrganizerLabel { id: string; name: string; color: MailOrganizerColor; revision: number }

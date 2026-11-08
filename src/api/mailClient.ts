@@ -168,6 +168,30 @@ export const fetchExternalMessagePlain = (accountId:string,uid:number,validity:n
   return apiGet<{text:string}>(url)
 }
 
+// The import source is always an explicitly authorized provider account.
+// Only public progress counts and user-owned source folder names are returned.
+export type MailExternalHistoryStatus = 'queued' | 'running' | 'paused' | 'failed' | 'needs_review' | 'cancelled' | 'completed'
+export interface MailExternalHistoryJob {
+ id:string
+ account_id:string
+ folder:string
+ status:MailExternalHistoryStatus
+ uid_validity:number
+ upper_uid:number
+ next_uid:number
+ imported:number
+ skipped:number
+ last_error_code?:string
+ created_at:string
+ updated_at:string
+}
+export const fetchExternalHistoryJobs = (accountId:string) =>
+  apiGet<MailExternalHistoryJob[]>(base()+'/external/accounts/'+key(accountId)+'/imports')
+export const startExternalHistoryJob = (accountId:string,folder:string) =>
+  apiPostJson<MailExternalHistoryJob>(base()+'/external/accounts/'+key(accountId)+'/imports',{folder})
+export const actionExternalHistoryJob = (accountId:string,jobId:string,action:'pause'|'resume'|'cancel') =>
+  apiPostJson<MailExternalHistoryJob>(base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)+'/action',{action})
+
 // Atoman-private encrypted mail organizer metadata; independent from remote IMAP flags.
 export type MailOrganizerColor = 'slate' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink'
 export interface MailOrganizerLabel { id: string; name: string; color: MailOrganizerColor; revision: number }

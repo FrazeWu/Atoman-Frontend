@@ -4,7 +4,7 @@ import MailExternalAccounts from '@/views/mail/MailExternalAccounts.vue'
 
 const api = vi.hoisted(() => ({
   providers: vi.fn(), unified: vi.fn(), connect: vi.fn(), sync: vi.fn(), disconnect: vi.fn(),
-  read: vi.fn(), folders: vi.fn(), messages: vi.fn(), folderList: vi.fn(), folderPage: vi.fn(), flag: vi.fn(), move: vi.fn()
+  read: vi.fn(), folders: vi.fn(), messages: vi.fn(), folderList: vi.fn(), folderPage: vi.fn(), flag: vi.fn(), move: vi.fn(), historyList: vi.fn(), historyStart: vi.fn(), historyAction: vi.fn()
 }))
 vi.mock('@/api/mail', () => ({ fetchMailFolders: api.folders }))
 vi.mock('@/api/mailClient', () => ({
@@ -18,6 +18,9 @@ vi.mock('@/api/mailClient', () => ({
   fetchExternalFolderPage: api.folderPage,
   setExternalMessageSeen: api.flag,
   moveExternalMessage: api.move,
+  fetchExternalHistoryJobs: api.historyList,
+  startExternalHistoryJob: api.historyStart,
+  actionExternalHistoryJob: api.historyAction,
   queryMailMessages: api.messages
 }))
 vi.mock('@/components/ui/PSheet.vue', () => ({
@@ -53,6 +56,9 @@ beforeEach(() => {
   }))
   api.flag.mockResolvedValue({updated:true})
   api.move.mockResolvedValue({moved:true,inbox_cache_updated:false,refresh_recommended:false})
+  api.historyList.mockResolvedValue([])
+  api.historyStart.mockResolvedValue({id:'hist1',account_id:'ext1',folder:'INBOX',status:'queued',imported:0,skipped:0,next_uid:1,upper_uid:30})
+  api.historyAction.mockResolvedValue({id:'hist1',account_id:'ext1',folder:'INBOX',status:'paused',imported:0,skipped:0,next_uid:1,upper_uid:30})
   api.connect.mockResolvedValue({...external,id:'new2'})
   api.sync.mockResolvedValue({...external,revision:2})
   api.disconnect.mockResolvedValue({deleted:true})
@@ -124,6 +130,33 @@ describe('External IMAP unified inbox', () => {
     await wrapper.findAll('button').find(b=>b.text()==='确认移动')!.trigger('click')
     await flushPromises()
     expect(api.move).toHaveBeenCalledWith('ext1',321,72,'Archive/2026','INBOX')
+    wrapper.unmount()
+  })
+  it('requires confirmation to create a private history import job', async () => {
+    const wrapper=setup();await flushPromises()
+    await wrapper.get('[data-testid="mode-accounts"]').trigger('click')
+    await wrapper.findAll('button').find(b=>b.text()==='文件夹')!.trigger('click')
+    await flushPromises()
+    expect(api.historyList).toHaveBeenCalledWith('ext1')
+    const start=wrapper.findAll('button').find(b=>b.text()==='导入当前文件夹历史')!
+    await start.trigger('click')
+    expect(api.historyStart).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('不会被移除')
+    const confirm=wrapper.findAll('button').find(b=>b.text()==='确认创建任务')!
+    await confirm.trigger('click');await flushPromises()
+    expect(api.historyStart).toHaveBeenCalledWith('ext1','INBOX')
+    wrapper.unmount()
+  })
+  it('renders history state without exposing provider credentials', async () => {
+    api.historyList.mockResolvedValue([{id:'hist1',account_id:'ext1',folder:'INBOX',status:'needs_review',upper_uid:10,next_uid:3,imported:2,skipped:0,last_error_code:'ambiguous_import'}])
+    const wrapper=setup();await flushPromises()
+    await wrapper.get('[data-testid="mode-accounts"]').trigger('click')
+    await wrapper.findAll('button').find(b=>b.text()==='文件夹')!.trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="external-history-hist1"]').text()).toContain('需人工核对')
+    expect(wrapper.get('[data-testid="external-history-hist1"]').text()).toContain('2 封')
+    expect(wrapper.text()).not.toContain('own-app-password')
+    expect(wrapper.findAll('button').some(b=>b.text()==='继续')).toBe(false)
     wrapper.unmount()
   })
   it('provider errors retain native Inbox and show safe status', async () => {

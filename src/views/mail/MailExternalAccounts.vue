@@ -63,6 +63,31 @@
           <div v-if="folders.length" class="mail-external__folder-nav" aria-label="选择文件夹">
             <PButton v-for="folder in folders" :key="folder.name" size="sm" :variant="folderName===folder.name ? 'primary' : 'secondary'" :disabled="folderLoading" @click="loadFolder(folder.name)">{{ folder.name }}</PButton>
           </div>
+          <section class="mail-external__history" aria-label="历史邮件迁移" data-testid="external-history">
+            <div class="mail-external__section-head">
+              <div><h3>导入历史邮件到 Atoman</h3><p>按文件夹迁移完整邮件与附件，保留原始邮件，不会删除来源。支持暂停和断点续传。</p></div>
+              <PButton size="sm" variant="secondary" :disabled="historyBusy || folderLoading" @click="refreshHistory">刷新进度</PButton>
+            </div>
+            <p v-if="historyError" role="alert" class="mail-external__error">{{ historyError }}</p>
+            <div v-if="!historyAvailable" class="mail-external__hint">历史迁移功能暂不可用；仍可正常浏览外部邮箱。</div>
+            <template v-else>
+              <div v-if="folderName && !activeHistoryJob" class="mail-external__account-actions">
+                <PButton variant="secondary" size="sm" :disabled="historyBusy" @click="confirmHistoryStart=true">导入当前文件夹历史</PButton>
+              </div>
+              <p v-else-if="activeHistoryJob" class="mail-external__hint">当前文件夹已有迁移任务：{{ historyStatusLabel(activeHistoryJob.status) }}</p>
+              <div v-if="historyJobs.length" class="mail-external__history-jobs">
+                <div v-for="job in historyJobs" :key="job.id" class="mail-external__history-job" :data-testid="'external-history-'+job.id">
+                  <div><strong>{{ job.folder }}</strong><small>{{ historyStatusLabel(job.status) }} · 已导入 {{ job.imported }} 封 · 跳过 {{ job.skipped }} 封 · UID 进度 {{ Math.min(job.next_uid,job.upper_uid+1) }} / {{ job.upper_uid+1 }}</small><small v-if="job.last_error_code">原因代码：{{ job.last_error_code }}</small></div>
+                  <div class="mail-external__account-actions">
+                    <PButton v-if="job.status==='queued'||job.status==='running'" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'pause')">暂停</PButton>
+                    <PButton v-if="job.status==='paused'||job.status==='failed'" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'resume')">继续</PButton>
+                    <PButton v-if="job.status==='paused'||job.status==='failed'||job.status==='queued'||job.status==='needs_review'" variant="ghost" size="sm" :disabled="historyBusy" @click="historyAction(job,'cancel')">取消</PButton>
+                  </div>
+                </div>
+              </div>
+              <p class="mail-external__hint">每轮最多处理 40 封，每封上限 40 MiB。遇到写入结果不明会停在“需人工核对”，绝不盲目重复导入。</p>
+            </template>
+          </section>
           <div v-if="folderPage && !folderLoading" class="mail-external__folder-results">
             <p>{{ folderPage.folder }} · 共 {{ folderPage.total }} 封</p>
             <PEmpty v-if="!folderPage.messages.length" title="没有邮件" description="该文件夹没有可显示的邮件。" compact />
@@ -108,6 +133,13 @@
     </main>
   </PSheet>
 
+  <PModal :show="confirmHistoryStart" title="导入当前文件夹历史邮件" size="sm" @close="confirmHistoryStart=false">
+    <p>确认将 {{ folderName }} 的历史邮件复制到 Atoman 吗？已有邮件不会被移除，迁移进度会保留。最多处理 40 MiB 的单封邮件，超过限制的邮件会明确计为跳过。</p>
+    <template #footer>
+      <PButton variant="secondary" :disabled="historyBusy" @click="confirmHistoryStart=false">取消</PButton>
+      <PButton variant="primary" :loading="historyBusy" @click="startHistory">确认创建任务</PButton>
+    </template>
+  </PModal>
   <PModal :show="showMoveConfirm" title="移动外部邮件" size="sm" @close="showMoveConfirm=false">
     <p>将此邮件移动到 {{ moveDestination }}？这会实际修改原邮箱。只有服务商支持安全 IMAP MOVE 时才会执行；不会永久删除邮件。</p>
     <template #footer>
@@ -135,7 +167,7 @@ import PModal from '@/components/ui/PModal.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import { fetchMailFolders } from '@/api/mail'
-import { queryMailMessages, fetchExternalProviders, fetchExternalUnifiedInbox, connectExternalAccount, syncExternalAccount, disconnectExternalAccount, fetchExternalMessagePlain, setExternalMessageSeen, type ExternalIMAPProvider, type MailExternalAccount, type MailExternalMessage, type MailExternalProvider, fetchExternalFolders, fetchExternalFolderPage, type MailExternalFolder, type MailExternalFolderPage, moveExternalMessage } from '@/api/mailClient'
+import { queryMailMessages, fetchExternalProviders, fetchExternalUnifiedInbox, connectExternalAccount, syncExternalAccount, disconnectExternalAccount, fetchExternalMessagePlain, setExternalMessageSeen, type ExternalIMAPProvider, type MailExternalAccount, type MailExternalMessage, type MailExternalProvider, fetchExternalFolders, fetchExternalFolderPage, type MailExternalFolder, type MailExternalFolderPage, moveExternalMessage, fetchExternalHistoryJobs, startExternalHistoryJob, actionExternalHistoryJob, type MailExternalHistoryJob } from '@/api/mailClient'
 import type { MailSummary } from '@/api/mail'
 import { mailTime } from './mail-helpers'
 
@@ -154,6 +186,13 @@ const folderName=ref('')
 const folderPage=ref<MailExternalFolderPage|null>(null)
 const folderLoading=ref(false),folderError=ref('')
 const moveDestination=ref(''),showMoveConfirm=ref(false)
+const historyJobs=ref<MailExternalHistoryJob[]>([])
+const historyAvailable=ref(false),historyBusy=ref(false),historyError=ref('')
+const confirmHistoryStart=ref(false)
+const activeHistoryJob=computed(()=>historyJobs.value.find(job=>job.folder===folderName.value))
+function historyStatusLabel(status:MailExternalHistoryJob['status']):string {
+  return ({queued:'排队中',running:'正在导入',paused:'已暂停',failed:'导入失败',needs_review:'需人工核对',cancelled:'已取消',completed:'已完成'} as const)[status] || status
+}
 let folderGeneration=0
 const selected=ref<UnifiedRow|null>(null),plainText=ref(''),reading=ref(false),readError=ref('')
 let readGeneration=0
@@ -294,6 +333,10 @@ function closeFolders(){
   folderLoading.value=false
   moveDestination.value=''
   showMoveConfirm.value=false
+  historyJobs.value=[]
+  historyAvailable.value=false
+  historyError.value=''
+  confirmHistoryStart.value=false
 }
 async function openFolders(account:MailExternalAccount){
   if(folderLoading.value)return
@@ -306,11 +349,48 @@ async function openFolders(account:MailExternalAccount){
     if(generation!==folderGeneration)return
     folders.value=response
     folderLoading.value=false
+    // Import progress is auxiliary: never block ordinary folder browsing.
+    void refreshHistory()
     const inbox=response.find(item=>item.role==='inbox') || response[0]
     if(inbox)await loadFolder(inbox.name)
   }catch{
     if(generation===folderGeneration)folderError.value='无法列出文件夹，请检查外部邮箱授权与网络。'
   }finally{if(generation===folderGeneration)folderLoading.value=false}
+}
+async function refreshHistory(){
+  const account=browsingAccount.value
+  if(!account)return
+  historyError.value=''
+  try{
+    const jobs=await fetchExternalHistoryJobs(account.id)
+    if(browsingAccount.value?.id!==account.id)return
+    historyJobs.value=jobs || []
+    historyAvailable.value=true
+  }catch{
+    if(browsingAccount.value?.id===account.id){historyAvailable.value=false;historyError.value='历史导入服务尚未就绪，文件夹浏览仍可使用。'}
+  }
+}
+async function startHistory(){
+  const account=browsingAccount.value,folder=folderName.value
+  if(!account || !folder || historyBusy.value || activeHistoryJob.value || !historyAvailable.value)return
+  historyBusy.value=true;historyError.value=''
+  try{
+    await startExternalHistoryJob(account.id,folder)
+    confirmHistoryStart.value=false
+    await refreshHistory()
+    notice.value='历史导入任务已创建；实际复制由后台任务逐批进行。'
+  }catch{historyError.value='无法创建任务，可能已经有相同文件夹的迁移任务，请刷新进度。'}
+  finally{historyBusy.value=false}
+}
+async function historyAction(job:MailExternalHistoryJob, action:'pause'|'resume'|'cancel'){
+  const account=browsingAccount.value
+  if(!account || historyBusy.value)return
+  historyBusy.value=true;historyError.value=''
+  try{
+    await actionExternalHistoryJob(account.id,job.id,action)
+    await refreshHistory()
+  }catch{historyError.value='无法执行此操作，任务状态可能已变化；请刷新进度。'}
+  finally{historyBusy.value=false}
 }
 async function loadFolder(name:string,position=0){
   if(!browsingAccount.value || folderLoading.value || !folders.value.some(f=>f.name===name))return
@@ -398,6 +478,13 @@ onMounted(refresh)
 .mail-external__source{display:inline-flex;align-items:center;gap:6px}
 .mail-external__reader{padding:20px;border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-card);display:grid;gap:16px}
 .mail-external__browser{display:grid;gap:14px;min-width:0;padding:18px;border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-card)}
+.mail-external__history{display:grid;gap:12px;padding:16px;border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-card)}
+.mail-external__history-jobs{display:grid;gap:6px}
+.mail-external__history-job{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:12px 0;border-top:1px solid var(--a-color-border-soft)}
+.mail-external__history-job>div:first-child{display:grid;gap:5px;min-width:0}
+.mail-external__history-job strong{font-size:13px;overflow-wrap:anywhere}
+.mail-external__history-job small{font-size:11px;color:var(--a-color-muted)}
+@media(max-width:640px){.mail-external__history-job{flex-direction:column;align-items:stretch}}
 .mail-external__folder-nav{display:flex;gap:8px;flex-wrap:wrap;max-height:180px;overflow-y:auto}
 .mail-external__folder-results{display:grid;gap:12px;min-width:0}
 .mail-external__folder-results>.p-button{justify-self:start}

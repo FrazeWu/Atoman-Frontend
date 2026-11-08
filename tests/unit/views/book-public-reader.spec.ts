@@ -15,6 +15,20 @@ afterEach(() => {
   localStorage.clear()
 })
 
+async function openPublicReaderTools(wrapper: ReturnType<typeof mount>) {
+  if (!wrapper.find('#public-book-search').exists()) {
+    await wrapper.get('[aria-label="目录与检索"]').trigger('click')
+    await flushPromises()
+  }
+}
+
+async function openPublicReaderSettings(wrapper: ReturnType<typeof mount>) {
+  if (!wrapper.find('.book-reader-display-controls select').exists()) {
+    await wrapper.get('.book-reader-shell__panel-tabs button:last-child').trigger('click')
+    await flushPromises()
+  }
+}
+
 describe('BookPublicReaderView', () => {
   it('uses a revision source without legacy APIs and isolates local bookmarks by account and revision', async () => {
     const legacy = vi.spyOn(booksApi, 'getPublishedBookAsset')
@@ -96,6 +110,7 @@ describe('BookPublicReaderView', () => {
     await flushPromises()
 
     await wrapper.find('[aria-label="添加书签"]').trigger('click')
+    await openPublicReaderTools(wrapper)
     expect(wrapper.find('.public-reader__bookmarks').exists()).toBe(true)
     expect(localStorage.getItem('atoman:book-reading-progress:public-asset-3')).toContain('bookmarks')
 
@@ -126,6 +141,7 @@ describe('BookPublicReaderView', () => {
     const wrapper = mount(BookPublicReaderView, { global: { plugins: [router] } })
     await flushPromises()
 
+    await openPublicReaderTools(wrapper)
     await wrapper.get('#public-book-search').setValue('关键词')
     await wrapper.find('.public-reader__search').trigger('submit')
 
@@ -159,7 +175,8 @@ describe('BookPublicReaderView', () => {
     await wrapper.get('.public-reader__text').trigger('scroll')
     const initiallyStored = JSON.parse(localStorage.getItem('atoman:book-reading-progress:public-asset-5') || '{}')
     expect(initiallyStored.display.scroll_mode).toBe('continuous')
-    await wrapper.find('.book-reader-display-controls select').setValue('0.85')
+    await openPublicReaderSettings(wrapper)
+    await wrapper.get('.book-reader-display-controls select').setValue('0.85')
     await wrapper.find('[aria-label="夜间主题"]').trigger('click')
 
     expect(localStorage.getItem('atoman:book-reading-progress:public-asset-5')).toContain('"theme":"night"')

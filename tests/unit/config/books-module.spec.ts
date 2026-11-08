@@ -55,6 +55,7 @@ describe("books module foundation", () => {
       "shared-notes",
       "edition/:editionId",
       "tags",
+      "shelf",
       "library",
       "lists",
       "lists/new",

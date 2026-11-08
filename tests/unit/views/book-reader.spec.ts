@@ -35,6 +35,20 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+async function openReaderTools(wrapper: ReturnType<typeof mount>) {
+  if (!wrapper.find('#private-book-search').exists()) {
+    await wrapper.get('[aria-label="目录与检索"]').trigger('click')
+    await flushPromises()
+  }
+}
+
+async function openReaderSettings(wrapper: ReturnType<typeof mount>) {
+  if (!wrapper.find('.book-reader-display-controls select').exists()) {
+    await wrapper.get('.book-reader-shell__panel-tabs button:last-child').trigger('click')
+    await flushPromises()
+  }
+}
+
 describe('BookReaderView', () => {
   it('opens a private TXT asset and saves its reading state', async () => {
     vi.spyOn(booksApi, 'getBookAsset').mockResolvedValue(asset)
@@ -57,7 +71,8 @@ describe('BookReaderView', () => {
 
     expect(wrapper.text()).toContain('Private text')
     expect(wrapper.text()).toContain('阅读进度')
-    await wrapper.find('textarea').setValue('remember this')
+    await openReaderTools(wrapper)
+    await wrapper.get('textarea').setValue('remember this')
     const saveButton = wrapper.findAll('button').find((button) => button.text().includes('保存位置'))
     expect(saveButton).toBeDefined()
     await saveButton!.trigger('click')
@@ -112,6 +127,7 @@ describe('BookReaderView', () => {
 
     await wrapper.find('[aria-label="添加书签"]').trigger('click')
     await flushPromises()
+    await openReaderTools(wrapper)
 
     expect(saveState).toHaveBeenCalledWith('asset-1', expect.objectContaining({
       preferences: expect.objectContaining({
@@ -145,6 +161,7 @@ describe('BookReaderView', () => {
     const wrapper = mount(BookReaderView, { global: { plugins: [router] } })
     await flushPromises()
 
+    await openReaderTools(wrapper)
     await wrapper.get('#private-book-search').setValue('目标段落')
     await wrapper.find('.books-reader__search').trigger('submit')
 
@@ -173,7 +190,8 @@ describe('BookReaderView', () => {
     const wrapper = mount(BookReaderView, { global: { plugins: [router] } })
     await flushPromises()
 
-    await wrapper.find('.book-reader-display-controls select').setValue('1.35')
+    await openReaderSettings(wrapper)
+    await wrapper.get('.book-reader-display-controls select').setValue('1.35')
     await wrapper.find('[aria-label="夜间主题"]').trigger('click')
     await flushPromises()
 

@@ -18,6 +18,7 @@ const { routeQuery, routerPush, routerReplace, player } = vi.hoisted(() => ({
 		setQueueFromCurrentItems: vi.fn(),
 		createPodcastSong: vi.fn((item) => item),
 		playQueuedSong: vi.fn(),
+		expandPlayer: vi.fn(),
 	},
 }));
 

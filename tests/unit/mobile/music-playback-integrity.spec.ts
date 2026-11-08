@@ -270,8 +270,7 @@ describe('mobile music playback integrity', () => {
     expect(wrapper.text()).toContain('真实歌手')
     expect(wrapper.findAll('[data-testid="artist-song-item"]')).toHaveLength(1)
     expect(api.listMusicSongs).toHaveBeenLastCalledWith(
-      { artist_id: 'real-artist', page: 1, page_size: 20 },
-      { force: true },
+      { artist_id: 'real-artist', artist_relation: 'participating', release_type: 'single,leak', page: 1, page_size: 20 },
     )
     wrapper.unmount()
   })

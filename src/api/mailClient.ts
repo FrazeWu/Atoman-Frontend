@@ -222,6 +222,52 @@ export const fetchExternalFlagAttempts = (accountId:string,jobId:string) =>
 export const reconcileExternalFlagAttempt = (accountId:string,jobId:string,attemptId:string) =>
   apiPostJson<ExternalFlagAttempt>(base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)+'/flag-attempts/'+key(attemptId)+'/reconcile',{})
 
+// A missing source UID is never proof of deletion. Cross-folder comparisons
+// are only source observations; native changes require one explicit choice.
+export type MailLocationCaseStatus = 'observed'|'missing_unclassified'|'possible_move'|'ambiguous_candidates'|'candidate_unverified'|'native_missing'|'native_unavailable'|'source_returned'|'kept'|'trashed'|'moved_resolved'|'restored'|'action_needs_review'
+export interface MailLocationCase {
+ id:string
+ job_id:string
+ source_uid:number
+ status:MailLocationCaseStatus
+ missing_observations:number
+ first_missing_at:string
+ last_observed_at:string
+ last_checked_at:string
+ returned_at?:string
+ candidate_folder?:string
+ action_id?:string
+ resolved_at?:string
+}
+export interface MailLocationScanPage {
+ job_id:string
+ items:MailLocationCase[]
+ next_source_uid:number
+ has_more:boolean
+ checked_at:string
+}
+export type MailLocationDecision = 'keep_native'|'trash_native'|'resolve_move'|'restore_native'
+export interface MailLocationAction {
+ id:string
+ case_id:string
+ action:MailLocationDecision
+ status:'dispatching'|'needs_review'|'aborted_prewrite'|'applied'
+ error_code?:string
+ created_at:string
+}
+const locationPath = (accountId:string,jobId:string) => base()+'/external/accounts/'+key(accountId)+'/imports/'+key(jobId)
+const locationCasePath=(accountId:string,jobId:string,caseId:string)=>locationPath(accountId,jobId)+'/location-cases/'+key(caseId)
+export const fetchExternalLocationCases=(accountId:string,jobId:string)=>
+  apiGet<MailLocationCase[]>(locationPath(accountId,jobId)+'/location-cases')
+export const scanExternalLocation=(accountId:string,jobId:string,afterUID=0)=>
+  apiPostJson<MailLocationScanPage>(locationPath(accountId,jobId)+'/location-scan',{after_uid:afterUID})
+export const decideExternalLocation=(accountId:string,jobId:string,caseId:string,action:MailLocationDecision)=>
+  apiPostJson<MailLocationCase>(locationCasePath(accountId,jobId,caseId)+'/action',{action,confirmed:true})
+export const fetchExternalLocationActions=(accountId:string,jobId:string,caseId:string)=>
+  apiGet<MailLocationAction[]>(locationCasePath(accountId,jobId,caseId)+'/actions')
+export const reconcileExternalLocation=(accountId:string,jobId:string,caseId:string,actionId:string)=>
+  apiPostJson<MailLocationAction>(locationCasePath(accountId,jobId,caseId)+'/actions/'+key(actionId)+'/reconcile',{})
+
 // Atoman-private encrypted mail organizer metadata; independent from remote IMAP flags.
 export type MailOrganizerColor = 'slate' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink'
 export interface MailOrganizerLabel { id: string; name: string; color: MailOrganizerColor; revision: number }

@@ -4,7 +4,7 @@ import MailExternalAccounts from '@/views/mail/MailExternalAccounts.vue'
 
 const api = vi.hoisted(() => ({
   providers: vi.fn(), unified: vi.fn(), connect: vi.fn(), sync: vi.fn(), disconnect: vi.fn(),
-  read: vi.fn(), folders: vi.fn(), messages: vi.fn(), folderList: vi.fn(), folderPage: vi.fn(), flag: vi.fn(), move: vi.fn(), historyList: vi.fn(), historyStart: vi.fn(), historyAction: vi.fn(), flagPreview: vi.fn(),flagConfig:vi.fn(),flagAttempts:vi.fn(),flagReconcile:vi.fn()
+  read: vi.fn(), folders: vi.fn(), messages: vi.fn(), folderList: vi.fn(), folderPage: vi.fn(), flag: vi.fn(), move: vi.fn(), historyList: vi.fn(), historyStart: vi.fn(), historyAction: vi.fn(), flagPreview: vi.fn(),flagConfig:vi.fn(),flagAttempts:vi.fn(),flagReconcile:vi.fn(), locationCases:vi.fn(),locationScan:vi.fn(),locationDecide:vi.fn(),locationActions:vi.fn(),locationReconcile:vi.fn()
 }))
 vi.mock('@/api/mail', () => ({ fetchMailFolders: api.folders }))
 vi.mock('@/api/mailClient', () => ({
@@ -25,6 +25,11 @@ vi.mock('@/api/mailClient', () => ({
   configureExternalFlagSync:api.flagConfig,
   fetchExternalFlagAttempts:api.flagAttempts,
   reconcileExternalFlagAttempt:api.flagReconcile,
+  fetchExternalLocationCases:api.locationCases,
+  scanExternalLocation:api.locationScan,
+  decideExternalLocation:api.locationDecide,
+  fetchExternalLocationActions:api.locationActions,
+  reconcileExternalLocation:api.locationReconcile,
   queryMailMessages: api.messages
 }))
 vi.mock('@/components/ui/PSheet.vue', () => ({
@@ -65,6 +70,11 @@ beforeEach(() => {
   api.flagConfig.mockResolvedValue({id:'hist1',flag_sync_enabled:true})
   api.flagAttempts.mockResolvedValue([])
   api.flagReconcile.mockResolvedValue({status:'applied'})
+  api.locationCases.mockResolvedValue([])
+  api.locationScan.mockResolvedValue({job_id:'hist1',items:[],next_source_uid:0,has_more:false,checked_at:'2026-11-08T12:00:00Z'})
+  api.locationDecide.mockResolvedValue({id:'case-1',status:'trashed'})
+  api.locationActions.mockResolvedValue([])
+  api.locationReconcile.mockResolvedValue({id:'receipt-1',status:'applied'})
   api.flagPreview.mockResolvedValue({job_id:'hist1',folder:'INBOX',checked_at:'2026-11-08T12:00:00Z',next_position:1,has_more:false,items:[{source_uid:88,native_email_id:'native-import',status:'ready',seen:{baseline:false,source:true,native:false,decision:'copy_to_native'},flagged:{baseline:false,source:false,native:false,decision:'in_sync'}}]})
   api.historyAction.mockResolvedValue({id:'hist1',account_id:'ext1',folder:'INBOX',status:'paused',imported:0,skipped:0,next_uid:1,upper_uid:30})
   api.connect.mockResolvedValue({...external,id:'new2'})
@@ -235,6 +245,72 @@ describe('External IMAP unified inbox', () => {
     expect(api.flagReconcile).toHaveBeenCalledWith('ext1','hist1','receipt-1')
     expect(api.flag).not.toHaveBeenCalled()
     expect(api.move).not.toHaveBeenCalled()
+    w.unmount()
+  })
+  it('checks location changes without any remote write and requires confirmation for native trash',async()=>{
+    api.historyList.mockResolvedValue([{id:'hist1',account_id:'ext1',folder:'INBOX',status:'completed',imported:1,skipped:0,upper_uid:88,next_uid:89,flag_sync_enabled:false}])
+    api.locationCases.mockResolvedValue([{id:'case-1',job_id:'hist1',source_uid:88,status:'missing_unclassified',missing_observations:2,first_missing_at:'2026-11-08T10:00:00Z',last_checked_at:'2026-11-08T12:00:00Z'}])
+    const w=setup();await flushPromises()
+    await w.get('[data-testid="mode-accounts"]').trigger('click');await flushPromises()
+    await w.findAll('button').find(b=>b.text()==='文件夹')!.trigger('click');await flushPromises()
+    await w.findAll('button').find(b=>b.text()==='检查移动与删除异常')!.trigger('click');await flushPromises()
+    expect(api.locationScan).toHaveBeenCalledWith('ext1','hist1',0)
+    expect(w.get('[data-testid="external-location-cases"]').text()).toContain('来源缺失，不能判定删除')
+    expect(api.locationDecide).not.toHaveBeenCalled()
+    expect(api.move).not.toHaveBeenCalled()
+    await w.findAll('button').find(b=>b.text()==='旧副本移入回收站')!.trigger('click');await flushPromises()
+    const confirm=()=>w.findAll('button').find(b=>b.text()==='确认处理')!
+    expect(confirm().attributes('disabled')).toBeDefined()
+    expect(w.text()).toContain('不会修改或删除原邮箱')
+    await w.get('[data-testid="external-location-confirm"]').setValue(true)
+    expect(confirm().attributes('disabled')).toBeUndefined()
+    await confirm().trigger('click');await flushPromises()
+    expect(api.locationDecide).toHaveBeenCalledWith('ext1','hist1','case-1','trash_native')
+    expect(api.move).not.toHaveBeenCalled()
+    w.unmount()
+  })
+  it('never treats multiple identical cross-folder candidate messages as an automatic move',async()=>{
+    api.historyList.mockResolvedValue([{id:'hist1',account_id:'ext1',folder:'INBOX',status:'completed',imported:1,skipped:0,upper_uid:88,next_uid:89}])
+    api.locationCases.mockResolvedValue([{id:'case-1',job_id:'hist1',source_uid:88,status:'ambiguous_candidates',missing_observations:2,first_missing_at:'2026-11-08T10:00:00Z',last_checked_at:'2026-11-08T12:00:00Z'}])
+    const w=setup();await flushPromises()
+    await w.get('[data-testid="mode-accounts"]').trigger('click');await flushPromises()
+    await w.findAll('button').find(b=>b.text()==='文件夹')!.trigger('click');await flushPromises()
+    await w.findAll('button').find(b=>b.text()==='检查移动与删除异常')!.trigger('click');await flushPromises()
+    expect(w.text()).toContain('多个相同内容候选，不自动选择')
+    expect(w.findAll('button').some(b=>b.text()==='确认候选并归档旧副本')).toBe(false)
+    expect(w.findAll('button').some(b=>b.text()==='旧副本移入回收站')).toBe(false)
+    expect(w.findAll('button').some(b=>b.text()==='保留旧副本')).toBe(true)
+    expect(api.locationDecide).not.toHaveBeenCalled()
+    w.unmount()
+  })
+  it('only reconciles ambiguous location receipts by reading native state, never sending a new MOVE',async()=>{
+    api.historyList.mockResolvedValue([{id:'hist1',account_id:'ext1',folder:'INBOX',status:'completed',imported:1,skipped:0,upper_uid:88,next_uid:89}])
+    api.locationCases.mockResolvedValue([{id:'case-1',job_id:'hist1',source_uid:88,status:'action_needs_review',missing_observations:2,action_id:'receipt-1',first_missing_at:'2026-11-08T10:00:00Z',last_checked_at:'2026-11-08T12:00:00Z'}])
+    api.locationActions.mockResolvedValue([{id:'receipt-1',case_id:'case-1',action:'trash_native',status:'needs_review',error_code:'remote_move_unknown',created_at:'2026-11-08T11:00:00Z'}])
+    const w=setup();await flushPromises()
+    await w.get('[data-testid="mode-accounts"]').trigger('click');await flushPromises()
+    await w.findAll('button').find(b=>b.text()==='文件夹')!.trigger('click');await flushPromises()
+    await w.findAll('button').find(b=>b.text()==='检查移动与删除异常')!.trigger('click');await flushPromises()
+    await w.findAll('button').find(b=>b.text()==='查看操作回执')!.trigger('click');await flushPromises()
+    expect(w.get('[data-testid="external-location-receipts"]').text()).toContain('待核对')
+    await w.findAll('button').find(b=>b.text()==='只读核对回执')!.trigger('click');await flushPromises()
+    expect(api.locationReconcile).toHaveBeenCalledWith('ext1','hist1','case-1','receipt-1')
+    expect(api.locationDecide).not.toHaveBeenCalled()
+    expect(api.move).not.toHaveBeenCalled()
+    w.unmount()
+  })
+  it('supports confirmed restoration of a trashed imported copy',async()=>{
+    api.historyList.mockResolvedValue([{id:'hist1',account_id:'ext1',folder:'INBOX',status:'completed',imported:1,skipped:0,upper_uid:88,next_uid:89}])
+    api.locationCases.mockResolvedValue([{id:'case-1',job_id:'hist1',source_uid:88,status:'trashed',missing_observations:2,first_missing_at:'2026-11-08T10:00:00Z',last_checked_at:'2026-11-08T12:00:00Z'}])
+    const w=setup();await flushPromises()
+    await w.get('[data-testid="mode-accounts"]').trigger('click');await flushPromises()
+    await w.findAll('button').find(b=>b.text()==='文件夹')!.trigger('click');await flushPromises()
+    await w.findAll('button').find(b=>b.text()==='检查移动与删除异常')!.trigger('click');await flushPromises()
+    await w.findAll('button').find(b=>b.text()==='恢复原文件夹')!.trigger('click');await flushPromises()
+    expect(w.text()).toContain('不会修改原邮箱')
+    await w.get('[data-testid="external-location-confirm"]').setValue(true)
+    await w.findAll('button').find(b=>b.text()==='确认处理')!.trigger('click');await flushPromises()
+    expect(api.locationDecide).toHaveBeenCalledWith('ext1','hist1','case-1','restore_native')
     w.unmount()
   })
   it('compares source and native flag changes without issuing any write', async () => {

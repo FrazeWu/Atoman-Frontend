@@ -83,6 +83,7 @@
                     <PButton v-if="job.flag_sync_enabled" variant="secondary" size="sm" :disabled="flagSyncBusy" @click="setFlagSync(job,false)">暂停已读/星标双向同步</PButton>
                     <PButton v-else-if="job.imported>0 && (job.status==='completed'||job.status==='watching')" variant="secondary" size="sm" :disabled="flagSyncBusy" @click="confirmFlagSyncJob=job;flagSyncAcknowledged=false">开启双向状态同步</PButton>
                     <PButton v-if="job.imported>0" variant="ghost" size="sm" :disabled="flagAttemptsBusy" @click="loadFlagAttempts(job)">查看状态回执</PButton>
+                    <PButton v-if="job.imported>0 && (job.status==='completed'||job.status==='watching')" variant="secondary" size="sm" :disabled="locationScanBusy" @click="scanLocations(job)">检查移动与删除异常</PButton>
                     <PButton v-if="job.status==='completed' && !job.continuous" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'enable_live')">开启新增邮件同步</PButton>
                     <PButton v-if="job.status==='watching' || (job.continuous && ['queued','paused','failed'].includes(job.status))" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'disable_live')">关闭新增邮件同步</PButton>
                     <PButton v-if="job.status==='queued'||job.status==='running'||job.status==='watching'" variant="secondary" size="sm" :disabled="historyBusy" @click="historyAction(job,'pause')">暂停</PButton>
@@ -91,6 +92,38 @@
                   </div>
                 </div>
               </div>
+              <p v-if="locationError" role="alert" class="mail-external__error">{{ locationError }}</p>
+              <section v-if="locationCaseJob" class="mail-external__flag-preview" aria-label="邮件位置异常核对" data-testid="external-location-cases">
+                <strong>移动 / 删除异常核对 · {{ locationCurrentJob?.folder }}</strong>
+                <p>源 UID 消失不代表删除。首次发现后需至少隔 5 分钟再次扫描；匹配到相同邮件内容也只能说明可能移动。扫描只读取来源邮箱并保存核对记录，不会自动移动或删除邮件。</p>
+                <div v-if="!locationCases.length" class="mail-external__hint">尚无需要核对的异常记录。</div>
+                <div v-for="entry in locationCases" :key="entry.id" class="mail-external__flag-item" :data-testid="'location-case-'+entry.source_uid">
+                  <span>来源 UID {{ entry.source_uid }} · {{ locationStatusLabel(entry.status) }}</span>
+                  <small>缺失观察 {{ entry.missing_observations }} 次 · 最近核对 {{ formattedDate(entry.last_checked_at) }}<template v-if="entry.returned_at"> · 原 UID 于 {{ formattedDate(entry.returned_at) }} 重新出现，请核对</template><template v-if="entry.candidate_folder"> · 疑似目标文件夹 {{ entry.candidate_folder }}</template></small>
+                  <div class="mail-external__account-actions">
+                    <PButton v-if="entry.missing_observations>=2 && ['missing_unclassified','possible_move','ambiguous_candidates','candidate_unverified'].includes(entry.status)" variant="secondary" size="sm" :disabled="locationActionBusy || Boolean(locationCurrentJob?.flag_sync_enabled)" @click="proposeLocationAction(entry,'keep_native')">保留旧副本</PButton>
+                    <PButton v-if="entry.missing_observations>=2 && ['missing_unclassified','possible_move'].includes(entry.status)" variant="secondary" size="sm" :disabled="locationActionBusy || Boolean(locationCurrentJob?.flag_sync_enabled)" @click="proposeLocationAction(entry,'trash_native')">旧副本移入回收站</PButton>
+                    <PButton v-if="entry.status==='possible_move'" variant="secondary" size="sm" :disabled="locationActionBusy || Boolean(locationCurrentJob?.flag_sync_enabled)" @click="proposeLocationAction(entry,'resolve_move')">确认候选，旧副本入回收站</PButton>
+                    <PButton v-if="entry.status==='trashed'||entry.status==='moved_resolved'" variant="secondary" size="sm" :disabled="locationActionBusy || Boolean(locationCurrentJob?.flag_sync_enabled)" @click="proposeLocationAction(entry,'restore_native')">恢复原文件夹</PButton>
+                    <PButton v-if="entry.action_id || ['trashed','moved_resolved','restored','action_needs_review'].includes(entry.status)" variant="ghost" size="sm" :disabled="locationActionBusy" @click="loadLocationActions(entry)">查看操作回执</PButton>
+                  </div>
+                </div>
+                <div v-if="locationActionsCase" class="mail-external__flag-preview" data-testid="external-location-receipts">
+                  <strong>位置操作回执</strong>
+                  <p>核对只重新读取 Atoman 目标文件夹，不会执行第二次移动。</p>
+                  <div v-for="attempt in locationActions" :key="attempt.id" class="mail-external__flag-item">
+                    <span>{{ locationDecisionLabel(attempt.action) }} · {{ attempt.status==='applied'?'已确认':attempt.status==='aborted_prewrite'?'写入前已取消':'待核对' }}</span>
+                    <small v-if="attempt.error_code">{{ attempt.error_code }}</small>
+                    <PButton v-if="attempt.status==='needs_review'||attempt.status==='dispatching'" variant="secondary" size="sm" :disabled="locationActionBusy" @click="reconcileLocationAction(attempt)">只读核对回执</PButton>
+                  </div>
+                  <PButton variant="ghost" size="sm" @click="locationActionsCase='';locationActions=[]">关闭回执</PButton>
+                </div>
+                <div class="mail-external__account-actions">
+                  <PButton v-if="locationHasMore && locationCurrentJob" variant="secondary" size="sm" :loading="locationScanBusy" @click="scanLocations(locationCurrentJob,locationCursor)">继续扫描下一批 8 封</PButton>
+                  <PButton v-if="locationCurrentJob" variant="secondary" size="sm" :disabled="locationScanBusy" @click="scanLocations(locationCurrentJob,0)">从头重新检查</PButton>
+                  <PButton variant="ghost" size="sm" @click="locationCaseJob='';locationCases=[];locationActionsCase='';locationActions=[]">关闭核对</PButton>
+                </div>
+              </section>
               <p v-if="flagSyncError" role="alert" class="mail-external__error">{{ flagSyncError }}</p>
               <div v-if="flagAttemptsJob" class="mail-external__flag-preview" data-testid="external-flag-attempts">
                 <strong>双向同步操作回执（最近 40 项）</strong>
@@ -184,6 +217,15 @@
       <PButton variant="primary" :loading="flagSyncBusy" :disabled="!flagSyncAcknowledged || flagSyncBusy" @click="confirmFlagSyncJob && setFlagSync(confirmFlagSyncJob,true)">确认开启双向同步</PButton>
     </template>
   </PModal>
+  <PModal :show="Boolean(confirmLocationAction)" title="确认邮件位置处理" size="sm" @close="confirmLocationAction=null;locationActionAcknowledged=false">
+    <p><strong>{{ confirmLocationAction ? locationDecisionLabel(confirmLocationAction.action) : '' }}</strong></p>
+    <p>{{ locationDecisionDescription() }}</p>
+    <label class="mail-external__live-optin"><input v-model="locationActionAcknowledged" type="checkbox" data-testid="external-location-confirm" /><span>我确认这是针对这条位置异常的手动处理。系统不会自动删除原邮箱邮件；结果不明确时应先核对回执。</span></label>
+    <template #footer>
+      <PButton variant="secondary" :disabled="locationActionBusy" @click="confirmLocationAction=null">取消</PButton>
+      <PButton variant="primary" :loading="locationActionBusy" :disabled="!locationActionAcknowledged||locationActionBusy" @click="applyLocationAction">确认处理</PButton>
+    </template>
+  </PModal>
   <PModal :show="showMoveConfirm" title="移动外部邮件" size="sm" @close="showMoveConfirm=false">
     <p>将此邮件移动到 {{ moveDestination }}？这会实际修改原邮箱。只有服务商支持安全 IMAP MOVE 时才会执行；不会永久删除邮件。</p>
     <template #footer>
@@ -211,7 +253,7 @@ import PModal from '@/components/ui/PModal.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import { fetchMailFolders } from '@/api/mail'
-import { queryMailMessages, fetchExternalProviders, fetchExternalUnifiedInbox, connectExternalAccount, syncExternalAccount, disconnectExternalAccount, fetchExternalMessagePlain, setExternalMessageSeen, type ExternalIMAPProvider, type MailExternalAccount, type MailExternalMessage, type MailExternalProvider, fetchExternalFolders, fetchExternalFolderPage, type MailExternalFolder, type MailExternalFolderPage, moveExternalMessage, fetchExternalHistoryJobs, startExternalHistoryJob, actionExternalHistoryJob, type MailExternalHistoryJob, fetchExternalFlagPreview, type MailFlagPreviewPage, type MailFlagDiff, configureExternalFlagSync, fetchExternalFlagAttempts, reconcileExternalFlagAttempt, type ExternalFlagAttempt } from '@/api/mailClient'
+import { queryMailMessages, fetchExternalProviders, fetchExternalUnifiedInbox, connectExternalAccount, syncExternalAccount, disconnectExternalAccount, fetchExternalMessagePlain, setExternalMessageSeen, type ExternalIMAPProvider, type MailExternalAccount, type MailExternalMessage, type MailExternalProvider, fetchExternalFolders, fetchExternalFolderPage, type MailExternalFolder, type MailExternalFolderPage, moveExternalMessage, fetchExternalHistoryJobs, startExternalHistoryJob, actionExternalHistoryJob, type MailExternalHistoryJob, fetchExternalFlagPreview, type MailFlagPreviewPage, type MailFlagDiff, configureExternalFlagSync, fetchExternalFlagAttempts, reconcileExternalFlagAttempt, type ExternalFlagAttempt, fetchExternalLocationCases, scanExternalLocation, decideExternalLocation, fetchExternalLocationActions, reconcileExternalLocation, type MailLocationCase, type MailLocationDecision, type MailLocationAction } from '@/api/mailClient'
 import type { MailSummary } from '@/api/mail'
 import { mailTime } from './mail-helpers'
 
@@ -245,6 +287,106 @@ const flagSyncError=ref('')
 const flagAttempts=ref<ExternalFlagAttempt[]>([])
 const flagAttemptsJob=ref('')
 const flagAttemptsBusy=ref(false)
+const locationCaseJob=ref('')
+const locationCases=ref<MailLocationCase[]>([])
+const locationCursor=ref(0)
+const locationHasMore=ref(false)
+const locationScanBusy=ref(false)
+const locationActionBusy=ref(false)
+const locationError=ref('')
+const confirmLocationAction=ref<{entry:MailLocationCase;action:MailLocationDecision}|null>(null)
+const locationActionAcknowledged=ref(false)
+const locationActions=ref<MailLocationAction[]>([])
+const locationActionsCase=ref('')
+const locationCurrentJob=computed(()=>historyJobs.value.find(row=>row.id===locationCaseJob.value))
+function locationStatusLabel(status:MailLocationCase['status']){
+ return ({observed:'首次缺失，需至少 5 分钟后再次确认',missing_unclassified:'来源缺失，不能判定删除',possible_move:'可能移至其他文件夹（需人工确认）',ambiguous_candidates:'多个相同内容候选，不自动选择',candidate_unverified:'候选邮件的身份尚未确认',native_missing:'Atoman 原副本不可用',native_unavailable:'Atoman 副本暂时无法核对',source_returned:'原 UID 再次出现，请核对',kept:'已选择保留 Atoman 旧副本',trashed:'旧副本已进入 Atoman 回收站',moved_resolved:'保留新位置副本，旧副本已入回收站',restored:'已恢复到原导入文件夹',action_needs_review:'移动操作结果不明确，禁止重试'} as Record<MailLocationCase['status'],string>)[status]||'待核对'
+}
+function locationDecisionLabel(action:MailLocationDecision){
+ return ({keep_native:'保留 Atoman 原副本',trash_native:'把 Atoman 旧副本移入回收站',resolve_move:'保留新文件夹副本，将旧副本移入回收站',restore_native:'从回收站恢复原导入文件夹'} as const)[action]
+}
+function locationDecisionDescription(){
+ const selected=confirmLocationAction.value
+ if(!selected)return ''
+ if(selected.action==='keep_native')return '只保留当前 Atoman 副本并记录处理选择，不会修改任何远程邮件。'
+ if(selected.action==='restore_native')return '仅把原 Atoman 导入副本恢复到之前的文件夹，不会修改原邮箱。若邮箱已被其他客户端移动，会拒绝覆盖。'
+ if(selected.action==='resolve_move')return `内容完全相同的邮件可能位于 ${selected.entry.candidate_folder||'其他文件夹'}，但无法仅凭哈希证明是移动。确认保留新文件夹中的候选邮件，将 Atoman 旧副本移入回收站。不会删除候选或修改原邮箱。`
+ return '原 UID 连续缺失并不一定意味着已删除。确认仅将 Atoman 的旧导入副本移入回收站；不会修改或删除原邮箱。恢复能力与实际保留期限受 Stalwart 回收站策略约束。'
+}
+async function refreshLocationCases(job:MailExternalHistoryJob){
+ const account=browsingAccount.value
+ if(!account)return
+ const rows=await fetchExternalLocationCases(account.id,job.id)
+ if(browsingAccount.value?.id!==account.id)return
+ locationCases.value=rows;locationCaseJob.value=job.id
+}
+async function scanLocations(job:MailExternalHistoryJob,afterUID=0){
+ const account=browsingAccount.value
+ if(!account||locationScanBusy.value || !['completed','watching'].includes(job.status))return
+ locationScanBusy.value=true;locationError.value=''
+ try{
+  const page=await scanExternalLocation(account.id,job.id,afterUID)
+  if(browsingAccount.value?.id!==account.id)return
+  if(locationCaseJob.value && locationCaseJob.value!==job.id){
+    locationActionsCase.value=''
+    locationActions.value=[]
+  }
+  locationCursor.value=page.next_source_uid
+  locationHasMore.value=page.has_more
+  await refreshLocationCases(job)
+ }catch{
+  if(browsingAccount.value?.id===account.id)locationError.value='无法检查来源 UID。可能尚未启用位置核对、来源文件夹已变化或服务暂时不可用；不会修改任何邮件。'
+ }finally{locationScanBusy.value=false}
+}
+function proposeLocationAction(entry:MailLocationCase,action:MailLocationDecision){
+ confirmLocationAction.value={entry,action};locationActionAcknowledged.value=false
+}
+async function applyLocationAction(){
+ const account=browsingAccount.value,selected=confirmLocationAction.value,job=locationCurrentJob.value
+ if(!account||!selected||!job||!locationActionAcknowledged.value||locationActionBusy.value)return
+ locationActionBusy.value=true;locationError.value=''
+ try {
+  await decideExternalLocation(account.id,job.id,selected.entry.id,selected.action)
+  if(browsingAccount.value?.id!==account.id)return
+  confirmLocationAction.value=null;locationActionAcknowledged.value=false
+  await refreshLocationCases(job)
+  notice.value='已完成已确认的位置处理。原邮箱没有被移动或删除。'
+ }catch{
+  if(browsingAccount.value?.id===account.id){
+   confirmLocationAction.value=null;locationError.value='操作未获确认，可能需要只读核对回执。请查看位置异常记录；不要重复点击。'
+   try{await refreshLocationCases(job)}catch{}
+  }
+ }finally{locationActionBusy.value=false}
+}
+async function loadLocationActions(entry:MailLocationCase){
+ const account=browsingAccount.value,job=locationCurrentJob.value
+ if(!account||!job||locationActionBusy.value)return
+ locationActionBusy.value=true;locationError.value=''
+ try {
+  const result=await fetchExternalLocationActions(account.id,job.id,entry.id)
+  if(browsingAccount.value?.id!==account.id)return
+  locationActionsCase.value=entry.id;locationActions.value=result
+ }catch{
+  if(browsingAccount.value?.id===account.id)locationError.value='无法读取位置操作回执，未修改邮件。'
+ }finally{locationActionBusy.value=false}
+}
+async function reconcileLocationAction(attempt:MailLocationAction){
+ const account=browsingAccount.value,job=locationCurrentJob.value,caseID=locationActionsCase.value
+ if(!account||!job||!caseID||locationActionBusy.value)return
+ locationActionBusy.value=true;locationError.value=''
+ try {
+  await reconcileExternalLocation(account.id,job.id,caseID,attempt.id)
+  if(browsingAccount.value?.id!==account.id)return
+  const entry=locationCases.value.find(v=>v.id===caseID)
+  if(entry){
+   const actions=await fetchExternalLocationActions(account.id,job.id,caseID)
+   if(browsingAccount.value?.id===account.id)locationActions.value=actions
+  }
+  await refreshLocationCases(job)
+ }catch{
+  if(browsingAccount.value?.id===account.id)locationError.value='状态仍不能安全确认，回执将保持锁定，不会重发移动请求。'
+ }finally{locationActionBusy.value=false}
+}
 const currentPreviewJob=computed(()=>historyJobs.value.find(job=>job.id===flagPreviewJob.value))
 function flagAttemptLabel(row:ExternalFlagAttempt){
   if(row.status==='applied')return '已确认同步'
@@ -457,6 +599,15 @@ function closeFolders(){
   flagPreview.value=null
   flagPreviewJob.value=''
   flagPreviewError.value=''
+  locationCaseJob.value=''
+  locationCases.value=[]
+  locationCursor.value=0
+  locationHasMore.value=false
+  locationError.value=''
+  locationActions.value=[]
+  locationActionsCase.value=''
+  confirmLocationAction.value=null
+  locationActionAcknowledged.value=false
   flagSyncError.value=''
   flagAttempts.value=[]
   flagAttemptsJob.value=''

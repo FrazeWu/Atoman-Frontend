@@ -98,7 +98,7 @@ async function getJson(url: string, fetcher: Fetcher): Promise<JsonValue> {
 	const response = await fetcher(url, {
 		headers: { Accept: "application/json" },
 	});
-	if ([401, 403, 404].includes(response.status)) return null;
+	if ([400, 401, 403, 404].includes(response.status)) return null;
 	if (!response.ok)
 		throw new Error(`Public SEO source returned ${response.status}`);
 	return unwrap(parseJsonValue(await response.json()));

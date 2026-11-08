@@ -346,4 +346,19 @@ describe("public content SEO", () => {
 		expect(fetcher).toHaveBeenCalledWith("https://api.atoman.org/api/v1/books/works?limit=50&offset=0", expect.any(Object));
 	});
 
+
+	it("returns noindex 404 for malformed detail identifiers rejected by the API", async () => {
+		const fetcher = vi.fn(async () => json({ error: { code: "validation.invalid_request" } }, 400)) as unknown as typeof fetch;
+		const lookup = await resolvePublicContentSeo("/books/work/invalid-id", undefined, "https://www.atoman.org", fetcher);
+		expect(lookup).toEqual({ matched: true, content: undefined });
+		vi.stubGlobal("fetch", fetcher);
+		const response = await pageMiddleware({
+			request: new Request("https://www.atoman.org/books/work/invalid-id"),
+			next: async () => new Response(shell, { headers: { "content-type": "text/html" } }),
+		});
+		expect(response.status).toBe(404);
+		expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+		expect(await response.text()).toContain('<meta name="robots" content="noindex, nofollow">');
+	});
+
 });

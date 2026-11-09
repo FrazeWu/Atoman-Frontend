@@ -58,6 +58,6 @@ describe('blog SEO helpers', () => {
 
     expect(xml).toContain('<loc>https://atoman.org/posts/post/one&amp;two</loc>')
     expect(xml).toContain('<lastmod>2026-07-14T09:30:00Z</lastmod>')
-    expect(buildRobotsText('https://atoman.org')).toBe('User-agent: *\nAllow: /\nSitemap: https://atoman.org/sitemap.xml\n')
+    expect(buildRobotsText('https://atoman.org')).toBe('User-agent: *\nAllow: /\nSitemap: https://atoman.org/sitemap.xml\nSitemap: https://atoman.org/sitemap-songs.xml\n')
   })
 })

@@ -149,5 +149,5 @@ export function buildSitemapXml(items: SitemapItem[], origin: string) {
 }
 
 export function buildRobotsText(origin: string) {
-  return `User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`
+  return `User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\nSitemap: ${origin}/sitemap-songs.xml\n`
 }

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { onRequest as articleHandler } from '../../../functions/posts/post/[id]'
 import { onRequest as sitemapHandler } from '../../../functions/sitemap.xml'
+import { onRequest as songSitemapHandler } from '../../../functions/sitemap-songs.xml'
 import { onRequest as robotsHandler } from '../../../functions/robots.txt'
 
 const shell = '<!doctype html><html><head><title>Atoman</title></head><body><div id="app"></div></body></html>'
@@ -141,6 +142,79 @@ describe('blog SEO Pages Functions', () => {
     expect(xml).toContain('<urlset')
     expect(xml).toContain('<loc>https://www.atoman.org/posts</loc>')
   })
+
+  it("lists publicly visible songs in a separate, paginated sitemap index", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      data: [{ id: "019ff396-4b75-7320-a447-ae78d0dd8189" }],
+      meta: { page: 1, page_size: 1, total: 1041 },
+    })));
+    vi.stubGlobal("fetch", fetcher);
+    const response = await songSitemapHandler({
+      request: new Request("https://www.atoman.org/sitemap-songs.xml"),
+      env: {},
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("application/xml");
+    const xml = await response.text();
+    expect(xml).toContain("<sitemapindex");
+    expect((xml.match(/<sitemap>/g) || []).length).toBe(11);
+    expect(xml).toContain("<loc>https://www.atoman.org/sitemap-songs.xml?page=11</loc>");
+    expect(xml).not.toContain("/music/song/");
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://api.atoman.org/api/v1/music/songs?page=1&page_size=1",
+      expect.any(Object),
+    );
+  });
+
+  it("serves only valid active song IDs and modification times in child sitemaps", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      data: [
+        { id: "019ff396-4b75-7320-a447-ae78d0dd8189", lifecycle_status: "active", updated_at: "2026-11-05T10:21:39+08:00" },
+        { id: "01a000a8-0fcc-73ae-9eae-842c686ff221", lifecycle_status: "merged" },
+        { id: "bad", lifecycle_status: "active" },
+      ],
+      meta: { page: 1, page_size: 100, total: 1041 },
+    })));
+    vi.stubGlobal("fetch", fetcher);
+    const response = await songSitemapHandler({
+      request: new Request("https://www.atoman.org/sitemap-songs.xml?page=1"),
+      env: {},
+    });
+    expect(response.status).toBe(200);
+    const xml = await response.text();
+    expect(xml).toContain("<urlset");
+    expect(xml).toContain("<loc>https://www.atoman.org/music/song/019ff396-4b75-7320-a447-ae78d0dd8189</loc>");
+    expect(xml).toContain("<lastmod>2026-11-05T10:21:39+08:00</lastmod>");
+    expect(xml).not.toContain("01a000a8");
+    expect(fetcher).toHaveBeenCalledWith(
+      "https://api.atoman.org/api/v1/music/songs?page=1&page_size=100",
+      expect.any(Object),
+    );
+  });
+
+  it.each(["?page=0", "?page=-1", "?page=1.5", "?page=1001", "?page=NaN"])(
+    "rejects malformed or excessive song sitemap pages %s",
+    async (query) => {
+      const fetcher = vi.fn();
+      vi.stubGlobal("fetch", fetcher);
+      const response = await songSitemapHandler({
+        request: new Request("https://www.atoman.org/sitemap-songs.xml" + query),
+        env: {},
+      });
+      expect([400, 404]).toContain(response.status);
+      expect(fetcher).not.toHaveBeenCalled();
+    },
+  );
+
+  it("never pretends the songs sitemap is empty when the music API is unavailable", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("unavailable", { status: 503 })));
+    const response = await songSitemapHandler({
+      request: new Request("https://www.atoman.org/sitemap-songs.xml"),
+      env: {},
+    });
+    expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  });
 
   it('serves robots.txt for the current origin', async () => {
     const response = await robotsHandler({ request: new Request('https://atoman.org/robots.txt') })

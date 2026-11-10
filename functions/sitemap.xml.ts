@@ -69,7 +69,10 @@ export async function onRequest(context: SitemapContext) {
 			: undefined;
 		const apiBase = resolveApiBase(context.env.VITE_API_URL || defaultApi, requestUrl.origin);
 		const response = await fetch(`${apiBase}/blog/seo/sitemap`, {
-			headers: { Accept: "application/json" },
+			headers: {
+				Accept: "application/json",
+				"User-Agent": "Atoman-Edge-SSR/1.0 (+https://www.atoman.org)",
+			},
 			signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(4000) : undefined,
 		});
 		if (!response.ok) throw new Error("SEO sitemap unavailable");

@@ -44,21 +44,26 @@ export async function onRequest(context: ArticleContext) {
     const requestUrl = new URL(context.request.url)
     const apiBase = resolveApiBase(context.env.VITE_API_URL, requestUrl.origin)
     const response = await fetch(`${apiBase}/blog/seo/posts/${encodeURIComponent(id)}`, {
-      headers: { Accept: 'application/json' },
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'Atoman-Edge-SSR/1.0 (+https://www.atoman.org)',
+      },
+      signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(4000) : undefined,
     })
     if (!response.ok) {
-      if (response.status === 403 || response.status === 404) return unavailableArticleResponse()
+      if (response.status === 404) return unavailableArticleResponse()
       return shell
     }
 
     const payload = await response.json() as { data?: BlogSeoPost }
-    if (!isBlogSeoPost(payload.data)) return unavailableArticleResponse()
+    if (!isBlogSeoPost(payload.data)) return fallback
     const html = buildArticleHtml(await shell.text(), payload.data, requestUrl.origin)
     const headers = new Headers(shell.headers)
     headers.set('content-type', 'text/html; charset=UTF-8')
+    headers.set('x-atoman-seo', 'hit')
     headers.delete('content-length')
     headers.delete('content-encoding')
-    return new Response(html, { status: shell.status, statusText: shell.statusText, headers })
+    return new Response(html, { status: 200, statusText: 'OK', headers })
   } catch {
     return fallback
   }

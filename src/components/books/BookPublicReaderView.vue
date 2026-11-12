@@ -48,13 +48,13 @@
       </template>
       <template #sidebar>
         <BookReaderSidebar
-          :total-pages="asset?.format === 'pdf' ? pdfPageCount : 0"
-          :current-page="asset?.format === 'pdf' ? pdfPage : 1"
+          :total-pages="asset?.format === 'pdf' ? pdfPageCount : ((asset?.format === 'cbz' || asset?.format === 'cbr') ? comicPages.length : 0)"
+          :current-page="asset?.format === 'pdf' ? pdfPage : ((asset?.format === 'cbz' || asset?.format === 'cbr') ? comicPage : 1)"
           :toc="epubTOC"
           :bookmarks="bookmarks"
           :annotations="sidebarAnnotations"
           :annotation-editable="source?.annotations !== undefined"
-          @select-page="jumpToPdfPage"
+          @select-page="(page: number) => handleSelectPage(page)"
           @toc-select="jumpToEpubTOC"
           @bookmark-jump="jumpToBookmark"
           @bookmark-remove="removeBookmark"
@@ -64,7 +64,7 @@
           @annotation-export="exportAnnotations"
         />
       </template>
-      <div v-if="asset?.format === 'txt'" ref="textViewport" class="public-reader__text" :class="{ 'public-reader__text--paginated': displayPreferences.scroll_mode === 'paginated' }" tabindex="0" @wheel="handleTextWheel" @keydown="handleTextKeydown" @scroll="handleTextScroll" @mouseup="captureSelection(true)" @keyup="captureSelection(true)"><pre ref="textRoot"><template v-for="part in textParts" :key="part.start"><mark v-if="part.mark" :data-mark-id="part.mark.id" :style="highlightStyle(part.mark)" @click="clickTextMark(part.mark)">{{ part.text }}</mark><template v-else>{{ part.text }}</template></template></pre></div>
+      <div v-if="asset?.format === 'txt'" ref="textViewport" class="public-reader__text" :class="{ 'public-reader__text--paginated': displayPreferences.scroll_mode === 'paginated' }" tabindex="0" @wheel="handleTextWheel" @keydown="handleTextKeydown" @scroll="handleTextScroll" @mouseup="captureSelection(true)" @keyup="captureSelection(true)"><pre ref="textRoot"><template v-for="part in textParts" :key="part.start"><mark v-if="part.mark" :data-mark-id="part.mark.id" :style="highlightStyle(part.mark)" style="cursor: pointer;" @click="clickTextMark(part.mark, $event)">{{ part.text }}</mark><template v-else>{{ part.text }}</template></template></pre></div>
       <div v-else-if="asset?.format === 'epub'" ref="epubViewport" class="public-reader__epub" @wheel.passive="markEpubActivity" @touchstart.passive="markEpubActivity" @keydown="markEpubActivity">
         <BookReaderSkeleton v-if="isEngineLoading" format="epub" />
         <div ref="epubHost" class="public-reader__epub-renderer" />
@@ -81,7 +81,7 @@
         <div v-else v-show="!isEngineLoading" class="public-reader__pdf-page" :class="{ 'is-selectable': source?.annotations !== undefined }" :style="pdfWidth ? { width: `${pdfWidth}px` } : {}">
           <canvas ref="pdfCanvas" aria-label="PDF 页面" />
           <div v-if="source?.annotations !== undefined" ref="pdfTextRoot" class="textLayer" aria-label="PDF 可选文字" />
-          <div class="public-reader__pdf-marks" aria-hidden="true"><template v-for="mark in annotations.filter(item => item.anchor.pdf_page === pdfPage)" :key="mark.id"><span v-for="(rect, index) in mark.anchor.pdf_rects" :key="index" :style="pdfMarkStyle(mark, rect)" /></template></div>
+          <div class="public-reader__pdf-marks"><template v-for="mark in annotations.filter(item => item.anchor.pdf_page === pdfPage)" :key="mark.id"><span v-for="(rect, index) in mark.anchor.pdf_rects" :key="index" :style="pdfMarkStyle(mark, rect)" style="pointer-events: auto; cursor: pointer;" @click.stop="clickTextMark(mark, $event)" /></template></div>
         </div>
       </div>
       <template #settings>
@@ -117,6 +117,29 @@
         </details>
       </template>
     </BookReaderShell>
+
+    <BookSelectionToolbar
+      v-if="selectionToolbar"
+      :position="{ x: selectionToolbar.x, y: selectionToolbar.y }"
+      :selected-text="selectionToolbar.text"
+      :existing-annotation="selectionToolbar.existing ? {
+        id: selectionToolbar.existing.id,
+        asset_id: asset?.id || '',
+        format: asset?.format || '',
+        text: selectionToolbar.existing.quote,
+        color: (selectionToolbar.existing.color as any) || 'yellow',
+        style: (selectionToolbar.existing.style as any) || 'highlight',
+        note: selectionToolbar.existing.note || '',
+        created_at: selectionToolbar.existing.created_at || '',
+        updated_at: (selectionToolbar.existing as any).updated_at || selectionToolbar.existing.created_at || '',
+      } : null"
+      :book-title="source?.title || asset?.file_name || ''"
+      @highlight="onToolbarHighlight"
+      @save-note="onToolbarSaveNote"
+      @quote="onToolbarQuote"
+      @delete="onToolbarDelete"
+      @close="closeSelectionToolbar"
+    />
   </main>
 </template>
 
@@ -129,6 +152,7 @@ import { loadPdfEngine, loadEpubEngine } from '@/utils/bookReaderEngines'
 import BookReaderSkeleton from '@/components/books/BookReaderSkeleton.vue'
 import BookPdfContinuousView from '@/components/books/BookPdfContinuousView.vue'
 import PButton from '@/components/ui/PButton.vue'
+import BookSelectionToolbar from '@/components/books/BookSelectionToolbar.vue'
 import BookReaderDisplayControls from '@/components/books/BookReaderDisplayControls.vue'
 import BookReaderShell from '@/components/books/BookReaderShell.vue'
 import BookReaderSidebar from '@/components/books/BookReaderSidebar.vue'
@@ -142,7 +166,7 @@ import { fetchPublishedBookAssetContent, getPublishedBookAsset, type BookPublish
 import type { BookReaderSource } from '@/types/bookReaderSource'
 import type { BookChapterAnchor } from '@/api/bookPrivate'
 import type { ReadingMark, ReadingAnchor } from '@/api/bookReading'
-import type { BookAnnotation } from '@/api/books'
+import type { BookAnnotation, BookHighlightColor, BookHighlightStyle } from '@/api/books'
 import { textSelection, pdfSelection, epubSelection, epubMarkRange, textRange, highlightedText, highlightColors, type HighlightSelection } from '@/utils/bookMarkAnchors'
 
 type EpubBook = any
@@ -151,9 +175,26 @@ type Contents = any
 type EpubTOCSource = { id?: string; href: string; label: string; subitems?: EpubTOCSource[] }
 type EpubTOCItem = EpubTOCSource & { depth: number }
 
+interface SelectionToolbarState {
+  x: number
+  y: number
+  text: string
+  candidate?: HighlightSelection | null
+  existing?: ReadingMark | null
+}
+
+const selectionToolbar = ref<SelectionToolbarState | null>(null)
+
 const route = useRoute()
 const props = defineProps<{ source?: BookReaderSource }>()
-const emit = defineEmits<{ annotate: [selection: HighlightSelection]; 'annotation-edit': [mark: ReadingMark]; 'annotation-delete': [mark: ReadingMark]; 'chapter-note': [anchor: BookChapterAnchor] }>()
+const emit = defineEmits<{
+  annotate: [selection: HighlightSelection]
+  'annotate-direct': [payload: { selection: HighlightSelection; color: string; style: string; note?: string; isQuote?: boolean }]
+  'annotation-edit': [mark: ReadingMark]
+  'annotation-update': [payload: ReadingMark]
+  'annotation-delete': [mark: ReadingMark]
+  'chapter-note': [anchor: BookChapterAnchor]
+}>()
 const readerStore = useBookReaderStore()
 const asset = ref<BookPublishedAsset | null>(null)
 const textContent = ref('')
@@ -228,8 +269,14 @@ function pdfMarkStyle(mark: ReadingMark, rect: NonNullable<ReadingAnchor['pdf_re
   return { left: `${rect.x * 100}%`, top: `${rect.y * 100}%`, width: `${rect.width * 100}%`, height: `${rect.height * 100}%`, backgroundColor: mark.style === 'underline' ? 'transparent' : `${color}66`, borderBottom: mark.style === 'underline' ? `2px solid ${color}` : 'none' }
 }
 function captureSelection(open = false) {
-  if (disposed || props.source?.annotations === undefined || isLoading.value) return
+  if (disposed || isLoading.value) return
   const selection = window.getSelection()
+  if (!selection || selection.isCollapsed || !selection.rangeCount) {
+    if (selectionToolbar.value && !selectionToolbar.value.existing) {
+      selectionToolbar.value = null
+    }
+    return
+  }
   const anchorNode = selection?.anchorNode
   const anchorElement = anchorNode instanceof Element ? anchorNode : anchorNode?.parentElement
   const selectedPage = asset.value?.format === 'pdf' && displayPreferences.value.scroll_mode === 'continuous'
@@ -239,7 +286,21 @@ function captureSelection(open = false) {
   const candidate = asset.value?.format === 'txt' && textRoot.value ? textSelection(textRoot.value, selection)
     : asset.value?.format === 'pdf' && selectedTextRoot ? pdfSelection(selectedTextRoot, selectedPageNumber, selection) : null
   selectionCandidate.value = candidate || undefined
-  if (open && candidate) annotateCandidate()
+  if (open && candidate) {
+    const range = selection.getRangeAt(0)
+    const rect = range.getBoundingClientRect()
+    if (rect && rect.width > 0) {
+      selectionToolbar.value = {
+        x: Math.max(140, Math.min(window.innerWidth - 140, rect.left + rect.width / 2)),
+        y: Math.max(60, rect.top),
+        text: candidate.quote,
+        candidate,
+        existing: null,
+      }
+    } else {
+      annotateCandidate()
+    }
+  }
 }
 function annotateCandidate() {
   if (!selectionCandidate.value) return
@@ -248,7 +309,76 @@ function annotateCandidate() {
   selectionCandidate.value = undefined
 }
 function selectionChanged() { if (asset.value?.format !== 'epub') captureSelection() }
-function clickTextMark(mark: ReadingMark) { if (window.getSelection()?.isCollapsed !== false) emit('annotation-edit', mark) }
+function clickTextMark(mark: ReadingMark, event?: MouseEvent) {
+  if (window.getSelection()?.isCollapsed === false) return
+  if (event) {
+    const target = event.currentTarget as HTMLElement | null
+    const rect = target?.getBoundingClientRect() || { left: event.clientX, top: event.clientY, width: 0 }
+    selectionToolbar.value = {
+      x: Math.max(140, Math.min(window.innerWidth - 140, rect.left + (rect.width || 0) / 2)),
+      y: Math.max(60, rect.top),
+      text: mark.quote,
+      candidate: null,
+      existing: mark,
+    }
+  } else {
+    emit('annotation-edit', mark)
+  }
+}
+function onToolbarHighlight(color: BookHighlightColor, style: BookHighlightStyle) {
+  if (!selectionToolbar.value) return
+  if (props.source?.annotations === undefined) {
+    annotationMessage.value = '登录后可保存划线高亮'
+    closeSelectionToolbar()
+    return
+  }
+  if (selectionToolbar.value.existing) {
+    emit('annotation-update', { ...selectionToolbar.value.existing, color, style })
+  } else if (selectionToolbar.value.candidate) {
+    emit('annotate-direct', { selection: selectionToolbar.value.candidate, color, style })
+    emit('annotate', selectionToolbar.value.candidate)
+  }
+  closeSelectionToolbar()
+}
+function onToolbarSaveNote(note: string, color: BookHighlightColor, style: BookHighlightStyle) {
+  if (!selectionToolbar.value) return
+  if (props.source?.annotations === undefined) {
+    annotationMessage.value = '登录后可保存读书想法'
+    closeSelectionToolbar()
+    return
+  }
+  if (selectionToolbar.value.existing) {
+    emit('annotation-update', { ...selectionToolbar.value.existing, note, color, style })
+  } else if (selectionToolbar.value.candidate) {
+    emit('annotate-direct', { selection: selectionToolbar.value.candidate, color, style, note })
+  }
+  closeSelectionToolbar()
+}
+function onToolbarQuote(color: BookHighlightColor, style: BookHighlightStyle) {
+  if (!selectionToolbar.value) return
+  if (props.source?.annotations === undefined) {
+    annotationMessage.value = '登录后可同步公开书摘'
+    closeSelectionToolbar()
+    return
+  }
+  if (selectionToolbar.value.existing) {
+    emit('annotation-update', { ...selectionToolbar.value.existing, label: '精选书摘', color, style })
+  } else if (selectionToolbar.value.candidate) {
+    emit('annotate-direct', { selection: selectionToolbar.value.candidate, color, style, isQuote: true })
+  }
+  annotationMessage.value = '已设为公开书摘，已同步至图书详情'
+  closeSelectionToolbar()
+}
+function onToolbarDelete(id: string) {
+  if (selectionToolbar.value?.existing) {
+    emit('annotation-delete', selectionToolbar.value.existing)
+  }
+  closeSelectionToolbar()
+}
+function closeSelectionToolbar() {
+  selectionToolbar.value = null
+  window.getSelection()?.removeAllRanges()
+}
 function editAnnotation(item: BookAnnotation) { const mark = annotations.value.find(mark => mark.id === item.id); if (mark) emit('annotation-edit', mark) }
 function deleteAnnotation(id: string) { const mark = annotations.value.find(mark => mark.id === id); if (mark) emit('annotation-delete', mark) }
 function jumpToAnnotation(item: BookAnnotation) {
@@ -267,6 +397,20 @@ function exportAnnotations() {
   link.click()
   URL.revokeObjectURL(url)
 }
+function clickEpubMark(mark: ReadingMark, event?: MouseEvent) {
+  const iframe = epubHost.value?.querySelector('iframe')
+  const iframeRect = iframe?.getBoundingClientRect() || { left: 0, top: 0 }
+  const x = event ? iframeRect.left + (event.clientX || 0) : window.innerWidth / 2
+  const y = event ? iframeRect.top + (event.clientY || 0) : 120
+  selectionToolbar.value = {
+    x: Math.max(140, Math.min(window.innerWidth - 140, x)),
+    y: Math.max(60, y),
+    text: mark.quote,
+    candidate: null,
+    existing: mark,
+  }
+}
+
 async function paintEpubAnnotations() {
   if (!epubRendition || !epubBook || !epubRendition.annotations) return
   const current = ++epubPaintGeneration
@@ -283,7 +427,17 @@ async function paintEpubAnnotations() {
       if (keys.has(type + cfi)) continue
       keys.add(type + cfi)
       const color = highlightColors[mark.color] || highlightColors.yellow!
-      epubRendition.annotations.add(type, cfi, { id: mark.id }, () => emit('annotation-edit', mark), 'revision-highlight', { fill: color, 'fill-opacity': '0.3', stroke: color, 'stroke-opacity': '1', 'stroke-width': '2' })
+      epubRendition.annotations.add(
+        type,
+        cfi,
+        { id: mark.id },
+        (e: MouseEvent) => {
+          clickEpubMark(mark, e)
+          emit('annotation-edit', mark)
+        },
+        'revision-highlight',
+        { fill: color, 'fill-opacity': '0.3', stroke: color, 'stroke-opacity': '1', 'stroke-width': '2' }
+      )
       epubPainted.push({ cfi, type })
     } catch { if (!disposed) annotationMessage.value = '部分划线无法定位，请从批注列表查看原文与笔记。' }
   }
@@ -364,8 +518,38 @@ function flattenEpubTOC(items: EpubTOCSource[], depth = 0): EpubTOCItem[] {
   return items.flatMap((item) => [{ ...item, depth }, ...flattenEpubTOC(item.subitems || [], depth + 1)])
 }
 
+function extractTxtTOC(text: string) {
+  const headingRegex = /(?:^|\n)\s*(第[0-9一二三四五六七八九十百千万]+[章节回集卷篇][^\n]{0,35}|(?:Chapter|Section)\s+[0-9]+[^\n]{0,35}|[引楔]子[^\n]{0,20}|尾声[^\n]{0,20}|后记[^\n]{0,20})/g
+  const matches: EpubTOCItem[] = []
+  let match: RegExpExecArray | null
+  while ((match = headingRegex.exec(text)) !== null) {
+    const label = match[1].trim()
+    const offset = match.index + (match[0].startsWith('\n') ? 1 : 0)
+    matches.push({
+      id: `txt-heading-${matches.length}`,
+      href: `txt:${offset}`,
+      label,
+      depth: 0,
+    })
+  }
+  if (matches.length >= 2) {
+    epubTOC.value = matches
+  }
+}
+
+function handleSelectPage(page: number) {
+  if (asset.value?.format === 'pdf') {
+    jumpToPdfPage(page)
+  } else if (asset.value?.format === 'cbz' || asset.value?.format === 'cbr') {
+    comicPage.value = Math.max(1, Math.min(page, comicPages.value.length))
+    scrollToComicPage()
+  }
+}
+
 async function loadText() {
-  textContent.value = await contentBlob!.text()
+  const text = await contentBlob!.text()
+  textContent.value = text
+  extractTxtTOC(text)
   await nextTick()
   updateTextPageCount()
   if (localProgress) {
@@ -477,6 +661,60 @@ function handleScrollModeChange(newMode: BookReaderScrollMode) {
   if (asset.value?.format === 'pdf' && newMode === 'paginated') void nextTick().then(() => renderPDFPage(false))
 }
 
+function applyEpubThemesAndStyles() {
+  if (!epubRendition) return
+  const theme = displayPreferences.value.theme || 'paper'
+  const fontScale = displayPreferences.value.font_scale || 1
+  const fontFamily = displayPreferences.value.font_family || 'serif'
+
+  const fontFamilies: Record<string, string> = {
+    serif: '"Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", Georgia, serif',
+    sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif',
+    kaiti: '"Kaiti SC", "STKaiti", "KaiTi", "楷体", serif',
+  }
+
+  const themeColors: Record<string, { bg: string; fg: string; link: string }> = {
+    paper: { bg: '#ffffff', fg: '#0f172a', link: '#0066cc' },
+    sepia: { bg: '#fbf0d9', fg: '#2d2013', link: '#8c531b' },
+    dim: { bg: '#fbf0d9', fg: '#2d2013', link: '#8c531b' },
+    slate: { bg: '#f1f5f9', fg: '#1e293b', link: '#0284c7' },
+    night: { bg: '#18181b', fg: '#e4e4e7', link: '#60a5fa' },
+  }
+
+  const colors = themeColors[theme] || themeColors.paper
+  const font = fontFamilies[fontFamily] || fontFamilies.serif
+  const fontSize = `${Math.round(100 * fontScale)}%`
+
+  try {
+    epubRendition.themes?.default?.({
+      body: {
+        'background-color': `${colors.bg} !important`,
+        color: `${colors.fg} !important`,
+        'font-family': `${font} !important`,
+        'font-size': `${fontSize} !important`,
+        'line-height': '1.85 !important',
+        padding: '1.5rem 1.25rem !important',
+      },
+      'p, div, span, li, blockquote, dd, dt, h1, h2, h3, h4, h5, h6': {
+        color: `${colors.fg} !important`,
+        'font-family': `${font} !important`,
+      },
+      a: {
+        color: `${colors.link} !important`,
+      },
+      img: {
+        'max-width': '100% !important',
+        height: 'auto !important',
+      },
+      '.revision-highlight': {
+        cursor: 'pointer',
+      }
+    })
+    epubRendition.themes?.fontSize?.(fontSize)
+    epubRendition.themes?.font?.(font)
+  } catch {}
+}
+
 async function buildEpubRendition(target?: string) {
   if (!epubBook || !epubHost.value || disposed) return
   const generation = ++epubBuildGeneration
@@ -495,12 +733,43 @@ async function buildEpubRendition(target?: string) {
     allowScriptedContent: false,
   })
   epubRendition = rendition
-  rendition.on('selected', (cfi: string, contents: Contents) => {
-    if (disposed || rendition !== epubRendition || props.source?.annotations === undefined) return
+  rendition.on('selected', (cfi: string, contents: any) => {
+    if (disposed || rendition !== epubRendition) return
     try {
-      selectionCandidate.value = epubSelection(cfi, contents.range(cfi), activeEpubCfi) || undefined
-      annotateCandidate()
+      const range = contents?.range ? contents.range(cfi) : null
+      const candidate = range ? (epubSelection(cfi, range, activeEpubCfi) || undefined) : undefined
+      selectionCandidate.value = candidate
+
+      if (candidate && range) {
+        const rangeRect = typeof range.getBoundingClientRect === 'function' ? range.getBoundingClientRect() : null
+        const iframe = epubHost.value?.querySelector('iframe')
+        const iframeRect = iframe?.getBoundingClientRect() || { left: 0, top: 0, width: 0, height: 0 }
+        if (rangeRect && rangeRect.width > 0) {
+          selectionToolbar.value = {
+            x: Math.max(140, Math.min(window.innerWidth - 140, iframeRect.left + rangeRect.left + rangeRect.width / 2)),
+            y: Math.max(60, iframeRect.top + rangeRect.top),
+            text: candidate.quote,
+            candidate,
+            existing: null,
+          }
+        }
+      }
     } catch { annotationMessage.value = '选区无法定位，请重新选择同一章节内的文字。' }
+  })
+  rendition.hooks?.content?.register?.((contents: any) => {
+    contents.document?.addEventListener?.('mousedown', () => {
+      if (selectionToolbar.value && !selectionToolbar.value.existing) {
+        selectionToolbar.value = null
+      }
+    })
+    contents.document?.addEventListener?.('selectionchange', () => {
+      const sel = contents.window?.getSelection()
+      if (!sel || sel.isCollapsed) {
+        if (selectionToolbar.value && !selectionToolbar.value.existing) {
+          selectionToolbar.value = null
+        }
+      }
+    })
   })
   for (const event of ['keydown', 'touchstart', 'touchmove', 'mousedown']) {
     rendition.on(event, () => { if (!disposed) epubHasUserInteraction = true })
@@ -522,6 +791,7 @@ async function buildEpubRendition(target?: string) {
   })
   await rendition.display(target || undefined)
   if (disposed || generation !== epubBuildGeneration || rendition !== epubRendition) return
+  applyEpubThemesAndStyles()
   // EPUB iframe wheel input does not bubble to the outer Vue component.
   // epub.js reports actual continuous viewport movement through the manager.
   if (mode === 'continuous') rendition.manager?.on?.('scrolled', () => {
@@ -738,6 +1008,7 @@ function updateDisplayPreferences(value: BookReaderDisplayPreferences) {
     display: displayPreferences.value,
   })
   rebuildEpubAfterModeChange()
+  applyEpubThemesAndStyles()
 }
 
 function jumpToTextMatch(match: BookTextSearchMatch) {
@@ -775,8 +1046,27 @@ function moveEpubPage(direction: 'prev' | 'next') {
 }
 
 function jumpToEpubTOC(href: string) {
-  if (epubRendition) { epubHasUserInteraction = true; epubJumpPending = true; void epubRendition.display(href) }
+  if (href.startsWith('txt:')) {
+    const offset = Number(href.slice(4))
+    if (!isNaN(offset)) {
+      scrollToTextOffset(offset)
+      handleTextScroll()
+    }
+  } else if (epubRendition) {
+    epubHasUserInteraction = true
+    epubJumpPending = true
+    void epubRendition.display(href)
+  }
 }
+
+watch(
+  [() => displayPreferences.value.theme, () => displayPreferences.value.font_scale, () => displayPreferences.value.font_family],
+  () => {
+    if (asset.value?.format === 'epub') {
+      applyEpubThemesAndStyles()
+    }
+  }
+)
 
 onMounted(async () => {
   document.addEventListener('selectionchange', selectionChanged)

@@ -73,6 +73,18 @@ const isAuthRoute = computed(() => route.matched.some((record) => record.meta.au
 const hasActiveTrack = computed(() => playerPresence.hasCurrentTrack)
 const showDeferredShell = ref(false)
 
+watch(hasActiveTrack, (active) => {
+  if (typeof document !== 'undefined') {
+    if (active) {
+      document.documentElement.dataset.playerActive = 'true'
+      document.documentElement.dataset.playerPinned = 'true'
+    } else {
+      delete document.documentElement.dataset.playerActive
+      delete document.documentElement.dataset.playerPinned
+    }
+  }
+}, { immediate: true })
+
 const globalShortcuts = computed<KeyboardShortcut[]>(() => [
   { key: 'h', description: '聚焦侧边栏', handler: () => uiStore.focusSidebar() },
   { key: 'l', description: '聚焦内容区', handler: () => uiStore.focusContent() },
@@ -117,7 +129,13 @@ onMounted(() => {
   }, 5000, 8000)
 })
 
-onBeforeUnmount(() => cancelIdleWork())
+onBeforeUnmount(() => {
+  cancelIdleWork()
+  if (typeof document !== 'undefined') {
+    delete document.documentElement.dataset.playerActive
+    delete document.documentElement.dataset.playerPinned
+  }
+})
 </script>
 
 <style scoped>
@@ -132,6 +150,7 @@ onBeforeUnmount(() => cancelIdleWork())
   flex: 1 0 auto;
   background: var(--a-color-bg);
   position: relative;
+  padding-bottom: var(--a-content-bottom-offset, 0px);
   transition:
     opacity var(--a-motion-detail-exit) var(--a-motion-ease-exit),
     transform var(--a-motion-detail-exit) var(--a-motion-ease-exit);

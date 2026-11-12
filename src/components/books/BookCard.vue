@@ -12,7 +12,7 @@
       :eager="eager"
     />
 
-    <!-- 卡片下方：书名、评分与作者信息 -->
+    <!-- 卡片下方：书名、评分与作者/版本信息 -->
     <div class="book-card__meta">
       <div class="book-card__meta-line">
         <strong class="book-card__title" :title="work.title">{{ work.title }}</strong>
@@ -21,7 +21,11 @@
           <span>{{ ratingText }}</span>
         </span>
       </div>
-      <p class="book-card__author" :title="authorText">{{ authorText || '未知作者' }}</p>
+      <div class="book-card__sub-line">
+        <span class="book-card__author" :title="authorText">{{ authorText || '未知作者' }}</span>
+        <span class="book-card__sep" aria-hidden="true">·</span>
+        <span class="book-card__editions">{{ editionCountText }}</span>
+      </div>
     </div>
   </RouterLink>
 </template>
@@ -44,7 +48,18 @@ const target = computed(() => ({
 const authorText = computed(() => props.work.authors?.map(a => a.name).join(' / ') || '')
 
 const coverSrc = computed(() => {
-  return props.work.cover_url || ''
+  return props.work.cover_url || props.work.editions?.[0]?.cover_url || ''
+})
+
+const editionCount = computed(() => {
+  if (Array.isArray(props.work.editions)) {
+    return props.work.editions.length
+  }
+  return 0
+})
+
+const editionCountText = computed(() => {
+  return `${editionCount.value} 个版本`
 })
 
 const categoryText = computed(() => {
@@ -64,22 +79,22 @@ const ratingText = computed(() => {
 .book-card {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.65rem;
   min-width: 0;
   color: var(--a-color-fg, #0f172a);
   text-decoration: none;
   box-shadow: none !important;
-  transition: opacity 0.15s ease;
 }
 
-.book-card:hover {
-  opacity: 0.85;
+.book-card:hover :deep(.book-cover) {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px -4px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.06);
 }
 
 .book-card__meta {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.15rem;
   min-width: 0;
 }
 
@@ -113,13 +128,40 @@ const ratingText = computed(() => {
   flex-shrink: 0;
 }
 
-.book-card__author {
+.book-card__sub-line {
+  display: flex;
+  align-items: center;
   font-size: 0.75rem;
   color: var(--a-color-text-secondary);
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.book-card__author {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   margin: 0;
-  line-height: 1.4;
+  min-width: 0;
+}
+
+.book-card__sep {
+  margin: 0 0.3rem;
+  color: var(--a-color-text-secondary);
+  opacity: 0.5;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.book-card__editions {
+  flex-shrink: 0;
+  color: var(--a-color-text-secondary);
+  opacity: 0.85;
+}
+
+.book-card:hover .book-card__editions {
+  opacity: 1;
 }
 </style>

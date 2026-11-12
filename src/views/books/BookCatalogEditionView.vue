@@ -1,56 +1,132 @@
 <template>
-  <section class="book-catalog">
-    <p v-if="loading" role="status">正在加载出版版本…</p>
+  <section class="book-catalog book-edition-view">
+    <p v-if="loading" role="status" class="book-catalog__status-text">正在加载出版版本…</p>
     <div v-else-if="error" role="alert" class="book-catalog__error-box">
       {{ error }} <PButton variant="secondary" @click="load">重试</PButton>
     </div>
     <template v-else-if="metadata && work && edition">
+      <!-- 顶部返回导航 -->
+      <nav class="book-edition__nav">
+        <RouterLink :to="'/books/work/' + work.id" class="book-edition__back-link">
+          <span class="book-edition__back-arrow">←</span> 返回《{{ work.title }}》
+        </RouterLink>
+      </nav>
+
       <div class="book-catalog__hero">
         <div class="book-catalog__cover-col">
-          <BookCover variant="edition" :src="edition.cover_url" :title="edition.title || work.title"
-            :author="edition.publisher || work.authors.map(p => p.name).join(' / ')" eager />
+          <BookCover
+            variant="edition"
+            :src="edition.cover_url || work.cover_url"
+            :title="edition.title || work.title"
+            :author="edition.publisher || work.authors.map(p => p.name).join(' / ')"
+            eager
+          />
         </div>
         <div class="book-catalog__info-col">
-          <PPageHeader :title="edition.title || work.title" :sub="work.authors.map(p => p.name).join(' / ')" />
-          <p><RouterLink :to="'/books/work/' + work.id">所属抽象作品：{{ work.title }}</RouterLink></p>
-          <p v-if="edition.subtitle">{{ edition.subtitle }}</p>
-          <dl class="book-catalog__details-dl">
-            <template v-for="field in fields" :key="field.key">
-              <dt>{{ field.label }}</dt><dd>{{ field.value || '待补充' }}</dd>
-            </template>
-          </dl>
-          <BookWikiPanel kind="edition" :entity-id="metadata.entity_id" :work-id="work.id" :authenticated="auth.isAuthenticated" @changed="load" />
+          <div class="book-catalog__work-header">
+            <h1 class="book-catalog__work-title">{{ edition.title || work.title }}</h1>
+            <p v-if="edition.subtitle" class="book-edition__subtitle">{{ edition.subtitle }}</p>
+            <div class="book-catalog__work-authors">
+              <RouterLink
+                v-for="author in work.authors"
+                :key="author.id"
+                :to="{ path: '/books', query: { q: author.name } }"
+                class="book-catalog__author-badge book-catalog__author-link"
+              >
+                {{ author.name }}
+              </RouterLink>
+              <span v-if="edition.translators?.length" class="book-catalog__author-badge book-catalog__author-badge--translator">
+                {{ edition.translators.map(p => p.name).join(' / ') }} 译
+              </span>
+            </div>
+          </div>
+
+          <!-- 现代元数据网格 -->
+          <div class="book-edition__meta-grid">
+            <div v-for="field in fields" :key="field.key" class="book-edition__meta-cell">
+              <span class="book-edition__meta-label">{{ field.label }}</span>
+              <span class="book-edition__meta-value">{{ field.value || '待补充' }}</span>
+            </div>
+          </div>
+
+          <div class="book-edition__wiki-wrap">
+            <BookWikiPanel
+              kind="edition"
+              :entity-id="metadata.entity_id"
+              :work-id="work.id"
+              :authenticated="auth.isAuthenticated"
+              @changed="load"
+            />
+          </div>
         </div>
       </div>
+
+      <!-- 推荐阅读文件 -->
       <section class="book-catalog__section">
-        <div class="book-catalog__section-header"><h2>推荐阅读文件</h2></div>
+        <div class="book-catalog__section-header">
+          <div class="book-catalog__section-title-wrap">
+            <h2>推荐阅读文件</h2>
+          </div>
+        </div>
         <p v-if="resourceError" role="alert" class="book-catalog__error">{{ resourceError }}</p>
-        <div v-else-if="bestFile" class="edition-file">
-          <div><strong>{{ bestFile.file_name }}</strong><p>{{ bestFile.format.toUpperCase() }} · {{ bestFile.is_best ? '当前最优文件' : '当前可阅读文件' }} · {{ bestFile.is_public ? '公开分享' : '仅自己可读' }}</p></div>
-          <div class="edition-file__actions">
-            <PButton size="sm" :to="resourceReaderPath(work.id, bestFile.asset_id, bestFile.revision_id)">开始阅读</PButton>
-            <PButton v-if="auth.isAuthenticated" size="sm" variant="secondary" :disabled="!!busyFile" @click="addToShelf(bestFile)">加入书架</PButton>
-            <PButton v-if="bestFile.can_manage" size="sm" variant="ghost" :disabled="!!busyFile" @click="confirmVisibility(bestFile)">{{ bestFile.is_public ? '停止公开' : '公开分享' }}</PButton>
+        <div v-else-if="bestFile" class="edition-best-card">
+          <div class="edition-best-card__body">
+            <div class="edition-best-card__badge-row">
+              <span class="edition-best-card__format" :class="`edition-best-card__format--${bestFile.format.toLowerCase()}`">
+                {{ bestFile.format.toUpperCase() }}
+              </span>
+              <span v-if="bestFile.is_best" class="edition-best-card__pill edition-best-card__pill--best">当前最优</span>
+              <span class="edition-best-card__pill" :class="bestFile.is_public ? 'edition-best-card__pill--public' : 'edition-best-card__pill--private'">
+                {{ bestFile.is_public ? '公开分享' : '仅自己可读' }}
+              </span>
+            </div>
+            <strong class="edition-best-card__filename">{{ bestFile.file_name }}</strong>
+          </div>
+          <div class="edition-best-card__actions">
+            <PButton size="sm" :to="resourceReaderPath(work.id, bestFile.asset_id, bestFile.revision_id)">
+              开始阅读
+            </PButton>
+            <PButton v-if="auth.isAuthenticated" size="sm" variant="secondary" :disabled="!!busyFile" @click="addToShelf(bestFile)">
+              加入书架
+            </PButton>
+            <PButton v-if="bestFile.can_manage" size="sm" variant="ghost" :disabled="!!busyFile" @click="confirmVisibility(bestFile)">
+              {{ bestFile.is_public ? '停止公开' : '公开分享' }}
+            </PButton>
           </div>
         </div>
         <p v-else class="book-catalog__empty-hint">暂无通过安全检查的文件。</p>
+
+        <!-- 文件质量信息与对比 -->
         <details v-if="files.length" class="edition-file__quality" aria-label="文件质量信息与对比">
           <summary>{{ files.length > 1 ? '文件质量信息与对比' : '查看文件质量信息' }}</summary>
           <p class="edition-file__quality-intro">下列指标来自实际文件检查，仅供人工比较。不能判断是否缺页、错字或内容完整；不会按 EPUB、PDF 等格式自动排名，也不会替换你书架中的文件。</p>
           <div class="edition-file__quality-grid">
             <article v-for="item in files" :key="item.revision_id" class="edition-file__quality-item">
-              <div class="edition-file__quality-heading"><strong>{{ item.file_name }}</strong><small>{{ item.is_best ? '当前最优' : '其他文件' }} · {{ item.format.toUpperCase() }}</small></div>
-              <ul><li v-for="(fact, index) in describeBookFileQuality(item.quality)" :key="index">{{ fact }}</li></ul>
-              <p v-for="(caveat, index) in item.quality?.limitations || []" :key="index" class="edition-file__quality-caveat">未检测范围：{{ caveat }}</p>
+              <div class="edition-file__quality-heading">
+                <strong>{{ item.file_name }}</strong>
+                <small>{{ item.is_best ? '当前最优' : '其他文件' }} · {{ item.format.toUpperCase() }}</small>
+              </div>
+              <ul>
+                <li v-for="(fact, index) in describeBookFileQuality(item.quality)" :key="index">{{ fact }}</li>
+              </ul>
+              <p v-for="(caveat, index) in item.quality?.limitations || []" :key="index" class="edition-file__quality-caveat">
+                未检测范围：{{ caveat }}
+              </p>
             </article>
           </div>
         </details>
-        <p v-if="fileNotice" role="status">{{ fileNotice }}</p>
+
+        <p v-if="fileNotice" role="status" class="edition-file__notice">{{ fileNotice }}</p>
+
+        <!-- 历史版本 -->
         <details v-if="otherFiles.length" class="edition-file__history">
           <summary>历史版本（{{ otherFiles.length }}）</summary>
           <ul class="book-catalog__list">
             <li v-for="item in otherFiles" :key="item.revision_id" class="book-catalog__row edition-file">
-              <div><strong>{{ item.file_name }}</strong><p>{{ item.format.toUpperCase() }} · 历史文件 · {{ item.is_public ? '公开分享' : '仅自己可读' }}</p></div>
+              <div class="edition-file__info">
+                <strong>{{ item.file_name }}</strong>
+                <p>{{ item.format.toUpperCase() }} · 历史文件 · {{ item.is_public ? '公开分享' : '仅自己可读' }}</p>
+              </div>
               <div class="edition-file__actions">
                 <PButton size="sm" variant="secondary" :to="resourceReaderPath(work.id, item.asset_id, item.revision_id)">阅读</PButton>
                 <PButton v-if="auth.isAuthenticated" size="sm" variant="secondary" :disabled="!!busyFile" @click="addToShelf(item)">加入书架</PButton>
@@ -60,11 +136,21 @@
             </li>
           </ul>
         </details>
+
+        <!-- 上传电子书区 -->
         <div class="edition-file__upload">
-          <BookResourceUpload v-if="auth.isAuthenticated" :key="String(metadata.entity_id) + ':' + String(auth.user?.uuid)"
-            :work-id="work.id" :edition-id="metadata.entity_id" :title="edition.title || work.title"
-            :initial-language="edition.language" @ready="loadFiles" />
-          <PButton v-else variant="secondary" :to="{ path: '/login', query: { redirect: route.fullPath } }">登录后上传文件</PButton>
+          <BookResourceUpload
+            v-if="auth.isAuthenticated"
+            :key="String(metadata.entity_id) + ':' + String(auth.user?.uuid)"
+            :work-id="work.id"
+            :edition-id="metadata.entity_id"
+            :title="edition.title || work.title"
+            :initial-language="edition.language"
+            @ready="loadFiles"
+          />
+          <PButton v-else variant="secondary" :to="{ path: '/login', query: { redirect: route.fullPath } }">
+            登录后上传文件
+          </PButton>
         </div>
       </section>
     </template>
@@ -100,7 +186,6 @@ import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
 import BookResourceUpload from '@/components/books/BookResourceUpload.vue'
 import BookCover from '@/components/books/BookCover.vue'
 import PButton from '@/components/ui/PButton.vue'
-import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import './bookCatalog.css'
 
@@ -191,19 +276,145 @@ onBeforeUnmount(() => { generation++ })
 </script>
 
 <style scoped>
-.edition-file { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: .55rem; }
-.edition-file p { font-size: .8rem; color: var(--a-color-text-secondary); margin: .3rem 0 0; }
-.edition-file__actions { display: flex; flex-wrap: wrap; gap: .4rem; }
-.edition-file__history { margin-top: 1rem; }
-.edition-file__history summary { cursor: pointer; font-weight: 600; padding: .65rem 0; }
-.edition-file__upload { margin-top: 1.5rem; }
- .edition-file__quality { margin-top: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: .55rem; padding: .75rem 1rem; }
- .edition-file__quality summary { font-weight: 600; cursor: pointer; }
- .edition-file__quality-intro { font-size: .85rem; color: var(--a-color-text-secondary); line-height: 1.6; }
- .edition-file__quality-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: .75rem; }
- .edition-file__quality-item { min-width: 0; border: 1px solid var(--a-color-border-soft); border-radius: .5rem; padding: .75rem; }
- .edition-file__quality-heading { display: flex; flex-direction: column; gap: .3rem; overflow-wrap: anywhere; }
- .edition-file__quality-heading small { color: var(--a-color-text-secondary); }
- .edition-file__quality-item ul { font-size: .82rem; padding-left: 1.2rem; line-height: 1.6; }
- .edition-file__quality-caveat { margin: .5rem 0 0; font-size: .78rem; color: var(--a-color-text-secondary); }
+.edition-file {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 10px;
+  background: var(--a-color-bg);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.edition-file:hover {
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface-muted);
+}
+
+.edition-file p {
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary);
+  margin: 0.25rem 0 0;
+}
+
+.edition-file__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.edition-file__history,
+.edition-file__quality {
+  margin-top: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  padding: 0;
+  background: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.edition-file__history summary,
+.edition-file__quality summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--a-color-text);
+  padding: 0.5rem 0.625rem;
+  margin-left: -0.625rem;
+  border-radius: 6px;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.edition-file__history summary:hover,
+.edition-file__quality summary:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.edition-file__history[open],
+.edition-file__quality[open] {
+  background: rgba(0, 0, 0, 0.02);
+  padding: 0.875rem 1.25rem 1.25rem;
+  margin-left: 0;
+  margin-top: 1rem;
+}
+
+.edition-file__history[open] summary,
+.edition-file__quality[open] summary {
+  margin-bottom: 0.75rem;
+  margin-left: 0;
+  padding: 0.25rem 0;
+  border-bottom: none;
+}
+
+.edition-file__quality-intro {
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary);
+  line-height: 1.6;
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(0, 0, 0, 0.025);
+  border-radius: 6px;
+}
+
+.edition-file__quality-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.85rem;
+}
+
+.edition-file__quality-item {
+  min-width: 0;
+  border: none;
+  border-radius: 6px;
+  padding: 1rem;
+  background: var(--a-color-bg, #ffffff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.edition-file__quality-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  overflow-wrap: anywhere;
+  margin-bottom: 0.5rem;
+}
+
+.edition-file__quality-heading strong {
+  font-size: 0.875rem;
+  color: var(--a-color-text);
+}
+
+.edition-file__quality-heading small {
+  font-size: 0.75rem;
+  color: var(--a-color-text-secondary);
+}
+
+.edition-file__quality-item ul {
+  font-size: 0.8125rem;
+  padding-left: 1.2rem;
+  line-height: 1.6;
+  margin: 0.5rem 0 0;
+  color: var(--a-color-text);
+}
+
+.edition-file__quality-caveat {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: #c2410c;
+  background: rgba(234, 88, 12, 0.08);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.edition-file__upload {
+  margin-top: 2rem;
+}
 </style>

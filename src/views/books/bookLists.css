@@ -1,19 +1,596 @@
-.booklists { color: var(--a-color-text); padding-block: 1.5rem; }
-.booklists__toolbar { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-block: 1.5rem; }
-.booklists__toolbar > .p-field { flex: 1; min-width: 12rem; }
-.booklists__tabs, .booklists__actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
-.booklists__list { padding: 0; margin: 0; list-style: none; display: grid; gap: 0.75rem; }
-.booklists__row { display: flex; align-items: start; gap: 1rem; padding: 1.25rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); transition: border-color 0.15s ease, background-color 0.15s ease; }
-.booklists__row:hover { border-color: var(--a-color-border); background: var(--a-color-surface-muted); }
-.booklists__row-main { flex: 1; min-width: 0; }
-.booklists__title { font-size: 1.25rem; font-weight: 600; color: var(--a-color-text); overflow-wrap: anywhere; }
-.booklists__description { color: var(--a-color-text-secondary); max-width: 70ch; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
-.booklists small, .booklists__empty { color: var(--a-color-muted-soft); }
-.booklists__empty { padding-block: 3rem; }
-.booklists__update { color: var(--a-color-primary); }
-.booklists__error { color: var(--a-color-danger); }
-.booklists__form { max-width: 48rem; display: grid; gap: 1.5rem; }
-.booklists__item { padding: 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); margin-block: 1rem; }
-.booklists__item textarea { width: 100%; }
-.booklists a:focus-visible, .booklists button:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 3px; }
-@media (max-width: 600px) { .booklists__row { flex-wrap: wrap; } .booklists__row-main { flex-basis: 100%; } }
+/* ==========================================================================
+   Book Lists & Detail & Editor - Apple / Cupertino Editorial Styles
+   ========================================================================== */
+
+.booklists {
+  color: var(--a-color-text);
+  padding-block: 1.5rem;
+  max-width: 64rem;
+  margin-inline: auto;
+}
+
+.booklists__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.booklists__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+/* Toolbar & Segmented Control */
+.booklists__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.booklists__segmented-wrap {
+  display: inline-flex;
+}
+
+.booklists__search-bar {
+  margin-bottom: 1.5rem;
+  max-width: 32rem;
+}
+
+/* Auth Gate */
+.booklists__auth-gate {
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  color: var(--a-color-text-secondary);
+  font-size: 0.9375rem;
+  margin-top: 1rem;
+}
+
+.booklists__auth-gate a {
+  color: var(--a-color-primary);
+  font-weight: 500;
+  margin-left: 0.375rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Status & Loading */
+.booklists__loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--a-color-text-secondary);
+  padding-block: 3rem;
+  font-size: 0.875rem;
+}
+
+.booklists__loading-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--a-color-border-soft);
+  border-top-color: var(--a-color-primary);
+  border-radius: 50%;
+  animation: a-spin 0.8s linear infinite;
+}
+
+@keyframes a-spin {
+  to { transform: rotate(360deg); }
+}
+
+.booklists__error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-danger-subtle, #fef2f2);
+  color: var(--a-color-danger);
+  font-size: 0.875rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--a-color-danger-border, #fecaca);
+}
+
+.booklists__notice {
+  margin-top: 1rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--a-radius-input);
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary);
+}
+
+.booklists__error {
+  color: var(--a-color-danger);
+  font-size: 0.8125rem;
+  margin-top: 0.375rem;
+}
+
+/* Card Grid */
+.booklists__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.booklists__card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.25rem;
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.booklists__card:hover {
+  border-color: var(--a-color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.booklists__card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.booklists__card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.booklists__card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--a-color-text-secondary);
+  background: var(--a-color-surface-muted);
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid var(--a-color-border-soft);
+}
+
+.booklists__badge-icon {
+  opacity: 0.7;
+}
+
+.booklists__status-pill {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  border: 1px solid var(--a-color-border-soft);
+}
+
+.booklists__status-pill--public {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.booklists__status-pill--private {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.booklists__status-pill--draft {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text-secondary);
+}
+
+.booklists__card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.booklists__title-link {
+  color: var(--a-color-text);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.booklists__title-link:hover {
+  color: var(--a-color-primary);
+}
+
+.booklists__card-description {
+  font-size: 0.875rem;
+  color: var(--a-color-text-secondary);
+  line-height: 1.6;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.booklists__update {
+  font-size: 0.8125rem;
+  color: var(--a-color-primary);
+  font-weight: 500;
+  margin: 0;
+}
+
+.booklists__card-footer {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--a-color-border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.booklists__link-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--a-color-primary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.booklists__link-action:hover {
+  color: var(--a-color-primary-hover, #1d4ed8);
+}
+
+/* Pagination */
+.booklists__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-block: 1rem;
+}
+
+.booklists__pagination-text {
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary);
+}
+
+/* ==========================================================================
+   Detail View
+   ========================================================================== */
+
+.booklist-detail__nav {
+  margin-bottom: 1rem;
+}
+
+.booklist-detail__hero {
+  padding: 1.75rem;
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.booklist-detail__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--a-color-text-secondary);
+}
+
+.booklist-detail__description {
+  font-size: 0.9375rem;
+  color: var(--a-color-text-secondary);
+  line-height: 1.7;
+  max-width: 60ch;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.booklist-detail__login-link {
+  font-size: 0.875rem;
+  color: var(--a-color-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.booklists__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+/* Detail Items List */
+.booklist-detail__items-section {
+  margin-top: 1.5rem;
+}
+
+.booklists__list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.booklists__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  transition: border-color 0.15s ease;
+}
+
+.booklists__row:hover {
+  border-color: var(--a-color-border);
+}
+
+.booklists__row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.booklists__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--a-color-text);
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.booklists__title:hover {
+  color: var(--a-color-primary);
+}
+
+.booklist-item-card__index {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--a-color-text-tertiary, #94a3b8);
+  min-width: 2rem;
+  padding-top: 0.125rem;
+}
+
+.booklist-item-card__title--unavailable {
+  color: var(--a-color-muted-soft, #94a3b8);
+  font-style: italic;
+}
+
+.booklist-item-card__quote {
+  margin-top: 0.625rem;
+  margin-left: 0;
+  padding: 0.625rem 0.875rem;
+  background: var(--a-color-surface-muted);
+  border-left: 3px solid var(--a-color-primary);
+  border-radius: 0 var(--a-radius-input) var(--a-radius-input) 0;
+}
+
+.booklist-item-card__quote p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--a-color-text);
+  line-height: 1.6;
+}
+
+.booklist-detail__comments {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
+/* ==========================================================================
+   Editor View
+   ========================================================================== */
+
+.booklist-editor__nav {
+  margin-bottom: 1rem;
+}
+
+.booklist-editor__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.booklist-editor__status-tag {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  border: 1px solid var(--a-color-border-soft);
+}
+
+.booklist-editor__status-tag--public {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.booklist-editor__status-tag--private {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.booklist-editor__section-card {
+  padding: 1.5rem;
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  display: grid;
+  gap: 1.25rem;
+}
+
+.booklist-editor__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.booklist-editor__section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.booklist-editor__count-badge {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--a-color-text-secondary);
+  background: var(--a-color-surface-muted);
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  border: 1px solid var(--a-color-border-soft);
+}
+
+.booklist-editor__search-box {
+  background: var(--a-color-surface-muted);
+  padding: 1rem;
+  border-radius: var(--a-radius-input);
+  border: 1px solid var(--a-color-border-soft);
+}
+
+.booklist-editor__search-toolbar {
+  margin: 0 0 0.5rem 0;
+}
+
+.booklist-editor__search-results {
+  margin-top: 0.75rem;
+}
+
+.booklist-editor__search-item {
+  padding: 0.75rem 1rem;
+  background: var(--a-color-bg);
+}
+
+.booklist-editor__empty-hint {
+  font-size: 0.875rem;
+  color: var(--a-color-text-secondary);
+  margin: 0;
+  padding: 1rem 0;
+  text-align: center;
+}
+
+.booklist-editor__items-list {
+  margin-top: 0.5rem;
+}
+
+.booklists__item {
+  padding: 1.25rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-bg);
+  display: grid;
+  gap: 0.875rem;
+}
+
+.booklist-editor__item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.booklist-editor__item-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--a-color-text-secondary);
+}
+
+.booklist-editor__item-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--a-color-text);
+  flex: 1;
+}
+
+.booklist-editor__item-link {
+  font-size: 0.8125rem;
+  color: var(--a-color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.booklist-editor__item-actions {
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+
+.booklist-editor__version-hint {
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary);
+  margin: 0;
+}
+
+.booklist-editor__actions {
+  padding-top: 1rem;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
+/* Accessible focus ring */
+.booklists a:focus-visible,
+.booklists button:focus-visible {
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .booklists__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .booklists__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .booklists__header-actions {
+    margin-top: 0;
+  }
+
+  .booklists__row {
+    flex-wrap: wrap;
+  }
+
+  .booklists__row-main {
+    flex-basis: 100%;
+  }
+}

@@ -16,7 +16,17 @@
       <PButton v-if="pendingMark && !markConflict" variant="secondary" :disabled="markBusy" @click="retryMark">重试标记操作</PButton>
       <PButton variant="ghost" :disabled="markBusy" @click="reloadMarks">重新载入书签与批注</PButton>
     </div>
-    <BookPublicReaderView v-if="opened" :key="readerKey" :source="cloudSource" @annotate="openHighlight" @annotation-edit="editHighlight" @annotation-delete="deleteHighlight" @chapter-note="openChapterNote" />
+    <BookPublicReaderView
+      v-if="opened"
+      :key="readerKey"
+      :source="cloudSource"
+      @annotate="openHighlight"
+      @annotate-direct="directSaveHighlight"
+      @annotation-edit="editHighlight"
+      @annotation-update="directUpdateHighlight"
+      @annotation-delete="deleteHighlight"
+      @chapter-note="openChapterNote"
+    />
     <div v-if="opened" class="cloud-reader__note-actions">
       <PButton size="sm" variant="ghost" @click="toggleChapterNotes">{{ chapterListOpen ? '收起本书笔记' : '查看本书章节笔记' }}</PButton>
       <RouterLink :to="`/books/work/${source.asset.work_id}/notes?revision_id=${revisionId}`">本作品全部笔记</RouterLink>
@@ -238,6 +248,43 @@ async function reloadMarks() {
 function openHighlight(selection: HighlightSelection) {
   if (pendingMark.value || draft.value) return
   draft.value = { ...selection, id: crypto.randomUUID(), version: 0, note: '', color: 'yellow', style: 'highlight' }
+}
+async function directSaveHighlight(payload: { selection: HighlightSelection; color: string; style: string; note?: string; isQuote?: boolean }) {
+  const id = crypto.randomUUID()
+  const input: ReadingMarkInput = {
+    base_version: 0,
+    kind: 'highlight',
+    anchor: payload.selection.anchor,
+    quote: payload.selection.quote,
+    label: payload.isQuote ? '精选书摘' : '',
+    note: payload.note || '',
+    color: payload.color,
+    style: payload.style,
+  }
+  pendingMark.value = { id, input }
+  try {
+    await performMark()
+  } catch {
+    // Retain in pendingMark
+  }
+}
+async function directUpdateHighlight(payload: ReadingMark) {
+  const input: ReadingMarkInput = {
+    base_version: payload.version,
+    kind: 'highlight',
+    anchor: payload.anchor,
+    quote: payload.quote,
+    label: payload.label || '',
+    note: payload.note || '',
+    color: payload.color,
+    style: payload.style,
+  }
+  pendingMark.value = { id: payload.id, input }
+  try {
+    await performMark()
+  } catch {
+    // Retain in pendingMark
+  }
 }
 function editHighlight(mark: ReadingMark) {
   if (pendingMark.value || draft.value) return

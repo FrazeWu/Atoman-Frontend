@@ -1,9 +1,9 @@
 <template>
   <section class="book-community">
     <div class="book-community__header">
-      <h2 class="book-community__title">读者书评与研讨</h2>
+      <h2 class="book-community__title">书评</h2>
       <p v-if="rating" class="book-community__rating-summary">
-        {{ rating.rating_active ? `信誉加权评分 ${rating.weighted_rating_score}` : `评分暂未生效，需至少 ${rating.minimum_rating_count} 名有效评分者` }} · {{ rating.rating_count }} 人评分
+        {{ rating.rating_score || 0 }} 分 · {{ rating.rating_count || 0 }} 人评分
       </p>
     </div>
 
@@ -26,11 +26,21 @@
     </div>
 
     <p v-if="error" role="alert" class="book-community__error">{{ error }}</p>
-    <PButton v-if="!rating" variant="secondary" @click="load">重新加载评分与书评</PButton>
+    <PButton v-if="!rating" variant="secondary" @click="load">重试</PButton>
 
-    <div class="book-community__reviews-section">
-      <h3 class="book-community__section-title">长篇书评</h3>
-      <p v-if="!reviews.length" class="book-catalog__empty-hint">还没有公开长评。</p>
+    <!-- 长评/短评分流选择器 (Option 2A) -->
+    <div class="book-community__filter-bar">
+      <PSegmentedControl
+        v-model="reviewScope"
+        :options="reviewScopeOptions"
+        size="sm"
+      />
+    </div>
+
+    <!-- 长篇书评 -->
+    <div v-show="reviewScope === 'all' || reviewScope === 'long'" class="book-community__reviews-section">
+      <h3 class="book-community__section-title">长评</h3>
+      <p v-if="!reviews.length" class="book-catalog__empty-hint">暂无长评。</p>
       <ul v-else class="book-community__review-list">
         <li v-for="review in reviews" :key="review.content_id" class="book-community__review-item">
           <details v-if="review.spoiler" class="book-community__spoiler">
@@ -47,14 +57,14 @@
           </PButton>
         </li>
       </ul>
-      <PButton v-if="reviews.length < total" variant="secondary" size="sm" @click="more">更多书评</PButton>
+      <PButton v-if="reviews.length < total" variant="secondary" size="sm" @click="more">更多长评</PButton>
 
       <details v-if="authenticated" class="book-community__link-form">
-        <summary class="book-community__link-summary">关联我的博客长评</summary>
+        <summary class="book-community__link-summary">关联文章</summary>
         <form class="book-community__link-fields" @submit.prevent="link">
           <label class="book-community__link-label">
             博客文章链接或 ID
-            <input v-model="contentId" required placeholder="粘贴自己文章的 /post/ 链接" class="book-community__link-input" />
+            <input v-model="contentId" required placeholder="粘贴文章的 /post/ 链接" class="book-community__link-input" />
           </label>
           <label class="book-community__checkbox-label">
             <input v-model="spoiler" type="checkbox" />
@@ -62,14 +72,15 @@
           </label>
           <div class="book-community__form-actions">
             <PButton type="submit" size="sm" :disabled="busy">关联长评</PButton>
-            <PButton to="/studio/blog/new" variant="ghost" size="sm">创作长评</PButton>
+            <PButton to="/studio/blog/new" variant="ghost" size="sm">写长评</PButton>
           </div>
         </form>
       </details>
     </div>
 
-    <div class="book-community__comments-section">
-      <CommentSection :target="{ kind: 'book_work', resourceId: workId }" noun="讨论" compact-guest-empty />
+    <!-- 短评与讨论区 -->
+    <div v-show="reviewScope === 'all' || reviewScope === 'short'" class="book-community__comments-section">
+      <CommentSection :target="{ kind: 'book_work', resourceId: workId }" noun="评论" compact-guest-empty />
     </div>
   </section>
 </template>
@@ -89,6 +100,7 @@ import {
   type BookReviewLink,
 } from '@/api/bookCommunity'
 import PButton from '@/components/ui/PButton.vue'
+import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import RatingControl from '@/components/shared/RatingControl.vue'
 import CommentSection from '@/components/comment/CommentSection.vue'
 
@@ -107,6 +119,13 @@ const busy = ref(false)
 const error = ref('')
 const contentId = ref('')
 const spoiler = ref(false)
+const reviewScope = ref<'all' | 'short' | 'long'>('all')
+
+const reviewScopeOptions = computed(() => [
+  { label: '全部', value: 'all' },
+  { label: '短评', value: 'short' },
+  { label: reviews.value.length ? `长评 (${reviews.value.length})` : '长评', value: 'long' },
+])
 
 async function load() {
   error.value = ''
@@ -213,9 +232,9 @@ onMounted(load)
 
 .book-community__rating-box {
   padding: 1rem 1.25rem;
-  background: var(--a-color-surface-muted, #f8fafc);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card, 4px);
+  background: rgba(0, 0, 0, 0.025);
+  border: none;
+  border-radius: 8px;
 }
 
 .book-community__error {
@@ -247,10 +266,11 @@ onMounted(load)
 }
 
 .book-community__review-item {
-  padding: 0.875rem 1rem;
+  padding: 1rem 1.25rem;
   background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card, 4px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
   display: flex;
   flex-direction: column;
   gap: 0.375rem;

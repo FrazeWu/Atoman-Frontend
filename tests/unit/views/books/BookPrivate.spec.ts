@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import * as api from '@/api/bookPrivate'
 import * as shareApi from '@/api/bookNoteCollections'
 import * as fileShelf from '@/api/bookFileShelf'
+import * as cacheUtil from '@/utils/bookOfflineCache'
 import BookPrivateLibraryView from '@/views/books/BookPrivateLibraryView.vue'
 import BookPrivateNotesView from '@/views/books/BookPrivateNotesView.vue'
 const wrappers: VueWrapper[] = []
@@ -92,4 +93,63 @@ it('书架固定绑定具体文件，包含归档与历史书，点击直接续�
   await wrapper.findAll('.file-library__card details button').find(item => item.text() === '取消归档')!.trigger('click')
   await flushPromises()
   expect(save).toHaveBeenCalledWith('revision-old', { archived: false })
+})
+
+it('书架支持分段控制器切换阅读状态与本地离线筛选', async () => {
+  const list = vi.spyOn(fileShelf, 'listFileShelf').mockResolvedValue({
+    items: [
+      { id: 'shelf-1', revision_id: 'rev-1', asset_id: 'asset-1', work_id: 'w-1', title: '在读图书', format: 'epub', status: 'reading', archived: false, furthest_percent: 0.3, has_better: false, file_available: true, cover_url: '', created_at: '2026-11-03T00:00:00Z' },
+      { id: 'shelf-2', revision_id: 'rev-2', asset_id: 'asset-2', work_id: 'w-2', title: '想读书目', format: 'txt', status: 'unstarted', archived: false, furthest_percent: 0, has_better: false, file_available: true, cover_url: '', created_at: '2026-11-03T00:00:01Z' },
+    ],
+    total: 2,
+  })
+  vi.spyOn(cacheUtil, 'initBookOfflineCache').mockResolvedValue(new Set(['rev-1']))
+  vi.spyOn(cacheUtil, 'getBookOfflineStorageInfo').mockResolvedValue({ count: 1, totalBytes: 1048576, revisionIds: ['rev-1'] })
+
+  const wrapper = await setup(BookPrivateLibraryView)
+  expect(list).toHaveBeenCalledWith({ sort: 'activity', status: '' })
+
+  // 点击在读分段
+  const readingSegment = wrapper.findAll('.p-segmented-control-item').find(el => el.text().includes('在读'))
+  expect(readingSegment).toBeDefined()
+  await readingSegment!.trigger('click')
+  await flushPromises()
+  expect(list).toHaveBeenCalledWith({ sort: 'activity', status: 'reading' })
+
+  // 点击本地离线分段
+  const offlineSegment = wrapper.findAll('.p-segmented-control-item').find(el => el.text().includes('本地离线'))
+  expect(offlineSegment).toBeDefined()
+  await offlineSegment!.trigger('click')
+  await flushPromises()
+  // 离线筛选仅显示 rev-1
+  const visibleCards = wrapper.findAll('.file-library__card')
+  expect(visibleCards).toHaveLength(1)
+  expect(visibleCards[0].text()).toContain('在读图书')
+})
+
+it('书架提供本地离线存储统计与清空操作', async () => {
+  vi.spyOn(fileShelf, 'listFileShelf').mockResolvedValue({
+    items: [
+      { id: 'shelf-1', revision_id: 'rev-1', asset_id: 'asset-1', work_id: 'w-1', title: '缓存图书', format: 'epub', status: 'reading', archived: false, furthest_percent: 0.5, has_better: false, file_available: true, cover_url: '', created_at: '2026-11-03T00:00:00Z' },
+    ],
+    total: 1,
+  })
+  vi.spyOn(cacheUtil, 'initBookOfflineCache').mockResolvedValue(new Set(['rev-1']))
+  vi.spyOn(cacheUtil, 'getBookOfflineStorageInfo').mockResolvedValue({ count: 1, totalBytes: 5242880, revisionIds: ['rev-1'] })
+  const clearSpy = vi.spyOn(cacheUtil, 'clearAllBookOfflineCache').mockResolvedValue(true)
+
+  const wrapper = await setup(BookPrivateLibraryView)
+  expect(wrapper.text()).toContain('1 本已缓存')
+  expect(wrapper.text()).toContain('5.0 MB')
+
+  // 触发清理按钮
+  const purgeBtn = wrapper.find('.file-library__storage-purge-btn')
+  expect(purgeBtn.exists()).toBe(true)
+  await purgeBtn.trigger('click')
+  await flushPromises()
+
+  // 确认清理弹窗
+  await wrapper.get('[data-confirm]').trigger('click')
+  await flushPromises()
+  expect(clearSpy).toHaveBeenCalled()
 })

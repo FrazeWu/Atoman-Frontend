@@ -101,6 +101,20 @@ describe('BookSelectionToolbar', () => {
     expect(writeTextMock).toHaveBeenCalledWith(expectedQuote)
   })
 
+  it('quote button emits quote with selected color and style', async () => {
+    const wrapper = mount(BookSelectionToolbar, {
+      props: {
+        position: { x: 100, y: 200 },
+        selectedText: '金句书摘测试',
+      },
+    })
+
+    await wrapper.find('[data-testid="quote-btn"]').trigger('click')
+
+    expect(wrapper.emitted('quote')).toBeTruthy()
+    expect(wrapper.emitted('quote')?.[0]).toEqual(['yellow', 'highlight'])
+  })
+
   it('delete button appears when existingAnnotation is provided and emits delete', async () => {
     const mockAnnotation: BookAnnotation = {
       id: 'ann-123',

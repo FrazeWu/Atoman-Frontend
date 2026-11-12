@@ -337,17 +337,19 @@ watch(
   flex-direction: column;
   width: 14.5rem;
   height: 100%;
-  border-right: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
+  border: 0;
+  border-right: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.08));
+  background: var(--book-reader-surface, #f7f8fa);
   overflow: hidden;
 }
 
 .book-reader-sidebar__tabs {
   display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  padding: 0.25rem 0.35rem;
+  border: 0;
+  border-bottom: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.06));
+  background: var(--book-reader-surface, #f7f8fa);
+  padding: 0.35rem 0.4rem;
   gap: 0.25rem;
 }
 
@@ -359,8 +361,8 @@ watch(
   gap: 0.25rem;
   min-height: 2rem;
   padding: 0.25rem 0.3rem;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-control);
+  border: 0;
+  border-radius: 6px;
   background: transparent;
   color: var(--a-color-muted);
   font-size: 0.74rem;
@@ -371,14 +373,14 @@ watch(
 }
 
 .book-reader-sidebar__tab:hover {
-  background: var(--a-color-surface-muted);
+  background: rgba(0, 0, 0, 0.05);
   color: var(--a-color-fg);
 }
 
 .book-reader-sidebar__tab.is-active {
-  border-color: var(--a-color-border-soft);
-  background: var(--a-color-bg);
-  color: var(--a-color-primary);
+  border: 0;
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--a-color-primary, #0066cc);
   font-weight: 600;
 }
 
@@ -399,40 +401,46 @@ watch(
   flex-direction: column;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.4rem;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-card);
+  padding: 0.5rem 0.6rem;
+  border: 0;
+  border-radius: 6px;
   background: transparent;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease;
 }
 
 .book-thumbnail-item:hover {
-  background: var(--a-color-surface-muted);
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .book-thumbnail-item.is-active {
-  border-color: var(--a-color-primary);
-  background: color-mix(in srgb, var(--a-color-primary) 8%, transparent);
+  border: 0;
+  background: rgba(0, 102, 204, 0.06);
 }
 
 .book-thumbnail-item__page {
   width: 100%;
   aspect-ratio: 1 / 1.414;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  box-shadow: none;
+  border: 0;
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.book-thumbnail-item:hover .book-thumbnail-item__page {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .book-thumbnail-item.is-active .book-thumbnail-item__page {
-  border-color: var(--a-color-primary);
-  outline: 2px solid var(--a-color-primary);
+  border: 0;
+  outline: 3px solid #007aff;
   outline-offset: 1px;
-  box-shadow: none;
+  box-shadow: 0 4px 14px rgba(0, 122, 255, 0.25);
 }
 
 .book-thumbnail-item__indicator {
@@ -442,8 +450,9 @@ watch(
 }
 
 .book-thumbnail-item__label {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--a-color-muted);
+  font-weight: 500;
 }
 
 /* 大纲目录 */
@@ -502,10 +511,11 @@ watch(
   align-items: center;
   justify-content: space-between;
   gap: 0.4rem;
-  padding: 0.3rem 0.45rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
+  padding: 0.45rem 0.65rem;
+  border: 0;
+  border-radius: 6px;
+  background: var(--book-reader-canvas, #ffffff);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .book-reader-sidebar__bookmark-jump {
@@ -517,7 +527,7 @@ watch(
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--a-color-fg);
+  color: var(--book-reader-text, var(--a-color-fg));
   font-size: 0.8rem;
   cursor: pointer;
   text-align: left;
@@ -646,7 +656,8 @@ watch(
   position: relative;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
-  background: var(--a-color-bg);
+  background: var(--book-reader-canvas, var(--a-color-bg));
+  color: var(--book-reader-text, var(--a-color-fg));
   overflow: hidden;
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease;

@@ -149,6 +149,11 @@
           <slot name="tools" />
         </div>
       </aside>
+
+      <div v-else-if="hasTools" class="book-reader-shell__offscreen-slots" aria-hidden="true" style="display: none;">
+        <slot name="settings" />
+        <slot name="tools" />
+      </div>
     </section>
   </section>
 </template>
@@ -264,8 +269,13 @@ function togglePanel(panel: 'tools' | 'settings') {
 
 <style scoped>
 .book-reader-shell {
-  display: grid;
-  gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--a-topbar-height, 3.5rem) - 2rem);
+  background: var(--book-reader-canvas, #ebeef2);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
   color: var(--book-reader-text, var(--a-color-fg));
 }
 
@@ -274,28 +284,29 @@ function togglePanel(panel: 'tools' | 'settings') {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.75rem;
-  min-height: 3.75rem;
-  padding: 0.45rem 0.75rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  background: var(--book-reader-surface, var(--a-color-bg));
+  min-height: 3.25rem;
+  padding: 0.35rem 0.85rem;
+  border: 0;
+  border-bottom: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.08));
+  background: var(--book-reader-surface, #ffffff);
 }
 
 .book-reader-shell__back {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
   padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-control);
+  border: 0;
+  border-radius: 9999px;
   background: transparent;
   color: var(--book-reader-muted, var(--a-color-muted));
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .book-reader-shell__back:hover {
-  background-color: color-mix(in srgb, var(--book-reader-surface, var(--a-color-bg)) 88%, var(--book-reader-text, var(--a-color-fg)));
+  background-color: rgba(0, 0, 0, 0.06);
   color: var(--book-reader-text, var(--a-color-fg));
 }
 
@@ -328,13 +339,14 @@ function togglePanel(panel: 'tools' | 'settings') {
 .book-reader-shell__format {
   display: inline-flex;
   align-items: center;
-  min-height: 1.4rem;
-  padding: 0 0.45rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
+  min-height: 1.3rem;
+  padding: 0 0.4rem;
+  border: 0;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.06);
   color: var(--book-reader-muted, var(--a-color-muted));
-  font-size: 0.7rem;
-  font-weight: 500;
+  font-size: 0.68rem;
+  font-weight: 600;
   letter-spacing: 0.04em;
 }
 
@@ -354,8 +366,9 @@ function togglePanel(panel: 'tools' | 'settings') {
 .book-reader-shell__workspace {
   display: flex;
   align-items: stretch;
-  gap: 1rem;
+  gap: 0;
   min-width: 0;
+  flex: 1;
 }
 
 .book-reader-shell__reading-column {
@@ -363,23 +376,24 @@ function togglePanel(panel: 'tools' | 'settings') {
   grid-template-rows: auto minmax(0, 1fr) auto;
   min-width: 0;
   flex: 1;
+  background: var(--book-reader-canvas, #ebeef2);
 }
 
 .book-reader-shell__toolbar {
   position: sticky;
   top: var(--a-topbar-height, 3.5rem);
-  z-index: 1;
+  z-index: 10;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.65rem;
-  min-height: 3.25rem;
-  padding: 0.4rem 0.65rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-bottom: 0;
-  border-radius: var(--a-radius-card) var(--a-radius-card) 0 0;
-  background: var(--book-reader-surface, var(--a-color-bg));
+  min-height: 2.85rem;
+  padding: 0.35rem 0.85rem;
+  border: 0;
+  border-bottom: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.08));
+  border-radius: 0;
+  background: var(--book-reader-surface, #f8f9fa);
   color: var(--book-reader-muted, var(--a-color-muted));
   font-size: 0.85rem;
 }
@@ -387,6 +401,8 @@ function togglePanel(panel: 'tools' | 'settings') {
 .book-reader-shell__sidebar-wrapper {
   flex-shrink: 0;
   display: flex;
+  background: var(--book-reader-surface, #f7f8fa);
+  border-right: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.08));
 }
 
 .book-reader-shell__toolbar-left {
@@ -408,32 +424,32 @@ function togglePanel(panel: 'tools' | 'settings') {
   width: 2.25rem;
   height: 2.25rem;
   padding: 0;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--book-reader-surface, var(--a-color-bg));
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
   color: var(--book-reader-muted, var(--a-color-muted));
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .book-reader-shell__tool-btn:hover {
-  background: var(--a-color-surface-muted);
+  background: rgba(0, 0, 0, 0.06);
   color: var(--book-reader-text, var(--a-color-fg));
 }
 
 .book-reader-shell__tool-btn.is-active {
-  border-color: var(--a-color-primary);
-  color: var(--a-color-primary);
+  background: rgba(0, 102, 204, 0.12);
+  color: var(--a-color-primary, #0066cc);
 }
 
 .book-reader-shell__zoom-controls {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.15rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--book-reader-surface, var(--a-color-bg));
+  padding: 0.15rem 0.35rem;
+  border: 0;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .book-reader-shell__zoom-btn {
@@ -452,7 +468,7 @@ function togglePanel(panel: 'tools' | 'settings') {
 }
 
 .book-reader-shell__zoom-btn:hover:not(:disabled) {
-  background: var(--a-color-surface-muted);
+  background: rgba(0, 0, 0, 0.06);
   color: var(--book-reader-text, var(--a-color-fg));
 }
 
@@ -487,19 +503,19 @@ function togglePanel(panel: 'tools' | 'settings') {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.25rem;
+  height: 2.25rem;
   padding: 0;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--book-reader-surface, var(--a-color-bg));
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
   color: var(--book-reader-text, var(--a-color-fg));
   cursor: pointer;
   transition: color 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
 }
 
 .book-reader-shell__pagination button:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--book-reader-surface, var(--a-color-bg)) 86%, var(--book-reader-text, var(--a-color-fg)));
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .book-reader-shell__pagination button:disabled {
@@ -515,19 +531,21 @@ function togglePanel(panel: 'tools' | 'settings') {
 
 .book-reader-shell__panel-tabs button,
 .book-reader-shell__panel-heading button {
-  min-height: 2.5rem;
-  padding: 0.4rem 0.65rem;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-control);
+  min-height: 2rem;
+  padding: 0.35rem 0.85rem;
+  border: 0;
+  border-radius: 9999px;
   background: transparent;
   color: var(--book-reader-muted, var(--a-color-muted));
   cursor: pointer;
   font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .book-reader-shell__panel-tabs button[aria-pressed="true"] {
-  border-color: var(--a-color-border-soft);
-  background: var(--book-reader-surface, var(--a-color-bg));
+  background: rgba(0, 0, 0, 0.08);
   color: var(--book-reader-text, var(--a-color-fg));
   font-weight: 600;
 }
@@ -536,30 +554,30 @@ function togglePanel(panel: 'tools' | 'settings') {
   display: grid;
   align-content: start;
   min-width: 0;
-  min-height: min(68vh, 720px);
+  min-height: min(72vh, 800px);
   overflow: hidden;
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--book-reader-surface, var(--a-color-bg));
+  border: 0;
+  background: var(--book-reader-canvas, #ebeef2);
   box-shadow: none;
 }
 
 .book-reader-shell__progress {
   display: grid;
-  gap: 0.4rem;
-  padding: 0.7rem 0.8rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-top: 0;
-  border-radius: 0 0 var(--a-radius-card) var(--a-radius-card);
-  background: var(--book-reader-surface, var(--a-color-bg));
+  gap: 0.35rem;
+  padding: 0.45rem 1rem 0.65rem;
+  border: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 0;
+  background: var(--book-reader-canvas, #ebeef2);
   color: var(--book-reader-muted, var(--a-color-muted));
-  font-size: 0.78rem;
+  font-size: 0.75rem;
 }
 
 .book-reader-shell__progress-track {
   height: 3px;
   overflow: hidden;
-  border-radius: var(--a-radius-control);
-  background: color-mix(in srgb, var(--book-reader-surface, var(--a-color-bg)) 80%, var(--book-reader-text, var(--a-color-fg)));
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .book-reader-shell__progress-track span {
@@ -589,10 +607,11 @@ function togglePanel(panel: 'tools' | 'settings') {
   min-width: 0;
   max-height: min(78vh, 56rem);
   overflow: auto;
-  padding: 1rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
+  padding: 1.25rem;
+  border: 0;
+  border-radius: 12px;
   background: var(--book-reader-surface, var(--a-color-bg));
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
   color: var(--book-reader-text, var(--a-color-fg));
 }
 

@@ -3,9 +3,9 @@
     <p v-if="loading" role="status">正在打开文件版本…</p>
     <div v-else-if="error" role="alert"><p>{{ error }}</p><PButton variant="secondary" @click="load">重试</PButton><PButton :to="`/books/work/${route.params.workId}`" variant="ghost">返回图书</PButton></div>
     <template v-else-if="source">
-      <div class="revision-reader__status"><span>文件版本 {{ version }}<template v-if="owner === 'guest'"> · 进度与书签仅保存在本机，登录后可使用云端同步</template></span><PButton variant="ghost" @click="load">重新载入文件</PButton></div>
       <BookCloudReader v-if="owner !== 'guest'" :key="source.progressKey" :source="source" :owner="owner" :revision-id="String(route.params.revisionId)" />
       <BookPublicReaderView v-else :key="source.progressKey" :source="source" />
+      <span v-if="owner === 'guest'" class="sr-only">进度与书签仅保存在本机</span>
       <BookPassageDiscussions v-if="owner === 'guest'" :revision-id="String(route.params.revisionId)" />
     </template>
   </section>
@@ -56,6 +56,8 @@ async function load() {
     version.value = revision.number
     source.value = {
       title: work.title,
+      subtitle: `第 ${revision.number} 版 · ${work.authors.map(person => person.name).join(' / ')}`,
+      toolbarLabel: `第 ${revision.number} 版`,
       backTo: `/books/work/${work.id}`,
       progressKey: `revision:${owner.value}:${revision.id}`,
       asset: { id: asset.id, work_id: work.id, title: work.title, author: work.authors.map(person => person.name).join(' / '), format: asset.format, file_name: revision.original_filename, content_type: '', size: 0, status: 'published', created_at: revision.created_at },

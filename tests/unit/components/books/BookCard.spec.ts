@@ -66,4 +66,21 @@ describe('BookCard.vue', () => {
     expect(wrapper.find('.book-card__rating').exists()).toBe(false)
     expect(wrapper.find('.book-card__title').text()).toBe('未评分作品')
   })
+
+  it('展示作品已收录的版本数量', async () => {
+    const workWithEditions: BookPublicWork = {
+      ...mockWork,
+      editions: [
+        { id: 'ed-1', work_id: 'work-100', title: '译林版' } as any,
+        { id: 'ed-2', work_id: 'work-100', title: '商务印书馆版' } as any,
+      ],
+    }
+
+    const wrapper = mount(BookCard, {
+      props: { work: workWithEditions },
+      global: { plugins: [router] },
+    })
+
+    expect(wrapper.find('.book-card__editions').text()).toBe('2 个版本')
+  })
 })

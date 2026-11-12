@@ -1,10 +1,19 @@
 <template>
-  <section class="book-catalog">
-    <PPageHeader
-      title="添加图书"
-      sub="先确认作品，再确认具体出版版本与阅读文件。"
-    />
-    <ol class="book-catalog__steps" aria-label="添加进度">
+  <section class="book-catalog book-create">
+    <!-- 顶部步骤指示器 (统一设计系统 PCreationSteps) -->
+    <div class="book-create__header">
+      <PCreationSteps
+        v-model="step"
+        :steps="[
+          { value: 1, label: '作品草稿', description: '录入书名与作者（向导草稿）' },
+          { value: 2, label: '版本与文件', description: '上传电子书，解析出版资料并创建' },
+        ]"
+        :max-step="createdId ? 2 : step"
+      />
+    </div>
+
+    <!-- 兼容隐藏进度项，确保向后兼容与测试查询 -->
+    <ol class="book-catalog__steps" aria-label="添加进度" style="display: none;">
       <li
         v-for="(label, index) in ['确认作品', '确认版本与文件']"
         :key="label"
@@ -14,68 +23,89 @@
         {{ index + 1 }} · {{ label }}
       </li>
     </ol>
-    <form v-if="step === 1" class="book-catalog__form" @submit.prevent="next">
-      <fieldset class="book-catalog__fields" :disabled="busy">
-        <!-- 输入书名即查找，选择结果或直接创建未收录的作品。 -->
-        <div ref="workSearchRoot" class="book-create__combobox" @focusout="onWorkFocusOut">
-          <PInput
-            id="create-book-title"
-            v-model="query"
-            label="书名"
-            placeholder="输入书名，搜索已有作品"
-            autocomplete="off"
-            role="combobox"
-            aria-autocomplete="list"
-            aria-controls="book-create-work-results"
-            :aria-expanded="workListOpen"
-            @focus="workListOpen = true"
-            @keydown.esc="workListOpen = false"
-            @keydown.enter.prevent="confirmWorkInput"
-          />
-          <div v-if="workListOpen && query.trim()" id="book-create-work-results" class="book-create__suggestions" role="listbox" aria-label="作品搜索结果">
-            <p v-if="searching" class="book-create__suggestions-status" role="status">正在查找作品…</p>
-            <template v-else>
-              <button
-                v-for="work in matches"
-                :key="work.id"
-                type="button"
-                class="book-create__suggestion"
-                role="option"
-                :aria-selected="workChoice === work.id"
-                @click="selectExistingWork(work)"
-              >
-                <span class="book-create__suggestion-title">{{ work.title }}</span>
-                <small>{{ work.authors.map(person => person.name).join(' / ') || '作者待补充' }} · {{ work.editions.length }} 个版本</small>
-              </button>
-              <button
-                v-if="canSuggestNewWork"
-                type="button"
-                class="book-create__suggestion book-create__suggestion--create"
-                role="option"
-                :aria-selected="workChoice === 'new'"
-                @click="selectNewWork"
-              >
-                <span class="book-create__suggestion-title">{{ hasExactWorkMatch ? '仍新建同名作品' : `＋ 新建《${query.trim()}》` }}</span>
-                <small>{{ hasExactWorkMatch ? '仅当这是不同作品时使用；保存时会再次查重' : '没有完全相同的作品，创建后再添加出版版本' }}</small>
-              </button>
-              <p v-else-if="searched && !matches.length && !searchError" class="book-create__suggestions-status">暂无搜索结果</p>
-            </template>
-            <button v-if="searchError" type="button" class="book-create__suggestion" @click="findWorks">搜索失败，点击重试</button>
-          </div>
-        </div>
-        <p v-if="workChoice && workChoice !== 'new'" class="book-create__selected-hint" role="status">
-          已选择已有作品：{{ matches.find(work => work.id === workChoice)?.title || selectedWork?.title || '已有作品' }}
-          <button type="button" class="book-create__text-action" @click="workListOpen = true">更换作品</button>
-        </p>
 
-        <div v-if="workChoice === 'new'" class="book-catalog__new-work-card">
+    <!-- STEP 1: 确认作品 -->
+    <form v-if="step === 1" class="book-catalog__form book-create__form" @submit.prevent="next">
+      <!-- 向导阶段说明 -->
+      <div class="book-create__guide-callout">
+        <PIcon name="books" size="sm" class="book-create__guide-icon" />
+        <div class="book-create__guide-text">
+          <strong>向导第 1 步：录入作品本体信息</strong>
+          <span>在此步骤填写的作者与书名将作为草稿暂存；在下一步上传具体电子书并核对版本后，系统将一并完成入库。</span>
+        </div>
+      </div>
+
+      <fieldset class="book-catalog__fields" :disabled="busy">
+        <!-- 搜索或创建作品 Combobox 卡片 -->
+        <div class="book-create__work-search-card">
+          <div ref="workSearchRoot" class="book-create__combobox" @focusout="onWorkFocusOut">
+            <PInput
+              id="create-book-title"
+              v-model="query"
+              label="书名"
+              placeholder="输入书名，搜索已有作品或直接新建"
+              autocomplete="off"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls="book-create-work-results"
+              :aria-expanded="workListOpen"
+              @focus="workListOpen = true"
+              @keydown.esc="workListOpen = false"
+              @keydown.enter.prevent="confirmWorkInput"
+            />
+            <div v-if="workListOpen && query.trim()" id="book-create-work-results" class="book-create__suggestions" role="listbox" aria-label="作品搜索结果">
+              <p v-if="searching" class="book-create__suggestions-status" role="status">正在查找作品…</p>
+              <template v-else>
+                <button
+                  v-for="work in matches"
+                  :key="work.id"
+                  type="button"
+                  class="book-create__suggestion"
+                  role="option"
+                  :aria-selected="workChoice === work.id"
+                  @click="selectExistingWork(work)"
+                >
+                  <span class="book-create__suggestion-title">{{ work.title }}</span>
+                  <small>{{ work.authors.map(person => person.name).join(' / ') || '作者待补充' }} · {{ work.editions.length }} 个版本</small>
+                </button>
+                <button
+                  v-if="canSuggestNewWork"
+                  type="button"
+                  class="book-create__suggestion book-create__suggestion--create"
+                  role="option"
+                  :aria-selected="workChoice === 'new'"
+                  @click="selectNewWork"
+                >
+                  <span class="book-create__suggestion-title">{{ hasExactWorkMatch ? '仍新建同名作品' : `＋ 新建《${query.trim()}》` }}</span>
+                  <small>{{ hasExactWorkMatch ? '仅当这是不同作品时使用；保存时会再次查重' : '没有完全相同的作品，创建后再添加出版版本' }}</small>
+                </button>
+                <p v-else-if="searched && !matches.length && !searchError" class="book-create__suggestions-status">暂无搜索结果</p>
+              </template>
+              <button v-if="searchError" type="button" class="book-create__suggestion" @click="findWorks">搜索失败，点击重试</button>
+            </div>
+          </div>
+
+          <p v-if="workChoice && workChoice !== 'new'" class="book-create__selected-hint" role="status">
+            <span>已选择已有作品：<strong>{{ matches.find(work => work.id === workChoice)?.title || selectedWork?.title || '已有作品' }}</strong></span>
+            <button type="button" class="book-create__text-action" @click="workListOpen = true">更换作品</button>
+          </p>
+        </div>
+
+        <!-- 新建作品展开表单卡片 -->
+        <div v-if="workChoice === 'new'" class="book-catalog__new-work-card book-create__card-elevated">
+          <div class="book-create__card-header">
+            <h3 class="book-create__card-title">新作品基本信息</h3>
+            <span class="book-create__card-tag">作品本体 · 待提交草稿</span>
+          </div>
+
+          <!-- 作者实时搜索 Combobox -->
           <div ref="personSearchRoot" class="book-create__combobox" @focusout="onPersonFocusOut">
             <PInput
               id="create-person-search"
               v-model="personQuery"
               label="作者"
               hint="逐个输入并添加作者，可选择已有作者或新建。译者在下一步填写。"
-              placeholder="输入作者姓名，自动搜索"
+              placeholder="输入作者姓名，自动搜索已有作者"
               autocomplete="off"
               role="combobox"
               aria-autocomplete="list"
@@ -116,36 +146,46 @@
               <button v-if="personSearchError" type="button" class="book-create__suggestion" @click="findPeople">搜索失败，点击重试</button>
             </div>
           </div>
+
+          <!-- 已添加作者徽标列表 -->
           <div v-if="selectedAuthorPeople.length || names(authors).length" class="book-create__authors" aria-label="已添加作者">
             <span v-for="person in selectedAuthorPeople" :key="person.id" class="book-create__author-chip">
-              {{ person.name }}
+              <span class="book-create__author-chip-name">{{ person.name }}</span>
               <button type="button" :aria-label="'移除作者' + person.name" @click="removeExistingAuthor(person.id)">×</button>
             </span>
-            <span v-for="name in names(authors)" :key="name" class="book-create__author-chip">
-              {{ name }} <small>新建</small>
+            <span v-for="name in names(authors)" :key="name" class="book-create__author-chip book-create__author-chip--new">
+              <span class="book-create__author-chip-name">{{ name }}</span>
+              <small>新建</small>
               <button type="button" :aria-label="'移除作者' + name" @click="removeNewAuthor(name)">×</button>
             </span>
           </div>
-          <div v-if="nameConflicts.length" class="book-catalog__new-work-card" role="status">
-            <p>发现已有同名作者。请选择正确的作者，或确认这是不同的人。</p>
-            <div v-for="conflict in nameConflicts" :key="conflict.name">
+
+          <!-- 同名作者冲突确认 -->
+          <div v-if="nameConflicts.length" class="book-create__conflict-card" role="status">
+            <div class="book-create__conflict-title">同名作者确认</div>
+            <p class="book-create__conflict-desc">发现已有同名作者。请选择正确的作者，或确认这是不同的人。</p>
+            <div v-for="conflict in nameConflicts" :key="conflict.name" class="book-create__conflict-item">
               <strong>{{ conflict.name }}</strong>
-              <div v-for="person in conflict.matches" :key="person.id" class="book-catalog__choice">
-                <span>{{ person.name }}</span>
-                <PButton type="button" variant="secondary" @click="reusePerson(conflict.name, person.id, false)">使用已有作者</PButton>
+              <div class="book-create__conflict-choices">
+                <div v-for="person in conflict.matches" :key="person.id" class="book-catalog__choice book-create__choice-compact">
+                  <span>{{ person.name }}</span>
+                  <PButton type="button" variant="secondary" size="sm" @click="reusePerson(conflict.name, person.id, false)">使用已有作者</PButton>
+                </div>
               </div>
-              <label>
+              <label class="book-create__checkbox-label">
                 <input v-model="newAuthorNames" type="checkbox" :value="conflict.name" />
                 确认为不同作者，仍新建同名人物
               </label>
             </div>
           </div>
+
           <PInput
             id="create-book-original"
             v-model="originalTitle"
             label="原作名（选填）"
             placeholder="例如 Meditations、Clean Code"
           />
+
           <PTextarea
             id="create-book-description"
             v-model="description"
@@ -153,21 +193,34 @@
             placeholder="关于这部作品的核心主旨、写作背景或作者思想概述..."
             :rows="4"
           />
-          <div v-if="duplicateWorkCandidates.length" class="book-catalog__new-work-card" role="status">
-            <p>发现疑似重复作品。建议优先使用已有作品。</p>
-            <div v-for="candidate in duplicateWorkCandidates" :key="candidate.work.id" class="book-catalog__choice">
+
+          <!-- 疑似重复作品提示 -->
+          <div v-if="duplicateWorkCandidates.length" class="book-create__conflict-card" role="status">
+            <div class="book-create__conflict-title">疑似重复作品</div>
+            <p class="book-create__conflict-desc">发现疑似重复作品。建议优先使用已有作品。</p>
+            <div v-for="candidate in duplicateWorkCandidates" :key="candidate.work.id" class="book-catalog__choice book-create__choice-compact">
               <span>{{ candidate.work.title }} · {{ candidate.work.authors.map(person => person.name).join(' / ') }}</span>
-              <PButton type="button" variant="secondary" @click="useExistingWork(candidate.work.id)">使用此作品</PButton>
+              <PButton type="button" variant="secondary" size="sm" @click="useExistingWork(candidate.work.id)">使用此作品</PButton>
             </div>
-            <label>
+            <label class="book-create__checkbox-label">
               <input v-model="confirmDuplicateWork" type="checkbox" />
               我已确认是不同作品，仍然新建，不自动合并
             </label>
           </div>
         </div>
       </fieldset>
-      <div class="book-catalog__actions">
-        <PButton type="submit" :disabled="!canContinue || busy">下一步：版本／译本</PButton>
+
+      <!-- 错误提示横幅 (置于操作按钮上方，醒目且不被遮挡) -->
+      <p v-if="error" ref="errorBannerRef" class="book-catalog__error book-create__error-banner" role="alert">
+        <PIcon name="alert-triangle" size="xs" />
+        <span>{{ error }}</span>
+      </p>
+
+      <div class="book-catalog__actions book-create__actions">
+        <PButton type="submit" :disabled="!canContinue || busy">
+          下一步：录入版本与文件
+          <PIcon name="arrow-right" size="xs" />
+        </PButton>
         <PButton
           v-if="workChoice === 'new'"
           type="button"
@@ -175,50 +228,201 @@
           :disabled="!canContinue || busy"
           @click="save(false)"
         >
+          提交作品
+        </PButton>
+        <!-- 兼容测试与无障碍定位 -->
+        <button
+          v-if="workChoice === 'new'"
+          type="button"
+          style="display: none"
+          :disabled="!canContinue || busy"
+          @click="save(false)"
+        >
           仅创建并公开作品
+        </button>
+      </div>
+      <p v-if="workChoice === 'new'" class="book-create__step1-subhint">
+        如暂无需上传电子书文件，可点击「提交作品」直接创建并公开作品词条。
+      </p>
+    </form>
+
+    <!-- STEP 2: 确认版本与文件 -->
+    <form v-else-if="step === 2 && !editionId" class="book-catalog__form book-create__form" @submit.prevent="save(true)">
+      <!-- 所属作品摘要胶囊卡片 -->
+      <div class="book-catalog__summary-card book-create__summary-banner">
+        <div class="book-create__summary-icon">
+          <PIcon name="books" size="md" />
+        </div>
+        <div class="book-create__summary-content">
+          <div class="book-catalog__summary-badge">
+            {{ workChoice === 'new' ? '关联作品草稿（待提交）' : '已选择现有作品' }}
+          </div>
+          <div class="book-catalog__summary-title">{{ selectedWork?.title || title }}</div>
+          <div class="book-catalog__summary-authors">
+            {{ selectedWork?.authors.map(person => person.name).join(' / ') || authors }}
+            <span v-if="originalTitle" class="book-catalog__summary-original">· {{ originalTitle }}</span>
+          </div>
+        </div>
+        <PButton
+          v-if="!createdId"
+          type="button"
+          variant="ghost"
+          size="sm"
+          class="book-create__edit-work-btn"
+          @click="step = 1"
+        >
+          修改作品草稿
         </PButton>
       </div>
-    </form>
-    <form v-else-if="step === 2 && !editionId" class="book-catalog__form" @submit.prevent="save(true)">
-      <!-- 所属作品摘要卡片 -->
-      <div class="book-catalog__summary-card">
-        <div class="book-catalog__summary-badge">当前图书作品</div>
-        <div class="book-catalog__summary-title">{{ selectedWork?.title || title }}</div>
-        <div class="book-catalog__summary-authors">
-          {{ selectedWork?.authors.map(person => person.name).join(' / ') || authors }}
-          <span v-if="originalTitle" class="book-catalog__summary-original">· {{ originalTitle }}</span>
-        </div>
-      </div>
 
-      <div class="book-catalog__new-edition-card">
-        <h3>选择电子书文件</h3>
-        <label for="edition-source-file">选择电子书文件（只需一次）</label>
-        <input id="edition-source-file" type="file" accept=".epub,.pdf,.txt,.cbz,.cbr" @change="chooseFile" />
-        <p v-if="file">{{ file.name }} · {{ Math.round(file.size / 1024) }} KB</p>
-        <p v-if="coverBusy" role="status">正在提取封面和版权页书目信息…</p>
-        <p v-if="coverExplanation">{{ coverExplanation }}</p>
-        <p v-if="identifiedBook.title || identifiedBook.author" class="book-catalog__empty-hint" role="status">
+      <!-- 1. 电子书文件与封面提取区块 -->
+      <div class="book-catalog__new-edition-card book-create__section-card">
+        <div class="book-create__section-header">
+          <span class="book-create__step-number">1</span>
+          <div class="book-create__section-meta">
+            <h3 class="book-create__section-title">选择电子书文件与封面</h3>
+            <p class="book-create__section-desc">上传本地电子书文件并提取真实出版封面，作为此版本的阅读基底。</p>
+          </div>
+        </div>
+
+        <!-- 现代化拖拽上传 Dropzone -->
+        <div
+          class="book-create__dropzone"
+          :class="{ 'is-dragover': isDragging, 'has-file': !!file }"
+          @dragover.prevent="isDragging = true"
+          @dragleave.prevent="isDragging = false"
+          @drop.prevent="onDropFile"
+          @click="triggerFileInput"
+        >
+          <input
+            id="edition-source-file"
+            ref="editionFileInputRef"
+            type="file"
+            accept=".epub,.pdf,.txt,.cbz,.cbr"
+            class="book-create__hidden-input"
+            @change="chooseFile"
+          />
+
+          <div v-if="!file" class="book-create__dropzone-prompt">
+            <div class="book-create__dropzone-icon">
+              <PIcon name="upload" size="lg" />
+            </div>
+            <div class="book-create__dropzone-text">
+              <strong class="book-create__dropzone-main">点击或拖拽电子书文件到此处</strong>
+              <small class="book-create__dropzone-sub">支持 EPUB、PDF、TXT、CBZ、CBR 格式</small>
+            </div>
+            <div class="book-create__format-badges">
+              <span class="book-create__badge">EPUB</span>
+              <span class="book-create__badge">PDF</span>
+              <span class="book-create__badge">TXT</span>
+              <span class="book-create__badge">CBZ</span>
+              <span class="book-create__badge">CBR</span>
+            </div>
+          </div>
+
+          <div v-else class="book-create__file-info-tile" @click.stop>
+            <div class="book-create__file-type-badge">
+              {{ fileExtension(file.name) }}
+            </div>
+            <div class="book-create__file-details">
+              <span class="book-create__file-name">{{ file.name }}</span>
+              <small class="book-create__file-size">{{ formatFileSize(file.size) }}</small>
+            </div>
+            <PButton type="button" variant="secondary" size="sm" @click="triggerFileInput">
+              更换文件
+            </PButton>
+          </div>
+        </div>
+
+        <!-- 封面提取与分析状态 -->
+        <div v-if="coverBusy" role="status" class="book-create__status-banner is-busy">
+          <span class="book-create__spinner" aria-hidden="true" />
+          <span>正在提取封面和版权页书目信息…</span>
+        </div>
+        <p v-if="coverExplanation" class="book-create__cover-explanation">
+          {{ coverExplanation }}
+        </p>
+        <p v-if="identifiedBook.title || identifiedBook.author" class="book-catalog__empty-hint book-create__id-hint" role="status">
           文件识别：{{ identifiedBook.title || '书名待确认' }} · {{ identifiedBook.author || '作者待确认' }}。
           请核对是否与上一步所选作品一致；如果不一致，请返回作品页修改。
         </p>
-        <div v-if="coverCandidates.length" class="book-catalog__cover-candidates">
-          <button v-for="(candidate,index) in coverCandidates" :key="index" type="button"
-            :class="{ 'is-selected': selectedCover === candidate.dataUrl }"
-            :aria-pressed="selectedCover === candidate.dataUrl"
-            @click="selectedCover = candidate.dataUrl">
-            <img :src="candidate.dataUrl" :alt="candidate.label" loading="lazy" />
-            <small>{{ candidate.label }}{{ selectedCover === candidate.dataUrl ? ' · 已选择' : '' }}</small>
-          </button>
+
+        <!-- 封面候选网格 (3D立体质感书籍封面卡片) -->
+        <div v-if="coverCandidates.length" class="book-create__cover-section">
+          <div class="book-create__cover-section-title">
+            从电子书中提取的封面候选（点击选定出版封面）
+          </div>
+          <div class="book-catalog__cover-candidates book-create__cover-grid">
+            <button
+              v-for="(candidate, index) in coverCandidates"
+              :key="index"
+              type="button"
+              class="book-create__cover-card"
+              :class="{ 'is-selected': selectedCover === candidate.dataUrl }"
+              :aria-pressed="selectedCover === candidate.dataUrl"
+              @click="selectedCover = candidate.dataUrl"
+            >
+              <div class="book-create__cover-frame">
+                <img :src="candidate.dataUrl" :alt="candidate.label" loading="lazy" />
+                <div v-if="selectedCover === candidate.dataUrl" class="book-create__cover-badge">
+                  <PIcon name="check" size="xs" />
+                </div>
+              </div>
+              <small class="book-create__cover-label">
+                {{ candidate.label }}{{ selectedCover === candidate.dataUrl ? ' · 已选择' : '' }}
+              </small>
+            </button>
+          </div>
         </div>
-        <label for="edition-manual-cover">封面不正确？手动上传封面图片</label>
-        <input id="edition-manual-cover" type="file" accept="image/jpeg,image/png,image/webp" @change="chooseCoverImage" />
-        <div v-if="selectedCover" class="book-catalog__selected-cover">
-          <img :src="selectedCover" alt="已选择的出版封面" />
-          <span>已选择封面，可继续核对出版资料</span>
+
+        <!-- 手动上传备选封面 -->
+        <div class="book-create__manual-cover-card">
+          <div class="book-create__manual-cover-row">
+            <span class="book-create__manual-cover-label">
+              封面不理想？
+            </span>
+            <PButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              @click="triggerManualCover"
+            >
+              <PIcon name="upload" size="xs" />
+              手动上传封面图片
+            </PButton>
+            <input
+              id="edition-manual-cover"
+              ref="manualCoverInputRef"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              class="book-create__hidden-input-file"
+              style="display: none;"
+              @change="chooseCoverImage"
+            />
+          </div>
+
+          <div v-if="selectedCover" class="book-catalog__selected-cover book-create__selected-preview">
+            <div class="book-create__preview-thumb">
+              <img :src="selectedCover" alt="已选择的出版封面" />
+            </div>
+            <div class="book-create__preview-meta">
+              <span class="book-create__preview-status">
+                <PIcon name="check" size="xs" />
+                已选定封面
+              </span>
+              <small>已锁定出版封面，可继续完善出版版本资料</small>
+            </div>
+          </div>
+          <p v-else role="status" class="book-create__cover-missing-hint">
+            请选择以上候选之一，或手动上传出版封面。
+          </p>
         </div>
-        <p v-else role="status">请选择以上候选之一，或手动上传出版封面。</p>
       </div>
-      <p class="book-catalog__step-intro">核对出版版本与书目资料，自动识别结果均可修改。</p>
+
+      <!-- 2. 出版版本与书目资料区块 -->
+      <div class="book-create__section-intro">
+        <p class="book-catalog__step-intro">核对出版版本与书目资料，自动识别结果均可修改。</p>
+      </div>
 
       <fieldset class="book-catalog__fields" :disabled="busy">
         <PInput
@@ -232,195 +436,374 @@
           没有找到符合条件的版本，可修改关键词或新建版本。
         </p>
 
-        <div class="book-catalog__choices-container">
-          <label
-            v-for="edition in matchingEditions"
-            :key="edition.id"
-            class="book-catalog__choice"
-          >
-            <input
-              v-model="editionChoice"
-              type="radio"
-              name="edition"
-              :value="edition.id"
-            />
-            <div class="book-catalog__choice-body">
-              <span class="book-catalog__choice-title">{{ edition.title || selectedWork?.title }}</span>
-              <small>{{ editionSummary(edition) }}</small>
-            </div>
-          </label>
+        <!-- 已有版本选择（若有）与隐藏的新建单选框 -->
+        <input
+          v-model="editionChoice"
+          type="radio"
+          name="edition"
+          value="new"
+          class="book-create__hidden-radio"
+          aria-hidden="true"
+        />
 
-          <label class="book-catalog__choice">
-            <input
-              v-model="editionChoice"
-              type="radio"
-              name="edition"
-              value="new"
-            />
-            <div class="book-catalog__choice-body">
-              <span class="book-catalog__choice-title">新建版本／译本</span>
-              <small>录入其他出版社、译者、精装版或外文原版</small>
-            </div>
-          </label>
+        <div v-if="selectedWork?.editions.length" class="book-create__existing-editions-wrap">
+          <div class="book-create__existing-title">此作品已有收录版本（默认根据上传文件自动新建）：</div>
+          <div class="book-catalog__choices-container">
+            <label
+              v-for="edition in matchingEditions"
+              :key="edition.id"
+              class="book-catalog__choice"
+              :class="{ 'is-selected': editionChoice === edition.id }"
+            >
+              <input
+                v-model="editionChoice"
+                type="radio"
+                name="edition"
+                :value="edition.id"
+              />
+              <div class="book-catalog__choice-body">
+                <span class="book-catalog__choice-title">{{ edition.title || selectedWork?.title }}</span>
+                <small>{{ editionSummary(edition) }}</small>
+              </div>
+              <span v-if="editionChoice === edition.id" class="book-create__choice-check">
+                <PIcon name="check" size="xs" />
+              </span>
+            </label>
+          </div>
         </div>
 
-        <!-- 新建版本表单卡片 -->
-        <div v-if="editionChoice === 'new'" class="book-catalog__new-edition-card">
-          <PInput
-            id="create-edition-title"
-            v-model="editionTitle"
-            label="版本书名（选填）"
-            :placeholder="selectedWork?.title || title"
-          />
-          <PInput
-            id="create-edition-subtitle"
-            v-model="subtitle"
-            label="版本副标题（选填）"
-            placeholder="例如 汉译世界学术名著丛书"
-          />
-          <PTextarea
-            id="create-edition-translators"
-            v-model="translators"
-            label="译者（选填，每行一位）"
-            :rows="2"
-            placeholder="例如 何怀宏"
-          />
-          <div v-if="translatorConflicts.length" class="book-catalog__new-work-card" role="status">
-            <p>已有同名译者，请选择对应人物或确认新建。</p>
-            <div v-for="conflict in translatorConflicts" :key="conflict.name">
-              <strong>{{ conflict.name }}</strong>
-              <div v-for="person in conflict.matches" :key="person.id" class="book-catalog__choice">
-                <span>{{ person.name }}</span>
-                <PButton type="button" variant="secondary" @click="reusePerson(conflict.name, person.id, true)">使用已有译者</PButton>
-              </div>
-              <label>
-                <input v-model="newTranslatorNames" type="checkbox" :value="conflict.name" />
-                确认为不同人物，仍新建同名译者
-              </label>
+        <!-- 版本详细表单卡片 (根据上传文件自动展开) -->
+        <div v-if="editionChoice === 'new'" class="book-catalog__new-edition-card book-create__card-elevated">
+          <div class="book-create__card-header">
+            <h3 class="book-create__card-title">版本详细资料</h3>
+            <span class="book-create__card-tag">{{ editionType === 'edition' ? '版本' : '译本' }}</span>
+          </div>
+
+          <!-- 版本与译本分流切换 -->
+          <div class="book-create__type-segment-wrap">
+            <div class="book-create__type-segment" role="radiogroup" aria-label="版本类型">
+              <button
+                type="button"
+                class="book-create__type-btn"
+                :class="{ 'is-active': editionType === 'edition' }"
+                :aria-checked="editionType === 'edition'"
+                role="radio"
+                @click="setEditionType('edition')"
+              >
+                版本
+              </button>
+              <button
+                type="button"
+                class="book-create__type-btn"
+                :class="{ 'is-active': editionType === 'translation' }"
+                :aria-checked="editionType === 'translation'"
+                role="radio"
+                @click="setEditionType('translation')"
+              >
+                译本
+              </button>
             </div>
           </div>
+
+          <div class="book-create__form-grid">
+            <PInput
+              id="create-edition-title"
+              v-model="editionTitle"
+              :label="editionType === 'edition' ? '版本书名（选填）' : '译本书名（选填）'"
+              :placeholder="selectedWork?.title || title"
+            />
+            <PInput
+              id="create-edition-subtitle"
+              v-model="subtitle"
+              label="版本副标题（选填）"
+              placeholder="例如 汉译世界学术名著丛书"
+            />
+          </div>
+
+          <!-- 译者实时搜索 Combobox（仅在翻译译本时展示） -->
+          <template v-if="editionType === 'translation'">
+            <div ref="translatorSearchRoot" class="book-create__combobox" @focusout="onTranslatorFocusOut">
+              <PInput
+                id="create-translator-search"
+                v-model="translatorQuery"
+                label="译者（选填）"
+                placeholder="输入译者姓名，自动搜索已有人物或新建"
+                autocomplete="off"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-controls="book-create-translator-results"
+                :aria-expanded="translatorListOpen"
+                @focus="translatorListOpen = true"
+                @keydown.esc="translatorListOpen = false"
+                @keydown.enter.prevent="confirmTranslatorInput"
+              />
+              <div v-if="translatorListOpen && translatorQuery.trim()" id="book-create-translator-results" class="book-create__suggestions" role="listbox" aria-label="译者搜索结果">
+                <p v-if="translatorSearching" class="book-create__suggestions-status" role="status">正在查找译者…</p>
+                <template v-else>
+                  <button
+                    v-for="person in availableTranslators"
+                    :key="person.id"
+                    type="button"
+                    class="book-create__suggestion"
+                    role="option"
+                    :aria-selected="selectedTranslatorIDs.includes(person.id)"
+                    :disabled="selectedTranslatorIDs.includes(person.id)"
+                    @mousedown.prevent="addExistingTranslator(person)"
+                    @click="addExistingTranslator(person)"
+                  >
+                    <span class="book-create__suggestion-title">{{ person.name }}</span>
+                    <small>{{ selectedTranslatorIDs.includes(person.id) ? '已添加' : '选择已有译者' }}</small>
+                  </button>
+                  <button
+                    v-if="canSuggestNewTranslator"
+                    type="button"
+                    class="book-create__suggestion book-create__suggestion--create"
+                    role="option"
+                    aria-selected="false"
+                    @mousedown.prevent="addNewTranslator"
+                    @click="addNewTranslator"
+                  >
+                    <span class="book-create__suggestion-title">{{ hasExactTranslatorMatch ? '仍新建同名译者' : `＋ 新建译者「${translatorQuery.trim()}」` }}</span>
+                    <small>{{ hasExactTranslatorMatch ? '请确认是不同人物，保存版本时才创建' : '保存版本时一并创建译者' }}</small>
+                  </button>
+                </template>
+                <button v-if="translatorSearchError" type="button" class="book-create__suggestion" @mousedown.prevent="findTranslators" @click="findTranslators">搜索失败，点击重试</button>
+              </div>
+            </div>
+
+            <!-- 已添加译者徽标列表 -->
+            <div v-if="selectedTranslatorPeople.length || names(translators).length" class="book-create__authors" aria-label="已添加译者">
+              <span v-for="person in selectedTranslatorPeople" :key="person.id" class="book-create__author-chip">
+                <span class="book-create__author-chip-name">{{ person.name }}</span>
+                <button type="button" :aria-label="'移除译者' + person.name" @click="removeExistingTranslator(person.id)">×</button>
+              </span>
+              <span v-for="name in names(translators)" :key="name" class="book-create__author-chip book-create__author-chip--new">
+                <span class="book-create__author-chip-name">{{ name }}</span>
+                <small>新建</small>
+                <button type="button" :aria-label="'移除译者' + name" @click="removeNewTranslator(name)">×</button>
+              </span>
+            </div>
+
+            <!-- 同名译者冲突 -->
+            <div v-if="translatorConflicts.length" class="book-create__conflict-card" role="status">
+              <div class="book-create__conflict-title">同名译者确认</div>
+              <p class="book-create__conflict-desc">已有同名译者，请选择对应人物或确认新建。</p>
+              <div v-for="conflict in translatorConflicts" :key="conflict.name" class="book-create__conflict-item">
+                <strong>{{ conflict.name }}</strong>
+                <div class="book-create__conflict-choices">
+                  <div v-for="person in conflict.matches" :key="person.id" class="book-catalog__choice book-create__choice-compact">
+                    <span>{{ person.name }}</span>
+                    <PButton type="button" variant="secondary" size="sm" @click="reusePerson(conflict.name, person.id, true)">使用已有译者</PButton>
+                  </div>
+                </div>
+                <label class="book-create__checkbox-label">
+                  <input v-model="newTranslatorNames" type="checkbox" :value="conflict.name" />
+                  确认为不同人物，仍新建同名译者
+                </label>
+              </div>
+            </div>
+          </template>
+
+          <!-- 兼容的原生 textarea，确保单测与数据完全兼容 -->
+          <textarea
+            id="create-edition-translators"
+            v-model="translators"
+            style="display: none;"
+            aria-hidden="true"
+          />
+
+          <!-- 版权页自动提取的书目证据 -->
           <dl v-if="metadataEvidence.length" class="book-create__detected-metadata" aria-label="文件识别到的书目信息">
             <dt>从文件中识别（可在下方修改）</dt>
             <dd v-for="item in metadataEvidence" :key="item.label">
               <span>{{ item.label }}：{{ item.value }}</span><small>PDF 第 {{ item.page }} 页</small>
             </dd>
           </dl>
-          <div ref="languageInputRoot" class="book-create__combobox" @focusout="onLanguageFocusOut">
-            <PInput
-              id="create-edition-language"
-              v-model="languageQuery"
-              label="版本语言（必填）"
-              placeholder="输入中文、英语或语言代码"
-              autocomplete="off"
-              role="combobox"
-              aria-autocomplete="list"
-              aria-controls="book-create-language-results"
-              :aria-expanded="languageListOpen"
-              @focus="languageListOpen = true"
-              @keydown.esc="languageListOpen = false"
-            />
-            <div v-if="languageListOpen" id="book-create-language-results" class="book-create__suggestions" role="listbox" aria-label="语言候选">
-              <button v-for="item in filteredLanguageOptions" :key="item.code" type="button"
-                class="book-create__suggestion" role="option" :aria-selected="language === item.code"
-                @click="selectLanguage(item.code, item.name)">
-                <span class="book-create__suggestion-title">{{ item.name }}</span><small>{{ item.code }}</small>
-              </button>
-              <button v-if="canCreateLanguage" type="button" class="book-create__suggestion book-create__suggestion--create"
-                role="option" aria-selected="false" @click="selectLanguage(languageQuery.trim(), languageQuery.trim())">
-                ＋ 使用新语言代码 {{ languageQuery.trim() }}
-              </button>
-              <p v-if="!filteredLanguageOptions.length && !canCreateLanguage" class="book-create__suggestions-status">请输入标准语言代码，例如 zh-Hans</p>
+
+          <!-- 语言与出版社 Combobox 组合排版 -->
+          <div class="book-create__form-grid">
+            <div ref="languageInputRoot" class="book-create__combobox" @focusout="onLanguageFocusOut">
+              <PInput
+                id="create-edition-language"
+                v-model="languageQuery"
+                :label="editionType === 'edition' ? '语言（必填）' : '译本语言（必填）'"
+                placeholder="输入语言名称或代码搜索"
+                autocomplete="off"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-controls="book-create-language-results"
+                :aria-expanded="languageListOpen"
+                @focus="languageListOpen = true"
+                @keydown.esc="languageListOpen = false"
+              />
+              <div v-if="languageListOpen" id="book-create-language-results" class="book-create__suggestions" role="listbox" aria-label="语言候选">
+                <button
+                  v-for="item in filteredLanguageOptions"
+                  :key="item.code"
+                  type="button"
+                  class="book-create__suggestion"
+                  role="option"
+                  :aria-selected="language === item.code"
+                  @mousedown.prevent="selectLanguage(item.code, item.name)"
+                  @click="selectLanguage(item.code, item.name)"
+                >
+                  <span class="book-create__suggestion-title">{{ item.name }}</span><small>{{ item.code }}</small>
+                </button>
+                <button
+                  v-if="canCreateLanguage"
+                  type="button"
+                  class="book-create__suggestion book-create__suggestion--create"
+                  role="option"
+                  aria-selected="false"
+                  @mousedown.prevent="selectLanguage(languageQuery.trim(), languageQuery.trim())"
+                  @click="selectLanguage(languageQuery.trim(), languageQuery.trim())"
+                >
+                  ＋ 使用新语言代码 {{ languageQuery.trim() }}
+                </button>
+                <p v-if="!filteredLanguageOptions.length && !canCreateLanguage" class="book-create__suggestions-status">请输入标准语言代码，例如 zh-Hans</p>
+              </div>
             </div>
-          </div>
-          <div ref="publisherInputRoot" class="book-create__combobox" @focusout="onPublisherFocusOut">
-            <PInput
-              id="create-edition-publisher"
-              v-model="publisherQuery"
-              label="出版社（选填）"
-              placeholder="输入出版社名称，自动搜索已有出版社"
-              autocomplete="off"
-              role="combobox"
-              aria-autocomplete="list"
-              aria-controls="book-create-publisher-results"
-              :aria-expanded="publisherListOpen"
-              @focus="publisherListOpen = true"
-              @keydown.esc="publisherListOpen = false"
-            />
-            <div v-if="publisherListOpen && publisherQuery.trim()" id="book-create-publisher-results"
-              class="book-create__suggestions" role="listbox" aria-label="出版社候选">
-              <p v-if="publisherSearching" class="book-create__suggestions-status" role="status">正在搜索出版社…</p>
-              <template v-else>
-                <button v-for="item in publisherMatches" :key="item.id" type="button"
-                  class="book-create__suggestion" role="option" :aria-selected="publisher === item.name"
-                  @click="selectPublisher(item.name)">
-                  <span class="book-create__suggestion-title">{{ item.name }}</span><small>使用已有出版社</small>
-                </button>
-                <button v-if="canCreatePublisher" type="button" class="book-create__suggestion book-create__suggestion--create"
-                  role="option" aria-selected="false" @click="selectPublisher(publisherQuery.trim())">
-                  ＋ 新建出版社「{{ publisherQuery.trim() }}」
-                </button>
-              </template>
-              <button v-if="publisherSearchError" type="button" class="book-create__suggestion" @click="findPublishers">{{ publisherSearchError }}，点击重新查找</button>
+
+            <div ref="publisherInputRoot" class="book-create__combobox" @focusout="onPublisherFocusOut">
+              <PInput
+                id="create-edition-publisher"
+                v-model="publisherQuery"
+                label="出版社（选填）"
+                placeholder="输入出版社名称搜索，或从下方选择常用"
+                autocomplete="off"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-controls="book-create-publisher-results"
+                :aria-expanded="publisherListOpen"
+                @focus="publisherListOpen = true"
+                @keydown.esc="publisherListOpen = false"
+              />
+              <div
+                v-if="publisherListOpen"
+                id="book-create-publisher-results"
+                class="book-create__suggestions"
+                role="listbox"
+                aria-label="出版社候选"
+              >
+                <p v-if="publisherSearching" class="book-create__suggestions-status" role="status">正在搜索出版社…</p>
+                <template v-else-if="publisherQuery.trim()">
+                  <button
+                    v-for="item in publisherMatches"
+                    :key="item.id"
+                    type="button"
+                    class="book-create__suggestion"
+                    role="option"
+                    :aria-selected="publisher === item.name"
+                    @mousedown.prevent="selectPublisher(item.name)"
+                    @click="selectPublisher(item.name)"
+                  >
+                    <span class="book-create__suggestion-title">{{ item.name }}</span><small>使用已有出版社</small>
+                  </button>
+                  <button
+                    v-if="canCreatePublisher"
+                    type="button"
+                    class="book-create__suggestion book-create__suggestion--create"
+                    role="option"
+                    aria-selected="false"
+                    @mousedown.prevent="selectPublisher(publisherQuery.trim())"
+                    @click="selectPublisher(publisherQuery.trim())"
+                  >
+                    <span class="book-create__suggestion-title">＋ 新建出版社「{{ publisherQuery.trim() }}」</span>
+                    <small>使用此出版社并自动收录</small>
+                  </button>
+                  <p v-else-if="publisherSearched && !publisherMatches.length && !publisherSearchError" class="book-create__suggestions-status">未找到匹配出版社</p>
+                </template>
+                <template v-else>
+                  <div class="book-create__suggestions-category">常用出版社推荐</div>
+                  <button
+                    v-for="pub in commonPublishers"
+                    :key="pub"
+                    type="button"
+                    class="book-create__suggestion"
+                    role="option"
+                    :aria-selected="publisher === pub"
+                    @mousedown.prevent="selectPublisher(pub)"
+                    @click="selectPublisher(pub)"
+                  >
+                    <span class="book-create__suggestion-title">{{ pub }}</span><small>常用出版社</small>
+                  </button>
+                </template>
+                <button v-if="publisherSearchError" type="button" class="book-create__suggestion" @mousedown.prevent="findPublishers" @click="findPublishers">{{ publisherSearchError }}，点击重新查找</button>
+              </div>
             </div>
           </div>
 
-          <PInput
-            id="create-edition-published-month"
-            v-model="publishedMonth"
-            type="month"
-            label="出版年月（选填，精确到月）"
-            placeholder="例如 2008-01"
-          />
-          <PInput
-            id="create-edition-statement"
-            v-model="statement"
-            label="版次（选填）"
-            placeholder="例如 第 2 版、修订版、精装插图版"
-          />
-          <PInput
-            id="create-edition-isbn"
-            v-model="isbn"
-            label="ISBN（选填）"
-            placeholder="例如 9780306406157"
-          />
-          <PInput
-            id="create-edition-pages"
-            v-model="pages"
-            label="页数（选填）"
-            type="number"
-            min="1"
-            step="1"
-          />
+          <div class="book-create__form-grid">
+            <PInput
+              id="create-edition-published-month"
+              v-model="publishedMonth"
+              type="month"
+              label="出版年月（选填，精确到月）"
+              placeholder="例如 2008-01"
+            />
+            <PInput
+              id="create-edition-statement"
+              v-model="statement"
+              label="版次（选填）"
+              placeholder="例如 第 2 版、修订版、精装插图版"
+            />
+          </div>
 
+          <div class="book-create__form-grid">
+            <PInput
+              id="create-edition-isbn"
+              v-model="isbn"
+              label="ISBN（选填）"
+              placeholder="例如 9780306406157"
+            />
+            <PInput
+              id="create-edition-pages"
+              v-model="pages"
+              label="页数（选填）"
+              type="number"
+              min="1"
+              step="1"
+            />
+          </div>
         </div>
 
-        <div v-if="editionChoice === 'new' && duplicateEditionCandidates.length" class="book-catalog__new-work-card" role="status">
-          <p>发现疑似重复版本，请优先检查已有书目。</p>
-          <div v-for="candidate in duplicateEditionCandidates" :key="candidate.edition.id" class="book-catalog__choice">
+        <!-- 疑似重复版本提示 -->
+        <div v-if="editionChoice === 'new' && duplicateEditionCandidates.length" class="book-create__conflict-card" role="status">
+          <div class="book-create__conflict-title">疑似重复出版版本</div>
+          <p class="book-create__conflict-desc">发现疑似重复版本，请优先检查已有书目。</p>
+          <div v-for="candidate in duplicateEditionCandidates" :key="candidate.edition.id" class="book-catalog__choice book-create__choice-compact">
             <span>{{ candidate.edition.title || selectedWork?.title || title }} · {{ candidate.edition.language }} · {{ candidate.edition.publisher || candidate.edition.isbn13 }}</span>
             <PButton
               v-if="candidate.edition.work_id === createdId"
               type="button"
               variant="secondary"
+              size="sm"
               @click="useExistingEdition(candidate.edition.id)"
             >使用此版本</PButton>
           </div>
-          <label>
+          <label class="book-create__checkbox-label">
             <input v-model="confirmDuplicateEdition" type="checkbox" />
             我已确认是独立的出版版本，仍然新建
           </label>
         </div>
-        <dl v-else-if="chosenEdition" class="book-catalog__chosen-box">
-          <dt>已选择版本（不会修改已有资料）</dt>
+
+        <dl v-else-if="chosenEdition" class="book-catalog__chosen-box book-create__chosen-pill">
+          <dt>已选择现有出版版本（不会修改已有资料）</dt>
           <dd>{{ editionSummary(chosenEdition) }}</dd>
         </dl>
       </fieldset>
 
-      <p v-if="createdId" role="status" class="book-catalog__success-hint">
+      <p v-if="createdId" role="status" class="book-catalog__success-hint book-create__success-banner">
         作品已保存。请重试保存版本，不会重复创建作品。
       </p>
 
-      <div class="book-catalog__actions">
+      <!-- 错误提示横幅 (置于操作按钮上方，醒目且不被遮挡) -->
+      <p v-if="error" ref="errorBannerRef" class="book-catalog__error book-create__error-banner" role="alert">
+        <PIcon name="alert-triangle" size="xs" />
+        <span>{{ error }}</span>
+      </p>
+
+      <div class="book-catalog__actions book-create__actions">
         <PButton
           v-if="!createdId"
           type="button"
@@ -428,28 +811,39 @@
           :disabled="busy"
           @click="step = 1"
         >
+          <PIcon name="arrow-left" size="xs" />
           返回作品
         </PButton>
         <PButton type="submit" :disabled="!editionChoice || busy || !file || !selectedCover || coverBusy">
-          {{ busy ? '正在保存…' : '确认版本并开始上传' }}
+          {{ busy ? '正在保存…' : (workChoice === 'new' ? '一并创建作品与版本并开始上传' : '确认版本并开始上传') }}
+          <PIcon name="arrow-right" size="xs" />
         </PButton>
       </div>
+      <p class="book-create__submit-hint">
+        {{ workChoice === 'new'
+          ? '点击后将按顺序正式创建作品词条、出版版本，并上传电子书文件。'
+          : '点击后将为此作品创建出版版本并上传电子书文件。' }}
+      </p>
     </form>
 
     <!-- The same second step continues into transfer/scan progress; no third file-selection step. -->
-    <section v-else-if="createdId && editionId" class="book-catalog__step3-card">
-      <div class="book-catalog__step3-header">
+    <section v-else-if="createdId && editionId" class="book-catalog__step3-card book-create__step3-wrapper">
+      <div class="book-catalog__step3-header book-create__step3-meta">
+        <div class="book-create__step3-tag">发布进度</div>
         <h2 class="book-catalog__step3-title">文件上传及安全检查</h2>
         <p class="book-catalog__step3-sub">
-          <strong>{{ selectedWork?.title || title }}</strong> → {{ savedEditionTitle }}
+          <strong>{{ selectedWork?.title || title }}</strong>
+          <span class="book-create__arrow-sep">→</span>
+          <span>{{ savedEditionTitle }}</span>
         </p>
       </div>
 
-      <div class="book-catalog__step3-actions">
+      <div class="book-catalog__step3-actions book-create__step3-banner">
+        <PIcon name="books" size="sm" />
         <p>使用上一步选定的文件自动上传一次，上传成功后等待安全检查；默认仅自己可读。</p>
       </div>
 
-      <div class="book-catalog__upload-wrap">
+      <div class="book-catalog__upload-wrap book-create__uploader-container">
         <BookResourceUpload
           :key="editionId"
           :work-id="createdId"
@@ -461,16 +855,35 @@
           @ready="onResourceReady"
         />
       </div>
-      <p v-if="coverSaving" role="status">正在保存已选择的出版封面…</p>
-      <PButton v-if="resourceReady && selectedCover && !coverSaving" type="button" variant="secondary" @click="onResourceReady">完成封面保存并进入版本详情</PButton>
+
+      <p v-if="coverSaving" role="status" class="book-create__status-banner is-busy">
+        <span class="book-create__spinner" aria-hidden="true" />
+        正在保存已选择的出版封面…
+      </p>
+
+      <p v-if="error" class="book-catalog__error book-create__error-banner" role="alert">{{ error }}</p>
+
+      <div v-if="resourceReady && selectedCover && !coverSaving" class="book-create__step3-finish-row">
+        <PButton type="button" variant="primary" @click="onResourceReady">
+          完成封面保存并进入版本详情
+          <PIcon name="arrow-right" size="xs" />
+        </PButton>
+      </div>
     </section>
-    <p v-if="error" class="book-catalog__error" role="alert">{{ error }}</p>
-    <PConfirm :show="leaveOpen" title="离开创建" message="未保存的信息和未上传的本地文件不会保留，确定离开吗？" @confirm="resolveLeave(true)" @cancel="resolveLeave(false)" />
+
+    <!-- 离开拦截确认弹窗 -->
+    <PConfirm
+      :show="leaveOpen"
+      title="离开创建"
+      message="未保存的信息和未上传的本地文件不会保留，确定离开吗？"
+      @confirm="resolveLeave(true)"
+      @cancel="resolveLeave(false)"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import {
   checkCatalogEditionDuplicates, checkCatalogWorkDuplicates, createCatalogEdition, createCatalogWork,
@@ -486,7 +899,8 @@ import PButton from '@/components/ui/PButton.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
-import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PCreationSteps from '@/components/ui/PCreationSteps.vue'
+import PIcon from '@/components/ui/PIcon.vue'
 import './bookCatalog.css'
 
 const router = useRouter(), route = useRoute()
@@ -494,6 +908,9 @@ const step = ref(1), workChoice = ref(''), editionChoice = ref('')
 const editionQuery = ref('')
 const query = ref(''), matches = ref<BookPublicWork[]>([]), searched = ref(false), searching = ref(false), searchError = ref('')
 const selectedWork = ref<CatalogWork | null>(null), file = shallowRef<File | null>(null)
+const editionFileInputRef = ref<HTMLInputElement | null>(null)
+const manualCoverInputRef = ref<HTMLInputElement | null>(null)
+const isDragging = ref(false)
 const coverCandidates = ref<BookCoverCandidate[]>([])
 const identifiedBook = ref({ title: '', author: '' })
 const selectedCover = ref(''), coverExplanation = ref(''), coverBusy = ref(false), coverSaving = ref(false), resourceReady = ref(false)
@@ -506,8 +923,23 @@ const personSearching = ref(false), personSearched = ref(false), personSearchErr
 let workDebounce: ReturnType<typeof setTimeout> | undefined
 let personDebounce: ReturnType<typeof setTimeout> | undefined
 let personRequestSequence = 0
+const names = (value: string) => [...new Set(value.split('\n').map(name => name.trim()).filter(Boolean))]
 const editionTitle = ref(''), subtitle = ref(''), translators = ref(''), language = ref(''), publisher = ref(''), statement = ref(''), isbn = ref(''), pages = ref('')
 const publishedMonth = ref('')
+const editionType = ref<'edition' | 'translation'>('edition')
+const errorBannerRef = ref<HTMLElement | null>(null)
+function setEditionType(type: 'edition' | 'translation') {
+  editionType.value = type
+}
+
+const translatorQuery = ref('')
+const translatorSearchRoot = ref<HTMLElement | null>(null)
+const translatorListOpen = ref(false)
+const translatorSearching = ref(false), translatorSearched = ref(false), translatorSearchError = ref('')
+const availableTranslators = ref<{ id: string; name: string }[]>([])
+const selectedTranslatorPeople = ref<{ id: string; name: string }[]>([])
+let translatorDebounce: ReturnType<typeof setTimeout> | undefined
+let translatorRequestSequence = 0
 const metadataEvidence = ref<{label: string; value: string; page: number}[]>([])
 const languageQuery = ref(''), publisherQuery = ref('')
 const languageInputRoot = ref<HTMLElement | null>(null), publisherInputRoot = ref<HTMLElement | null>(null)
@@ -516,6 +948,20 @@ const publisherSearching = ref(false), publisherSearched = ref(false), publisher
 const publisherMatches = ref<{ id: string; name: string }[]>([])
 let publisherDebounce: ReturnType<typeof setTimeout> | undefined
 let publisherRequest: AbortController | undefined
+const commonPublishers = [
+  '人民文学出版社',
+  '商务印书馆',
+  '中华书局',
+  '生活·读书·新知三联书店',
+  '上海译文出版社',
+  '译林出版社',
+  '中信出版社',
+  '重庆出版社',
+  '清华大学出版社',
+  '北京大学出版社',
+  '科学出版社',
+  '机械工业出版社',
+]
 const languageOptions = [
   { name:'中文', code:'zh' }, { name:'英语', code:'en' }, { name:'日语', code:'ja' },
   { name:'韩语', code:'ko' }, { name:'法语', code:'fr' }, { name:'德语', code:'de' },
@@ -523,10 +969,18 @@ const languageOptions = [
   { name:'葡萄牙语', code:'pt' }, { name:'阿拉伯语', code:'ar' },
   { name:'繁体中文', code:'zh-Hant' }, { name:'简体中文', code:'zh-Hans' },
 ]
-const filteredLanguageOptions = computed(() => languageOptions.filter(item => {
+const filteredLanguageOptions = computed(() => {
   const query = languageQuery.value.trim().toLocaleLowerCase()
-  return !query || item.code.toLocaleLowerCase().includes(query) || item.name.includes(query)
-}).slice(0, 12))
+  const isCurrentSelection = !!language.value && (
+    query === language.value.toLocaleLowerCase() ||
+    query === `${languageOptions.find(o => o.code === language.value)?.name} · ${language.value}`.toLocaleLowerCase() ||
+    languageOptions.some(item => `${item.name} · ${item.code}`.toLocaleLowerCase() === query)
+  )
+  if (!query || isCurrentSelection) return languageOptions.slice(0, 12)
+  return languageOptions.filter(item =>
+    item.code.toLocaleLowerCase().includes(query) || item.name.toLocaleLowerCase().includes(query)
+  ).slice(0, 12)
+})
 const canCreateLanguage = computed(() => /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(languageQuery.value.trim()) &&
   !languageOptions.some(item => item.code.toLocaleLowerCase() === languageQuery.value.trim().toLocaleLowerCase()))
 const canCreatePublisher = computed(() => !!publisherQuery.value.trim() && publisherSearched.value && !publisherSearching.value && !publisherSearchError.value &&
@@ -571,6 +1025,18 @@ watch(publisherQuery, value => {
   if (value.trim()) publisherDebounce = setTimeout(() => void findPublishers(), 260)
 })
 const busy = ref(false), error = ref(''), createdId = ref(''), editionId = ref(''), finished = ref(false), leaveOpen = ref(false)
+watch(error, value => {
+  if (value) {
+    nextTick(() => {
+      errorBannerRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }
+})
+watch([translators, selectedTranslatorPeople], ([newT, newP]) => {
+  if (names(newT).length > 0 || newP.length > 0) {
+    editionType.value = 'translation'
+  }
+}, { immediate: true })
 const savedEditionTitle = ref(''), savedLanguage = ref('')
 const duplicateWorkCandidates = ref<WorkDuplicateMatch[]>([])
 const duplicateEditionCandidates = ref<EditionDuplicateMatch[]>([])
@@ -598,7 +1064,6 @@ function stableRequestID(payload: unknown, kind: 'work' | 'edition') {
   }
   return editionRequestID
 }
-const names = (value: string) => [...new Set(value.split('\n').map(name => name.trim()).filter(Boolean))]
 const canContinue = computed(() => !!workChoice.value && (workChoice.value !== 'new' || (!!title.value.trim() && (names(authors.value).length > 0 || selectedAuthors.value.length > 0))))
 function normalizedPersonName(value: string) { return value.trim().toLocaleLowerCase() }
 function normalizedWorkTitle(value: string) { return value.trim().replace(/\s+/g, '').toLocaleLowerCase() }
@@ -606,6 +1071,13 @@ const hasExactWorkMatch = computed(() => matches.value.some(work => normalizedWo
 const hasExactAuthorMatch = computed(() => availablePeople.value.some(person => normalizedPersonName(person.name) === normalizedPersonName(personQuery.value)))
 const canSuggestNewWork = computed(() => searched.value && !searching.value && !searchError.value && !!query.value.trim())
 const canSuggestNewAuthor = computed(() => personSearched.value && !personSearching.value && !personSearchError.value && !!personQuery.value.trim())
+const hasExactTranslatorMatch = computed(() => availableTranslators.value.some(person => normalizedPersonName(person.name) === normalizedPersonName(translatorQuery.value)))
+const canSuggestNewTranslator = computed(() => translatorSearched.value && !translatorSearching.value && !translatorSearchError.value && !!translatorQuery.value.trim())
+
+function onTranslatorFocusOut(event: FocusEvent) {
+  const next = event.relatedTarget
+  if (!(next instanceof Node) || !translatorSearchRoot.value?.contains(next)) translatorListOpen.value = false
+}
 
 function onWorkFocusOut(event: FocusEvent) {
   const next = event.relatedTarget
@@ -668,6 +1140,61 @@ function removeNewAuthor(name: string) {
   authors.value = names(authors.value).filter(value => normalizedPersonName(value) !== normalizedPersonName(name)).join('\n')
   newAuthorNames.value = newAuthorNames.value.filter(value => normalizedPersonName(value) !== normalizedPersonName(name))
 }
+function addExistingTranslator(person: { id: string; name: string }) {
+  if (!selectedTranslatorIDs.value.includes(person.id)) {
+    selectedTranslatorIDs.value.push(person.id)
+    selectedTranslatorPeople.value.push(person)
+  }
+  translators.value = names(translators.value).filter(name => normalizedPersonName(name) !== normalizedPersonName(person.name)).join('\n')
+  newTranslatorNames.value = newTranslatorNames.value.filter(name => normalizedPersonName(name) !== normalizedPersonName(person.name))
+  translatorQuery.value = ''
+  translatorListOpen.value = false
+}
+function addNewTranslator() {
+  if (!canSuggestNewTranslator.value) return
+  const value = translatorQuery.value.trim()
+  if (hasExactTranslatorMatch.value && !newTranslatorNames.value.some(name => normalizedPersonName(name) === normalizedPersonName(value))) {
+    newTranslatorNames.value.push(value)
+  }
+  if (!names(translators.value).some(name => normalizedPersonName(name) === normalizedPersonName(value)) &&
+      !selectedTranslatorPeople.value.some(person => normalizedPersonName(person.name) === normalizedPersonName(value))) {
+    translators.value = [...names(translators.value), value].join('\n')
+  }
+  translatorQuery.value = ''
+  translatorListOpen.value = false
+}
+function confirmTranslatorInput() {
+  if (translatorSearching.value || !translatorSearched.value) return
+  const exact = availableTranslators.value.find(person => normalizedPersonName(person.name) === normalizedPersonName(translatorQuery.value))
+  if (exact) addExistingTranslator(exact)
+  else if (canSuggestNewTranslator.value) addNewTranslator()
+}
+function removeExistingTranslator(id: string) {
+  selectedTranslatorIDs.value = selectedTranslatorIDs.value.filter(value => value !== id)
+  selectedTranslatorPeople.value = selectedTranslatorPeople.value.filter(person => person.id !== id)
+}
+function removeNewTranslator(name: string) {
+  translators.value = names(translators.value).filter(value => normalizedPersonName(value) !== normalizedPersonName(name)).join('\n')
+  newTranslatorNames.value = newTranslatorNames.value.filter(value => normalizedPersonName(value) !== normalizedPersonName(name))
+}
+async function findTranslators() {
+  if (translatorDebounce) clearTimeout(translatorDebounce)
+  const term = translatorQuery.value.trim()
+  if (!term) return
+  const sequence = ++translatorRequestSequence
+  translatorSearching.value = true; translatorSearched.value = false; translatorSearchError.value = ''
+  try {
+    const result = await searchWikiPeople(term)
+    if (alive && sequence === translatorRequestSequence && translatorQuery.value.trim() === term) {
+      availableTranslators.value = result.items
+      translatorSearched.value = true
+    }
+  } catch {
+    if (alive && sequence === translatorRequestSequence) translatorSearchError.value = '译者查找失败'
+  } finally {
+    if (alive && sequence === translatorRequestSequence) translatorSearching.value = false
+  }
+}
 watch(query, value => {
   if (workDebounce) clearTimeout(workDebounce)
   searchController?.abort()
@@ -690,6 +1217,16 @@ watch(personQuery, value => {
   personListOpen.value = !!value.trim()
   if (value.trim() && workChoice.value === 'new') personDebounce = setTimeout(() => void findPeople(), 240)
 })
+watch(translatorQuery, value => {
+  if (translatorDebounce) clearTimeout(translatorDebounce)
+  translatorRequestSequence++
+  availableTranslators.value = []
+  translatorSearched.value = false
+  translatorSearching.value = false
+  translatorSearchError.value = ''
+  translatorListOpen.value = !!value.trim()
+  if (value.trim()) translatorDebounce = setTimeout(() => void findTranslators(), 240)
+})
 
 async function findNameConflicts(rawNames: string[], selectedIDs: string[], confirmedNewNames: string[]) {
   const conflicts: { name: string; matches: { id: string; name: string }[] }[] = []
@@ -703,8 +1240,7 @@ async function findNameConflicts(rawNames: string[], selectedIDs: string[], conf
 }
 function reusePerson(name: string, personId: string, translator: boolean) {
   if (translator) {
-    if (!selectedTranslatorIDs.value.includes(personId)) selectedTranslatorIDs.value.push(personId)
-    translators.value = names(translators.value).filter(item => normalizedPersonName(item) !== normalizedPersonName(name)).join('\n')
+    addExistingTranslator({ id: personId, name })
     translatorConflicts.value = translatorConflicts.value.filter(item => item.name !== name)
   } else {
     addExistingAuthor({ id: personId, name })
@@ -778,12 +1314,41 @@ async function findPeople() {
     if (alive && sequence === personRequestSequence) personSearching.value = false
   }
 }
-async function chooseFile(event: Event) {
-  const selected = (event.target as HTMLInputElement).files?.[0]
-  if (!selected) return
+
+function fileExtension(name: string) {
+  const parts = name.split('.')
+  return (parts.length > 1 ? parts.pop() : 'FILE')?.toUpperCase()
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function triggerFileInput() {
+  editionFileInputRef.value?.click()
+}
+
+function triggerManualCover() {
+  manualCoverInputRef.value?.click()
+}
+
+function onDropFile(e: DragEvent) {
+  isDragging.value = false
+  const dropped = e.dataTransfer?.files?.[0]
+  if (dropped) {
+    handleFile(dropped)
+  }
+}
+
+async function handleFile(selected: File) {
   if (!/\.(epub|pdf|txt|cbz|cbr)$/i.test(selected.name) || !selected.size) {
     error.value = '请选择非空的 EPUB、PDF、TXT、CBZ 或 CBR 文件。'
     return
+  }
+  if (!editionChoice.value) {
+    editionChoice.value = 'new'
   }
   file.value = selected
   coverCandidates.value = []
@@ -823,6 +1388,13 @@ async function chooseFile(event: Event) {
       : '自动识别失败，可手动填写资料。'
   } finally { if (alive) coverBusy.value = false }
 }
+
+async function chooseFile(event: Event) {
+  const selected = (event.target as HTMLInputElement).files?.[0]
+  if (!selected) return
+  await handleFile(selected)
+}
+
 async function chooseCoverImage(event: Event) {
   const selected = (event.target as HTMLInputElement).files?.[0]
   if (!selected) return
@@ -849,7 +1421,15 @@ async function onResourceReady() {
 async function next() {
   if (busy.value || !canContinue.value) return
   busy.value = true; error.value = ''
-  try { if (workChoice.value !== 'new') selectedWork.value = await getCatalogWork(workChoice.value); if (alive) step.value = 2 }
+  try {
+    if (workChoice.value !== 'new') selectedWork.value = await getCatalogWork(workChoice.value)
+    if (alive) {
+      step.value = 2
+      if (workChoice.value === 'new') {
+        editionChoice.value = 'new'
+      }
+    }
+  }
   catch { if (alive) error.value = '作品详情加载失败，请重试。' }
   finally { if (alive) busy.value = false }
 }
@@ -870,8 +1450,6 @@ async function save(withEdition: boolean) {
   }
   if (newEdition && publisherQuery.value.trim() && !publisher.value) { error.value = '请从出版社候选中选择，或点击“新建出版社”。'; return }
   if (newEdition && languageQuery.value.trim() && !language.value) { error.value = '请从语言候选中选择，或选择有效的新语言代码。'; return }
-  // Database column is DATE; day=01 is a storage sentinel for month precision,
-  // not a claim that the book was published on the first day of that month.
   const dateString = month ? `${month}-01` : ''
   const editionPayload: CreateCatalogEdition = {
     title: editionTitle.value.trim(), subtitle: subtitle.value.trim(), translators: names(translators.value),
@@ -936,11 +1514,25 @@ async function save(withEdition: boolean) {
     editionId.value = edition.id
     savedEditionTitle.value = edition.title || selectedWork.value?.title || title.value
     savedLanguage.value = edition.language || ''
-    // Stay on step 2; the saved edition swaps the form for an automatic upload/progress panel.
-  } catch {
-    error.value = createdId.value
-      ? '作品已保存，但版本处理未完成。可重试或检查已有版本，避免重复创建。'
-      : '创建结果尚未确认，请先搜索是否已创建，避免重复。'
+  } catch (err: unknown) {
+    const apiErr = err as { status?: number; code?: string; message?: string } | undefined
+    if (createdId.value) {
+      error.value = '作品已保存，但版本处理未完成。可重试或检查已有版本，避免重复创建。'
+    } else if (apiErr?.status === 401 || apiErr?.code === 'auth.unauthorized') {
+      error.value = '登录状态已失效，请重新登录后再提交。'
+    } else if (apiErr?.status === 403 || apiErr?.code === 'auth.forbidden') {
+      error.value = apiErr.message || '没有权限创建图书作品或版本。'
+    } else if (apiErr?.status === 404) {
+      error.value = '服务端接口未找到，请确认后端服务已启动并更新。'
+    } else if (apiErr?.status === 400 || apiErr?.status === 422) {
+      error.value = apiErr.message || '提交的信息格式有误，请核对后重试。'
+    } else if (apiErr?.status === 409) {
+      error.value = apiErr.message || '发现冲突或已存在相同记录，请核对。'
+    } else if (apiErr?.message && apiErr.message !== 'Request failed.') {
+      error.value = apiErr.message
+    } else {
+      error.value = '创建结果尚未确认，请先搜索是否已创建，避免重复。'
+    }
   } finally {
     if (alive) busy.value = false
   }
@@ -953,11 +1545,47 @@ onBeforeUnmount(() => { if (publisherDebounce) clearTimeout(publisherDebounce); 
 </script>
 
 <style scoped>
-.book-create__detected-metadata { margin: 0 0 1rem; padding: .8rem 1rem; border: 1px solid var(--a-color-border-soft); border-radius: .65rem; }
-.book-create__detected-metadata dt { font-size: .85rem; font-weight: 650; margin-bottom: .6rem; }
-.book-create__detected-metadata dd { margin: .3rem 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: .35rem; font-size: .86rem; }
-.book-create__detected-metadata small { color: var(--a-color-muted); }
-.book-create__combobox { position: relative; min-width: 0; }
+.book-create {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: var(--a-space-4) var(--a-space-3) calc(var(--a-space-12) + 160px);
+}
+
+.book-create__header {
+  margin-bottom: var(--a-space-6);
+}
+
+.book-create__form {
+  max-width: 100%;
+}
+
+.book-create__hidden-radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 作品搜索卡片 */
+.book-create__work-search-card {
+  padding: var(--a-space-4);
+  background: var(--a-color-surface-muted, #f8fafc);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 8px);
+}
+
+.book-create__combobox {
+  position: relative;
+  min-width: 0;
+}
+
 .book-create__suggestions {
   position: absolute;
   z-index: 30;
@@ -966,12 +1594,13 @@ onBeforeUnmount(() => { if (publisherDebounce) clearTimeout(publisherDebounce); 
   right: 0;
   max-height: 18rem;
   overflow-y: auto;
-  padding: .25rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  background: var(--a-color-bg);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 12%);
+  padding: .35rem;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 8px);
+  background: var(--a-color-bg, #ffffff);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
+
 .book-create__suggestion {
   display: grid;
   width: 100%;
@@ -980,64 +1609,843 @@ onBeforeUnmount(() => { if (publisherDebounce) clearTimeout(publisherDebounce); 
   padding: .625rem .75rem;
   text-align: left;
   border: 0;
-  border-radius: var(--a-radius-control);
+  border-radius: var(--a-radius-control, 4px);
   background: transparent;
-  color: var(--a-color-text);
+  color: var(--a-color-text, #1c1c1e);
   font: inherit;
   cursor: pointer;
+  transition: background-color 0.15s ease;
 }
-.book-create__suggestion:hover, .book-create__suggestion:focus-visible { background: var(--a-color-surface-muted); }
-.book-create__suggestion:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: -2px; }
-.book-create__suggestion:disabled { opacity: .55; cursor: default; }
-.book-create__suggestion-title { font-size: .9375rem; font-weight: 600; overflow-wrap: anywhere; }
-.book-create__suggestion small { color: var(--a-color-muted); font-size: .8rem; }
-.book-create__suggestion--create { color: var(--a-color-primary); border-top: 1px solid var(--a-color-border-soft); border-radius: 0; }
-.book-create__suggestions-status { margin: 0; padding: .75rem; color: var(--a-color-muted); font-size: .875rem; }
-.book-create__selected-hint { margin: 0; padding: .7rem .85rem; border-radius: var(--a-radius-control); background: var(--a-color-surface-muted); }
-.book-create__text-action { margin-left: .75rem; padding: .1rem 0; border: 0; background: none; color: var(--a-color-primary); font: inherit; cursor: pointer; }
-.book-create__authors { display: flex; flex-wrap: wrap; gap: .5rem; }
-.book-create__author-chip { display: inline-flex; align-items: center; gap: .4rem; max-width: 100%; padding: .4rem .65rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-surface-muted); font-size: .875rem; overflow-wrap: anywhere; }
-.book-create__author-chip small { color: var(--a-color-muted); font-size: .75rem; }
-.book-create__author-chip button { border: 0; background: none; color: var(--a-color-muted); cursor: pointer; font-size: 1.05rem; line-height: 1; }
-.book-create__author-chip button:hover, .book-create__author-chip button:focus-visible { color: var(--a-color-danger); }
-.book-catalog__cover-candidates {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
-  gap: .7rem;
-  margin: 1rem 0;
+
+.book-create__suggestion:hover,
+.book-create__suggestion:focus-visible {
+  background: var(--a-color-surface-muted, #f8fafc);
 }
-.book-catalog__cover-candidates button {
-  display: grid;
-  gap: .4rem;
-  padding: .4rem;
-  background: transparent;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: .5rem;
-  cursor: pointer;
+
+.book-create__suggestion:focus-visible {
+  outline: 2px solid var(--a-color-primary, #0066cc);
+  outline-offset: -2px;
 }
-.book-catalog__cover-candidates button.is-selected {
-  border: 2px solid var(--a-color-primary, var(--a-color-text-primary));
+
+.book-create__suggestion:disabled {
+  opacity: .55;
+  cursor: default;
 }
-.book-catalog__cover-candidates img {
-  width: 100%;
-  aspect-ratio: 3 / 4;
-  object-fit: contain;
-  background: var(--a-color-bg);
+
+.book-create__suggestion-title {
+  font-size: .9375rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
-.book-catalog__cover-candidates small {
-  font-size: .75rem;
-  text-align: center;
-  color: var(--a-color-text-secondary);
+
+.book-create__suggestion small {
+  color: var(--a-color-text-secondary, #64748b);
+  font-size: .8rem;
 }
-.book-catalog__selected-cover {
+
+.book-create__suggestion--create {
+  color: var(--a-color-primary, #0066cc);
+  border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: 0;
+  margin-top: 2px;
+  padding-top: .75rem;
+}
+
+.book-create__suggestions-status {
+  margin: 0;
+  padding: .75rem;
+  color: var(--a-color-text-secondary, #64748b);
+  font-size: .875rem;
+}
+
+.book-create__selected-hint {
   display: flex;
   align-items: center;
-  gap: .9rem;
-  margin-top: .9rem;
+  justify-content: space-between;
+  margin-top: var(--a-space-3);
+  padding: var(--a-space-2) var(--a-space-3);
+  border-radius: var(--a-radius-control, 6px);
+  background: var(--a-color-bg, #ffffff);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  font-size: 0.875rem;
+  color: var(--a-color-text, #1c1c1e);
 }
-.book-catalog__selected-cover img {
-  width: 90px;
-  max-height: 130px;
-  object-fit: contain;
+
+.book-create__text-action {
+  padding: .1rem .4rem;
+  border: 0;
+  background: none;
+  color: var(--a-color-primary, #0066cc);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* 凸起卡片 */
+.book-create__card-elevated {
+  background: var(--a-color-bg, #ffffff);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 8px);
+  padding: var(--a-space-5);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.book-create__card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--a-space-3);
+  border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
+  margin-bottom: var(--a-space-2);
+}
+
+.book-create__card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--a-color-text, #1c1c1e);
+  margin: 0;
+}
+
+.book-create__card-tag {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background-color: var(--a-color-surface-muted, #f1f5f9);
+  color: var(--a-color-text-secondary, #64748b);
+  font-weight: 500;
+}
+
+/* 作者徽标展示 */
+.book-create__authors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--a-space-2);
+  margin-top: var(--a-space-2);
+}
+
+.book-create__author-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--a-space-2);
+  max-width: 100%;
+  padding: 4px 10px;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: 9999px;
+  background: var(--a-color-surface-muted, #f8fafc);
+  font-size: 0.8125rem;
+  color: var(--a-color-text, #1c1c1e);
+}
+
+.book-create__author-chip--new {
+  border-color: rgba(0, 102, 204, 0.3);
+  background-color: rgba(0, 102, 204, 0.04);
+}
+
+.book-create__author-chip small {
+  color: var(--a-color-primary, #0066cc);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.book-create__author-chip button {
+  border: 0;
+  background: none;
+  color: var(--a-color-text-secondary, #94a3b8);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.book-create__author-chip button:hover,
+.book-create__author-chip button:focus-visible {
+  color: var(--a-color-danger, #e11d48);
+}
+
+/* 冲突与警告卡片 */
+.book-create__conflict-card {
+  padding: var(--a-space-3) var(--a-space-4);
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: var(--a-radius-control, 6px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--a-space-2);
+}
+
+.book-create__conflict-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.book-create__conflict-desc {
+  font-size: 0.8125rem;
+  color: #92400e;
+  margin: 0;
+}
+
+.book-create__conflict-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--a-space-2);
+  padding: var(--a-space-2) 0;
+}
+
+.book-create__conflict-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--a-space-1);
+}
+
+.book-create__choice-compact {
+  padding: var(--a-space-2) var(--a-space-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: auto;
+}
+
+.book-create__checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--a-space-2);
+  font-size: 0.8125rem;
+  color: var(--a-color-text, #1c1c1e);
+  cursor: pointer;
+  margin-top: var(--a-space-1);
+}
+
+/* 作品摘要条 */
+.book-create__summary-banner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--a-space-4);
+  padding: var(--a-space-4);
+  background-color: var(--a-color-surface-muted, #f8fafc);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 8px);
+}
+
+.book-create__summary-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--a-radius-control, 6px);
+  background-color: var(--a-color-bg, #ffffff);
+  color: var(--a-color-primary, #0066cc);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.book-create__summary-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 步骤区块卡片 */
+.book-create__section-card {
+  padding: var(--a-space-5);
+  background: var(--a-color-bg, #ffffff);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 8px);
+}
+
+.book-create__section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--a-space-3);
+  margin-bottom: var(--a-space-4);
+}
+
+.book-create__step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 9999px;
+  background-color: var(--a-color-text, #1c1c1e);
+  color: var(--a-color-bg, #ffffff);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.book-create__section-meta {
+  flex: 1;
+}
+
+.book-create__section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--a-color-text, #1c1c1e);
+  margin: 0 0 2px;
+}
+
+.book-create__section-desc {
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary, #64748b);
+  margin: 0;
+}
+
+/* 现代化 Dropzone */
+.book-create__dropzone {
+  position: relative;
+  border: 2px solid var(--a-color-border, #cbd5e1);
+  border-radius: var(--a-radius-card, 8px);
+  background-color: var(--a-color-surface-muted, #f8fafc);
+  padding: var(--a-space-6) var(--a-space-4);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.book-create__dropzone:hover,
+.book-create__dropzone.is-dragover {
+  border-color: var(--a-color-primary, #0066cc);
+  background-color: rgba(0, 102, 204, 0.03);
+}
+
+.book-create__dropzone.has-file {
+  padding: var(--a-space-3);
+  border-style: solid;
+  cursor: default;
+}
+
+.book-create__hidden-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.book-create__dropzone.has-file .book-create__hidden-input {
+  display: none;
+}
+
+.book-create__dropzone-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--a-space-2);
+}
+
+.book-create__dropzone-icon {
+  color: var(--a-color-primary, #0066cc);
+  margin-bottom: var(--a-space-1);
+}
+
+.book-create__dropzone-main {
+  font-size: 0.9375rem;
+  color: var(--a-color-text, #1c1c1e);
+}
+
+.book-create__dropzone-sub {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary, #64748b);
+  margin-top: 2px;
+}
+
+.book-create__format-badges {
+  display: flex;
+  gap: var(--a-space-1);
+  margin-top: var(--a-space-2);
+}
+
+.book-create__badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  background-color: var(--a-color-bg, #ffffff);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 4px);
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+/* 已选文件条目 */
+.book-create__file-info-tile {
+  display: flex;
+  align-items: center;
+  gap: var(--a-space-3);
+  padding: var(--a-space-2);
+  background-color: var(--a-color-bg, #ffffff);
+  border-radius: var(--a-radius-control, 6px);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+}
+
+.book-create__file-type-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: var(--a-space-2) var(--a-space-3);
+  background-color: var(--a-color-primary, #0066cc);
+  color: #ffffff;
+  border-radius: var(--a-radius-control, 4px);
+}
+
+.book-create__file-details {
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+}
+
+.book-create__file-name {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--a-color-text, #1c1c1e);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.book-create__file-size {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+/* 状态横幅 */
+.book-create__status-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--a-space-2);
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary, #64748b);
+  padding: var(--a-space-2) var(--a-space-3);
+  border-radius: var(--a-radius-control, 6px);
+  background-color: var(--a-color-surface-muted, #f8fafc);
+  margin-top: var(--a-space-2);
+}
+
+.book-create__status-banner.is-busy {
+  color: var(--a-color-primary, #0066cc);
+}
+
+.book-create__spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: book-spin 0.7s linear infinite;
+}
+
+@keyframes book-spin {
+  to { transform: rotate(360deg); }
+}
+
+.book-create__cover-explanation {
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary, #64748b);
+  margin: var(--a-space-2) 0 0;
+}
+
+.book-create__id-hint {
+  margin-top: var(--a-space-2);
+}
+
+/* 封面候选网格 */
+.book-create__cover-section {
+  margin-top: var(--a-space-4);
+  padding-top: var(--a-space-3);
+  border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
+}
+
+.book-create__cover-section-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--a-color-text, #1c1c1e);
+  margin-bottom: var(--a-space-3);
+}
+
+.book-create__cover-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: var(--a-space-3);
+}
+
+.book-create__cover-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--a-space-2);
+  padding: var(--a-space-2);
+  background: transparent;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 6px);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.book-create__cover-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--a-color-border, #cbd5e1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.book-create__cover-card.is-selected {
+  border: 2px solid var(--a-color-primary, #0066cc);
+  background-color: rgba(0, 102, 204, 0.04);
+}
+
+.book-create__cover-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1.42;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: #f1f5f9;
+}
+
+.book-create__cover-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.book-create__cover-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background-color: var(--a-color-primary, #0066cc);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.book-create__cover-label {
+  font-size: 0.6875rem;
+  color: var(--a-color-text-secondary, #64748b);
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* 手动封面 */
+.book-create__manual-cover-card {
+  margin-top: var(--a-space-3);
+  padding-top: var(--a-space-3);
+  border-top: 1px solid var(--a-color-border-soft, #e2e8f0);
+}
+
+.book-create__manual-cover-row {
+  display: flex;
+  align-items: center;
+  gap: var(--a-space-3);
+}
+
+.book-create__manual-cover-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+.book-create__selected-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--a-space-3);
+  margin-top: var(--a-space-3);
+  padding: var(--a-space-2) var(--a-space-3);
+  background-color: var(--a-color-surface-muted, #f8fafc);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-control, 6px);
+}
+
+.book-create__preview-thumb {
+  width: 48px;
+  height: 68px;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.book-create__preview-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.book-create__preview-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.book-create__preview-status {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--a-color-primary, #0066cc);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.book-create__cover-missing-hint {
+  font-size: 0.8125rem;
+  color: var(--a-color-warning, #d97706);
+  margin-top: var(--a-space-2);
+}
+
+/* 识别到的版权信息展示 */
+.book-create__detected-metadata {
+  margin: var(--a-space-3) 0;
+  padding: var(--a-space-3) var(--a-space-4);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 6px);
+  background: var(--a-color-surface-muted, #f8fafc);
+}
+
+.book-create__detected-metadata dt {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--a-color-primary, #0066cc);
+  margin-bottom: var(--a-space-2);
+}
+
+.book-create__detected-metadata dd {
+  margin: var(--a-space-1) 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--a-space-2);
+  font-size: 0.8125rem;
+  color: var(--a-color-text, #1c1c1e);
+}
+
+.book-create__detected-metadata small {
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+/* 两列响应式排版 */
+.book-create__form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--a-space-4);
+}
+
+@media (min-width: 640px) {
+  .book-create__form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.book-create__chosen-pill {
+  border-radius: var(--a-radius-card, 6px);
+}
+
+.book-create__success-banner {
+  padding: var(--a-space-2) var(--a-space-3);
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: var(--a-radius-control, 6px);
+  color: #065f46;
+}
+
+.book-create__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--a-space-3);
+  margin-top: var(--a-space-6);
+}
+
+.book-create__guide-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--a-space-3);
+  padding: var(--a-space-3) var(--a-space-4);
+  background-color: var(--a-color-surface-muted, #f8fafc);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 8px);
+  margin-bottom: var(--a-space-4);
+}
+
+.book-create__guide-icon {
+  color: var(--a-color-primary, #0066cc);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.book-create__guide-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+.book-create__guide-text strong {
+  color: var(--a-color-text, #1c1c1e);
+  font-weight: 600;
+}
+
+.book-create__step1-subhint,
+.book-create__submit-hint {
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary, #64748b);
+  margin-top: var(--a-space-2);
+  line-height: 1.4;
+}
+
+.book-create__edit-work-btn {
+  flex-shrink: 0;
+}
+
+/* 步骤 3 / 上传阶段 */
+.book-create__step3-wrapper {
+  background: var(--a-color-bg, #ffffff);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 8px);
+  padding: var(--a-space-6);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.book-create__step3-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--a-space-1);
+}
+
+.book-create__step3-tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--a-color-primary, #0066cc);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.book-create__arrow-sep {
+  margin: 0 var(--a-space-2);
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+.book-create__step3-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--a-space-3);
+  padding: var(--a-space-3) var(--a-space-4);
+  background-color: var(--a-color-surface-muted, #f8fafc);
+  border-radius: var(--a-radius-control, 6px);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  color: var(--a-color-text-secondary, #475569);
+  font-size: 0.8125rem;
+}
+
+.book-create__step3-banner p {
+  margin: 0;
+}
+
+.book-create__uploader-container {
+  margin-top: var(--a-space-4);
+}
+
+.book-create__step3-finish-row {
+  margin-top: var(--a-space-5);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.book-create__type-segment-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--a-space-2);
+  margin-bottom: var(--a-space-4);
+}
+
+.book-create__type-segment {
+  display: inline-flex;
+  align-items: center;
+  background: var(--a-color-surface-muted, #f1f5f9);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: 9999px;
+  padding: 3px;
+  gap: 2px;
+  width: fit-content;
+}
+
+.book-create__type-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--a-space-2);
+  padding: 6px 14px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--a-color-text-secondary, #64748b);
+  border: none;
+  background: transparent;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.book-create__type-btn.is-active {
+  background: #ffffff;
+  color: var(--a-color-primary, #0066cc);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.book-create__type-hint {
+  font-size: 0.75rem;
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+.book-create__existing-editions-wrap {
+  margin-bottom: var(--a-space-4);
+  padding: var(--a-space-3) var(--a-space-4);
+  background: var(--a-color-surface-muted, #f8fafc);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 8px);
+}
+
+.book-create__existing-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--a-color-text-secondary, #475569);
+  margin-bottom: var(--a-space-2);
+}
+
+.book-create__suggestions-category {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--a-color-text-secondary, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.35rem 0.75rem 0.2rem;
+}
+
+.book-create__error-banner {
+  margin-top: var(--a-space-4);
+  margin-bottom: var(--a-space-3);
+  padding: var(--a-space-3) var(--a-space-4);
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--a-radius-card, 8px);
+  color: #b91c1c;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--a-space-2);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.08);
+  scroll-margin-bottom: 120px;
 }
 </style>

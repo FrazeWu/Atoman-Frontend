@@ -198,8 +198,14 @@ async function load() {
     if (current !== generation) return
     works.value = result.items
     total.value = result.total
-  } catch {
-    if (current === generation) error.value = '图书加载失败，请重试。'
+  } catch (err: unknown) {
+    if ((err as any)?.name === 'AbortError' || (err as any)?.code === 20 || (err instanceof Error && err.name === 'AbortError')) {
+      return
+    }
+    console.error('[BooksDiscoverView load error]', err)
+    if (current === generation) {
+      error.value = '图书加载失败，请重试。'
+    }
   } finally {
     if (current === generation) loading.value = false
   }
@@ -244,22 +250,24 @@ onBeforeUnmount(() => {
   box-sizing: border-box;
   min-height: clamp(16rem, 33vh, 23rem);
   margin-block: 1.25rem 1.75rem;
-  padding: 2rem;
+  padding: 2.5rem 2rem;
   align-content: center;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  background: var(--a-color-surface-muted);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .book-discover__empty-state :deep(.p-empty__icon) {
-  width: 3.75rem;
-  height: 3.75rem;
+  width: 3.5rem;
+  height: 3.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
+  border: none;
+  border-radius: 8px;
+  background: var(--a-color-bg, #ffffff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  color: var(--a-color-text-secondary, #64748b);
 }
 
 .book-discover__empty-state :deep(.p-empty__description) {
@@ -274,6 +282,41 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   gap: 1rem;
   margin-block: 1.25rem;
+}
+
+.p-segmented-control {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.04);
+  padding: 2px;
+  border-radius: 6px;
+  gap: 2px;
+  box-sizing: border-box;
+}
+
+.p-segmented-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.85rem;
+  border-radius: 5px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--a-color-text-secondary, #64748b);
+  text-decoration: none;
+  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+  line-height: 1.2;
+}
+
+.p-segmented-item:hover {
+  color: var(--a-color-text, #0f172a);
+}
+
+.p-segmented-item.active {
+  background: var(--a-color-bg, #ffffff);
+  color: var(--a-color-text, #0f172a);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 1px rgba(0, 0, 0, 0.04);
 }
 
 .book-discover__search-area {
@@ -296,12 +339,13 @@ onBeforeUnmount(() => {
 .book-discover__add-btn {
   height: var(--a-control-height-sm, 2.25rem);
   flex-shrink: 0;
+  border-radius: 6px;
 }
 
 .book-discover__count-row {
   display: flex;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .book-discover__total-count {
@@ -319,8 +363,8 @@ onBeforeUnmount(() => {
 .book-catalog__error-box {
   padding: 1.5rem;
   margin-block: 1rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control, 4px);
-  background: var(--a-color-bg);
+  border: 1px solid rgba(225, 29, 72, 0.2);
+  border-radius: 8px;
+  background: rgba(225, 29, 72, 0.04);
 }
 </style>

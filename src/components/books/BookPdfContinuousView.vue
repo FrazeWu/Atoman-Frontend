@@ -216,7 +216,12 @@ defineExpose({ goToPage })
 </script>
 
 <style scoped>
-.book-pdf-continuous { position:relative; width:100%; min-width:0; height:min(68vh,720px); }
-.book-pdf-continuous__scroll { position:absolute; inset:0; overflow:auto; background:var(--book-reader-surface); }
-.book-pdf-continuous__scroll :deep(.pdfViewer .page) { margin:0 auto 1rem; box-shadow:none; border:1px solid var(--a-color-border-soft); }
+.book-pdf-continuous { position: relative; width: 100%; min-width: 0; height: min(72vh, 800px); }
+.book-pdf-continuous__scroll { position: absolute; inset: 0; overflow: auto; background: var(--book-reader-canvas, #ebeef2); }
+.book-pdf-continuous__scroll :deep(.pdfViewer .page) {
+  margin: 1.5rem auto;
+  border: 0 !important;
+  border-radius: 3px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+}
 </style>

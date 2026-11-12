@@ -1,6 +1,7 @@
 <template>
   <div
     class="book-selection-toolbar"
+    :class="{ 'has-note-open': isNoteOpen }"
     :style="positionStyle"
     role="toolbar"
     aria-label="划线批注工具栏"
@@ -67,6 +68,18 @@
         <Copy :size="16" aria-hidden="true" />
       </button>
 
+      <!-- 设为公开书摘 -->
+      <button
+        type="button"
+        class="book-selection-toolbar__icon-btn"
+        title="设为公开书摘"
+        aria-label="设为公开书摘"
+        data-testid="quote-btn"
+        @click="emitQuote"
+      >
+        <Quote :size="15" aria-hidden="true" />
+      </button>
+
       <!-- 删除划线（仅编辑现有划线时出现） -->
       <button
         v-if="existingAnnotation"
@@ -119,6 +132,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import {
   Copy,
   MessageSquarePlus,
+  Quote,
   Trash2,
   Underline,
 } from 'lucide-vue-next'
@@ -142,6 +156,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   highlight: [color: BookHighlightColor, style: BookHighlightStyle]
   'save-note': [note: string, color: BookHighlightColor, style: BookHighlightStyle]
+  quote: [color: BookHighlightColor, style: BookHighlightStyle]
   delete: [id: string]
   copy: [text: string]
   close: []
@@ -206,6 +221,10 @@ function saveNote() {
   isNoteOpen.value = false
 }
 
+function emitQuote() {
+  emit('quote', selectedColor.value, selectedStyle.value)
+}
+
 async function copyQuote() {
   const quote = `“${props.selectedText}” —— 《${props.bookTitle || '图书'}》`
   try {
@@ -242,139 +261,201 @@ onUnmounted(() => {
 <style scoped>
 .book-selection-toolbar {
   position: fixed;
-  transform: translate(-50%, -100%) translateY(-8px);
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  box-shadow: none !important;
+  transform: translate(-50%, -100%) translateY(-10px);
+  background: var(--p-surface-elevated, #ffffff);
+  border: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.08));
+  border-radius: 9999px;
+  box-shadow:
+    0 14px 32px -4px rgba(0, 0, 0, 0.16),
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.6) inset;
   z-index: 120;
   display: flex;
   flex-direction: column;
   user-select: none;
-  min-width: 14rem;
+  min-width: 14.5rem;
+  transition: border-radius 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+
+:global(.dark) .book-selection-toolbar,
+:global([data-theme='dark']) .book-selection-toolbar,
+:global([data-reader-theme='night']) .book-selection-toolbar {
+  background: rgba(36, 36, 40, 0.92);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 16px 36px -4px rgba(0, 0, 0, 0.55),
+    0 4px 14px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+}
+
+.book-selection-toolbar.has-note-open {
+  border-radius: 16px;
+  min-width: 18rem;
 }
 
 .book-selection-toolbar__actions {
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.375rem 0.5rem;
+  padding: 0.375rem 0.625rem;
+  height: 2.75rem;
+  box-sizing: border-box;
 }
 
 .book-selection-toolbar__colors {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.4rem;
+  padding-right: 0.25rem;
 }
 
 .book-selection-toolbar__color-btn {
-  width: 18px;
-  height: 18px;
-  border-radius: var(--a-radius-control);
-  border: 1px solid var(--a-color-border-soft);
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  border: 0;
   cursor: pointer;
   padding: 0;
-  transition: transform 0.12s ease;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, outline-color 0.15s ease;
 }
 
 .book-selection-toolbar__color-btn[data-color="yellow"] {
-  background-color: color-mix(in srgb, var(--a-color-warning) 35%, transparent);
-  border-color: color-mix(in srgb, var(--a-color-warning) 60%, transparent);
+  background: linear-gradient(135deg, #fef08a, #facc15);
 }
 
 .book-selection-toolbar__color-btn[data-color="green"] {
-  background-color: color-mix(in srgb, var(--a-color-success) 35%, transparent);
-  border-color: color-mix(in srgb, var(--a-color-success) 60%, transparent);
+  background: linear-gradient(135deg, #a7f3d0, #34d399);
 }
 
 .book-selection-toolbar__color-btn[data-color="blue"] {
-  background-color: color-mix(in srgb, var(--a-color-primary) 35%, transparent);
-  border-color: color-mix(in srgb, var(--a-color-primary) 60%, transparent);
+  background: linear-gradient(135deg, #bae6fd, #60a5fa);
 }
 
 .book-selection-toolbar__color-btn[data-color="pink"] {
-  background-color: color-mix(in srgb, var(--a-color-danger) 35%, transparent);
-  border-color: color-mix(in srgb, var(--a-color-danger) 60%, transparent);
+  background: linear-gradient(135deg, #fbcfe8, #f472b6);
 }
 
 .book-selection-toolbar__color-btn:hover {
-  transform: scale(1.12);
+  transform: scale(1.18);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .book-selection-toolbar__color-btn.is-active {
-  outline: 2px solid var(--a-color-primary);
-  outline-offset: 1px;
-  box-shadow: none;
+  outline: 2px solid #007aff;
+  outline-offset: 2px;
 }
 
 .book-selection-toolbar__icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 1.875rem;
+  height: 1.875rem;
   padding: 0;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-control);
-  color: var(--a-color-text-secondary);
+  border: none;
+  border-radius: 9999px;
+  color: #4b5563;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+:global(.dark) .book-selection-toolbar__icon-btn,
+:global([data-theme='dark']) .book-selection-toolbar__icon-btn,
+:global([data-reader-theme='night']) .book-selection-toolbar__icon-btn {
+  color: #9ca3af;
 }
 
 .book-selection-toolbar__icon-btn:hover {
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-text);
+  background: rgba(0, 0, 0, 0.07);
+  color: #111827;
+}
+
+:global(.dark) .book-selection-toolbar__icon-btn:hover,
+:global([data-theme='dark']) .book-selection-toolbar__icon-btn:hover,
+:global([data-reader-theme='night']) .book-selection-toolbar__icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f3f4f6;
+}
+
+.book-selection-toolbar__icon-btn:active {
+  transform: scale(0.92);
 }
 
 .book-selection-toolbar__icon-btn.is-active {
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-primary);
-  border-color: var(--a-color-border-soft);
+  background: rgba(0, 122, 255, 0.12);
+  color: #007aff;
 }
 
 .book-selection-toolbar__icon-btn--danger:hover {
-  background: var(--a-color-danger-bg);
-  color: var(--a-color-danger);
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
 }
 
 .book-selection-toolbar__divider {
   width: 1px;
-  height: 1rem;
-  background: var(--a-color-border-soft);
+  height: 1.125rem;
+  background: rgba(0, 0, 0, 0.1);
   margin: 0 0.125rem;
 }
 
+:global(.dark) .book-selection-toolbar__divider,
+:global([data-theme='dark']) .book-selection-toolbar__divider,
+:global([data-reader-theme='night']) .book-selection-toolbar__divider {
+  background: rgba(255, 255, 255, 0.14);
+}
+
 .book-selection-toolbar__note {
-  border-top: 1px solid var(--a-color-border-soft);
-  padding: 0.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  padding: 0.625rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
-  background: var(--a-color-bg);
+  gap: 0.5rem;
+  background: transparent;
+}
+
+:global(.dark) .book-selection-toolbar__note,
+:global([data-theme='dark']) .book-selection-toolbar__note,
+:global([data-reader-theme='night']) .book-selection-toolbar__note {
+  border-top-color: rgba(255, 255, 255, 0.08);
 }
 
 .book-selection-toolbar__textarea {
   width: 100%;
   box-sizing: border-box;
-  padding: 0.375rem 0.5rem;
-  font-family: inherit;
+  padding: 0.5rem 0.625rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 0.8125rem;
-  line-height: 1.4;
-  color: var(--a-color-text);
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
+  line-height: 1.45;
+  color: var(--a-color-text, #1f2937);
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
   resize: none;
   outline: none;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+:global(.dark) .book-selection-toolbar__textarea,
+:global([data-theme='dark']) .book-selection-toolbar__textarea,
+:global([data-reader-theme='night']) .book-selection-toolbar__textarea {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #f3f4f6;
 }
 
 .book-selection-toolbar__textarea:focus {
-  border-color: var(--a-color-primary);
-  outline: 2px solid var(--a-color-primary);
-  outline-offset: 0;
-  box-shadow: none;
+  background: var(--a-color-bg, #ffffff);
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.16);
+}
+
+:global(.dark) .book-selection-toolbar__textarea:focus,
+:global([data-theme='dark']) .book-selection-toolbar__textarea:focus,
+:global([data-reader-theme='night']) .book-selection-toolbar__textarea:focus {
+  background: rgba(20, 20, 24, 0.8);
 }
 
 .book-selection-toolbar__note-actions {

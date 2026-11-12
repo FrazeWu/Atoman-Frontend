@@ -6,6 +6,8 @@ import type { BookReaderBookmark } from '@/utils/bookReaderPreferences'
 export interface BookReaderSource {
   asset: BookPublishedAsset
   title: string
+  subtitle?: string
+  toolbarLabel?: string
   backTo: string
   progressKey: string
   loadContent: () => Promise<Blob>

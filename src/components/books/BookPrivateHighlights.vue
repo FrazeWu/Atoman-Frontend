@@ -547,4 +547,26 @@ onMounted(load)
  .book-private-highlights__share-dialog{display:grid;gap:1rem;padding:1rem}
  .book-private-highlights__share-dialog label{display:flex;gap:.6rem;align-items:flex-start}
  .book-private-highlights__share-actions{display:flex;gap:.7rem;flex-wrap:wrap}
+
+@media (max-width: 640px) {
+  .book-private-highlights__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+  .book-private-highlights__colors {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+  .book-private-highlights__search {
+    width: 100%;
+    min-width: 0;
+  }
+  .book-private-highlights__card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
 </style>

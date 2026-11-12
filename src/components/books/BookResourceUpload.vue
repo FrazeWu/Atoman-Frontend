@@ -1,27 +1,38 @@
 <template>
   <section class="resource-upload" :aria-labelledby="`resource-upload-title${idSuffix}`">
-    <h3 :id="`resource-upload-title${idSuffix}`">{{ replaceAsset ? '上传替换文件' : '上传电子书' }}</h3>
-    <p>支持 EPUB、PDF、TXT、CBZ、CBR。文件先通过自动安全检查，默认仅上传者可读；确认有权分享时可选择公开。</p>
+    <div class="resource-upload__header">
+      <h3 :id="`resource-upload-title${idSuffix}`" class="resource-upload__title">{{ replaceAsset ? '上传替换文件' : '上传电子书' }}</h3>
+      <p class="resource-upload__desc">支持 EPUB、PDF、TXT、CBZ、CBR。文件先通过自动安全检查，默认仅上传者可读；确认有权分享时可选择公开。</p>
+    </div>
     <form @submit.prevent="upload">
       <fieldset :disabled="busy || pending" class="resource-upload__fields">
-        <label v-if="showFilePicker" :for="`resource-file${idSuffix}`">{{ autoStart ? '更换电子书文件' : '电子书文件' }}</label>
-        <input v-if="showFilePicker" :id="`resource-file${idSuffix}`" ref="fileInput" type="file" accept=".epub,.pdf,.txt,.cbz,.cbr" @change="chooseFile">
-        <p v-if="file">{{ autoStart ? '沿用上一步的文件（无需再次选择）：' : '已选择：' }}{{ file.name }}</p>
+        <div v-if="showFilePicker" class="resource-upload__file-picker">
+          <label :for="`resource-file${idSuffix}`" class="resource-upload__file-label">
+            <span class="resource-upload__file-icon">📁</span>
+            <span class="resource-upload__file-text">{{ autoStart ? '更换电子书文件' : '选择电子书文件 (EPUB, PDF, TXT, CBZ, CBR)' }}</span>
+          </label>
+          <input :id="`resource-file${idSuffix}`" ref="fileInput" type="file" accept=".epub,.pdf,.txt,.cbz,.cbr" class="resource-upload__native-file" @change="chooseFile">
+        </div>
+        <p v-if="file" class="resource-upload__chosen-hint">{{ autoStart ? '沿用上一步的文件（无需再次选择）：' : '已选择：' }}<strong>{{ file.name }}</strong></p>
         <PInput v-if="!replaceAsset && !autoStart" id="resource-language" v-model="language" label="文件语言代码" placeholder="例如 zh、en；不确定时留空" />
-        <label v-if="!autoStart"><input v-model="confirmed" type="checkbox"> 同时公开分享此文件（我确认拥有公开分享所需权利）</label>
+        <label v-if="!autoStart" class="resource-upload__checkbox-label"><input v-model="confirmed" type="checkbox"> 同时公开分享此文件（我确认拥有公开分享所需权利）</label>
         <p v-if="autoStart">{{ busy ? '正在将选定文件上传到私有书架…' : '默认仅自己可读；公开分享需要另外确认版权与分享权限。' }}</p>
-        <PButton v-if="!autoStart || !initialFile || !!error" type="submit" :loading="busy"
-          :disabled="!file || (!!session && session.status !== 'uploading')">
-          {{ session?.status === 'uploading' ? '继续本次上传' : (confirmed ? '上传并公开文件' : '上传文件（仅自己可读）') }}
-        </PButton>
+        <div class="resource-upload__action-row">
+          <PButton v-if="!autoStart || !initialFile || !!error" type="submit" :loading="busy"
+            :disabled="!file || (!!session && session.status !== 'uploading')">
+            {{ session?.status === 'uploading' ? '继续本次上传' : (confirmed ? '上传并公开文件' : '上传文件（仅自己可读）') }}
+          </PButton>
+        </div>
       </fieldset>
     </form>
-    <div v-if="busy" role="status"><progress :value="percent" max="100" aria-label="文件上传进度" /> {{ percent }}% · {{ phase }}</div>
-    <p v-if="session" role="status">{{ statusText }}</p>
+    <div v-if="busy" role="status" class="resource-upload__progress-wrap"><progress :value="percent" max="100" aria-label="文件上传进度" /> {{ percent }}% · {{ phase }}</div>
+    <p v-if="session" role="status" class="resource-upload__status">{{ statusText }}</p>
     <p v-if="error" class="resource-upload__error" role="alert">{{ error }}</p>
-    <PButton v-if="pending && !busy" variant="secondary" :disabled="checking" @click="checkStatus">检查处理状态</PButton>
-    <PButton v-if="session?.status === 'ready' && session.revision_id" :to="resourceReaderPath(workId, session.asset_id, session.revision_id)">开始阅读</PButton>
-    <PButton v-if="session && ['ready', 'failed', 'quarantined'].includes(session.status)" variant="secondary" @click="chooseAnother">重新选择文件</PButton>
+    <div class="resource-upload__footer-actions">
+      <PButton v-if="pending && !busy" variant="secondary" :disabled="checking" @click="checkStatus">检查处理状态</PButton>
+      <PButton v-if="session?.status === 'ready' && session.revision_id" :to="resourceReaderPath(workId, session.asset_id, session.revision_id)">开始阅读</PButton>
+      <PButton v-if="session && ['ready', 'failed', 'quarantined'].includes(session.status)" variant="secondary" @click="chooseAnother">重新选择文件</PButton>
+    </div>
     <PConfirm :show="leaveOpen" title="中断文件上传" message="文件尚未上传完成。离开会中断本次传输，确定离开吗？" @confirm="leave(true)" @cancel="leave(false)" />
   </section>
 </template>
@@ -155,8 +166,133 @@ onBeforeUnmount(() => { alive = false; controller?.abort(); clearTimeout(timer);
 </script>
 
 <style scoped>
-.resource-upload { margin-block: 1.5rem; padding-block: 1rem; border-top: 1px solid var(--a-color-border-soft); }
-.resource-upload__fields { display: grid; gap: 1rem; padding: 0; margin: 0; border: 0; min-width: 0; }
-.resource-upload__error { color: var(--a-color-danger); }
-.resource-upload progress { max-width: 100%; }
+.resource-upload {
+  margin-block: 1.5rem;
+  padding: 1.5rem;
+  border: none;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.025);
+}
+
+.resource-upload__header {
+  margin-bottom: 1.25rem;
+}
+
+.resource-upload__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--a-color-text);
+  margin: 0 0 0.35rem;
+}
+
+.resource-upload__desc {
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.resource-upload__fields {
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.resource-upload__file-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.resource-upload__file-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.25rem;
+  background: var(--a-color-bg, #ffffff);
+  border: 1.5px solid rgba(0, 122, 255, 0.35);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+  user-select: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.resource-upload__file-label:hover {
+  border-color: #007aff;
+  background: rgba(0, 122, 255, 0.04);
+  transform: translateY(-1px);
+}
+
+.resource-upload__file-icon {
+  font-size: 1.15rem;
+}
+
+.resource-upload__file-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--a-color-text);
+}
+
+.resource-upload__native-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.resource-upload__chosen-hint {
+  font-size: 0.875rem;
+  color: var(--a-color-primary, #0066cc);
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 102, 204, 0.06);
+  border-radius: 6px;
+}
+
+.resource-upload__checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--a-color-text);
+  cursor: pointer;
+}
+
+.resource-upload__action-row {
+  margin-top: 0.25rem;
+}
+
+.resource-upload__progress-wrap {
+  margin-top: 1rem;
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary);
+}
+
+.resource-upload__status {
+  font-size: 0.8125rem;
+  color: var(--a-color-text-secondary);
+  margin-top: 0.5rem;
+}
+
+.resource-upload__error {
+  color: var(--a-color-danger);
+  font-size: 0.8125rem;
+  margin-top: 0.5rem;
+}
+
+.resource-upload__footer-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
 </style>

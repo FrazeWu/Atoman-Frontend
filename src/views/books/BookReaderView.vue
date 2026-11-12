@@ -57,12 +57,12 @@
       </template>
       <template #sidebar>
         <BookReaderSidebar
-          :total-pages="asset?.format === 'pdf' ? pdfPageCount : 0"
-          :current-page="asset?.format === 'pdf' ? pdfPage : 1"
+          :total-pages="asset?.format === 'pdf' ? pdfPageCount : (asset?.format === 'txt' ? textPages.length : (comicPages.length || 0))"
+          :current-page="asset?.format === 'pdf' ? pdfPage : (asset?.format === 'txt' ? textPage : (comicPage || 1))"
           :toc="epubTOC"
           :bookmarks="bookmarks"
           :annotations="annotations"
-          @select-page="jumpToPdfPage"
+          @select-page="handleSelectPage"
           @toc-select="jumpToEpubTOC"
           @bookmark-jump="jumpToBookmark"
           @bookmark-remove="removeBookmark"
@@ -395,26 +395,43 @@ async function loadEPUB() {
 
   epubRendition.themes.default({
     '.book-highlight': {
-      'background-color': 'color-mix(in srgb, #f59e0b 35%, transparent)',
+      'background-color': 'rgba(254, 240, 138, 0.65)',
       'cursor': 'pointer',
-      'border-radius': '2px',
+      'border-radius': '3px',
+      'padding': '0.12em 0.2em',
+      '-webkit-box-decoration-break': 'clone',
+      'box-decoration-break': 'clone',
     },
     '.book-highlight--yellow': {
-      'background-color': 'color-mix(in srgb, #f59e0b 35%, transparent)',
+      'background-color': 'rgba(254, 240, 138, 0.65)',
     },
     '.book-highlight--green': {
-      'background-color': 'color-mix(in srgb, #10b981 35%, transparent)',
+      'background-color': 'rgba(187, 247, 208, 0.65)',
     },
     '.book-highlight--blue': {
-      'background-color': 'color-mix(in srgb, #3b82f6 35%, transparent)',
+      'background-color': 'rgba(186, 230, 253, 0.65)',
     },
     '.book-highlight--pink': {
-      'background-color': 'color-mix(in srgb, #f87171 35%, transparent)',
+      'background-color': 'rgba(251, 207, 232, 0.65)',
     },
     '.book-highlight.is-underline': {
       'background-color': 'transparent !important',
-      'text-decoration': 'underline wavy #3b82f6 !important',
-      'text-underline-offset': '3px !important',
+      'text-decoration': 'underline !important',
+      'text-decoration-thickness': '2px !important',
+      'text-underline-offset': '4px !important',
+      'text-decoration-color': '#007aff !important',
+    },
+    '.book-highlight--yellow.is-underline': {
+      'text-decoration-color': '#eab308 !important',
+    },
+    '.book-highlight--green.is-underline': {
+      'text-decoration-color': '#22c55e !important',
+    },
+    '.book-highlight--blue.is-underline': {
+      'text-decoration-color': '#007aff !important',
+    },
+    '.book-highlight--pink.is-underline': {
+      'text-decoration-color': '#ec4899 !important',
     },
   })
 
@@ -724,13 +741,29 @@ function changeComicPage(delta: number) {
 function changeTextPage(delta: number) {
   const nextPage = Math.min(Math.max(1, textPage.value + delta), textPages.value.length)
   if (nextPage === textPage.value) return
-  textPage.value = nextPage
-  textViewport.value?.scrollTo?.({ top: textPageElements[nextPage - 1]?.offsetTop || 0, behavior: 'smooth' })
-  readingPercent.value = textPages.value.length > 1 ? (nextPage - 1) / (textPages.value.length - 1) : 1
+  jumpToTextPage(nextPage)
+}
+
+function jumpToTextPage(page: number) {
+  const target = Math.min(Math.max(1, page), textPages.value.length)
+  textPage.value = target
+  textViewport.value?.scrollTo?.({ top: textPageElements[target - 1]?.offsetTop || 0, behavior: 'smooth' })
+  readingPercent.value = textPages.value.length > 1 ? (target - 1) / (textPages.value.length - 1) : 1
   if (readingState.value) {
-    readingState.value.txt_offset = textPages.value[nextPage - 1]?.start || 0
+    readingState.value.txt_offset = textPages.value[target - 1]?.start || 0
   }
   scheduleSaveState()
+}
+
+function handleSelectPage(page: number) {
+  if (asset.value?.format === 'pdf') {
+    jumpToPdfPage(page)
+  } else if (asset.value?.format === 'txt') {
+    jumpToTextPage(page)
+  } else if (asset.value?.format === 'cbz' || asset.value?.format === 'cbr') {
+    comicPage.value = Math.min(Math.max(1, page), comicPages.value.length)
+    scrollToComicPage()
+  }
 }
 
 function moveEpubPage(direction: 'prev' | 'next') {
@@ -763,7 +796,7 @@ function escapeHtml(text: string): string {
 }
 
 function renderTextPageHtml(page: TextPage): string {
-  const pageAnns = annotations.value
+  const pageAnns = (Array.isArray(annotations.value) ? annotations.value : [])
     .filter(
       (a) =>
         a.format === 'txt' &&

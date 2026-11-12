@@ -39,9 +39,26 @@ export const createResourceUpload = (assetId: string, file: File, confirmed: boo
 export const getResourceUpload = (id: string) => apiGet<ResourceUpload>(url(uploadPath(id)))
 export const listResourceRevisions = (id: string) => apiGet<{ items: ResourceRevision[] }>(url(`/assets/${encodeURIComponent(id)}/revisions`))
 export async function fetchResourceRevision(id: string, signal?: AbortSignal) {
-  const response = await apiRequest(url(`/asset-revisions/${encodeURIComponent(id)}/content`), { cache: 'no-store', signal })
-  if (!response.ok) throw new Error('文件不可用或无权访问，请返回图书详情检查文件状态。')
-  return response.blob()
+  const contentUrl = url(`/asset-revisions/${encodeURIComponent(id)}/content`)
+  const cacheStorage = typeof caches !== 'undefined' ? caches : null
+  const cacheName = 'atoman-books-offline-v1'
+  const cached = cacheStorage ? await cacheStorage.match(contentUrl) : undefined
+  try {
+    const response = await apiRequest(contentUrl, { cache: 'no-store', signal })
+    if (!response.ok) throw new Error('文件不可用或无权访问，请返回图书详情检查文件状态。')
+    if (cacheStorage) {
+      try {
+        const cache = await cacheStorage.open(cacheName)
+        await cache.put(contentUrl, response.clone())
+      } catch {
+        // 离线缓存尽力而为
+      }
+    }
+    return response.blob()
+  } catch (error) {
+    if (cached) return cached.blob()
+    throw error
+  }
 }
 export function resourceReaderPath(workId: string, assetId: string, revisionId: string) {
   return `/books/read/${encodeURIComponent(workId)}/${encodeURIComponent(assetId)}/${encodeURIComponent(revisionId)}`

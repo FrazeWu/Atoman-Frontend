@@ -120,13 +120,14 @@ watch(
   aspect-ratio: 2 / 3;
   width: 100%;
   overflow: hidden;
-  border-radius: var(--a-radius-card, 4px);
+  border-radius: 4px;
   background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
-  box-shadow: none !important;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.04);
   user-select: none;
   display: flex;
   flex-direction: column;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .book-cover img {

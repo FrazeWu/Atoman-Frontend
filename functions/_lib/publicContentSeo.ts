@@ -125,6 +125,134 @@ function content(
 	return { path, title, description, imageUrl, lastModified, structuredData };
 }
 
+function bookCoverUrl(value: unknown, apiBase: string): string | undefined {
+	const source = text(value);
+	if (!source) return undefined;
+	try {
+		const result = new URL(source, new URL(apiBase).origin);
+		return result.protocol === "https:" || result.protocol === "http:"
+			? result.toString()
+			: undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+async function loadBookWork(apiBase: string, id: string, fetcher: Fetcher) {
+	const work = record(
+		await getJson(`${apiBase}/books/works/${encodeURIComponent(id)}`, fetcher),
+	);
+	if (!work || !text(work.id) || !text(work.title) ||
+		(text(work.lifecycle_status) && text(work.lifecycle_status) !== "active"))
+		return undefined;
+	const title = text(work.title);
+	const authors = names(work.authors);
+	const editions = array(work.editions).map(record).filter(Boolean);
+	const description = plainText(
+		work.description || work.subtitle,
+		`在 Atoman 浏览《${title}》${authors.length ? `（${authors.join("、")}）` : ""}的作品资料、出版版本和读者讨论。`,
+	);
+	const image = bookCoverUrl(work.cover_url || editions[0]?.cover_url, apiBase);
+	return content(
+		`/books/work/${encodeURIComponent(text(work.id))}`,
+		`《${title}》${authors.length ? ` - ${authors.join("、")}` : ""} | 图书 | Atoman`,
+		description,
+		{
+			"@type": "Book",
+			name: title,
+			description,
+			author: authors.map((name) => ({ "@type": "Person", name })),
+			image,
+			workExample: editions.map((edition) => ({
+				"@type": "Book",
+				name: text(edition?.title) || title,
+				isbn: text(edition?.isbn13) || text(edition?.isbn10) || undefined,
+				url: `${canonicalOrigin}/books/edition/${encodeURIComponent(text(edition?.id))}`,
+			})).filter((edition) => !edition.url.endsWith("/")),
+		},
+		image,
+		date(work.updated_at),
+	);
+}
+
+async function loadBookEdition(apiBase: string, id: string, fetcher: Fetcher) {
+	const metadata = record(
+		await getJson(`${apiBase}/books/wiki/edition/${encodeURIComponent(id)}`, fetcher),
+	);
+	const fields = record(metadata?.fields);
+	const workId = text(fields?.work_id);
+	if (!workId) return undefined;
+	const work = record(
+		await getJson(`${apiBase}/books/works/${encodeURIComponent(workId)}`, fetcher),
+	);
+	if (!work || !text(work.id) || !text(work.title) ||
+		(text(work.lifecycle_status) && text(work.lifecycle_status) !== "active"))
+		return undefined;
+	const editionId = text(metadata?.entity_id) || id;
+	const edition = array(work.editions).map(record).find((item) => text(item?.id) === editionId);
+	if (!edition) return undefined;
+	const title = text(edition.title) || text(work.title);
+	const authors = names(work.authors);
+	const publisher = text(edition.publisher) || text(record(edition.publisher_info)?.name);
+	const isbn = text(edition.isbn13) || text(edition.isbn10);
+	const description = [`《${title}》`, authors.join("、"), publisher, text(edition.edition_statement), isbn ? `ISBN ${isbn}` : ""]
+		.filter(Boolean).join(" · ");
+	const image = bookCoverUrl(edition.cover_url, apiBase);
+	return content(
+		`/books/edition/${encodeURIComponent(editionId)}`,
+		`《${title}》${text(edition.edition_statement) ? `（${text(edition.edition_statement)}）` : ""} | 图书版本 | Atoman`,
+		description,
+		{
+			"@type": "Book",
+			name: title,
+			description,
+			author: authors.map((name) => ({ "@type": "Person", name })),
+			bookEdition: text(edition.edition_statement) || undefined,
+			bookFormat: text(edition.binding) || undefined,
+			isbn: isbn || undefined,
+			inLanguage: text(edition.language) || undefined,
+			numberOfPages: typeof edition.page_count === "number" ? edition.page_count : undefined,
+			publisher: publisher ? { "@type": "Organization", name: publisher } : undefined,
+			datePublished: date(edition.published_date),
+			image,
+		},
+		image,
+		date(fields?.updated_at),
+	);
+}
+
+async function loadBookList(apiBase: string, id: string, fetcher: Fetcher) {
+	const booklist = record(
+		await getJson(`${apiBase}/books/booklists/${encodeURIComponent(id)}`, fetcher),
+	);
+	if (!booklist || !text(booklist.id) || !text(booklist.title) || booklist.visibility !== "public")
+		return undefined;
+	const title = text(booklist.title);
+	const description = plainText(booklist.description, `在 Atoman 浏览公开书单《${title}》及其推荐作品。`);
+	const works = array(booklist.items).map(record).filter((item) => item?.available === true && !!text(item?.canonical_work_id));
+	return content(
+		`/books/lists/${encodeURIComponent(text(booklist.id))}`,
+		`${title} | 公开书单 | Atoman`,
+		description,
+		{
+			"@type": "CollectionPage",
+			name: title,
+			description,
+			mainEntity: {
+				"@type": "ItemList",
+				itemListElement: works.map((item, index) => ({
+					"@type": "ListItem",
+					position: index + 1,
+					name: text(item?.title),
+					url: `${canonicalOrigin}/books/work/${encodeURIComponent(text(item?.canonical_work_id))}`,
+				})),
+			},
+		},
+		undefined,
+		date(booklist.updated_at || booklist.published_at),
+	);
+}
+
 async function loadArtist(apiBase: string, id: string, fetcher: Fetcher) {
 	const artist = record(
 		await getJson(`${apiBase}/music/artists/${encodeURIComponent(id)}`, fetcher),
@@ -463,11 +591,14 @@ export async function resolvePublicContentSeo(
 	const routes: Array<
 		[RegExp, (value: string) => Promise<PublicContentSeo | undefined>]
 	> = [
-		[/^\/music\/artist\/([^/]+)$/, (id) => loadArtist(apiBase, id, fetcher)],
+		[/^\/books\/work\/([^/]+)$/, (id) => loadBookWork(apiBase, id, fetcher)],
+		[/^\/books\/edition\/([^/]+)$/, (id) => loadBookEdition(apiBase, id, fetcher)],
+		[/^\/books\/lists\/(?!new$)([^/]+)$/, (id) => loadBookList(apiBase, id, fetcher)],
+		[/^\/music\/artist\/(?!new$)([^/]+)$/, (id) => loadArtist(apiBase, id, fetcher)],
 		[/^\/music\/album\/([^/]+)$/, (id) => loadAlbum(apiBase, id, fetcher)],
 		[/^\/music\/song\/([^/]+)$/, (id) => loadSong(apiBase, id, fetcher)],
 		[/^\/forum\/topic\/([^/]+)$/, (id) => loadForumTopic(apiBase, id, fetcher)],
-		[/^\/debate\/(?!rules$)([^/]+)$/, (id) => loadDebate(apiBase, id, fetcher)],
+		[/^\/debate\/(?!(?:rules|search|me)$)([^/]+)$/, (id) => loadDebate(apiBase, id, fetcher)],
 		[
 			/^\/podcasts\/show\/([^/]+)$/,
 			(slug) => loadPodcastShow(apiBase, slug, fetcher),
@@ -652,6 +783,27 @@ async function fetchList(apiBase: string, path: string, fetcher: Fetcher) {
 	return items;
 }
 
+async function fetchBookCollection(apiBase: string, path: string, fetcher: Fetcher) {
+	const limit = 50;
+	const items: Record<string, unknown>[] = [];
+	for (let page = 0; page < 100; page += 1) {
+		const response = await fetcher(`${apiBase}${path}?limit=${limit}&offset=${page * limit}`, {
+			headers: {
+				Accept: "application/json",
+				"User-Agent": "Atoman-Edge-SSR/1.0 (+https://www.atoman.org)",
+			},
+			signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(4000) : undefined,
+		});
+		if (!response.ok) throw new Error(`Book sitemap source unavailable: ${path}`);
+		const payload = record(unwrap(parseJsonValue(await response.json())));
+		if (!payload || !Array.isArray(payload.items)) throw new Error("Malformed book sitemap source");
+		const pageItems = array(payload.items).map(record).filter((item): item is Record<string, unknown> => Boolean(item));
+		items.push(...pageItems);
+		if (pageItems.length < limit || (typeof payload.total === "number" && items.length >= payload.total)) break;
+	}
+	return items;
+}
+
 export async function collectPublicSitemapItems(
 	apiBase: string,
 	fetcher: Fetcher = fetch,
@@ -663,6 +815,8 @@ export async function collectPublicSitemapItems(
 		fetchList(apiBase, "/debate/topics?page=1&page_size=1000", fetcher),
 		fetchList(apiBase, "/podcast/episodes", fetcher),
 		fetchList(apiBase, "/videos?sort=latest&page=1&page_size=1000", fetcher),
+		fetchBookCollection(apiBase, "/books/works", fetcher),
+		fetchBookCollection(apiBase, "/books/booklists", fetcher),
 	]);
 	const fulfilled = (index: number) =>
 		sources[index].status === "fulfilled"
@@ -674,7 +828,25 @@ export async function collectPublicSitemapItems(
 	const debates = fulfilled(3);
 	const episodes = fulfilled(4);
 	const videos = fulfilled(5);
+	const works = fulfilled(6);
+	const booklists = fulfilled(7);
 	const items: SitemapItem[] = [];
+
+	works.forEach((work) => {
+		if (text(work.id) && text(work.title) && work.lifecycle_status === "active") {
+			items.push({ path: `/books/work/${encodeURIComponent(text(work.id))}`, last_modified: date(work.updated_at) });
+			array(work.editions).map(record).filter(Boolean).forEach((edition) => {
+				if (text(edition?.id)) items.push({
+					path: `/books/edition/${encodeURIComponent(text(edition?.id))}`,
+					last_modified: date(edition?.updated_at),
+				});
+			});
+		}
+	});
+	booklists.forEach((booklist) => {
+		if (booklist.visibility === "public" && text(booklist.id) && text(booklist.title))
+			items.push({ path: `/books/lists/${encodeURIComponent(text(booklist.id))}`, last_modified: date(booklist.updated_at || booklist.published_at) });
+	});
 
 	artists.forEach((artist) => {
 		if (text(artist.id))

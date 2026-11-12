@@ -98,33 +98,180 @@ onMounted(async () => {
 })
 </script>
 <style scoped>
-.mail-settings { display:grid; gap:8px; max-width:920px; margin:0 auto; padding:28px clamp(18px,5vw,62px) 75px; color:var(--a-color-fg); }
-.mail-settings section { display:grid; gap:17px; margin:0; padding:20px 0 31px; border-bottom:1px solid var(--a-color-border-soft); }
-.mail-settings h2 { font-size:18px; font-weight:600; margin:0; }
-.mail-settings p { margin:0; color:var(--a-color-muted); font-size:13px; line-height:1.7; }
-.mail-settings .mail-settings__check { display:inline-flex; align-items:center; gap:9px; font-size:13px; margin:0; cursor:pointer; }
-.mail-settings__check input { width:16px; height:16px; margin:0; accent-color:var(--a-color-primary); }
-.mail-rule { display:grid; gap:15px; padding:18px; border:1px solid var(--a-color-border-soft); border-radius:var(--a-radius-card); background:var(--a-color-bg); }
-.mail-rule__head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.mail-rule__fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 16px; }
-.mail-settings__save { display:flex; align-items:center; gap:14px; padding:20px 0 35px; }
-.mail-settings__error { color:var(--a-color-danger)!important; }
-.mail-settings dl { display:grid; grid-template-columns:94px minmax(0,1fr); gap:15px; margin:0; font-size:13px; }
-.mail-settings dt { color:var(--a-color-muted); }
-.mail-settings dd { margin:0; overflow-wrap:anywhere; }
-.mail-settings__password-form { display:flex; align-items:end; gap:12px; }
-.mail-settings__password-form .p-field { flex:1; min-width:0; }
-.mail-settings__password-form .p-button { flex-shrink:0; }
-.mail-settings__password { display:flex; justify-content:space-between; gap:15px; align-items:center; padding:15px 0; border-bottom:1px solid var(--a-color-border-soft); }
-.mail-settings__password strong { font-size:14px; font-weight:600; }
-.mail-settings__password small { display:block; margin-top:6px; color:var(--a-color-muted); font-size:12px; }
-.mail-settings__new-password { display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:16px; border:1px solid var(--a-color-border-soft); border-radius:var(--a-radius-control); background:var(--a-color-surface); }
-.mail-settings__new-password strong { width:100%; font-size:13px; }
-.mail-settings__new-password code { flex:1; min-width:0; overflow-wrap:anywhere; user-select:all; font-size:14px; }
-@media (max-width:600px) {
- .mail-settings { padding:20px 16px 60px; }
- .mail-rule__fields { grid-template-columns:1fr; }
- .mail-settings__password-form { flex-wrap:wrap; }
- .mail-settings dl { grid-template-columns:75px minmax(0,1fr); gap:13px; }
+.mail-settings {
+  display: grid;
+  gap: 12px;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px clamp(16px, 4vw, 48px) 72px;
+  color: var(--a-color-fg);
+}
+.mail-settings section {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 20px 0 28px;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+.mail-settings h2 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.mail-settings p {
+  margin: 0;
+  color: var(--a-color-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.mail-settings .mail-settings__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  margin: 0;
+  cursor: pointer;
+  color: var(--a-color-muted-soft);
+}
+.mail-settings__check input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--a-color-primary);
+  cursor: pointer;
+}
+.mail-rule {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  background: var(--a-color-surface);
+  transition: border-color 140ms ease;
+}
+.mail-rule:hover {
+  border-color: var(--a-color-border);
+}
+.mail-rule__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mail-rule__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+.mail-settings__save {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 0 32px;
+}
+.mail-settings__error {
+  color: var(--a-color-danger) !important;
+  font-size: 13px;
+}
+.mail-settings dl {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 12px 16px;
+  margin: 0;
+  font-size: 13px;
+  background: var(--a-color-surface);
+  padding: 14px 16px;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+}
+.mail-settings dt {
+  color: var(--a-color-muted);
+  font-weight: 500;
+}
+.mail-settings dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--a-color-fg);
+  font-variant-numeric: tabular-nums;
+}
+.mail-settings__password-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.mail-settings__password-form .p-field {
+  flex: 1;
+  min-width: 0;
+}
+.mail-settings__password-form .p-button {
+  flex-shrink: 0;
+}
+.mail-settings__password {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  transition: background-color 140ms ease;
+}
+.mail-settings__password:hover {
+  background: var(--a-color-surface);
+}
+.mail-settings__password strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.mail-settings__password small {
+  display: block;
+  margin-top: 4px;
+  color: var(--a-color-muted);
+  font-size: 11px;
+}
+.mail-settings__new-password {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface);
+}
+.mail-settings__new-password strong {
+  width: 100%;
+  font-size: 13px;
+  color: var(--a-color-warning);
+}
+.mail-settings__new-password code {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  user-select: all;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  padding: 6px 10px;
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+}
+@media (max-width: 600px) {
+  .mail-settings {
+    padding: 16px 14px 60px;
+  }
+  .mail-rule__fields {
+    grid-template-columns: 1fr;
+  }
+  .mail-settings__password-form {
+    flex-wrap: wrap;
+  }
+  .mail-settings dl {
+    grid-template-columns: 70px minmax(0, 1fr);
+    gap: 10px;
+  }
 }
 </style>

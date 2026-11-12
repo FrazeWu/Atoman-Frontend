@@ -3,8 +3,8 @@
     <main class="mail-external" data-testid="mail-external-accounts">
       <header class="mail-external__intro">
         <div>
-          <h2>一个地方，查看所有收件箱</h2>
-          <p>Atoman 邮件与你主动授权的其他邮箱并排展示。可以按文件夹浏览，并显式同步已读状态；预览不会修改原始邮件。</p>
+          <h2>聚合收件箱</h2>
+          <p>统一查看授权绑定的外部邮箱来信，可按文件夹浏览并同步状态。</p>
         </div>
         <PButton variant="secondary" size="sm" :disabled="loading" @click="refresh"><RefreshCw :size="16" /> 刷新列表</PButton>
       </header>

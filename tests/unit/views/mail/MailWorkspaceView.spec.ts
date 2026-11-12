@@ -102,4 +102,24 @@ describe('Mail workspace', () => {
     const undo=wrapper.findAll('button').find(b=>b.text().includes('撤销发送'))!; await undo.trigger('click'); await flushPromises()
     expect(api.cancel).toHaveBeenCalledWith('queue-1'); expect(wrapper.text()).toContain('发送已撤销')
   })
+  it('supports keyboard shortcuts for archive, star, and escape in floating reader', async () => {
+    const wrapper = mountView(); await flushPromises()
+    await wrapper.get('[data-testid="mail-message-two"]').trigger('click'); await flushPromises()
+    expect(wrapper.find('[data-testid="mail-plain-text"]').exists()).toBe(true)
+
+    // S toggles star
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 's' }))
+    await flushPromises()
+    expect(api.action).toHaveBeenCalledWith('inbox', ['two'], 'flag', undefined)
+
+    // E archives
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'e' }))
+    await flushPromises()
+    expect(api.action).toHaveBeenCalledWith('inbox', ['one', 'two'], 'archive', undefined)
+
+    // Escape closes reader
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await flushPromises()
+    expect(wrapper.find('[data-testid="mail-plain-text"]').exists()).toBe(false)
+  })
 })

@@ -51,12 +51,12 @@ export async function onRequest(context: ArticleContext) {
       signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(4000) : undefined,
     })
     if (!response.ok) {
-      if (response.status === 404) return unavailableArticleResponse()
+      if (response.status === 403 || response.status === 404) return unavailableArticleResponse()
       return shell
     }
 
     const payload = await response.json() as { data?: BlogSeoPost }
-    if (!isBlogSeoPost(payload.data)) return fallback
+    if (!isBlogSeoPost(payload.data)) return unavailableArticleResponse()
     const html = buildArticleHtml(await shell.text(), payload.data, requestUrl.origin)
     const headers = new Headers(shell.headers)
     headers.set('content-type', 'text/html; charset=UTF-8')

@@ -210,6 +210,52 @@ describe('云端阅读入口', () => {
     expect(editor.get('button[type="submit"]').attributes('disabled')).toBeDefined()
     expect(readerSource().annotations?.[0]?.note).toBe('旧笔记')
   })
+  it('划线跨设备冲突后可保留本机编辑内容，基于云端最新版本平滑重试并成功同步', async () => {
+    const highlight: ReadingMark = { ...mark, kind: 'highlight', quote: '原文', anchor: { txt_offset_start: 5, txt_offset_end: 7 }, note: '旧笔记', color: 'yellow', style: 'highlight' }
+    vi.mocked(api.listReadingMarks).mockResolvedValue({ items: [highlight], deleted: [] })
+    vi.mocked(api.saveReadingMark).mockRejectedValueOnce(new ApiErrorResponseError(409, 'books.reading_mark_conflict', 'changed'))
+    await setup()
+    wrapper!.findComponent(BookPublicReaderView).vm.$emit('annotation-edit', highlight)
+    await flushPromises()
+    const editor = wrapper!.findComponent(BookHighlightEditor)
+    await editor.get('textarea').setValue('本机重要批注')
+    await editor.get('form').trigger('submit')
+    await flushPromises()
+    expect(editor.props('conflict')).toBe(true)
+    expect(wrapper!.text()).toContain('保留本机修改并同步')
+
+    const latestCloudHighlight: ReadingMark = { ...highlight, version: 5, note: '其他设备的改动' }
+    vi.mocked(api.listReadingMarks).mockResolvedValueOnce({ items: [latestCloudHighlight], deleted: [] })
+    vi.mocked(api.saveReadingMark).mockResolvedValueOnce({ ...latestCloudHighlight, version: 6, note: '本机重要批注' })
+
+    await wrapper!.findAll('button').find(b => b.text().includes('保留本机修改并同步'))!.trigger('click')
+    await flushPromises()
+
+    expect(api.saveReadingMark).toHaveBeenLastCalledWith(
+      'rev-1',
+      highlight.id,
+      expect.objectContaining({ base_version: 5, quote: '原文', note: '本机重要批注' }),
+      expect.any(AbortSignal)
+    )
+    expect(wrapper!.findComponent(BookHighlightEditor).exists()).toBe(false)
+  })
+  it('跨设备阅读进度冲突时展示云端与本机的位置对比与进度百分比', async () => {
+    const conflictErr = new ApiErrorResponseError(409, 'books.reading_state_conflict', 'changed')
+    conflictErr.details = { state: { revision_id: 'rev-1', version: 10, current_percent: .85, txt_offset: 850, pdf_page: 0, epub_cfi: '', furthest_percent: .9 } }
+    vi.spyOn(api, 'saveCloudReadingState').mockRejectedValueOnce(conflictErr)
+
+    await setup()
+    const source = readerSource()
+    source.onPosition?.({ current_percent: .25, txt_offset: 250, epub_cfi: '', pdf_page: 0 })
+    await new Promise(r => setTimeout(r, 850))
+    await flushPromises()
+
+    expect(wrapper!.text()).toContain('其他设备已更新进度')
+    expect(wrapper!.text()).toContain('云端：85%')
+    expect(wrapper!.text()).toContain('本机：25%')
+    expect(wrapper!.text()).toContain('采用云端位置（85%）')
+    expect(wrapper!.text()).toContain('保留本机当前位置（25%）并同步')
+  })
   it('公开划线删除前提醒受影响合集；明确勾选才能保留冻结分享',async()=>{
     const highlight: ReadingMark = { ...mark, kind:'highlight', quote:'私人原文' }
     vi.mocked(api.listReadingMarks).mockResolvedValue({items:[highlight],deleted:[]})

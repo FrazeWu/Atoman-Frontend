@@ -11,7 +11,10 @@
       <label>划线样式<select v-model="style" :disabled="busy || frozen"><option value="highlight">高亮</option><option value="underline">下划线</option></select></label>
       <label>我的批注<textarea v-model="note" :readonly="busy || frozen" rows="6" maxlength="10000" placeholder="可选：写下你的想法" /></label>
       <p v-if="error" role="alert">{{ error }}</p>
-      <p v-if="conflict">云端已发生变化，当前输入仍保留在这里。请复制需要保留的内容，再关闭编辑并重新载入标记。</p>
+      <div v-if="conflict" class="highlight-editor__conflict-alert" role="alert">
+        <p>该划线已在其他设备修改。可保留当前输入并覆盖到最新版本，或关闭放弃修改。</p>
+        <PButton type="button" variant="secondary" :disabled="busy" @click="$emit('resolve-conflict')">保留当前输入并同步</PButton>
+      </div>
       <div class="highlight-editor__actions">
         <PButton type="submit" :disabled="busy || conflict">{{ busy ? '正在保存…' : frozen ? '重试原操作' : '保存划线与批注' }}</PButton>
         <PButton v-if="draft.version > 0" type="button" variant="danger" :disabled="busy || frozen" @click="$emit('delete')">删除划线</PButton>
@@ -31,7 +34,7 @@ import type { ReadingAnchor } from '@/api/bookReading'
 
 export interface HighlightDraft { id: string; version: number; anchor: ReadingAnchor; quote: string; note: string; color: string; style: string }
 const props = defineProps<{ draft: HighlightDraft; busy: boolean; frozen: boolean; conflict: boolean; error: string; allowDiscussion?: boolean }>()
-const emit = defineEmits<{ save: [value: { color: string; style: string; note: string }]; delete: []; close: []; discuss: [] }>()
+const emit = defineEmits<{ save: [value: { color: string; style: string; note: string }]; delete: []; close: []; discuss: []; 'resolve-conflict': [] }>()
 const color = ref(props.draft.color)
 const style = ref(props.draft.style)
 const note = ref(props.draft.note)
@@ -69,4 +72,5 @@ defineExpose({ requestClose })
 .highlight-editor fieldset label { display: flex; align-items: center; min-height: 44px; padding-inline: .5rem; }
 .highlight-editor textarea, .highlight-editor select { width: 100%; padding: .75rem; border: 1px solid var(--a-color-border-soft); background: var(--a-color-bg); color: var(--a-color-fg); }
 .highlight-editor__actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.highlight-editor__conflict-alert { display: grid; gap: .5rem; padding: .75rem; border: 1px solid var(--a-color-border-soft); border-radius: .5rem; font-size: .875rem; line-height: 1.5; }
 </style>

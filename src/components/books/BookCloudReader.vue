@@ -6,13 +6,14 @@
       <PButton v-if="!opened && reading.status.value === 'offline'" variant="ghost" @click="localOnly = true">仅本机阅读</PButton>
     </div>
     <div v-if="reading.status.value === 'conflict'" class="cloud-reader__conflict" role="alert">
-      <p>其他设备已更新进度（云端 {{ Math.round((reading.conflict.value?.current_percent || 0) * 100) }}%）。请选择继续位置，不会自动覆盖。</p>
-      <PButton variant="secondary" @click="chooseCloud">采用云端位置</PButton>
-      <PButton variant="ghost" @click="reading.chooseLocal">保留当前位置并同步</PButton>
+      <p>其他设备已更新进度（云端：{{ formatPositionSummary(reading.conflict.value) }}；本机：{{ formatPositionSummary(reading.localPosition.value) }}）。请选择继续位置，不会自动覆盖。</p>
+      <PButton variant="secondary" @click="chooseCloud">采用云端位置（{{ formatPositionSummary(reading.conflict.value) }}）</PButton>
+      <PButton variant="ghost" @click="reading.chooseLocal">保留本机当前位置（{{ formatPositionSummary(reading.localPosition.value) }}）并同步</PButton>
     </div>
     <p v-if="chapterError && !chapterDraft" role="alert">{{ chapterError }}</p>
     <div v-if="markError" role="alert">
       <p>{{ markError }}</p>
+      <PButton v-if="markConflict && draft" variant="secondary" :disabled="markBusy" @click="resolveMarkConflictKeepLocal">保留本机修改并同步</PButton>
       <PButton v-if="pendingMark && !markConflict" variant="secondary" :disabled="markBusy" @click="retryMark">重试标记操作</PButton>
       <PButton variant="ghost" :disabled="markBusy" @click="reloadMarks">重新载入书签与批注</PButton>
     </div>
@@ -42,7 +43,7 @@
     <BookPublicReaderView v-else-if="localOnly" :source="localSource" />
     <BookChapterNoteEditor v-if="chapterDraft" :key="`${chapterDraft.id}:${chapterDraft.version}`" ref="chapterEditor" :draft="chapterDraft" :busy="chapterBusy" :frozen="Boolean(chapterPending)" :conflict="chapterConflict" :error="chapterError" @save="saveChapterNote" @close="closeChapterNote" />
     <PButton v-if="chapterPending && !chapterConflict" variant="secondary" :disabled="chapterBusy" @click="performChapterNote">重试保存章节笔记</PButton>
-    <BookHighlightEditor v-if="draft" :key="`${draft.id}:${draft.version}`" ref="editor" :draft="draft" :busy="markBusy" :frozen="Boolean(pendingMark)" :conflict="markConflict" :error="markError" allow-discussion @discuss="passages?.discuss(draft.anchor)" @save="saveHighlight" @delete="deleteHighlight(draft)" @close="draft = undefined" />
+    <BookHighlightEditor v-if="draft" :key="`${draft.id}:${draft.version}`" ref="editor" :draft="draft" :busy="markBusy" :frozen="Boolean(pendingMark)" :conflict="markConflict" :error="markError" allow-discussion @discuss="passages?.discuss(draft.anchor)" @save="saveHighlight" @delete="deleteHighlight(draft)" @resolve-conflict="resolveMarkConflictKeepLocal" @close="draft = undefined" />
     <PSheet :show="!!deletingHighlight" title="删除划线与公开分享" mode="partial" @close="deletingHighlight = undefined">
       <div v-if="deletingHighlight" class="cloud-reader__share-warning">
         <p>删除此私人划线后，默认撤销所有包含它的有效分享链接。已发布快照不会被自动修改。</p>
@@ -112,6 +113,14 @@ const chapterTotal = ref(0)
 const chapterTarget = shallowRef<ReadingPosition>()
 let heartbeatTimer: ReturnType<typeof setInterval> | undefined
 let stopped = false
+function formatPositionSummary(pos?: ReadingPosition): string {
+  if (!pos) return '0%'
+  const percent = typeof pos.current_percent === 'number' ? `${Math.round(pos.current_percent * 100)}%` : ''
+  if (pos.pdf_page) {
+    return percent ? `第 ${pos.pdf_page} 页（${percent}）` : `第 ${pos.pdf_page} 页`
+  }
+  return percent || '0%'
+}
 const message = computed(() => {
   if (localOnly.value && !opened.value) return '进度暂存本机，重新连接后确认同步；本机模式的书签不会自动上传。'
   return ({ loading: '正在读取云端进度…', saved: '进度已同步到云端 · 书签仅本人可见', pending: '进度已暂存本机，等待同步…', saving: '正在同步进度…', offline: '云端同步失败。未同步进度暂存本机，可重试。', conflict: '跨设备进度冲突，已暂停同步。' })[reading.status.value]
@@ -343,6 +352,38 @@ async function performMark() {
   } finally { markBusy.value = false }
 }
 async function retryMark() { try { await performMark() } catch { /* 保留原 UUID 和内容供重试。 */ } }
+async function resolveMarkConflictKeepLocal() {
+  if (markBusy.value) return
+  markBusy.value = true
+  markError.value = ''
+  try {
+    const result = await listReadingMarks(props.revisionId, reading.signal)
+    if (stopped) return
+    marks.value = result.items
+    marksLoaded.value = true
+    const currentDraft = draft.value
+    if (!currentDraft) {
+      markConflict.value = false
+      return
+    }
+    const cloudMark = result.items.find(m => m.id === currentDraft.id)
+    const newVersion = cloudMark ? cloudMark.version : 0
+    currentDraft.version = newVersion
+    if (pendingMark.value && 'input' in pendingMark.value) {
+      pendingMark.value.input.base_version = newVersion
+    }
+    markConflict.value = false
+    markBusy.value = false
+    await performMark()
+  } catch (err) {
+    if (!stopped) {
+      markConflict.value = err instanceof ApiErrorResponseError && err.status === 409
+      markError.value = markConflict.value ? '该划线在其他设备再次发生改动，请重新重试。' : '同步失败，请检查网络后重试。'
+    }
+  } finally {
+    markBusy.value = false
+  }
+}
 async function retry() {
   if (opened.value) { await reading.flush(); return }
   if (await reading.start()) {

@@ -10,6 +10,7 @@ export function useRevisionReading(owner: string, revisionId: string) {
   const state = shallowRef<CloudReadingState>()
   const conflict = shallowRef<CloudReadingState>()
   const initialPosition = shallowRef<ReadingPosition>()
+  const localPosition = shallowRef<ReadingPosition>()
   const controller = new AbortController()
   const key = `atoman:book-reading-outbox:${owner}:${revisionId}`
   let outbox: Outbox = { furthest: 0 }
@@ -44,6 +45,7 @@ export function useRevisionReading(owner: string, revisionId: string) {
       outbox.furthest = Math.max(outbox.furthest, result.state.furthest_percent)
       initialPosition.value = pendingPosition() || result.state
       currentPosition = initialPosition.value
+      localPosition.value = currentPosition
       if (!outbox.request && outbox.latest && result.state.version !== (outbox.baseVersion ?? 0)) {
         conflict.value = result.state
         status.value = 'conflict'
@@ -58,6 +60,7 @@ export function useRevisionReading(owner: string, revisionId: string) {
     if (disposed) return
     activity()
     currentPosition = { ...position }
+    localPosition.value = currentPosition
     outbox.latest = currentPosition
     outbox.baseVersion ??= state.value?.version
     if (position.advance_furthest !== false) {
@@ -100,7 +103,8 @@ export function useRevisionReading(owner: string, revisionId: string) {
       if (disposed) return
       if (err instanceof ApiErrorResponseError && err.code === 'books.reading_state_conflict') {
         try {
-          conflict.value = await getCloudReadingState(revisionId, controller.signal)
+          const cloudState = err.details?.state as CloudReadingState | undefined
+          conflict.value = cloudState || await getCloudReadingState(revisionId, controller.signal)
           if (!disposed) status.value = 'conflict'
         } catch { if (!disposed) status.value = 'offline' }
       } else status.value = 'offline'
@@ -114,6 +118,7 @@ export function useRevisionReading(owner: string, revisionId: string) {
     state.value = conflict.value
     initialPosition.value = conflict.value
     currentPosition = conflict.value
+    localPosition.value = conflict.value
     outbox = { furthest: conflict.value.furthest_percent, baseVersion: conflict.value.version }
     conflict.value = undefined
     status.value = 'saved'
@@ -139,6 +144,26 @@ export function useRevisionReading(owner: string, revisionId: string) {
     } catch { /* 时长请求失败不伪造或补报时间。 */ }
     finally { heartbeatBusy = false }
   }
-  function dispose() { disposed = true; clearTimeout(timer); controller.abort() }
-  return { status, state, conflict, initialPosition, signal: controller.signal, start, observe, flush, chooseCloud, chooseLocal, activity, ready, heartbeat, dispose }
+
+  function onOnline() {
+    if (disposed) return
+    if (status.value === 'offline') {
+      void start()
+    } else if (outbox.request || outbox.latest) {
+      void flush()
+    }
+  }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('online', onOnline)
+  }
+
+  function dispose() {
+    disposed = true
+    clearTimeout(timer)
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('online', onOnline)
+    }
+    controller.abort()
+  }
+  return { status, state, conflict, initialPosition, localPosition, signal: controller.signal, start, observe, flush, chooseCloud, chooseLocal, activity, ready, heartbeat, dispose }
 }

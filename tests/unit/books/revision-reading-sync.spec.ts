@@ -182,6 +182,31 @@ describe('修订级云阅读同步', () => {
     await reader.heartbeat()
     expect(vi.mocked(api.sendReadingHeartbeat).mock.calls.at(-1)![1]).toMatchObject({ visible: false, active: false })
   })
+  it('冲突错误附带服务端最新状态时直接采用，避免重复发起状态查询', async () => {
+    const conflictState: CloudReadingState = { ...cloud, version: 8, current_percent: .85, furthest_percent: .85 }
+    const conflictErr = new ApiErrorResponseError(409, 'books.reading_state_conflict', 'changed')
+    conflictErr.details = { state: conflictState }
+    vi.mocked(api.saveCloudReadingState).mockRejectedValueOnce(conflictErr)
+    const reader = make()
+    await reader.start()
+    reader.observe(position(.2))
+    await reader.flush()
+    expect(reader.status.value).toBe('conflict')
+    expect(reader.conflict.value).toEqual(conflictState)
+    expect(api.getCloudReadingState).not.toHaveBeenCalled()
+  })
+  it('网络恢复触发 online 事件时自动恢复同步并冲刷待发进度', async () => {
+    vi.mocked(api.saveCloudReadingState).mockRejectedValueOnce(new Error('offline'))
+    const reader = make()
+    await reader.start()
+    reader.observe(position(.4))
+    await reader.flush()
+    expect(reader.status.value).toBe('offline')
+
+    window.dispatchEvent(new Event('online'))
+    await flushPromises()
+    expect(api.createReadingSession).toHaveBeenCalledTimes(2)
+  })
   it('卸载取消请求并清理待保存计时器，不再向下一个账号发送写入', async () => {
     const reader = make()
     await reader.start()

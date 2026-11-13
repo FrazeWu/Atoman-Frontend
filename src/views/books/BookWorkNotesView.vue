@@ -7,6 +7,16 @@
       <RouterLink :to="`/books/work/${workId}/collections`">我的笔记合集</RouterLink>
     </nav>
     <div class="work-notes__toolbar">
+      <div class="work-notes__search-box">
+        <input
+          v-model="searchQuery"
+          type="search"
+          placeholder="搜索笔记或划线..."
+          class="work-notes__search-input"
+          aria-label="搜索笔记或划线"
+          @keyup.enter="reload"
+        />
+      </div>
       <label for="work-notes-filter">记录类型</label>
       <select id="work-notes-filter" v-model="kind" aria-label="筛选笔记类型">
         <option value="all">全部</option>
@@ -27,9 +37,15 @@
             <span class="work-notes__kind">{{ item.type === 'highlight' ? '划线与批注' : '独立章节笔记' }}</span>
             <time :datetime="item.updated_at">{{ formatTime(item.updated_at) }}</time>
           </div>
-          <h3 v-if="item.title" class="work-notes__title">{{ item.title }}</h3>
-          <blockquote v-if="item.quote" class="work-notes__quote" :data-color="item.color || 'yellow'">{{ item.quote }}</blockquote>
-          <p v-if="item.note" class="work-notes__body">{{ item.note }}</p>
+          <h3 v-if="item.title" class="work-notes__title">
+            <PHighlightText :text="item.title" :query="searchQuery" />
+          </h3>
+          <blockquote v-if="item.quote" class="work-notes__quote" :data-color="item.color || 'yellow'">
+            <PHighlightText :text="item.quote" :query="searchQuery" />
+          </blockquote>
+          <p v-if="item.note" class="work-notes__body">
+            <PHighlightText :text="item.note" :query="searchQuery" />
+          </p>
           <div class="work-notes__origin">
             <span v-if="item.source" class="work-notes__file">{{ item.source.file_name }}<span v-if="item.source.format"> · {{ item.source.format.toUpperCase() }}</span><span v-if="item.source.edition_label"> · {{ item.source.edition_label }}</span></span>
             <span v-else>作品级独立笔记 · 未关联电子书文件</span>
@@ -54,6 +70,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PHighlightText from '@/components/ui/PHighlightText.vue'
 import { listWorkNotes, type WorkNoteItem } from '@/api/bookReading'
 import { getCatalogWork } from '@/api/bookCatalog'
 
@@ -62,12 +79,15 @@ const workId = computed(() => String(route.params.workId || ''))
 const workTitle = ref('')
 const kind = ref<'all' | 'highlight' | 'chapter_note'>('all')
 const selectedRevision = ref(String(route.query.revision_id || ''))
+const searchQuery = ref('')
 const items = ref<WorkNoteItem[]>([])
 const total = ref(0)
 const loading = ref(false)
 const error = ref('')
 let controller: AbortController | undefined
 let generation = 0
+let debounceTimer: ReturnType<typeof setTimeout> | undefined
+
 function formatTime(value: string) {
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })
@@ -85,7 +105,16 @@ async function load(reset: boolean) {
   loading.value = true
   error.value = ''
   try {
-    const result = await listWorkNotes(workId.value, { kind: kind.value, revisionId: selectedRevision.value || undefined, limit: 30, offset }, controller.signal)
+    const options: { kind: 'all' | 'highlight' | 'chapter_note'; revisionId?: string; q?: string; limit: number; offset: number } = {
+      kind: kind.value,
+      revisionId: selectedRevision.value || undefined,
+      limit: 30,
+      offset,
+    }
+    if (searchQuery.value.trim()) {
+      options.q = searchQuery.value.trim()
+    }
+    const result = await listWorkNotes(workId.value, options, controller.signal)
     if (current !== generation) return
     items.value = reset ? result.items : [...items.value, ...result.items]
     total.value = result.total
@@ -96,12 +125,26 @@ async function load(reset: boolean) {
 }
 function reload() { void load(true) }
 function loadMore() { if (!loading.value && items.value.length < total.value) void load(false) }
+
 watch([workId, kind, selectedRevision], () => void load(true), { immediate: true })
+
+watch(searchQuery, () => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    void load(true)
+  }, 300)
+})
+
 watch(workId, async id => {
   workTitle.value = ''
   try { const work = await getCatalogWork(id); if (id === workId.value) workTitle.value = work.title } catch { /* Timeline still works without public work metadata. */ }
 }, { immediate: true })
-onBeforeUnmount(() => { generation++; controller?.abort() })
+
+onBeforeUnmount(() => {
+  generation++
+  if (debounceTimer) clearTimeout(debounceTimer)
+  controller?.abort()
+})
 </script>
 
 <style scoped>
@@ -109,6 +152,16 @@ onBeforeUnmount(() => { generation++; controller?.abort() })
 .work-notes__navigation { display:flex; gap:1.25rem; font-size:.9rem; }
 .work-notes__navigation a,.work-notes__link { color:var(--a-color-primary, #3764a6); text-decoration:none; }
 .work-notes__toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:.8rem; font-size:.9rem; }
+.work-notes__search-box { display:flex; align-items:center; }
+.work-notes__search-input {
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: .45rem;
+  padding: .4rem .7rem;
+  background: var(--a-color-surface, white);
+  font: inherit;
+  font-size: .88rem;
+  min-width: 180px;
+}
 .work-notes__toolbar select { border:1px solid var(--a-color-border-soft); border-radius:.45rem; padding:.45rem .7rem; background:var(--a-color-surface, white); }
 .work-notes__total { margin-left:auto; color:var(--a-color-text-secondary); }
 .work-notes__hint,.work-notes__muted,.work-notes__unavailable { color:var(--a-color-text-secondary); font-size:.8rem; }

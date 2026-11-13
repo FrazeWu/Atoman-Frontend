@@ -6,6 +6,7 @@ import PSearchInput, { type SearchScopeOption } from '@/components/ui/PSearchInp
 import { useUnifiedSearchPreview } from '@/composables/useUnifiedSearchPreview'
 import { safeSearchHref, writeSearchQuery } from '@/utils/searchUrl'
 import type { SearchHit, SearchScope } from '@/api/search'
+import PHighlightText from '@/components/ui/PHighlightText.vue'
 
 const MODULE_NAMES: Record<string, string> = {
   books: '图书',
@@ -330,10 +331,10 @@ onUnmounted(() => {
                 <!-- Info -->
                 <div class="p-unified-search-dropdown__info">
                   <div class="p-unified-search-dropdown__title">
-                    {{ item.title }}
+                    <PHighlightText :text="item.title" :query="query" />
                   </div>
                   <div v-if="item.subtitle" class="p-unified-search-dropdown__subtitle">
-                    {{ item.subtitle }}
+                    <PHighlightText :text="item.subtitle" :query="query" />
                   </div>
                 </div>
 

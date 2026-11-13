@@ -4,26 +4,42 @@
 
     <!-- 统一工具栏：分类过滤与搜索排布 -->
     <div class="book-discover__controls">
-      <!-- 左侧：图书/榜单切换 -->
-      <div class="p-segmented-control" role="tablist">
-        <RouterLink
-          :to="{ path: '/books' }"
-          class="p-segmented-item"
-          :class="{ active: !ranked }"
-          role="tab"
-          :aria-selected="!ranked"
+      <!-- 左侧：图书/榜单切换 + 筛选触发按钮 -->
+      <div class="book-discover__controls-left">
+        <div class="p-segmented-control" role="tablist">
+          <RouterLink
+            :to="{ path: '/books' }"
+            class="p-segmented-item"
+            :class="{ active: !ranked }"
+            role="tab"
+            :aria-selected="!ranked"
+          >
+            全部图书
+          </RouterLink>
+          <RouterLink
+            :to="{ path: '/books', query: { sort: 'high-rated' } }"
+            class="p-segmented-item"
+            :class="{ active: ranked }"
+            role="tab"
+            :aria-selected="ranked"
+          >
+            高分榜
+          </RouterLink>
+        </div>
+
+        <button
+          v-if="!ranked && route.query.type !== 'people'"
+          type="button"
+          class="book-discover__filter-toggle"
+          :class="{ 'is-active': activeFilterCount > 0, 'is-expanded': facetsExpanded }"
+          :aria-expanded="facetsExpanded"
+          aria-label="展开筛选工具栏"
+          @click="facetsExpanded = !facetsExpanded"
         >
-          全部图书
-        </RouterLink>
-        <RouterLink
-          :to="{ path: '/books', query: { sort: 'high-rated' } }"
-          class="p-segmented-item"
-          :class="{ active: ranked }"
-          role="tab"
-          :aria-selected="ranked"
-        >
-          高分榜
-        </RouterLink>
+          <SlidersHorizontal :size="14" aria-hidden="true" />
+          <span>筛选</span>
+          <span v-if="activeFilterCount > 0" class="book-discover__filter-badge">{{ activeFilterCount }}</span>
+        </button>
       </div>
 
       <!-- 右侧：统一搜索栏 (Option 1A) 与添加操作 -->
@@ -50,6 +66,113 @@
         </PButton>
       </div>
     </div>
+
+    <!-- Cupertino 分面筛选面板 (仅在全部图书主视图且展开时呈现) -->
+    <transition name="facet-drawer">
+      <div v-if="!ranked && route.query.type !== 'people' && facetsExpanded" class="book-discover__facets-panel" role="region" aria-label="图书分面筛选">
+        <!-- 语言分面 -->
+        <div class="book-discover__facet-group">
+          <span class="book-discover__facet-title">语言</span>
+          <div class="book-discover__facet-capsules" role="radiogroup" aria-label="按作品语言筛选">
+            <button
+              type="button"
+              class="book-discover__capsule"
+              :class="{ 'is-selected': !activeLang }"
+              role="radio"
+              :aria-checked="!activeLang"
+              @click="setLanguage('')"
+            >
+              全部
+            </button>
+            <button
+              v-for="item in facetLanguages"
+              :key="item.key"
+              type="button"
+              class="book-discover__capsule"
+              :class="{ 'is-selected': activeLang === item.key }"
+              role="radio"
+              :aria-checked="activeLang === item.key"
+              @click="setLanguage(item.key)"
+            >
+              <span>{{ item.label }}</span>
+              <span class="book-discover__capsule-badge">{{ item.count }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 年代分面 -->
+        <div class="book-discover__facet-group">
+          <span class="book-discover__facet-title">年代</span>
+          <div class="book-discover__facet-capsules" role="radiogroup" aria-label="按出版年代筛选">
+            <button
+              type="button"
+              class="book-discover__capsule"
+              :class="{ 'is-selected': !activeEra }"
+              role="radio"
+              :aria-checked="!activeEra"
+              @click="setEra('')"
+            >
+              全部
+            </button>
+            <button
+              v-for="item in facetDecades"
+              :key="item.key"
+              type="button"
+              class="book-discover__capsule"
+              :class="{ 'is-selected': activeEra === item.key }"
+              role="radio"
+              :aria-checked="activeEra === item.key"
+              @click="setEra(item.key)"
+            >
+              <span>{{ item.label }}</span>
+              <span class="book-discover__capsule-badge">{{ item.count }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 评分分面 -->
+        <div class="book-discover__facet-group">
+          <span class="book-discover__facet-title">评分</span>
+          <div class="book-discover__facet-capsules" role="radiogroup" aria-label="按最低评分筛选">
+            <button
+              type="button"
+              class="book-discover__capsule"
+              :class="{ 'is-selected': !activeRating }"
+              role="radio"
+              :aria-checked="!activeRating"
+              @click="setRating('')"
+            >
+              全部
+            </button>
+            <button
+              v-for="item in facetRatings"
+              :key="item.key"
+              type="button"
+              class="book-discover__capsule"
+              :class="{ 'is-selected': activeRating === item.key }"
+              role="radio"
+              :aria-checked="activeRating === item.key"
+              @click="setRating(item.key)"
+            >
+              <span>{{ item.label }}</span>
+              <span class="book-discover__capsule-badge">{{ item.count }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 重置操作 -->
+        <div v-if="activeFilterCount > 0" class="book-discover__facet-reset">
+          <button
+            type="button"
+            class="book-discover__reset-btn"
+            @click="resetFilters"
+          >
+            <RotateCcw :size="12" aria-hidden="true" />
+            <span>重置筛选</span>
+          </button>
+        </div>
+      </div>
+    </transition>
 
     <!-- 错误重试状态 -->
     <div v-if="error" role="alert" class="book-catalog__error-box">
@@ -130,9 +253,15 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { BookOpen } from 'lucide-vue-next'
+import { BookOpen, RotateCcw, SlidersHorizontal } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import { catalogRevision, searchCatalogWorks } from '@/api/bookCatalog'
+import {
+  catalogRevision,
+  getCatalogWorkFacets,
+  searchCatalogWorks,
+  type BookWorkFacetsResult,
+  type CatalogFilterParams,
+} from '@/api/bookCatalog'
 import { highRatedWorks, type WorkRating } from '@/api/bookCommunity'
 import { searchWikiPeople } from '@/api/bookWiki'
 import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
@@ -173,6 +302,91 @@ const error = ref('')
 let request: AbortController | undefined
 let generation = 0
 
+// 分面筛选状态
+const facetsExpanded = ref(Boolean(route.query.lang || route.query.era || route.query.rating))
+const facetsData = ref<BookWorkFacetsResult>({
+  languages: [],
+  decades: [],
+  ratings: [],
+})
+
+const activeLang = computed(() => String(route.query.lang || ''))
+const activeEra = computed(() => String(route.query.era || ''))
+const activeRating = computed(() => String(route.query.rating || ''))
+
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (activeLang.value) count++
+  if (activeEra.value) count++
+  if (activeRating.value) count++
+  return count
+})
+
+const facetLanguages = computed(() => facetsData.value.languages)
+const facetDecades = computed(() => facetsData.value.decades)
+const facetRatings = computed(() => facetsData.value.ratings)
+
+function eraToYears(era: string): { yearFrom?: number; yearTo?: number } {
+  if (era === '2020s') return { yearFrom: 2020, yearTo: 2029 }
+  if (era === '2010s') return { yearFrom: 2010, yearTo: 2019 }
+  if (era === '2000s') return { yearFrom: 2000, yearTo: 2009 }
+  if (era === 'classic') return { yearTo: 1999 }
+  return {}
+}
+
+function ratingToMin(rating: string): number | undefined {
+  if (rating === '9+') return 9.0
+  if (rating === '8+') return 8.0
+  if (rating === '7+') return 7.0
+  return undefined
+}
+
+function setLanguage(val: string) {
+  void router.push({
+    path: '/books',
+    query: {
+      ...route.query,
+      lang: val || undefined,
+      page: undefined,
+    },
+  })
+}
+
+function setEra(val: string) {
+  void router.push({
+    path: '/books',
+    query: {
+      ...route.query,
+      era: val || undefined,
+      page: undefined,
+    },
+  })
+}
+
+function setRating(val: string) {
+  void router.push({
+    path: '/books',
+    query: {
+      ...route.query,
+      rating: val || undefined,
+      page: undefined,
+    },
+  })
+}
+
+function resetFilters() {
+  void router.push({
+    path: '/books',
+    query: {
+      ...route.query,
+      lang: undefined,
+      era: undefined,
+      rating: undefined,
+      page: undefined,
+    },
+  })
+}
+
 async function load() {
   request?.abort()
   request = new AbortController()
@@ -194,10 +408,36 @@ async function load() {
       total.value = result.total
       return
     }
-    const result = await searchCatalogWorks(String(route.query.q || ''), 24, (page.value - 1) * 24, request.signal)
+    const searchPromise = activeFilterCount.value > 0
+      ? searchCatalogWorks(
+          String(route.query.q || ''),
+          24,
+          (page.value - 1) * 24,
+          {
+            language: activeLang.value || undefined,
+            minRating: ratingToMin(activeRating.value),
+            yearFrom: eraToYears(activeEra.value).yearFrom,
+            yearTo: eraToYears(activeEra.value).yearTo,
+          },
+          request.signal,
+        )
+      : searchCatalogWorks(
+          String(route.query.q || ''),
+          24,
+          (page.value - 1) * 24,
+          request.signal,
+        )
+
+    const [result, facets] = await Promise.all([
+      searchPromise,
+      getCatalogWorkFacets(String(route.query.q || ''), request.signal).catch(() => ({ languages: [], decades: [], ratings: [] })),
+    ])
     if (current !== generation) return
     works.value = result.items
     total.value = result.total
+    if (facets) {
+      facetsData.value = facets
+    }
   } catch (err: unknown) {
     if ((err as any)?.name === 'AbortError' || (err as any)?.code === 20 || (err instanceof Error && err.name === 'AbortError')) {
       return
@@ -230,10 +470,22 @@ function changePage(value: number) {
 
 // 打开详情不重新挂载发现页；搜索与分页仍由 URL 恢复。
 watch(
-  [() => route.query.q, () => route.query.page, () => route.query.sort, () => route.query.type, () => catalogRevision.value],
+  [
+    () => route.query.q,
+    () => route.query.page,
+    () => route.query.sort,
+    () => route.query.type,
+    () => route.query.lang,
+    () => route.query.era,
+    () => route.query.rating,
+    () => catalogRevision.value,
+  ],
   () => {
     query.value = String(route.query.q || '')
     searchType.value = route.query.type === 'people' ? 'people' : 'works'
+    if (route.query.lang || route.query.era || route.query.rating) {
+      facetsExpanded.value = true
+    }
     void load()
   },
   { immediate: true }
@@ -282,6 +534,186 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   gap: 1rem;
   margin-block: 1.25rem;
+}
+
+.book-discover__controls-left {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.book-discover__filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 1.875rem;
+  padding: 0 0.625rem;
+  border-radius: 6px;
+  border: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.08));
+  background: var(--a-color-bg, #ffffff);
+  color: var(--a-color-text-secondary, #64748b);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.book-discover__filter-toggle:hover {
+  color: var(--a-color-text, #0f172a);
+  background: var(--a-color-surface-hover, rgba(0, 0, 0, 0.02));
+}
+
+.book-discover__filter-toggle.is-active,
+.book-discover__filter-toggle.is-expanded {
+  color: var(--a-color-text, #0f172a);
+  border-color: var(--a-color-text, #0f172a);
+}
+
+.book-discover__filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  border-radius: 9999px;
+  background: var(--a-color-text, #0f172a);
+  color: var(--a-color-bg, #ffffff);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.book-discover__facets-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  border-radius: 8px;
+  background: var(--a-color-surface-soft, rgba(0, 0, 0, 0.02));
+  border: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.06));
+}
+
+.book-discover__facet-group {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  flex-wrap: wrap;
+}
+
+.book-discover__facet-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--a-color-text-secondary, #64748b);
+  width: 2.25rem;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.book-discover__facet-capsules {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.book-discover__capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--a-color-text-secondary, #64748b);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  line-height: 1.2;
+}
+
+.book-discover__capsule:hover {
+  color: var(--a-color-text, #0f172a);
+  background: rgba(0, 0, 0, 0.07);
+}
+
+.book-discover__capsule.is-selected {
+  background: var(--a-color-text, #0f172a);
+  color: var(--a-color-bg, #ffffff);
+}
+
+.book-discover__capsule-badge {
+  font-size: 0.6875rem;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+.book-discover__capsule.is-selected .book-discover__capsule-badge {
+  opacity: 0.9;
+}
+
+.book-discover__facet-reset {
+  display: flex;
+  align-items: center;
+  padding-top: 0.375rem;
+  border-top: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.04));
+}
+
+.book-discover__reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: transparent;
+  border: none;
+  color: var(--a-color-text-secondary, #64748b);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.book-discover__reset-btn:hover {
+  color: var(--a-color-text, #0f172a);
+}
+
+.facet-drawer-enter-active,
+.facet-drawer-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.facet-drawer-enter-from,
+.facet-drawer-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+:root.dark .book-discover__capsule {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+:root.dark .book-discover__capsule:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+:root.dark .book-discover__capsule.is-selected {
+  background: var(--a-color-text, #f1f5f9);
+  color: var(--a-color-bg, #0b0f19);
+}
+
+:root.dark .book-discover__filter-toggle {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+:root.dark .book-discover__facets-panel {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .p-segmented-control {

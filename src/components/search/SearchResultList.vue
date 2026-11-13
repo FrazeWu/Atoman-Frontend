@@ -3,11 +3,11 @@
     <li v-for="item in items" :key="item.key" class="search-result-item">
       <RouterLink :to="safeSearchHref(item.href)" class="search-result-link">
         <div class="result-header">
-          <span class="result-title">{{ item.title }}</span>
+          <span class="result-title"><PHighlightText :text="item.title" :query="query" /></span>
           <span v-if="item.module" class="result-module-tag">{{ getModuleLabel(item.module) }}</span>
         </div>
-        <span v-if="item.subtitle" class="result-subtitle">{{ item.subtitle }}</span>
-        <span v-if="item.snippet" class="result-snippet">{{ item.snippet }}</span>
+        <span v-if="item.subtitle" class="result-subtitle"><PHighlightText :text="item.subtitle" :query="query" /></span>
+        <span v-if="item.snippet" class="result-snippet"><PHighlightText :text="item.snippet" :query="query" /></span>
       </RouterLink>
     </li>
   </ul>
@@ -16,8 +16,12 @@
 <script setup lang="ts">
 import type { SearchHit } from '@/api/search'
 import { safeSearchHref } from '@/utils/searchUrl'
+import PHighlightText from '@/components/ui/PHighlightText.vue'
 
-defineProps<{ items: SearchHit[] }>()
+defineProps<{
+  items: SearchHit[]
+  query?: string
+}>()
 
 const MODULE_LABELS: Record<string, string> = {
   books: '图书',

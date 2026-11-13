@@ -97,10 +97,11 @@ export interface WorkNotesResult {
   offset: number
   items: WorkNoteItem[]
 }
-export const listWorkNotes = (workId: string, options: { kind?: WorkNoteItem['type'] | 'all'; revisionId?: string; limit?: number; offset?: number } = {}, signal?: AbortSignal) => {
+export const listWorkNotes = (workId: string, options: { kind?: WorkNoteItem['type'] | 'all'; revisionId?: string; q?: string; limit?: number; offset?: number } = {}, signal?: AbortSignal) => {
   const params = new URLSearchParams()
   if (options.kind && options.kind !== 'all') params.set('kind', options.kind)
   if (options.revisionId) params.set('revision_id', options.revisionId)
+  if (options.q) params.set('q', options.q)
   params.set('limit', String(options.limit ?? 30))
   params.set('offset', String(options.offset ?? 0))
   return request<WorkNotesResult>(`/works/${path(workId)}/notes?${params.toString()}`, 'GET', undefined, signal)

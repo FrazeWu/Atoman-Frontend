@@ -24,8 +24,52 @@ async function post<T>(path: string, input: unknown, requestId?: string): Promis
     body: JSON.stringify(input),
   })).data
 }
-export const searchCatalogWorks = (query = '', limit = 24, offset = 0, signal?: AbortSignal) =>
-  apiGet<CatalogPage>(url(`/works?q=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`), { signal })
+export interface CatalogFilterParams {
+  language?: string
+  minRating?: number
+  yearFrom?: number
+  yearTo?: number
+}
+
+export interface FacetCountItem {
+  key: string
+  label: string
+  count: number
+}
+
+export interface BookWorkFacetsResult {
+  languages: FacetCountItem[]
+  decades: FacetCountItem[]
+  ratings: FacetCountItem[]
+}
+
+export function searchCatalogWorks(
+  query = '',
+  limit = 24,
+  offset = 0,
+  filtersOrSignal?: CatalogFilterParams | AbortSignal,
+  signal?: AbortSignal,
+): Promise<CatalogPage> {
+  let filters: CatalogFilterParams | undefined
+  let actualSignal = signal
+  if (filtersOrSignal instanceof AbortSignal) {
+    actualSignal = filtersOrSignal
+  } else if (filtersOrSignal) {
+    filters = filtersOrSignal
+  }
+  const params = new URLSearchParams()
+  if (query) params.set('q', query)
+  params.set('limit', String(limit))
+  params.set('offset', String(offset))
+  if (filters?.language) params.set('language', filters.language)
+  if (filters?.minRating) params.set('min_rating', String(filters.minRating))
+  if (filters?.yearFrom) params.set('year_from', String(filters.yearFrom))
+  if (filters?.yearTo) params.set('year_to', String(filters.yearTo))
+  return apiGet<CatalogPage>(url(`/works?${params.toString()}`), { signal: actualSignal })
+}
+
+export const getCatalogWorkFacets = (query = '', signal?: AbortSignal) =>
+  apiGet<BookWorkFacetsResult>(url(`/works/facets?q=${encodeURIComponent(query)}`), { signal })
 export interface CatalogPublisherSuggestion { id: string; name: string }
 export const searchCatalogPublishers = (query = '', limit = 24, offset = 0, signal?: AbortSignal) =>
   apiGet<{ items: CatalogPublisherSuggestion[]; total: number }>(url(`/publishers?q=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`), { signal })

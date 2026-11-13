@@ -77,3 +77,29 @@ it('按具体文件和类型筛选；分页保留记录，不改变原始归属'
     expect(listWorkNotes).toHaveBeenLastCalledWith('work-1', { kind: 'chapter_note', revisionId: undefined, limit: 30, offset: 0 }, expect.any(AbortSignal))
   } finally { wrapper.unmount() }
 })
+
+it('支持关键词搜索并高亮文本', async () => {
+  const router = createRouterForNotes()
+  await router.push('/books/work/work-1/notes')
+  const wrapper = mount(BookWorkNotesView, { global: { plugins: [router], stubs: { PPageHeader: true, RouterLink: false } } })
+  try {
+    await flushPromises()
+    const searchInput = wrapper.get('.work-notes__search-input')
+    await searchInput.setValue('心得')
+    // Fast-forward debounce 300ms
+    await new Promise((r) => setTimeout(r, 350))
+    await flushPromises()
+
+    expect(listWorkNotes).toHaveBeenLastCalledWith(
+      'work-1',
+      { kind: 'all', revisionId: undefined, q: '心得', limit: 30, offset: 0 },
+      expect.any(AbortSignal),
+    )
+    // Check mark tag highlighting
+    const marks = wrapper.findAll('mark')
+    expect(marks.length).toBeGreaterThan(0)
+    expect(marks.some((m) => m.text() === '心得')).toBe(true)
+  } finally {
+    wrapper.unmount()
+  }
+})

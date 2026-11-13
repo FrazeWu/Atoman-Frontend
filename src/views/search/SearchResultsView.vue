@@ -136,7 +136,7 @@
             :type="filter.kind === 'number' ? 'number' : 'text'"
             :inputmode="filter.kind === 'date' ? 'numeric' : undefined"
             :pattern="filter.kind === 'date' ? '[0-9]{4}/[0-9]{2}/[0-9]{2}' : undefined"
-            :placeholder="filter.kind === 'date' ? 'YYYY/MM/DD' : filter.multiple ? '多个值用逗号分隔' : filter.kind === 'entity' ? '对象 ID' : ''"
+            :placeholder="filter.kind === 'date' ? 'YYYY/MM/DD' : filter.multiple ? '多个值用逗号分隔' : filter.kind === 'entity' ? '输入名称或编号' : ''"
             :min="filter.min"
             :max="filter.max"
             :step="filter.integer ? 1 : 'any'"
@@ -175,7 +175,7 @@
           <div class="search-meta">
             <span class="search-meta__total">共 {{ search.result.value.pagination?.total ?? 0 }} 条结果</span>
           </div>
-          <SearchResultList :items="search.result.value.items || []" />
+          <SearchResultList :items="search.result.value.items || []" :query="state.q" />
           <nav v-if="search.result.value.pagination" class="search-pagination" aria-label="结果分页">
             <button
               type="button"
@@ -215,7 +215,7 @@
               <span>此类结果暂不可用。</span>
               <button type="button" class="retry-btn" @click="search.reload">重试</button>
             </div>
-            <SearchResultList v-else :items="group.items || []" />
+            <SearchResultList v-else :items="group.items || []" :query="state.q" />
           </section>
         </section>
 

@@ -112,7 +112,7 @@
           <li v-for="item in notes" :key="item.id" class="private-books__note-card">
             <div class="private-books__note-header">
               <strong class="private-books__note-title">
-                {{ item.title || '未命名笔记' }}
+                <PHighlightText :text="item.title || '未命名笔记'" :query="query" />
               </strong>
               <div v-if="item.tags.length" class="private-books__tags-list">
                 <button
@@ -123,12 +123,14 @@
                   :title="'按标签 #' + t + ' 筛选'"
                   @click="filterByTag(t)"
                 >
-                  # {{ t }}
+                  # <PHighlightText :text="t" :query="query" />
                 </button>
               </div>
             </div>
 
-            <p class="private-books__body">{{ item.body }}</p>
+            <p class="private-books__body">
+              <PHighlightText :text="item.body" :query="query" />
+            </p>
 
             <div class="private-books__toolbar">
               <RouterLink
@@ -318,7 +320,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { Plus, Download, Search, BookOpen } from 'lucide-vue-next'
 import { apiGet } from '@/api/client'
@@ -343,6 +345,7 @@ import PSheet from '@/components/ui/PSheet.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
+import PHighlightText from '@/components/ui/PHighlightText.vue'
 import BookPrivateHighlights from '@/components/books/BookPrivateHighlights.vue'
 import BookHighlightTrash from '@/components/books/BookHighlightTrash.vue'
 import './bookCatalog.css'
@@ -431,6 +434,19 @@ function clearTagFilter() {
   tag.value = ''
   void load()
 }
+
+let queryTimer: ReturnType<typeof setTimeout> | undefined
+
+watch(query, () => {
+  if (queryTimer) clearTimeout(queryTimer)
+  queryTimer = setTimeout(() => {
+    void load()
+  }, 300)
+})
+
+onBeforeUnmount(() => {
+  if (queryTimer) clearTimeout(queryTimer)
+})
 
 async function load(append = false) {
   if (activeTab.value === 'highlights') return

@@ -86,7 +86,7 @@
             :to="`/books/work/${item.work_id}`"
             class="book-private-highlights__work-title"
           >
-            {{ item.work_title || '未命名书籍' }}
+            <PHighlightText :text="item.work_title || '未命名书籍'" :query="query" />
           </RouterLink>
           <span class="book-private-highlights__time">{{ formatTime(item.created_at) }}</span>
         </div>
@@ -96,13 +96,15 @@
           class="book-private-highlights__quote"
           :class="`is-${item.color || 'yellow'}`"
         >
-          “{{ item.quote }}”
+          “<PHighlightText :text="item.quote" :query="query" />”
         </blockquote>
 
         <!-- 读者想法便签（若有批注） -->
         <div v-if="item.note" class="book-private-highlights__thought">
           <div class="book-private-highlights__thought-header">💬 批注与想法</div>
-          <p class="book-private-highlights__thought-body">{{ item.note }}</p>
+          <p class="book-private-highlights__thought-body">
+            <PHighlightText :text="item.note" :query="query" />
+          </p>
         </div>
 
         <!-- 底部操作栏 -->
@@ -177,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, onBeforeRouteLeave } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
 import { privateBookRequest, downloadBookData } from '@/api/bookPrivate'
@@ -187,6 +189,7 @@ import { getNoteShareImpact, type NoteShareImpact } from '@/api/bookNoteCollecti
 import PButton from '@/components/ui/PButton.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import PHighlightText from '@/components/ui/PHighlightText.vue'
 import BookHighlightEditor from './BookHighlightEditor.vue'
 import { useToast } from '@/composables/useToast'
 
@@ -238,6 +241,19 @@ async function page(offset = 0) {
 
   return privateBookRequest<{ items: Item[]; total: number }>(`/me/reading-marks?${params}`)
 }
+
+let queryTimer: ReturnType<typeof setTimeout> | undefined
+
+watch(query, () => {
+  if (queryTimer) clearTimeout(queryTimer)
+  queryTimer = setTimeout(() => {
+    void load()
+  }, 300)
+})
+
+onBeforeUnmount(() => {
+  if (queryTimer) clearTimeout(queryTimer)
+})
 
 async function load(append = false) {
   const current = ++sequence

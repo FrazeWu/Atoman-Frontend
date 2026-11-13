@@ -4,7 +4,17 @@
     <header class="books-notes-header">
       <div class="books-notes-header__top">
         <h1 class="books-notes-header__title">书摘</h1>
-        <span class="books-notes-header__count">{{ notesList.length }} 条笔记</span>
+        <span class="books-notes-header__count">{{ filteredNotes.length }} 条笔记</span>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="books-notes-header__search">
+        <MInput
+          v-model="searchQuery"
+          placeholder="搜索笔记与引文..."
+          clearable
+          data-testid="notes-search-input"
+        />
       </div>
     </header>
 
@@ -24,9 +34,9 @@
 
     <!-- Notes Stream -->
     <main v-else class="books-notes-content">
-      <div v-if="notesList.length > 0" class="books-notes-list">
+      <div v-if="filteredNotes.length > 0" class="books-notes-list">
         <article
-          v-for="note in notesList"
+          v-for="note in filteredNotes"
           :key="note.id"
           class="books-note-card"
           data-testid="book-note-card"
@@ -35,20 +45,22 @@
           <div class="books-note-card__meta">
             <span class="books-note-card__book">
               <MIcon name="books" size="xs" />
-              <span>{{ note.bookTitle }}</span>
+              <span><PHighlightText :text="note.bookTitle" :query="searchQuery" /></span>
             </span>
             <span v-if="note.chapter" class="books-note-card__chapter">{{ note.chapter }}</span>
           </div>
 
           <!-- Highlight Quote Block -->
           <blockquote class="books-note-card__quote">
-            “{{ note.quote }}”
+            “<PHighlightText :text="note.quote" :query="searchQuery" />”
           </blockquote>
 
           <!-- User Reflection / Commentary -->
           <div v-if="note.comment" class="books-note-card__reflection">
             <div class="books-note-card__reflection-label">心得随笔</div>
-            <p class="books-note-card__reflection-text">{{ note.comment }}</p>
+            <p class="books-note-card__reflection-text">
+              <PHighlightText :text="note.comment" :query="searchQuery" />
+            </p>
           </div>
 
           <!-- Footer Actions -->
@@ -86,18 +98,20 @@
         <div class="books-notes-empty__icon">
           <MIcon name="notes" size="lg" />
         </div>
-        <p class="books-notes-empty__title">暂无书摘笔记</p>
-        <p class="books-notes-empty__desc">在阅读过程中选中文本即可划线并添加书摘与随笔。</p>
+        <p class="books-notes-empty__title">{{ searchQuery ? '未找到相关笔记' : '暂无书摘笔记' }}</p>
+        <p class="books-notes-empty__desc">{{ searchQuery ? '试试其他关键词或清空搜索。' : '在阅读过程中选中文本即可划线并添加书摘与随笔。' }}</p>
       </div>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { getActivePinia } from 'pinia'
 import MIcon from '@mobile/components/ui/MIcon.vue'
+import MInput from '@mobile/components/ui/MInput.vue'
 import MGuestCard from '@mobile/components/ui/MGuestCard.vue'
+import PHighlightText from '@/components/ui/PHighlightText.vue'
 import { useAuthStore } from '@/stores/auth'
 import { deletePrivateNote, listPrivateNotes, type PrivateNote } from '@/api/bookPrivate'
 
@@ -122,12 +136,24 @@ const props = withDefaults(
 const authStore = getActivePinia() ? useAuthStore() : null
 const operationError = ref('')
 const deletingId = ref('')
+const searchQuery = ref('')
 const sourceNotes = new Map<string, PrivateNote>()
 let loadGeneration = 0
 
 const notesList = ref<BookNoteItem[]>(
   props.initialNotes ? [...props.initialNotes] : []
 )
+
+const filteredNotes = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return notesList.value
+  return notesList.value.filter(
+    (n) =>
+      n.quote.toLowerCase().includes(q) ||
+      (n.comment && n.comment.toLowerCase().includes(q)) ||
+      n.bookTitle.toLowerCase().includes(q),
+  )
+})
 
 watch(
   () => props.initialNotes,
@@ -236,6 +262,10 @@ onBeforeUnmount(() => { loadGeneration += 1 })
 .books-notes-header__count {
   font-size: 12px;
   color: var(--a-color-text-muted, #94a3b8);
+}
+
+.books-notes-header__search {
+  margin-top: 12px;
 }
 
 .books-notes-header__subtitle {

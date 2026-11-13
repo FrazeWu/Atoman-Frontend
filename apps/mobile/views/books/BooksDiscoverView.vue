@@ -21,24 +21,103 @@
         />
       </div>
 
-      <!-- Tab Filter Chips -->
-      <div class="mobile-books-discover__chips">
+      <!-- Tab Filter Chips & Facet Toggle -->
+      <div class="mobile-books-discover__chips-bar">
+        <div class="mobile-books-discover__chips">
+          <button
+            type="button"
+            class="mobile-books-discover__chip"
+            :class="{ 'is-active': activeFilter === 'all' }"
+            @click="setFilter('all')"
+          >
+            全部图书
+          </button>
+          <button
+            type="button"
+            class="mobile-books-discover__chip"
+            :class="{ 'is-active': activeFilter === 'ranked' }"
+            @click="setFilter('ranked')"
+          >
+            高分榜
+          </button>
+        </div>
+
         <button
+          v-if="activeFilter === 'all'"
           type="button"
-          class="mobile-books-discover__chip"
-          :class="{ 'is-active': activeFilter === 'all' }"
-          @click="setFilter('all')"
+          class="mobile-books-discover__filter-toggle"
+          :class="{ 'is-active': activeFilterCount > 0 || facetsExpanded }"
+          aria-label="筛选选项"
+          @click="facetsExpanded = !facetsExpanded"
         >
-          全部图书
+          <span>筛选</span>
+          <span v-if="activeFilterCount > 0" class="mobile-books-discover__badge-count">{{ activeFilterCount }}</span>
         </button>
-        <button
-          type="button"
-          class="mobile-books-discover__chip"
-          :class="{ 'is-active': activeFilter === 'ranked' }"
-          @click="setFilter('ranked')"
-        >
-          高分榜
-        </button>
+      </div>
+
+      <!-- Faceted Filters Row -->
+      <div v-if="activeFilter === 'all' && (facetsExpanded || activeFilterCount > 0)" class="mobile-books-discover__facets-bar">
+        <div class="mobile-books-discover__facet-scroll">
+          <button
+            type="button"
+            class="mobile-books-discover__facet-pill"
+            :class="{ 'is-selected': !activeLang }"
+            @click="toggleLang('')"
+          >
+            全部语言
+          </button>
+          <button
+            type="button"
+            class="mobile-books-discover__facet-pill"
+            :class="{ 'is-selected': activeLang === 'zh' }"
+            @click="toggleLang('zh')"
+          >
+            中文
+          </button>
+          <button
+            type="button"
+            class="mobile-books-discover__facet-pill"
+            :class="{ 'is-selected': activeLang === 'en' }"
+            @click="toggleLang('en')"
+          >
+            英语
+          </button>
+
+          <button
+            type="button"
+            class="mobile-books-discover__facet-pill"
+            :class="{ 'is-selected': activeEra === '2020s' }"
+            @click="toggleEra('2020s')"
+          >
+            2020年代
+          </button>
+          <button
+            type="button"
+            class="mobile-books-discover__facet-pill"
+            :class="{ 'is-selected': activeEra === 'classic' }"
+            @click="toggleEra('classic')"
+          >
+            2000年以前
+          </button>
+
+          <button
+            type="button"
+            class="mobile-books-discover__facet-pill"
+            :class="{ 'is-selected': activeRating === '9+' }"
+            @click="toggleRating('9+')"
+          >
+            9.0分以上
+          </button>
+
+          <button
+            v-if="activeFilterCount > 0"
+            type="button"
+            class="mobile-books-discover__facet-reset"
+            @click="resetFacets"
+          >
+            重置
+          </button>
+        </div>
       </div>
     </header>
 
@@ -65,7 +144,9 @@
             </div>
           </div>
           <div class="mobile-books-discover__hero-info">
-            <h2 class="mobile-books-discover__hero-title">{{ heroBook.title }}</h2>
+            <h2 class="mobile-books-discover__hero-title">
+              <PHighlightText :text="heroBook.title" :query="searchQuery" />
+            </h2>
             <p class="mobile-books-discover__hero-author">{{ getAuthors(heroBook) }}</p>
             <div class="mobile-books-discover__hero-meta">
               <span v-if="heroBook.rating_score" class="mobile-books-discover__rating-badge">
@@ -131,7 +212,9 @@
 
           <!-- Metadata -->
           <div class="mobile-books-discover__meta">
-            <h2 class="mobile-books-discover__work-title">{{ work.title }}</h2>
+            <h2 class="mobile-books-discover__work-title">
+              <PHighlightText :text="work.title" :query="searchQuery" />
+            </h2>
             <p class="mobile-books-discover__work-author">{{ getAuthors(work) }}</p>
             <div class="mobile-books-discover__work-extra">
               <span v-if="work.rating_score" class="mobile-books-discover__badge">
@@ -172,12 +255,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { searchCatalogWorks } from '@/api/bookCatalog'
 import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import { highRatedWorks, type WorkRating } from '@/api/bookCommunity'
 import type { BookPublicWork } from '@/api/books'
+import PHighlightText from '@/components/ui/PHighlightText.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MInput from '@mobile/components/ui/MInput.vue'
@@ -209,6 +293,70 @@ const loading = ref(props.initialWorks === undefined)
 const loadError = ref('')
 const worksList = ref<DiscoverWorkItem[]>(props.initialWorks ? [...props.initialWorks] : [])
 const rankedWorks = ref<RankedItem[]>([])
+
+// Mobile Facets State
+const activeLang = ref('')
+const activeEra = ref('')
+const activeRating = ref('')
+const facetsExpanded = ref(false)
+
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (activeLang.value) count++
+  if (activeEra.value) count++
+  if (activeRating.value) count++
+  return count
+})
+
+function toggleLang(lang: string) {
+  activeLang.value = activeLang.value === lang ? '' : lang
+  void loadCatalog()
+}
+
+function toggleEra(era: string) {
+  activeEra.value = activeEra.value === era ? '' : era
+  void loadCatalog()
+}
+
+function toggleRating(rating: string) {
+  activeRating.value = activeRating.value === rating ? '' : rating
+  void loadCatalog()
+}
+
+function resetFacets() {
+  activeLang.value = ''
+  activeEra.value = ''
+  activeRating.value = ''
+  void loadCatalog()
+}
+
+function eraToYears(era: string): { yearFrom?: number; yearTo?: number } {
+  if (era === '2020s') return { yearFrom: 2020, yearTo: 2029 }
+  if (era === 'classic') return { yearTo: 1999 }
+  return {}
+}
+
+function ratingToMin(rating: string): number | undefined {
+  if (rating === '9+') return 9.0
+  if (rating === '8+') return 8.0
+  return undefined
+}
+
+let searchDebounce: ReturnType<typeof setTimeout> | undefined
+
+watch(searchQuery, () => {
+  if (props.initialWorks) return
+  if (searchDebounce) clearTimeout(searchDebounce)
+  searchDebounce = setTimeout(() => {
+    if (activeFilter.value === 'all') {
+      void loadCatalog()
+    }
+  }, 300)
+})
+
+onBeforeUnmount(() => {
+  if (searchDebounce) clearTimeout(searchDebounce)
+})
 
 const filteredWorks = computed<DiscoverWorkItem[]>(() => {
   const query = searchQuery.value.trim().toLowerCase()
@@ -274,7 +422,19 @@ async function loadCatalog() {
   loading.value = true
   loadError.value = ''
   try {
-    const res = await searchCatalogWorks(searchQuery.value.trim(), 30, 0)
+    const res = activeFilterCount.value > 0
+      ? await searchCatalogWorks(
+          searchQuery.value.trim(),
+          30,
+          0,
+          {
+            language: activeLang.value || undefined,
+            minRating: ratingToMin(activeRating.value),
+            yearFrom: eraToYears(activeEra.value).yearFrom,
+            yearTo: eraToYears(activeEra.value).yearTo,
+          },
+        )
+      : await searchCatalogWorks(searchQuery.value.trim(), 30, 0)
     if (Array.isArray(res?.items)) {
       worksList.value = res.items.map((item: BookPublicWork) => ({
         id: item.id,
@@ -360,27 +520,119 @@ onMounted(() => {
   margin-bottom: 12px;
 }
 
+.mobile-books-discover__chips-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .mobile-books-discover__chips {
   display: flex;
   gap: 8px;
 }
 
 .mobile-books-discover__chip {
-  padding: 4px 12px;
-  font-size: 12px;
+  padding: 6px 14px;
+  font-size: 13px;
   font-weight: 500;
-  border-radius: var(--a-radius-control, 4px);
+  border-radius: var(--a-radius-pill, 9999px);
   border: 1px solid var(--a-color-border-soft, #eeeeee);
   background: var(--a-color-surface, #ffffff);
   color: var(--a-color-text-secondary, #666666);
   cursor: pointer;
-  transition: all 0.15s ease;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .mobile-books-discover__chip.is-active {
   background: var(--a-color-primary, #111111);
   color: var(--a-color-primary-contrast, #ffffff);
   border-color: var(--a-color-primary, #111111);
+}
+
+.mobile-books-discover__filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--a-color-text-secondary, #666666);
+  background: transparent;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-pill, 9999px);
+  cursor: pointer;
+  min-height: 32px;
+}
+
+.mobile-books-discover__filter-toggle.is-active {
+  color: var(--a-color-primary, #007aff);
+  border-color: var(--a-color-primary, #007aff);
+}
+
+.mobile-books-discover__badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: var(--a-color-primary, #007aff);
+  color: #ffffff;
+}
+
+.mobile-books-discover__facets-bar {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--a-color-border-soft, #f0f0f0);
+}
+
+.mobile-books-discover__facet-scroll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+
+.mobile-books-discover__facet-pill {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--a-radius-pill, 9999px);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  background: var(--a-color-surface, #ffffff);
+  color: var(--a-color-text-secondary, #666666);
+  cursor: pointer;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.mobile-books-discover__facet-pill.is-selected {
+  background: var(--a-color-primary-subtle, rgba(0, 122, 255, 0.12));
+  color: var(--a-color-primary, #007aff);
+  border-color: var(--a-color-primary, #007aff);
+  font-weight: 600;
+}
+
+.mobile-books-discover__facet-reset {
+  flex-shrink: 0;
+  background: transparent;
+  border: 0;
+  color: var(--a-color-text-tertiary, #999999);
+  font-size: 11px;
+  padding: 4px 6px;
+  cursor: pointer;
 }
 
 .mobile-books-discover__content {

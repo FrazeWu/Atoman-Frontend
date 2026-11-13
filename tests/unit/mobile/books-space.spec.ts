@@ -109,6 +109,27 @@ describe('Mobile Books Space Overhaul', () => {
         expect(pushSpy).toHaveBeenCalledWith('/books/work/w-1')
       }
     })
+
+    it('toggles mobile faceted filters toolbar and selects language pill', async () => {
+      const wrapper = mount(BooksDiscoverView, {
+        global: { plugins: [router, pinia] },
+        props: { initialWorks: mockWorks },
+      })
+
+      const toggle = wrapper.find('.mobile-books-discover__filter-toggle')
+      expect(toggle.exists()).toBe(true)
+      expect(wrapper.find('.mobile-books-discover__facets-bar').exists()).toBe(false)
+
+      await toggle.trigger('click')
+      expect(wrapper.find('.mobile-books-discover__facets-bar').exists()).toBe(true)
+
+      const pills = wrapper.findAll('.mobile-books-discover__facet-pill')
+      expect(pills.length).toBeGreaterThan(0)
+      const zhPill = pills.find((p) => p.text().includes('中文'))
+      expect(zhPill).toBeDefined()
+      await zhPill!.trigger('click')
+      expect(zhPill!.classes()).toContain('is-selected')
+    })
   })
 
   describe('BookDetailMobileView.vue (图书详情)', () => {
@@ -254,6 +275,24 @@ describe('Mobile Books Space Overhaul', () => {
 
       await deleteBtn.trigger('click')
       expect(wrapper.text()).not.toContain('事物的本质并不因我们对它的赞扬')
+    })
+
+    it('filters notes when typing in mobile search input and highlights keyword', async () => {
+      const wrapper = mount(BooksNotesView, {
+        global: { plugins: [router, pinia] },
+        props: { initialNotes: mockNotes },
+      })
+
+      const searchInput = wrapper.find('[data-testid="notes-search-input"] input')
+      expect(searchInput.exists()).toBe(true)
+
+      await searchInput.setValue('木雕')
+      expect(wrapper.text()).toContain('代码重构和木雕')
+      expect(wrapper.text()).not.toContain('事物的本质并不因我们对它的赞扬')
+
+      const mark = wrapper.find('mark')
+      expect(mark.exists()).toBe(true)
+      expect(mark.text()).toBe('木雕')
     })
   })
 

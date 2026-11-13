@@ -669,17 +669,23 @@
   background: var(--a-color-surface-muted);
 }
 
-/* Reader: Floating Sheet Presentation (Book Module Pattern) */
+/* Reader: Full-width Floating Sheet (Design System Spec & Music Module Navigation) */
 .mail-workspace__reader-sheet {
   background: var(--a-color-surface) !important;
-  border-left: 1px solid var(--a-color-border-soft);
-  box-shadow: -8px 0 36px rgba(0, 0, 0, 0.08);
+  border-left: 1px solid var(--a-color-border-soft) !important;
+  box-shadow: none !important;
+}
+:root.dark .mail-workspace__reader-sheet {
+  border-left: 1px solid var(--a-color-border) !important;
 }
 .mail-workspace__reader {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  max-width: 96rem;
+  margin: 0 auto;
+  width: 100%;
   background: var(--a-color-surface);
 }
 .mail-workspace__reader-empty {

@@ -129,15 +129,14 @@ defineEmits(['click'])
 .p-entry.content-stream-entry::before {
   content: '';
   position: absolute;
-  left: 2.5px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 2px;
-  height: 14px;
-  border-radius: var(--a-radius-none, 0px);
-  background-color: var(--a-color-success);
-  opacity: 1;
-  transition: color 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2.5px;
+  height: 100%;
+  background-color: var(--a-color-text);
+  opacity: 0;
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
 }
 
@@ -148,24 +147,15 @@ defineEmits(['click'])
   background: var(--a-color-surface-muted);
 }
 
-/* Hover / Focus 悬浮状态：显示完整贯穿黑线 */
+/* Hover / Focus 悬浮状态：显示左侧指示线 */
 .p-entry.content-stream-entry:hover::before,
 .p-entry.content-stream-entry:focus-within::before,
 .p-entry.content-stream-entry.is-focused::before,
 .p-entry.content-stream-entry.is-open::before {
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 2.5px;
-  height: 100%;
-  transform: none;
-  border-radius: 0;
-  background-color: var(--a-color-text);
   opacity: 1;
 }
 
 .p-entry.content-stream-entry.is-read::before {
-  background-color: transparent;
   opacity: 0;
 }
 

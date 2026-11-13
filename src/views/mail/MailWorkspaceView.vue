@@ -53,23 +53,45 @@
             <template v-else><div v-for="group in visibleConversations" :key="group.id" class="mail-workspace__message-row" :class="{ 'is-selected': selectedGroupId === group.id, 'is-unread': group.messages.some(row => row.isRead === false) }"><label class="mail-workspace__row-check"><input type="checkbox" :checked="group.messages.every(row => selection.has(row.id))" :aria-label="`选择：${group.latest.subject || '无主题'}`" @change="toggleGroup(group)" /></label><button class="mail-workspace__message" :data-testid="`mail-message-${group.latest.id}`" @click="openConversation(group)"><span class="mail-workspace__sender">{{ addressText(group.latest.from || []) || '邮件' }}<span v-if="group.messages.length > 1"> · {{ group.messages.length }}</span><Star v-if="group.latest.isFlagged" :size="12" fill="currentColor" /></span><span class="mail-workspace__message-first"><span class="mail-workspace__message-subject">{{ group.latest.subject || '无主题' }}</span><small>{{ mailTime(group.latest.receivedAt) }}</small></span><span class="mail-workspace__message-preview">{{ group.latest.preview || '没有摘要' }}</span><span v-if="group.latest.hasAttachment" class="mail-workspace__attachment"><Paperclip :size="12" /> 附件</span></button></div><div v-if="!visibleConversations.length" class="mail-workspace__list-state"><PEmpty compact align="center" :title="committedSearch ? '没有找到匹配的邮件' : '此文件夹暂无邮件'" :description="committedSearch ? '试试更短的关键词或清空搜索。' : '新的邮件会显示在这里。'"><template #icon><Inbox :size="28" /></template></PEmpty></div><button v-if="hasMore" class="mail-workspace__load-more" :disabled="loadingMessages" @click="loadMessages(true)">{{ loadingMessages ? '加载中…' : '加载更多' }}</button></template>
           </div>
         </section>
-        <!-- 浮动框设计：参考图书模块，点击邮件弹出详情 -->
+        <!-- 浮动框设计：参考图书与音乐模块，点击邮件弹出详情（全宽设计规范，左侧轨支持上下切换邮件） -->
         <PSheet
-          :show="Boolean(selectedGroupId && readerMessages.length)"
+          :show="isReaderOpen"
           :title="activeSubject"
-          :mode="isMobile ? 'full' : 'partial'"
-          :partial-width="isMobile ? '100%' : 'min(860px, 72vw)'"
+          mode="full"
+          content-max-width="96rem"
           :side="isMobile ? 'bottom' : 'right'"
-          close-type="header"
           panel-class="mail-workspace__reader-sheet"
+          :navigation="navigation"
+          :navigation-key="selectedGroupId || ''"
+          :navigation-direction="navigationDirection"
+          :navigation-loading="navigationLoading"
           @close="handleCloseReader"
+          @navigate="handleSheetNavigate"
         >
           <article class="mail-workspace__reader" :class="{ 'mail-mobile-visible': mobilePane === 'reader' }" data-testid="mail-reader-pane">
             <template v-if="readerMessages.length">
               <header class="mail-workspace__reader-head">
                 <div class="mail-workspace__nav-group" aria-label="切换邮件">
-                  <button type="button" class="mail-icon-button" :disabled="!hasPrevMail" aria-label="上一封" title="上一封 (K)" @click="goToPrevMail"><ChevronUp :size="16" /></button>
-                  <button type="button" class="mail-icon-button" :disabled="!hasNextMail" aria-label="下一封" title="下一封 (J)" @click="goToNextMail"><ChevronDown :size="16" /></button>
+                  <button
+                    type="button"
+                    class="mail-icon-button"
+                    :disabled="!navigation.previous || navigationLoading"
+                    :aria-label="navigation.previous ? `上一封：${navigation.previous.label}` : '没有上一封'"
+                    :title="navigation.previous ? `上一封：${navigation.previous.label} (K)` : '没有上一封'"
+                    @click="handleSheetNavigate('previous')"
+                  >
+                    <ChevronUp :size="16" />
+                  </button>
+                  <button
+                    type="button"
+                    class="mail-icon-button"
+                    :disabled="!navigation.next || navigationLoading"
+                    :aria-label="navigation.next ? `下一封：${navigation.next.label}` : '没有下一封'"
+                    :title="navigation.next ? `下一封：${navigation.next.label} (J)` : '没有下一封'"
+                    @click="handleSheetNavigate('next')"
+                  >
+                    <ChevronDown :size="16" />
+                  </button>
                 </div>
                 <div class="mail-workspace__reader-tools">
                   <button class="mail-icon-button" aria-label="为邮件添加提醒或标签" title="提醒与标签" :disabled="organizerBusy" @click="openMailOrganizer(readerMessages[readerMessages.length-1])"><Tags :size="16" /></button>
@@ -172,6 +194,7 @@ import MailAdvancedSearch from './MailAdvancedSearch.vue'
 import MailAttachmentPreview from './MailAttachmentPreview.vue'
 import MailScheduledPanel from './MailScheduledPanel.vue'
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { useSheetNavigation, type SheetNavigationDirection } from '@/composables/useSheetNavigation'
 import type { MailSummary, MailAttachmentInfo } from '@/api/mail'
 import MailSettings from './MailSettings.vue'
 import MailExternalAccounts from './MailExternalAccounts.vue'
@@ -207,26 +230,36 @@ const visibleConversations=computed(()=>{
   return scoped.filter(group=>!isMessageSnoozed(group.latest))
 })
 
-const currentGroupIndex = computed(() => {
-  if (!selectedGroupId.value) return -1
-  return visibleConversations.value.findIndex(g => g.id === selectedGroupId.value)
+const isReaderOpen = computed(() => Boolean(selectedGroupId.value && readerMessages.value.length))
+
+const loadMailNavigationItems = async () => {
+  return visibleConversations.value.map(group => ({
+    id: group.id,
+    label: group.latest.subject?.trim() || '(无主题)',
+  }))
+}
+
+const {
+  navigation,
+  loading: navigationLoading,
+  direction: navigationDirection,
+  navigate: handleSheetNavigate,
+  load: reloadNavigation,
+} = useSheetNavigation(
+  selectedGroupId,
+  loadMailNavigationItems,
+  (targetId: string) => {
+    const group = visibleConversations.value.find(g => g.id === targetId)
+    if (group) {
+      void openConversation(group)
+    }
+  },
+  isReaderOpen,
+)
+
+watch(visibleConversations, () => {
+  void reloadNavigation()
 })
-const hasPrevMail = computed(() => currentGroupIndex.value > 0)
-const hasNextMail = computed(() => currentGroupIndex.value !== -1 && currentGroupIndex.value < visibleConversations.value.length - 1)
-
-function goToPrevMail() {
-  if (hasPrevMail.value) {
-    const prevGroup = visibleConversations.value[currentGroupIndex.value - 1]
-    if (prevGroup) void openConversation(prevGroup)
-  }
-}
-
-function goToNextMail() {
-  if (hasNextMail.value) {
-    const nextGroup = visibleConversations.value[currentGroupIndex.value + 1]
-    if (nextGroup) void openConversation(nextGroup)
-  }
-}
 
 function handleCloseReader() {
   clearReader()
@@ -236,16 +269,8 @@ function handleCloseReader() {
 async function archiveAndAdvance() {
   if (!readerMessages.value.length || actionBusy.value) return
   const currentIds = readerMessages.value.map(row => row.id)
-  const groups = visibleConversations.value
-  const currentIndex = currentGroupIndex.value
-  let nextGroup: (typeof groups)[number] | null = null
-  if (currentIndex !== -1) {
-    if (currentIndex + 1 < groups.length) {
-      nextGroup = groups[currentIndex + 1] || null
-    } else if (currentIndex > 0) {
-      nextGroup = groups[currentIndex - 1] || null
-    }
-  }
+  const nextTargetId = navigation.value.next?.id || navigation.value.previous?.id || null
+  const nextGroup = nextTargetId ? visibleConversations.value.find(g => g.id === nextTargetId) || null : null
 
   await performAction('archive', currentIds)
   if (nextGroup) {
@@ -258,16 +283,8 @@ async function archiveAndAdvance() {
 async function trashAndAdvance() {
   if (!readerMessages.value.length || actionBusy.value) return
   const currentIds = readerMessages.value.map(row => row.id)
-  const groups = visibleConversations.value
-  const currentIndex = currentGroupIndex.value
-  let nextGroup: (typeof groups)[number] | null = null
-  if (currentIndex !== -1) {
-    if (currentIndex + 1 < groups.length) {
-      nextGroup = groups[currentIndex + 1] || null
-    } else if (currentIndex > 0) {
-      nextGroup = groups[currentIndex - 1] || null
-    }
-  }
+  const nextTargetId = navigation.value.next?.id || navigation.value.previous?.id || null
+  const nextGroup = nextTargetId ? visibleConversations.value.find(g => g.id === nextTargetId) || null : null
 
   await performAction('trash', currentIds)
   if (nextGroup) {
@@ -438,14 +455,18 @@ function handleMailShortcut(event: KeyboardEvent) {
 
   // 5. Navigation: J (next) / K (previous)
   if (key === 'j' || key === 'k') {
-    const groups = visibleConversations.value
-    if (!groups.length || isDraftFolder.value) return
-    const current = groups.findIndex(group => group.id === selectedGroupId.value)
-    const next = current === -1 ? 0 : Math.max(0, Math.min(groups.length - 1, current + (key === 'j' ? 1 : -1)))
-    const group = groups[next]
-    if (group) {
-      void openConversation(group)
-      event.preventDefault()
+    if (isDraftFolder.value) return
+    const direction: SheetNavigationDirection = key === 'j' ? 'next' : 'previous'
+    if (selectedGroupId.value) {
+      if (handleSheetNavigate(direction)) {
+        event.preventDefault()
+      }
+    } else {
+      const groups = visibleConversations.value
+      if (groups.length) {
+        void openConversation(groups[0]!)
+        event.preventDefault()
+      }
     }
     return
   }

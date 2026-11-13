@@ -45,7 +45,20 @@ export function useMailWorkspace() {
     }
     return fallback
   }
-  function clearReader() { readerGeneration++; selectedGroupId.value = ''; readerMessages.value = []; expanded.value = new Set(); details.value = {}; detailErrors.value = {}; detailLoading.value = new Set(); htmlShown.value = {}; threadError.value = '' }
+  function resetReaderState() {
+    readerGeneration++
+    expanded.value = new Set()
+    details.value = {}
+    detailErrors.value = {}
+    detailLoading.value = new Set()
+    htmlShown.value = {}
+    threadError.value = ''
+  }
+  function clearReader() {
+    resetReaderState()
+    selectedGroupId.value = ''
+    readerMessages.value = []
+  }
   async function loadFolders(preserve = false) {
     const generation = ++folderGeneration
     foldersLoading.value = true; foldersError.value = ''
@@ -101,9 +114,12 @@ export function useMailWorkspace() {
   function selectAll() { selection.value = allSelected.value ? new Set() : new Set(messages.value.slice(0, 100).map(row => row.id)) }
   function toggleGroup(group: MailConversation) { const next = new Set(selection.value); const remove = group.messages.every(row => next.has(row.id)); for (const row of group.messages) { if (remove) next.delete(row.id); else if (next.size < 100) next.add(row.id) }; selection.value = next }
   async function openConversation(group: MailConversation) {
-    clearReader(); selectedGroupId.value = group.id; mobilePane.value = 'reader'
+    resetReaderState()
+    selectedGroupId.value = group.id
+    mobilePane.value = 'reader'
     readerMessages.value = [...group.messages].sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))
-    expanded.value = new Set([group.latest.id]); void loadDetail(group.latest)
+    expanded.value = new Set([group.latest.id])
+    void loadDetail(group.latest)
     if (!conversationMode.value || !group.latest.threadId) return
     const generation = readerGeneration, folderId = currentFolderId.value
     try {

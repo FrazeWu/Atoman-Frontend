@@ -70,7 +70,7 @@
           <PIcon v-else name="moon" size="md" />
         </button>
         <AppTopbarAuthControls v-if="showAuthControls" />
-        <PButton v-else to="/login" size="sm">登录</PButton>
+        <PButton v-else-if="!isAuthPage" to="/login" size="sm">登录</PButton>
       </div>
     </div>
   </header>
@@ -126,6 +126,10 @@ const handleModuleNavigation = () => {
 const authStore = useAuthStore()
 const siteAccessStore = useSiteAccessStore()
 const showAuthControls = computed(() => authStore.isAuthenticated && !!authStore.user)
+const isAuthPage = computed(() => {
+  const p = route.path
+  return p === '/login' || p === '/register' || p === '/forgot-password'
+})
 
 const navRooms = computed(() => topbarNavOrder.filter((key) => siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key]))
 const siteContext = computed(() => {
@@ -260,22 +264,7 @@ const toggleTheme = (event: MouseEvent) => {
   z-index: var(--a-z-navigation);
   background: var(--a-color-bg);
   height: var(--a-topbar-height);
-}
-
-.topbar::after {
-  content: '';
-  position: absolute;
-  left: calc(50% + var(--a-sidebar-width, 0px) / 2);
-  bottom: 0;
-  width: 20px;
-  height: 1px;
-  transform: translateX(-50%);
-  background: var(--a-color-fg);
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.topbar.is-scrolled::after {
-  width: calc((100% - var(--a-sidebar-width, 0px)) * 0.75);
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 :root.dark .topbar,

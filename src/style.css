@@ -1198,20 +1198,8 @@ body:has(.app-shell.has-sidebar) {
 	overflow-y: auto;
 	display: flex;
 	flex-direction: column;
+	border-right: 1px solid var(--a-color-border-soft);
 	z-index: 20;
-}
-
-.a-sidebar::after,
-.p-sidebar::after {
-	content: "";
-	position: absolute;
-	right: 0;
-	top: 50%;
-	width: 1px;
-	height: 16px;
-	transform: translateY(-50%);
-	background: var(--a-color-fg);
-	pointer-events: none;
 }
 
 .a-sidebar::-webkit-scrollbar,
@@ -1399,10 +1387,6 @@ html:not([data-atoman-app="mobile"]) .mobile-bottom-nav {
 	}
 	.p-sidebar,
 	.a-sidebar {
-		display: none;
-	}
-	.a-sidebar::after,
-	.p-sidebar::after {
 		display: none;
 	}
 	.app-shell.has-sidebar .site-footer {

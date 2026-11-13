@@ -91,4 +91,23 @@ describe('Mail composer',()=>{
   api.save.mockRejectedValue(new Error('offline'));const w=mountComposer();await w.get('input[aria-label="收件人"]').setValue('a@example.test');await w.get('textarea').setValue('Hello');await w.get('button[aria-label="关闭写信"]').trigger('click');await flushPromises()
   expect(w.emitted('close')).toBeUndefined();expect(api.queue).not.toHaveBeenCalled();expect(w.text()).toContain('草稿保存失败')
  })
+ it('supports sending via Cmd/Ctrl + Enter shortcut', async () => {
+  const w = mountComposer(); await flushPromises()
+  await w.get('input[aria-label="收件人"]').setValue('a@example.test')
+  await w.get('textarea').setValue('Shortcut body')
+  await w.get('textarea').trigger('keydown', { key: 'Enter', metaKey: true })
+  await flushPromises()
+  expect(api.queue).toHaveBeenCalledTimes(1)
+  expect(w.emitted('queued')).toHaveLength(1)
+ })
+ it('supports drag and drop file attachments', async () => {
+  api.upload.mockResolvedValue({ id: 'att-1', name: 'document.pdf', size: 1024, content_type: 'application/pdf' })
+  const w = mountComposer(); await flushPromises()
+  const file = new File(['mock content'], 'document.pdf', { type: 'application/pdf' })
+  const dropEvent = { dataTransfer: { files: [file] } }
+  await w.get('form').trigger('drop', dropEvent)
+  await flushPromises()
+  expect(api.upload).toHaveBeenCalledWith(file)
+  expect(w.text()).toContain('document.pdf')
+ })
 })

@@ -291,7 +291,29 @@ watch(sort, () => {
   font-size: 0.85rem;
 }
 .vh-recommendation-item { position: relative; min-width: 0; }
-.vh-recommendation-feedback { position: absolute; top: .5rem; right: .5rem; display: grid; width: 2rem; height: 2rem; place-items: center; border: 0; border-radius: var(--a-radius-control); background: rgba(0,0,0,.7); color: #fff; cursor: pointer; }
+.vh-recommendation-item :deep(.p-dropdown-root) {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 5;
+}
+.vh-recommendation-feedback {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 0;
+  border-radius: var(--a-radius-control);
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+.vh-recommendation-feedback:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.85);
+}
 .vh-recommendation-menu { display: grid; min-width: 10rem; padding: .25rem; background: var(--a-color-bg); border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); }
 .vh-recommendation-menu button { min-height: 2.25rem; border: 0; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-fg); text-align: left; padding: 0 0.75rem; cursor: pointer; }
 .vh-recommendation-menu button:hover { background: var(--a-color-surface-muted); }

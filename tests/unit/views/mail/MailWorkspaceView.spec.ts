@@ -122,4 +122,22 @@ describe('Mail workspace', () => {
     await flushPromises()
     expect(wrapper.find('[data-testid="mail-plain-text"]').exists()).toBe(false)
   })
+  it('uses full-width PSheet mode and supports navigation between mails', async () => {
+    const wrapper = mountView(); await flushPromises()
+    await wrapper.get('[data-testid="mode-single"]').trigger('click'); await flushPromises()
+    const rows = wrapper.findAll('[data-testid^="mail-message-"]')
+    expect(rows).toHaveLength(2)
+
+    await rows[0]!.trigger('click'); await flushPromises()
+    const sheet = wrapper.findComponent({ name: 'PSheet' })
+    expect(sheet.exists()).toBe(true)
+    expect(sheet.props('mode')).toBe('full')
+    expect(sheet.props('contentMaxWidth')).toBe('96rem')
+    expect(sheet.props('navigation')).toBeDefined()
+
+    // Press 'j' to navigate to next mail
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    await flushPromises()
+    expect(api.read).toHaveBeenCalledWith('inbox', 'one')
+  })
 })

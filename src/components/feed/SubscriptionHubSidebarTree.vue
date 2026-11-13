@@ -199,14 +199,27 @@ const sourceType = (item: SubscriptionHubMembership) =>
 }
 .subscription-hub-sidebar__error {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  color: var(--a-color-danger);
+  padding: 0.5rem 0.65rem;
+  font-size: 11px;
+  color: var(--a-color-muted);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+  gap: 0.5rem;
 }
 .subscription-hub-sidebar__error button {
-  border: 0;
-  background: var(--a-color-surface-muted);
-  color: inherit;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
+  padding: 2px 6px;
+  font-size: 11px;
+  border-radius: var(--a-radius-control);
   cursor: pointer;
+  white-space: nowrap;
+}
+.subscription-hub-sidebar__error button:hover {
+  background: var(--a-color-surface);
 }
 .subscription-hub-sidebar__source {
   display: grid;

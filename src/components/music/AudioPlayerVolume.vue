@@ -1,5 +1,5 @@
 <template>
-  <div class="volume-container" @wheel.prevent="handleWheel">
+  <div class="volume-container" :class="{ 'is-dragging': isDragging }" @wheel.prevent="handleWheel">
     <div class="vol-trigger" data-hint="静音 / 解除静音 (M)">
       <button
         type="button"
@@ -15,8 +15,13 @@
       </button>
     </div>
     <div class="volume-control">
-      <div class="vol-slider-wrapper">
+      <div
+        ref="sliderWrapperRef"
+        class="vol-slider-wrapper"
+        @pointerdown="handlePointerDown"
+      >
         <input
+          ref="sliderInputRef"
           type="range"
           min="0"
           max="1"
@@ -25,7 +30,9 @@
           :style="{ '--vol-percent': `${volume * 100}%` }"
           class="vol-slider"
           aria-label="音量"
-          @input="$emit('change', parseFloat(($event.target as HTMLInputElement).value))"
+          @input="handleInput"
+          @change="handleInput"
+          @keydown="handleKeydown"
         />
       </div>
       <span class="vol-percentage" aria-live="off">{{ Math.round(volume * 100) }}%</span>
@@ -34,6 +41,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import PIcon from '@/components/ui/PIcon.vue'
 
 const props = defineProps<{
@@ -44,6 +52,69 @@ const emit = defineEmits<{
   'change': [volume: number]
   'toggle-mute': []
 }>()
+
+const sliderWrapperRef = ref<HTMLElement | null>(null)
+const sliderInputRef = ref<HTMLInputElement | null>(null)
+const isDragging = ref(false)
+
+const handleInput = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  const val = parseFloat(target.value)
+  if (!Number.isNaN(val)) {
+    emit('change', val)
+  }
+}
+
+const updateFromPointer = (e: PointerEvent) => {
+  if (!sliderWrapperRef.value) return
+  const rect = sliderWrapperRef.value.getBoundingClientRect()
+  if (rect.width <= 0) return
+  const rawRatio = (e.clientX - rect.left) / rect.width
+  const nextVolume = Math.min(1, Math.max(0, Math.round(rawRatio * 100) / 100))
+  emit('change', nextVolume)
+}
+
+const handlePointerDown = (e: PointerEvent) => {
+  if (e.button !== 0) return
+  isDragging.value = true
+  updateFromPointer(e)
+
+  const onPointerMove = (moveEvent: PointerEvent) => {
+    if (!isDragging.value) return
+    updateFromPointer(moveEvent)
+  }
+
+  const onPointerUp = () => {
+    isDragging.value = false
+    window.removeEventListener('pointermove', onPointerMove)
+    window.removeEventListener('pointerup', onPointerUp)
+    window.removeEventListener('pointercancel', onPointerUp)
+  }
+
+  window.addEventListener('pointermove', onPointerMove)
+  window.addEventListener('pointerup', onPointerUp)
+  window.addEventListener('pointercancel', onPointerUp)
+}
+
+const handleKeydown = (e: KeyboardEvent) => {
+  let nextVol = props.volume
+  if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+    nextVol = Math.min(1, Math.round((props.volume + 0.05) * 100) / 100)
+    e.preventDefault()
+  } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+    nextVol = Math.max(0, Math.round((props.volume - 0.05) * 100) / 100)
+    e.preventDefault()
+  } else if (e.key === 'Home') {
+    nextVol = 0
+    e.preventDefault()
+  } else if (e.key === 'End') {
+    nextVol = 1
+    e.preventDefault()
+  }
+  if (nextVol !== props.volume) {
+    emit('change', nextVol)
+  }
+}
 
 const handleWheel = (e: WheelEvent) => {
   const delta = e.deltaY < 0 ? 0.05 : -0.05
@@ -101,17 +172,29 @@ const handleWheel = (e: WheelEvent) => {
   display: flex;
   align-items: center;
   width: 76px;
-  height: 20px;
+  height: 24px;
+  cursor: pointer;
+  touch-action: none;
+  position: relative;
 }
 
 .vol-slider {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 4px;
-  border-radius: 999px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
   outline: none;
   cursor: pointer;
+}
+
+/* Track styles */
+.vol-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
   background: linear-gradient(
     to right,
     var(--a-color-primary) 0%,
@@ -119,12 +202,10 @@ const handleWheel = (e: WheelEvent) => {
     var(--a-color-surface-muted) var(--vol-percent, 50%),
     var(--a-color-surface-muted) 100%
   );
-  transition:
-    height 0.15s ease,
-    background 0.08s linear;
+  transition: background 0.08s linear;
 }
 
-:root.dark .vol-slider {
+:root.dark .vol-slider::-webkit-slider-runnable-track {
   background: linear-gradient(
     to right,
     var(--a-color-primary) 0%,
@@ -134,56 +215,69 @@ const handleWheel = (e: WheelEvent) => {
   );
 }
 
-.volume-container:hover .vol-slider,
-.vol-slider:focus-visible,
-.vol-slider:active {
-  height: 6px;
+.vol-slider::-moz-range-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--a-color-primary) 0%,
+    var(--a-color-primary) var(--vol-percent, 50%),
+    var(--a-color-surface-muted) var(--vol-percent, 50%),
+    var(--a-color-surface-muted) 100%
+  );
 }
 
+:root.dark .vol-slider::-moz-range-track {
+  background: linear-gradient(
+    to right,
+    var(--a-color-primary) 0%,
+    var(--a-color-primary) var(--vol-percent, 50%),
+    rgba(255, 255, 255, 0.16) var(--vol-percent, 50%),
+    rgba(255, 255, 255, 0.16) 100%
+  );
+}
+
+/* Thumb styles */
 .vol-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--a-color-surface);
   border: 1.5px solid var(--a-color-primary);
   box-shadow: none;
   cursor: pointer;
+  margin-top: -4px;
   opacity: 0;
-  transform: scale(0.6);
-  transition:
-    opacity 0.15s ease,
-    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.15s ease;
 }
 
 .volume-container:hover .vol-slider::-webkit-slider-thumb,
 .vol-slider:focus-visible::-webkit-slider-thumb,
-.vol-slider:active::-webkit-slider-thumb {
+.vol-slider:active::-webkit-slider-thumb,
+.is-dragging .vol-slider::-webkit-slider-thumb {
   opacity: 1;
-  transform: scale(1);
 }
 
 .vol-slider::-moz-range-thumb {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: var(--a-color-surface);
   border: 1.5px solid var(--a-color-primary);
   box-shadow: none;
   cursor: pointer;
   opacity: 0;
-  transform: scale(0.6);
-  transition:
-    opacity 0.15s ease,
-    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.15s ease;
 }
 
 .volume-container:hover .vol-slider::-moz-range-thumb,
 .vol-slider:focus-visible::-moz-range-thumb,
-.vol-slider:active::-moz-range-thumb {
+.vol-slider:active::-moz-range-thumb,
+.is-dragging .vol-slider::-moz-range-thumb {
   opacity: 1;
-  transform: scale(1);
 }
 
 .vol-percentage {

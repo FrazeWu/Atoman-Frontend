@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import AudioPlayerVolume from '@/components/music/AudioPlayerVolume.vue'
 
@@ -73,5 +73,57 @@ describe('AudioPlayerVolume.vue', () => {
     })
     await wrapperLow.find('.volume-container').trigger('wheel', { deltaY: 100 })
     expect(wrapperLow.emitted('change')?.[0]?.[0]).toBe(0)
+  })
+
+  it('updates volume via keyboard ArrowUp, ArrowDown, Home and End keys', async () => {
+    const wrapper = mount(AudioPlayerVolume, {
+      props: {
+        volume: 0.5,
+      },
+    })
+
+    const slider = wrapper.find('.vol-slider')
+
+    await slider.trigger('keydown', { key: 'ArrowUp' })
+    expect(wrapper.emitted('change')?.[0]?.[0]).toBe(0.55)
+
+    await slider.trigger('keydown', { key: 'ArrowDown' })
+    expect(wrapper.emitted('change')?.[1]?.[0]).toBe(0.45)
+
+    await slider.trigger('keydown', { key: 'Home' })
+    expect(wrapper.emitted('change')?.[2]?.[0]).toBe(0)
+
+    await slider.trigger('keydown', { key: 'End' })
+    expect(wrapper.emitted('change')?.[3]?.[0]).toBe(1)
+  })
+
+  it('updates volume on pointerdown on slider wrapper', async () => {
+    const wrapper = mount(AudioPlayerVolume, {
+      props: {
+        volume: 0.5,
+      },
+    })
+
+    const wrapperEl = wrapper.find('.vol-slider-wrapper')
+    // Mock getBoundingClientRect
+    vi.spyOn(wrapperEl.element, 'getBoundingClientRect').mockReturnValue({
+      left: 100,
+      width: 100,
+      right: 200,
+      top: 0,
+      bottom: 24,
+      height: 24,
+      x: 100,
+      y: 0,
+      toJSON: () => {},
+    })
+
+    // Click at clientX = 175 (75% of slider)
+    await wrapperEl.trigger('pointerdown', {
+      button: 0,
+      clientX: 175,
+    })
+
+    expect(wrapper.emitted('change')?.[0]?.[0]).toBe(0.75)
   })
 })

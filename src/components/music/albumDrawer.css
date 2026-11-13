@@ -30,8 +30,8 @@
   align-items: flex-start;
 }
 .album-cover {
-  width: 220px;
-  height: 220px;
+  width: 280px;
+  height: 280px;
   flex-shrink: 0;
 }
 
@@ -65,7 +65,7 @@
   gap: 0.35rem;
   margin-top: 1rem;
 }
-.album-skeleton-actions { margin-top: 1.5rem; }
+.album-skeleton-actions { margin-top: auto; }
 .album-skeleton-track { cursor: default; }
 .album-skeleton-track:hover {
   background: transparent;
@@ -75,7 +75,7 @@
   display: flex;
   flex-direction: column;
   align-self: stretch;
-  justify-content: center;
+  min-height: 280px;
 }
 .album-type {
   font-family: var(--a-font-sans);
@@ -220,7 +220,8 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 0.75rem;
-  margin-top: 1.5rem;
+  margin-top: auto;
+  padding-top: 1.25rem;
 }
 .album-more-trigger {
   display: inline-grid;
@@ -302,6 +303,7 @@
 
   .album-info {
     min-width: 0;
+    min-height: auto;
   }
 
   .album-title {
@@ -317,6 +319,8 @@
   .album-actions {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 2.75rem;
+    margin-top: 1.25rem;
+    padding-top: 0;
   }
 
   .album-actions :deep([data-testid="album-copy-uuid"]) {

@@ -13,6 +13,7 @@ export interface MusicShortcutContextOptions {
   activeElement?: Element | null
   showLyrics?: boolean
   showQueue?: boolean
+  isMusicRoute?: boolean
 }
 
 /**
@@ -78,26 +79,35 @@ export function isPlayerActiveContext(
   options: MusicShortcutContextOptions = {},
   active: Element | null = typeof document !== 'undefined' ? document.activeElement : null
 ): boolean {
-  if (!active || !(active instanceof HTMLElement)) {
-    // 焦点丢失在 body 上时，若歌词面板在前台处于展示状态，判定为沉浸式歌词上下文
-    return Boolean(options.showLyrics)
-  }
-
   // 1. 焦点处于底栏播放器或悬浮小播放器内
-  if (Boolean(active.closest?.('.player, .audio-player, .player-mini'))) {
+  if (active && Boolean(active.closest?.('.player, .audio-player, .player-mini'))) {
     return true
   }
 
-  // 2. 歌词面板打开且焦点在歌词面板内部或处于面板全局模式
+  // 2. 歌词面板打开且焦点在歌词面板内部或处于 body
   if (options.showLyrics) {
+    if (!active) return true
     const insideLyrics = Boolean(active.closest?.('.music-lyrics-panel'))
-    const onBody = active === document.body || !active
+    const onBody = active === document.body || active === document.documentElement
     if (insideLyrics || onBody) return true
   }
 
-  // 3. 队列抽屉获得焦点
-  if (options.showQueue && Boolean(active.closest?.('.audio-player-queue, [data-player-queue]'))) {
-    return true
+  // 3. 队列抽屉展开且焦点在队列内部或处于 body
+  if (options.showQueue) {
+    if (!active) return true
+    const insideQueue = Boolean(active.closest?.('.audio-player-queue, [data-player-queue]'))
+    const onBody = active === document.body || active === document.documentElement
+    if (insideQueue || onBody) return true
+  }
+
+  // 4. 当前处于音乐/播客专属路由页面，且焦点在 body 或非输入/非弹窗区域
+  if (options.isMusicRoute) {
+    if (!active || active === document.body || active === document.documentElement) {
+      return true
+    }
+    if (!isInputOrIMEActive(undefined, active) && !active.closest?.('[role="dialog"], .p-modal, .p-sheet')) {
+      return true
+    }
   }
 
   return false
@@ -136,7 +146,7 @@ export function resolveMusicPlayerShortcut(
   }
 
   // ─────────────────────────────────────────────────────────────
-  // 2. 模态隔离保护：若页面存在打开的模态框/抽屉，且非播放器自身，则彻底阻断单键
+  // 2. 模态隔离保护：若页面存在打开的模态框/抽屉，且非播放器自身，则彻底阻断
   // ─────────────────────────────────────────────────────────────
   if (typeof document !== 'undefined') {
     const activeOverlay = document.querySelector(
@@ -145,23 +155,38 @@ export function resolveMusicPlayerShortcut(
     if (activeOverlay) {
       const activeEl = options.activeElement ?? document.activeElement
       const isInsidePlayer = Boolean(
-        activeEl?.closest?.('.player, .audio-player, .player-mini, .music-lyrics-panel')
+        activeEl?.closest?.('.player, .audio-player, .player-mini, .music-lyrics-panel, .audio-player-queue')
       )
       if (!isInsidePlayer) return null
     }
   }
 
   // ─────────────────────────────────────────────────────────────
-  // 3. 播放器激活域单键通道 (Player Active Context - Space / Arrows / M)
-  // 仅在明确聚焦播放器、展开歌词面板时生效！避免页面滚动与按钮激活被掠夺
+  // 3. 播放器激活域快捷键通道 (Player Active Context - Space / Arrows / Alt+Arrows / M / [/])
+  // 处于播放器、歌词/队列面板、音乐专属路由页面时激活
   // ─────────────────────────────────────────────────────────────
   const isContextActive = isPlayerActiveContext(options, options.activeElement)
   if (!isContextActive) {
-    // 在普通页面中，单键完全放行给浏览器原生（Space 翻页、方向键滚动、M/S 业务按键）
+    // 在普通非音乐页面中，放行给浏览器原生（Space 翻页、方向键滚动、Alt+Left 浏览器后退等）
     return null
   }
 
-  // 如果焦点在其它交互控件上（如普通按钮/Tab），按空格键由控件自身响应，播放器不劫持
+  // 在激活上下文中，优先支持 Alt + ← (上一首) 和 Alt + → (下一首) 等快捷键
+  if (event.altKey) {
+    if (event.key === 'ArrowLeft') return 'previous'
+    if (event.key === 'ArrowRight') return 'next'
+    if (event.key === ' ' || event.code === 'Space') return 'toggle-play'
+    if (event.key === 'ArrowUp') return 'volume-up'
+    if (event.key === 'ArrowDown') return 'volume-down'
+    if (key === 'm') return 'mute'
+    if (key === 'l') return 'lyrics'
+    return null
+  }
+
+  // 如果有其他修饰键（如非 Alt+Shift 的其他组合），单键不触发
+  if (event.shiftKey) return null
+
+  // 如果焦点在其它交互控件上（如普通按钮/Tab/链接），按空格键由控件自身响应，播放器不劫持
   if (isInteractiveWidgetActive(options.activeElement ?? document.activeElement)) {
     return null
   }
@@ -172,6 +197,8 @@ export function resolveMusicPlayerShortcut(
   if (event.key === 'ArrowUp') return 'volume-up'
   if (event.key === 'ArrowDown') return 'volume-down'
   if (key === 'm') return 'mute'
+  if (key === '[') return 'previous'
+  if (key === ']') return 'next'
 
   return null
 }

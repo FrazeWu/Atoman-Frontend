@@ -98,6 +98,38 @@ describe('musicKeyboardShortcuts Unit Tests', () => {
       expect(result).toBe('toggle-play')
     })
 
+    it('triggers previous and next track with Alt+Arrows and [/] in player context', () => {
+      const playerEl = document.createElement('div')
+      playerEl.className = 'player'
+      const focusTarget = document.createElement('div')
+      playerEl.appendChild(focusTarget)
+      document.body.appendChild(playerEl)
+
+      expect(
+        resolveMusicPlayerShortcut(keydown('ArrowLeft', { altKey: true }), { activeElement: focusTarget })
+      ).toBe('previous')
+      expect(
+        resolveMusicPlayerShortcut(keydown('ArrowRight', { altKey: true }), { activeElement: focusTarget })
+      ).toBe('next')
+      expect(
+        resolveMusicPlayerShortcut(keydown('['), { activeElement: focusTarget })
+      ).toBe('previous')
+      expect(
+        resolveMusicPlayerShortcut(keydown(']'), { activeElement: focusTarget })
+      ).toBe('next')
+    })
+
+    it('supports music route shortcuts when browsing /music with body focus', () => {
+      expect(resolveMusicPlayerShortcut(keydown(' '), { isMusicRoute: true })).toBe('toggle-play')
+      expect(resolveMusicPlayerShortcut(keydown('ArrowLeft', { altKey: true }), { isMusicRoute: true })).toBe('previous')
+      expect(resolveMusicPlayerShortcut(keydown('ArrowRight', { altKey: true }), { isMusicRoute: true })).toBe('next')
+      expect(resolveMusicPlayerShortcut(keydown('ArrowLeft'), { isMusicRoute: true })).toBe('skip-back')
+      expect(resolveMusicPlayerShortcut(keydown('ArrowRight'), { isMusicRoute: true })).toBe('skip-forward')
+      expect(resolveMusicPlayerShortcut(keydown('ArrowUp'), { isMusicRoute: true })).toBe('volume-up')
+      expect(resolveMusicPlayerShortcut(keydown('ArrowDown'), { isMusicRoute: true })).toBe('volume-down')
+      expect(resolveMusicPlayerShortcut(keydown('m'), { isMusicRoute: true })).toBe('mute')
+    })
+
     it('allows single Space and Arrows when lyrics panel is active', () => {
       expect(resolveMusicPlayerShortcut(keydown(' '), { showLyrics: true })).toBe('toggle-play')
       expect(resolveMusicPlayerShortcut(keydown('ArrowLeft'), { showLyrics: true })).toBe('skip-back')

@@ -430,12 +430,10 @@ function handleKeydown(event: KeyboardEvent) {
 
 function handleWindowKeydown(event: KeyboardEvent) {
   if (event.key !== 'Escape' || event.defaultPrevented) return
-  if (queuePanelRef.value?.contains(document.activeElement)) return
   player.toggleQueue()
 }
 
 function handleWindowPointerDown(event: PointerEvent) {
-  if (!player.showQueue) return
   const target = event.target as HTMLElement | null
   if (!target) return
   if (queuePanelRef.value?.contains(target)) return

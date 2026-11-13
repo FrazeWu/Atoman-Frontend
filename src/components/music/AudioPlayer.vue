@@ -338,10 +338,15 @@ function cyclePlaybackRate() {
 function handleGlobalKeydown(e: KeyboardEvent) {
   if (!player.currentSong) return;
 
+  const isMusicRoute = Boolean(
+    route.path.startsWith('/music') || route.path.startsWith('/podcast')
+  );
+
   const shortcut = resolveMusicPlayerShortcut(e, {
     activeElement: typeof document !== 'undefined' ? document.activeElement : null,
     showLyrics: player.showLyrics,
     showQueue: player.showQueue,
+    isMusicRoute,
   });
   if (!shortcut) return;
   e.preventDefault();
@@ -349,8 +354,8 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   else if (shortcut === 'toggle-play') player.togglePlay();
   else if (shortcut === 'previous') player.playPrevious();
   else if (shortcut === 'next') player.playNext();
-  else if (shortcut === 'skip-back') player.skip(-5);
-  else if (shortcut === 'skip-forward') player.skip(5);
+  else if (shortcut === 'skip-back') player.skip(isPodcast.value ? -15 : -5);
+  else if (shortcut === 'skip-forward') player.skip(isPodcast.value ? 15 : 5);
   else if (shortcut === 'mute') player.toggleMute();
   else if (shortcut === 'volume-up') player.setVolume(player.volume + 0.05);
   else if (shortcut === 'volume-down') player.setVolume(player.volume - 0.05);

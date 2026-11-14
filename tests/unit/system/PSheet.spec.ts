@@ -583,7 +583,7 @@ describe("PSheet.vue", () => {
 			/\.p-sheet-panel\.is-shifted\s+\.sheet-layer-rail\s*\{[\s\S]*?pointer-events:\s*auto/,
 		);
 		expect(source).toMatch(
-			/:style="\{ top: backdropTop, zIndex: backdropZIndex \}"/,
+			/:style="\{ top: backdropTop, zIndex: backdropZIndex, left: backdropLeft \}"/,
 		);
 	});
 

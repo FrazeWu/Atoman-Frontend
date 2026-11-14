@@ -1,4 +1,5 @@
 import { buildStaticPageHtml, isKnownPagePath } from "./_lib/pageSeo";
+import { injectPublicSectionListing, loadPublicSectionListing } from "./_lib/sectionContentSeo";
 import {
 	buildAggregatedContentHtml,
 	buildMissingPublicContentHtml,
@@ -139,7 +140,7 @@ export async function onRequest(context: MiddlewareContext) {
 		const missingSeoPage =
 			(lookup.matched && !lookup.content && !lookup.retryable) ||
 			(!lookup.matched && !isKnownPagePath(requestUrl.pathname));
-		const transformedHtml = isAggregatedFeedItemPath(requestUrl.pathname)
+		let transformedHtml = isAggregatedFeedItemPath(requestUrl.pathname)
 			? buildAggregatedContentHtml(staticHtml)
 			: lookup.content
 				? buildPublicContentHtml(staticHtml, lookup.content)
@@ -148,6 +149,14 @@ export async function onRequest(context: MiddlewareContext) {
 				: missingSeoPage
 					? buildMissingPublicContentHtml(staticHtml)
 					: staticHtml;
+		if (!missingSeoPage && !lookup.matched) {
+			const listing = await loadPublicSectionListing(
+				requestUrl.pathname,
+				context.env?.VITE_API_URL,
+				requestUrl.origin,
+			);
+			transformedHtml = injectPublicSectionListing(transformedHtml, listing);
+		}
 		const headers = new Headers(response.headers);
 		headers.delete("content-length");
 		headers.delete("content-encoding");

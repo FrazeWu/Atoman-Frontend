@@ -166,6 +166,17 @@
         font-weight: 500;
         text-decoration: none;
       }
+      .portal-prerender__sections {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px 24px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 18px;
+        font-size: 14px;
+      }
+      .portal-prerender__sections a { color: #555; text-decoration: underline; text-underline-offset: 3px; }
       .portal-prerender__actions a:first-child {
         border-color: #171717;
         color: #fff;
@@ -212,6 +223,15 @@
             </div>
           </div>
         </header>
+        <nav id="sections" class="portal-prerender__sections" aria-label="Atoman 公开栏目">
+          <a href="/posts">博客文章</a>
+          <a href="/books">图书馆</a>
+          <a href="/music">音乐档案</a>
+          <a href="/forum">公开讨论</a>
+          <a href="/debate">辩论</a>
+          <a href="/podcasts">播客</a>
+          <a href="/videos">视频</a>
+        </nav>
       </div>
       <!-- seo-prerender-end -->
     </div>

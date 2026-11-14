@@ -44,6 +44,22 @@ describe("static page SEO", () => {
 		expect(html).not.toContain('name="robots"');
 	});
 
+	it("renders distinct, crawlable initial section bodies and public internal links", () => {
+		const pageShell = '<!doctype html><html><head><title>Atoman</title></head><body><div id="app"><!-- seo-prerender-start --><div class="portal-prerender">HOME ONLY</div><!-- seo-prerender-end --></div></body></html>';
+		const books = buildStaticPageHtml(pageShell, "/books", "www.atoman.org");
+		const music = buildStaticPageHtml(pageShell, "/music", "www.atoman.org");
+		expect(books).toContain('<main class="seo-static-fallback" data-seo-fallback="section">');
+		expect(books).toContain('<h1>图书馆</h1>');
+		expect(books).toContain('href="/books/lists"');
+		expect(books).not.toContain('HOME ONLY');
+		expect(music).toContain('<h1>音乐档案</h1>');
+		expect(music).toContain('href="/podcasts"');
+		expect(music).not.toContain('HOME ONLY');
+		expect(books).not.toBe(music);
+		expect(buildStaticPageHtml(pageShell, "/", "www.atoman.org")).toContain('HOME ONLY');
+		expect(buildStaticPageHtml(pageShell, "/search", "www.atoman.org")).not.toContain('seo-static-fallback');
+	});
+
 	it("marks preview deployments and private application routes as noindex", () => {
 		expect(
 			buildStaticPageHtml(shell, "/", "preview.atoman-frontend.pages.dev"),

@@ -68,6 +68,58 @@ const pageMeta: Record<string, StaticPageMeta> = {
 	},
 };
 
+// These are real, public destinations. Keep the initial HTML specific to the
+// requested section instead of shipping the home page's placeholder to crawlers.
+const publicSectionLinks: Record<string, string[]> = {
+  "/": ["/feed", "/posts", "/books", "/music", "/forum", "/podcasts", "/videos"],
+  "/feed": ["/posts", "/podcasts", "/videos", "/music"],
+  "/posts": ["/feed", "/forum", "/debate"],
+  "/books": ["/books/lists", "/posts", "/forum"],
+  "/books/lists": ["/books", "/posts"],
+  "/music": ["/podcasts", "/videos", "/posts"],
+  "/forum": ["/debate", "/posts"],
+  "/debate": ["/forum", "/posts"],
+  "/timeline": ["/posts", "/books"],
+  "/podcasts": ["/feed", "/posts", "/music"],
+  "/videos": ["/posts", "/music"],
+  "/about": ["/feed", "/books", "/music", "/forum"],
+  "/terms": ["/about", "/privacy"],
+  "/privacy": ["/about", "/terms"],
+};
+
+function buildSectionFallback(path: string, meta: StaticPageMeta) {
+  const links = (publicSectionLinks[path] || [])
+    .filter((destination) => pageMeta[destination])
+    .map((destination) =>
+      `<li><a href="${escapeHtml(destination)}">${escapeHtml(pageMeta[destination].title.split(" | ")[0])}</a></li>`,
+    ).join("");
+  const fallback = [
+    '<main class="seo-static-fallback" data-seo-fallback="section">',
+    `<h1>${escapeHtml(meta.title.split(" | ")[0])}</h1>`,
+    `<p>${escapeHtml(meta.description)}</p>`,
+    links ? `<nav aria-label="探索 Atoman 其他公开栏目"><h2>探索更多公开内容</h2><ul>${links}</ul></nav>` : "",
+    "</main>",
+  ].join("");
+  return fallback;
+}
+
+function replaceSectionFallback(html: string, path: string, meta: StaticPageMeta) {
+  // A visible, crawlable loading shell is replaced automatically when Vue mounts.
+  // The home page keeps its existing designed prerender loading screen.
+  if (path === "/") return html;
+  const marker = /<!--\s*seo-prerender-start\s*-->[\s\S]*?<!--\s*seo-prerender-end\s*-->/i;
+  const result = marker.test(html)
+    ? html.replace(marker, buildSectionFallback(path, meta))
+    : html.replace(/<div id=["']app["']>/i, (match) => `${match}${buildSectionFallback(path, meta)}`);
+  return result.replace(/<\/head>/i, `    <style data-seo-section-fallback>
+      .seo-static-fallback { display: block; min-height: 30vh; max-width: 900px; margin: 0 auto; padding: 48px 24px; color: #171717; font: 16px/1.65 system-ui, sans-serif; }
+      .seo-static-fallback h1 { font-size: 30px; line-height: 1.3; margin: 0 0 18px; }
+      .seo-static-fallback h2 { font-size: 20px; margin: 30px 0 12px; }
+      .seo-static-fallback ul { padding-left: 1.4em; }
+      .seo-static-fallback a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+    </style>\n  </head>`);
+}
+
 const noIndexPrefixes = [
 	"/login",
 	"/register",
@@ -201,8 +253,9 @@ export function buildStaticPageHtml(
 				"",
 			);
 	if (!tags.length) return cleanHtml;
-	return cleanHtml.replace(
+	const pageHtml = cleanHtml.replace(
 		/<\/head>/i,
 		`    ${tags.join("\n    ")}\n  </head>`,
 	);
+	return meta ? replaceSectionFallback(pageHtml, path, meta) : pageHtml;
 }

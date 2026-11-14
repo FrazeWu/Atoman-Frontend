@@ -83,6 +83,21 @@ describe("public content SEO", () => {
 		expect(html).not.toContain("portal-prerender");
 	});
 
+	it("adds verified recording facts but rejects impossible release years", async () => {
+		const fetcher = vi.fn(async () => json({ data: {
+			song: { id: "song-1", title: "样本歌曲", lifecycle_status: "active", duration_sec: 206, release_date: "2202-01-01T00:00:00Z" },
+			artists: [{ name: "示例音乐人" }],
+		} })) as unknown as typeof fetch;
+		const lookup = await resolvePublicContentSeo("/music/song/song-1", "https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+		expect(lookup.content?.structuredData.duration).toBe("PT206S");
+		expect(lookup.content?.structuredData.datePublished).toBeUndefined();
+		const html = buildPublicContentHtml(shell, lookup.content!);
+		expect(html).toContain("作品资料");
+		expect(html).toContain("示例音乐人");
+		expect(html).toContain("3 分 26 秒");
+		expect(html).not.toContain("2202");
+	});
+
 	it("marks aggregated feed item pages as noindex without a homepage canonical", () => {
 		const html = buildAggregatedContentHtml(shell);
 

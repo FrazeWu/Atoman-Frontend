@@ -311,11 +311,21 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 		await getJson(`${apiBase}/music/songs/${encodeURIComponent(id)}`, fetcher),
 	);
 	const song = record(detail?.song);
-	if (!song || !text(song.id) || !text(song.title)) return undefined;
+	if (!song || !text(song.id) || !text(song.title) ||
+		(text(song.lifecycle_status) && text(song.lifecycle_status) !== "active")) return undefined;
 	const title = text(song.title);
 	const artists = names(detail?.artists);
 	const album = record(song.album);
-	const description = `在 Atoman 收听${artists.length ? ` ${artists.join("、")} 的` : ""}歌曲《${title}》，查看所属专辑与歌词。`;
+	const durationSeconds = typeof song.duration_sec === "number" && Number.isFinite(song.duration_sec) && song.duration_sec > 0
+		? Math.round(song.duration_sec) : undefined;
+	const durationLabel = durationSeconds === undefined ? "" : `${Math.floor(durationSeconds / 60)} 分 ${String(durationSeconds % 60).padStart(2, "0")} 秒`;
+	// Do not trust malformed catalog years (e.g. 2202) as real release dates.
+	const rawReleaseDate = date(song.release_date);
+	const releaseYear = rawReleaseDate ? Number(rawReleaseDate.slice(0, 4)) : NaN;
+	const releaseDate = Number.isInteger(releaseYear) && releaseYear >= 1000 && releaseYear <= new Date().getUTCFullYear() + 1
+		? rawReleaseDate : undefined;
+	const fallback = `在 Atoman 查看${artists.length ? ` ${artists.join("、")} 的` : ""}歌曲《${title}》的作品资料${durationLabel ? `，时长 ${durationLabel}` : ""}。`;
+	const description = plainText(song.description, fallback);
 	return content(
 		`/music/song/${encodeURIComponent(id)}`,
 		`《${title}》${artists.length ? ` - ${artists.join("、")}` : ""} | Atoman`,
@@ -326,6 +336,8 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 			description,
 			image: text(song.cover_url) || text(album?.cover_url) || undefined,
 			byArtist: artists.map((name) => ({ "@type": "MusicGroup", name })),
+			duration: durationSeconds !== undefined ? `PT${durationSeconds}S` : undefined,
+			datePublished: releaseDate,
 			inAlbum: text(album?.title)
 				? { "@type": "MusicAlbum", name: text(album?.title) }
 				: undefined,
@@ -682,6 +694,24 @@ export function buildPublicContentHtml(html: string, item: PublicContentSeo) {
 		text(item.structuredData.name) ||
 		text(item.structuredData.headline) ||
 		item.title;
+	const facts: Array<[string, string]> = [];
+	const entity = item.structuredData;
+	const authors = array(entity.author).map((author) => text(record(author)?.name)).filter(Boolean);
+	const performers = array(entity.byArtist).map((artist) => text(record(artist)?.name)).filter(Boolean);
+	if (authors.length) facts.push(["作者", authors.join("、")]);
+	if (performers.length) facts.push(["音乐人", performers.join("、")]);
+	if (text(entity.isbn)) facts.push(["ISBN", text(entity.isbn)]);
+	if (text(record(entity.publisher)?.name)) facts.push(["出版社", text(record(entity.publisher)?.name)]);
+	if (text(record(entity.inAlbum)?.name)) facts.push(["所属专辑", text(record(entity.inAlbum)?.name)]);
+	if (typeof entity.numberOfPages === "number" && entity.numberOfPages > 0)
+		facts.push(["页数", String(entity.numberOfPages)]);
+	if (typeof entity.duration === "string" && /^PT[0-9]+S$/.test(entity.duration)) {
+		const seconds = Number(entity.duration.slice(2, -1));
+		facts.push(["时长", `${Math.floor(seconds / 60)} 分 ${String(seconds % 60).padStart(2, "0")} 秒`]);
+	}
+	const factsHtml = facts.length
+		? `<section aria-label="作品资料"><h2>作品资料</h2><dl>${facts.map(([name, value]) => `<dt>${escapeHtml(name)}</dt><dd>${escapeHtml(value)}</dd>`).join("")}</dl></section>`
+		: "";
 	const fallbackHtml = injectSeoFallbackHtml(cleanDefaultMetadata(html), {
 		kind: "content",
 		title: structuredTitle,
@@ -693,7 +723,13 @@ export function buildPublicContentHtml(html: string, item: PublicContentSeo) {
 				? directVideoSource(item.structuredData.contentUrl)
 				: undefined,
 	});
-	return fallbackHtml.replace(
+	const detailedHtml = factsHtml
+		? fallbackHtml.replace(
+			/(<main data-seo-fallback="content"><h1>[\s\S]*?<\/h1><p>[\s\S]*?<\/p>)/,
+			(marker) => `${marker}${factsHtml}`,
+		)
+		: fallbackHtml;
+	return detailedHtml.replace(
 		/<\/head>/i,
 		`    ${tags}\n  </head>`,
 	);

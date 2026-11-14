@@ -56,7 +56,7 @@
           v-if="show && showBackdrop && isTopLayer"
           class="p-sheet-backdrop"
           :class="backdropClass"
-          :style="{ top: backdropTop, zIndex: backdropZIndex }"
+          :style="{ top: backdropTop, zIndex: backdropZIndex, left: backdropLeft }"
           @click="$emit('close')"
         />
       </Transition>
@@ -509,6 +509,12 @@ const backdropTop = computed(() => {
   if (props.side === 'bottom') return '0px'
   const top = props.partialTopAnchor?.getBoundingClientRect().top
   return typeof top === 'number' ? `${top}px` : props.top
+})
+
+const backdropLeft = computed(() => {
+  if (isMobile.value || props.side === 'bottom') return '0px'
+  if (props.side === 'right') return `calc(var(--a-sidebar-width) + ${layerInset.value}px)`
+  return '0px'
 })
 
 const sheetStyle = computed(() => {

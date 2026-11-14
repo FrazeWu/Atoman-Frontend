@@ -20,6 +20,7 @@ interface Props {
   modelValue?: string
   mode: 'normal' | 'split'
   placeholder?: string
+  disabled?: boolean
   noBorder?: boolean
   showModeToggle?: boolean
   showSyncScrollToggle?: boolean

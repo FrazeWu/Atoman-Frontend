@@ -125,122 +125,23 @@
           @keydown="handleComposerKeydown"
         />
 
-        <!-- 排版格式切换与富文本工具栏 -->
-        <div class="mail-compose__format-bar">
-          <PSegmentedControl
-            :model-value="rich ? 'rich' : 'plain'"
-            :options="[{ label: '纯文本', value: 'plain' }, { label: '格式文本', value: 'rich' }]"
-            :disabled="contentLocked"
-            @update:model-value="setRich($event === 'rich')"
-          />
-          <div v-if="rich" class="mail-compose__format-tools">
-            <button
-              type="button"
-              class="mail-compose__tool-btn"
-              :class="{ 'is-active': activeFormats.bold }"
-              :disabled="contentLocked"
-              title="加粗 (Ctrl/Cmd + B)"
-              aria-label="加粗"
-              @mousedown.prevent="format('bold')"
-            >
-              <Bold :size="15" />
-            </button>
-            <button
-              type="button"
-              class="mail-compose__tool-btn"
-              :class="{ 'is-active': activeFormats.italic }"
-              :disabled="contentLocked"
-              title="斜体 (Ctrl/Cmd + I)"
-              aria-label="斜体"
-              @mousedown.prevent="format('italic')"
-            >
-              <Italic :size="15" />
-            </button>
-            <button
-              type="button"
-              class="mail-compose__tool-btn"
-              :class="{ 'is-active': activeFormats.underline }"
-              :disabled="contentLocked"
-              title="下划线 (Ctrl/Cmd + U)"
-              aria-label="下划线"
-              @mousedown.prevent="format('underline')"
-            >
-              <Underline :size="15" />
-            </button>
-            <button
-              type="button"
-              class="mail-compose__tool-btn"
-              :class="{ 'is-active': activeFormats.strikeThrough }"
-              :disabled="contentLocked"
-              title="删除线"
-              aria-label="删除线"
-              @mousedown.prevent="format('strikeThrough')"
-            >
-              <Strikethrough :size="15" />
-            </button>
-            <span class="mail-compose__tool-divider" />
-            <button
-              type="button"
-              class="mail-compose__tool-btn"
-              :class="{ 'is-active': activeFormats.insertUnorderedList }"
-              :disabled="contentLocked"
-              title="无序列表"
-              aria-label="无序列表"
-              @mousedown.prevent="format('insertUnorderedList')"
-            >
-              <List :size="15" />
-            </button>
-            <button
-              type="button"
-              class="mail-compose__tool-btn"
-              :class="{ 'is-active': activeFormats.insertOrderedList }"
-              :disabled="contentLocked"
-              title="有序列表"
-              aria-label="有序列表"
-              @mousedown.prevent="format('insertOrderedList')"
-            >
-              <ListOrdered :size="15" />
-            </button>
-            <button
-              type="button"
-              class="mail-compose__tool-btn"
-              :disabled="contentLocked"
-              title="清除格式"
-              aria-label="清除格式"
-              @mousedown.prevent="format('removeFormat')"
-            >
-              <RemoveFormatting :size="15" />
-            </button>
-          </div>
-        </div>
-
-        <!-- 正文编辑器（支持富文本/纯文本，支持快捷键发送与粘贴图片/附件） -->
-        <div class="mail-compose__editor-wrap">
-          <div
-            v-if="rich"
-            ref="editor"
-            class="mail-compose__editor"
-            :contenteditable="!contentLocked"
-            role="textbox"
-            aria-label="邮件正文"
-            aria-multiline="true"
-            @input="captureRich"
-            @paste="onEditorPaste"
-            @keyup="updateActiveFormats"
-            @mouseup="updateActiveFormats"
-            @keydown="handleComposerKeydown"
-          />
-          <PTextarea
-            v-else
+        <!-- 正文编辑器（复用全站统一 PEditor：支持 Markdown、分屏/即时预览与标准快捷键） -->
+        <div class="mail-compose__editor-wrap" @keydown="handleComposerKeydown">
+          <PEditor
             v-model="text"
-            class="mail-compose__body"
-            label="正文"
-            aria-label="邮件正文"
-            :rows="13"
-            placeholder="写下邮件内容，支持拖拽文件或粘贴截图作为附件…"
+            :mode="editorMode"
             :disabled="contentLocked"
-            @paste="onEditorPaste"
-            @keydown="handleComposerKeydown"
+            placeholder="写下邮件内容，支持 Markdown 排版与快捷键，支持拖拽文件添加附件…"
+            :show-toolbar="true"
+            :show-mode-toggle="true"
+            :live-preview="true"
+            :line-numbers="false"
+            :enable-image-upload="false"
+            :enable-mentions="false"
+            :enable-embeds="false"
+            :no-border="true"
+            editor-aria-label="邮件正文"
+            @mode-change="editorMode = $event"
           />
         </div>
 
@@ -363,17 +264,17 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import DOMPurify from 'dompurify'
+import { marked } from 'marked'
 import { onBeforeRouteLeave } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
-import { Bold, Italic, List, ListOrdered, Paperclip, RefreshCw, RemoveFormatting, Strikethrough, Underline, X } from 'lucide-vue-next'
+import { Paperclip, RefreshCw, X } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PInput from '@/components/ui/PInput.vue'
-import PTextarea from '@/components/ui/PTextarea.vue'
-import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PDatetimePicker from '@/components/ui/PDatetimePicker.vue'
+import PEditor from '@/components/shared/PEditor.vue'
 import MailRecipientField from './MailRecipientField.vue'
 import { fetchMailContacts, fetchMailPreferences, fetchMailSenders, type MailContact, type MailSenderIdentity } from '@/api/mailClient'
 import { deleteMailDraft, queueMail, saveMailDraft, uploadMailAttachment, type MailComposeFields, type MailDraft, type MailOutbox } from '@/api/mailClient'
@@ -454,8 +355,23 @@ const subject = ref(props.draft.subject)
 const text = ref(props.draft.text)
 const html = ref(props.draft.html || '')
 const attachments = ref([...props.draft.attachments])
-const rich = ref(Boolean(html.value))
-const editor = ref<HTMLElement | null>(null)
+const editorMode = ref<'normal' | 'split'>('normal')
+
+function computeHtml(markdown: string): string {
+  if (!markdown.trim()) return ''
+  try {
+    const raw = marked.parse(markdown, { async: false }) as string
+    return DOMPurify.sanitize(raw, {
+      ALLOWED_TAGS: [
+        'p', 'br', 'div', 'strong', 'b', 'em', 'i', 'u', 's', 'strike',
+        'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'a', 'span', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
+      ],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style'],
+    })
+  } catch {
+    return ''
+  }
+}
 
 const draftId = ref(props.draft.id)
 const conflicted = ref(false)
@@ -473,7 +389,6 @@ const changedSnapshot = computed(() => JSON.stringify({
   bcc: bccText.value,
   subject: subject.value,
   text: text.value,
-  html: html.value,
   attachments: attachments.value,
   sender: selectedSender.value,
   sendAt: scheduleMode.value ? scheduledLocal.value : null,
@@ -497,6 +412,7 @@ function looseRecipients(value: string) {
 }
 
 function fields(strict = false): MailComposeFields {
+  const generatedHtml = computeHtml(text.value)
   return {
     ...(selectedSender.value.startsWith('alias:') ? { alias_id: selectedSender.value.slice(6) } : selectedSender.value ? { external_account_id: selectedSender.value } : {}),
     to: strict ? parseRecipients(toText.value) : looseRecipients(toText.value),
@@ -504,7 +420,7 @@ function fields(strict = false): MailComposeFields {
     bcc: strict ? parseRecipients(bccText.value) : looseRecipients(bccText.value),
     subject: subject.value,
     text: text.value,
-    html: rich.value ? html.value : undefined,
+    html: generatedHtml || undefined,
     attachments: [...attachments.value],
     send_at: scheduleMode.value && scheduledLocal.value ? new Date(scheduledLocal.value).toISOString() : undefined,
     in_reply_to: props.draft.in_reply_to,
@@ -743,68 +659,7 @@ function onEditorPaste(event: ClipboardEvent) {
     if (files.length) {
       event.preventDefault()
       void processAttachmentFiles(files)
-      return
     }
-  }
-  pastePlain(event)
-}
-
-function captureRich() {
-  if (editor.value) {
-    text.value = editor.value.innerText
-    html.value = DOMPurify.sanitize(editor.value.innerHTML, {
-      ALLOWED_TAGS: ['p', 'br', 'div', 'strong', 'b', 'em', 'i', 'u', 's', 'strike', 'ul', 'ol', 'li', 'blockquote', 'code'],
-      ALLOWED_ATTR: [],
-    })
-  }
-}
-
-const activeFormats = ref({
-  bold: false,
-  italic: false,
-  underline: false,
-  strikeThrough: false,
-  insertUnorderedList: false,
-  insertOrderedList: false,
-})
-
-function updateActiveFormats() {
-  if (!rich.value || !editor.value) return
-  try {
-    activeFormats.value = {
-      bold: document.queryCommandState('bold'),
-      italic: document.queryCommandState('italic'),
-      underline: document.queryCommandState('underline'),
-      strikeThrough: document.queryCommandState('strikeThrough'),
-      insertUnorderedList: document.queryCommandState('insertUnorderedList'),
-      insertOrderedList: document.queryCommandState('insertOrderedList'),
-    }
-  } catch {
-    /* ignore queryCommandState errors in edge states */
-  }
-}
-
-function format(command: string) {
-  editor.value?.focus()
-  document.execCommand(command)
-  captureRich()
-  updateActiveFormats()
-}
-
-function pastePlain(event: ClipboardEvent) {
-  event.preventDefault()
-  document.execCommand('insertText', false, event.clipboardData?.getData('text/plain') || '')
-  captureRich()
-}
-
-async function setRich(enabled: boolean) {
-  rich.value = enabled
-  if (enabled) {
-    await nextTick()
-    if (editor.value) editor.value.innerText = text.value
-    captureRich()
-  } else {
-    html.value = ''
   }
 }
 
@@ -848,11 +703,6 @@ async function loadComposerEnhancements() {
     const block = '\n\n--\n' + lines + '\n'
     if (props.draft.in_reply_to && text.value.trim()) text.value = block + text.value
     else text.value = (text.value.trim() ? text.value.trim() : '') + block
-    if (rich.value && sig.html) {
-      const safe = DOMPurify.sanitize(sig.html, { ALLOWED_TAGS: ['p', 'br', 'div', 'strong', 'b', 'em', 'i', 'u', 's', 'ul', 'ol', 'li'], ALLOWED_ATTR: [] })
-      html.value = safe + html.value
-      if (editor.value) editor.value.innerHTML = html.value
-    }
   } catch {
     /* Signature lookup is optional; do not block composing. */
   }
@@ -864,10 +714,6 @@ onMounted(async () => {
     if (ambiguousSend.value) error.value = '这封草稿有待确认的发送记录，请先确认发送状态。'
   } catch {
     /* optional storage */
-  }
-  await nextTick()
-  if (editor.value) {
-    editor.value.innerHTML = DOMPurify.sanitize(html.value, { ALLOWED_TAGS: ['p', 'br', 'div', 'strong', 'b', 'em', 'i', 'u', 's', 'ul', 'ol', 'li', 'blockquote', 'code'], ALLOWED_ATTR: [] })
   }
   window.addEventListener('beforeunload', beforeUnload)
   void loadComposerEnhancements()
@@ -1023,89 +869,27 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 
-.mail-compose__format-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 4px;
-}
-.mail-compose__format-tools {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 3px 6px;
-  background: var(--a-color-surface-muted);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-}
-.mail-compose__tool-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--a-color-muted);
-  cursor: pointer;
-  transition: all 120ms ease;
-}
-.mail-compose__tool-btn:hover:not(:disabled) {
-  background: var(--a-color-surface);
-  color: var(--a-color-fg);
-}
-.mail-compose__tool-btn.is-active {
-  background: var(--a-color-surface);
-  color: var(--a-color-primary);
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-.mail-compose__tool-divider {
-  width: 1px;
-  height: 16px;
-  margin: 0 4px;
-  background: var(--a-color-border-soft);
-}
-
 .mail-compose__editor-wrap {
   position: relative;
-  min-height: 320px;
-}
-.mail-compose__editor {
-  display: block;
-  min-height: 320px;
-  width: 100%;
-  padding: 18px;
+  min-height: 420px;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
+  border-radius: var(--a-radius-card, 4px);
   background: var(--a-color-bg);
-  color: var(--a-color-fg);
-  font-size: 14px;
-  line-height: 1.8;
-  font-family: inherit;
-  overflow-wrap: anywhere;
+  overflow: hidden;
   transition: border-color 140ms ease;
 }
-.mail-compose__editor:empty::before {
-  content: attr(data-placeholder);
-  color: var(--a-color-muted-soft);
-  pointer-events: none;
+.mail-compose__editor-wrap:focus-within {
+  border-color: var(--a-color-border-hover, #64748b);
 }
-.mail-compose__editor:hover:not(:disabled) {
-  border-color: var(--a-color-border);
+.mail-compose__editor-wrap :deep(.p-editor) {
+  min-height: 420px;
+  border: none;
 }
-.mail-compose__editor:focus-visible {
-  outline: 2px solid var(--a-color-primary);
-  outline-offset: 1px;
+.mail-compose__editor-wrap :deep(.p-editor-body) {
+  min-height: 360px;
 }
-.mail-compose__body :deep(.p-textarea) {
-  min-height: 320px;
-  line-height: 1.8;
-  resize: vertical;
+.mail-compose__editor-wrap :deep(.cm-editor) {
+  min-height: 360px;
 }
 
 .mail-compose__attachments-section {
@@ -1290,13 +1074,11 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
     gap: 14px;
   }
-  .mail-compose__format-bar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .mail-compose__editor,
-  .mail-compose__body :deep(.p-textarea) {
-    min-height: 220px;
+  .mail-compose__editor-wrap,
+  .mail-compose__editor-wrap :deep(.p-editor),
+  .mail-compose__editor-wrap :deep(.p-editor-body),
+  .mail-compose__editor-wrap :deep(.cm-editor) {
+    min-height: 260px;
   }
   .mail-compose__footer {
     padding: 12px 14px;

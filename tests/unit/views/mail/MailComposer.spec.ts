@@ -7,6 +7,7 @@ vi.mock('vue-router',()=>({onBeforeRouteLeave:vi.fn()}))
 vi.mock('@/api/mailClient',()=>({saveMailDraft:api.save,queueMail:api.queue,deleteMailDraft:api.remove,uploadMailAttachment:api.upload, fetchMailSenders:api.senders}))
 vi.mock('@/components/ui/PSheet.vue',()=>({default:{emits:['close'],template:'<section><button aria-label="关闭写信" @click="$emit(\'close\')">close</button><slot /></section>'}}))
 vi.mock('@/components/ui/PModal.vue',()=>({default:{template:'<section><slot /><slot name="footer" /></section>'}}))
+vi.mock('@/components/shared/PEditor.vue',()=>({default:{name:'PEditor',props:['modelValue','disabled','editorAriaLabel'],emits:['update:modelValue'],template:'<textarea :value="modelValue" :aria-label="editorAriaLabel" :disabled="disabled" @input="$emit(\'update:modelValue\', $event.target.value)" />'}}))
 const draft={id:'11111111-1111-4111-8111-111111111111',to:[],cc:[],bcc:[],subject:'',text:'',attachments:[]}
 const mounted:Array<ReturnType<typeof mount>>=[]
 function mountComposer(props={}){const w=mount(MailComposer,{props:{address:'me@atoman.org',draft,...props}});mounted.push(w);return w}

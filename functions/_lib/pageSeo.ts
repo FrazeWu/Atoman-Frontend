@@ -153,11 +153,37 @@ const noIndexPrefixes = [
 	"/books/public-read",
 	"/books/annotations",
 	"/books/lists/new",
+	// Authenticated areas and in-site search results must not enter Google.
+	"/posts/subscriptions",
+	"/posts/bookmarks",
+	"/music/starred",
+	"/music/library",
+	"/music/playlists",
+	"/music/bookmarks",
+	"/music/history",
+	"/music/me",
+	"/music/archived",
+	"/music/imports",
+	"/forum/me",
+	"/forum/new",
+	"/forum/search",
+	"/timeline/me",
+	"/timeline/search",
+	"/podcasts/subscriptions",
+	"/podcasts/favorites",
+	"/podcasts/me",
+	"/videos/search",
+	"/videos/subscriptions",
+	"/videos/favorites",
 ];
 
 const privateRoutePatterns = [
 	/^\/books\/work\/[^/]+\/(?:notes|collections)(?:\/|$)/,
 	/^\/books\/lists\/[^/]+\/edit(?:\/|$)/,
+	/^\/posts\/notes\/[^/]+\/edit(?:\/|$)/,
+	/^\/music\/album\/[^/]+\/edit(?:\/|$)/,
+	/^\/forum\/topic\/[^/]+\/edit(?:\/|$)/,
+	/^\/users\/[^/]+\/settings(?:\/|$)/,
 ];
 
 const publicRoutePrefixes = [
@@ -182,6 +208,26 @@ const publicRoutePrefixes = [
 	"/privacy",
 ];
 
+// Only registered routes are valid under these sections. Accepting every
+// subpath as 200 made invented URLs look like soft-404 pages to search engines.
+const guardedRoutes: Record<string, { exact: string[]; dynamic: RegExp[] }> = {
+  "/posts": {
+    exact: ["/posts/articles", "/posts/notes"],
+    dynamic: [/^\/posts\/notes\/[^/]+$/],
+  },
+  "/books": {
+    exact: ["/books/shared-notes"],
+    dynamic: [/^\/books\/note-shares\/[^/]+$/],
+  },
+  "/music": {
+    exact: ["/music/discover", "/music/albums", "/music/songs", "/music/tags", "/music/artists", "/music/more"],
+    dynamic: [/^\/music\/tags\/[^/]+$/, /^\/music\/playlist\/[^/]+$/],
+  },
+  "/about": { exact: [], dynamic: [] },
+  "/terms": { exact: [], dynamic: [] },
+  "/privacy": { exact: [], dynamic: [] },
+};
+
 function escapeHtml(value: string) {
 	return value
 		.replace(/&/g, "&amp;")
@@ -205,6 +251,11 @@ export function isKnownPagePath(pathname: string) {
 		) || privateRoutePatterns.some((pattern) => pattern.test(path))
 	)
 		return true;
+	for (const [section, routes] of Object.entries(guardedRoutes)) {
+		if (path.startsWith(`${section}/`)) {
+			return routes.exact.includes(path) || routes.dynamic.some((pattern) => pattern.test(path));
+		}
+	}
 	return publicRoutePrefixes.some(
 		(prefix) => path === prefix || path.startsWith(`${prefix}/`),
 	);

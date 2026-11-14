@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { buildStaticPageHtml } from "../../../functions/_lib/pageSeo";
+import { buildStaticPageHtml, isKnownPagePath } from "../../../functions/_lib/pageSeo";
 import { onRequest as pageMiddleware } from "../../../functions/_middleware";
 
 const shell =
@@ -124,6 +124,44 @@ describe("static page SEO", () => {
 		});
 		expect(response.status).toBe(200);
 		expect(await response.text()).toContain('<meta name="robots" content="noindex, nofollow">');
+	});
+
+	it.each([
+		"/music/made-up-section", "/books/made-up-section", "/posts/made-up-section",
+		"/about/fake-page", "/terms/fake-page", "/privacy/fake-page",
+	])("returns a real 404 for invented section child %s", async (path) => {
+		expect(isKnownPagePath(path)).toBe(false);
+		const response = await pageMiddleware({
+			request: new Request("https://www.atoman.org" + path),
+			next: async () => new Response(shell, { headers: { "content-type": "text/html" } }),
+		});
+		expect(response.status).toBe(404);
+		expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+		expect(await response.text()).not.toContain('rel="canonical"');
+	});
+
+	it.each([
+		"/music/albums", "/music/tags/hiphop", "/music/playlist/playlist-id",
+		"/books/shared-notes", "/books/note-shares/share-key",
+		"/posts/notes/short-note-id", "/posts/articles", "/music/song/song-id",
+	])("keeps registered public path %s valid", (path) => {
+		expect(isKnownPagePath(path)).toBe(true);
+	});
+
+	it.each([
+		"/music/me", "/music/history", "/music/imports", "/music/bookmarks",
+		"/posts/subscriptions", "/forum/me", "/forum/new",
+		"/podcasts/favorites", "/videos/subscriptions", "/videos/favorites",
+		"/users/handle/settings", "/posts/notes/note-1/edit",
+	])("marks authenticated feature %s noindex", async (path) => {
+		const html = buildStaticPageHtml(shell, path, "www.atoman.org");
+		expect(html).toContain('name="robots" content="noindex, nofollow"');
+		expect(isKnownPagePath(path)).toBe(true);
+		const response = await pageMiddleware({
+			request: new Request("https://www.atoman.org" + path),
+			next: async () => new Response(shell, { headers: { "content-type": "text/html" } }),
+		});
+		expect(response.status).toBe(200);
 	});
 
 	it("returns a noindex 404 for an unknown SPA route", async () => {

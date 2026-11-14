@@ -1,5 +1,16 @@
 <template>
-  <PSheet :show="true" title="写邮件" mode="full" content-max-width="96rem" close-type="header" @close="closeComposer">
+  <PSheet
+    :show="true"
+    title="写邮件"
+    mode="full"
+    content-max-width="96rem"
+    close-type="header"
+    :side="side || (isMobile ? 'bottom' : 'right')"
+    :layer-index="layerIndex"
+    :stack-size="stackSize"
+    :is-top-layer="isTopLayer"
+    @close="closeComposer"
+  >
     <form
       class="mail-compose"
       :class="{ 'is-dragging': isDraggingOver }"
@@ -367,8 +378,28 @@ import MailRecipientField from './MailRecipientField.vue'
 import { fetchMailContacts, fetchMailPreferences, fetchMailSenders, type MailContact, type MailSenderIdentity } from '@/api/mailClient'
 import { deleteMailDraft, queueMail, saveMailDraft, uploadMailAttachment, type MailComposeFields, type MailDraft, type MailOutbox } from '@/api/mailClient'
 import { fileSize, newRequestID, parseRecipients } from './mail-helpers'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
 
-const props = defineProps<{ address: string; draft: MailDraft; warning?: string }>()
+const isMobile = computed(isStandaloneMobileApp)
+
+const props = withDefaults(
+  defineProps<{
+    address: string
+    draft: MailDraft
+    warning?: string
+    layerIndex?: number
+    stackSize?: number
+    isTopLayer?: boolean
+    side?: 'right' | 'bottom'
+  }>(),
+  {
+    warning: undefined,
+    layerIndex: undefined,
+    stackSize: 1,
+    isTopLayer: true,
+    side: undefined,
+  }
+)
 const emit = defineEmits<{ close: []; saved: []; queued: [outbox: MailOutbox, draft: MailDraft] }>()
 const contacts = ref<MailContact[]>([])
 const externalSenders = ref<MailSenderIdentity[]>([])

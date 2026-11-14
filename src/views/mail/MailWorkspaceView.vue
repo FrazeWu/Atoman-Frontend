@@ -61,6 +61,10 @@
           content-max-width="96rem"
           :side="isMobile ? 'bottom' : 'right'"
           panel-class="mail-workspace__reader-sheet"
+          :is-shifted="hasActiveDrawer"
+          :is-top-layer="!hasActiveDrawer"
+          :layer-index="0"
+          :stack-size="hasActiveDrawer ? 2 : 1"
           :navigation="navigation"
           :navigation-key="selectedGroupId || ''"
           :navigation-direction="navigationDirection"
@@ -166,13 +170,83 @@
           <dt>Esc</dt><dd>关闭浮动框 / 返回</dd>
         </dl>
       </PModal>
-      <MailOrganizerPanel v-if="organizerOpen" :state="organizerState" :target="organizerTarget" :messages="messages" :now="organizerNow" :busy="organizerBusy" :error="organizerError" @close="organizerOpen=false" @action="onOrganizerAction" @create-label="onCreateOrganizerLabel" @delete-label="onDeleteOrganizerLabel" @update-label="onUpdateOrganizerLabel" />
-      <MailExternalAccounts v-if="externalOpen" @close="externalOpen=false" @open-native="openNativeFromAggregate" />
-      <MailScheduledPanel v-if="scheduledOpen" :items="pendingSends" :busy-id="cancelBusy" @close="scheduledOpen=false" @refresh="refreshQueue" @cancel="undoSend" />
-      <MailAttachmentPreview v-if="attachmentPreview" :key="attachmentPreview.messageId+attachmentPreview.attachment.partId" :message-id="attachmentPreview.messageId" :attachment="attachmentPreview.attachment" @close="attachmentPreview=null" />
-      <MailComposer v-if="composeDraft" :key="composeDraft.id" :address="mailAccount?.address || ''" :draft="composeDraft" :warning="composeWarning" @close="composeDraft = null" @saved="onDraftSaved" @queued="onQueued" />
-      <MailAdvancedSearch v-if="advancedOpen" :filters="advancedFilters" :everywhere="allFolders" @close="advancedOpen=false" @apply="setAdvancedSearch" />
-      <MailSettings v-if="settingsOpen" :address="mailAccount?.address || ''" :folders="folders" @close="settingsOpen = false" />
+      <MailOrganizerPanel
+        v-if="organizerOpen"
+        :state="organizerState"
+        :target="organizerTarget"
+        :messages="messages"
+        :now="organizerNow"
+        :busy="organizerBusy"
+        :error="organizerError"
+        :layer-index="isReaderOpen ? 1 : 0"
+        :stack-size="isReaderOpen ? 2 : 1"
+        :is-top-layer="true"
+        :side="isMobile ? 'bottom' : 'right'"
+        @close="organizerOpen=false"
+        @action="onOrganizerAction"
+        @create-label="onCreateOrganizerLabel"
+        @delete-label="onDeleteOrganizerLabel"
+        @update-label="onUpdateOrganizerLabel"
+      />
+      <MailExternalAccounts
+        v-if="externalOpen"
+        :layer-index="isReaderOpen ? 1 : 0"
+        :stack-size="isReaderOpen ? 2 : 1"
+        :is-top-layer="true"
+        :side="isMobile ? 'bottom' : 'right'"
+        @close="externalOpen=false"
+        @open-native="openNativeFromAggregate"
+      />
+      <MailScheduledPanel
+        v-if="scheduledOpen"
+        :items="pendingSends"
+        :busy-id="cancelBusy"
+        :layer-index="isReaderOpen ? 1 : 0"
+        :stack-size="isReaderOpen ? 2 : 1"
+        :is-top-layer="true"
+        :side="isMobile ? 'bottom' : 'right'"
+        @close="scheduledOpen=false"
+        @refresh="refreshQueue"
+        @cancel="undoSend"
+      />
+      <MailAttachmentPreview
+        v-if="attachmentPreview"
+        :key="attachmentPreview.messageId+attachmentPreview.attachment.partId"
+        :message-id="attachmentPreview.messageId"
+        :attachment="attachmentPreview.attachment"
+        @close="attachmentPreview=null"
+      />
+      <MailComposer
+        v-if="composeDraft"
+        :key="composeDraft.id"
+        :address="mailAccount?.address || ''"
+        :draft="composeDraft"
+        :warning="composeWarning"
+        :layer-index="isReaderOpen ? 1 : 0"
+        :stack-size="isReaderOpen ? 2 : 1"
+        :is-top-layer="true"
+        :side="isMobile ? 'bottom' : 'right'"
+        @close="composeDraft = null"
+        @saved="onDraftSaved"
+        @queued="onQueued"
+      />
+      <MailAdvancedSearch
+        v-if="advancedOpen"
+        :filters="advancedFilters"
+        :everywhere="allFolders"
+        @close="advancedOpen=false"
+        @apply="setAdvancedSearch"
+      />
+      <MailSettings
+        v-if="settingsOpen"
+        :address="mailAccount?.address || ''"
+        :folders="folders"
+        :layer-index="isReaderOpen ? 1 : 0"
+        :stack-size="isReaderOpen ? 2 : 1"
+        :is-top-layer="true"
+        :side="isMobile ? 'bottom' : 'right'"
+        @close="settingsOpen = false"
+      />
       <PModal :show="folderDialog" title="新建文件夹" size="sm" @close="folderDialog = false"><form class="mail-workspace__folder-form" @submit.prevent="addFolder"><PInput id="new-mail-folder" v-model="newFolderName" label="文件夹名称" maxlength="100" required autofocus /><p v-if="folderError" class="mail-error" role="alert">{{ folderError }}</p><PButton type="submit" :disabled="folderWorking || !newFolderName.trim()">{{ folderWorking ? '创建中…' : '创建' }}</PButton></form></PModal>
       <PModal :show="deleteFolderDialog" title="删除文件夹" size="sm" @close="deleteFolderDialog = false"><p>删除「{{ currentFolder?.name }}」？只有空文件夹可以删除。</p><p v-if="folderError" class="mail-error" role="alert">{{ folderError }}</p><template #footer><PButton variant="secondary" @click="deleteFolderDialog = false">取消</PButton><PButton :disabled="folderWorking" @click="removeFolder">删除文件夹</PButton></template></PModal>
     </template>
@@ -231,6 +305,9 @@ const visibleConversations=computed(()=>{
 })
 
 const isReaderOpen = computed(() => Boolean(selectedGroupId.value && readerMessages.value.length))
+const hasActiveDrawer = computed(() =>
+  Boolean(composeDraft.value || settingsOpen.value || externalOpen.value || organizerOpen.value || scheduledOpen.value)
+)
 
 const loadMailNavigationItems = async () => {
   return visibleConversations.value.map(group => ({
@@ -408,7 +485,7 @@ function handleMailShortcut(event: KeyboardEvent) {
     }
     return
   }
-  if (composeDraft.value || settingsOpen.value || externalOpen.value || organizerOpen.value || advancedOpen.value || attachmentPreview.value || folderDialog.value || deleteFolderDialog.value) return
+  if (composeDraft.value || settingsOpen.value || externalOpen.value || organizerOpen.value || scheduledOpen.value || advancedOpen.value || attachmentPreview.value || folderDialog.value || deleteFolderDialog.value) return
 
   const key = event.key.toLowerCase()
 

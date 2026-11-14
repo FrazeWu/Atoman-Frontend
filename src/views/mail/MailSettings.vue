@@ -1,5 +1,15 @@
 <template>
-  <PSheet :show="true" title="邮箱设置" mode="full" close-type="header" @close="emit('close')">
+  <PSheet
+    :show="true"
+    title="邮箱设置"
+    mode="full"
+    close-type="header"
+    :side="side || (isMobile ? 'bottom' : 'right')"
+    :layer-index="layerIndex"
+    :stack-size="stackSize"
+    :is-top-layer="isTopLayer"
+    @close="emit('close')"
+  >
     <div class="mail-settings">
       <div v-if="loading" role="status">正在读取设置…</div>
       <p v-if="error" role="alert" class="mail-settings__error">{{ error }}</p>
@@ -33,7 +43,7 @@
   </PModal>
 </template>
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Plus, Trash2 } from 'lucide-vue-next'
 import PSheet from '@/components/ui/PSheet.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -45,11 +55,30 @@ import PModal from '@/components/ui/PModal.vue'
 import MailContactsPanel from './MailContactsPanel.vue'
 import MailAliasesPanel from './MailAliasesPanel.vue'
 import { useMailUnreadStore } from '@/stores/mailUnread'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
 import PButton from '@/components/ui/PButton.vue'
 import type { MailFolder } from '@/api/mail'
 import { fetchMailPreferences, saveMailPreferences, fetchMailAppPasswords, createMailAppPassword, revokeMailAppPassword, type MailPreferences, type MailAppPassword } from '@/api/mailClient'
 import { mailTime, newRequestID, parseRecipients } from './mail-helpers'
-const props = defineProps<{ address: string; folders: MailFolder[] }>()
+
+const isMobile = computed(isStandaloneMobileApp)
+
+const props = withDefaults(
+  defineProps<{
+    address: string
+    folders: MailFolder[]
+    layerIndex?: number
+    stackSize?: number
+    isTopLayer?: boolean
+    side?: 'right' | 'bottom'
+  }>(),
+  {
+    layerIndex: undefined,
+    stackSize: 1,
+    isTopLayer: true,
+    side: undefined,
+  }
+)
 const mailUnread=useMailUnreadStore()
 async function enableBrowserNotifications(){
   const status=await mailUnread.requestBrowserPermission()

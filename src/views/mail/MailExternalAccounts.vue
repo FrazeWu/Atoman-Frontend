@@ -1,5 +1,15 @@
 <template>
-  <PSheet :show="true" title="聚合邮箱" mode="full" close-type="header" @close="emit('close')">
+  <PSheet
+    :show="true"
+    title="聚合邮箱"
+    mode="full"
+    close-type="header"
+    :side="side || (isMobile ? 'bottom' : 'right')"
+    :layer-index="layerIndex"
+    :stack-size="stackSize"
+    :is-top-layer="isTopLayer"
+    @close="emit('close')"
+  >
     <main class="mail-external" data-testid="mail-external-accounts">
       <header class="mail-external__intro">
         <div>
@@ -252,10 +262,28 @@ import PSelect from '@/components/ui/PSelect.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
 import { fetchMailFolders } from '@/api/mail'
 import { queryMailMessages, fetchExternalProviders, fetchExternalUnifiedInbox, connectExternalAccount, syncExternalAccount, disconnectExternalAccount, fetchExternalMessagePlain, setExternalMessageSeen, type ExternalIMAPProvider, type MailExternalAccount, type MailExternalMessage, type MailExternalProvider, fetchExternalFolders, fetchExternalFolderPage, type MailExternalFolder, type MailExternalFolderPage, moveExternalMessage, fetchExternalHistoryJobs, startExternalHistoryJob, actionExternalHistoryJob, type MailExternalHistoryJob, fetchExternalFlagPreview, type MailFlagPreviewPage, type MailFlagDiff, configureExternalFlagSync, fetchExternalFlagAttempts, reconcileExternalFlagAttempt, type ExternalFlagAttempt, fetchExternalLocationCases, scanExternalLocation, decideExternalLocation, fetchExternalLocationActions, reconcileExternalLocation, type MailLocationCase, type MailLocationDecision, type MailLocationAction } from '@/api/mailClient'
 import type { MailSummary } from '@/api/mail'
 import { mailTime } from './mail-helpers'
+
+const isMobile = computed(isStandaloneMobileApp)
+
+withDefaults(
+  defineProps<{
+    layerIndex?: number
+    stackSize?: number
+    isTopLayer?: boolean
+    side?: 'right' | 'bottom'
+  }>(),
+  {
+    layerIndex: undefined,
+    stackSize: 1,
+    isTopLayer: true,
+    side: undefined,
+  }
+)
 
 const emit = defineEmits<{ close: []; openNative: [id:string] }>()
 const mode = ref<'inbox'|'accounts'>('inbox')

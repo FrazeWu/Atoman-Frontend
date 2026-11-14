@@ -1,5 +1,15 @@
 <template>
-  <PSheet :show="true" title="定时发送与发件状态" mode="full" close-type="header" @close="emit('close')">
+  <PSheet
+    :show="true"
+    title="定时发送与发件状态"
+    mode="full"
+    close-type="header"
+    :side="side || (isMobile ? 'bottom' : 'right')"
+    :layer-index="layerIndex"
+    :stack-size="stackSize"
+    :is-top-layer="isTopLayer"
+    @close="emit('close')"
+  >
     <section class="mail-scheduled">
       <header><h2>发件队列</h2><PButton variant="secondary" size="sm" @click="emit('refresh')"><RefreshCw :size="15" /> 刷新状态</PButton></header>
       <p>定时邮件会在预定时刻由服务器提交，不需要保持浏览器打开。发送前可以取消；状态未知时请勿重复发送。</p>
@@ -17,13 +27,33 @@
   </PSheet>
 </template>
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Clock, RefreshCw } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PSheet from '@/components/ui/PSheet.vue'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
 import type { MailOutbox } from '@/api/mailClient'
 import { mailTime } from './mail-helpers'
-defineProps<{items:MailOutbox[];busyId:string}>()
+
+const isMobile = computed(isStandaloneMobileApp)
+
+withDefaults(
+  defineProps<{
+    items: MailOutbox[]
+    busyId: string
+    layerIndex?: number
+    stackSize?: number
+    isTopLayer?: boolean
+    side?: 'right' | 'bottom'
+  }>(),
+  {
+    layerIndex: undefined,
+    stackSize: 1,
+    isTopLayer: true,
+    side: undefined,
+  }
+)
 const emit=defineEmits<{close:[];refresh:[];cancel:[item:MailOutbox]}>()
 function status(value:string) {
  const values:{[key:string]:string}={queued:'等待发送',dispatching:'正在提交',sending:'正在提交',sent:'已发送',submitted:'已提交',cancelled:'已取消',failed:'发送失败',uncertain:'结果待确认',blocked:'已阻止'}

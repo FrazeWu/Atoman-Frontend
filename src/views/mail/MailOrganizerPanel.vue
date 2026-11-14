@@ -1,5 +1,15 @@
 <template>
-  <PSheet :show="true" title="提醒与标签" mode="full" close-type="header" @close="emit('close')">
+  <PSheet
+    :show="true"
+    title="提醒与标签"
+    mode="full"
+    close-type="header"
+    :side="side || (isMobile ? 'bottom' : 'right')"
+    :layer-index="layerIndex"
+    :stack-size="stackSize"
+    :is-top-layer="isTopLayer"
+    @close="emit('close')"
+  >
     <section class="mail-organizer">
       <p class="mail-organizer__description">稍后处理只在 Atoman 收件箱列表中暂时隐藏邮件，到期自动重新显示；不会修改其他邮箱客户端中的邮件位置或已读状态。</p>
       <p v-if="error" class="mail-organizer__error" role="alert">{{ error }}</p>
@@ -83,10 +93,32 @@ import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PDatetimePicker from '@/components/ui/PDatetimePicker.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
+import { isStandaloneMobileApp } from '@/utils/appRuntime'
 import type { MailSummary } from '@/api/mail'
 import type { MailOrganizerColor, MailOrganizerLabel, MailOrganizerState, MailOrganizerAction, MailOrganizerMutation, MailOrganizerRecord } from '@/api/mailClient'
 
-const props = defineProps<{state:MailOrganizerState;target:MailSummary|null;messages:MailSummary[];busy:boolean;error:string;now:number}>()
+const isMobile = computed(isStandaloneMobileApp)
+
+const props = withDefaults(
+  defineProps<{
+    state: MailOrganizerState
+    target: MailSummary | null
+    messages: MailSummary[]
+    busy: boolean
+    error: string
+    now: number
+    layerIndex?: number
+    stackSize?: number
+    isTopLayer?: boolean
+    side?: 'right' | 'bottom'
+  }>(),
+  {
+    layerIndex: undefined,
+    stackSize: 1,
+    isTopLayer: true,
+    side: undefined,
+  }
+)
 const emit = defineEmits<{
   close:[]
   action:[value:MailOrganizerMutation]

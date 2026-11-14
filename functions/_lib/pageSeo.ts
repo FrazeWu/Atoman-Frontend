@@ -137,6 +137,7 @@ const noIndexPrefixes = [
 	"/__disabled__",
 	"/__not_found__",
 	"/feed/sources",
+	"/feed/search",
 	"/feed/subscriptions",
 	"/feed/stats",
 	"/feed/starred",
@@ -211,6 +212,12 @@ const publicRoutePrefixes = [
 // Only registered routes are valid under these sections. Accepting every
 // subpath as 200 made invented URLs look like soft-404 pages to search engines.
 const guardedRoutes: Record<string, { exact: string[]; dynamic: RegExp[] }> = {
+  "/feed": {
+    // /feed/following was a legacy SPA path; it is no longer registered.
+    // Keeping an invented child as HTTP 200 made Google index a soft 404.
+    exact: ["/feed/explore"],
+    dynamic: [/^\/feed\/item\/[^/]+$/],
+  },
   "/posts": {
     exact: ["/posts/articles", "/posts/notes"],
     dynamic: [/^\/posts\/notes\/[^/]+$/],

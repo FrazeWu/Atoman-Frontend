@@ -129,6 +129,7 @@ describe("static page SEO", () => {
 	it.each([
 		"/music/made-up-section", "/books/made-up-section", "/posts/made-up-section",
 		"/about/fake-page", "/terms/fake-page", "/privacy/fake-page",
+		"/feed/following", "/feed/unknown-old-link",
 	])("returns a real 404 for invented section child %s", async (path) => {
 		expect(isKnownPagePath(path)).toBe(false);
 		const response = await pageMiddleware({
@@ -144,12 +145,14 @@ describe("static page SEO", () => {
 		"/music/albums", "/music/tags/hiphop", "/music/playlist/playlist-id",
 		"/books/shared-notes", "/books/note-shares/share-key",
 		"/posts/notes/short-note-id", "/posts/articles", "/music/song/song-id",
+		"/feed/explore", "/feed/item/feed-item-1", "/feed/subscriptions",
 	])("keeps registered public path %s valid", (path) => {
 		expect(isKnownPagePath(path)).toBe(true);
 	});
 
 	it.each([
 		"/music/me", "/music/history", "/music/imports", "/music/bookmarks",
+		"/feed/search",
 		"/posts/subscriptions", "/forum/me", "/forum/new",
 		"/podcasts/favorites", "/videos/subscriptions", "/videos/favorites",
 		"/users/handle/settings", "/posts/notes/note-1/edit",

@@ -60,6 +60,64 @@ describe("public content SEO", () => {
 		expect(html).not.toContain('content="old"');
 	});
 
+	it("links a public artist to their active albums without exposing archived or duplicate editions", async () => {
+		const artistId = "019fa2ca-a4ab-72fd-8d3d-5f1a06694598";
+		const publicAlbumId = "01a10a79-3c3c-7c40-a3be-dbe76b21c2ac";
+		const privateAlbumId = "01a06b7f-0350-7e5e-85fc-4b523587fcb9";
+		const fetcher = vi.fn(async () => json({ data: {
+			id: artistId, name: "示例音乐人", artist_form: "person", lifecycle_status: "active",
+			albums: [
+				{ id: publicAlbumId, title: "公开 & 专辑", lifecycle_status: "active", status: "open", entry_status: "open" },
+				{ id: publicAlbumId, title: "重复条目", lifecycle_status: "active", status: "open" },
+				{ id: privateAlbumId, title: "已删除专辑", lifecycle_status: "retired", status: "closed" },
+				{ id: "not-an-id", title: "无效 URL", lifecycle_status: "active" },
+			],
+		} })) as unknown as typeof fetch;
+		const found = await resolvePublicContentSeo(`/music/artist/${artistId}`, "https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+		const page = '<!doctype html><html><head><title>Atoman</title></head><body><div id="app"><!-- seo-prerender-start --><p>首页预览</p><!-- seo-prerender-end --></div></body></html>';
+		const html = buildPublicContentHtml(page, found.content!);
+		expect(html).toContain('<h2>公开专辑</h2>');
+		expect(html).toContain(`href="/music/album/${publicAlbumId}">公开 &amp; 专辑</a>`);
+		expect(html.match(new RegExp(`href="/music/album/${publicAlbumId}"`, "g"))).toHaveLength(1);
+		expect(html).not.toContain("已删除专辑");
+		expect(html).not.toContain("无效 URL");
+		expect(html).not.toContain("首页预览");
+	});
+
+	it("renders actual book edition links on the public work page", async () => {
+		const workId = "01a1a665-e4f0-71d9-bd3e-4d19f50b9d09";
+		const editionId = "01a1a665-ec80-7a99-9222-960174288f0a";
+		const fetcher = vi.fn(async () => json({ data: {
+			id: workId, title: "三体", lifecycle_status: "active", authors: [{name: "刘慈欣"}],
+			editions: [{ id: editionId, title: "三体", edition_statement: "第一版", isbn13: "9787536692930" },
+				{ id: "not-a-real-id", title: "无效版本" }],
+		} })) as unknown as typeof fetch;
+		const found = await resolvePublicContentSeo(`/books/work/${workId}`, "https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+		const shell = '<html><head></head><body><div id="app"><!-- seo-prerender-start --><p>通用首屏</p><!-- seo-prerender-end --></div></body></html>';
+		const html = buildPublicContentHtml(shell, found.content!);
+		expect(html).toContain('<h2>出版版本</h2>');
+		expect(html).toContain(`href="/books/edition/${editionId}">第一版</a>`);
+		expect(html).not.toContain("无效版本");
+		expect(html).not.toContain("通用首屏");
+	});
+
+	it("links published book edition back to its public work", async () => {
+		const workId = "01a1a665-e4f0-71d9-bd3e-4d19f50b9d09";
+		const editionId = "01a1a665-ec80-7a99-9222-960174288f0a";
+		const fetcher = vi.fn(async (url: string) =>
+			url.includes("/books/wiki/edition/")
+				? json({ data: { entity_id: editionId, fields: { work_id: workId } } })
+				: json({ data: { id: workId, title: "三体", lifecycle_status: "active", authors: [{name: "刘慈欣"}],
+						editions: [{ id: editionId, title: "三体", edition_statement: "第一版", isbn13: "9787536692930" }] } }),
+		) as unknown as typeof fetch;
+		const found = await resolvePublicContentSeo(`/books/edition/${editionId}`, "https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+		const shell = '<html><head></head><body><div id="app"><!-- seo-prerender-start --><p>通用首屏</p><!-- seo-prerender-end --></div></body></html>';
+		const html = buildPublicContentHtml(shell, found.content!);
+		expect(html).toContain('<h2>所属作品</h2>');
+		expect(html).toContain(`href="/books/work/${workId}">所属作品：三体</a>`);
+		expect(html).not.toContain("通用首屏");
+	});
+
 	it("renders crawlable video content in the HTML body", () => {
 		const html = buildPublicContentHtml(
 			'<!doctype html><html><head><title>Atoman</title></head><body><div id="app"><!-- seo-prerender-start --><div class="portal-prerender">首页</div><!-- seo-prerender-end --></div></body></html>',

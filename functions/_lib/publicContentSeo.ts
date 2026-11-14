@@ -172,15 +172,21 @@ async function loadBookWork(apiBase: string, id: string, fetcher: Fetcher) {
 			description,
 			author: authors.map((name) => ({ "@type": "Person", name })),
 			image,
-			workExample: editions.map((edition) => ({
+			workExample: editions.filter((edition) => uuidPattern.test(text(edition?.id))).map((edition) => ({
 				"@type": "Book",
 				name: text(edition?.title) || title,
 				isbn: text(edition?.isbn13) || text(edition?.isbn10) || undefined,
-				url: `${canonicalOrigin}/books/edition/${encodeURIComponent(text(edition?.id))}`,
-			})).filter((edition) => !edition.url.endsWith("/")),
+				url: `${canonicalOrigin}/books/edition/${text(edition?.id).toLowerCase()}`,
+			})),
 		},
 		image,
 		date(work.updated_at),
+		editions.flatMap((edition) => {
+			const eid = text(edition?.id);
+			return uuidPattern.test(eid)
+				? [{ href: `${canonicalOrigin}/books/edition/${eid.toLowerCase()}`, label: text(edition?.edition_statement) || text(edition?.title) || `${title} · 出版版本` }]
+				: [];
+		}).slice(0, 50),
 	);
 }
 
@@ -227,6 +233,9 @@ async function loadBookEdition(apiBase: string, id: string, fetcher: Fetcher) {
 		},
 		image,
 		date(fields?.updated_at),
+		uuidPattern.test(workId)
+			? [{ href: `${canonicalOrigin}/books/work/${workId.toLowerCase()}`, label: `所属作品：${text(work.title)}` }]
+			: [],
 	);
 }
 
@@ -259,6 +268,12 @@ async function loadBookList(apiBase: string, id: string, fetcher: Fetcher) {
 		},
 		undefined,
 		date(booklist.updated_at || booklist.published_at),
+		works.flatMap((entry) => {
+			const workId = text(entry?.canonical_work_id);
+			return uuidPattern.test(workId)
+				? [{ href: `${canonicalOrigin}/books/work/${workId.toLowerCase()}`, label: text(entry?.title) || `图书作品 ${workId}` }]
+				: [];
+		}).slice(0, 50),
 	);
 }
 
@@ -268,6 +283,19 @@ async function loadArtist(apiBase: string, id: string, fetcher: Fetcher) {
 	);
 	if (!artist || !text(artist.id) || !text(artist.name)) return undefined;
 	const name = text(artist.display_name) || text(artist.name);
+	const seenAlbumIds = new Set<string>();
+	const publicAlbums = array(artist.albums).map(record).filter(Boolean).filter((album) =>
+		(!text(album?.lifecycle_status) || text(album?.lifecycle_status) === "active") &&
+		(!text(album?.status) || text(album?.status) === "open") &&
+		(!text(album?.entry_status) || text(album?.entry_status) === "open"),
+	);
+	const relatedLinks = publicAlbums.flatMap((album) => {
+		const href = musicEntityUrl("album", album?.id);
+		const label = text(album?.title);
+		if (!href || !label || seenAlbumIds.has(href)) return [];
+		seenAlbumIds.add(href);
+		return [{ href, label }];
+	}).slice(0, 60);
 	const description = plainText(
 		artist.bio,
 		`在 Atoman 查看 ${name} 的音乐资料、专辑与作品。`,
@@ -284,6 +312,7 @@ async function loadArtist(apiBase: string, id: string, fetcher: Fetcher) {
 		},
 		text(artist.image_url) || undefined,
 		date(artist.updated_at),
+		relatedLinks,
 	);
 }
 
@@ -743,7 +772,7 @@ export function buildPublicContentHtml(html: string, item: PublicContentSeo) {
 		const candidate = text(value);
 		try {
 			const url = new URL(candidate);
-			return url.origin === canonicalOrigin && /^\/music\/(?:artist|album|song)\/[a-f0-9-]{36}$/i.test(url.pathname)
+			return url.origin === canonicalOrigin && /^\/(?:music\/(?:artist|album|song)|books\/(?:work|edition))\/[a-f0-9-]{36}$/i.test(url.pathname)
 				? url.pathname : undefined;
 		} catch { return undefined; }
 	};
@@ -772,9 +801,13 @@ export function buildPublicContentHtml(html: string, item: PublicContentSeo) {
 	const relatedLinks = (item.relatedLinks || [])
 		.map((link) => ({ href: safeLink(link.href), label: text(link.label) }))
 		.filter((link): link is { href: string; label: string } => Boolean(link.href && link.label));
-	const relatedHeading = entity["@type"] === "MusicAlbum" ? "专辑曲目" : "相邻曲目";
+	const relatedHeading = item.path.startsWith("/music/artist/") ? "公开专辑"
+		: item.path.startsWith("/books/work/") ? "出版版本"
+		: item.path.startsWith("/books/edition/") ? "所属作品"
+		: item.path.startsWith("/books/lists/") ? "书单作品"
+		: entity["@type"] === "MusicAlbum" ? "专辑曲目" : "相邻曲目";
 	const relatedHtml = relatedLinks.length
-		? `<nav aria-label="相关音乐作品"><h2>${relatedHeading}</h2><ul>${relatedLinks.map((link) =>
+		? `<nav aria-label="相关作品"><h2>${relatedHeading}</h2><ul>${relatedLinks.map((link) =>
 			`<li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`).join("")}</ul></nav>`
 		: "";
 	const fallbackHtml = injectSeoFallbackHtml(cleanDefaultMetadata(html), {

@@ -81,6 +81,9 @@ describe('blog SEO Pages Functions', () => {
     const xml = await response.text()
     expect(xml).toContain('<loc>https://www.atoman.org/</loc>')
     expect(xml).toContain('<loc>https://www.atoman.org/feed</loc>')
+    expect(xml).toContain('<loc>https://www.atoman.org/music/albums</loc>')
+    expect(xml).toContain('<loc>https://www.atoman.org/music/artists</loc>')
+    expect(xml).toContain('<loc>https://www.atoman.org/music/songs</loc>')
     expect(xml).toContain('<loc>https://www.atoman.org/posts/post/post-1</loc>')
   })
 

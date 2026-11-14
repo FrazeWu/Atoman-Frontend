@@ -44,6 +44,21 @@ describe("static page SEO", () => {
 		expect(html).not.toContain('name="robots"');
 	});
 
+	it.each([
+		["/music/albums", "音乐专辑列表", "/music/artists"],
+		["/music/artists", "音乐人目录", "/music/albums"],
+		["/music/songs", "歌曲目录", "/music/artists"],
+	])("renders a unique SEO shell for %s", (path, title, linkedPage) => {
+		const sample = '<html><head><title>Home</title></head><body><div id="app"><!-- seo-prerender-start --><h1>首页通用标题</h1><!-- seo-prerender-end --></div></body></html>';
+		const html = buildStaticPageHtml(sample, path, "www.atoman.org");
+		expect(html).toContain(`<h1>${title}</h1>`);
+		expect(html).toContain(`rel="canonical" href="https://www.atoman.org${path}"`);
+		expect(html).toContain(`href="${linkedPage}"`);
+		expect(html).not.toContain("首页通用标题");
+		expect(html).not.toContain('name="robots" content="noindex');
+		expect(isKnownPagePath(path)).toBe(true);
+	});
+
 	it("renders distinct, crawlable initial section bodies and public internal links", () => {
 		const pageShell = '<!doctype html><html><head><title>Atoman</title></head><body><div id="app"><!-- seo-prerender-start --><div class="portal-prerender">HOME ONLY</div><!-- seo-prerender-end --></div></body></html>';
 		const books = buildStaticPageHtml(pageShell, "/books", "www.atoman.org");

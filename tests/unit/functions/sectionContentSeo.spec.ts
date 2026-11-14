@@ -44,6 +44,23 @@ describe("public section SEO link previews", () => {
     expect(listing).toContain("音乐人");
   });
 
+  it.each([
+    ["/music/albums", "albums", "/music/album/", "title"],
+    ["/music/artists", "artists", "/music/artist/", "name"],
+    ["/music/songs", "songs", "/music/song/", "title"],
+  ])("exposes up to 12 public detail links on %s", async (page, apiName, prefix, labelField) => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({data: Array.from({length: 14}, (_, i) => ({
+      id: `record-${i}`, [labelField]: `公开内容 ${i}`, lifecycle_status: i === 2 ? "retired" : "active", status: "open",
+    }))}), {headers:{"content-type":"application/json"}})) as unknown as typeof fetch;
+    const listing = await loadPublicSectionListing(page, undefined, "https://www.atoman.org", fetcher);
+    expect(listing).toContain(`${prefix}record-0`);
+    expect(listing).not.toContain(`${prefix}record-2`);
+    expect(listing).toContain(`${prefix}record-12`);
+    expect(listing).not.toContain(`${prefix}record-13`);
+    expect((listing.match(/<li>/g) || []).length).toBe(12);
+    expect(fetcher).toHaveBeenCalledWith(expect.stringContaining(`/music/${apiName}?page=1&page_size=12`),expect.any(Object));
+  });
+
   it("accepts raw video arrays and excludes non-public videos", async () => {
     const fetcher = vi.fn(async () => new Response(JSON.stringify([
       { id: "video-1", title: "公开视频", visibility: "public", status: "published" },

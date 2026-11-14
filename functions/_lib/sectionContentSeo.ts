@@ -7,6 +7,7 @@ type PublicListSource = {
   endpoint: string;
   routePrefix: string;
   labelField: "title" | "name";
+  maxItems?: number;
 };
 
 const sources: Record<string, PublicListSource[]> = {
@@ -16,6 +17,15 @@ const sources: Record<string, PublicListSource[]> = {
   "/music": [
     { heading: "音乐专辑", endpoint: "/music/albums?page=1&page_size=8", routePrefix: "/music/album/", labelField: "title" },
     { heading: "音乐人", endpoint: "/music/artists?page=1&page_size=8", routePrefix: "/music/artist/", labelField: "name" },
+  ],
+  "/music/albums": [
+    { heading: "公开音乐专辑", endpoint: "/music/albums?page=1&page_size=12", routePrefix: "/music/album/", labelField: "title", maxItems: 12 },
+  ],
+  "/music/artists": [
+    { heading: "公开音乐人", endpoint: "/music/artists?page=1&page_size=12", routePrefix: "/music/artist/", labelField: "name", maxItems: 12 },
+  ],
+  "/music/songs": [
+    { heading: "公开歌曲", endpoint: "/music/songs?page=1&page_size=12", routePrefix: "/music/song/", labelField: "title", maxItems: 12 },
   ],
   "/forum": [{ heading: "公开讨论", endpoint: "/forum/topics?page=1&page_size=8", routePrefix: "/forum/topic/", labelField: "title" }],
   "/debate": [{ heading: "公开辩题", endpoint: "/debate/topics?page=1&page_size=8", routePrefix: "/debate/", labelField: "title" }],
@@ -79,7 +89,7 @@ async function getGroup(apiBase: string, source: PublicListSource, fetcher: Publ
         return `<li><a href="${escapeHtml(url)}">${escapeHtml(title)}</a>${summary && summary !== title ? `<p>${escapeHtml(summary)}</p>` : ""}</li>`;
       })
       .filter(Boolean)
-      .slice(0, 8);
+      .slice(0, source.maxItems ?? 8);
     return valid.length
       ? `<section class="seo-public-listing-group"><h3>${escapeHtml(source.heading)}</h3><ul>${valid.join("")}</ul></section>`
       : "";

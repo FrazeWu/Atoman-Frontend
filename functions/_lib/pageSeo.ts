@@ -34,6 +34,18 @@ const pageMeta: Record<string, StaticPageMeta> = {
 		title: "音乐档案 | Atoman",
 		description: "浏览和整理专辑、歌曲与艺人资料。",
 	},
+	"/music/albums": {
+		title: "音乐专辑列表 | Atoman",
+		description: "浏览 Atoman 公开收录的音乐专辑，查看专辑介绍、音乐人和曲目资料。",
+	},
+	"/music/artists": {
+		title: "音乐人目录 | Atoman",
+		description: "浏览 Atoman 公开收录的音乐人与组合，探索音乐人资料和关联专辑。",
+	},
+	"/music/songs": {
+		title: "歌曲目录 | Atoman",
+		description: "浏览 Atoman 公开收录的歌曲，查看歌曲详情、音乐人及关联专辑。",
+	},
 	"/forum": {
 		title: "论坛 | Atoman",
 		description: "参与主题讨论，发布观点并与社区交流。",
@@ -76,7 +88,10 @@ const publicSectionLinks: Record<string, string[]> = {
   "/posts": ["/feed", "/forum", "/debate"],
   "/books": ["/books/lists", "/posts", "/forum"],
   "/books/lists": ["/books", "/posts"],
-  "/music": ["/podcasts", "/videos", "/posts"],
+  "/music": ["/music/albums", "/music/artists", "/music/songs", "/podcasts", "/videos", "/posts"],
+  "/music/albums": ["/music", "/music/artists", "/music/songs"],
+  "/music/artists": ["/music", "/music/albums", "/music/songs"],
+  "/music/songs": ["/music", "/music/albums", "/music/artists"],
   "/forum": ["/debate", "/posts"],
   "/debate": ["/forum", "/posts"],
   "/timeline": ["/posts", "/books"],

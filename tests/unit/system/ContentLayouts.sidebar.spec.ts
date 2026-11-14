@@ -26,4 +26,15 @@ describe("content layout shells", () => {
 			);
 		}
 	});
+
+	it("preserves sidebar width contracts for studio layout and mail workspace", () => {
+		const globalStyle = readFileSync(
+			resolve(__dirname, "../../../src/style.css"),
+			"utf8",
+		);
+		expect(globalStyle).toMatch(/body:has\(\.studio-layout\)[\s\S]*?--a-sidebar-width:\s*12rem/);
+		expect(globalStyle).toMatch(/body:has\(\.studio-layout\.is-sidebar-collapsed\)[\s\S]*?--a-sidebar-width:\s*var\(--a-sidebar-collapsed-width\)/);
+		expect(globalStyle).toMatch(/body:has\(\.mail-page\)[\s\S]*?--a-sidebar-width:\s*220px/);
+		expect(globalStyle).toMatch(/body:has\(\.mail-workspace\)[\s\S]*?--a-sidebar-width:\s*220px/);
+	});
 });

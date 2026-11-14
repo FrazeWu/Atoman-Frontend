@@ -163,7 +163,8 @@ body {
 	outline-offset: 2px;
 }
 
-body:has(.app-shell.has-sidebar) {
+body:has(.app-shell.has-sidebar),
+body:has(.studio-layout) {
 	--a-sidebar-width: 12rem;
 	--a-content-bottom-offset: calc(
 		var(--a-player-reserved-height) +
@@ -173,9 +174,11 @@ body:has(.app-shell.has-sidebar) {
 }
 
 @media (min-width: 768px) {
-	body:has(.app-shell.has-sidebar .a-module-layout.is-sidebar-collapsed) {
+	body:has(.app-shell.has-sidebar .a-module-layout.is-sidebar-collapsed),
+	body:has(.studio-layout.is-sidebar-collapsed) {
 		--a-sidebar-width: var(--a-sidebar-collapsed-width);
 	}
+	body:has(.mail-page),
 	body:has(.mail-workspace) {
 		--a-sidebar-width: 220px;
 	}
@@ -1361,7 +1364,8 @@ html:not([data-atoman-app="mobile"]) .mobile-bottom-nav {
 }
 
 @media (max-width: 1023px) {
-	body:has(.app-shell.has-sidebar) {
+	body:has(.app-shell.has-sidebar),
+	body:has(.studio-layout) {
 		--a-sidebar-width: 4.5rem;
 	}
 	.has-sidebar {
@@ -1377,7 +1381,10 @@ html:not([data-atoman-app="mobile"]) .mobile-bottom-nav {
 	:root {
 		--a-page-start-space: 1.5rem;
 	}
-	body:has(.app-shell.has-sidebar) {
+	body:has(.app-shell.has-sidebar),
+	body:has(.studio-layout),
+	body:has(.mail-page),
+	body:has(.mail-workspace) {
 		--a-sidebar-width: 0px;
 		--a-mobile-nav-reserved-height: calc(64px + env(safe-area-inset-bottom, 0px));
 		--a-footer-reserved-height: 0px;

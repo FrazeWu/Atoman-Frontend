@@ -52,6 +52,7 @@ export const studioRoutes: RouteRecordRaw[] = [
 							overlay: studioEditorRouteView,
 						},
 						meta: {
+							hasSidebar: true,
 							studioOverlay: true,
 							studioOverlayMode: "edit",
 						},
@@ -101,6 +102,7 @@ export const studioRoutes: RouteRecordRaw[] = [
 							overlay: studioEditorRouteView,
 						},
 						meta: {
+							hasSidebar: true,
 							studioOverlay: true,
 							studioOverlayMode: "new",
 						},
@@ -117,6 +119,7 @@ export const studioRoutes: RouteRecordRaw[] = [
 							overlay: studioEditorRouteView,
 						},
 						meta: {
+							hasSidebar: true,
 							studioOverlay: true,
 							studioOverlayMode: "edit",
 						},

@@ -44,6 +44,18 @@ describe("public section SEO link previews", () => {
     expect(listing).toContain("音乐人");
   });
 
+  it("accepts raw video arrays and excludes non-public videos", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify([
+      { id: "video-1", title: "公开视频", visibility: "public", status: "published" },
+      { id: "video-2", title: "私密视频", visibility: "private", status: "published" },
+      { id: "video-3", title: "草稿视频", visibility: "public", status: "draft" },
+    ]), { headers: { "content-type": "application/json" } })) as unknown as typeof fetch;
+    const listing = await loadPublicSectionListing("/videos", undefined, "https://www.atoman.org", fetcher);
+    expect(listing).toContain('href="/videos/watch/video-1"');
+    expect(listing).not.toContain("私密视频");
+    expect(listing).not.toContain("草稿视频");
+  });
+
   it("fails open for unavailable APIs and does not rewrite non-section pages", async () => {
     const failing = vi.fn(async () => { throw new Error("503"); }) as unknown as typeof fetch;
     const listing = await loadPublicSectionListing("/videos", undefined, "https://www.atoman.org", failing);

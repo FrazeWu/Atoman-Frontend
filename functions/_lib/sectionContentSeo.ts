@@ -48,8 +48,9 @@ function publicRecord(item: PublicItem) {
 }
 
 function listItems(payload: unknown): PublicItem[] {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return [];
-  const data = (payload as { data?: unknown }).data;
+  if (!payload || typeof payload !== "object") return [];
+  // Public APIs return either a bare array (/videos) or a data envelope.
+  const data = Array.isArray(payload) ? payload : (payload as { data?: unknown }).data;
   const items = Array.isArray(data)
     ? data
     : data && typeof data === "object" && !Array.isArray(data)

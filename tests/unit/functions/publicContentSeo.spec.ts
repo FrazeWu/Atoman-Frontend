@@ -98,6 +98,72 @@ describe("public content SEO", () => {
 		expect(html).not.toContain("2202");
 	});
 
+	it("links only verified music artist, album and neighboring song entities in crawlable HTML", async () => {
+		const artist = "01a17b88-ee59-77c5-9ebf-049390c71f52";
+		const album = "01a17b88-ee76-77c9-afff-031387805123";
+		const song = "01a17b89-60cd-741e-beba-f14d5c6ca236";
+		const previous = "01a17b89-581d-7415-9118-54a93cb85c5e";
+		const fetcher = vi.fn(async () => json({ data: {
+			song: { id: song, title: "示例歌曲", lifecycle_status: "active", duration_sec: 201,
+				album: { id: album, title: "公开专辑" } },
+			artists: [{ id: artist, name: "示例歌手" }],
+			previous: { id: previous, title: "上一首作品", lifecycle_status: "active" },
+		} })) as unknown as typeof fetch;
+		const lookup = await resolvePublicContentSeo(`/music/song/${song}`, "https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+		const page = '<!doctype html><html><head><title>Atoman</title></head><body><div id="app"><!-- seo-prerender-start --><p>首页预览</p><!-- seo-prerender-end --></div></body></html>';
+		const html = buildPublicContentHtml(page, lookup.content!);
+		expect(html).toContain(`href="/music/artist/${artist}">示例歌手</a>`);
+		expect(html).toContain(`href="/music/album/${album}">公开专辑</a>`);
+		expect(html).toContain(`href="/music/song/${previous}">上一首：上一首作品</a>`);
+		expect(html).toContain('"@type":"MusicRecording"');
+		expect(html).toContain(`"url":"https://www.atoman.org/music/artist/${artist}"`);
+		expect(html).toContain(`"url":"https://www.atoman.org/music/album/${album}"`);
+		expect(html).not.toContain("首页预览");
+	});
+
+	it("renders a publicly visible album track list without exposing archived songs", async () => {
+		const album = "01a17b88-ee76-77c9-afff-031387805123";
+		const artist = "01a17b88-ee59-77c5-9ebf-049390c71f52";
+		const firstTrack = "01a17b89-60cd-741e-beba-f14d5c6ca236";
+		const archivedTrack = "01a17b89-581d-7415-9118-54a93cb85c5e";
+		const fetcher = vi.fn(async () => json({ data: {
+			id: album, title: "商业与玩法", lifecycle_status: "active", status: "open",
+			artists: [{ id: artist, name: "示例音乐人" }],
+			songs: [
+				{ id: firstTrack, title: "公开歌曲", lifecycle_status: "active", status: "open" },
+				{ id: archivedTrack, title: "归档歌曲", lifecycle_status: "retired", status: "closed" },
+			],
+		} })) as unknown as typeof fetch;
+		const lookup = await resolvePublicContentSeo(`/music/album/${album}`, "https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+		const page = '<!doctype html><html><head><title>Atoman</title></head><body><div id="app"><!-- seo-prerender-start --><p>首页预览</p><!-- seo-prerender-end --></div></body></html>';
+		const html = buildPublicContentHtml(page, lookup.content!);
+		expect(html).toContain('<h2>专辑曲目</h2>');
+		expect(html).toContain(`href="/music/song/${firstTrack}">公开歌曲</a>`);
+		expect(html).toContain(`href="/music/artist/${artist}">示例音乐人</a>`);
+		expect(html).not.toContain("归档歌曲");
+		expect(html).not.toContain(`href="/music/song/${archivedTrack}"`);
+	});
+
+	it("does not invent links to soft-deleted albums and escapes catalog labels", async () => {
+		const song = "01a07774-5d12-7269-8ba1-873530a3654d";
+		const deletedAlbum = "01a06b7f-0350-7e5e-85fc-4b523587fcb9";
+		const artist = "01a000c7-7bc4-7d80-a32d-bc9ee315d2d7";
+		const fetcher = vi.fn(async () => json({ data: {
+			song: { id: song, title: "Kendrick <unsafe> & friends", album_id: deletedAlbum,
+				lifecycle_status: "active", duration_sec: 257 },
+			artists: [{ id: artist, name: "Kendrick & Friends" }],
+		} })) as unknown as typeof fetch;
+		const lookup = await resolvePublicContentSeo(`/music/song/${song}`, "https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+		expect(lookup.content?.structuredData.inAlbum).toBeUndefined();
+		expect(lookup.content?.description).toContain("Kendrick & Friends");
+		const page = '<!doctype html><html><head><title>Atoman</title></head><body><div id="app"><!-- seo-prerender-start --><p>首页预览</p><!-- seo-prerender-end --></div></body></html>';
+		const html = buildPublicContentHtml(page, lookup.content!);
+		expect(html).toContain(`href="/music/artist/${artist}"`);
+		expect(html).not.toContain(`href="/music/album/${deletedAlbum}"`);
+		expect(html).not.toContain("<unsafe>");
+		expect(html).toContain("Kendrick &amp; Friends");
+	});
+
 	it("marks aggregated feed item pages as noindex without a homepage canonical", () => {
 		const html = buildAggregatedContentHtml(shell);
 

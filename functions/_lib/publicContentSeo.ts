@@ -11,6 +11,7 @@ export type PublicContentSeo = {
 	imageUrl?: string;
 	lastModified?: string;
 	structuredData: Record<string, unknown>;
+	relatedLinks?: Array<{ href: string; label: string }>;
 };
 
 export type PublicContentLookup = {
@@ -108,6 +109,13 @@ async function getJson(url: string, fetcher: Fetcher): Promise<JsonValue> {
 	return unwrap(parseJsonValue(await response.json()));
 }
 
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function musicEntityUrl(kind: "artist" | "album" | "song", id: unknown): string | undefined {
+	const value = text(id);
+	return uuidPattern.test(value) ? `${canonicalOrigin}/music/${kind}/${value.toLowerCase()}` : undefined;
+}
+
 function names(values: unknown): string[] {
 	return array(values)
 		.map((value) => text(record(value)?.name))
@@ -121,8 +129,9 @@ function content(
 	structuredData: Record<string, unknown>,
 	imageUrl?: string,
 	lastModified?: string,
+	relatedLinks?: PublicContentSeo["relatedLinks"],
 ): PublicContentSeo {
-	return { path, title, description, imageUrl, lastModified, structuredData };
+	return { path, title, description, imageUrl, lastModified, structuredData, relatedLinks };
 }
 
 function bookCoverUrl(value: unknown, apiBase: string): string | undefined {
@@ -289,6 +298,14 @@ async function loadAlbum(apiBase: string, id: string, fetcher: Fetcher) {
 		album.description,
 		`在 Atoman 查看专辑《${title}》的曲目与资料。`,
 	);
+	const tracks = array(album.songs).map(record).filter(Boolean).filter((track) =>
+		(!text(track?.lifecycle_status) || text(track?.lifecycle_status) === "active") &&
+		(!text(track?.status) || text(track?.status) === "open"),
+	);
+	const relatedLinks = tracks
+		.map((track) => ({ href: musicEntityUrl("song", track?.id), label: text(track?.title) }))
+		.filter((link): link is { href: string; label: string } => Boolean(link.href && link.label))
+		.slice(0, 60);
 	return content(
 		`/music/album/${encodeURIComponent(id)}`,
 		`《${title}》${artists.length ? ` - ${artists.join("、")}` : ""} | Atoman`,
@@ -298,11 +315,16 @@ async function loadAlbum(apiBase: string, id: string, fetcher: Fetcher) {
 			name: title,
 			description,
 			image: text(album.cover_url) || undefined,
-			byArtist: artists.map((name) => ({ "@type": "MusicGroup", name })),
+			byArtist: array(album.artists).map(record).filter(Boolean).map((artist) => ({
+				"@type": "MusicGroup",
+				name: text(artist?.name),
+				url: musicEntityUrl("artist", artist?.id),
+			})).filter((artist) => artist.name),
 			datePublished: date(album.release_date),
 		},
 		text(album.cover_url) || undefined,
 		date(album.updated_at),
+		relatedLinks,
 	);
 }
 
@@ -324,8 +346,23 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 	const releaseYear = rawReleaseDate ? Number(rawReleaseDate.slice(0, 4)) : NaN;
 	const releaseDate = Number.isInteger(releaseYear) && releaseYear >= 1000 && releaseYear <= new Date().getUTCFullYear() + 1
 		? rawReleaseDate : undefined;
-	const fallback = `在 Atoman 查看${artists.length ? ` ${artists.join("、")} 的` : ""}歌曲《${title}》的作品资料${durationLabel ? `，时长 ${durationLabel}` : ""}。`;
-	const description = plainText(song.description, fallback);
+	const albumName = text(album?.title);
+	const factualFallback = [
+		`在 Atoman 查看歌曲《${title}》的作品资料`,
+		artists.length ? `音乐人：${artists.join("、")}` : "",
+		albumName ? `收录于《${albumName}》` : "",
+		durationLabel ? `时长 ${durationLabel}` : "",
+	].filter(Boolean).join("；") + "。";
+	const description = plainText(song.description, factualFallback);
+	const relatedLinks = ([
+		{ record: record(detail?.previous), prefix: "上一首" },
+		{ record: record(detail?.next), prefix: "下一首" },
+	] as const).flatMap(({ record: adjacent, prefix }) => {
+		const href = musicEntityUrl("song", adjacent?.id);
+		const label = text(adjacent?.title);
+		return href && label && adjacent?.lifecycle_status !== "merged" && adjacent?.lifecycle_status !== "retired"
+			? [{ href, label: `${prefix}：${label}` }] : [];
+	});
 	return content(
 		`/music/song/${encodeURIComponent(id)}`,
 		`《${title}》${artists.length ? ` - ${artists.join("、")}` : ""} | Atoman`,
@@ -335,15 +372,20 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 			name: title,
 			description,
 			image: text(song.cover_url) || text(album?.cover_url) || undefined,
-			byArtist: artists.map((name) => ({ "@type": "MusicGroup", name })),
+			byArtist: array(detail?.artists).map(record).filter(Boolean).map((artist) => ({
+				"@type": "MusicGroup",
+				name: text(artist?.name),
+				url: musicEntityUrl("artist", artist?.id),
+			})).filter((artist) => artist.name),
 			duration: durationSeconds !== undefined ? `PT${durationSeconds}S` : undefined,
 			datePublished: releaseDate,
-			inAlbum: text(album?.title)
-				? { "@type": "MusicAlbum", name: text(album?.title) }
+			inAlbum: albumName
+				? { "@type": "MusicAlbum", name: albumName, url: musicEntityUrl("album", album?.id) }
 				: undefined,
 		},
 		text(song.cover_url) || text(album?.cover_url) || undefined,
 		date(song.updated_at),
+		relatedLinks,
 	);
 }
 
@@ -694,23 +736,46 @@ export function buildPublicContentHtml(html: string, item: PublicContentSeo) {
 		text(item.structuredData.name) ||
 		text(item.structuredData.headline) ||
 		item.title;
-	const facts: Array<[string, string]> = [];
+	type FactValue = { label: string; href?: string };
+	const facts: Array<{ name: string; values: FactValue[] }> = [];
 	const entity = item.structuredData;
-	const authors = array(entity.author).map((author) => text(record(author)?.name)).filter(Boolean);
-	const performers = array(entity.byArtist).map((artist) => text(record(artist)?.name)).filter(Boolean);
-	if (authors.length) facts.push(["作者", authors.join("、")]);
-	if (performers.length) facts.push(["音乐人", performers.join("、")]);
-	if (text(entity.isbn)) facts.push(["ISBN", text(entity.isbn)]);
-	if (text(record(entity.publisher)?.name)) facts.push(["出版社", text(record(entity.publisher)?.name)]);
-	if (text(record(entity.inAlbum)?.name)) facts.push(["所属专辑", text(record(entity.inAlbum)?.name)]);
+	const safeLink = (value: unknown) => {
+		const candidate = text(value);
+		try {
+			const url = new URL(candidate);
+			return url.origin === canonicalOrigin && /^\/music\/(?:artist|album|song)\/[a-f0-9-]{36}$/i.test(url.pathname)
+				? url.pathname : undefined;
+		} catch { return undefined; }
+	};
+	const authorNames = array(entity.author).map((author) => text(record(author)?.name)).filter(Boolean);
+	if (authorNames.length) facts.push({ name: "作者", values: authorNames.map((label) => ({ label })) });
+	const performers = array(entity.byArtist).map(record).filter(Boolean).map((artist) => ({
+		label: text(artist?.name), href: safeLink(artist?.url),
+	})).filter((artist) => artist.label);
+	if (performers.length) facts.push({ name: "音乐人", values: performers });
+	if (text(entity.isbn)) facts.push({ name: "ISBN", values: [{ label: text(entity.isbn) }] });
+	if (text(record(entity.publisher)?.name)) facts.push({ name: "出版社", values: [{ label: text(record(entity.publisher)?.name) }] });
+	const album = record(entity.inAlbum);
+	if (text(album?.name)) facts.push({ name: "所属专辑", values: [{ label: text(album?.name), href: safeLink(album?.url) }] });
 	if (typeof entity.numberOfPages === "number" && entity.numberOfPages > 0)
-		facts.push(["页数", String(entity.numberOfPages)]);
+		facts.push({ name: "页数", values: [{ label: String(entity.numberOfPages) }] });
 	if (typeof entity.duration === "string" && /^PT[0-9]+S$/.test(entity.duration)) {
 		const seconds = Number(entity.duration.slice(2, -1));
-		facts.push(["时长", `${Math.floor(seconds / 60)} 分 ${String(seconds % 60).padStart(2, "0")} 秒`]);
+		facts.push({ name: "时长", values: [{ label: `${Math.floor(seconds / 60)} 分 ${String(seconds % 60).padStart(2, "0")} 秒` }] });
 	}
 	const factsHtml = facts.length
-		? `<section aria-label="作品资料"><h2>作品资料</h2><dl>${facts.map(([name, value]) => `<dt>${escapeHtml(name)}</dt><dd>${escapeHtml(value)}</dd>`).join("")}</dl></section>`
+		? `<section aria-label="作品资料"><h2>作品资料</h2><dl>${facts.map(({ name, values }) =>
+			`<dt>${escapeHtml(name)}</dt><dd>${values.map(({ label, href }) => href
+				? `<a href="${escapeHtml(href)}">${escapeHtml(label)}</a>` : escapeHtml(label)).join("、")}</dd>`
+		).join("")}</dl></section>`
+		: "";
+	const relatedLinks = (item.relatedLinks || [])
+		.map((link) => ({ href: safeLink(link.href), label: text(link.label) }))
+		.filter((link): link is { href: string; label: string } => Boolean(link.href && link.label));
+	const relatedHeading = entity["@type"] === "MusicAlbum" ? "专辑曲目" : "相邻曲目";
+	const relatedHtml = relatedLinks.length
+		? `<nav aria-label="相关音乐作品"><h2>${relatedHeading}</h2><ul>${relatedLinks.map((link) =>
+			`<li><a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a></li>`).join("")}</ul></nav>`
 		: "";
 	const fallbackHtml = injectSeoFallbackHtml(cleanDefaultMetadata(html), {
 		kind: "content",
@@ -723,10 +788,11 @@ export function buildPublicContentHtml(html: string, item: PublicContentSeo) {
 				? directVideoSource(item.structuredData.contentUrl)
 				: undefined,
 	});
-	const detailedHtml = factsHtml
+	const htmlSupplement = factsHtml + relatedHtml;
+	const detailedHtml = htmlSupplement
 		? fallbackHtml.replace(
 			/(<main data-seo-fallback="content"><h1>[\s\S]*?<\/h1><p>[\s\S]*?<\/p>)/,
-			(marker) => `${marker}${factsHtml}`,
+			(marker) => `${marker}${htmlSupplement}`,
 		)
 		: fallbackHtml;
 	return detailedHtml.replace(

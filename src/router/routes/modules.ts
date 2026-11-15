@@ -72,6 +72,11 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 					component: () => import("@/views/blog/BookmarkView.vue"),
 					meta: { requiresAuth: true },
 				},
+				{
+					path: "post/:id",
+					component: () => import("@/views/blog/PostDetailRouteView.vue"),
+					beforeEnter: (to) => (to.params.id === "new" ? "/__not_found__" : true),
+				},
 			],
 		},
 		{
@@ -81,11 +86,6 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 		{
 			path: "/collection/:id",
 			component: () => import("@/views/blog/CollectionView.vue"),
-		},
-		{
-			path: "/post/:id",
-			component: () => import("@/views/blog/PostDetailRouteView.vue"),
-			beforeEnter: (to) => (to.params.id === "new" ? "/__not_found__" : true),
 		},
 	],
 	music: [

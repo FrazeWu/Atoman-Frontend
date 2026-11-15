@@ -311,6 +311,71 @@
   color: var(--a-color-fg);
 }
 
+:deep(.cm-code-block-preview),
+:deep(.cm-math-block-preview),
+:deep(.cm-table-block-preview) {
+  position: relative;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card, 6px);
+  margin: 1.25rem 0;
+  overflow: hidden;
+  background: var(--a-color-bg);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+:deep(.cm-code-block-preview:hover),
+:deep(.cm-math-block-preview:hover),
+:deep(.cm-table-block-preview:hover) {
+  border-color: var(--a-color-text-secondary);
+}
+
+:deep(.cm-code-block-header),
+:deep(.cm-math-block-header),
+:deep(.cm-table-block-header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--a-color-muted);
+  background: var(--a-color-surface-muted);
+  border-bottom: 1px solid var(--a-color-border-soft);
+  user-select: none;
+}
+
+:deep(.cm-code-block-edit-hint),
+:deep(.cm-math-block-edit-hint),
+:deep(.cm-table-block-edit-hint) {
+  font-size: 0.68rem;
+  font-weight: 400;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+:deep(.cm-code-block-preview:hover .cm-code-block-edit-hint),
+:deep(.cm-math-block-preview:hover .cm-math-block-edit-hint),
+:deep(.cm-table-block-preview:hover .cm-table-block-edit-hint) {
+  opacity: 1;
+}
+
+:deep(.cm-code-block-preview pre) {
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+:deep(.cm-math-block-preview) {
+  padding: 1.25rem 1rem;
+  text-align: center;
+}
+
+:deep(.cm-table-block-preview table) {
+  margin: 0 !important;
+  width: 100%;
+}
+
 .sv-preview {
   padding: 1.5rem 1.5rem 2rem;
   background: var(--a-color-bg);

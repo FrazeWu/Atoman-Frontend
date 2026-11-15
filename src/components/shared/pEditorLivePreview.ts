@@ -77,22 +77,85 @@ export class MarkdownPreviewWidget extends WidgetType {
     wrapper.className = 'cm-markdown-widget prose-blog'
     const fence = this.source.match(/^\s*(```+|~~~+)([^\n]*)\n([\s\S]*?)\n\s*\1\s*$/)
     if (fence) {
+      const codeBlockWrap = document.createElement('div')
+      codeBlockWrap.className = 'cm-code-block-preview'
+
+      const header = document.createElement('div')
+      header.className = 'cm-code-block-header'
+
+      const langSpan = document.createElement('span')
+      langSpan.className = 'cm-code-block-lang'
+      const language = fence[2].trim()
+      langSpan.textContent = (language || 'code').toUpperCase()
+      header.appendChild(langSpan)
+
+      const editHint = document.createElement('span')
+      editHint.className = 'cm-code-block-edit-hint'
+      editHint.textContent = '点击编辑代码'
+      header.appendChild(editHint)
+
+      codeBlockWrap.appendChild(header)
+
       const pre = document.createElement('pre')
       const code = document.createElement('code')
-      const language = fence[2].trim()
-      if (language) code.className = `language-${language}`
+      if (language) code.className = `hljs language-${language}`
       code.textContent = fence[3]
       pre.append(code)
-      wrapper.append(pre)
+      codeBlockWrap.append(pre)
+      wrapper.append(codeBlockWrap)
     } else {
       const table = markdownTableDOM(this.source)
       if (table) {
-        wrapper.append(table)
+        const tableWrap = document.createElement('div')
+        tableWrap.className = 'cm-table-block-preview'
+
+        const header = document.createElement('div')
+        header.className = 'cm-table-block-header'
+
+        const label = document.createElement('span')
+        label.className = 'cm-table-block-label'
+        label.textContent = '表格'
+        header.appendChild(label)
+
+        const editHint = document.createElement('span')
+        editHint.className = 'cm-table-block-edit-hint'
+        editHint.textContent = '点击编辑表格'
+        header.appendChild(editHint)
+
+        tableWrap.appendChild(header)
+        tableWrap.appendChild(table)
+        wrapper.append(tableWrap)
       } else {
-        const template = document.createElement('template')
-        // renderMarkdown sanitizes through DOMPurify before widgets receive the HTML.
-        template.innerHTML = this.html
-        wrapper.append(template.content.cloneNode(true))
+        const isMath = /^\s*\$\$[\s\S]*\$\$\s*$/.test(this.source)
+        if (isMath) {
+          const mathWrap = document.createElement('div')
+          mathWrap.className = 'cm-math-block-preview'
+
+          const header = document.createElement('div')
+          header.className = 'cm-math-block-header'
+
+          const label = document.createElement('span')
+          label.className = 'cm-math-block-label'
+          label.textContent = '数学公式 (LATEX)'
+          header.appendChild(label)
+
+          const editHint = document.createElement('span')
+          editHint.className = 'cm-math-block-edit-hint'
+          editHint.textContent = '点击编辑公式'
+          header.appendChild(editHint)
+
+          mathWrap.appendChild(header)
+
+          const template = document.createElement('template')
+          template.innerHTML = this.html
+          mathWrap.appendChild(template.content.cloneNode(true))
+          wrapper.append(mathWrap)
+        } else {
+          const template = document.createElement('template')
+          // renderMarkdown sanitizes through DOMPurify before widgets receive the HTML.
+          template.innerHTML = this.html
+          wrapper.append(template.content.cloneNode(true))
+        }
       }
     }
     wrapper.addEventListener('click', (event) => {

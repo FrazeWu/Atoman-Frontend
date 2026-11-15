@@ -5,6 +5,8 @@ import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { reportError } from '@/utils/logger'
 
+const MAX_IMAGE_SIZE = 20 * 1024 * 1024 // 20MB
+
 interface EditorImageUploadOptions {
   enabled: () => boolean
   getView: () => EditorView | null
@@ -29,6 +31,15 @@ export function useEditorImageUpload(options: EditorImageUploadOptions) {
   async function uploadImage(file: File) {
     const view = options.getView()
     if (!view) return
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      reportError(new Error('图片大小超过 20MB 限制'), '图片过大')
+      const from = view.state.selection.main.from
+      const notice = '<!-- 图片超过 20MB 限制，请压缩后重试 -->'
+      view.dispatch({ changes: { from, to: from, insert: notice } })
+      return
+    }
+
     const uploadId = Math.random().toString(36).slice(2, 8)
     const placeholder = `![上传中-${uploadId}]()`
     const from = view.state.selection.main.from
@@ -45,7 +56,7 @@ export function useEditorImageUpload(options: EditorImageUploadOptions) {
       })
       if (!response.ok) throw new Error('upload failed')
       const data = response.data as { url: string }
-      replacePlaceholder(placeholder, `![图片](${data.url})`)
+      replacePlaceholder(placeholder, `![${file.name.replace(/\.[^.]+$/, '') || '图片'}](${data.url})`)
     } catch (error) {
       reportError(error, '图片上传失败')
       replacePlaceholder(placeholder, '')
@@ -63,7 +74,12 @@ export function useEditorImageUpload(options: EditorImageUploadOptions) {
 
   function handleFiles(files?: FileList | null) {
     if (!files) return
-    Array.from(files).filter(file => file.type.startsWith('image/')).forEach(uploadImage)
+    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'))
+    void (async () => {
+      for (const file of imageFiles) {
+        await uploadImage(file)
+      }
+    })()
   }
 
   function onCmPaste(event: ClipboardEvent) {
@@ -71,7 +87,11 @@ export function useEditorImageUpload(options: EditorImageUploadOptions) {
     const files = Array.from(event.clipboardData?.files ?? []).filter(file => file.type.startsWith('image/'))
     if (!files.length) return
     event.preventDefault()
-    files.forEach(uploadImage)
+    void (async () => {
+      for (const file of files) {
+        await uploadImage(file)
+      }
+    })()
   }
 
   function onDrop(event: DragEvent) {

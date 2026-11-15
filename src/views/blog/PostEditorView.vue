@@ -45,12 +45,13 @@
 
             <div ref="publicationSheetTopAnchor" class="editor-top-info" role="status" aria-live="polite">
               <div class="editor-top-info__group">
-                <span class="editor-top-info__sync" :class="`is-${draftStatus.tone}`">{{ draftStatus.text }}</span>
                 <span>{{ editorCharacterCount }} 字</span>
+                <span class="editor-top-info__sep" aria-hidden="true">·</span>
                 <span>{{ editorReadingTime }}</span>
               </div>
               <div class="editor-top-info__group editor-top-info__group--secondary">
                 <span>{{ contentMode === 'markdown' ? 'Markdown' : 'Visual' }}</span>
+                <span class="editor-top-info__sep" aria-hidden="true">·</span>
                 <span>{{ lineNumbersVisible ? '行号已开启' : '行号已关闭' }}</span>
               </div>
             </div>

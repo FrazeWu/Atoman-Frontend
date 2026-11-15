@@ -84,70 +84,81 @@ const tools: Tool[] = [
 <style scoped>
 .post-format-toolbar {
   display: flex;
-  min-height: 2.75rem;
+  min-height: 2.35rem;
+  height: 2.35rem;
   align-items: center;
   align-content: center;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  overflow: visible;
-  padding: 0.35rem 0.75rem;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 0.2rem;
+  padding: 0 0.75rem;
   border-bottom: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+
+.post-format-toolbar::-webkit-scrollbar {
+  display: none;
 }
 
 .post-format-toolbar__button {
-  display: inline-grid;
-  width: 2rem;
-  height: 2rem;
-  flex: 0 0 2rem;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  flex: 0 0 1.85rem;
   padding: 0;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: 0;
-  background: var(--a-color-bg);
-  color: var(--a-color-fg);
+  border: 1px solid transparent;
+  border-radius: var(--a-radius-control, 4px);
+  background: transparent;
+  color: var(--a-color-muted);
   cursor: pointer;
   font: inherit;
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.72rem;
+  font-weight: 600;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
-.post-format-toolbar__button:hover:not(:disabled),
+.post-format-toolbar__button:hover:not(:disabled) {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
+}
+
 .post-format-toolbar__button.is-active {
-  border-color: var(--a-color-fg);
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-primary, #007aff);
 }
 
 .post-format-toolbar__button:focus-visible {
-  outline: 2px solid var(--a-color-fg);
-  outline-offset: 2px;
+  outline: 2px solid var(--a-color-primary);
+  outline-offset: 1px;
 }
 
 .post-format-toolbar__button:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
 .post-format-toolbar__separator {
   width: 1px;
-  height: 1.25rem;
+  height: 1.1rem;
   flex: 0 0 1px;
-  margin-inline: 0.1rem;
+  margin-inline: 0.15rem;
   background: var(--a-color-border-soft);
 }
 
 @media (max-width: 960px) {
   .post-format-toolbar {
-    min-height: 3.25rem;
+    min-height: 2.5rem;
+    height: 2.5rem;
     padding-inline: 0.5rem;
   }
 
   .post-format-toolbar__button {
-    width: 2.75rem;
-    height: 2.75rem;
-    flex-basis: 2.75rem;
+    width: 2rem;
+    height: 2rem;
+    flex-basis: 2rem;
   }
 }
 </style>

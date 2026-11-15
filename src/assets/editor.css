@@ -4,8 +4,8 @@
 	display: flex;
 	height: 100%;
 	min-height: 0;
-	border: 2px solid #000;
-	background: #fff;
+	border: 1px solid var(--a-color-border-soft);
+	background: var(--a-color-bg);
 	overflow: hidden;
 }
 
@@ -15,7 +15,7 @@
 	min-width: 0;
 	display: flex;
 	flex-direction: column;
-	border-right: 2px solid #000;
+	border-right: 1px solid var(--a-color-border-soft);
 	overflow: hidden;
 }
 
@@ -88,9 +88,9 @@
 /* ─── Gutter (line numbers) ──────────────────────────────────────────────── */
 
 .cm-gutters {
-	border-right: 2px solid #000 !important;
-	background: #f9fafb !important;
-	color: #9ca3af !important;
+	border-right: 1px solid var(--a-color-border-soft) !important;
+	background: var(--a-color-surface-muted, #f8f8f7) !important;
+	color: var(--a-color-muted, #9ca3af) !important;
 	padding-right: 0 !important;
 	min-width: 42px;
 }
@@ -111,12 +111,12 @@
 /* ─── Active line ─────────────────────────────────────────────────────────── */
 
 .cm-activeLine {
-	background-color: #fffdf0 !important;
+	background-color: var(--a-color-surface-muted, rgba(0, 0, 0, 0.04)) !important;
 }
 
 .cm-activeLineGutter {
-	background-color: #f0eed6 !important;
-	color: #374151 !important;
+	background-color: var(--a-color-surface-muted, rgba(0, 0, 0, 0.06)) !important;
+	color: var(--a-color-text, #374151) !important;
 }
 
 /* ─── First-line title decoration ─────────────────────────────────────────── */
@@ -127,7 +127,7 @@
 	font-weight: 700 !important;
 	letter-spacing: 0 !important;
 	line-height: 1.35 !important;
-	color: #000 !important;
+	color: var(--a-color-text) !important;
 }
 
 .cm-line.cm-title-h2 {
@@ -136,7 +136,7 @@
 	font-weight: 700 !important;
 	letter-spacing: 0 !important;
 	line-height: 1.4 !important;
-	color: #111 !important;
+	color: var(--a-color-text) !important;
 }
 
 .cm-line.cm-title-h3 {
@@ -144,27 +144,27 @@
 	font-size: 1.15rem !important;
 	font-weight: 700 !important;
 	line-height: 1.35 !important;
-	color: #1f2937 !important;
+	color: var(--a-color-text) !important;
 }
 
 .cm-line.cm-title-h4 {
 	font-family: inherit !important;
 	font-size: 1rem !important;
 	font-weight: 700 !important;
-	color: #374151 !important;
+	color: var(--a-color-text) !important;
 }
 
 /* ─── Selection ───────────────────────────────────────────────────────────── */
 
 .cm-selectionBackground,
 .cm-editor ::selection {
-	background: rgba(0, 0, 0, 0.12) !important;
+	background: var(--a-color-surface-muted, rgba(0, 122, 255, 0.15)) !important;
 }
 
 /* ─── Cursor ──────────────────────────────────────────────────────────────── */
 
 .cm-cursor {
-	border-left-color: #000 !important;
+	border-left-color: var(--a-color-text) !important;
 	border-left-width: 2px !important;
 }
 
@@ -172,7 +172,7 @@
 
 .cm-content {
 	padding: 0 1.5rem !important;
-	caret-color: #000;
+	caret-color: var(--a-color-primary, #007aff);
 }
 
 /* ─── Preview prose ───────────────────────────────────────────────────────── */

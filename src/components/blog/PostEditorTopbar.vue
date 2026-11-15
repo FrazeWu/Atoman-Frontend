@@ -1,20 +1,26 @@
 <template>
   <header class="editor-topbar">
-    <div class="editor-topbar__header-row">
+    <div class="editor-topbar__main">
       <div class="editor-topbar__identity">
         <PButton type="button" variant="ghost" size="sm" aria-label="返回" title="返回" @click="$emit('go-back')">
           <ArrowLeft :size="17" aria-hidden="true" />
         </PButton>
         <span class="editor-topbar__title">{{ isEdit ? '编辑文章' : '新建文章' }}</span>
-        <span class="editor-topbar__status" :class="`is-${draftStatus.tone}`">{{ draftStatus.text }}</span>
+        <span class="editor-topbar__status" :class="`is-${draftStatus.tone}`">
+          <span class="editor-topbar__status-dot" aria-hidden="true" />
+          {{ draftStatus.text }}
+        </span>
       </div>
 
-      <div class="editor-topbar__tools">
+      <div class="editor-topbar__center">
         <PSegmentedControl
           :model-value="contentMode"
           :options="contentModeOptions"
           @update:model-value="value => $emit('update:content-mode', value as 'markdown' | 'visual')"
         />
+      </div>
+
+      <div class="editor-topbar__actions">
         <PButton
           type="button"
           variant="ghost"
@@ -25,10 +31,11 @@
           :aria-pressed="previewOpen"
           @click="$emit('toggle-preview')"
         >
-          <EyeOff v-if="previewOpen" :size="17" aria-hidden="true" />
-          <Eye v-else :size="17" aria-hidden="true" />
-          <span>{{ previewOpen ? '关闭实时预览' : '实时预览' }}</span>
+          <EyeOff v-if="previewOpen" :size="16" aria-hidden="true" />
+          <Eye v-else :size="16" aria-hidden="true" />
+          <span class="editor-topbar__btn-text">{{ previewOpen ? '关闭实时预览' : '实时预览' }}</span>
         </PButton>
+
         <PButton
           type="button"
           variant="ghost"
@@ -37,9 +44,10 @@
           :title="contentSource === 'imported' ? '重新导入 Markdown' : '导入 Markdown'"
           @click="handleImport"
         >
-          <Upload :size="17" aria-hidden="true" />
-          <span>{{ contentSource === 'imported' ? '重新导入 Markdown' : '导入 Markdown' }}</span>
+          <Upload :size="16" aria-hidden="true" />
+          <span class="editor-topbar__btn-text">{{ contentSource === 'imported' ? '重新导入' : '导入 Markdown' }}</span>
         </PButton>
+
         <PButton
           type="button"
           variant="ghost"
@@ -48,38 +56,44 @@
           title="草稿管理"
           @click="$emit('open-draft-manager')"
         >
-          <FileText :size="17" aria-hidden="true" />
-          <span>草稿管理</span>
+          <FileText :size="16" aria-hidden="true" />
+          <span class="editor-topbar__btn-text">草稿管理</span>
         </PButton>
+
         <PDropdown v-if="isEdit" position="right" label="更多操作">
           <template #trigger>
             <PButton type="button" variant="ghost" size="sm" aria-label="更多操作" title="更多操作">
-              <Ellipsis :size="18" aria-hidden="true" />
+              <Ellipsis :size="17" aria-hidden="true" />
             </PButton>
           </template>
           <template #default="{ close }">
             <div class="editor-topbar__menu">
               <button v-if="isEdit" type="button" class="editor-topbar__menu-item" :disabled="exporting" @click="$emit('export-markdown'); close()">
-                <Download :size="16" aria-hidden="true" />
+                <Download :size="15" aria-hidden="true" />
                 导出 Markdown
               </button>
               <button v-if="isEdit" type="button" class="editor-topbar__menu-item" @click="$emit('open-version-history'); close()">
-                <History :size="16" aria-hidden="true" />
+                <History :size="15" aria-hidden="true" />
                 版本历史
               </button>
             </div>
           </template>
         </PDropdown>
-        <input ref="fileInput" type="file" accept=".md,.markdown,.txt" class="hidden-file-input" @change="$emit('import-file', $event)" />
-      </div>
-    </div>
 
-    <div class="editor-topbar__publish-row">
-      <span class="editor-topbar__publish-status" :class="`is-${draftStatus.tone}`">{{ draftStatus.text }}</span>
-      <div class="editor-topbar__publish-actions">
-        <PButton type="button" variant="secondary" size="sm" :loading="saving === 'draft'" :disabled="Boolean(saving)" loading-text="保存中…" @click="$emit('save-draft')">
+        <span class="editor-topbar__divider" aria-hidden="true" />
+
+        <PButton
+          type="button"
+          variant="secondary"
+          size="sm"
+          :loading="saving === 'draft'"
+          :disabled="Boolean(saving)"
+          loading-text="保存中…"
+          @click="$emit('save-draft')"
+        >
           存草稿
         </PButton>
+
         <PButton
           type="button"
           variant="primary"
@@ -92,6 +106,8 @@
         >
           {{ publicationOpen ? '确认' : '发布' }}
         </PButton>
+
+        <input ref="fileInput" type="file" accept=".md,.markdown,.txt" class="hidden-file-input" @change="$emit('import-file', $event)" />
       </div>
     </div>
   </header>
@@ -142,96 +158,101 @@ const handleImport = () => fileInput.value?.click()
 
 <style scoped>
 .editor-topbar {
-  display: grid;
-  min-height: 7rem;
-  gap: 0;
-  border-bottom: var(--a-border);
+  display: flex;
+  min-height: 3.25rem;
+  height: 3.25rem;
+  align-items: center;
+  border-bottom: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg);
 }
 
-.editor-topbar__header-row,
-.editor-topbar__publish-row,
-.editor-topbar__identity,
-.editor-topbar__tools {
+.editor-topbar__main {
   display: flex;
-  min-width: 0;
+  width: 100%;
+  height: 100%;
   align-items: center;
-}
-
-.editor-topbar__header-row {
   justify-content: space-between;
-  gap: 1rem;
-  min-height: 3.5rem;
-  padding: 0.5rem 1rem;
-}
-
-.editor-topbar__identity,
-.editor-topbar__tools,
-.editor-topbar__publish-row {
-  gap: 0.4rem;
+  padding: 0 1rem;
+  gap: 0.75rem;
 }
 
 .editor-topbar__identity {
-  flex: 1;
-}
-
-.editor-topbar__tools {
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .editor-topbar__title {
-  font-size: 0.86rem;
-  font-weight: 500;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--a-color-text);
   white-space: nowrap;
-}
-
-.editor-topbar__status,
-.editor-topbar__publish-status {
-  color: var(--a-color-muted);
-  font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .editor-topbar__status {
-  min-width: 0;
-}
-
-.editor-topbar__status.is-ok,
-.editor-topbar__publish-status.is-ok {
-  color: var(--a-color-success);
-}
-
-.editor-topbar__status.is-warn,
-.editor-topbar__publish-status.is-warn {
-  color: var(--a-color-danger);
-}
-
-.editor-topbar__publish-row {
-  width: 100%;
-  min-height: 3.25rem;
-  justify-content: flex-end;
-  padding: 0.4rem 1rem;
-  border-top: var(--a-border);
-}
-
-.editor-topbar__publish-status {
-  min-width: 0;
-  margin-right: auto;
-}
-
-.editor-topbar__publish-actions {
-  display: flex;
-  min-width: 0;
+  display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
+  color: var(--a-color-muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--a-radius-pill, 9999px);
+  background: var(--a-color-surface-muted);
+}
+
+.editor-topbar__status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--a-color-muted);
+  flex-shrink: 0;
+}
+
+.editor-topbar__status.is-ok {
+  color: var(--a-color-success, #34c759);
+}
+.editor-topbar__status.is-ok .editor-topbar__status-dot {
+  background: var(--a-color-success, #34c759);
+}
+
+.editor-topbar__status.is-warn {
+  color: var(--a-color-danger, #ff3b30);
+}
+.editor-topbar__status.is-warn .editor-topbar__status-dot {
+  background: var(--a-color-danger, #ff3b30);
+}
+
+.editor-topbar__center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.editor-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+}
+
+.editor-topbar__divider {
+  width: 1px;
+  height: 1.25rem;
+  background: var(--a-color-border-soft);
+  margin-inline: 0.25rem;
+  flex-shrink: 0;
 }
 
 .editor-topbar__menu {
   display: grid;
-  min-width: 12rem;
+  min-width: 11rem;
   padding: 0.25rem;
 }
 
@@ -239,16 +260,17 @@ const handleImport = () => fileInput.value?.click()
   display: flex;
   min-height: 2.25rem;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.5rem 0.65rem;
+  gap: 0.5rem;
+  padding: 0.4rem 0.65rem;
   border: 0;
-  border-radius: var(--a-radius-control);
+  border-radius: var(--a-radius-control, 4px);
   background: transparent;
-  color: var(--a-color-fg);
+  color: var(--a-color-text);
   cursor: pointer;
   font: inherit;
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   text-align: left;
+  transition: background-color 0.12s ease;
 }
 
 .editor-topbar__menu-item:hover,
@@ -261,37 +283,27 @@ const handleImport = () => fileInput.value?.click()
   display: none;
 }
 
+@media (max-width: 900px) {
+  .editor-topbar__btn-text {
+    display: none;
+  }
+}
+
 @media (max-width: 640px) {
   .editor-topbar {
-    min-height: 8.5rem;
+    min-height: 3rem;
+    height: 3rem;
   }
-
-  .editor-topbar__header-row {
-    min-height: 3.25rem;
+  .editor-topbar__main {
     padding-inline: 0.5rem;
+    gap: 0.35rem;
   }
-
-  .editor-topbar__tools {
-    gap: 0.15rem;
-  }
-
   .editor-topbar__status {
     display: none;
   }
-
-  .editor-topbar__publish-row {
-    flex-wrap: wrap;
-    padding-inline: 0.5rem;
-  }
-
-  .editor-topbar__publish-status {
-    flex: 1 1 auto;
-    margin-right: auto;
-  }
-
   .editor-topbar :deep(.p-segmented-control-item) {
     padding-inline: 0.5rem;
-    font-size: 0.7rem;
+    font-size: 0.72rem;
   }
 }
 </style>

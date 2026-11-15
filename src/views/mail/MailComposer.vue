@@ -21,6 +21,27 @@
       @dragleave="onDragLeave"
       @drop.prevent="onDrop"
     >
+      <!-- 现代化写邮件顶栏 -->
+      <header class="mail-compose__topbar">
+        <div class="mail-compose__topbar-title-row">
+          <h2 class="mail-compose__topbar-title">写邮件</h2>
+          <PBadge
+            role="status"
+            :type="dirty ? 'warning' : 'success'"
+            :label="saving ? '正在保存…' : dirty ? '有未保存内容' : '草稿已保存'"
+          />
+        </div>
+        <button
+          type="button"
+          class="mail-compose__topbar-close"
+          aria-label="关闭写邮件"
+          title="关闭写邮件"
+          @click="closeComposer"
+        >
+          <X :size="18" />
+        </button>
+      </header>
+
       <!-- 拖拽上传文件提示浮层 -->
       <div v-if="isDraggingOver" class="mail-compose__drop-overlay">
         <Paperclip :size="32" />
@@ -28,7 +49,7 @@
       </div>
 
       <div class="mail-compose__content">
-        <!-- 发件人与保存状态 -->
+        <!-- 发件人行 -->
         <div class="mail-compose__identity">
           <div class="mail-compose__sender-box">
             <label for="mail-sender">发件人</label>
@@ -52,11 +73,6 @@
               </option>
             </select>
           </div>
-          <PBadge
-            role="status"
-            :type="dirty ? 'warning' : 'success'"
-            :label="saving ? '正在保存…' : dirty ? '有未保存内容' : '草稿已保存'"
-          />
         </div>
 
         <!-- 收件人行 + 抄送/密送开关 -->
@@ -126,15 +142,17 @@
           @keydown="handleComposerKeydown"
         />
 
-        <!-- 正文编辑器（复用全站统一 PEditor：支持 Markdown、分屏/即时预览与标准快捷键） -->
+        <!-- 正文编辑器（复用全站现代 PEditor：选区气泡工具栏、斜杠命令菜单与即时预览） -->
         <div class="mail-compose__editor-wrap" @keydown="handleComposerKeydown">
           <PEditor
             v-model="text"
             :mode="editorMode"
             :disabled="contentLocked"
-            placeholder="写下邮件内容，支持 Markdown 排版与快捷键，支持拖拽文件添加附件…"
-            :show-toolbar="true"
-            :show-mode-toggle="true"
+            placeholder="写下邮件内容，支持 Markdown 排版与快捷键，输入 / 唤出插入菜单…"
+            :show-toolbar="false"
+            :show-mode-toggle="false"
+            :enable-bubble-menu="true"
+            :enable-slash-menu="true"
             :live-preview="true"
             :line-numbers="false"
             :enable-image-upload="false"
@@ -735,6 +753,52 @@ onBeforeUnmount(() => {
   flex-direction: column;
   min-height: 100%;
   color: var(--a-color-fg);
+  background: #ffffff;
+}
+:root.dark .mail-compose {
+  background: var(--a-color-surface);
+}
+
+.mail-compose__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  background: #ffffff;
+}
+:root.dark .mail-compose__topbar {
+  background: var(--a-color-surface);
+  border-bottom-color: var(--a-color-border);
+}
+.mail-compose__topbar-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mail-compose__topbar-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--a-color-fg);
+  letter-spacing: -0.01em;
+}
+.mail-compose__topbar-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--a-radius-control, 6px);
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+.mail-compose__topbar-close:hover {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
 }
 
 .mail-compose.is-dragging {
@@ -750,7 +814,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   border: 2px dashed var(--a-color-primary);
   border-radius: var(--a-radius-card);
   backdrop-filter: blur(2px);
@@ -758,7 +822,7 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 :root.dark .mail-compose__drop-overlay {
-  background: rgba(24, 24, 27, 0.92);
+  background: rgba(24, 24, 27, 0.94);
 }
 .mail-compose__drop-overlay p {
   margin: 0;
@@ -769,11 +833,11 @@ onBeforeUnmount(() => {
 .mail-compose__content {
   flex: 1;
   display: grid;
-  gap: 18px;
+  gap: 14px;
   max-width: 900px;
   width: 100%;
   margin: 0 auto;
-  padding: 24px clamp(16px, 4vw, 48px) 36px;
+  padding: 16px clamp(16px, 4vw, 40px) 32px;
 }
 
 .mail-compose__identity {
@@ -782,7 +846,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  padding-bottom: 14px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--a-color-border-soft);
 }
 .mail-compose__sender-box {
@@ -801,8 +865,8 @@ onBeforeUnmount(() => {
 }
 .mail-compose__sender-box select {
   max-width: min(100%, 420px);
-  min-height: 36px;
-  height: 36px;
+  min-height: 34px;
+  height: 34px;
   padding: 0 10px;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
@@ -872,25 +936,30 @@ onBeforeUnmount(() => {
 
 .mail-compose__editor-wrap {
   position: relative;
-  min-height: 420px;
+  min-height: 380px;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card, 4px);
-  background: var(--a-color-bg);
+  border-radius: var(--a-radius-card, 6px);
+  background: #ffffff;
   overflow: hidden;
   transition: border-color 140ms ease;
 }
+:root.dark .mail-compose__editor-wrap {
+  background: var(--a-color-surface);
+  border-color: var(--a-color-border);
+}
 .mail-compose__editor-wrap:focus-within {
-  border-color: var(--a-color-border-hover, #64748b);
+  border-color: var(--a-color-primary);
 }
 .mail-compose__editor-wrap :deep(.p-editor) {
-  min-height: 420px;
+  min-height: 380px;
   border: none;
+  background: transparent;
 }
 .mail-compose__editor-wrap :deep(.p-editor-body) {
-  min-height: 360px;
+  min-height: 340px;
 }
 .mail-compose__editor-wrap :deep(.cm-editor) {
-  min-height: 360px;
+  min-height: 340px;
 }
 
 .mail-compose__attachments-section {

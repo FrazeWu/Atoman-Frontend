@@ -744,6 +744,14 @@
     border-color: var(--a-color-border) !important;
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35) !important;
   }
+
+  /* Mail Composer Specific Polish */
+  .mail-composer-sheet .sheet-layer-rail {
+    display: none !important;
+  }
+  .mail-composer-sheet .sheet-content {
+    padding-left: 0 !important;
+  }
 }
 
 .mail-workspace__reader-sheet {

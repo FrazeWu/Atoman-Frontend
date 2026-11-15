@@ -1,4 +1,4 @@
-import { nextTick, type ComputedRef, type Ref } from "vue";
+import { nextTick, ref, type ComputedRef, type Ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { apiRequestResult } from "@/api/client";
 import { useApi } from "@/composables/useApi";
@@ -86,6 +86,9 @@ export function usePostEditorPublication({
 	const authStore = useAuthStore();
 	const studio = useStudioStore();
 	const lifecycle = useContentLifecycle();
+	// save() 在 finally 里会清空 saving。冲突弹窗是异步打开的，覆盖保存必须记住
+	// 触发冲突的那次目标状态，否则发布冲突会被当成草稿写回并取消发布。
+	const conflictSaveTarget = ref<SaveTarget>("draft");
 
 	const loadPost = async (expectedPostID = String(route.params.id || "")): Promise<boolean> => {
 		if (!isEdit.value) return true;
@@ -195,6 +198,7 @@ export function usePostEditorPublication({
 			if (!response.ok) {
 				const responseError = response.data as PostSaveFailure;
 				if (postSaveErrorCode(responseError) === "blog.post_conflict") {
+					conflictSaveTarget.value = status;
 					hasPostConflict.value = true;
 					error.value = "文章已在其他会话更新。请刷新文章后再保存。";
 					return null;
@@ -337,5 +341,12 @@ export function usePostEditorPublication({
 		}
 	};
 
-	return { loadPost, fetchRemotePost, save, schedulePublish, retrySchedule };
+	return {
+		loadPost,
+		fetchRemotePost,
+		save,
+		schedulePublish,
+		retrySchedule,
+		conflictSaveTarget,
+	};
 }

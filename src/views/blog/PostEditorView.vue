@@ -109,7 +109,7 @@
                 <PostEditorOutlinePanel
                   :show="outlineOpen"
                   :headings="outlineHeadings"
-                  :active-line="activeHeadingLine"
+                  :active-line="outlineActiveLine"
                   @close="outlineOpen = false"
                   @select-heading="handleSelectHeading"
                 />
@@ -392,8 +392,15 @@ useEditorVirtualKeyboard(editorPageRef, {
   },
 })
 
+// 编辑器文档第一行固定是 `# ${title}`，大纲行号只统计正文。
+const outlineActiveLine = computed(() => {
+  const line = activeHeadingLine.value
+  if (line == null || line <= 1) return null
+  return line - 1
+})
+
 const handleSelectHeading = (lineNumber: number) => {
-  editorRef.value?.scrollToHeadingLine(lineNumber)
+  editorRef.value?.scrollToHeadingLine(lineNumber + 1)
 }
 
 const publicationWarnings = computed(() => evaluateBlogPublicationQuality({
@@ -551,7 +558,14 @@ const {
   },
 })
 
-const { loadPost, fetchRemotePost, save, schedulePublish, retrySchedule } = usePostEditorPublication({
+const {
+  loadPost,
+  fetchRemotePost,
+  save,
+  schedulePublish,
+  retrySchedule,
+  conflictSaveTarget,
+} = usePostEditorPublication({
   isEdit,
   form,
   contentSource,
@@ -626,21 +640,19 @@ const remotePostData = ref<{
 
 const openConflictModal = async () => {
   conflictModalVisible.value = true
-  if (!remotePostData.value) {
-    loadingRemotePost.value = true
-    try {
-      const remote = await fetchRemotePost()
-      if (remote) {
-        remotePostData.value = {
-          title: remote.title,
-          content: remote.content,
-          updated_at: remote.updated_at,
-          base_updated_at: remote.updated_at,
-        }
+  loadingRemotePost.value = true
+  try {
+    const remote = await fetchRemotePost()
+    if (remote) {
+      remotePostData.value = {
+        title: remote.title,
+        content: remote.content,
+        updated_at: remote.updated_at,
+        base_updated_at: remote.updated_at,
       }
-    } finally {
-      loadingRemotePost.value = false
     }
+  } finally {
+    loadingRemotePost.value = false
   }
 }
 
@@ -652,7 +664,7 @@ const handleConflictOverwrite = async () => {
       loadedPostUpdatedAtRaw.value = remotePostData.value.base_updated_at
       loadedPostUpdatedAt.value = parseDraftTimestamp(remotePostData.value.base_updated_at)
     }
-    const saved = await save(saving.value || 'draft', false, true)
+    const saved = await save(conflictSaveTarget.value, false, true)
     if (saved) {
       hasPostConflict.value = false
       conflictModalVisible.value = false

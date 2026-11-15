@@ -5,7 +5,8 @@ import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { reportError } from '@/utils/logger'
 
-const MAX_IMAGE_SIZE = 20 * 1024 * 1024 // 20MB
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
 
 interface EditorImageUploadOptions {
   enabled: () => boolean
@@ -18,25 +19,49 @@ export function useEditorImageUpload(options: EditorImageUploadOptions) {
   const imageInputRef = ref<HTMLInputElement | null>(null)
   const uploadingImage = ref(false)
   const isDragging = ref(false)
+  const uploadError = ref('')
 
   const triggerImageUpload = () => imageInputRef.value?.click()
+
+  function uploadFailureMessage(payload: unknown) {
+    if (payload && typeof payload === 'object') {
+      const error = (payload as { error?: unknown }).error
+      if (typeof error === 'string' && error.trim()) return error.trim()
+      if (error && typeof error === 'object' && typeof (error as { message?: unknown }).message === 'string') {
+        const message = (error as { message: string }).message.trim()
+        if (message) return message
+      }
+    }
+    return '图片上传失败，请重试'
+  }
+
+  function imageAlt(name: string) {
+    const base = name.replace(/\.[^.]+$/, '').replace(/[[\]\r\n]/g, '').trim()
+    return base || '图片'
+  }
+
+  function rejectImage(message: string) {
+    uploadError.value = message
+    reportError(new Error(message), message)
+  }
 
   async function handleImageUploadFile(event: Event) {
     const file = (event.target as HTMLInputElement).files?.[0]
     if (!file) return
     if (imageInputRef.value) imageInputRef.value.value = ''
-    await uploadImage(file)
+    await uploadImages([file])
   }
 
   async function uploadImage(file: File) {
     const view = options.getView()
     if (!view) return
 
+    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+      rejectImage('只支持 JPEG、PNG、GIF、WebP 格式的图片')
+      return
+    }
     if (file.size > MAX_IMAGE_SIZE) {
-      reportError(new Error('图片大小超过 20MB 限制'), '图片过大')
-      const from = view.state.selection.main.from
-      const notice = '<!-- 图片超过 20MB 限制，请压缩后重试 -->'
-      view.dispatch({ changes: { from, to: from, insert: notice } })
+      rejectImage('图片不能超过 5MB')
       return
     }
 
@@ -54,10 +79,14 @@ export function useEditorImageUpload(options: EditorImageUploadOptions) {
         headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {},
         body: formData,
       })
-      if (!response.ok) throw new Error('upload failed')
-      const data = response.data as { url: string }
-      replacePlaceholder(placeholder, `![${file.name.replace(/\.[^.]+$/, '') || '图片'}](${data.url})`)
+      const data = response.data as { url?: unknown }
+      if (!response.ok || typeof data?.url !== 'string' || !data.url) {
+        throw new Error(uploadFailureMessage(response.data))
+      }
+      replacePlaceholder(placeholder, `![${imageAlt(file.name)}](${data.url})`)
     } catch (error) {
+      const message = error instanceof Error && error.message ? error.message : '图片上传失败，请重试'
+      uploadError.value = message
       reportError(error, '图片上传失败')
       replacePlaceholder(placeholder, '')
     } finally {
@@ -72,14 +101,18 @@ export function useEditorImageUpload(options: EditorImageUploadOptions) {
     if (index !== -1) view.dispatch({ changes: { from: index, to: index + placeholder.length, insert: replacement } })
   }
 
+  async function uploadImages(files: File[]) {
+    uploadError.value = ''
+    for (const file of files) {
+      await uploadImage(file)
+    }
+  }
+
   function handleFiles(files?: FileList | null) {
     if (!files) return
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'))
-    void (async () => {
-      for (const file of imageFiles) {
-        await uploadImage(file)
-      }
-    })()
+    if (!imageFiles.length) return
+    void uploadImages(imageFiles)
   }
 
   function onCmPaste(event: ClipboardEvent) {
@@ -87,11 +120,7 @@ export function useEditorImageUpload(options: EditorImageUploadOptions) {
     const files = Array.from(event.clipboardData?.files ?? []).filter(file => file.type.startsWith('image/'))
     if (!files.length) return
     event.preventDefault()
-    void (async () => {
-      for (const file of files) {
-        await uploadImage(file)
-      }
-    })()
+    void uploadImages(files)
   }
 
   function onDrop(event: DragEvent) {
@@ -102,6 +131,7 @@ export function useEditorImageUpload(options: EditorImageUploadOptions) {
   return {
     imageInputRef,
     uploadingImage,
+    uploadError,
     isDragging,
     triggerImageUpload,
     handleImageUploadFile,

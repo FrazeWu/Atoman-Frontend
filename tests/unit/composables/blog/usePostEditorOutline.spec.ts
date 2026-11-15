@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { nextTick, ref } from 'vue'
+import { defineComponent, h, nextTick, ref, watch } from 'vue'
+import { mount } from '@vue/test-utils'
 import {
   extractMarkdownHeadings,
   usePostEditorOutline,
@@ -75,6 +76,28 @@ describe('usePostEditorOutline', () => {
     expect(headings.value).toHaveLength(2)
     expect(headings.value[1].text).toBe('新增第二节')
 
+    vi.useRealTimers()
+  })
+
+  it('组件卸载后不再应用防抖更新', async () => {
+    vi.useFakeTimers()
+    const content = ref('# 初始标题')
+    const lengths: number[] = []
+    const wrapper = mount(defineComponent({
+      setup() {
+        const { headings } = usePostEditorOutline(content)
+        watch(headings, (value) => {
+          lengths.push(value.length)
+        })
+        return () => h('div')
+      },
+    }))
+
+    content.value = '# 初始标题\n\n## 新增第二节'
+    wrapper.unmount()
+    await vi.advanceTimersByTimeAsync(200)
+
+    expect(lengths).toEqual([])
     vi.useRealTimers()
   })
 })

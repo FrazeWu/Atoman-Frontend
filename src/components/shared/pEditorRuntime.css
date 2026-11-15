@@ -11,6 +11,16 @@
   border: 1px solid var(--a-color-border-soft);
 }
 
+.p-editor-upload-error {
+  margin: 0;
+  padding: 0.45rem 1.25rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-bg);
+  color: var(--a-color-danger, #b91c1c);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
 .p-editor-presence {
   display: flex;
   align-items: center;

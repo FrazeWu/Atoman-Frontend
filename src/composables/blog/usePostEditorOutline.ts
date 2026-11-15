@@ -1,4 +1,4 @@
-import { ref, watch, type Ref } from 'vue'
+import { getCurrentScope, onScopeDispose, ref, watch, type Ref } from 'vue'
 
 export interface PostOutlineHeading {
   id: string
@@ -54,6 +54,13 @@ export function usePostEditorOutline(contentRef: Ref<string>) {
       headings.value = extractMarkdownHeadings(newContent)
     }, 150)
   })
+
+  if (getCurrentScope()) {
+    onScopeDispose(() => {
+      if (timer) clearTimeout(timer)
+      timer = null
+    })
+  }
 
   return {
     headings,

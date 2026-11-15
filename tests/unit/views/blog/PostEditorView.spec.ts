@@ -14,11 +14,13 @@ enableAutoUnmount(afterEach);
 const editorControl = {
 	lastModelValue: "",
 	replaceDocument: vi.fn(),
+	scrollToHeadingLine: vi.fn(),
 	emitCollabReady: null as null | ((markdown: string) => Promise<void>),
 	emitUpdateModel: null as null | ((markdown: string) => Promise<void>),
 	reset() {
 		this.lastModelValue = "";
 		this.replaceDocument.mockReset();
+		this.scrollToHeadingLine.mockReset();
 		this.emitCollabReady = null;
 		this.emitUpdateModel = null;
 	},
@@ -62,6 +64,7 @@ vi.mock("@/components/shared/PEditor.vue", () => ({
 		setup(props, { emit, expose }) {
 			expose({
 				replaceDocument: editorControl.replaceDocument,
+				scrollToHeadingLine: editorControl.scrollToHeadingLine,
 			});
 
 			editorControl.emitCollabReady = async (markdown: string) => {
@@ -2050,5 +2053,115 @@ describe("PostEditorView", () => {
 		});
 		expect(wrapper.text()).toContain("文章已在其他会话更新");
 		expect(wrapper.text()).toContain("刷新文章");
+	});
+
+	it("发布冲突后覆盖保存仍使用发布状态", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/posts/post/:id/edit", component: PostEditorView }],
+		});
+		await router.push("/posts/post/post-1/edit");
+		await router.isReady();
+
+		const auth = useAuthStore();
+		auth.token = "token";
+		auth.user = { uuid: "user-1", username: "demo", role: "user" } as never;
+		auth.isAuthenticated = true;
+		let putCount = 0;
+		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input);
+			if (url.includes("/blog/posts/post-1") && init?.method === "PUT") {
+				putCount += 1;
+				if (putCount === 1) {
+					return new Response(JSON.stringify({
+						error: { code: "blog.post_conflict", message: "stale" },
+					}), { status: 409 });
+				}
+				return makeJsonResponse({
+					data: {
+						id: "post-1",
+						title: "本地修改",
+						content: "本地正文",
+						updated_at: "2026-07-02T00:00:00.000000Z",
+					},
+				});
+			}
+			if (url.includes("/blog/posts/post-1")) {
+				return makeJsonResponse({
+					data: {
+						id: "post-1",
+						title: "远端标题",
+						content: "远端正文",
+						summary: "",
+						cover_url: "",
+						updated_at: "2026-07-01T12:34:56.123456Z",
+						channel_id: "channel-1",
+						collection_id: "collection-1",
+					},
+				});
+			}
+			if (url.includes("/blog/channels/channel-1/collections")) {
+				return makeJsonResponse({ data: [{ id: "collection-1", channel_id: "channel-1", is_default: true }] });
+			}
+			if (url.includes("/blog/drafts")) return makeJsonResponse({ data: null });
+			if (url.includes("/blog/channels?")) return makeJsonResponse({ data: [] });
+			return makeJsonResponse({ data: null });
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		const wrapper = mount(
+			{ template: "<router-view />" },
+			{
+				global: {
+					plugins: [router],
+					stubs: { PButton: { template: "<button><slot /></button>" }, PModal: { template: '<div><slot /><slot name="footer" /></div>' } },
+				},
+			},
+		);
+		await flushPromises();
+		const editor = wrapper.findComponent(PostEditorView);
+		editor.vm.$.setupState.form.title = "本地修改";
+		editor.vm.$.setupState.form.content = "本地正文";
+		editor.vm.$.setupState.selectedCollectionIds = ["collection-1"];
+
+		await editor.vm.$.setupState.save("published");
+		await flushPromises();
+		await editor.vm.$.setupState.handleConflictOverwrite();
+		await flushPromises();
+
+		const putBodies = fetchMock.mock.calls
+			.filter(([input, request]) => String(input).includes("/blog/posts/post-1") && request?.method === "PUT")
+			.map(([, request]) => JSON.parse(String(request?.body || "{}")));
+		expect(putBodies).toHaveLength(2);
+		expect(putBodies[0]?.status).toBe("published");
+		expect(putBodies[1]?.status).toBe("published");
+		expect(putBodies[1]?.base_updated_at).toBe("2026-07-01T12:34:56.123456Z");
+	});
+
+	it("大纲跳转跳过编辑器里的标题行", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [{ path: "/studio/blog/new", component: PostEditorView }],
+		});
+		await router.push("/studio/blog/new");
+		await router.isReady();
+		vi.stubGlobal("fetch", vi.fn(async () => makeJsonResponse({ data: null })));
+
+		const wrapper = mount(
+			{ template: "<router-view />" },
+			{ global: { plugins: [router] } },
+		);
+		await flushPromises();
+		const editor = wrapper.findComponent(PostEditorView);
+		editor.vm.$.setupState.activeHeadingLine = 4;
+		await nextTick();
+		expect(editor.vm.$.setupState.outlineActiveLine).toBe(3);
+
+		editor.vm.$.setupState.activeHeadingLine = 1;
+		await nextTick();
+		expect(editor.vm.$.setupState.outlineActiveLine).toBeNull();
+
+		editor.vm.$.setupState.handleSelectHeading(2);
+		expect(editorControl.scrollToHeadingLine).toHaveBeenCalledWith(3);
 	});
 });

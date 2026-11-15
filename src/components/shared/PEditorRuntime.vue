@@ -88,7 +88,8 @@
       </div>
     </div>
 
-    <input ref="imageInputRef" type="file" accept="image/*" class="tb-hidden-input" @change="handleImageUploadFile" />
+    <input ref="imageInputRef" type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="tb-hidden-input" @change="handleImageUploadFile" />
+    <p v-if="uploadError" class="p-editor-upload-error" role="alert">{{ uploadError }}</p>
 
     <div
       class="p-editor-body"
@@ -280,6 +281,7 @@ let collabReady = false
 let collabFallbackTimer: ReturnType<typeof setTimeout> | null = null
 const {
   imageInputRef,
+  uploadError,
   isDragging,
   triggerImageUpload,
   handleImageUploadFile,
@@ -328,7 +330,7 @@ function findActiveHeadingLine(docText: string, position: number): number | null
     const lineStart = offset
     const lineEnd = offset + lineText.length
 
-    if (/^#{2,}\s+.+/.test(lineText) && lineStart <= position) {
+    if (/^#{1,6}\s+.+/.test(lineText) && lineStart <= position) {
       active = lineNumber
     }
     if (position <= lineEnd) break

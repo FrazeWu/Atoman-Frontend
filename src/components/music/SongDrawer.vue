@@ -11,6 +11,7 @@ import { deleteMusicSongRating, setMusicSongRating, type MusicLyricsAnnotation, 
 import MusicAnnotationWorkspace from '@/components/music/MusicAnnotationWorkspace.vue'
 import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
 import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
+import { getSongEditorialNote } from '@/content/musicEditorialNotes'
 import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
 import AppleMusicPreview from '@/components/music/AppleMusicPreview.vue'
 import MusicTagList from '@/components/music/MusicTagList.vue'
@@ -73,6 +74,11 @@ const { navigation, loading: navigationLoading, direction: navigationDirection, 
 const closeCurrentSong = () => closeSong(props.layer?.key)
 const returnCurrentSong = () => props.layer && returnToLayer(props.layer.key)
 const detail = ref<MusicSongDetail | null>(null)
+const editorialNote = computed(() => {
+  const song = detail.value?.song
+  return !song || song.description?.trim() || song.lifecycle_status !== 'active' || song.status !== 'open'
+    ? undefined : getSongEditorialNote(String(song.id), song.title, String(song.album?.id || song.album_id || ''))
+})
 let queryClient: ReturnType<typeof useQueryClient> | null = null
 try {
   queryClient = useQueryClient()
@@ -674,6 +680,13 @@ watch(
             test-id="song-description-toggle"
             max-width="42rem"
           />
+          <section v-if="editorialNote" class="song-detail__editorial" data-testid="song-editorial-note">
+            <h2>编辑补充资料</h2>
+            <p>{{ editorialNote.text }}</p>
+            <p class="song-detail__editorial-sources">参考来源：
+              <a v-for="source in editorialNote.sources" :key="source.href" :href="source.href" target="_blank" rel="noopener noreferrer">{{ source.label }}</a>
+            </p>
+          </section>
           <section class="song-detail__lyrics">
           <header class="song-detail__lyrics-header">
             <h2 class="song-detail__lyrics-title">
@@ -824,6 +837,12 @@ watch(
 .song-detail__play { min-width: 6rem; }
 .song-detail__description, .song-detail__supplementary { grid-column: 1 / -1; }
 .song-detail__description { padding-top: 0.25rem; }
+.song-detail__editorial { grid-column: 1 / -1; display: grid; gap: 0.5rem; padding: 0.45rem 0; max-width: 42rem; }
+.song-detail__editorial h2, .song-detail__editorial p { margin: 0; }
+.song-detail__editorial h2 { font-size: 0.875rem; font-weight: 600; }
+.song-detail__editorial p { line-height: 1.65; overflow-wrap: anywhere; }
+.song-detail__editorial-sources { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; font-size: 0.75rem; color: var(--a-color-muted); }
+.song-detail__editorial-sources a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .song-detail__supplementary { display: grid; gap: 0.75rem; border-top: 0; padding-top: 1rem; }
 .song-detail__playlist-menu { display: grid; min-width: 12rem; padding: 0.35rem; }
 .song-detail__playlist-menu p { margin: 0; padding: 0.65rem; color: var(--a-color-muted); }

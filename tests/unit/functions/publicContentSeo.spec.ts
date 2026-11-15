@@ -250,6 +250,71 @@ describe("public content SEO", () => {
 		expect(artistHtml).toContain("<dt>已收录公开专辑</dt><dd>1</dd>");
 	});
 
+	it("renders source-linked editorial notes for public songs without authored descriptions", async () => {
+		const songId = "01a07774-5cc3-7d3a-af30-6611899f00fc";
+		const fetcher = vi.fn(async () => json({ data: {
+			song: { id: songId, title: "DNA.", description: "", status: "open", lifecycle_status: "active",
+				track_number: 2, album: { title: "DAMN.", id: "01a06b7f-0330-7f31-a440-b666a9722289" } },
+			artists: [{ name: "Kendrick Lamar" }],
+		} })) as unknown as typeof fetch;
+		const resolved = await resolvePublicContentSeo(`/music/song/${songId}`, "https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+		const page = '<html><head></head><body><div id="app"><!-- seo-prerender-start --><p>首页内容</p><!-- seo-prerender-end --></div></body></html>';
+		const html = buildPublicContentHtml(page, resolved.content!);
+		expect(html).toContain('data-seo-editorial="song"');
+		expect(html).toContain("<h2>编辑补充资料</h2>");
+		expect(html).toContain("Matt Schaeffer");
+		expect(html).toContain('href="https://pitchfork.com/news/72695-kendrick-lamars-new-album-damn-the-full-credits/"');
+		expect(html).toContain('href="https://music.apple.com/us/song/1440881357"');
+		expect(html).toContain("参考来源：");
+		expect(html).not.toContain("首页内容");
+		expect(resolved.content?.description).toContain("Mike WiLL Made-It");
+		expect(resolved.content?.description.length).toBeLessThanOrEqual(160);
+	});
+
+	it("does not show stale editorial notes after a song is renamed or assigned to another album", async () => {
+		const songId = "01a07774-5cc3-7d3a-af30-6611899f00fc";
+		for (const [title, albumId] of [
+			["Renamed Song", "01a06b7f-0330-7f31-a440-b666a9722289"],
+			["DNA.", "01a17b88-ee76-77c9-afff-031387805123"],
+		] as const) {
+			const fetcher = vi.fn(async () => json({ data: {
+				song: { id: songId, title, album_id: albumId, status: "open", lifecycle_status: "active" },
+				artists: [{name:"Kendrick Lamar"}],
+			} })) as unknown as typeof fetch;
+			const resolved = await resolvePublicContentSeo(`/music/song/${songId}`, "https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+			const html = buildPublicContentHtml('<html><head></head><body></body></html>', resolved.content!);
+			expect(html).not.toContain('data-seo-editorial="song"');
+		}
+	});
+
+	it("never overrides a wiki-authored song description with a curated note", async () => {
+		const songId = "01a07774-5cc3-7d3a-af30-6611899f00fc";
+		const fetcher = vi.fn(async () => json({ data: {
+			song: { id: songId, title: "DNA.", description: "编辑者填写的歌曲介绍。", status: "open", lifecycle_status: "active" },
+			artists: [{ name: "Kendrick Lamar" }],
+		} })) as unknown as typeof fetch;
+		const resolved = await resolvePublicContentSeo(`/music/song/${songId}`, "https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+		const page = '<html><head></head><body><div id="app"><!-- seo-prerender-start --><p>首页内容</p><!-- seo-prerender-end --></div></body></html>';
+		const html = buildPublicContentHtml(page, resolved.content!);
+		expect(resolved.content?.description).toBe("编辑者填写的歌曲介绍。");
+		expect(html).not.toContain('data-seo-editorial="song"');
+	});
+
+	it("does not attach supplemental copy to a closed or unrelated song", async () => {
+		for (const [songId, status] of [
+			["01a07774-5cc3-7d3a-af30-6611899f00fc", "closed"],
+			["01a17b89-60cd-741e-beba-f14d5c6ca236", "open"],
+		] as const) {
+			const fetcher = vi.fn(async () => json({ data: {
+				song: { id: songId, title: "Song", description: "", status, lifecycle_status: "active" },
+				artists: [{ name: "Artist" }],
+			} })) as unknown as typeof fetch;
+			const resolved = await resolvePublicContentSeo(`/music/song/${songId}`, "https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+			const html = buildPublicContentHtml('<html><head></head><body></body></html>', resolved.content!);
+			expect(html).not.toContain('data-seo-editorial="song"');
+		}
+	});
+
 	it("renders only recorded song facts, not assumed duration or invented release dates", async () => {
 		const songId = "01a17b89-60cd-741e-beba-f14d5c6ca236";
 		const albumId = "01a17b88-ee76-77c9-afff-031387805123";

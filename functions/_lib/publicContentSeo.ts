@@ -3,6 +3,7 @@ import {
 	resolveApiBase,
 	type SitemapItem,
 } from "./blogSeo";
+import { getSongEditorialNote, type SongEditorialNote } from "../../src/content/musicEditorialNotes";
 
 export type PublicContentSeo = {
 	path: string;
@@ -15,6 +16,8 @@ export type PublicContentSeo = {
 	// Body copy can be longer than the search-snippet meta description.
 	bodyText?: string;
 	metadataFacts?: Array<{ name: string; value: string }>;
+	/** Visible to visitors in the song drawer as well as in server HTML. */
+	editorialNote?: SongEditorialNote;
 };
 
 export type PublicContentLookup = {
@@ -162,8 +165,9 @@ function content(
 	relatedLinks?: PublicContentSeo["relatedLinks"],
 	bodyText?: string,
 	metadataFacts?: PublicContentSeo["metadataFacts"],
+	editorialNote?: PublicContentSeo["editorialNote"],
 ): PublicContentSeo {
-	return { path, title, description, imageUrl, lastModified, structuredData, relatedLinks, bodyText, metadataFacts };
+	return { path, title, description, imageUrl, lastModified, structuredData, relatedLinks, bodyText, metadataFacts, editorialNote };
 }
 
 function bookCoverUrl(value: unknown, apiBase: string): string | undefined {
@@ -435,7 +439,9 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 		trackPosition ? `曲目序号：${trackPosition}` : "",
 		durationLabel ? `时长 ${durationLabel}` : "",
 	].filter(Boolean).join("；") + "。";
-	const description = plainText(song.description, factualFallback);
+	const editorialNote = !text(song.description) && (!text(song.status) || text(song.status) === "open")
+		? getSongEditorialNote(id, title, text(album?.id) || text(song.album_id)) : undefined;
+	const description = plainText(song.description, editorialNote?.text || factualFallback);
 	const relatedLinks = ([
 		{ record: record(detail?.previous), prefix: "上一首" },
 		{ record: record(detail?.next), prefix: "下一首" },
@@ -470,6 +476,7 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 		relatedLinks,
 		fullBodyText(song.description, factualFallback),
 		facts,
+		editorialNote,
 	);
 }
 
@@ -879,7 +886,18 @@ export function buildPublicContentHtml(html: string, item: PublicContentSeo) {
 				? directVideoSource(item.structuredData.contentUrl)
 				: undefined,
 	});
-	const htmlSupplement = factsHtml + relatedHtml;
+	const sourcesHtml = item.editorialNote?.sources.flatMap((source) => {
+		try {
+			const url = new URL(source.href);
+			if (url.protocol !== "https:" ||
+				!["music.apple.com", "pitchfork.com"].includes(url.hostname)) return [];
+			return [`<a href="${escapeHtml(url.href)}" rel="noopener noreferrer">${escapeHtml(source.label)}</a>`];
+		} catch { return []; }
+	}).join("、") || "";
+	const editorialHtml = item.editorialNote
+		? `<section data-seo-editorial="song"><h2>编辑补充资料</h2><p>${escapeHtml(item.editorialNote.text)}</p>${sourcesHtml ? `<p>参考来源：${sourcesHtml}</p>` : ""}</section>`
+		: "";
+	const htmlSupplement = factsHtml + editorialHtml + relatedHtml;
 	const detailedHtml = htmlSupplement
 		? fallbackHtml.replace(
 			/(<main data-seo-fallback="content"><h1>[\s\S]*?<\/h1><p>[\s\S]*?<\/p>)/,

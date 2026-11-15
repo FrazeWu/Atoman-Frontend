@@ -5,6 +5,7 @@
     mode="full"
     content-max-width="96rem"
     close-type="header"
+    panel-class="mail-workspace__sheet-panel mail-composer-sheet"
     :side="side || (isMobile ? 'bottom' : 'right')"
     :layer-index="layerIndex"
     :stack-size="stackSize"

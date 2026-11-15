@@ -60,7 +60,7 @@
           mode="full"
           content-max-width="96rem"
           :side="isMobile ? 'bottom' : 'right'"
-          panel-class="mail-workspace__reader-sheet"
+          panel-class="mail-workspace__sheet-panel mail-workspace__reader-sheet"
           :is-shifted="hasActiveDrawer"
           :is-top-layer="!hasActiveDrawer"
           :layer-index="0"

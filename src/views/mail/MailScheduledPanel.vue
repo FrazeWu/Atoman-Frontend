@@ -4,6 +4,7 @@
     title="定时发送与发件状态"
     mode="full"
     close-type="header"
+    panel-class="mail-workspace__sheet-panel mail-scheduled-sheet"
     :side="side || (isMobile ? 'bottom' : 'right')"
     :layer-index="layerIndex"
     :stack-size="stackSize"

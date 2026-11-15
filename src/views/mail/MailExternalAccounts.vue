@@ -4,6 +4,7 @@
     title="聚合邮箱"
     mode="full"
     close-type="header"
+    panel-class="mail-workspace__sheet-panel mail-external-sheet"
     :side="side || (isMobile ? 'bottom' : 'right')"
     :layer-index="layerIndex"
     :stack-size="stackSize"

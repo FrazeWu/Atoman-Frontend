@@ -12,6 +12,9 @@ export type PublicContentSeo = {
 	lastModified?: string;
 	structuredData: Record<string, unknown>;
 	relatedLinks?: Array<{ href: string; label: string }>;
+	// Body copy can be longer than the search-snippet meta description.
+	bodyText?: string;
+	metadataFacts?: Array<{ name: string; value: string }>;
 };
 
 export type PublicContentLookup = {
@@ -47,14 +50,41 @@ function text(value: unknown): string {
 	return typeof value === "string" ? value.trim() : "";
 }
 
-function plainText(value: unknown, fallback: string): string {
-	const normalized = text(value)
+function normalizedPlainText(value: unknown): string {
+	return text(value)
 		.replace(/<[^>]*>/g, " ")
 		.replace(/[#*_`>~[\]()]/g, " ")
 		.replace(/\s+/g, " ")
 		.trim();
+}
+
+function plainText(value: unknown, fallback: string): string {
+	const normalized = normalizedPlainText(value);
 	if (!normalized) return fallback;
 	return normalized.length > 160 ? `${normalized.slice(0, 157)}...` : normalized;
+}
+
+function fullBodyText(value: unknown, fallback: string): string {
+	const normalized = normalizedPlainText(value);
+	// The full authored summary is useful to crawlers; do not truncate it to
+	// the 160-character meta-snippet limit. Bound very large content separately.
+	return normalized ? normalized.slice(0, 4000) : fallback;
+}
+
+function safeReleaseDate(value: unknown, precision: unknown): { raw?: string; label?: string } {
+	const raw = date(value);
+	if (!raw || !/^\d{4}-\d{2}-\d{2}/.test(raw)) return {};
+	const year = Number(raw.slice(0, 4));
+	const month = Number(raw.slice(5, 7));
+	const day = Number(raw.slice(8, 10));
+	const parsed = new Date(Date.UTC(year, month - 1, day));
+	if (year < 1000 || year > new Date().getUTCFullYear() + 1 ||
+		parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) return {};
+	const detail = text(precision);
+	const label = detail === "year" || detail === "unknown" ? `${year} 年`
+		: detail === "month" ? `${year} 年 ${month} 月`
+		: `${year} 年 ${month} 月 ${day} 日`;
+	return { raw, label };
 }
 
 function date(value: unknown): string | undefined {
@@ -130,8 +160,10 @@ function content(
 	imageUrl?: string,
 	lastModified?: string,
 	relatedLinks?: PublicContentSeo["relatedLinks"],
+	bodyText?: string,
+	metadataFacts?: PublicContentSeo["metadataFacts"],
 ): PublicContentSeo {
-	return { path, title, description, imageUrl, lastModified, structuredData, relatedLinks };
+	return { path, title, description, imageUrl, lastModified, structuredData, relatedLinks, bodyText, metadataFacts };
 }
 
 function bookCoverUrl(value: unknown, apiBase: string): string | undefined {
@@ -296,10 +328,9 @@ async function loadArtist(apiBase: string, id: string, fetcher: Fetcher) {
 		seenAlbumIds.add(href);
 		return [{ href, label }];
 	}).slice(0, 60);
-	const description = plainText(
-		artist.bio,
-		`在 Atoman 查看 ${name} 的音乐资料、专辑与作品。`,
-	);
+	const factualFallback = `在 Atoman 查看 ${name} 的音乐资料` +
+		(relatedLinks.length ? `，包含 ${relatedLinks.length} 张公开专辑` : "") + "。";
+	const description = plainText(artist.bio, factualFallback);
 	return content(
 		`/music/artist/${encodeURIComponent(id)}`,
 		`${name} | 音乐档案 | Atoman`,
@@ -313,6 +344,8 @@ async function loadArtist(apiBase: string, id: string, fetcher: Fetcher) {
 		text(artist.image_url) || undefined,
 		date(artist.updated_at),
 		relatedLinks,
+		fullBodyText(artist.bio, factualFallback),
+		relatedLinks.length ? [{ name: "已收录公开专辑", value: String(relatedLinks.length) }] : [],
 	);
 }
 
@@ -323,10 +356,7 @@ async function loadAlbum(apiBase: string, id: string, fetcher: Fetcher) {
 	if (!album || !text(album.id) || !text(album.title)) return undefined;
 	const title = text(album.title);
 	const artists = names(album.artists);
-	const description = plainText(
-		album.description,
-		`在 Atoman 查看专辑《${title}》的曲目与资料。`,
-	);
+	const released = safeReleaseDate(album.release_date, album.release_date_precision);
 	const tracks = array(album.songs).map(record).filter(Boolean).filter((track) =>
 		(!text(track?.lifecycle_status) || text(track?.lifecycle_status) === "active") &&
 		(!text(track?.status) || text(track?.status) === "open"),
@@ -335,6 +365,17 @@ async function loadAlbum(apiBase: string, id: string, fetcher: Fetcher) {
 		.map((track) => ({ href: musicEntityUrl("song", track?.id), label: text(track?.title) }))
 		.filter((link): link is { href: string; label: string } => Boolean(link.href && link.label))
 		.slice(0, 60);
+	const factualFallback = [
+		`在 Atoman 查看专辑《${title}》的资料`,
+		artists.length ? `音乐人：${artists.join("、")}` : "",
+		released.label ? `发行时间：${released.label}` : "",
+		tracks.length ? `已收录 ${tracks.length} 首曲目` : "",
+	].filter(Boolean).join("；") + "。";
+	const description = plainText(album.description, factualFallback);
+	const facts = [
+		released.label ? { name: "发行时间", value: released.label } : undefined,
+		tracks.length ? { name: "已收录曲目", value: `${tracks.length} 首` } : undefined,
+	].filter((item): item is { name: string; value: string } => Boolean(item));
 	return content(
 		`/music/album/${encodeURIComponent(id)}`,
 		`《${title}》${artists.length ? ` - ${artists.join("、")}` : ""} | Atoman`,
@@ -349,11 +390,14 @@ async function loadAlbum(apiBase: string, id: string, fetcher: Fetcher) {
 				name: text(artist?.name),
 				url: musicEntityUrl("artist", artist?.id),
 			})).filter((artist) => artist.name),
-			datePublished: date(album.release_date),
+			datePublished: released.raw,
+			numTracks: tracks.length || undefined,
 		},
 		text(album.cover_url) || undefined,
 		date(album.updated_at),
 		relatedLinks,
+		fullBodyText(album.description, factualFallback),
+		facts,
 	);
 }
 
@@ -370,16 +414,25 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 	const durationSeconds = typeof song.duration_sec === "number" && Number.isFinite(song.duration_sec) && song.duration_sec > 0
 		? Math.round(song.duration_sec) : undefined;
 	const durationLabel = durationSeconds === undefined ? "" : `${Math.floor(durationSeconds / 60)} 分 ${String(durationSeconds % 60).padStart(2, "0")} 秒`;
-	// Do not trust malformed catalog years (e.g. 2202) as real release dates.
-	const rawReleaseDate = date(song.release_date);
-	const releaseYear = rawReleaseDate ? Number(rawReleaseDate.slice(0, 4)) : NaN;
-	const releaseDate = Number.isInteger(releaseYear) && releaseYear >= 1000 && releaseYear <= new Date().getUTCFullYear() + 1
-		? rawReleaseDate : undefined;
+	// Use only plausible dates, respecting day/month/year source precision.
+	const released = safeReleaseDate(song.release_date, song.release_date_precision);
 	const albumName = text(album?.title);
+	const trackNumber = typeof song.track_number === "number" && Number.isInteger(song.track_number) && song.track_number > 0 && song.track_number < 1000
+		? song.track_number : undefined;
+	const discNumber = typeof song.disc_number === "number" && Number.isInteger(song.disc_number) && song.disc_number > 0 && song.disc_number < 100
+		? song.disc_number : undefined;
+	const trackPosition = trackNumber === undefined ? "" : discNumber && discNumber > 1
+		? `第 ${discNumber} 碟，第 ${trackNumber} 首` : `第 ${trackNumber} 首`;
+	const facts = [
+		released.label ? { name: "发行时间", value: released.label } : undefined,
+		trackPosition ? { name: "曲目序号", value: trackPosition } : undefined,
+	].filter((item): item is { name: string; value: string } => Boolean(item));
 	const factualFallback = [
 		`在 Atoman 查看歌曲《${title}》的作品资料`,
 		artists.length ? `音乐人：${artists.join("、")}` : "",
 		albumName ? `收录于《${albumName}》` : "",
+		released.label ? `发行时间：${released.label}` : "",
+		trackPosition ? `曲目序号：${trackPosition}` : "",
 		durationLabel ? `时长 ${durationLabel}` : "",
 	].filter(Boolean).join("；") + "。";
 	const description = plainText(song.description, factualFallback);
@@ -407,7 +460,7 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 				url: musicEntityUrl("artist", artist?.id),
 			})).filter((artist) => artist.name),
 			duration: durationSeconds !== undefined ? `PT${durationSeconds}S` : undefined,
-			datePublished: releaseDate,
+			datePublished: released.raw,
 			inAlbum: albumName
 				? { "@type": "MusicAlbum", name: albumName, url: musicEntityUrl("album", album?.id) }
 				: undefined,
@@ -415,6 +468,8 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 		text(song.cover_url) || text(album?.cover_url) || undefined,
 		date(song.updated_at),
 		relatedLinks,
+		fullBodyText(song.description, factualFallback),
+		facts,
 	);
 }
 
@@ -792,6 +847,9 @@ export function buildPublicContentHtml(html: string, item: PublicContentSeo) {
 		const seconds = Number(entity.duration.slice(2, -1));
 		facts.push({ name: "时长", values: [{ label: `${Math.floor(seconds / 60)} 分 ${String(seconds % 60).padStart(2, "0")} 秒` }] });
 	}
+	for (const fact of item.metadataFacts || []) {
+		if (text(fact.name) && text(fact.value)) facts.push({ name: text(fact.name), values: [{ label: text(fact.value) }] });
+	}
 	const factsHtml = facts.length
 		? `<section aria-label="作品资料"><h2>作品资料</h2><dl>${facts.map(({ name, values }) =>
 			`<dt>${escapeHtml(name)}</dt><dd>${values.map(({ label, href }) => href
@@ -813,7 +871,7 @@ export function buildPublicContentHtml(html: string, item: PublicContentSeo) {
 	const fallbackHtml = injectSeoFallbackHtml(cleanDefaultMetadata(html), {
 		kind: "content",
 		title: structuredTitle,
-		description: item.description,
+		description: item.bodyText || item.description,
 		canonical,
 		imageUrl: image,
 		mediaUrl:

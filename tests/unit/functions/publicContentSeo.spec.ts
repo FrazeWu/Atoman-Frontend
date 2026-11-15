@@ -222,6 +222,66 @@ describe("public content SEO", () => {
 		expect(html).toContain("Kendrick &amp; Friends");
 	});
 
+	it("keeps full authored album and artist copy in crawlable HTML while capping the meta snippet", async () => {
+		const albumId = "01a17b88-ee76-77c9-afff-031387805123";
+		const artistId = "019fa2ca-a4ab-72fd-8d3d-5f1a06694598";
+		const fullAlbumText = "公开专辑介绍：" + "录音背景与发行信息。".repeat(28) + "独特的结尾介绍 & 收录情况。";
+		const fullArtistText = "音乐人简介：" + "公开经历与创作资料。".repeat(24) + "长期创作与专辑整理。";
+		const fetcher = vi.fn(async (url: string) => url.includes("/albums/")
+			? json({ data: { id: albumId, title: "资料专辑", description: `<p>${fullAlbumText}</p>`,
+				release_date: "2026-09-26T00:00:00Z", release_date_precision: "day",
+				artists: [{ name: "音乐人", id: artistId }], songs: [
+					{ id: "01a17b89-60cd-741e-beba-f14d5c6ca236", title: "公开曲目", lifecycle_status: "active" },
+				] } })
+			: json({ data: { id: artistId, name: "音乐人", bio: fullArtistText,
+				albums: [{ id: albumId, title: "资料专辑", lifecycle_status: "active", entry_status: "open" }] } })) as unknown as typeof fetch;
+		const page = '<html><head></head><body><div id="app"><!-- seo-prerender-start -->旧内容<!-- seo-prerender-end --></div></body></html>';
+		const album = await resolvePublicContentSeo(`/music/album/${albumId}`, "https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+		const albumHtml = buildPublicContentHtml(page, album.content!);
+		expect(album.content?.description.length).toBeLessThanOrEqual(160);
+		expect(albumHtml).toContain("独特的结尾介绍 &amp; 收录情况");
+		expect(albumHtml).toContain("<dt>发行时间</dt><dd>2026 年 9 月 26 日</dd>");
+		expect(albumHtml).toContain("<dt>已收录曲目</dt><dd>1 首</dd>");
+		expect(albumHtml).toContain('"numTracks":1');
+		const artist = await resolvePublicContentSeo(`/music/artist/${artistId}`, "https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+		const artistHtml = buildPublicContentHtml(page, artist.content!);
+		expect(artist.content?.description.length).toBeLessThanOrEqual(160);
+		expect(artistHtml).toContain("长期创作与专辑整理。");
+		expect(artistHtml).toContain("<dt>已收录公开专辑</dt><dd>1</dd>");
+	});
+
+	it("renders only recorded song facts, not assumed duration or invented release dates", async () => {
+		const songId = "01a17b89-60cd-741e-beba-f14d5c6ca236";
+		const albumId = "01a17b88-ee76-77c9-afff-031387805123";
+		const song = { id: songId, title: "公开歌曲", description: "", album: {id:albumId,title:"资料专辑"},
+			release_date: "2026-09-26T00:00:00Z", release_date_precision: "day", track_number: 13, disc_number: 2, duration_sec: 0 };
+		const fetcher = vi.fn(async () => json({ data: {song, artists: [{name:"音乐人"}] } })) as unknown as typeof fetch;
+		const found = await resolvePublicContentSeo(`/music/song/${songId}`, "https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+		const page = '<html><head></head><body><div id="app"><!-- seo-prerender-start -->旧内容<!-- seo-prerender-end --></div></body></html>';
+		const html = buildPublicContentHtml(page, found.content!);
+		expect(html).toContain("<dt>曲目序号</dt><dd>第 2 碟，第 13 首</dd>");
+		expect(html).toContain("<dt>发行时间</dt><dd>2026 年 9 月 26 日</dd>");
+		expect(html).toContain("收录于《资料专辑》");
+		expect(html).not.toContain("<dt>时长</dt>");
+		expect(html).not.toContain("PT0S");
+	});
+
+	it("rejects invalid and impossible calendar dates in both album and song facts", async () => {
+		const album = "01a17b88-ee76-77c9-afff-031387805123";
+		const get = async (dateValue: string, precision: string) => {
+			const fetcher = vi.fn(async () => json({ data: { id: album, title: "专辑", release_date: dateValue, release_date_precision: precision } })) as unknown as typeof fetch;
+			const found = await resolvePublicContentSeo(`/music/album/${album}`, "https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+			return found.content!;
+		};
+		for (const dateValue of ["2202-01-01T00:00:00Z", "2026-02-29T00:00:00Z", "0001-01-01T00:00:00Z"]) {
+			const result = await get(dateValue, "day");
+			expect(result.structuredData.datePublished).toBeUndefined();
+			expect(result.metadataFacts).toEqual([]);
+		}
+		const monthOnly = await get("2026-09-01T00:00:00Z", "month");
+		expect(monthOnly.metadataFacts).toEqual([{name:"发行时间",value:"2026 年 9 月"}]);
+	});
+
 	it("marks aggregated feed item pages as noindex without a homepage canonical", () => {
 		const html = buildAggregatedContentHtml(shell);
 

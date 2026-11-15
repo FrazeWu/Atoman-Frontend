@@ -1,5 +1,5 @@
 <template>
-  <div class="editor-page">
+  <div ref="editorPageRef" class="editor-page">
     <div class="editor-shell">
       <div v-if="error && !editorLoadFailed" class="editor-error a-error" role="alert">
         <span>{{ error }}</span>
@@ -48,6 +48,19 @@
                 <span>{{ editorCharacterCount }} 字</span>
                 <span class="editor-top-info__sep" aria-hidden="true">·</span>
                 <span>{{ editorReadingTime }}</span>
+                <template v-if="outlineHeadings.length > 0">
+                  <span class="editor-top-info__sep" aria-hidden="true">·</span>
+                  <button
+                    type="button"
+                    class="editor-outline-pill-btn"
+                    :class="{ 'is-active': outlineOpen }"
+                    aria-label="查看文章大纲"
+                    @click="outlineOpen = !outlineOpen"
+                  >
+                    <ListTree :size="12" aria-hidden="true" />
+                    <span>{{ outlineHeadings.length }} 节大纲</span>
+                  </button>
+                </template>
               </div>
               <div class="editor-top-info__group editor-top-info__group--secondary">
                 <span>{{ contentMode === 'markdown' ? 'Markdown' : 'Visual' }}</span>
@@ -59,8 +72,11 @@
             <div class="editor-format-row">
               <PostEditorFormattingToolbar
                 :line-numbers="lineNumbersVisible"
+                :outline-open="outlineOpen"
+                :outline-count="outlineHeadings.length"
                 @command="executeFormattingCommand"
                 @update:line-numbers="lineNumbersVisible = $event"
+                @toggle-outline="outlineOpen = !outlineOpen"
               />
             </div>
 
@@ -86,8 +102,17 @@
                     :show-whitespace="true"
                     @update:line-numbers="lineNumbersVisible = $event"
                     @collab-ready="handleCollabReady"
+                    @active-heading-change="activeHeadingLine = $event"
                   />
                 </div>
+
+                <PostEditorOutlinePanel
+                  :show="outlineOpen"
+                  :headings="outlineHeadings"
+                  :active-line="activeHeadingLine"
+                  @close="outlineOpen = false"
+                  @select-heading="handleSelectHeading"
+                />
               </section>
             </div>
           </template>
@@ -249,6 +274,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import { hasAppHistory, studioContentLocation } from '@/router/studioEditor'
 
+import { ListTree } from 'lucide-vue-next'
 import PEditor from '@/components/shared/PEditor.vue'
 import PostEditorFormattingToolbar from '@/components/blog/PostEditorFormattingToolbar.vue'
 import type { PostEditorCommand } from '@/components/blog/postEditorCommands'
@@ -257,6 +283,7 @@ import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PostEditorDraftRecoveryModal from '@/components/blog/PostEditorDraftRecoveryModal.vue'
 import PostEditorConflictModal from '@/components/blog/PostEditorConflictModal.vue'
+import PostEditorOutlinePanel from '@/components/blog/PostEditorOutlinePanel.vue'
 import PostVersionHistoryModal from '@/components/blog/PostVersionHistoryModal.vue'
 import { useApi } from '@/composables/useApi'
 import type { BlogScheduleStatus } from '@/composables/useContentLifecycle'
@@ -265,6 +292,8 @@ import { useStudioStore } from '@/stores/studio'
 import PostPublicationSheet from '@/components/blog/PostPublicationSheet.vue'
 import { usePostEditorCollections } from '@/composables/blog/usePostEditorCollections'
 import { usePostEditorPublication } from '@/composables/blog/usePostEditorPublication'
+import { usePostEditorOutline } from '@/composables/blog/usePostEditorOutline'
+import { useEditorVirtualKeyboard } from '@/composables/blog/useEditorVirtualKeyboard'
 import { evaluateBlogPublicationQuality } from '@/utils/blogPublicationQuality'
 import {
   parseDraftTimestamp,
@@ -349,6 +378,23 @@ const form = ref<PostEditorDraftForm>({
   visibility: 'public' as BlogVisibility,
   tags: [],
 })
+
+const editorPageRef = ref<HTMLElement | null>(null)
+const outlineOpen = ref(false)
+const activeHeadingLine = ref<number | null>(null)
+const { headings: outlineHeadings } = usePostEditorOutline(computed(() => form.value.content))
+
+useEditorVirtualKeyboard(editorPageRef, {
+  onKeyboardOpen: () => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 640) {
+      outlineOpen.value = false
+    }
+  },
+})
+
+const handleSelectHeading = (lineNumber: number) => {
+  editorRef.value?.scrollToHeadingLine(lineNumber)
+}
 
 const publicationWarnings = computed(() => evaluateBlogPublicationQuality({
   title: form.value.title,
@@ -550,6 +596,8 @@ const handlePublishAction = () => {
 const closePublicationReview = () => {
   publicationReviewVisible.value = false
   publicationIntent.value = null
+  outlineOpen.value = false
+  activeHeadingLine.value = null
 }
 
 const confirmPublication = () => {
@@ -796,6 +844,8 @@ const resetEditorStateForRoute = () => {
   remotePostData.value = null
   publicationReviewVisible.value = false
   publicationIntent.value = null
+  outlineOpen.value = false
+  activeHeadingLine.value = null
   scheduledAt.value = ''
   savedPostId.value = null
   markdownImportID.value = null

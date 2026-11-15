@@ -27,26 +27,42 @@
     >
       <Hash :size="15" aria-hidden="true" />
     </button>
+    <button
+      type="button"
+      class="post-format-toolbar__button"
+      :class="{ 'is-active': outlineOpen }"
+      :aria-pressed="outlineOpen"
+      aria-label="文章大纲"
+      title="文章大纲"
+      @click="$emit('toggle-outline')"
+    >
+      <ListTree :size="15" aria-hidden="true" />
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { AtSign, Bold, BookOpen, Code2, Headphones, Hash, Image, Italic, Link, List, ListOrdered, Minus, Quote, Redo2, Sigma, Strikethrough, Table, Undo2, Video, type LucideIcon } from 'lucide-vue-next'
+import { AtSign, Bold, BookOpen, Code2, Headphones, Hash, Image, Italic, Link, List, ListOrdered, ListTree, Minus, Quote, Redo2, Sigma, Strikethrough, Table, Undo2, Video, type LucideIcon } from 'lucide-vue-next'
 
 import type { PostEditorCommand } from './postEditorCommands'
 
 withDefaults(defineProps<{
   activeCommands?: PostEditorCommand[]
   lineNumbers: boolean
+  outlineOpen?: boolean
+  outlineCount?: number
   readonly?: boolean
 }>(), {
   activeCommands: () => [],
+  outlineOpen: false,
+  outlineCount: 0,
   readonly: false,
 })
 
 defineEmits<{
   (e: 'command', command: PostEditorCommand): void
   (e: 'update:line-numbers', value: boolean): void
+  (e: 'toggle-outline'): void
 }>()
 
 type Tool = {

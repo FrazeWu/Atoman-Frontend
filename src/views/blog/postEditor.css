@@ -160,11 +160,14 @@
 
 .editor-body :deep(.cm-editor) {
   height: 100%;
+  touch-action: pan-y;
 }
 
 .editor-body :deep(.cm-scroller) {
   height: 100%;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: max(1.5rem, var(--a-keyboard-inset, 0px)) !important;
   font-family: var(--a-font-sans, ui-sans-serif, system-ui, sans-serif) !important;
   font-size: 1.0625rem;
   line-height: 1.45 !important;
@@ -342,5 +345,35 @@
   .editor-format-row :deep(.post-format-toolbar) {
     flex-wrap: nowrap;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
   }
+}
+
+.editor-outline-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: 999px;
+  background: var(--a-color-bg);
+  color: var(--a-color-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  line-height: 1.2;
+  transition: all 0.12s ease;
+}
+
+.editor-outline-pill-btn:hover {
+  background: var(--a-color-surface-hover);
+  color: var(--a-color-fg);
+}
+
+.editor-outline-pill-btn.is-active {
+  background: var(--a-color-primary-subtle, rgba(37, 99, 235, 0.08));
+  border-color: var(--a-color-primary, #2563eb);
+  color: var(--a-color-primary, #2563eb);
+  font-weight: 600;
 }

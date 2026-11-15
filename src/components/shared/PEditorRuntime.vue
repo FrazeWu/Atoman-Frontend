@@ -155,7 +155,7 @@ import '@/assets/editor.css'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { AtSign, Quote } from 'lucide-vue-next'
 import { EditorView, highlightActiveLine, highlightActiveLineGutter, highlightWhitespace, keymap, lineNumbers, placeholder as cmPlaceholder, scrollPastEnd } from '@codemirror/view'
-import { Compartment, EditorState } from '@codemirror/state'
+import { Compartment, EditorState, Prec } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
@@ -481,6 +481,13 @@ function initCodeMirror() {
   const extensions = [
     history(),
     keymap.of(bindings),
+    Prec.highest(EditorView.domEventHandlers({
+      keydown: (event) => {
+        if (!handleEditorKeydown(event)) return false
+        event.stopPropagation()
+        return true
+      },
+    })),
     markdown({ codeLanguages: languages }),
     lineNumberCompartment.of(lineNumberExtensions()),
     livePreviewCompartment.of(props.livePreview ? livePreviewExtensions() : []),
@@ -497,12 +504,10 @@ function initCodeMirror() {
         if (bubble.value.visible) updateBubbleMenu()
       },
       paste: onCmPaste,
-      drop: (e) => {
-        e.preventDefault()
-        handleDropFiles(e.dataTransfer?.files)
-      },
-      keydown: (e) => {
-        return handleEditorKeydown(e)
+      drop: (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        onDrop(event)
       },
     }),
     EditorView.updateListener.of((update) => {

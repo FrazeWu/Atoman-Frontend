@@ -60,6 +60,18 @@ describe('usePostEditorOutline', () => {
     expect(headings[1].lineNumber).toBe(6)
   })
 
+  it('忽略波浪线围栏代码块里的标题', () => {
+    const headings = extractMarkdownHeadings([
+      '~~~markdown',
+      '# 代码里的标题',
+      '~~~',
+      '## 真正的标题',
+    ].join('\n'))
+
+    expect(headings).toHaveLength(1)
+    expect(headings[0].text).toBe('真正的标题')
+  })
+
   it('内容变化时通过防抖响应式更新大纲列表', async () => {
     vi.useFakeTimers()
     const content = ref('# 初始标题')

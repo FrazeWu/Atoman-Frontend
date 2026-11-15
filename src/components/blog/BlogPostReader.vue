@@ -165,7 +165,9 @@ function paginateAcademicContent(content: string) {
   if (!content) return []
   const documentFragment = document.implementation.createHTMLDocument('academic-reader')
   documentFragment.body.innerHTML = content
-  const blocks = Array.from(documentFragment.body.children)
+  const root = documentFragment.body
+  const sanitizeRoot = root.querySelector(':scope > [data-atoman-sanitize-root]')
+  const blocks = Array.from((sanitizeRoot ?? root).children)
   if (!blocks.length) return [content]
 
   const pages: string[] = []
@@ -689,7 +691,11 @@ function handleRenderedContentClick(event: MouseEvent) {
     const href = footnoteLink.getAttribute('href')
     if (href && href.startsWith('#')) {
       const id = href.slice(1)
-      const targetEl = document.getElementById(id) || document.getElementById(decodeURIComponent(id))
+      const scope = event.currentTarget instanceof Element ? event.currentTarget : document
+      const findById = (value: string) => scope instanceof Document
+        ? scope.getElementById(value)
+        : scope.querySelector<HTMLElement>(`#${CSS.escape(value)}`)
+      const targetEl = findById(id) || findById(decodeURIComponent(id))
       if (targetEl) {
         event.preventDefault()
         targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -837,8 +843,8 @@ defineExpose({
         />
       </div>
       <p v-if="post.summary" class="post-sheet-summary article-summary">{{ post.summary }}</p>
-      <div v-if="post.tags?.length || post.public_tags?.length || (authStore.isAuthenticated && showAddTagInput)" class="post-sheet-detail-toolbar">
-        <div v-if="post.tags?.length || post.public_tags?.length" class="post-sheet-tags" aria-label="文章标签">
+      <div v-if="post.tags?.length || post.public_tags?.length || authStore.isAuthenticated" class="post-sheet-detail-toolbar">
+        <div class="post-sheet-tags" aria-label="文章标签">
           <button v-for="tag in post.tags" :key="`author-${tag}`" type="button" @click="openTag(tag)">{{ tag }}</button>
           <span v-for="tag in post.public_tags" :key="tag.id" class="post-public-tag">
             <button type="button" @click="openTag(tag.name)">{{ tag.name }} <small>{{ tag.count }}</small></button>

@@ -230,23 +230,28 @@ const focusTagInput = () => {
 
 const addTag = (rawTag: string) => {
   tagError.value = ''
-  const tag = rawTag.trim().toLowerCase().replace(/[,，\s]+/g, '')
-  if (!tag) return
+  const pieces = rawTag.split(/[,，\s]+/).map(tag => tag.trim().toLowerCase()).filter(Boolean)
+  if (!pieces.length) return
 
-  if (props.tags.includes(tag)) {
-    tagError.value = '该标签已添加'
-    return
-  }
-  if (props.tags.length >= 5) {
-    tagError.value = '最多添加 5 个标签'
-    return
-  }
-  if (tag.length > 20) {
-    tagError.value = '标签长度不能超过 20 个字符'
-    return
+  const next = [...props.tags]
+  for (const tag of pieces) {
+    if (next.includes(tag)) {
+      tagError.value = '该标签已添加'
+      continue
+    }
+    if (next.length >= 5) {
+      tagError.value = '最多添加 5 个标签'
+      break
+    }
+    if (tag.length > 20) {
+      tagError.value = '标签长度不能超过 20 个字符'
+      continue
+    }
+    next.push(tag)
+    tagError.value = ''
   }
 
-  emit('update:tags', [...props.tags, tag])
+  if (next.length !== props.tags.length) emit('update:tags', next)
   pendingTagText.value = ''
 }
 
@@ -262,6 +267,7 @@ const commitPendingTag = () => {
 }
 
 const handleTagKeydown = (e: KeyboardEvent) => {
+  if (e.isComposing || e.keyCode === 229) return
   if (e.key === 'Enter' || e.key === ',' || e.key === '，' || e.key === ' ') {
     e.preventDefault()
     commitPendingTag()

@@ -610,8 +610,6 @@ const handlePublishAction = () => {
 const closePublicationReview = () => {
   publicationReviewVisible.value = false
   publicationIntent.value = null
-  outlineOpen.value = false
-  activeHeadingLine.value = null
 }
 
 const confirmPublication = () => {
@@ -687,7 +685,11 @@ const refreshAfterConflict = async () => {
   conflictModalVisible.value = false
   savedPostId.value = null
   const loaded = await loadPost()
-  if (!loaded) editorLoadFailed.value = true
+  if (!loaded) {
+    editorLoadFailed.value = true
+    return
+  }
+  replaceCollaborativeDocumentFromForm()
 }
 
 watch(hasPostConflict, (isConflict) => {

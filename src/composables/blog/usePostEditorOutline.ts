@@ -11,18 +11,28 @@ export function extractMarkdownHeadings(content: string): PostOutlineHeading[] {
   if (!content) return []
   const lines = content.split('\n')
   const headings: PostOutlineHeading[] = []
-  let inCodeBlock = false
+  let fenceCharacter = ''
+  let fenceLength = 0
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     const trimmed = line.trim()
+    const fenceMatch = /^(```+|~~~+)/.exec(trimmed)
 
-    // 忽略代码块内部的注释
-    if (trimmed.startsWith('```')) {
-      inCodeBlock = !inCodeBlock
+    // 忽略围栏代码块内部的标题
+    if (fenceMatch) {
+      const marker = fenceMatch[1]
+      const markerCharacter = marker[0]
+      if (!fenceCharacter) {
+        fenceCharacter = markerCharacter
+        fenceLength = marker.length
+      } else if (markerCharacter === fenceCharacter && marker.length >= fenceLength) {
+        fenceCharacter = ''
+        fenceLength = 0
+      }
       continue
     }
-    if (inCodeBlock) continue
+    if (fenceCharacter) continue
 
     // 匹配 Markdown 标题：# 到 ######
     const match = line.match(/^(#{1,6})\s+(.+)$/)

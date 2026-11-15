@@ -51,10 +51,12 @@ export function sv_wrapLinePrefix(
   const lastLine = cmView.state.doc.lineAt(Math.max(from, endPosition))
   const original = cmView.state.sliceDoc(firstLine.from, lastLine.to)
   const lines = original.split('\n')
-  const shouldRemove = lines.every((line) => !line.trim() || line.startsWith(prefix))
+  const matchesPrefix = (line: string) => prefix === '1. ' ? /^\d+\.\s+/.test(line) : line.startsWith(prefix)
+  const stripPrefix = (line: string) => prefix === '1. ' ? line.replace(/^\d+\.\s+/, '') : line.slice(prefix.length)
+  const shouldRemove = lines.every((line) => !line.trim() || matchesPrefix(line))
   const replacement = lines.map((line) => {
-    if (!line.trim()) return shouldRemove ? '' : `${prefix}${placeholder}`
-    if (shouldRemove) return line.startsWith(prefix) ? line.slice(prefix.length) : line
+    if (!line.trim()) return shouldRemove ? '' : lines.length === 1 ? `${prefix}${placeholder}` : prefix
+    if (shouldRemove) return matchesPrefix(line) ? stripPrefix(line) : line
     if (/^#{1,6}\s+$/.test(prefix) && /^#{1,6}\s+/.test(line)) {
       return `${prefix}${line.replace(/^#{1,6}\s+/, '')}`
     }

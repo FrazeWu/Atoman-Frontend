@@ -315,7 +315,7 @@ export function findBlockCandidateRanges(state: EditorState): Array<{ from: numb
       continue
     }
     if (!/^\s*\|/.test(line.text) || lineNumber >= doc.lines) continue
-    if (!/^\s*\|?\s*:?-+/.test(doc.line(lineNumber + 1).text)) continue
+    if (!/^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(doc.line(lineNumber + 1).text)) continue
     const endLine = findTableEndLine(doc, lineNumber)
     ranges.push({ from: line.from, to: doc.line(endLine).to })
     lineNumber = endLine

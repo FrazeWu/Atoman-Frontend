@@ -18,16 +18,17 @@ export function useEditorVirtualKeyboard(
     if (typeof window === 'undefined' || !window.visualViewport) return
 
     const vv = window.visualViewport
-    // 键盘弹出时 visualViewport 高度显著减小
-    const heightDiff = window.innerHeight - vv.height
+    const wasOpen = isKeyboardOpen.value
+    // 键盘弹出时 visualViewport 高度显著减小。offsetTop 计入地址栏滚动，避免内边距被算大。
+    const heightDiff = window.innerHeight - (vv.offsetTop || 0) - vv.height
     const open = heightDiff > 100
 
     if (open) {
       isKeyboardOpen.value = true
       keyboardHeight.value = Math.max(0, Math.round(heightDiff))
       targetRef.value?.style.setProperty('--a-keyboard-inset', `${keyboardHeight.value}px`)
-      options.onKeyboardOpen?.(keyboardHeight.value)
-    } else {
+      if (!wasOpen) options.onKeyboardOpen?.(keyboardHeight.value)
+    } else if (wasOpen) {
       isKeyboardOpen.value = false
       keyboardHeight.value = 0
       targetRef.value?.style.setProperty('--a-keyboard-inset', '0px')

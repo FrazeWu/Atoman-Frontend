@@ -61,7 +61,11 @@ describe('useEditorVirtualKeyboard', () => {
     expect(wrapper.vm.isKeyboardOpen).toBe(true)
     expect(wrapper.vm.keyboardHeight).toBe(350)
     expect((wrapper.element as HTMLElement).style.getPropertyValue('--a-keyboard-inset')).toBe('350px')
+    expect(onOpen).toHaveBeenCalledTimes(1)
     expect(onOpen).toHaveBeenCalledWith(350)
+
+    resizeCallback?.()
+    expect(onOpen).toHaveBeenCalledTimes(1)
 
     // 模拟软键盘收起：height 恢复为 800 (差值 0 <= 100)
     mockVisualViewport.height = 800

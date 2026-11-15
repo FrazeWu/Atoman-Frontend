@@ -717,6 +717,10 @@ const mobileSheetStyle = computed(() => {
   box-shadow: none !important;
 }
 
+:global(html[data-player-active="true"]) .p-sheet-root:not(.p-sheet-root--above-player) .p-sheet-layer.is-right {
+  bottom: var(--a-content-bottom-offset, var(--a-player-reserved-height, 68px)) !important;
+}
+
 .p-sheet-layer.is-left {
   left: 0;
   border-right: 1px solid var(--a-color-border-soft);
@@ -958,8 +962,14 @@ const mobileSheetStyle = computed(() => {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 2.5rem;
+  padding-bottom: calc(5rem + var(--a-content-bottom-offset, 0px));
   display: flex;
   flex-direction: column;
+}
+
+.is-reading-mode .sheet-content {
+  mask-image: linear-gradient(to bottom, transparent 0, black 24px, black calc(100% - 24px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 24px, black calc(100% - 24px), transparent 100%);
 }
 
 .p-sheet-footer {

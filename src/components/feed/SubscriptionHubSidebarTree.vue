@@ -252,8 +252,9 @@ const sourceType = (item: SubscriptionHubMembership) =>
   color: var(--a-color-fg);
 }
 .subscription-hub-sidebar__source > span:first-child {
-  color: var(--a-color-muted);
-  font-size: 0.64rem;
+  color: var(--a-color-text-secondary, var(--a-color-muted));
+  font-size: 0.72rem;
+  font-weight: 500;
   line-height: 1;
   text-align: center;
   white-space: nowrap;

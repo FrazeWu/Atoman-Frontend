@@ -1,7 +1,7 @@
 <template>
-  <div v-if="updatedAt" class="post-update-notice" :class="`post-update-notice--${variant}`" role="note">
+  <div v-if="shouldShowNotice" class="post-update-notice" :class="`post-update-notice--${variant}`" role="note">
     <span class="post-update-notice__label">{{ label }}</span>
-    <span>{{ formatDate(updatedAt) }}，{{ freshnessMessage }}</span>
+    <span>{{ formatDate(updatedAt!) }}，{{ freshnessMessage }}</span>
   </div>
 </template>
 
@@ -12,9 +12,11 @@ const props = withDefaults(defineProps<{
   updatedAt?: string
   label?: string
   variant?: 'default' | 'compact'
+  minElapsedWeeks?: number
 }>(), {
   label: '最近更新时间：',
   variant: 'default',
+  minElapsedWeeks: 12,
 })
 
 const elapsedWeeks = computed(() => {
@@ -23,6 +25,11 @@ const elapsedWeeks = computed(() => {
   if (!Number.isFinite(updatedAt)) return null
   const weekInMilliseconds = 7 * 24 * 60 * 60 * 1000
   return Math.floor(Math.max(0, Date.now() - updatedAt) / weekInMilliseconds)
+})
+
+const shouldShowNotice = computed(() => {
+  if (!props.updatedAt || elapsedWeeks.value === null) return false
+  return elapsedWeeks.value >= props.minElapsedWeeks
 })
 
 function formatDate(value: string) {

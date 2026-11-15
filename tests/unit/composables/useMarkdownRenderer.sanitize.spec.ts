@@ -30,6 +30,15 @@ describe("useMarkdownRenderer sanitize", () => {
     );
   });
 
+  it("renders standalone footnote markers as superscript elements", () => {
+    const { renderMarkdown } = useMarkdownRenderer();
+
+    const html = renderMarkdown("究竟有多么无力。^1\n\n另外还有参考[^2]。");
+
+    expect(html).toContain("无力。<sup>1</sup>");
+    expect(html).toContain("另外还有参考<sup>2</sup>");
+  });
+
   it("keeps structured Markdown when the enhanced runtime is ready", async () => {
     const { renderMarkdown, runtimeState } = useMarkdownRenderer();
     const source = [

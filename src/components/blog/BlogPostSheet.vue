@@ -43,6 +43,7 @@ const { navigation, loading: navigationLoading, direction: navigationDirection, 
     :is-top-layer="sheets.isTop(layer.key) && !commentsBlockParent"
     side="right"
     mode="full"
+    top="0px"
     reading-mode
     close-type="both"
     :navigation="navigation"

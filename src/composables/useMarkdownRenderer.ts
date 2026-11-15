@@ -456,8 +456,6 @@ function disambiguateSingleMarkerLines(content: string): string {
 }
 
 function preprocessFootnotes(content: string): string {
-  if (!/(?:^|\n)\s*\[?\^([0-9a-zA-Z_-]+)\]?:/m.test(content)) return content;
-
   const lines = content.split("\n");
   let fenceCharacter = "";
   let fenceLength = 0;
@@ -490,8 +488,6 @@ function preprocessFootnotes(content: string): string {
     return line;
   });
 
-  if (definitionKeys.size === 0) return content;
-
   fenceCharacter = "";
   fenceLength = 0;
   return normalizedLines
@@ -515,12 +511,30 @@ function preprocessFootnotes(content: string): string {
 
       if (/^\s*\[\^([0-9a-zA-Z_-]+)\]:/.test(line)) return line;
 
-      return line.replace(/(^|[^\w\[\^])\^([0-9a-zA-Z_-]+)(?=[^\w\]\^:]|$)/g, (match, prefix, id) => {
+      // 1. Replace defined keys with standard marked [^id] footnote syntax
+      let processed = line.replace(/(^|[^\w\[\^])\^([0-9a-zA-Z_-]+)(?=[^\w\]\^:]|$)/g, (match, prefix, id) => {
         if (definitionKeys.has(id)) {
           return `${prefix}[^${id}]`;
         }
         return match;
       });
+
+      // 2. For standalone superscript numbers like ^1 or [^1] without a definition, convert to <sup>id</sup>
+      processed = processed.replace(/(^|[^\w\[\^])\^([0-9]+)(?=[^\w\]\^:]|$)/g, (_match, prefix, id) => {
+        if (!definitionKeys.has(id)) {
+          return `${prefix}<sup>${id}</sup>`;
+        }
+        return _match;
+      });
+
+      processed = processed.replace(/(^|[^\w])\[\^([0-9]+)\](?=[^\w:]|$)/g, (_match, prefix, id) => {
+        if (!definitionKeys.has(id)) {
+          return `${prefix}<sup>${id}</sup>`;
+        }
+        return _match;
+      });
+
+      return processed;
     })
     .join("\n");
 }

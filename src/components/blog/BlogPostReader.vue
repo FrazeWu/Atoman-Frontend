@@ -98,6 +98,14 @@ const bookmarkFolderError = ref('')
 const publicTagInput = ref('')
 const publicTagLoading = ref(false)
 const publicTagError = ref('')
+const showAddTagInput = ref(false)
+
+async function handleAddTagSubmit() {
+  await addPublicTag()
+  if (!publicTagError.value) {
+    showAddTagInput.value = false
+  }
+}
 const reportOpen = ref(false)
 const reportReason = ref('spam')
 const reportNote = ref('')
@@ -829,17 +837,27 @@ defineExpose({
         />
       </div>
       <p v-if="post.summary" class="post-sheet-summary article-summary">{{ post.summary }}</p>
-      <div v-if="post.tags?.length || post.public_tags?.length || authStore.isAuthenticated" class="post-sheet-detail-toolbar">
+      <div v-if="post.tags?.length || post.public_tags?.length || (authStore.isAuthenticated && showAddTagInput)" class="post-sheet-detail-toolbar">
         <div v-if="post.tags?.length || post.public_tags?.length" class="post-sheet-tags" aria-label="文章标签">
           <button v-for="tag in post.tags" :key="`author-${tag}`" type="button" @click="openTag(tag)">{{ tag }}</button>
           <span v-for="tag in post.public_tags" :key="tag.id" class="post-public-tag">
             <button type="button" @click="openTag(tag.name)">{{ tag.name }} <small>{{ tag.count }}</small></button>
             <button v-if="tag.viewer_added || isOwner || isAdminRole(authStore.user?.role)" type="button" class="post-public-tag__remove" :aria-label="`移除标签 ${tag.name}`" @click.stop="removePublicTag(tag)">×</button>
           </span>
+          <button
+            v-if="authStore.isAuthenticated && !showAddTagInput"
+            type="button"
+            class="post-public-tag-toggle-btn"
+            aria-label="添加公共标签"
+            @click="showAddTagInput = true"
+          >
+            + 标签
+          </button>
         </div>
-        <form v-if="authStore.isAuthenticated" class="post-public-tag-form" @submit.prevent="addPublicTag">
+        <form v-if="authStore.isAuthenticated && showAddTagInput" class="post-public-tag-form" @submit.prevent="handleAddTagSubmit">
           <input v-model="publicTagInput" maxlength="48" placeholder="添加公共标签" aria-label="添加公共标签" :disabled="publicTagLoading" />
           <PButton type="submit" size="sm" variant="secondary" :loading="publicTagLoading">添加</PButton>
+          <PButton type="button" size="sm" variant="ghost" @click="showAddTagInput = false">取消</PButton>
         </form>
       </div>
       <p v-if="publicTagError" class="post-public-tag-error" role="alert">{{ publicTagError }}</p>

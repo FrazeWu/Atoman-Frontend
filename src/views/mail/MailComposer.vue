@@ -72,6 +72,7 @@
                 原发件地址已停用或不可用，请重新选择
               </option>
             </select>
+            <p v-if="senderLoadFailed" class="mail-compose__error" role="alert">发件地址暂时没有加载出来。可以先用 Atoman 地址发送，或关闭后重试。</p>
           </div>
         </div>
 
@@ -143,7 +144,7 @@
         />
 
         <!-- 正文编辑器（复用全站现代 PEditor：选区气泡工具栏、斜杠命令菜单与即时预览） -->
-        <div class="mail-compose__editor-wrap" @keydown="handleComposerKeydown">
+        <div class="mail-compose__editor-wrap" @keydown="handleComposerKeydown" @paste.capture="onEditorPaste">
           <PEditor
             v-model="text"
             :mode="editorMode"
@@ -324,14 +325,17 @@ const emit = defineEmits<{ close: []; saved: []; queued: [outbox: MailOutbox, dr
 const contacts = ref<MailContact[]>([])
 const externalSenders = ref<MailSenderIdentity[]>([])
 const senderLoaded = ref(false)
+const senderLoadFailed = ref(false)
 const selectedSender = ref(props.draft.alias_id ? `alias:${props.draft.alias_id}` : props.draft.external_account_id || '')
-const senderMissing = computed(() => Boolean(selectedSender.value) && senderLoaded.value && !externalSenders.value.some(row => row.alias_id ? selectedSender.value === `alias:${row.alias_id}` : selectedSender.value === row.external_account_id))
+const senderMissing = computed(() => Boolean(selectedSender.value) && senderLoaded.value && !senderLoadFailed.value && !externalSenders.value.some(row => row.alias_id ? selectedSender.value === `alias:${row.alias_id}` : selectedSender.value === row.external_account_id))
 
 async function loadSenderChoices() {
   try {
     externalSenders.value = (await fetchMailSenders()).filter(row => Boolean(row.external_account_id || row.alias_id))
+    senderLoadFailed.value = false
   } catch {
     externalSenders.value = []
+    senderLoadFailed.value = true
   } finally {
     senderLoaded.value = true
   }
@@ -677,6 +681,7 @@ function onEditorPaste(event: ClipboardEvent) {
     }
     if (files.length) {
       event.preventDefault()
+      event.stopPropagation()
       void processAttachmentFiles(files)
     }
   }

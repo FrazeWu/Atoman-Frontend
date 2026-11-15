@@ -235,7 +235,11 @@ const guardedRoutes: Record<string, { exact: string[]; dynamic: RegExp[] }> = {
   },
   "/posts": {
     exact: ["/posts/articles", "/posts/notes"],
-    dynamic: [/^\/posts\/notes\/[^/]+$/],
+    dynamic: [
+      /^\/posts\/notes\/[^/]+$/,
+      /^\/posts\/channel\/[^/]+$/,
+      /^\/posts\/collection\/[^/]+$/,
+    ],
   },
   "/books": {
     exact: ["/books/shared-notes"],

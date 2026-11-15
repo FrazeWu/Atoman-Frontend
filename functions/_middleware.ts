@@ -45,6 +45,10 @@ function legacyRedirectDestination(pathname: string) {
 
 	const post = pathname.match(/^\/post\/([^/]+)$/);
 	if (post) return `/posts/post/${post[1]}`;
+	const channel = pathname.match(/^\/channels\/([^/]+)(?:\/(?:posts|about))?$/);
+	if (channel) return `/posts/channel/${channel[1]}`;
+	const collection = pathname.match(/^\/collection\/([^/]+)$/);
+	if (collection) return `/posts/collection/${collection[1]}`;
 	const watch = pathname.match(/^\/watch\/([^/]+)$/);
 	if (watch) return `/videos/watch/${watch[1]}`;
 	return undefined;

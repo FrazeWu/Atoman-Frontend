@@ -345,6 +345,11 @@ describe("public content SEO", () => {
 		}
 		const monthOnly = await get("2026-09-01T00:00:00Z", "month");
 		expect(monthOnly.metadataFacts).toEqual([{name:"发行时间",value:"2026 年 9 月"}]);
+		expect(monthOnly.structuredData.datePublished).toBe("2026-09");
+		const yearOnly = await get("2026-09-01T00:00:00Z", "year");
+		expect(yearOnly.structuredData.datePublished).toBe("2026");
+		const unknownPrecision = await get("2026-09-01T00:00:00Z", "unknown");
+		expect(unknownPrecision.structuredData.datePublished).toBeUndefined();
 	});
 
 	it("marks aggregated feed item pages as noindex without a homepage canonical", () => {

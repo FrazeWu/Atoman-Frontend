@@ -10,6 +10,17 @@ export interface SongEditorialSource {
   href: string
 }
 
+export function canShowSongEditorialNote(song: {
+  description?: string | null
+  lifecycle_status?: string | null
+  status?: string | null
+  entry_status?: string | null
+}) {
+  if (song.description?.trim()) return false
+  if (song.lifecycle_status !== 'active') return false
+  return (song.entry_status || song.status) === 'open'
+}
+
 export interface SongEditorialNote {
   expectedTitle: string
   expectedAlbumId: string

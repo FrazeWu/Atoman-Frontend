@@ -159,7 +159,7 @@ describe("static page SEO", () => {
 	it.each([
 		"/music/albums", "/music/tags/hiphop", "/music/playlist/playlist-id",
 		"/books/shared-notes", "/books/note-shares/share-key",
-		"/posts/notes/short-note-id", "/posts/articles", "/music/song/song-id",
+		"/posts/notes/short-note-id", "/posts/articles", "/posts/channel/tech", "/posts/collection/c-1", "/music/song/song-id",
 		"/feed/explore", "/feed/item/feed-item-1", "/feed/subscriptions",
 	])("keeps registered public path %s valid", (path) => {
 		expect(isKnownPagePath(path)).toBe(true);
@@ -241,6 +241,10 @@ describe("static page SEO", () => {
 		["/blog/articles", "/posts/articles"],
 		["/blog/notes/", "/posts/notes"],
 		["/post/post-123", "/posts/post/post-123"],
+		["/channels/tech", "/posts/channel/tech"],
+		["/channels/tech/posts", "/posts/channel/tech"],
+		["/channels/tech/about", "/posts/channel/tech"],
+		["/collection/c-1", "/posts/collection/c-1"],
 		["/watch/video-456", "/videos/watch/video-456"],
 		["/notes", "/posts/notes"],
 		["/bookmarks", "/posts/bookmarks"],

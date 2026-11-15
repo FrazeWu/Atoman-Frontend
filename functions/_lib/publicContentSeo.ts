@@ -3,7 +3,7 @@ import {
 	resolveApiBase,
 	type SitemapItem,
 } from "./blogSeo";
-import { getSongEditorialNote, type SongEditorialNote } from "../../src/content/musicEditorialNotes";
+import { canShowSongEditorialNote, getSongEditorialNote, type SongEditorialNote } from "../../src/content/musicEditorialNotes";
 
 export type PublicContentSeo = {
 	path: string;
@@ -74,7 +74,7 @@ function fullBodyText(value: unknown, fallback: string): string {
 	return normalized ? normalized.slice(0, 4000) : fallback;
 }
 
-function safeReleaseDate(value: unknown, precision: unknown): { raw?: string; label?: string } {
+function safeReleaseDate(value: unknown, precision: unknown): { raw?: string; label?: string; published?: string } {
 	const raw = date(value);
 	if (!raw || !/^\d{4}-\d{2}-\d{2}/.test(raw)) return {};
 	const year = Number(raw.slice(0, 4));
@@ -87,7 +87,11 @@ function safeReleaseDate(value: unknown, precision: unknown): { raw?: string; la
 	const label = detail === "year" || detail === "unknown" ? `${year} 年`
 		: detail === "month" ? `${year} 年 ${month} 月`
 		: `${year} 年 ${month} 月 ${day} 日`;
-	return { raw, label };
+	const published = detail === "year" ? raw.slice(0, 4)
+		: detail === "month" ? raw.slice(0, 7)
+		: detail === "unknown" ? undefined
+		: raw.slice(0, 10);
+	return { raw, label, published };
 }
 
 function date(value: unknown): string | undefined {
@@ -325,15 +329,16 @@ async function loadArtist(apiBase: string, id: string, fetcher: Fetcher) {
 		(!text(album?.status) || text(album?.status) === "open") &&
 		(!text(album?.entry_status) || text(album?.entry_status) === "open"),
 	);
-	const relatedLinks = publicAlbums.flatMap((album) => {
+	const albumLinks = publicAlbums.flatMap((album) => {
 		const href = musicEntityUrl("album", album?.id);
 		const label = text(album?.title);
 		if (!href || !label || seenAlbumIds.has(href)) return [];
 		seenAlbumIds.add(href);
 		return [{ href, label }];
-	}).slice(0, 60);
+	});
+	const relatedLinks = albumLinks.slice(0, 60);
 	const factualFallback = `在 Atoman 查看 ${name} 的音乐资料` +
-		(relatedLinks.length ? `，包含 ${relatedLinks.length} 张公开专辑` : "") + "。";
+		(albumLinks.length ? `，包含 ${albumLinks.length} 张公开专辑` : "") + "。";
 	const description = plainText(artist.bio, factualFallback);
 	return content(
 		`/music/artist/${encodeURIComponent(id)}`,
@@ -349,7 +354,7 @@ async function loadArtist(apiBase: string, id: string, fetcher: Fetcher) {
 		date(artist.updated_at),
 		relatedLinks,
 		fullBodyText(artist.bio, factualFallback),
-		relatedLinks.length ? [{ name: "已收录公开专辑", value: String(relatedLinks.length) }] : [],
+		albumLinks.length ? [{ name: "已收录公开专辑", value: String(albumLinks.length) }] : [],
 	);
 }
 
@@ -394,7 +399,7 @@ async function loadAlbum(apiBase: string, id: string, fetcher: Fetcher) {
 				name: text(artist?.name),
 				url: musicEntityUrl("artist", artist?.id),
 			})).filter((artist) => artist.name),
-			datePublished: released.raw,
+			datePublished: released.published,
 			numTracks: tracks.length || undefined,
 		},
 		text(album.cover_url) || undefined,
@@ -439,8 +444,12 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 		trackPosition ? `曲目序号：${trackPosition}` : "",
 		durationLabel ? `时长 ${durationLabel}` : "",
 	].filter(Boolean).join("；") + "。";
-	const editorialNote = !text(song.description) && (!text(song.status) || text(song.status) === "open")
-		? getSongEditorialNote(id, title, text(album?.id) || text(song.album_id)) : undefined;
+	const editorialNote = canShowSongEditorialNote({
+		description: text(song.description),
+		lifecycle_status: text(song.lifecycle_status),
+		status: text(song.status),
+		entry_status: text(song.entry_status),
+	}) ? getSongEditorialNote(id, title, text(album?.id) || text(song.album_id)) : undefined;
 	const description = plainText(song.description, editorialNote?.text || factualFallback);
 	const relatedLinks = ([
 		{ record: record(detail?.previous), prefix: "上一首" },
@@ -466,7 +475,7 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 				url: musicEntityUrl("artist", artist?.id),
 			})).filter((artist) => artist.name),
 			duration: durationSeconds !== undefined ? `PT${durationSeconds}S` : undefined,
-			datePublished: released.raw,
+			datePublished: released.published,
 			inAlbum: albumName
 				? { "@type": "MusicAlbum", name: albumName, url: musicEntityUrl("album", album?.id) }
 				: undefined,

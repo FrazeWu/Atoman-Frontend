@@ -11,7 +11,7 @@ import { deleteMusicSongRating, setMusicSongRating, type MusicLyricsAnnotation, 
 import MusicAnnotationWorkspace from '@/components/music/MusicAnnotationWorkspace.vue'
 import MusicLyricsLine from '@/components/music/MusicLyricsLine.vue'
 import MusicDescriptionPreview from '@/components/music/MusicDescriptionPreview.vue'
-import { getSongEditorialNote } from '@/content/musicEditorialNotes'
+import { canShowSongEditorialNote, getSongEditorialNote } from '@/content/musicEditorialNotes'
 import MusicEntryStateControl from '@/components/music/MusicEntryStateControl.vue'
 import AppleMusicPreview from '@/components/music/AppleMusicPreview.vue'
 import MusicTagList from '@/components/music/MusicTagList.vue'
@@ -76,8 +76,8 @@ const returnCurrentSong = () => props.layer && returnToLayer(props.layer.key)
 const detail = ref<MusicSongDetail | null>(null)
 const editorialNote = computed(() => {
   const song = detail.value?.song
-  return !song || song.description?.trim() || song.lifecycle_status !== 'active' || song.status !== 'open'
-    ? undefined : getSongEditorialNote(String(song.id), song.title, String(song.album?.id || song.album_id || ''))
+  if (!song || !canShowSongEditorialNote(song)) return undefined
+  return getSongEditorialNote(String(song.id), song.title, String(song.album?.id || song.album_id || ''))
 })
 let queryClient: ReturnType<typeof useQueryClient> | null = null
 try {

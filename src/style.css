@@ -192,6 +192,13 @@ body:has(.studio-layout) {
 	}
 }
 
+@media (max-width: 950px) {
+	body:has(.mail-page),
+	body:has(.mail-workspace) {
+		--a-sidebar-width: 0px;
+	}
+}
+
 /* ─── Layout ─────────────────────────────────────────── */
 .a-page {
 	max-width: 72rem;

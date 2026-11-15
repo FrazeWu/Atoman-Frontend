@@ -245,24 +245,26 @@ export function useMailWorkspace() {
     finally { loadingAccount.value = false }
   }
   async function performAction(action: MailAction, explicitIds?: string[], targetMailboxId?: string) {
-    if (actionBusy.value) return
+    if (actionBusy.value) return false
     const ids = explicitIds || [...selection.value]
-    if (!ids.length) return
-    if (ids.length > 100) { notice.value = '一次最多操作 100 封邮件，请从列表分批选择。'; return }
+    if (!ids.length) return false
+    if (ids.length > 100) { notice.value = '一次最多操作 100 封邮件，请从列表分批选择。'; return false }
     actionBusy.value = true
     try {
       const result = await mutateMailMessages(currentFolderId.value, ids, action, targetMailboxId)
       actionUndo.value = result.undo_id || ''; selection.value = new Set()
       const names: Partial<Record<MailAction, string>> = { archive: '已归档', trash: '已移到回收站', junk: '已移到垃圾邮件', restore: '已恢复到收件箱', move: '已移动', read: '已标为已读', unread: '已标为未读', flag: '已添加星标', unflag: '已取消星标' }
       notice.value = `${names[action] || '已更新'} ${result.affected} 封邮件。${result.failed?.length ? `另有 ${result.failed.length} 封未更新，请刷新后重试。` : ''}`
-      const changed = new Set(result.updated || ids)
+      const failed = new Set(result.failed || [])
+      const changed = new Set(result.updated || ids.filter(id => !failed.has(id)))
       if (['archive', 'trash', 'junk', 'restore', 'move'].includes(action) && readerMessages.value.some(row => changed.has(row.id))) clearReader()
       else {
         readerMessages.value = readerMessages.value.map(row => changed.has(row.id) ? { ...row, ...(['read', 'unread'].includes(action) ? { isRead: action === 'read' } : {}), ...(['flag', 'unflag'].includes(action) ? { isFlagged: action === 'flag' } : {}) } : row)
         for (const id of changed) if (details.value[id] && ['read', 'unread'].includes(action)) details.value[id]!.isRead = action === 'read'
       }
       await loadMessages(false, true); await loadFolders(true)
-    } catch (error) { notice.value = messageError(error, '操作没有完成，请刷新后重试。') }
+      return ids.some(id => !failed.has(id))
+    } catch (error) { notice.value = messageError(error, '操作没有完成，请刷新后重试。'); return false }
     finally { actionBusy.value = false }
   }
   async function undoAction() {

@@ -351,7 +351,8 @@ async function archiveAndAdvance() {
   const nextTargetId = navigation.value.next?.id || navigation.value.previous?.id || null
   const nextGroup = nextTargetId ? visibleConversations.value.find(g => g.id === nextTargetId) || null : null
 
-  await performAction('archive', currentIds)
+  const archived = await performAction('archive', currentIds)
+  if (!archived) return
   if (nextGroup) {
     void openConversation(nextGroup)
   } else {
@@ -365,7 +366,8 @@ async function trashAndAdvance() {
   const nextTargetId = navigation.value.next?.id || navigation.value.previous?.id || null
   const nextGroup = nextTargetId ? visibleConversations.value.find(g => g.id === nextTargetId) || null : null
 
-  await performAction('trash', currentIds)
+  const trashed = await performAction('trash', currentIds)
+  if (!trashed) return
   if (nextGroup) {
     void openConversation(nextGroup)
   } else {
@@ -466,6 +468,10 @@ async function openNativeFromAggregate(id:string){
   if(group) await openConversation(group)
   else {mobilePane.value='list';notice.value='已切换至 Atoman 收件箱，目标邮件可能不在当前页。'}
 }
+function mailSurfaceBusy() {
+  return Boolean(composeDraft.value || settingsOpen.value || externalOpen.value || organizerOpen.value || scheduledOpen.value || advancedOpen.value || attachmentPreview.value || folderDialog.value || deleteFolderDialog.value)
+}
+
 // The mailbox owns its shortcuts only while it is visible. Never intercept
 // composing, dialogs, keyboard IME, or other forms.
 function handleMailShortcut(event: KeyboardEvent) {
@@ -487,7 +493,7 @@ function handleMailShortcut(event: KeyboardEvent) {
     }
     return
   }
-  if (composeDraft.value || settingsOpen.value || externalOpen.value || organizerOpen.value || scheduledOpen.value || advancedOpen.value || attachmentPreview.value || folderDialog.value || deleteFolderDialog.value) return
+  if (mailSurfaceBusy()) return
 
   const key = event.key.toLowerCase()
 
@@ -638,6 +644,7 @@ function handleTouchEnd(e: TouchEvent) {
  const deltaY = touch.clientY - touchStartY
  const duration = Date.now() - touchStartTime
 
+ if (mailSurfaceBusy()) return
  // Trigger edge right-swipe back (from left side with dominant horizontal travel)
  if (duration < 400 && deltaX > 60 && Math.abs(deltaY) < 50 && touchStartX < 120) {
   if (mobilePane.value === 'reader' || selectedGroupId.value) {

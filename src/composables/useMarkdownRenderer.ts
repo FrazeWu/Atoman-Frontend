@@ -455,35 +455,63 @@ function disambiguateSingleMarkerLines(content: string): string {
     .join("\n");
 }
 
+function footnoteFenceState(line: string, fenceCharacter: string, fenceLength: number) {
+  const fenceMatch = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+  if (!fenceMatch) return { handled: false, fenceCharacter, fenceLength };
+  const marker = fenceMatch[1];
+  const markerChar = marker?.[0] || "";
+  if (!markerChar) return { handled: true, fenceCharacter, fenceLength };
+  if (!fenceCharacter) {
+    return { handled: true, fenceCharacter: markerChar, fenceLength: marker.length };
+  }
+  if (markerChar === fenceCharacter && marker.length >= fenceLength) {
+    return { handled: true, fenceCharacter: "", fenceLength: 0 };
+  }
+  return { handled: true, fenceCharacter, fenceLength };
+}
+
+function referencedFootnoteIdsIn(lines: string[]) {
+  const referenced = new Set<string>();
+  let fenceCharacter = "";
+  let fenceLength = 0;
+  for (const line of lines) {
+    const fence = footnoteFenceState(line, fenceCharacter, fenceLength);
+    fenceCharacter = fence.fenceCharacter;
+    fenceLength = fence.fenceLength;
+    if (fence.handled || fenceCharacter) continue;
+    if (/^\s*(?:\[\^|\^)[0-9a-zA-Z_-]+\]?:/.test(line)) continue;
+    for (const match of line.matchAll(/(^|[^\w\[\^])\^([0-9a-zA-Z_-]+)(?=[^\w\]\^:]|$)/g)) {
+      referenced.add(match[2]);
+    }
+    for (const match of line.matchAll(/(^|[^\w])\[\^([0-9a-zA-Z_-]+)\](?!:)/g)) {
+      referenced.add(match[2]);
+    }
+  }
+  return referenced;
+}
+
 function preprocessFootnotes(content: string): string {
   const lines = content.split("\n");
+  const referencedFootnoteIds = referencedFootnoteIdsIn(lines);
   let fenceCharacter = "";
   let fenceLength = 0;
 
   const definitionKeys = new Set<string>();
   const normalizedLines = lines.map((line) => {
-    const fenceMatch = /^ {0,3}(`{3,}|~{3,})/.exec(line);
-    if (fenceMatch) {
-      const marker = fenceMatch[1];
-      const markerChar = marker?.[0];
-      if (marker && markerChar) {
-        if (!fenceCharacter) {
-          fenceCharacter = markerChar;
-          fenceLength = marker.length;
-        } else if (markerChar === fenceCharacter && marker.length >= fenceLength) {
-          fenceCharacter = "";
-          fenceLength = 0;
-        }
-      }
+      const fence = footnoteFenceState(line, fenceCharacter, fenceLength);
+    fenceCharacter = fence.fenceCharacter;
+    fenceLength = fence.fenceLength;
+    if (fence.handled || fenceCharacter) return line;
+
+    const standardDefinition = /^(\s*)\[\^([0-9a-zA-Z_-]+)\]:(.*)$/.exec(line);
+    if (standardDefinition) {
+      definitionKeys.add(standardDefinition[2]);
       return line;
     }
-    if (fenceCharacter) return line;
-
-    const defMatch = /^(\s*)\[?\^([0-9a-zA-Z_-]+)\]?:(.*)$/.exec(line);
-    if (defMatch) {
-      const [, indent, key, rest] = defMatch;
-      definitionKeys.add(key);
-      return `${indent}[^${key}]:${rest}`;
+    const shorthandDefinition = /^(\s*)\^([0-9a-zA-Z_-]+):(.*)$/.exec(line);
+    if (shorthandDefinition && referencedFootnoteIds.has(shorthandDefinition[2])) {
+      definitionKeys.add(shorthandDefinition[2]);
+      return `${shorthandDefinition[1]}[^${shorthandDefinition[2]}]:${shorthandDefinition[3]}`;
     }
     return line;
   });
@@ -570,6 +598,22 @@ function decorateOutboundLinks(html: string, preserveSingleRoot = false): string
         { ...markdownMediaSanitizeOptions, RETURN_DOM_FRAGMENT: true },
       )
     : DOMPurify.sanitize(html, { ...markdownMediaSanitizeOptions, RETURN_DOM_FRAGMENT: true });
+  const trustedFrame = (src: string) => (
+    /^https:\/\/(?:www\.youtube\.com|youtube\.com)\/embed\/[A-Za-z0-9_-]{11}(?:[?#]|$)/.test(src)
+    || /^https:\/\/player\.bilibili\.com\/player\.html\?bvid=BV[A-Za-z0-9]+(?:&|$)/.test(src)
+  );
+  fragment.querySelectorAll("iframe").forEach((frame) => {
+    const src = frame.getAttribute("src") || "";
+    if (!trustedFrame(src)) {
+      frame.remove();
+      return;
+    }
+    frame.removeAttribute("allow");
+  });
+  fragment.querySelectorAll("audio,video,source").forEach((media) => {
+    media.removeAttribute("autoplay");
+    if (!media.closest(".atoman-post-embed")) media.remove();
+  });
   fragment.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((link) => {
     try {
       const href = link.getAttribute("href");

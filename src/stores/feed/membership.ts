@@ -16,6 +16,8 @@ export function createFeedMembershipState() {
   const starredItemIds = ref<Set<string>>(new Set());
   const bookmarkedPostIds = ref<Set<string>>(new Set());
   const readingListItemIds = ref<Set<string>>(new Set());
+  const readingListCatalogReady = ref(false);
+  const bookmarkToggleChains = new Map<string, Promise<boolean | null>>();
   type PendingMembershipToggle = {
     confirmed: boolean;
     desired: boolean;
@@ -230,7 +232,7 @@ export function createFeedMembershipState() {
     }
   };
 
-  const togglePostBookmark = async (
+  const performPostBookmarkToggle = async (
     postId: string,
   ): Promise<boolean | null> => {
     const authStore = useAuthStore();
@@ -280,6 +282,16 @@ export function createFeedMembershipState() {
       reportError(e, "Failed to toggle post bookmark");
     }
     return null;
+  };
+
+  const togglePostBookmark = (postId: string): Promise<boolean | null> => {
+    const previous = bookmarkToggleChains.get(postId) ?? Promise.resolve(null);
+    const next = previous.catch(() => null).then(() => performPostBookmarkToggle(postId));
+    bookmarkToggleChains.set(postId, next);
+    void next.finally(() => {
+      if (bookmarkToggleChains.get(postId) === next) bookmarkToggleChains.delete(postId);
+    });
+    return next;
   };
 
   // Store does not own paged starred lists; callers should update local lists or refetch after success.
@@ -378,6 +390,7 @@ export function createFeedMembershipState() {
     const authStore = useAuthStore();
     if (!authStore.isAuthenticated) {
       readingListItemIds.value = new Set();
+      readingListCatalogReady.value = true;
       return;
     }
     const revision = readingListMembershipRevision;
@@ -388,6 +401,7 @@ export function createFeedMembershipState() {
         new Set(ids),
         readingListToggleStates,
       );
+      readingListCatalogReady.value = true;
     } catch (e) {
       reportError(e, "Failed to fetch reading list ids");
     }
@@ -408,12 +422,15 @@ export function createFeedMembershipState() {
     starredItemIds.value = new Set();
     bookmarkedPostIds.value = new Set();
     readingListItemIds.value = new Set();
+    readingListCatalogReady.value = false;
+    bookmarkToggleChains.clear();
   };
 
   return {
     starredItemIds,
     bookmarkedPostIds,
     readingListItemIds,
+    readingListCatalogReady,
     toggleStar,
     fetchStarredIds,
     fetchBookmarkedPostIds,

@@ -94,6 +94,18 @@ defineOptions({ name: 'CommentItem' })
 
 const allowedCommentTags = new Set(['p', 'br', 'strong', 'em', 'code', 'a', 'blockquote'])
 
+function safeCommentHref(value: string) {
+  const href = value.trim()
+  if (!href || href.startsWith('//') || /^javascript:/i.test(href) || /^data:/i.test(href)) return ''
+  if (href.startsWith('/') || href.startsWith('#') || href.startsWith('?')) return href
+  try {
+    const url = new URL(href)
+    return url.protocol === 'http:' || url.protocol === 'https:' ? href : ''
+  } catch {
+    return ''
+  }
+}
+
 function toCommentVNodes(html: string): VNodeChild[] {
   const document = new DOMParser().parseFromString(html, 'text/html')
   return Array.from(document.body.childNodes).map(toCommentVNode)
@@ -108,9 +120,11 @@ function toCommentVNode(node: Node): VNodeChild {
   const children = Array.from(element.childNodes).map(toCommentVNode)
   if (!allowedCommentTags.has(tag)) return children
   if (tag === 'a') {
+    const href = safeCommentHref(element.getAttribute('href') ?? '')
+    if (!href) return children
     return h('a', {
-      href: element.getAttribute('href') ?? '',
-      rel: element.getAttribute('rel') ?? undefined,
+      href,
+      rel: element.getAttribute('rel') ?? 'ugc nofollow noopener noreferrer',
     }, children)
   }
   return h(tag, children)

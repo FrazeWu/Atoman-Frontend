@@ -113,6 +113,11 @@ export function useFeedItemActions({
       await markItemsReadAndRefresh(pendingReadIds)
     }
 
+    if (autoReadingListSubscriptionSourceIds.size && !feedStore.readingListCatalogReady) {
+      await feedStore.fetchReadingListIds()
+    }
+    if (!feedStore.readingListCatalogReady) return
+
     const pendingReadingListIds = items
       .filter((item) => (
         (item.type === 'feed_item' || item.type === 'project_update')

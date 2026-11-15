@@ -174,9 +174,13 @@ function generatePresetScopedCss(creatorId: string, config: ThemePresetConfig): 
 }
 
 function generateCustomScopedCss(creatorId: string, rawCss: string): string {
-  if (!rawCss.trim()) return ''
+  const sanitizedCss = rawCss
+    .replace(/@import\b[^;]*;?/gi, '')
+    .replace(/expression\s*\([^)]*\)/gi, '')
+    .replace(/javascript\s*:/gi, '')
+  if (!sanitizedCss.trim()) return ''
   const scope = `.creator-theme-scope[data-creator-id="${creatorId}"]`
-  return rawCss.replace(/(^|})([^{}]+)({)/g, (match, prefix, selectors, suffix) => {
+  return sanitizedCss.replace(/(^|})([^{}]+)({)/g, (match, prefix, selectors, suffix) => {
     const trimmed = selectors.trim()
     if (!trimmed || trimmed.startsWith('@')) return match
     const scopedSelectors = trimmed

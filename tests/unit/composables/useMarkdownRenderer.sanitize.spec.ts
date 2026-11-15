@@ -39,6 +39,41 @@ describe("useMarkdownRenderer sanitize", () => {
     expect(html).toContain("另外还有参考<sup>2</sup>");
   });
 
+  it("keeps an unreferenced caret line in the article", () => {
+    const { renderMarkdown } = useMarkdownRenderer();
+
+    const html = renderMarkdown("Hello\n\n^1: this citation line should remain visible");
+
+    expect(html).toContain("this citation line should remain visible");
+    expect(html).not.toContain("footnotes");
+  });
+
+  it("drops arbitrary frames and remote media while keeping a trusted player", () => {
+    const { renderMarkdown } = useMarkdownRenderer();
+
+    const html = renderMarkdown([
+      '<iframe src="https://evil.example" allow="camera *; microphone *"></iframe>',
+      '<audio src="https://evil.example/a.mp3" autoplay></audio>',
+      ':::video{id="33333333-3333-3333-3333-333333333333"}',
+      ':::',
+    ].join("\n"), {
+      videoEmbeds: {
+        "33333333-3333-3333-3333-333333333333": {
+          id: "33333333-3333-3333-3333-333333333333",
+          title: "演示",
+          kind: "video",
+          iframeSrc: "https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0&autoplay=0",
+          href: "/videos/watch/33333333-3333-3333-3333-333333333333",
+        },
+      },
+    });
+
+    expect(html).not.toContain("evil.example");
+    expect(html).not.toContain("camera");
+    expect(html).not.toContain("microphone");
+    expect(html).toContain("https://www.youtube.com/embed/dQw4w9WgXcQ");
+  });
+
   it("keeps structured Markdown when the enhanced runtime is ready", async () => {
     const { renderMarkdown, runtimeState } = useMarkdownRenderer();
     const source = [

@@ -41,6 +41,8 @@ interface Props {
   enableResourceReferences?: boolean
   resourceReferenceLabels?: ResourceReferenceLabels
   editorAriaLabel?: string
+  enableBubbleMenu?: boolean
+  enableSlashMenu?: boolean
 }
 
 type PEditorExposed = {
@@ -65,6 +67,8 @@ const props = withDefaults(defineProps<Props>(), {
   showToolbar: true,
   enableImageUpload: true,
   showReferenceTrigger: true,
+  enableBubbleMenu: true,
+  enableSlashMenu: true,
 })
 
 const emit = defineEmits<{

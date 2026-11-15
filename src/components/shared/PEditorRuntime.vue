@@ -124,6 +124,21 @@
       @select="applyReference"
     />
 
+    <PEditorBubbleMenu
+      v-if="bubble.visible"
+      :position="{ top: bubble.y, left: bubble.x }"
+      @command="handleBubbleCommand"
+    />
+
+    <PEditorSlashMenu
+      v-if="slash.visible"
+      :items="slashItems"
+      :active-index="slash.index"
+      :position="{ top: slash.y, left: slash.x }"
+      @hover="slash.index = $event"
+      @select="applySlashCommand"
+    />
+
     <MediaPickerModal
       :open="pickerState.open"
       :initial-type="pickerState.type"
@@ -171,6 +186,13 @@ import type { PostEditorCommand } from '@/components/blog/postEditorCommands'
 import { createLivePreviewExtensions } from './pEditorLivePreview'
 import * as pEditorCommands from './pEditorCommands'
 import { executeEditorCommand } from './pEditorCommands'
+import PEditorBubbleMenu from './editor/PEditorBubbleMenu.vue'
+import PEditorSlashMenu from './editor/PEditorSlashMenu.vue'
+import {
+  getSlashCommands,
+  filterSlashCommands,
+  type SlashMenuItem,
+} from './editor/slashCommands'
 
 
 interface Props {
@@ -197,6 +219,8 @@ interface Props {
   enableResourceReferences?: boolean
   resourceReferenceLabels?: ResourceReferenceLabels
   editorAriaLabel?: string
+  enableBubbleMenu?: boolean
+  enableSlashMenu?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -220,6 +244,8 @@ const props = withDefaults(defineProps<Props>(), {
   enableResourceReferences: false,
   resourceReferenceLabels: () => ({}),
   editorAriaLabel: undefined,
+  enableBubbleMenu: true,
+  enableSlashMenu: true,
 })
 
 const emit = defineEmits<{
@@ -465,11 +491,16 @@ function initCodeMirror() {
     EditorView.domEventHandlers({
       scroll: () => {
         if (effectiveMode.value === 'split') onCmScroll()
+        if (slash.value.visible) repositionSlashMenu()
+        if (bubble.value.visible) updateBubbleMenu()
       },
       paste: onCmPaste,
       drop: (e) => {
         e.preventDefault()
         handleDropFiles(e.dataTransfer?.files)
+      },
+      keydown: (e) => {
+        return handleEditorKeydown(e)
       },
     }),
     EditorView.updateListener.of((update) => {
@@ -487,6 +518,16 @@ function initCodeMirror() {
         const line = doc.lineAt(pos)
         const textBefore = line.text.slice(0, pos - line.from)
         detectMentionFromText(textBefore, pos)
+      }
+      if (props.enableSlashMenu && (update.docChanged || update.selectionSet || update.viewportChanged || update.focusChanged)) {
+        const pos = update.state.selection.main.head
+        const doc = update.state.doc
+        const line = doc.lineAt(pos)
+        const textBefore = line.text.slice(0, pos - line.from)
+        detectSlashCommand(textBefore, pos)
+      }
+      if (props.enableBubbleMenu && (update.docChanged || update.selectionSet || update.viewportChanged || update.focusChanged)) {
+        updateBubbleMenu()
       }
     }),
     EditorView.theme({
@@ -827,25 +868,251 @@ function closeMention() {
   mentionRequest++
 }
 
-function onContainerKeydown(e: KeyboardEvent) {
-  if (!mention.value.visible) return
-  if (e.key === 'Escape') {
-    e.preventDefault()
-    closeMention()
+const bubble = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+})
+
+function closeBubbleMenu() {
+  bubble.value.visible = false
+}
+
+function updateBubbleMenu() {
+  if (!cmView || !props.enableBubbleMenu) {
+    closeBubbleMenu()
     return
   }
-  const items = mention.value.results
-  if (items.length === 0) return
-  if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    mention.value.index = (mention.value.index + 1) % items.length
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    mention.value.index = (mention.value.index - 1 + items.length) % items.length
-  } else if (e.key === 'Enter' || e.key === 'Tab') {
-    e.preventDefault()
-    applyReference(items[mention.value.index])
+  const selection = cmView.state.selection.main
+  if (selection.empty || !cmView.hasFocus) {
+    closeBubbleMenu()
+    return
   }
+  if (slash.value.visible || mention.value.visible) {
+    closeBubbleMenu()
+    return
+  }
+
+  try {
+    const fromCoords = cmView.coordsAtPos(selection.from)
+    const toCoords = cmView.coordsAtPos(selection.to)
+    if (!fromCoords || !toCoords) {
+      closeBubbleMenu()
+      return
+    }
+
+    const bubbleWidth = 320
+    const bubbleHeight = 36
+    const margin = 10
+
+    const minX = Math.min(fromCoords.left, toCoords.left)
+    const maxX = Math.max(fromCoords.right, toCoords.right)
+    const midX = (minX + maxX) / 2
+
+    let left = midX - bubbleWidth / 2
+    if (left + bubbleWidth > window.innerWidth - margin) {
+      left = window.innerWidth - margin - bubbleWidth
+    }
+    if (left < margin) {
+      left = margin
+    }
+
+    const topY = Math.min(fromCoords.top, toCoords.top)
+    let top = topY - bubbleHeight - 8
+    if (top < 52) {
+      const bottomY = Math.max(fromCoords.bottom, toCoords.bottom)
+      top = bottomY + 8
+    }
+
+    bubble.value = {
+      visible: true,
+      x: Math.round(left),
+      y: Math.round(top),
+    }
+  } catch {
+    closeBubbleMenu()
+  }
+}
+
+function handleBubbleCommand(cmd: PostEditorCommand) {
+  executeCommand(cmd)
+}
+
+const slash = ref({
+  visible: false,
+  index: 0,
+  x: 0,
+  y: 0,
+  query: '',
+  startPos: -1,
+  endPos: -1,
+})
+
+function closeSlashMenu() {
+  slash.value.visible = false
+  slash.value.query = ''
+  slash.value.startPos = -1
+  slash.value.endPos = -1
+  slash.value.index = 0
+}
+
+const allSlashCommands = computed(() => {
+  return getSlashCommands({
+    enableEmbeds: props.enableEmbeds,
+    enableMentions: props.enableMentions,
+    enableImageUpload: props.enableImageUpload,
+  })
+})
+
+const slashItems = computed(() => {
+  return filterSlashCommands(allSlashCommands.value, slash.value.query)
+})
+
+function repositionSlashMenu() {
+  if (!cmView || !slash.value.visible || slash.value.startPos < 0) return
+  const coords = cmView.coordsAtPos(slash.value.startPos)
+  if (coords) {
+    const menuWidth = 260
+    const menuHeight = 280
+    const margin = 12
+
+    let left = coords.left
+    if (left + menuWidth > window.innerWidth - margin) {
+      left = window.innerWidth - menuWidth - margin
+    }
+    if (left < margin) left = margin
+
+    let top = coords.bottom + 6
+    if (top + menuHeight > window.innerHeight - margin) {
+      top = Math.max(margin, coords.top - menuHeight - 6)
+    }
+
+    slash.value.x = Math.round(left)
+    slash.value.y = Math.round(top)
+  }
+}
+
+function detectSlashCommand(textBefore: string, pos: number) {
+  if (!cmView || !props.enableSlashMenu) {
+    if (slash.value.visible) closeSlashMenu()
+    return
+  }
+
+  if (props.protectFirstLine) {
+    const line = cmView.state.doc.lineAt(pos)
+    if (line.number === 1) {
+      if (slash.value.visible) closeSlashMenu()
+      return
+    }
+  }
+
+  const match = /^(\s*)\/([^\s]*)$/.exec(textBefore)
+  if (!match) {
+    if (slash.value.visible) closeSlashMenu()
+    return
+  }
+
+  const query = match[2]
+  const slashPos = pos - query.length - 1
+
+  slash.value.startPos = slashPos
+  slash.value.endPos = pos
+  slash.value.query = query
+  slash.value.visible = true
+
+  const items = filterSlashCommands(allSlashCommands.value, query)
+  if (slash.value.index >= items.length) {
+    slash.value.index = 0
+  }
+
+  repositionSlashMenu()
+}
+
+function applySlashCommand(item: SlashMenuItem) {
+  if (!cmView) return
+  const from = slash.value.startPos
+  const to = slash.value.endPos
+  closeSlashMenu()
+
+  item.execute({
+    cmView,
+    from,
+    to,
+    triggerImageUpload,
+    insertEmbed,
+    insertReference,
+  })
+}
+
+function handleEditorKeydown(e: KeyboardEvent): boolean {
+  if (slash.value.visible) {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      closeSlashMenu()
+      return true
+    }
+    const items = slashItems.value
+    if (items.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        slash.value.index = (slash.value.index + 1) % items.length
+        return true
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        slash.value.index = (slash.value.index - 1 + items.length) % items.length
+        return true
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault()
+        const selected = items[slash.value.index]
+        if (selected) {
+          applySlashCommand(selected)
+        }
+        return true
+      }
+    }
+  }
+
+  if (mention.value.visible) {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      closeMention()
+      return true
+    }
+    const items = mention.value.results
+    if (items.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        mention.value.index = (mention.value.index + 1) % items.length
+        return true
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        mention.value.index = (mention.value.index - 1 + items.length) % items.length
+        return true
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault()
+        const selected = items[mention.value.index]
+        if (selected) {
+          applyReference(selected)
+        }
+        return true
+      }
+    }
+  }
+
+  if (bubble.value.visible && e.key === 'Escape') {
+    closeBubbleMenu()
+    return false
+  }
+
+  return false
+}
+
+function onContainerKeydown(e: KeyboardEvent) {
+  handleEditorKeydown(e)
 }
 
 watch(svPreviewHtml, async () => {

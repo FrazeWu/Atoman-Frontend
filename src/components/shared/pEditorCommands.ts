@@ -123,12 +123,14 @@ export function executeEditorCommand(
   switch (command) {
     case 'undo': sv_undo(cmView); break
     case 'redo': sv_redo(cmView); break
+    case 'heading1': sv_wrapLinePrefix(cmView, '# ', '标题'); break
     case 'heading2': sv_wrapLinePrefix(cmView, '## ', '标题'); break
     case 'heading3': sv_wrapLinePrefix(cmView, '### ', '标题'); break
     case 'heading4': sv_wrapLinePrefix(cmView, '#### ', '标题'); break
     case 'bold': sv_wrap(cmView, '**', '**', '粗体文字'); break
     case 'italic': sv_wrap(cmView, '*', '*', '斜体文字'); break
     case 'strike': sv_wrap(cmView, '~~', '~~', '删除线'); break
+    case 'inlineCode': sv_wrap(cmView, '`', '`', '代码'); break
     case 'blockquote': sv_wrapLinePrefix(cmView, '> ', '引用内容'); break
     case 'bulletList': sv_wrapLinePrefix(cmView, '- ', '列表项'); break
     case 'orderedList': sv_wrapLinePrefix(cmView, '1. ', '列表项'); break

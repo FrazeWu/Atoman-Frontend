@@ -55,6 +55,7 @@
     "katex": "^0.18.11",
     "lucide-vue-next": "^1.0.0",
     "marked": "^17.0.4",
+    "marked-footnote": "^1.4.0",
     "marked-highlight": "^2.2.3",
     "marked-katex-extension": "^5.1.7",
     "music-metadata": "11.16.0",

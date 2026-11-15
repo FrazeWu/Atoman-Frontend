@@ -67,7 +67,6 @@
               <section class="editor-canvas" :class="{ 'is-preview-open': previewOpen }">
                 <div class="editor-body">
                   <PEditor
-                    :key="collabRoomId || 'new'"
                     ref="editorRef"
                     v-model="editorBody"
                     :mode="previewOpen ? 'split' : 'normal'"
@@ -77,6 +76,7 @@
                     :enable-mentions="true"
                     :enable-collab="shouldEnableCollab"
                     :collab-room-id="collabRoomId"
+                    :protect-first-line="true"
                     :show-mode-toggle="false"
                     :show-sync-scroll-toggle="false"
                     :show-toolbar="false"
@@ -338,12 +338,16 @@ const publicationWarnings = computed(() => evaluateBlogPublicationQuality({
   content: form.value.content,
 }))
 
+const cleanCharCount = computed(() => (
+  (form.value.title + form.value.content).replace(/\s/g, '').length
+))
+
 const editorCharacterCount = computed(() => (
-  `${(form.value.title + form.value.content).replace(/\s/g, '').length.toLocaleString('zh-CN')}`
+  `${cleanCharCount.value.toLocaleString('zh-CN')}`
 ))
 
 const editorReadingTime = computed(() => (
-  `预计阅读 ${Math.max(1, Math.ceil((form.value.title + form.value.content).replace(/\s/g, '').length / 400))} 分钟`
+  `预计阅读 ${Math.max(1, Math.ceil(cleanCharCount.value / 400))} 分钟`
 ))
 
 // ── Title-in-editor binding ──────────────────────────────
@@ -352,11 +356,12 @@ const editorBody = computed({
   set: (val: string) => {
     const nl = val.indexOf('\n')
     const firstLine = nl >= 0 ? val.slice(0, nl) : val
-    if (!/^#(?:\s|$)/.test(firstLine)) {
-      form.value.content = val
-      return
+    const titleMatch = firstLine.match(/^#+\s*(.*)$/)
+    if (titleMatch) {
+      form.value.title = titleMatch[1]
+    } else {
+      form.value.title = firstLine
     }
-    form.value.title = firstLine.replace(/^#\s?/, '').trim()
     form.value.content = nl >= 0 ? val.slice(nl + 1) : ''
   },
 })

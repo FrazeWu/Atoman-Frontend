@@ -110,6 +110,7 @@
         data-testid="markdown-preview"
         v-html="svPreviewHtml"
         @scroll="onPreviewScroll"
+        @click="handlePreviewClick"
       />
     </div>
 
@@ -351,6 +352,26 @@ function onPreviewScroll() {
   const dom = cmView.scrollDOM
   dom.scrollTop = ratio * (dom.scrollHeight - dom.clientHeight)
   requestAnimationFrame(() => { syncingScroll = false })
+}
+
+function handlePreviewClick(event: MouseEvent) {
+  const target = event.target as HTMLElement | null
+  const footnoteLink = target?.closest<HTMLAnchorElement>('a[data-footnote-ref], a[data-footnote-backref]')
+  if (footnoteLink && previewPaneRef.value) {
+    const href = footnoteLink.getAttribute('href')
+    if (href && href.startsWith('#')) {
+      const id = href.slice(1)
+      const targetEl = previewPaneRef.value.querySelector<HTMLElement>(`#${CSS.escape(id)}`) || previewPaneRef.value.querySelector<HTMLElement>(`#${CSS.escape(decodeURIComponent(id))}`)
+      if (targetEl) {
+        event.preventDefault()
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        targetEl.classList.add('footnote-target-highlight')
+        setTimeout(() => {
+          targetEl.classList.remove('footnote-target-highlight')
+        }, 1500)
+      }
+    }
+  }
 }
 
 function clearCollabFallbackTimer() {

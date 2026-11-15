@@ -209,55 +209,74 @@ export function buildLivePreviewDecos(view: EditorView, renderMarkdown: (source:
   return builder.finish()
 }
 
-export function buildBlockPreviewDecos(state: EditorState, renderMarkdown: (source: string) => string): DecorationSet {
-  const cursor = state.selection.main.head
-  const ranges: Array<{ from: number; to: number }> = []
-  const addRange = (from: number, to: number) => {
-    if (cursor < from || cursor > to) ranges.push({ from, to })
+const renderCache = new Map<string, string>()
+function cachedRenderMarkdown(source: string, renderMarkdown: (source: string) => string): string {
+  let html = renderCache.get(source)
+  if (html === undefined) {
+    html = renderMarkdown(source)
+    if (renderCache.size >= 150) {
+      const oldestKey = renderCache.keys().next().value
+      if (oldestKey !== undefined) renderCache.delete(oldestKey)
+    }
+    renderCache.set(source, html)
   }
+  return html
+}
+
+export function findBlockCandidateRanges(state: EditorState): Array<{ from: number; to: number }> {
+  const ranges: Array<{ from: number; to: number }> = []
 
   syntaxTree(state).iterate({
     enter(node) {
       if (node.name !== 'FencedCode') return
-      addRange(node.from, node.to)
+      ranges.push({ from: node.from, to: node.to })
       return false
     },
   })
 
-  for (let lineNumber = 1; lineNumber <= state.doc.lines; lineNumber += 1) {
-    const line = state.doc.line(lineNumber)
+  const doc = state.doc
+  for (let lineNumber = 1; lineNumber <= doc.lines; lineNumber += 1) {
+    const line = doc.line(lineNumber)
     const trimmed = line.text.trim()
     const singleLineEmbed = /^:::(post|music|video)\{[^}\n]*\}\s*:::$/u.test(trimmed)
     if (singleLineEmbed) {
-      addRange(line.from, line.to)
+      ranges.push({ from: line.from, to: line.to })
       continue
     }
     if (trimmed === '$$' || /^:::(post|music|video)\{/.test(trimmed)) {
-      const closingLine = findClosingLine(state.doc, lineNumber, trimmed === '$$' ? '$$' : ':::')
+      const closingLine = findClosingLine(doc, lineNumber, trimmed === '$$' ? '$$' : ':::')
       if (closingLine) {
-        addRange(line.from, state.doc.line(closingLine).to)
+        ranges.push({ from: line.from, to: doc.line(closingLine).to })
         lineNumber = closingLine
       }
       continue
     }
-    if (!/^\s*\|/.test(line.text) || lineNumber >= state.doc.lines) continue
-    if (!/^\s*\|?\s*:?-+/.test(state.doc.line(lineNumber + 1).text)) continue
-    const endLine = findTableEndLine(state.doc, lineNumber)
-    addRange(line.from, state.doc.line(endLine).to)
+    if (!/^\s*\|/.test(line.text) || lineNumber >= doc.lines) continue
+    if (!/^\s*\|?\s*:?-+/.test(doc.line(lineNumber + 1).text)) continue
+    const endLine = findTableEndLine(doc, lineNumber)
+    ranges.push({ from: line.from, to: doc.line(endLine).to })
     lineNumber = endLine
   }
+  return ranges
+}
+
+export function buildBlockPreviewDecos(state: EditorState, renderMarkdown: (source: string) => string): DecorationSet {
+  const cursor = state.selection.main.head
+  const candidateRanges = findBlockCandidateRanges(state)
+  const ranges = candidateRanges.filter(range => cursor < range.from || cursor > range.to)
 
   ranges.sort((a, b) => a.from - b.from)
   const builder = new RangeSetBuilder<Decoration>()
   let lastTo = -1
   for (const range of ranges) {
     if (range.from < lastTo) continue
+    const source = state.sliceDoc(range.from, range.to)
     builder.add(range.from, range.to, Decoration.replace({
       block: true,
       widget: new MarkdownPreviewWidget(
-        renderMarkdown(state.sliceDoc(range.from, range.to)),
+        cachedRenderMarkdown(source, renderMarkdown),
         range.from,
-        state.sliceDoc(range.from, range.to),
+        source,
       ),
     }))
     lastTo = range.to
@@ -266,13 +285,39 @@ export function buildBlockPreviewDecos(state: EditorState, renderMarkdown: (sour
 }
 
 export function makeBlockPreviewField(renderMarkdown: (source: string) => string) {
+  let cachedCandidateRanges: Array<{ from: number; to: number }> = []
+  let candidateRangesDocVersion: EditorState['doc'] | null = null
+
+  const getCandidateRanges = (state: EditorState) => {
+    if (candidateRangesDocVersion === state.doc) return cachedCandidateRanges
+    cachedCandidateRanges = findBlockCandidateRanges(state)
+    candidateRangesDocVersion = state.doc
+    return cachedCandidateRanges
+  }
+
+  const findBlockForPos = (pos: number, ranges: Array<{ from: number; to: number }>) => {
+    return ranges.find((r) => pos >= r.from && pos <= r.to) || null
+  }
+
   return StateField.define<DecorationSet>({
     create: (state) => buildBlockPreviewDecos(state, renderMarkdown),
-    update: (decorations, transaction) => (
-      transaction.docChanged || transaction.selection
-        ? buildBlockPreviewDecos(transaction.state, renderMarkdown)
-        : decorations
-    ),
+    update: (decorations, transaction) => {
+      if (transaction.docChanged) {
+        return buildBlockPreviewDecos(transaction.state, renderMarkdown)
+      }
+      if (transaction.selection) {
+        const ranges = getCandidateRanges(transaction.state)
+        const prevHead = transaction.startState.selection.main.head
+        const newHead = transaction.state.selection.main.head
+        const prevBlock = findBlockForPos(prevHead, ranges)
+        const newBlock = findBlockForPos(newHead, ranges)
+        if (prevBlock === newBlock) {
+          return decorations
+        }
+        return buildBlockPreviewDecos(transaction.state, renderMarkdown)
+      }
+      return decorations
+    },
     provide: (field) => EditorView.decorations.from(field),
   })
 }

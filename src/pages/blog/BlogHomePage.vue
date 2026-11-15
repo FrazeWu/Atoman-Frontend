@@ -4,10 +4,10 @@
       <template #action>
         <PButton v-if="!authStore.isAuthenticated" to="/login" variant="secondary">登录</PButton>
         <div v-else class="blog-home__preference-actions">
-          <PButton size="sm" variant="ghost" :loading="recommendationPreferenceLoading" @click="toggleRecommendationPreference">
+          <PButton size="sm" variant="secondary" :loading="recommendationPreferenceLoading" @click="toggleRecommendationPreference">
             {{ personalizedRecommendations ? '个性化推荐：开' : '个性化推荐：关' }}
           </PButton>
-          <PButton size="sm" variant="ghost" :loading="recommendationPreferenceLoading" @click="clearRecommendationData">清除推荐数据</PButton>
+          <PButton size="sm" variant="secondary" :loading="recommendationPreferenceLoading" @click="clearRecommendationData">清除推荐数据</PButton>
         </div>
       </template>
     </PPageHeader>
@@ -105,7 +105,7 @@
       </template>
       <div v-else class="blog-home__filter-group blog-home__filter-group--end">
         <span v-if="activeTag" class="blog-home__active-tag">标签：{{ activeTag }}</span>
-        <PButton size="sm" variant="ghost" :label="activeTag ? '清除标签' : '清除搜索'" @click="clearBlogSearch" />
+        <PButton size="sm" variant="secondary" :label="activeTag ? '清除标签' : '清除搜索'" @click="clearBlogSearch" />
       </div>
     </div>
 

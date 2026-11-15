@@ -559,3 +559,74 @@
 .prose-blog .hljs-attr {
 	color: #8be9fd;
 }
+
+.prose-blog sup {
+  font-size: 0.75em;
+  line-height: 0;
+  vertical-align: super;
+  position: relative;
+  top: -0.2em;
+}
+
+.prose-blog sup a[data-footnote-ref],
+.prose-blog a[data-footnote-ref] {
+  text-decoration: none;
+  font-weight: 600;
+  color: var(--a-color-primary, #2563eb);
+  padding: 0 0.15em;
+  border-radius: var(--a-radius-xs, 2px);
+}
+
+.prose-blog sup a[data-footnote-ref]:hover,
+.prose-blog a[data-footnote-ref]:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
+.prose-blog .footnotes {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--a-color-border-soft);
+  font-size: 0.9rem;
+  color: var(--a-color-muted);
+}
+
+.prose-blog .footnotes ol {
+  padding-left: 1.25rem;
+  margin: 0.75rem 0;
+}
+
+.prose-blog .footnotes li {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+  scroll-margin-top: 5rem;
+}
+
+.prose-blog .footnotes li p {
+  margin: 0;
+  display: inline;
+  font-size: 0.9rem;
+  color: inherit;
+}
+
+.prose-blog a[data-footnote-backref] {
+  text-decoration: none;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: var(--a-color-primary, #2563eb);
+  margin-left: 0.35rem;
+  font-weight: 500;
+}
+
+.prose-blog a[data-footnote-backref]:hover {
+  text-decoration: underline;
+}
+
+.prose-blog hr[data-footnotes] {
+  display: none;
+}
+
+.prose-blog .footnote-target-highlight {
+  background-color: var(--a-color-surface-hover, rgba(59, 130, 246, 0.12));
+  border-radius: var(--a-radius-sm, 4px);
+  transition: background-color 0.4s ease;
+}

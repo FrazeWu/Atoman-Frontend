@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { usePostQuery } from '@/entities/post'
 import BlogPostReader from '@/components/blog/BlogPostReader.vue'
 import { PSkeleton, PEmpty } from '@/shared/ui'
+import PButton from '@/components/ui/PButton.vue'
 
 const route = useRoute()
 const postSlugOrId = computed(() => (route.params.slugOrId as string) || (route.params.id as string) || '')
@@ -21,7 +22,7 @@ const { data: post, isLoading, error, refetch } = usePostQuery(postSlugOrId)
     <div v-else-if="error" class="post-detail-page__error" style="padding: 3rem 1rem;">
       <PEmpty title="文章加载失败" :description="error.message">
         <template #action>
-          <button class="a-button" @click="() => refetch()">重新加载</button>
+          <PButton variant="primary" size="sm" @click="() => refetch()">重新加载</PButton>
         </template>
       </PEmpty>
     </div>

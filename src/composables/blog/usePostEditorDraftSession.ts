@@ -394,6 +394,9 @@ export function usePostEditorDraftSession({
 		}, 1800);
 	};
 	const clearAllDrafts = async () => {
+		clearServerSyncTimer();
+		clearCollabStartupTimer();
+		draftWatchEnabled.value = false;
 		clearLocalDraft();
 		await deleteServerDraft();
 		pendingDraftCandidate.value = null;
@@ -596,7 +599,14 @@ export function usePostEditorDraftSession({
 	};
 
 	watch(
-		() => JSON.stringify(draftPayload.value),
+		() => [
+			draftPayload.value.title,
+			draftPayload.value.content,
+			draftPayload.value.summary,
+			draftPayload.value.cover_url,
+			draftPayload.value.channel_id,
+			draftPayload.value.collection_id,
+		],
 		() => {
 			if (
 				!draftWatchEnabled.value ||

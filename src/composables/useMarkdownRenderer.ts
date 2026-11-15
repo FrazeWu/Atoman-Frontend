@@ -1,6 +1,7 @@
 import { reportError } from "@/utils/logger";
 import { readonly, shallowRef } from "vue";
 import { marked, type Token } from "marked";
+import markedFootnote from "marked-footnote";
 import DOMPurify from "dompurify";
 import type { ResolvedReference } from "@/api/references";
 import { applyResolvedReferences } from "@/composables/useReferenceRendering";
@@ -73,6 +74,14 @@ renderer.heading = ({ text, depth }) => {
 };
 
 marked.use({ renderer });
+marked.use(
+  markedFootnote({
+    refMarkers: true,
+    footnoteDivider: true,
+    description: "注释",
+    backRefLabel: "回到正文引用 {0}",
+  }),
+);
 
 function shouldLoadMarkdownRuntime(content: string): boolean {
   return /```|~~~|\$\$|\\\(|\\\[|(^|[^\\])\$[^$\n]+\$/m.test(content);
@@ -446,10 +455,80 @@ function disambiguateSingleMarkerLines(content: string): string {
     .join("\n");
 }
 
+function preprocessFootnotes(content: string): string {
+  if (!/(?:^|\n)\s*\[?\^([0-9a-zA-Z_-]+)\]?:/m.test(content)) return content;
+
+  const lines = content.split("\n");
+  let fenceCharacter = "";
+  let fenceLength = 0;
+
+  const definitionKeys = new Set<string>();
+  const normalizedLines = lines.map((line) => {
+    const fenceMatch = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    if (fenceMatch) {
+      const marker = fenceMatch[1];
+      const markerChar = marker?.[0];
+      if (marker && markerChar) {
+        if (!fenceCharacter) {
+          fenceCharacter = markerChar;
+          fenceLength = marker.length;
+        } else if (markerChar === fenceCharacter && marker.length >= fenceLength) {
+          fenceCharacter = "";
+          fenceLength = 0;
+        }
+      }
+      return line;
+    }
+    if (fenceCharacter) return line;
+
+    const defMatch = /^(\s*)\[?\^([0-9a-zA-Z_-]+)\]?:(.*)$/.exec(line);
+    if (defMatch) {
+      const [, indent, key, rest] = defMatch;
+      definitionKeys.add(key);
+      return `${indent}[^${key}]:${rest}`;
+    }
+    return line;
+  });
+
+  if (definitionKeys.size === 0) return content;
+
+  fenceCharacter = "";
+  fenceLength = 0;
+  return normalizedLines
+    .map((line) => {
+      const fenceMatch = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+      if (fenceMatch) {
+        const marker = fenceMatch[1];
+        const markerChar = marker?.[0];
+        if (marker && markerChar) {
+          if (!fenceCharacter) {
+            fenceCharacter = markerChar;
+            fenceLength = marker.length;
+          } else if (markerChar === fenceCharacter && marker.length >= fenceLength) {
+            fenceCharacter = "";
+            fenceLength = 0;
+          }
+        }
+        return line;
+      }
+      if (fenceCharacter) return line;
+
+      if (/^\s*\[\^([0-9a-zA-Z_-]+)\]:/.test(line)) return line;
+
+      return line.replace(/(^|[^\w\[\^])\^([0-9a-zA-Z_-]+)(?=[^\w\]\^:]|$)/g, (match, prefix, id) => {
+        if (definitionKeys.has(id)) {
+          return `${prefix}[^${id}]`;
+        }
+        return match;
+      });
+    })
+    .join("\n");
+}
+
 const canonicalOrigin = "https://www.atoman.org";
 const internalOrigins = new Set([canonicalOrigin, "https://atoman.org"]);
 const markdownMediaSanitizeOptions = {
-  ADD_TAGS: ["audio", "iframe", "source", "video"],
+  ADD_TAGS: ["audio", "iframe", "source", "video", "section"],
   ADD_ATTR: [
     "allow",
     "allowfullscreen",
@@ -460,6 +539,11 @@ const markdownMediaSanitizeOptions = {
     "preload",
     "src",
     "title",
+    "data-footnote-ref",
+    "data-footnote-backref",
+    "data-footnotes",
+    "aria-describedby",
+    "aria-label",
   ],
 };
 
@@ -514,8 +598,10 @@ export function useMarkdownRenderer() {
 
     try {
       const html = marked(
-        disambiguateSingleMarkerLines(
-          normalizeLatexMathDelimiters(preprocessDirectives(content, options)),
+        preprocessFootnotes(
+          disambiguateSingleMarkerLines(
+            normalizeLatexMathDelimiters(preprocessDirectives(content, options)),
+          ),
         ),
       ) as string;
       return decorateOutboundLinks(html, true);

@@ -253,7 +253,12 @@ export function usePostEditorPublication({
 			}
 			return savedID;
 		} catch (cause) {
-			error.value = cause instanceof Error ? cause.message : "网络错误，请重试";
+			const message = cause instanceof Error ? cause.message : "";
+			if (!message || message === "Failed to fetch" || message.includes("NetworkError") || message.includes("Load failed")) {
+				error.value = "网络连接失败，草稿已保存在本地，请检查网络后重试";
+			} else {
+				error.value = message;
+			}
 			return null;
 		} finally {
 			saving.value = null;

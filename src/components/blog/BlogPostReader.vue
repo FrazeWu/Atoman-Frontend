@@ -675,6 +675,25 @@ function closeComments() {
 
 function handleRenderedContentClick(event: MouseEvent) {
   const target = event.target as HTMLElement | null
+
+  const footnoteLink = target?.closest<HTMLAnchorElement>('a[data-footnote-ref], a[data-footnote-backref]')
+  if (footnoteLink) {
+    const href = footnoteLink.getAttribute('href')
+    if (href && href.startsWith('#')) {
+      const id = href.slice(1)
+      const targetEl = document.getElementById(id) || document.getElementById(decodeURIComponent(id))
+      if (targetEl) {
+        event.preventDefault()
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        targetEl.classList.add('footnote-target-highlight')
+        setTimeout(() => {
+          targetEl.classList.remove('footnote-target-highlight')
+        }, 1500)
+      }
+    }
+    return
+  }
+
   const link = target?.closest<HTMLAnchorElement>('a[data-atoman-embed]')
   const href = link?.getAttribute('href')
   if (!link || !href || href.startsWith('#')) return
@@ -726,7 +745,7 @@ defineExpose({
     </div>
     <div v-else-if="!isSheet && errorStatus" class="post-reader-error">
       <p>文章暂时无法加载</p><p class="a-muted">请稍后重试，或返回文章列表。</p>
-      <div class="post-reader-error__actions"><button type="button" class="a-btn a-btn--primary" @click="fetchPost">重试</button><RouterLink to="/posts" class="a-link">返回文章</RouterLink></div>
+      <div class="post-reader-error__actions"><PButton variant="primary" size="sm" @click="fetchPost">重试</PButton><RouterLink to="/posts" class="a-link">返回文章</RouterLink></div>
     </div>
     <article v-else-if="post" ref="postContentAnchor" class="post-reader-article" @click="handleRenderedContentClick">
       <div v-if="!isSheet || isOwner" class="post-reader-top-nav">
@@ -820,7 +839,7 @@ defineExpose({
         </div>
         <form v-if="authStore.isAuthenticated" class="post-public-tag-form" @submit.prevent="addPublicTag">
           <input v-model="publicTagInput" maxlength="48" placeholder="添加公共标签" aria-label="添加公共标签" :disabled="publicTagLoading" />
-          <PButton type="submit" size="sm" variant="ghost" :loading="publicTagLoading">添加</PButton>
+          <PButton type="submit" size="sm" variant="secondary" :loading="publicTagLoading">添加</PButton>
         </form>
       </div>
       <p v-if="publicTagError" class="post-public-tag-error" role="alert">{{ publicTagError }}</p>

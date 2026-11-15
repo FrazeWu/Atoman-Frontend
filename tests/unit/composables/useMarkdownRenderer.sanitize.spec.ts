@@ -129,4 +129,46 @@ describe("useMarkdownRenderer sanitize", () => {
     expect(html).not.toContain(`href="/post/${postId}"`);
     expect(html).not.toContain(`href="/music/albums/${albumId}"`);
   });
+
+  it("renders footnotes as superscript links with corresponding jump items", () => {
+    const { renderMarkdown } = useMarkdownRenderer();
+    const source = [
+      "这是一段包含注释的正文[^1]，这里还有第二个注释[^2]。",
+      "",
+      "[^1]: 这是第一个注释的具体内容。",
+      "[^2]: 这是第二个注释的具体内容。",
+    ].join("\n");
+
+    const html = renderMarkdown(source);
+
+    expect(html).toContain('<sup><a id="footnote-ref-1" href="#footnote-1" data-footnote-ref="" aria-describedby="footnote-label">[1]</a></sup>');
+    expect(html).toContain('<sup><a id="footnote-ref-2" href="#footnote-2" data-footnote-ref="" aria-describedby="footnote-label">[2]</a></sup>');
+    expect(html).toContain('<section class="footnotes" data-footnotes="">');
+    expect(html).toContain('<li id="footnote-1">');
+    expect(html).toContain('<li id="footnote-2">');
+    expect(html).toContain('href="#footnote-ref-1"');
+    expect(html).toContain('href="#footnote-ref-2"');
+  });
+
+  it("normalizes loose footnote shorthand into superscript annotations", () => {
+    const { renderMarkdown } = useMarkdownRenderer();
+    const source = [
+      "究竟有多么无力。^1",
+      "",
+      "^1: 这是第一条注释。",
+      "",
+      "代码块中的不应转换：",
+      "```text",
+      "x^2 = 4",
+      "^1: not a note",
+      "```",
+    ].join("\n");
+
+    const html = renderMarkdown(source);
+
+    expect(html).toContain('<sup><a id="footnote-ref-1" href="#footnote-1" data-footnote-ref="" aria-describedby="footnote-label">[1]</a></sup>');
+    expect(html).toContain('<section class="footnotes" data-footnotes="">');
+    expect(html).toContain('<li id="footnote-1">');
+    expect(html).toContain('这是第一条注释。');
+  });
 });

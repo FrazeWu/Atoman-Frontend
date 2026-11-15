@@ -70,7 +70,13 @@
           />
         </PField>
 
-        <PInput v-model="tagText" label="标签（可选）" placeholder="例如：设计, 前端" />
+        <PInput
+          :model-value="localTagInput"
+          label="标签（可选）"
+          placeholder="例如：设计, 前端"
+          @update:model-value="onTagInput"
+          @blur="onTagBlur"
+        />
       </section>
 
       <section class="publication-sheet__section">
@@ -117,7 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import type { BlogScheduleStatus } from '@/composables/useContentLifecycle'
 import PField from '@/components/ui/PField.vue'
@@ -184,13 +190,23 @@ const visibilityOptions = [
   { label: '仅关注者', value: 'followers' },
   { label: '私密', value: 'private' },
 ]
-const tagText = computed({
-  get: () => props.tags.join(', '),
-  set: (value: string) => {
-    const tags = [...new Set(value.split(',').map(tag => tag.trim().toLowerCase()).filter(Boolean))].slice(0, 5)
-    emit('update:tags', tags)
-  },
-})
+const localTagInput = ref(props.tags.join(', '))
+watch(() => props.tags, (newTags) => {
+  const currentParsed = [...new Set(localTagInput.value.split(/[,，]/).map(tag => tag.trim().toLowerCase()).filter(Boolean))].slice(0, 5)
+  if (JSON.stringify(currentParsed) !== JSON.stringify(newTags)) {
+    localTagInput.value = newTags.join(', ')
+  }
+}, { immediate: true })
+
+const onTagInput = (value: string) => {
+  localTagInput.value = value
+  const tags = [...new Set(value.split(/[,，]/).map(tag => tag.trim().toLowerCase()).filter(Boolean))].slice(0, 5)
+  emit('update:tags', tags)
+}
+
+const onTagBlur = () => {
+  localTagInput.value = props.tags.join(', ')
+}
 const scheduleMessage = computed(() => {
   if (!props.schedule) return ''
   if (props.schedule.status === 'failed') return props.schedule.last_error ? `发布失败：${props.schedule.last_error}` : '发布失败，请重新尝试发布'

@@ -4,6 +4,7 @@ import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { yCollab } from 'y-codemirror.next'
 import { useApiWebSocketUrl } from '@/composables/useApi'
+import { useAuthStore } from '@/stores/auth'
 
 export interface EditorPeer {
   clientId: number
@@ -30,7 +31,12 @@ export function useEditorCollaboration(options: CollaborationOptions) {
   function start(roomId: string): { extension: Extension; document: string } {
     stop()
     document = new Y.Doc()
-    provider = new WebsocketProvider(useApiWebSocketUrl('collab/ws'), roomId, document, { connect: true })
+    const authStore = useAuthStore()
+    const protocols = authStore.token ? [`atoman.api.${authStore.token}`] : undefined
+    provider = new WebsocketProvider(useApiWebSocketUrl('collab/ws'), roomId, document, {
+      connect: true,
+      protocols,
+    })
     text = document.getText('codemirror')
 
     provider.awareness.on('change', () => {

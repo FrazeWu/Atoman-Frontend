@@ -481,6 +481,25 @@ function handleArticleBodyClick(event: MouseEvent) {
       }
     }
 
+    const footnoteLink = target.closest<HTMLAnchorElement>('a[data-footnote-ref], a[data-footnote-backref]')
+    if (footnoteLink) {
+      const href = footnoteLink.getAttribute('href')
+      if (href && href.startsWith('#')) {
+        const id = href.slice(1)
+        const targetEl = document.getElementById(id) || document.getElementById(decodeURIComponent(id))
+        if (targetEl) {
+          event.preventDefault()
+          event.stopPropagation()
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          targetEl.classList.add('footnote-target-highlight')
+          setTimeout(() => {
+            targetEl.classList.remove('footnote-target-highlight')
+          }, 1500)
+        }
+      }
+      return
+    }
+
     const embedLink = target.closest<HTMLAnchorElement>('a[data-atoman-embed]')
     const href = embedLink?.getAttribute('href')
     if (embedLink && href && !href.startsWith('#')) {

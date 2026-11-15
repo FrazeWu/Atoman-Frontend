@@ -8,7 +8,28 @@ export const userRoutes: RouteRecordRaw[] = [
 ]
 
 export const channelRoutes: RouteRecordRaw[] = [
-  { path: '/channels/:slug', component: () => import('@/views/blog/ChannelView.vue') },
-  { path: '/channels/:slug/posts', component: () => import('@/views/blog/ChannelView.vue') },
-  { path: '/channels/:slug/about', component: () => import('@/views/blog/ChannelView.vue') },
+  {
+    path: '/channels/:slug',
+    redirect: (to) => ({
+      path: `/posts/channel/${String(to.params.slug)}`,
+      query: to.query,
+      hash: to.hash,
+    }),
+  },
+  {
+    path: '/channels/:slug/posts',
+    redirect: (to) => ({
+      path: `/posts/channel/${String(to.params.slug)}`,
+      query: to.query,
+      hash: to.hash,
+    }),
+  },
+  {
+    path: '/channels/:slug/about',
+    redirect: (to) => ({
+      path: `/posts/channel/${String(to.params.slug)}`,
+      query: to.query,
+      hash: to.hash,
+    }),
+  },
 ]

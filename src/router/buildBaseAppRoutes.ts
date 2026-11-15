@@ -55,6 +55,22 @@ export function buildBaseAppRoutes(extraRoutes: RouteRecordRaw[] = []): RouteRec
         hash: to.hash,
       }),
     },
+    {
+      path: '/collection/:id',
+      redirect: to => ({
+        path: `/posts/collection/${String(to.params.id)}`,
+        query: to.query,
+        hash: to.hash,
+      }),
+    },
+    {
+      path: '/watch/:id',
+      redirect: to => ({
+        path: `/videos/watch/${String(to.params.id)}`,
+        query: to.query,
+        hash: to.hash,
+      }),
+    },
     { path: '/notes', redirect: '/posts/notes' },
     { path: '/blog', redirect: '/posts' },
     {

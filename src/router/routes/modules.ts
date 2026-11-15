@@ -77,15 +77,15 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 					component: () => import("@/views/blog/PostDetailRouteView.vue"),
 					beforeEnter: (to) => (to.params.id === "new" ? "/__not_found__" : true),
 				},
+				{
+					path: "channel/:slug",
+					component: () => import("@/views/blog/ChannelView.vue"),
+				},
+				{
+					path: "collection/:id",
+					component: () => import("@/views/blog/CollectionView.vue"),
+				},
 			],
-		},
-		{
-			path: "/channel/:slug",
-			component: () => import("@/views/blog/ChannelView.vue"),
-		},
-		{
-			path: "/collection/:id",
-			component: () => import("@/views/blog/CollectionView.vue"),
 		},
 	],
 	music: [
@@ -491,7 +491,6 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				},
 			],
 		},
-		{ path: "/watch/:id", redirect: (to) => `/videos/watch/${to.params.id}` },
 	],
 };
 

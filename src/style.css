@@ -182,6 +182,14 @@ body:has(.studio-layout) {
 	body:has(.mail-workspace) {
 		--a-sidebar-width: 220px;
 	}
+	body:has(.setting-management-layout),
+	body:has(.user-settings) {
+		--a-sidebar-width: 12rem;
+	}
+	body:has(.setting-management-layout:has(.p-directory-panel.is-collapsed)),
+	body:has(.user-settings:has(.p-directory-panel.is-collapsed)) {
+		--a-sidebar-width: var(--a-sidebar-collapsed-width);
+	}
 }
 
 /* ─── Layout ─────────────────────────────────────────── */

@@ -30,6 +30,8 @@ describe('host-scoped route tables', () => {
     const blogPaths = flattenPaths(moduleRoutes.blog)
     expect(blogPaths).toContain('/')
     expect(blogPaths).toContain('bookmarks')
+    expect(blogPaths).toContain('channel/:slug')
+    expect(blogPaths).toContain('collection/:id')
     expect(blogPaths).not.toContain('post/new')
     expect(blogPaths).not.toContain('/posts')
   })
@@ -125,6 +127,60 @@ describe('host-scoped route tables', () => {
       query: { source: 'legacy' },
       hash: '#comments',
     })
+  })
+
+  it('redirects root collection and watch links to their canonical module routes', () => {
+    const appRoutes = buildAppRoutes()
+    const collectionRoute = appRoutes.find((route) => route.path === '/collection/:id')
+    const watchRoute = appRoutes.find((route) => route.path === '/watch/:id')
+
+    expect(collectionRoute?.redirect).toBeTypeOf('function')
+    expect(watchRoute?.redirect).toBeTypeOf('function')
+
+    if (typeof collectionRoute?.redirect === 'function') {
+      expect(collectionRoute.redirect({
+        path: '/collection/c-1',
+        params: { id: 'c-1' },
+        query: { ref: 'share' },
+        hash: '',
+      } as never)).toEqual({
+        path: '/posts/collection/c-1',
+        query: { ref: 'share' },
+        hash: '',
+      })
+    }
+
+    if (typeof watchRoute?.redirect === 'function') {
+      expect(watchRoute.redirect({
+        path: '/watch/v-1',
+        params: { id: 'v-1' },
+        query: { t: '120' },
+        hash: '',
+      } as never)).toEqual({
+        path: '/videos/watch/v-1',
+        query: { t: '120' },
+        hash: '',
+      })
+    }
+  })
+
+  it('redirects public channel links to canonical blog channel routes', () => {
+    const appRoutes = buildAppRoutes()
+    const channelRoute = appRoutes.find((route) => route.path === '/channels/:slug')
+    expect(channelRoute?.redirect).toBeTypeOf('function')
+
+    if (typeof channelRoute?.redirect === 'function') {
+      expect(channelRoute.redirect({
+        path: '/channels/tech',
+        params: { slug: 'tech' },
+        query: { sort: 'latest' },
+        hash: '',
+      } as never)).toEqual({
+        path: '/posts/channel/tech',
+        query: { sort: 'latest' },
+        hash: '',
+      })
+    }
   })
 
   it('registers Studio as the only creator workspace', () => {

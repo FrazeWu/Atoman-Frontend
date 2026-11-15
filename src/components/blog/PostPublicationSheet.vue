@@ -93,6 +93,7 @@
           :uploading="coverUploading"
           :error="coverUploadError"
           @trigger-upload="triggerCoverUpload"
+          @file-selected="$emit('cover-upload', $event)"
           @remove-cover="$emit('remove-cover')"
         />
       </section>
@@ -169,7 +170,7 @@ const emit = defineEmits<{
   (event: 'update:summary', value: string): void
   (event: 'update:visibility', value: Visibility): void
   (event: 'update:tags', value: string[]): void
-  (event: 'cover-upload', eventValue: Event): void
+  (event: 'cover-upload', eventValue: Event | File): void
   (event: 'remove-cover'): void
   (event: 'update:scheduled-at', value: string): void
 }>()

@@ -3,7 +3,7 @@
     <div class="editor-shell">
       <div v-if="error && !editorLoadFailed" class="editor-error a-error" role="alert">
         <span>{{ error }}</span>
-        <PButton v-if="hasPostConflict" type="button" size="sm" variant="ghost" @click="refreshAfterConflict">刷新文章</PButton>
+        <PButton v-if="hasPostConflict" type="button" size="sm" variant="ghost" @click="openConflictModal">刷新文章</PButton>
       </div>
       <div v-if="editorLoadFailed" class="editor-load-failure" role="alert">
         <p>{{ error || '编辑器加载失败，请刷新重试' }}</p>
@@ -143,6 +143,22 @@
       @restore="restorePendingDraft"
     />
 
+    <PostEditorConflictModal
+      v-if="conflictModalVisible"
+      :show="conflictModalVisible"
+      :local-title="form.title"
+      :local-content="form.content"
+      :remote-title="remotePostData?.title || ''"
+      :remote-content="remotePostData?.content || ''"
+      :remote-updated-at="remotePostData?.updated_at || ''"
+      :loading-remote="loadingRemotePost"
+      :saving="resolvingConflict"
+      :above-player="true"
+      @close="conflictModalVisible = false"
+      @overwrite="handleConflictOverwrite"
+      @discard="handleConflictDiscard"
+    />
+
     <PModal v-if="draftManagerVisible" above-player title="草稿管理" size="md" @close="closeDraftManager">
       <div class="draft-manager-body">
         <div class="draft-manager-grid">
@@ -240,6 +256,7 @@ import PostEditorTopbar from '@/components/blog/PostEditorTopbar.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PostEditorDraftRecoveryModal from '@/components/blog/PostEditorDraftRecoveryModal.vue'
+import PostEditorConflictModal from '@/components/blog/PostEditorConflictModal.vue'
 import PostVersionHistoryModal from '@/components/blog/PostVersionHistoryModal.vue'
 import { useApi } from '@/composables/useApi'
 import type { BlogScheduleStatus } from '@/composables/useContentLifecycle'
@@ -250,6 +267,7 @@ import { usePostEditorCollections } from '@/composables/blog/usePostEditorCollec
 import { usePostEditorPublication } from '@/composables/blog/usePostEditorPublication'
 import { evaluateBlogPublicationQuality } from '@/utils/blogPublicationQuality'
 import {
+  parseDraftTimestamp,
   usePostEditorDraftSession,
   type BlogVisibility,
   type EditorDraftPayload,
@@ -487,7 +505,7 @@ const {
   },
 })
 
-const { loadPost, save, schedulePublish, retrySchedule } = usePostEditorPublication({
+const { loadPost, fetchRemotePost, save, schedulePublish, retrySchedule } = usePostEditorPublication({
   isEdit,
   form,
   contentSource,
@@ -548,13 +566,75 @@ const saveDraft = () => {
   void save('draft', false, true)
 }
 
+const conflictModalVisible = ref(false)
+const loadingRemotePost = ref(false)
+const resolvingConflict = ref(false)
+const remotePostData = ref<{
+  title: string
+  content: string
+  updated_at: string
+  base_updated_at: string
+} | null>(null)
+
+const openConflictModal = async () => {
+  conflictModalVisible.value = true
+  if (!remotePostData.value) {
+    loadingRemotePost.value = true
+    try {
+      const remote = await fetchRemotePost()
+      if (remote) {
+        remotePostData.value = {
+          title: remote.title,
+          content: remote.content,
+          updated_at: remote.updated_at,
+          base_updated_at: remote.updated_at,
+        }
+      }
+    } finally {
+      loadingRemotePost.value = false
+    }
+  }
+}
+
+const handleConflictOverwrite = async () => {
+  if (resolvingConflict.value) return
+  resolvingConflict.value = true
+  try {
+    if (remotePostData.value?.base_updated_at) {
+      loadedPostUpdatedAtRaw.value = remotePostData.value.base_updated_at
+      loadedPostUpdatedAt.value = parseDraftTimestamp(remotePostData.value.base_updated_at)
+    }
+    const saved = await save(saving.value || 'draft', false, true)
+    if (saved) {
+      hasPostConflict.value = false
+      conflictModalVisible.value = false
+      remotePostData.value = null
+    }
+  } finally {
+    resolvingConflict.value = false
+  }
+}
+
+const handleConflictDiscard = async () => {
+  conflictModalVisible.value = false
+  remotePostData.value = null
+  await refreshAfterConflict()
+}
+
 const refreshAfterConflict = async () => {
   error.value = ''
   hasPostConflict.value = false
+  conflictModalVisible.value = false
   savedPostId.value = null
   const loaded = await loadPost()
   if (!loaded) editorLoadFailed.value = true
 }
+
+watch(hasPostConflict, (isConflict) => {
+  if (isConflict) {
+    void openConflictModal()
+  }
+})
 
 const handleVersionRestored = async () => {
   versionHistoryOpen.value = false
@@ -570,13 +650,7 @@ const handleVersionRestored = async () => {
   replaceCollaborativeDocumentFromForm()
 }
 
-const handleCoverUpload = async (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-
-  if (!file) return
-
+const uploadCoverFile = async (file: File) => {
   if (!authStore.token) {
     coverUploadError.value = '请先登录后再上传封面'
     return
@@ -624,6 +698,19 @@ const handleCoverUpload = async (event: Event) => {
   } finally {
     coverUploading.value = false
   }
+}
+
+const handleCoverUpload = async (eventOrFile: Event | File) => {
+  let file: File | undefined
+  if (eventOrFile instanceof File) {
+    file = eventOrFile
+  } else if (eventOrFile && 'target' in eventOrFile) {
+    const input = eventOrFile.target as HTMLInputElement
+    file = input.files?.[0]
+    input.value = ''
+  }
+  if (!file) return
+  await uploadCoverFile(file)
 }
 
 const removeCover = () => {
@@ -705,6 +792,8 @@ const resetEditorStateForRoute = () => {
   loadedPostUpdatedAt.value = 0
   loadedPostUpdatedAtRaw.value = ''
   hasPostConflict.value = false
+  conflictModalVisible.value = false
+  remotePostData.value = null
   publicationReviewVisible.value = false
   publicationIntent.value = null
   scheduledAt.value = ''

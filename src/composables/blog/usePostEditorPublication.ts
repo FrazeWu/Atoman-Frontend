@@ -311,5 +311,31 @@ export function usePostEditorPublication({
 		}
 	};
 
-	return { loadPost, save, schedulePublish, retrySchedule };
+	const fetchRemotePost = async (expectedPostID = String(route.params.id || "")) => {
+		if (!isEdit.value || !expectedPostID) return null;
+		try {
+			const response = await apiRequestResult(api.blog.post(expectedPostID), {
+				headers: authStore.token
+					? { Authorization: `Bearer ${authStore.token}` }
+					: {},
+			});
+			if (!response.ok) return null;
+			const data = response.data;
+			const post = data.data || data;
+			return {
+				id: String(post.id || expectedPostID),
+				title: String(post.title || ""),
+				content: String(post.content || ""),
+				summary: String(post.summary || ""),
+				cover_url: String(post.cover_url || ""),
+				updated_at: typeof post.updated_at === "string" ? post.updated_at : "",
+				updated_at_timestamp: parseDraftTimestamp(post.updated_at),
+			};
+		} catch (cause) {
+			reportError(cause);
+			return null;
+		}
+	};
+
+	return { loadPost, fetchRemotePost, save, schedulePublish, retrySchedule };
 }

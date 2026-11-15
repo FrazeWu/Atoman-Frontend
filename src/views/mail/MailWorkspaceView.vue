@@ -1,7 +1,7 @@
 <template>
   <section class="mail-page" data-testid="mail-workspace">
     <header class="mail-page__header">
-      <div class="mail-page__identity"><span class="mail-page__eyebrow">AToMAN · MAIL</span><h1>电子邮件</h1><p>{{ mailAccount?.address || '管理电子邮箱' }}</p></div>
+      <div class="mail-page__identity"><span class="mail-page__eyebrow">AToMAN · MAIL</span><h1>电子邮件</h1><p>{{ displayAddress }}</p></div>
       <div class="mail-page__actions"><PBadge v-if="mailIsActive" class="mail-page__status" type="success" label="已连接" /><button v-if="mailIsActive" class="mail-icon-button" aria-label="邮箱设置" @click="settingsOpen = true"><Settings :size="19" /></button><button class="mail-icon-button" aria-label="刷新邮箱" :disabled="loadingAccount" @click="refreshMailbox"><RefreshCw :size="18" :class="{ 'mail-spin': loadingAccount }" /></button></div>
     </header>
     <div v-if="loadingAccount && !mailAccount" class="mail-gate"><RefreshCw class="mail-spin" :size="24" /><p>正在连接邮箱…</p></div>
@@ -276,7 +276,9 @@ import MailOrganizerPanel from './MailOrganizerPanel.vue'
 import { fetchMailOrganizer, createMailOrganizerLabel, updateMailOrganizerLabel, deleteMailOrganizerLabel, mutateMailOrganizer, type MailOrganizerState, type MailOrganizerMutation, type MailOrganizerColor } from '@/api/mailClient'
 import { addressText, fileSize, mailFrameDocument, mailTime } from './mail-helpers'
 import { useMailWorkspace } from './useMailWorkspace'
+import './mail-workspace.css'
 const { advancedOpen,advancedFilters,allFolders,setAdvancedSearch,clearAdvancedSearch, mailAccount, loadingAccount, accountError, mailIsActive, isMailAdministrator, statusLabel, statusTitle, statusDescription, invitation, chosenLocalPart, isChosenLocalValid, redeeming, redeemError, claimAddress, folders, foldersLoading, foldersError, currentFolder, currentFolderId, folderLabel, mobilePane, messages, drafts, loadingMessages, messagesError, searchText, committedSearch, totalMessages, conversations, conversationMode, selection, selectedGroupId, allSelected, selectAll, toggleGroup, selectFolder, loadMessages, refreshMailbox, runSearch, hasMore, openConversation, readerMessages, expanded, details, detailErrors, detailLoading, htmlShown, threadError, toggleExpanded, loadDetail, newMessage, editDraft, composeDraft, composeWarning, settingsOpen, replyTo, forwardMessage, onDraftSaved, onQueued, pendingSends, remainingSeconds, queueLabel, undoSend, checkSend, refreshQueue, provisionAccount, cancelBusy, notice, actionUndo, actionBusy, performAction, undoAction, downloadAttachment, downloadSource, blockSender, folderDialog, deleteFolderDialog, newFolderName, folderError, folderWorking, addFolder, removeFolder, isDraftFolder, clearReader } = useMailWorkspace()
+const displayAddress = computed(() => mailAccount.value?.address || '管理电子邮箱')
 const shortcutHelp=ref(false)
 const scheduledOpen=ref(false)
 const externalOpen=ref(false)
@@ -666,4 +668,3 @@ function previewAttachment(message:MailSummary,attachment:MailAttachmentInfo){
 }
 const folderIcon = (role: string | null) => ({ inbox: Inbox, sent: Send, drafts: FileText, trash: Trash2, junk: ShieldAlert, archive: Archive }[role || ''] || Folder)
 </script>
-<style src="./mail-workspace.css"></style>

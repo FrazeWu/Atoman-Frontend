@@ -1,14 +1,28 @@
+:root {
+  --mail-panel-bg: #ffffff;
+  --mail-item-active-bg: rgba(37, 99, 235, 0.05);
+  --mail-item-hover-bg: #f8fafc;
+}
+:root.dark {
+  --mail-panel-bg: var(--a-color-surface);
+  --mail-item-active-bg: var(--a-color-surface-muted);
+  --mail-item-hover-bg: var(--a-color-surface-muted);
+}
+
 .mail-page {
   --mail-divider: var(--a-color-border-soft);
   --mail-sidebar-width: 236px;
   --mail-gutter: 14px;
   --mail-pad-x: clamp(16px, 2.5vw, 36px);
   --mail-pad-bottom: 16px;
-  background: var(--a-color-bg);
+  background: #ffffff;
   min-height: calc(100dvh - var(--a-topbar-height));
   color: var(--a-color-fg);
   display: flex;
   flex-direction: column;
+}
+:root.dark .mail-page {
+  background: var(--a-color-bg);
 }
 .mail-page * {
   box-sizing: border-box;
@@ -225,7 +239,7 @@
   display: flex;
   flex-direction: column;
   padding: 16px 12px 14px;
-  background: var(--a-color-surface);
+  background: var(--mail-panel-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card, 10px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -236,7 +250,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background: var(--a-color-surface);
+  background: var(--mail-panel-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card, 10px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -296,11 +310,11 @@
   transition: color 140ms ease, background-color 140ms ease;
 }
 .mail-workspace__folder:hover:not(.is-active) {
-  background: var(--a-color-surface-muted);
+  background: var(--mail-item-hover-bg);
   color: var(--a-color-fg);
 }
 .mail-workspace__folder.is-active {
-  background: var(--a-color-surface-muted);
+  background: var(--mail-item-active-bg);
   color: var(--a-color-primary);
   font-weight: 600;
 }
@@ -704,7 +718,7 @@
 
 /* Reader & Drawer Floating Sheets */
 .mail-workspace__sheet-panel {
-  background: var(--a-color-surface) !important;
+  background: #ffffff !important;
 }
 :root.dark .mail-workspace__sheet-panel {
   background: var(--a-color-surface) !important;
@@ -721,18 +735,19 @@
     max-width: none !important;
     border: 1px solid var(--a-color-border-soft) !important;
     border-radius: var(--a-radius-card, 10px) !important;
-    background: var(--a-color-surface) !important;
+    background: #ffffff !important;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
     overflow: hidden !important;
   }
   :root.dark .mail-workspace__sheet-panel {
+    background: var(--a-color-surface) !important;
     border-color: var(--a-color-border) !important;
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35) !important;
   }
 }
 
 .mail-workspace__reader-sheet {
-  background: var(--a-color-surface) !important;
+  background: #ffffff !important;
 }
 :root.dark .mail-workspace__reader-sheet {
   background: var(--a-color-surface) !important;
@@ -745,6 +760,9 @@
   max-width: 96rem;
   margin: 0 auto;
   width: 100%;
+  background: #ffffff;
+}
+:root.dark .mail-workspace__reader {
   background: var(--a-color-surface);
 }
 .mail-workspace__reader-empty {
@@ -767,6 +785,9 @@
   gap: 12px;
   border-bottom: 0;
   padding: 0 20px;
+  background: #ffffff;
+}
+:root.dark .mail-workspace__reader-head {
   background: var(--a-color-surface);
 }
 .mail-workspace__nav-group {
@@ -794,6 +815,9 @@
   padding: 24px clamp(20px, 3vw, 40px) 48px;
   overflow-y: auto;
   flex: 1;
+  background: #ffffff;
+}
+:root.dark .mail-workspace__reader-body {
   background: var(--a-color-surface);
 }
 .mail-workspace__reader-body h2 {
@@ -808,10 +832,13 @@
   border: 1px solid var(--a-color-border-subtle, rgba(0, 0, 0, 0.05));
   border-radius: var(--a-radius-card);
   margin-bottom: 14px;
-  background: var(--a-color-surface);
+  background: #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   overflow: hidden;
   transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+:root.dark .mail-workspace__thread-card {
+  background: var(--a-color-surface);
 }
 .mail-workspace__thread-card:hover {
   border-color: var(--a-color-border);

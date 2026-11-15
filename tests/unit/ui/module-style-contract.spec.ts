@@ -38,7 +38,7 @@ const shellFiles = [
 ];
 const blogFeedFiles = [
 	"src/components/blog/PostCoverField.vue",
-	"src/components/blog/PostEditorSidebar.vue",
+	"src/components/blog/PostEditorOutlinePanel.vue",
 	"src/components/blog/PostEditorTopbar.vue",
 	"src/components/feed/FeedArticleSheet.vue",
 	"src/components/feed/FeedSidebarSources.vue",

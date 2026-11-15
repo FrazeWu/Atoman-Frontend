@@ -356,7 +356,7 @@
   gap: 0.3rem;
   padding: 0.1rem 0.45rem;
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
-  border-radius: 999px;
+  border-radius: var(--a-radius-pill, 9999px);
   background: var(--a-color-bg);
   color: var(--a-color-muted);
   font: inherit;

@@ -90,4 +90,61 @@ describe('PostPublicationSheet', () => {
     expect(wrapper.text()).toContain('请选择一个合集')
     expect(wrapper.find('[data-testid="publication-confirm"]').exists()).toBe(false)
   })
+
+  it('标签胶囊渲染与点击移除操作', async () => {
+    const wrapper = mount(PostPublicationSheet, {
+      props: {
+        ...baseProps,
+        tags: ['vue', 'typescript'],
+      },
+      global: {
+        stubs: {
+          PSheet: sheetStub,
+          PSegmentedControl: true,
+          PSelect: true,
+          PTextarea: true,
+          PostCoverField: true,
+        },
+      },
+    })
+
+    const pills = wrapper.findAll('.publication-tag-pill')
+    expect(pills).toHaveLength(2)
+    expect(pills[0].text()).toContain('vue')
+    expect(pills[1].text()).toContain('typescript')
+
+    await pills[0].find('.publication-tag-pill__remove').trigger('click')
+    expect(wrapper.emitted('update:tags')).toBeTruthy()
+    expect(wrapper.emitted('update:tags')?.[0]?.[0]).toEqual(['typescript'])
+  })
+
+  it('输入框按回车添加新标签并防止重复添加', async () => {
+    const wrapper = mount(PostPublicationSheet, {
+      props: {
+        ...baseProps,
+        tags: ['前端'],
+      },
+      global: {
+        stubs: {
+          PSheet: sheetStub,
+          PSegmentedControl: true,
+          PSelect: true,
+          PTextarea: true,
+          PostCoverField: true,
+        },
+      },
+    })
+
+    const input = wrapper.find('.publication-tag-input')
+    await input.setValue('设计')
+    await input.trigger('keydown', { key: 'Enter' })
+
+    expect(wrapper.emitted('update:tags')).toBeTruthy()
+    expect(wrapper.emitted('update:tags')?.[0]?.[0]).toEqual(['前端', '设计'])
+
+    // 重复添加
+    await input.setValue('前端')
+    await input.trigger('keydown', { key: 'Enter' })
+    expect(wrapper.text()).toContain('该标签已添加')
+  })
 })

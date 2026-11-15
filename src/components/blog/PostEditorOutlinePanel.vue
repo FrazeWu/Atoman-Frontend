@@ -106,8 +106,8 @@ const handleSelect = (lineNumber: number) => {
   flex-direction: column;
   background: var(--a-color-bg, #ffffff);
   border: var(--a-border);
-  border-radius: var(--a-radius-card, 6px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  border-radius: var(--a-radius-card, 4px);
+  box-shadow: var(--a-shadow-card, none);
   pointer-events: auto;
   overflow: hidden;
   z-index: 36;
@@ -146,7 +146,7 @@ const handleSelect = (lineNumber: number) => {
   min-width: 1.25rem;
   height: 1.25rem;
   padding: 0 0.35rem;
-  border-radius: 999px;
+  border-radius: var(--a-radius-pill, 9999px);
   background: var(--a-color-surface-hover, #e2e8f0);
   color: var(--a-color-muted, #64748b);
   font-size: 0.7rem;
@@ -282,7 +282,7 @@ const handleSelect = (lineNumber: number) => {
   min-width: 1.5rem;
   height: 1.15rem;
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 600;
   border-radius: 3px;
   background: var(--a-color-surface-hover, #e2e8f0);
   color: var(--a-color-muted, #64748b);
@@ -330,7 +330,7 @@ const handleSelect = (lineNumber: number) => {
     bottom: 0;
     width: 100%;
     max-height: 60vh;
-    border-radius: 12px 12px 0 0;
+    border-radius: var(--a-radius-card, 4px) var(--a-radius-card, 4px) 0 0;
     border-inline: none;
     border-bottom: none;
   }

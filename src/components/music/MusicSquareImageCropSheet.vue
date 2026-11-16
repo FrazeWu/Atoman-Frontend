@@ -3,12 +3,17 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSheet from '@/components/ui/PSheet.vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   show: boolean
   sourceFile?: File | null
   sourceUrl?: string
   title?: string
-}>()
+  layerIndex?: number
+  stackSize?: number
+}>(), {
+  layerIndex: 0,
+  stackSize: 1,
+})
 
 const emit = defineEmits<{
   confirm: [file: File]
@@ -250,6 +255,8 @@ onBeforeUnmount(() => {
     partial-width="var(--a-comment-sheet-width)"
     content-max-width="36rem"
     close-type="header"
+    :layer-index="layerIndex"
+    :stack-size="stackSize"
     @close="$emit('cancel')"
   >
     <div class="crop-sheet" data-testid="music-square-crop-sheet">

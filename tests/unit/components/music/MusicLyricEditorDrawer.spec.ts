@@ -449,6 +449,25 @@ describe('MusicLyricEditorDrawer.vue', () => {
     }))
   })
 
+  it('imports standalone translation LRC when song already has original lyrics', async () => {
+    const wrapper = mountDrawer({
+      content: '[00:01.00]Alpha\n[00:02.00]Beta',
+      translation: '',
+      format: 'lrc',
+      version: 1,
+    })
+    await wrapper.get('[data-testid="mode-translation"]').trigger('click')
+    await chooseFile(
+      wrapper,
+      '翻译 LRC',
+      fileWithText('trans.lrc', vi.fn().mockResolvedValue('[00:01.00]阿尔法\n[00:02.00]贝塔')),
+    )
+    await vi.waitFor(() => expect(draftRows(wrapper)[0]?.translation).toBe('阿尔法'))
+    expect(draftRows(wrapper)[1]?.translation).toBe('贝塔')
+    expect(draftRows(wrapper)[0]?.original).toBe('Alpha')
+    expect(draftRows(wrapper)[1]?.original).toBe('Beta')
+  })
+
   it('keeps the current draft and reports an LRC with no importable rows', async () => {
     const wrapper = mountDrawer()
     await chooseFile(wrapper, '原文 LRC', fileWithText('empty.lrc', vi.fn().mockResolvedValue('[00:01.00]')))

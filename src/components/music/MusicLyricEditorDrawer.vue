@@ -20,7 +20,9 @@ import {
   type MusicLyricDraftIssue,
   type MusicLyricDraftRow,
 } from '@/utils/musicLyricsDraft'
+import { getActivePinia } from 'pinia'
 import { downloadTextFile } from '@/utils/textDownload'
+import { usePlayerStore } from '@/stores/player'
 
 const props = withDefaults(defineProps<{
   show: boolean
@@ -37,6 +39,8 @@ const props = withDefaults(defineProps<{
   source?: string
   defaultEditSummary?: string
   presentation?: 'sheet' | 'page'
+  layerIndex?: number
+  stackSize?: number
 }>(), {
   content: '',
   translation: '',
@@ -51,6 +55,8 @@ const props = withDefaults(defineProps<{
   source: '',
   defaultEditSummary: '',
   presentation: 'sheet',
+  layerIndex: 0,
+  stackSize: 1,
 })
 
 const emit = defineEmits<{
@@ -75,8 +81,33 @@ const targetOptions = [
   { label: '翻译', value: 'translation' },
 ] satisfies Array<{ label: string, value: MusicLyricsEditTarget }>
 
+function getPlayer() {
+  if (getActivePinia()) {
+    try {
+      return usePlayerStore()
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
 const rows = ref<MusicLyricDraftRow[]>([])
 const selectedRowId = ref('')
+
+function scrollSelectedRowIntoView() {
+  if (!selectedRowId.value) return
+  nextTick(() => {
+    const el = document.querySelector(`[data-testid="lyric-row-${selectedRowId.value}"]`)
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+  })
+}
+
+watch(selectedRowId, () => {
+  scrollSelectedRowIntoView()
+})
 const draftFormat = ref<MusicLyricsFormat>('plain')
 const draftEditSummary = ref('')
 const editTarget = ref<MusicLyricsEditTarget>('original')
@@ -259,14 +290,42 @@ function shiftAllTimes(offsetMs: number) {
 }
 
 function handleGlobalKeydown(event: KeyboardEvent) {
-  if (!props.show || props.saving || editTarget.value !== 'original') return
+  if (!props.show || props.saving) return
+  const target = event.target as HTMLElement | null
+  const isTextInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+
+  // 1. 打点快捷键（仅在编辑原文模式且无修饰键冲突时可用）
   if (
-    (event.ctrlKey && event.code === 'Space')
+    editTarget.value === 'original' &&
+    ((event.ctrlKey && event.code === 'Space')
     || (event.altKey && event.key.toLowerCase() === 's')
-    || (event.shiftKey && event.key === 'Enter')
+    || (event.shiftKey && event.key === 'Enter'))
   ) {
     event.preventDefault()
     stampCurrentTime()
+    return
+  }
+
+  const player = getPlayer()
+  if (!player) return
+
+  // 2. 播放/暂停快捷键（非文字输入聚焦时按 Space）
+  if (!isTextInput && event.code === 'Space' && !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey) {
+    event.preventDefault()
+    player.togglePlay()
+    return
+  }
+
+  // 3. 快退/快进 3 秒微调
+  if (event.altKey && event.key === 'ArrowLeft') {
+    event.preventDefault()
+    player.seek(Math.max(0, (player.currentTime || 0) - 3))
+    return
+  }
+  if (event.altKey && event.key === 'ArrowRight') {
+    event.preventDefault()
+    player.seek(Math.min(player.duration || Infinity, (player.currentTime || 0) + 3))
+    return
   }
 }
 
@@ -309,7 +368,12 @@ async function setImportFile(kind: 'original' | 'translation', file: File | null
   else translationImportFile.value = file
   importIssues.value = []
   importError.value = ''
-  if (!originalImportFile.value) return
+  if (!originalImportFile.value && rows.value.length === 0) {
+    if (kind === 'translation') {
+      importError.value = '请先添加或导入原文歌词'
+    }
+    return
+  }
   await importSelectedLrc()
 }
 
@@ -320,7 +384,8 @@ async function handleImportDrop(kind: 'original' | 'translation', event: DragEve
 }
 
 async function importSelectedLrc() {
-  if (props.saving || !originalImportFile.value) return
+  if (props.saving) return
+  if (!originalImportFile.value && rows.value.length === 0) return
 
   importGeneration += 1
   const generation = importGeneration
@@ -328,15 +393,19 @@ async function importSelectedLrc() {
   const translationFile = translationImportFile.value
   const isStale = () => generation !== importGeneration || !props.show
   importParsing.value = true
-  let original: string
-  try {
-    original = await originalFile.text()
-  } catch {
-    if (isStale()) return
-    importIssues.value = []
-    importError.value = `读取 LRC 文件失败：${originalFile.name}`
-    importParsing.value = false
-    return
+  let original = ''
+  if (originalFile) {
+    try {
+      original = await originalFile.text()
+    } catch {
+      if (isStale()) return
+      importIssues.value = []
+      importError.value = `读取 LRC 文件失败：${originalFile.name}`
+      importParsing.value = false
+      return
+    }
+  } else if (rows.value.length > 0) {
+    original = serializeMusicLyricDraft(rows.value, 'lrc').content
   }
   if (isStale()) return
 
@@ -359,7 +428,7 @@ async function importSelectedLrc() {
     const locatedParseIssues = parsed.issues.map((issue) => {
       const fileName = issue.source === 'translation'
         ? (translationFile?.name ?? '翻译 LRC')
-        : originalFile.name
+        : (originalFile?.name ?? '原文歌词')
       const location = issue.sourceLine === undefined
         ? fileName
         : `${fileName} 第 ${issue.sourceLine} 行`
@@ -390,7 +459,8 @@ async function importSelectedLrc() {
   } catch {
     if (isStale()) return
     importIssues.value = []
-    importError.value = `解析 LRC 文件失败：${originalFile.name}`
+    const failedName = originalFile?.name ?? translationFile?.name ?? '歌词文件'
+    importError.value = `解析 LRC 文件失败：${failedName}`
     importParsing.value = false
   }
 }
@@ -439,6 +509,8 @@ function handleSave() {
     :show="show"
     :title="songTitle.trim() ? `歌词-${songTitle.trim()}` : '歌词-歌曲'"
     :aria-label="songTitle.trim() ? `歌词-${songTitle.trim()}` : '歌词-歌曲'"
+    :layer-index="layerIndex"
+    :stack-size="stackSize"
     content-max-width="72rem"
     close-type="header"
     panel-class="lyric-editor-drawer"
@@ -542,7 +614,7 @@ function handleSave() {
           正在解析 LRC...
         </p>
         <p
-          v-else-if="importMode && originalImportFile && !importError"
+          v-else-if="importMode && (originalImportFile || translationImportFile) && !importError"
           class="music-lyric-editor-drawer__import-status"
           role="status"
           aria-live="polite"

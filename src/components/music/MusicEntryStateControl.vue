@@ -40,11 +40,11 @@ const action = computed<MusicStateRequestAction>(() => {
   return 'close'
 })
 const isAdmin = computed(() => isAdminRole(authStore.user?.role))
-const actionLabel = computed(() => ({ close: '申请关闭修改', reopen: '申请重新开发', unlock: '申请解除锁定' })[action.value])
+const actionLabel = computed(() => ({ close: '申请关闭修改', reopen: '申请重新开放', unlock: '申请解除锁定' })[action.value])
 const displayedActionLabel = computed(() => isAdmin.value
-  ? ({ close: '紧急关闭修改', reopen: '紧急重新开发', unlock: '紧急解除锁定' })[action.value]
+  ? ({ close: '关闭修改', reopen: '重新开放', unlock: '解除锁定' })[action.value]
   : actionLabel.value)
-const statusLabel = computed(() => ({ development: '开发中', locked: '已锁定', closed: '已关闭' })[currentStatus.value])
+const statusLabel = computed(() => ({ development: '开放编辑', locked: '已锁定', closed: '已关闭' })[currentStatus.value])
 const statusIcon = computed(() => currentStatus.value === 'development' ? LockOpen : currentStatus.value === 'locked' ? Lock : ShieldCheck)
 const isActive = computed(() => !props.lifecycleStatus || props.lifecycleStatus === 'active')
 

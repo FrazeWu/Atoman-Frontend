@@ -88,8 +88,12 @@ export const deleteMailFolder = (id: string) => apiDeleteJson<{ deleted: boolean
 export interface MailFilterRule { id: string; name?: string; enabled: boolean; field: 'from' | 'to' | 'subject'; value: string; action: 'move' | 'junk' | 'archive' | 'trash'; mailbox_id?: string }
 export interface MailSignature { enabled: boolean; text: string; html: string; on_reply: boolean }
 export interface MailPreferences { signature?: MailSignature; mail_notifications?: boolean; conversation_mode?: boolean; rules: MailFilterRule[]; blocked_senders: string[]; vacation: { enabled: boolean; subject: string; text: string } }
-interface PreferencesResponse { conversation_mode: boolean; rules: Array<Omit<MailFilterRule, 'value'> & { contains: string }>; blocked_senders: string[]; signature?: MailSignature; auto_reply: MailPreferences['vacation'] }
-function readPreferences(row: PreferencesResponse): MailPreferences { return { conversation_mode: row.conversation_mode, signature: row.signature || { enabled:false,text:'',html:'',on_reply:true }, blocked_senders: row.blocked_senders || [], vacation: row.auto_reply, rules: (row.rules || []).map(rule => ({ ...rule, value: rule.contains })) } }
+interface PreferencesResponse { conversation_mode: boolean; rules: Array<Omit<MailFilterRule, 'value'> & { contains: string }>; blocked_senders: string[]; signature?: MailSignature; auto_reply?: Partial<MailPreferences['vacation']> | null }
+function readVacation(value: PreferencesResponse['auto_reply']): MailPreferences['vacation'] {
+  const row = value && typeof value === 'object' ? value : {}
+  return { enabled: row.enabled === true, subject: typeof row.subject === 'string' ? row.subject : '', text: typeof row.text === 'string' ? row.text : '' }
+}
+function readPreferences(row: PreferencesResponse): MailPreferences { return { conversation_mode: row.conversation_mode, signature: row.signature || { enabled:false,text:'',html:'',on_reply:true }, blocked_senders: row.blocked_senders || [], vacation: readVacation(row.auto_reply), rules: (row.rules || []).map(rule => ({ ...rule, value: rule.contains })) } }
 export async function fetchMailPreferences() { return readPreferences(await apiGet<PreferencesResponse>(`${base()}/settings`)) }
 export async function saveMailPreferences(settings: MailPreferences) {
   const payload: PreferencesResponse = { conversation_mode: settings.conversation_mode ?? true, signature: settings.signature || { enabled:false,text:'',html:'',on_reply:true }, blocked_senders: settings.blocked_senders, auto_reply: settings.vacation, rules: settings.rules.map(({ value, ...rule }) => ({ ...rule, name: rule.name || value, contains: value })) }

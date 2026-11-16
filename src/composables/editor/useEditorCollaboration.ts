@@ -55,7 +55,12 @@ export function useEditorCollaboration(options: CollaborationOptions) {
       options.onReady(text.toString())
     })
 
-    return { extension: yCollab(text, provider.awareness), document: options.initialValue() }
+    // Sync can finish before CodeMirror exists. The editor must mount from the
+    // shared document in that case, not from the local draft.
+    return {
+      extension: yCollab(text, provider.awareness),
+      document: readyEmitted && text ? text.toString() : options.initialValue(),
+    }
   }
 
   function replaceDocument(markdown: string) {

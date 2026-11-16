@@ -140,4 +140,48 @@ describe('Mail workspace', () => {
     await flushPromises()
     expect(api.read).toHaveBeenCalledWith('inbox', 'one')
   })
+  it('moves a list cursor with J and K without opening the first conversation', async () => {
+    const wrapper = mountView(); await flushPromises()
+    await wrapper.get('[data-testid="mode-single"]').trigger('click'); await flushPromises()
+    expect(wrapper.findAll('[data-testid^="mail-message-"]')).toHaveLength(2)
+    expect(wrapper.find('[data-mail-cursor="true"]').exists()).toBe(false)
+    const cursorTestId = () => wrapper.get('[data-mail-cursor="true"]').get('[data-testid^="mail-message-"]').attributes('data-testid')
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }))
+    await flushPromises()
+    expect(wrapper.find('[data-testid="mail-plain-text"]').exists()).toBe(false)
+    expect(cursorTestId()).toBe('mail-message-one')
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }))
+    await flushPromises()
+    expect(wrapper.find('[data-testid="mail-plain-text"]').exists()).toBe(false)
+    expect(cursorTestId()).toBe('mail-message-two')
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    await flushPromises()
+    expect(cursorTestId()).toBe('mail-message-one')
+    expect(api.read).not.toHaveBeenCalled()
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))
+    await flushPromises()
+    expect(api.read).toHaveBeenCalledWith('inbox', 'one')
+
+    const fresh = mountView(); await flushPromises()
+    await fresh.get('[data-testid="mode-single"]').trigger('click'); await flushPromises()
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }))
+    await flushPromises()
+    expect(fresh.find('[data-testid="mail-plain-text"]').exists()).toBe(false)
+    expect(fresh.get('[data-mail-cursor="true"]').get('[data-testid^="mail-message-"]').attributes('data-testid')).toBe('mail-message-two')
+  })
+  it('marks the open conversation as junk from the advertised ! shortcut', async () => {
+    const wrapper = mountView(); await flushPromises()
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '!' }))
+    await flushPromises()
+    expect(api.action).not.toHaveBeenCalled()
+
+    await wrapper.get('[data-testid="mail-message-two"]').trigger('click'); await flushPromises()
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '!' }))
+    await flushPromises()
+    expect(api.action).toHaveBeenCalledWith('inbox', ['one', 'two'], 'junk', undefined)
+  })
 })

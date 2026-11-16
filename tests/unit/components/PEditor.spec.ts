@@ -11,6 +11,7 @@ const collabMockState = vi.hoisted(() => ({
 	asyncText: "",
 	asyncMergedText: "",
 	neverSync: false,
+	syncOnListen: false,
 	urls: [] as string[],
 }));
 
@@ -84,6 +85,7 @@ vi.mock("y-websocket", () => {
 		on(event: string, listener: (isSynced: boolean) => void) {
 			if (event === "sync") {
 				this.syncListeners.push(listener);
+				if (collabMockState.syncOnListen) listener(true);
 			}
 		}
 
@@ -154,6 +156,7 @@ describe("PEditor", () => {
 		collabMockState.asyncText = "";
 		collabMockState.asyncMergedText = "";
 		collabMockState.neverSync = false;
+		collabMockState.syncOnListen = false;
 		collabMockState.urls = [];
 		consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
 		consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -590,6 +593,31 @@ describe("PEditor", () => {
 		expect(wrapper.emitted("collab-ready")).toEqual([["shared async copy"]]);
 		expect(wrapper.find(".cm-content").text()).toContain("shared async copy");
 		expect(wrapper.find(".cm-content").text()).not.toContain("hello collab");
+	});
+
+	it("uses the synced remote document when collab syncs before the editor mounts", async () => {
+		collabMockState.initialText = "remote essay";
+		collabMockState.syncOnListen = true;
+		vi.useFakeTimers();
+
+		const wrapper = await mountEditor({
+			modelValue: "local draft",
+			mode: FUTURE_NORMAL_MODE,
+			enableCollab: true,
+			collabRoomId: "room-1",
+		});
+
+		expect(wrapper.emitted("collab-ready")).toEqual([["remote essay"]]);
+		expect(wrapper.find(".cm-content").text()).toContain("remote essay");
+		expect(wrapper.find(".cm-content").text()).not.toContain("local draft");
+
+		await vi.advanceTimersByTimeAsync(1500);
+		await nextTick();
+		vi.useRealTimers();
+
+		expect(wrapper.emitted("collab-ready")).toEqual([["remote essay"]]);
+		expect(wrapper.find(".cm-content").text()).toContain("remote essay");
+		expect(wrapper.find(".cm-content").text()).not.toContain("local draft");
 	});
 
 	it("emits collab-ready with existing shared content instead of local modelValue", async () => {

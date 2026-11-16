@@ -87,4 +87,12 @@ describe('mail client contract',()=>{
   const settings=await fetchMailPreferences();expect(settings.vacation.text).toBe('Back soon');expect(settings.rules[0]?.value).toBe('receipt')
   await saveMailPreferences(settings);expect(http.put).toHaveBeenCalledWith('/api/v1/mail/settings',{...wire,signature:{enabled:false,text:'',html:'',on_reply:true}})
  })
+ it('fills a safe auto-reply when the server omits or only partially sends it',async()=>{
+  http.get.mockResolvedValueOnce({conversation_mode:true,blocked_senders:[],rules:[]})
+  expect((await fetchMailPreferences()).vacation).toEqual({enabled:false,subject:'',text:''})
+  http.get.mockResolvedValueOnce({conversation_mode:true,blocked_senders:[],rules:[],auto_reply:{enabled:true}})
+  expect((await fetchMailPreferences()).vacation).toEqual({enabled:true,subject:'',text:''})
+  http.get.mockResolvedValueOnce({conversation_mode:true,blocked_senders:[],rules:[],auto_reply:null})
+  expect((await fetchMailPreferences()).vacation.enabled).toBe(false)
+ })
 })

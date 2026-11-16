@@ -590,7 +590,8 @@
 .mail-workspace__message-row:hover {
   background: var(--a-color-surface-muted);
 }
-.mail-workspace__message-row.is-selected {
+.mail-workspace__message-row.is-selected,
+.mail-workspace__message-row.is-cursor {
   background: var(--a-color-surface-muted);
   box-shadow: inset 3px 0 var(--a-color-primary);
 }

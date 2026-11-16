@@ -278,6 +278,7 @@ const resourceReferenceCompartment = new Compartment()
 const contentAttributesCompartment = new Compartment()
 let cmView: EditorView | null = null
 let collabReady = false
+let pendingCollabDocument: string | null = null
 let collabFallbackTimer: ReturnType<typeof setTimeout> | null = null
 const {
   imageInputRef,
@@ -301,6 +302,7 @@ const collaboration = useEditorCollaboration({
   initialValue: () => props.modelValue,
   onReady: value => {
     collabReady = true
+    pendingCollabDocument = value
     if (collabFallbackTimer) {
       clearTimeout(collabFallbackTimer)
       collabFallbackTimer = null
@@ -426,7 +428,9 @@ function seedCollabEditorFromModel() {
 
 function scheduleCollabFallback() {
   clearCollabFallbackTimer()
-  collabReady = false
+  // A sync that landed before the view existed has already chosen the document.
+  // Clearing the flag here would let the local fallback replace that remote text.
+  if (collabReady) return
   collabFallbackTimer = setTimeout(seedCollabEditorFromModel, 1500)
 }
 
@@ -599,6 +603,8 @@ function initCodeMirror() {
   }
 
   if (props.enableCollab && props.collabRoomId) {
+    collabReady = false
+    pendingCollabDocument = null
     const session = collaboration.start(props.collabRoomId)
     extensions.push(session.extension)
     cmView = new EditorView({
@@ -608,6 +614,11 @@ function initCodeMirror() {
       }),
       parent: cmContainerRef.value,
     })
+    if (pendingCollabDocument != null && cmView.state.doc.toString() !== pendingCollabDocument) {
+      cmView.dispatch({
+        changes: { from: 0, to: cmView.state.doc.length, insert: pendingCollabDocument },
+      })
+    }
     scheduleCollabFallback()
     return
   }

@@ -215,4 +215,30 @@ describe("useMarkdownRenderer sanitize", () => {
     expect(html).toContain('<li id="footnote-1">');
     expect(html).toContain('这是第一条注释。');
   });
+
+  it("does not turn footnote markers inside inline code or math into superscripts", () => {
+    const { renderMarkdown } = useMarkdownRenderer();
+    const html = renderMarkdown([
+      "正文标记 ^1 和 [^2] 仍然是上标。",
+      "",
+      "行内代码 `^1`、`[^2]` 与公式 $x^2$、$$y^3$$ 保持原样。",
+      "",
+      "$$",
+      "a^2 + [^4]",
+      "$$",
+      "",
+      "\\(b^5\\)",
+    ].join("\n"));
+
+    expect(html).toContain("正文标记 <sup>1</sup>");
+    expect(html).toContain("和 <sup>2</sup>");
+    expect(html).toContain("<code>^1</code>");
+    expect(html).toContain("<code>[^2]</code>");
+    expect(html).not.toContain("<code><sup>");
+    expect(html).not.toContain("$x<sup>");
+    expect(html).not.toContain("$$y<sup>");
+    expect(html).not.toContain("a<sup>2</sup>");
+    expect(html).not.toContain("[<sup>4</sup>]");
+    expect(html).not.toContain("b<sup>5</sup>");
+  });
 });

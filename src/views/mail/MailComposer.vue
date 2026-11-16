@@ -212,7 +212,8 @@
             label="发送时间（本地时区）"
             :disabled="contentLocked"
           />
-          <p v-if="scheduleMode">发件将在所选时间由服务器自动执行；发送前可以取消。</p>
+          <p v-if="scheduledConfirmed">已安排定时发送，服务器会在所选时间发出；发送前可以取消。</p>
+          <p v-else-if="scheduleMode">点击发送后，服务器才会按所选时间发出这封邮件；提交成功前不会安排发送。</p>
         </div>
 
         <!-- 报错信息与冲突恢复 -->
@@ -342,6 +343,7 @@ async function loadSenderChoices() {
 }
 
 const scheduleMode = ref(Boolean(props.draft.send_at))
+const scheduledConfirmed = ref(false)
 const scheduledLocal = ref(props.draft.send_at ? toLocalDateTime(props.draft.send_at) : '')
 
 function toLocalDateTime(iso: string) {
@@ -580,6 +582,7 @@ async function sendMessage() {
       error.value = queued.status === 'cancelled' ? '上次发送已撤销，请再次点击发送。' : '上次邮件未发出，请检查后再次发送。'
       return
     }
+    if (sendAt) scheduledConfirmed.value = true
     emit('queued', queued, { id: draftId.value, revision: revision.value, updated_at: updatedAt.value, ...content })
     emit('close')
   } catch (cause) {

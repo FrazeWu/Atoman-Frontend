@@ -470,38 +470,180 @@ function footnoteFenceState(line: string, fenceCharacter: string, fenceLength: n
   return { handled: true, fenceCharacter, fenceLength };
 }
 
-function referencedFootnoteIdsIn(lines: string[]) {
+function isEscapedMarkdownChar(content: string, index: number) {
+  let slashes = 0;
+  for (let cursor = index - 1; cursor >= 0 && content[cursor] === "\\"; cursor -= 1) slashes += 1;
+  return slashes % 2 === 1;
+}
+
+function closingBacktickSpan(content: string, start: number) {
+  let ticks = 0;
+  while (content[start + ticks] === "`") ticks += 1;
+  if (!ticks) return null;
+  let cursor = start + ticks;
+  while (cursor < content.length) {
+    if (content[cursor] !== "`") {
+      cursor += 1;
+      continue;
+    }
+    let close = 0;
+    while (content[cursor + close] === "`") close += 1;
+    if (close === ticks) return cursor + close;
+    cursor += close;
+  }
+  return null;
+}
+
+function closingInlineDollar(content: string, from: number) {
+  for (let cursor = from; cursor < content.length; cursor += 1) {
+    if (content[cursor] === "\n") return null;
+    if (content[cursor] !== "$" || isEscapedMarkdownChar(content, cursor)) continue;
+    if (content[cursor + 1] === "$" || cursor === from) return null;
+    return cursor + 1;
+  }
+  return null;
+}
+
+// Fenced blocks are skipped by the line walker. Inline code and math still need
+// their own ranges, including spans that cross lines, or ^1 becomes <sup>.
+function inlineFootnoteSkipRanges(content: string) {
+  const ranges: Array<[number, number]> = [];
+  let fenceCharacter = "";
+  let fenceLength = 0;
+  let index = 0;
+  while (index < content.length) {
+    const atLineStart = index === 0 || content[index - 1] === "\n";
+    if (atLineStart) {
+      const lineBreak = content.indexOf("\n", index);
+      const line = content.slice(index, lineBreak === -1 ? content.length : lineBreak);
+      const wasFenced = Boolean(fenceCharacter);
+      const fence = footnoteFenceState(line, fenceCharacter, fenceLength);
+      fenceCharacter = fence.fenceCharacter;
+      fenceLength = fence.fenceLength;
+      if (fence.handled || wasFenced || fenceCharacter) {
+        index += line.length + 1;
+        continue;
+      }
+    }
+
+    if (content[index] === "`") {
+      const end = closingBacktickSpan(content, index);
+      if (end != null) {
+        ranges.push([index, end]);
+        index = end;
+        continue;
+      }
+    }
+
+    if (content.startsWith("$$", index) && !isEscapedMarkdownChar(content, index)) {
+      const close = content.indexOf("$$", index + 2);
+      const end = close === -1 ? content.length : close + 2;
+      ranges.push([index, end]);
+      index = end;
+      continue;
+    }
+
+    if (content[index] === "$" && !isEscapedMarkdownChar(content, index)) {
+      const end = closingInlineDollar(content, index + 1);
+      if (end != null) {
+        ranges.push([index, end]);
+        index = end;
+        continue;
+      }
+    }
+
+    index += 1;
+  }
+  return ranges;
+}
+
+function lineStartOffsets(lines: string[]) {
+  const offsets: number[] = [];
+  let cursor = 0;
+  for (const line of lines) {
+    offsets.push(cursor);
+    cursor += line.length + 1;
+  }
+  return offsets;
+}
+
+function overlapsFootnoteSkip(ranges: Array<[number, number]>, start: number, end: number) {
+  return ranges.some(([from, to]) => start < to && end > from);
+}
+
+function referencedFootnoteIdsIn(lines: string[], ranges: Array<[number, number]>, offsets: number[]) {
   const referenced = new Set<string>();
   let fenceCharacter = "";
   let fenceLength = 0;
-  for (const line of lines) {
+  lines.forEach((line, lineIndex) => {
     const fence = footnoteFenceState(line, fenceCharacter, fenceLength);
     fenceCharacter = fence.fenceCharacter;
     fenceLength = fence.fenceLength;
-    if (fence.handled || fenceCharacter) continue;
-    if (/^\s*(?:\[\^|\^)[0-9a-zA-Z_-]+\]?:/.test(line)) continue;
+    if (fence.handled || fenceCharacter) return;
+    const lineStart = offsets[lineIndex] ?? 0;
+    if (overlapsFootnoteSkip(ranges, lineStart, lineStart + line.length)) {
+      if (ranges.some(([from, to]) => lineStart >= from && lineStart + line.length <= to)) return;
+    }
+    if (/^\s*(?:\[\^|\^)[0-9a-zA-Z_-]+\]?:/.test(line)) return;
     for (const match of line.matchAll(/(^|[^\w\[\^])\^([0-9a-zA-Z_-]+)(?=[^\w\]\^:]|$)/g)) {
+      const offset = match.index ?? 0;
+      if (overlapsFootnoteSkip(ranges, lineStart + offset, lineStart + offset + match[0].length)) continue;
       referenced.add(match[2]);
     }
     for (const match of line.matchAll(/(^|[^\w])\[\^([0-9a-zA-Z_-]+)\](?!:)/g)) {
+      const offset = match.index ?? 0;
+      if (overlapsFootnoteSkip(ranges, lineStart + offset, lineStart + offset + match[0].length)) continue;
       referenced.add(match[2]);
     }
-  }
+  });
   return referenced;
+}
+
+function mapOutsideFootnoteSkips(
+  line: string,
+  lineStart: number,
+  ranges: Array<[number, number]>,
+  transform: (text: string) => string,
+) {
+  const cuts = new Set<number>([0, line.length]);
+  for (const [from, to] of ranges) {
+    const start = Math.max(0, from - lineStart);
+    const end = Math.min(line.length, to - lineStart);
+    if (end > start) {
+      cuts.add(start);
+      cuts.add(end);
+    }
+  }
+  const points = [...cuts].sort((left, right) => left - right);
+  let output = "";
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const start = points[index] ?? 0;
+    const end = points[index + 1] ?? line.length;
+    const slice = line.slice(start, end);
+    const absoluteStart = lineStart + start;
+    const absoluteEnd = lineStart + end;
+    const protectedSlice = ranges.some(([from, to]) => absoluteStart >= from && absoluteEnd <= to);
+    output += protectedSlice ? slice : transform(slice);
+  }
+  return output;
 }
 
 function preprocessFootnotes(content: string): string {
   const lines = content.split("\n");
-  const referencedFootnoteIds = referencedFootnoteIdsIn(lines);
+  const skipRanges = inlineFootnoteSkipRanges(content);
+  const offsets = lineStartOffsets(lines);
+  const referencedFootnoteIds = referencedFootnoteIdsIn(lines, skipRanges, offsets);
   let fenceCharacter = "";
   let fenceLength = 0;
 
   const definitionKeys = new Set<string>();
-  const normalizedLines = lines.map((line) => {
+  const normalizedLines = lines.map((line, lineIndex) => {
       const fence = footnoteFenceState(line, fenceCharacter, fenceLength);
     fenceCharacter = fence.fenceCharacter;
     fenceLength = fence.fenceLength;
     if (fence.handled || fenceCharacter) return line;
+    const lineStart = offsets[lineIndex] ?? 0;
+    if (skipRanges.some(([from, to]) => lineStart >= from && lineStart + line.length <= to)) return line;
 
     const standardDefinition = /^(\s*)\[\^([0-9a-zA-Z_-]+)\]:(.*)$/.exec(line);
     if (standardDefinition) {
@@ -519,7 +661,7 @@ function preprocessFootnotes(content: string): string {
   fenceCharacter = "";
   fenceLength = 0;
   return normalizedLines
-    .map((line) => {
+    .map((line, lineIndex) => {
       const fenceMatch = /^ {0,3}(`{3,}|~{3,})/.exec(line);
       if (fenceMatch) {
         const marker = fenceMatch[1];
@@ -536,33 +678,31 @@ function preprocessFootnotes(content: string): string {
         return line;
       }
       if (fenceCharacter) return line;
+      const lineStart = offsets[lineIndex] ?? 0;
+      if (skipRanges.some(([from, to]) => lineStart >= from && lineStart + line.length <= to)) return line;
 
       if (/^\s*\[\^([0-9a-zA-Z_-]+)\]:/.test(line)) return line;
 
-      // 1. Replace defined keys with standard marked [^id] footnote syntax
-      let processed = line.replace(/(^|[^\w\[\^])\^([0-9a-zA-Z_-]+)(?=[^\w\]\^:]|$)/g, (match, prefix, id) => {
-        if (definitionKeys.has(id)) {
-          return `${prefix}[^${id}]`;
-        }
-        return match;
-      });
+      return mapOutsideFootnoteSkips(line, lineStart, skipRanges, (text) => {
+        // 1. Replace defined keys with standard marked [^id] footnote syntax
+        let processed = text.replace(/(^|[^\w\[\^])\^([0-9a-zA-Z_-]+)(?=[^\w\]\^:]|$)/g, (match, prefix, id) => {
+          if (definitionKeys.has(id)) return `${prefix}[^${id}]`;
+          return match;
+        });
 
-      // 2. For standalone superscript numbers like ^1 or [^1] without a definition, convert to <sup>id</sup>
-      processed = processed.replace(/(^|[^\w\[\^])\^([0-9]+)(?=[^\w\]\^:]|$)/g, (_match, prefix, id) => {
-        if (!definitionKeys.has(id)) {
-          return `${prefix}<sup>${id}</sup>`;
-        }
-        return _match;
-      });
+        // 2. For standalone superscript numbers like ^1 or [^1] without a definition, convert to <sup>id</sup>
+        processed = processed.replace(/(^|[^\w\[\^])\^([0-9]+)(?=[^\w\]\^:]|$)/g, (_match, prefix, id) => {
+          if (!definitionKeys.has(id)) return `${prefix}<sup>${id}</sup>`;
+          return _match;
+        });
 
-      processed = processed.replace(/(^|[^\w])\[\^([0-9]+)\](?=[^\w:]|$)/g, (_match, prefix, id) => {
-        if (!definitionKeys.has(id)) {
-          return `${prefix}<sup>${id}</sup>`;
-        }
-        return _match;
-      });
+        processed = processed.replace(/(^|[^\w])\[\^([0-9]+)\](?=[^\w:]|$)/g, (_match, prefix, id) => {
+          if (!definitionKeys.has(id)) return `${prefix}<sup>${id}</sup>`;
+          return _match;
+        });
 
-      return processed;
+        return processed;
+      });
     })
     .join("\n");
 }

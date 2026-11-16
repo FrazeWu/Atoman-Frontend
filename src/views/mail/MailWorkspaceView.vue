@@ -77,7 +77,7 @@
             <div v-if="messagesError" class="mail-workspace__list-state" role="alert"><CircleAlert :size="22" /><p>{{ messagesError }}</p><button @click="loadMessages()">重试</button></div>
             <div v-else-if="loadingMessages && !messages.length && !drafts.length" class="mail-workspace__list-state"><RefreshCw class="mail-spin" :size="22" /><p>正在加载…</p></div>
             <template v-else-if="isDraftFolder"><button v-for="draft in drafts" :key="draft.id" class="mail-workspace__message" @click="editDraft(draft)"><span class="mail-workspace__message-first"><span class="mail-workspace__message-subject">{{ draft.subject || '未命名草稿' }}</span><small>{{ mailTime(draft.updated_at || '') }}</small></span><span class="mail-workspace__message-preview">{{ draft.text || '继续编辑' }}</span></button><div v-if="!drafts.length" class="mail-workspace__list-state"><PEmpty compact align="center" title="这里还没有草稿" description="写邮件时会自动保存草稿。"><template #icon><FileText :size="26" /></template></PEmpty></div></template>
-            <template v-else><div v-for="group in visibleConversations" :key="group.id" class="mail-workspace__message-row" :class="{ 'is-selected': selectedGroupId === group.id, 'is-unread': group.messages.some(row => row.isRead === false) }"><label class="mail-workspace__row-check"><input type="checkbox" :checked="group.messages.every(row => selection.has(row.id))" :aria-label="`选择：${group.latest.subject || '无主题'}`" @change="toggleGroup(group)" /></label><button class="mail-workspace__message" :data-testid="`mail-message-${group.latest.id}`" @click="openConversation(group)"><span class="mail-workspace__sender">{{ addressText(group.latest.from || []) || '邮件' }}<span v-if="group.messages.length > 1"> · {{ group.messages.length }}</span><Star v-if="group.latest.isFlagged" :size="12" fill="currentColor" /></span><span class="mail-workspace__message-first"><span class="mail-workspace__message-subject">{{ group.latest.subject || '无主题' }}</span><small>{{ mailTime(group.latest.receivedAt) }}</small></span><span class="mail-workspace__message-preview">{{ group.latest.preview || '没有摘要' }}</span><span v-if="group.latest.hasAttachment" class="mail-workspace__attachment"><Paperclip :size="12" /> 附件</span></button></div><div v-if="!visibleConversations.length" class="mail-workspace__list-state"><PEmpty compact align="center" :title="committedSearch ? '没有找到匹配的邮件' : '此文件夹暂无邮件'" :description="committedSearch ? '试试更短的关键词或清空搜索。' : '新的邮件会显示在这里。'"><template #icon><Inbox :size="28" /></template></PEmpty></div><button v-if="hasMore" class="mail-workspace__load-more" :disabled="loadingMessages" @click="loadMessages(true)">{{ loadingMessages ? '加载中…' : '加载更多' }}</button></template>
+            <template v-else><div v-for="group in visibleConversations" :key="group.id" class="mail-workspace__message-row" :class="{ 'is-selected': selectedGroupId === group.id, 'is-cursor': listCursorId === group.id && selectedGroupId !== group.id, 'is-unread': group.messages.some(row => row.isRead === false) }" :data-mail-cursor="listCursorId === group.id ? 'true' : undefined"><label class="mail-workspace__row-check"><input type="checkbox" :checked="group.messages.every(row => selection.has(row.id))" :aria-label="`选择：${group.latest.subject || '无主题'}`" @change="toggleGroup(group)" /></label><button class="mail-workspace__message" :data-testid="`mail-message-${group.latest.id}`" @click="openConversation(group)"><span class="mail-workspace__sender">{{ addressText(group.latest.from || []) || '邮件' }}<span v-if="group.messages.length > 1"> · {{ group.messages.length }}</span><Star v-if="group.latest.isFlagged" :size="12" fill="currentColor" /></span><span class="mail-workspace__message-first"><span class="mail-workspace__message-subject">{{ group.latest.subject || '无主题' }}</span><small>{{ mailTime(group.latest.receivedAt) }}</small></span><span class="mail-workspace__message-preview">{{ group.latest.preview || '没有摘要' }}</span><span v-if="group.latest.hasAttachment" class="mail-workspace__attachment"><Paperclip :size="12" /> 附件</span></button></div><div v-if="!visibleConversations.length" class="mail-workspace__list-state"><PEmpty compact align="center" :title="committedSearch ? '没有找到匹配的邮件' : '此文件夹暂无邮件'" :description="committedSearch ? '试试更短的关键词或清空搜索。' : '新的邮件会显示在这里。'"><template #icon><Inbox :size="28" /></template></PEmpty></div><button v-if="hasMore" class="mail-workspace__load-more" :disabled="loadingMessages" @click="loadMessages(true)">{{ loadingMessages ? '加载中…' : '加载更多' }}</button></template>
           </div>
         </section>
         <!-- 浮动框设计：参考图书与音乐模块，点击邮件弹出详情（全宽设计规范，左侧轨支持上下切换邮件） -->
@@ -183,7 +183,8 @@
       <PModal :show="shortcutHelp" title="邮箱快捷键" size="sm" @close="shortcutHelp=false">
         <dl class="mail-shortcuts">
           <dt>C</dt><dd>写邮件</dd>
-          <dt>J / K</dt><dd>下一封 / 上一封</dd>
+          <dt>J / K</dt><dd>下一封 / 上一封；未打开时在列表中移动</dd>
+          <dt>!</dt><dd>移到垃圾邮件</dd>
           <dt>Enter / O</dt><dd>打开邮件</dd>
           <dt>R</dt><dd>回复</dd>
           <dt>A</dt><dd>全部回复</dd>
@@ -294,7 +295,7 @@ import MailComposer from './MailComposer.vue'
 import MailAdvancedSearch from './MailAdvancedSearch.vue'
 import MailAttachmentPreview from './MailAttachmentPreview.vue'
 import MailScheduledPanel from './MailScheduledPanel.vue'
-import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useSheetNavigation, type SheetNavigationDirection } from '@/composables/useSheetNavigation'
 import type { MailSummary, MailAttachmentInfo } from '@/api/mail'
 import MailSettings from './MailSettings.vue'
@@ -332,6 +333,8 @@ const visibleConversations=computed(()=>{
   if(organizerFilterId.value || currentFolder.value?.role!=='inbox' || committedSearch.value || allFolders.value)return scoped
   return scoped.filter(group=>!isMessageSnoozed(group.latest))
 })
+const listCursorId = ref('')
+watch(selectedGroupId, id => { if (id) listCursorId.value = id })
 
 const isReaderOpen = computed(() => Boolean(selectedGroupId.value && readerMessages.value.length))
 const hasActiveDrawer = computed(() =>
@@ -363,13 +366,33 @@ const {
   isReaderOpen,
 )
 
-watch(visibleConversations, () => {
+watch(visibleConversations, groups => {
   void reloadNavigation()
+  if (listCursorId.value && !groups.some(group => group.id === listCursorId.value)) listCursorId.value = ''
 })
 
 function handleCloseReader() {
   clearReader()
   mobilePane.value = 'list'
+}
+
+function moveListCursor(direction: SheetNavigationDirection) {
+  const groups = visibleConversations.value
+  if (!groups.length) return false
+  const currentIndex = groups.findIndex(group => group.id === listCursorId.value)
+  const nextIndex = currentIndex === -1
+    ? (direction === 'next' ? 0 : groups.length - 1)
+    : direction === 'next'
+      ? Math.min(currentIndex + 1, groups.length - 1)
+      : Math.max(currentIndex - 1, 0)
+  const next = groups[nextIndex]
+  if (!next) return false
+  listCursorId.value = next.id
+  void nextTick(() => {
+    const row = document.querySelector<HTMLElement>('[data-mail-cursor="true"]')
+    if (typeof row?.scrollIntoView === 'function') row.scrollIntoView({ block: 'nearest' })
+  })
+  return true
 }
 
 async function archiveAndAdvance() {
@@ -565,7 +588,8 @@ function handleMailShortcut(event: KeyboardEvent) {
     return
   }
 
-  // 5. Navigation: J (next) / K (previous)
+  // 5. Navigation: J (next / down) / K (previous / up).
+  // With the reader closed, move a list cursor instead of opening the first row.
   if (key === 'j' || key === 'k') {
     if (isDraftFolder.value) return
     const direction: SheetNavigationDirection = key === 'j' ? 'next' : 'previous'
@@ -573,21 +597,18 @@ function handleMailShortcut(event: KeyboardEvent) {
       if (handleSheetNavigate(direction)) {
         event.preventDefault()
       }
-    } else {
-      const groups = visibleConversations.value
-      if (groups.length) {
-        void openConversation(groups[0]!)
-        event.preventDefault()
-      }
+    } else if (moveListCursor(direction)) {
+      event.preventDefault()
     }
     return
   }
 
-  // 6. Enter / O: Open selected conversation when reader is closed
+  // 6. Enter / O: Open the cursor, or the first conversation when none is marked.
   if ((event.key === 'Enter' || key === 'o') && !selectedGroupId.value) {
     const groups = visibleConversations.value
-    if (groups.length && !isDraftFolder.value) {
-      void openConversation(groups[0]!)
+    const target = groups.find(group => group.id === listCursorId.value) || groups[0]
+    if (target && !isDraftFolder.value) {
+      void openConversation(target)
       event.preventDefault()
     }
     return
@@ -608,6 +629,13 @@ function handleMailShortcut(event: KeyboardEvent) {
   // # or Delete: Trash and advance
   if (event.key === '#' || event.key === 'Delete') {
     void trashAndAdvance()
+    event.preventDefault()
+    return
+  }
+
+  // !: Move the open conversation to junk
+  if (event.key === '!') {
+    void performAction('junk', readerMessages.value.map(row => row.id))
     event.preventDefault()
     return
   }

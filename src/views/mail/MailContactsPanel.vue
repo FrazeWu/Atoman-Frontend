@@ -10,7 +10,17 @@
         <PButton size="sm" :disabled="importing" @click="openNew"><Plus :size="15" /> 新建联系人</PButton>
       </div>
     </header>
-    <PSearchInput v-model="search" variant="inline" size="sm" aria-label="搜索邮件联系人" placeholder="搜索姓名或邮箱" :show-shortcut-badge="false" :show-action-button="false" />
+    <PUnifiedSearchBar
+      v-model="search"
+      variant="inline"
+      size="sm"
+      aria-label="搜索邮件联系人"
+      placeholder="搜索姓名或邮箱"
+      :show-action-button="false"
+      :enable-preview="false"
+      :auto-navigate-on-select="false"
+      :clearable="true"
+    />
     <div v-if="loading" role="status" class="mail-contacts__hint">正在加载联系人…</div>
     <div v-if="error" role="alert" class="mail-contacts__error">{{ error }}</div>
     <p v-if="importNotice" role="status" class="mail-contacts__hint">{{ importNotice }}</p>
@@ -61,7 +71,7 @@ import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
-import PSearchInput from '@/components/ui/PSearchInput.vue'
+import PUnifiedSearchBar from '@/components/search/PUnifiedSearchBar.vue'
 import { createMailContact, deleteMailContact, fetchMailContacts, updateMailContact, type MailContact } from '@/api/mailClient'
 import { CONTACT_FILE_MAX_BYTES, exportContactsCSV, exportContactsVCard, parseContactFile, type ContactImport, type TransferContact } from './mail-contact-transfer'
 

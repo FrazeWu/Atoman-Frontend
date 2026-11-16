@@ -1,9 +1,10 @@
 import { computed, onScopeDispose, ref, watch } from 'vue'
+import { getActivePinia } from 'pinia'
 import { searchApi, type SearchHit } from '@/api/search'
 import { useAuthStore } from '@/stores/auth'
 
 export function useUnifiedSearchPreview(module: string | (() => string) = '', types: () => readonly string[] = () => []) {
-  const auth = useAuthStore()
+  const auth = getActivePinia() ? useAuthStore() : null
   const items = ref<SearchHit[]>([])
   const loading = ref(false)
   const failed = ref(false)
@@ -47,7 +48,9 @@ export function useUnifiedSearchPreview(module: string | (() => string) = '', ty
     loading.value = true
     timer = setTimeout(() => { void search(q) }, 250)
   }
-  watch(() => auth.user?.uuid, reset, { flush: 'sync' })
+  if (auth) {
+    watch(() => auth.user?.uuid, reset, { flush: 'sync' })
+  }
   onScopeDispose(reset)
   return { items, loading, failed, partial, search, schedule, cancelPending, reset,
     results: computed(() => items.value.map(item => ({

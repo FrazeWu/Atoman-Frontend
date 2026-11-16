@@ -33,7 +33,34 @@
         </aside>
         <section class="mail-workspace__list" :class="{ 'mail-mobile-visible': mobilePane === 'list' }" data-testid="mail-list-pane">
           <header class="mail-workspace__list-header"><button class="mail-icon-button mail-workspace__mobile-back" aria-label="显示文件夹" @click="mobilePane = 'folders'"><ChevronLeft :size="18" /></button><div class="mail-workspace__heading"><h2>{{ currentFolder ? folderLabel(currentFolder) : '邮件' }}</h2><small>{{ isDraftFolder ? drafts.length : totalMessages }} 封邮件</small></div><PButton class="mail-workspace__mobile-compose" size="sm" variant="secondary" aria-label="写邮件" @click="newMessage"><Pencil :size="15" /> 写邮件</PButton><button class="mail-icon-button" title="刷新邮件列表" aria-label="刷新邮件列表" :disabled="loadingMessages" @click="loadMessages(false, true)"><RefreshCw :size="17" :class="{ 'mail-spin': loadingMessages }" /></button></header>
-          <div v-if="!isDraftFolder" class="mail-workspace__search-container"><PSearchInput v-model="searchText" class="mail-workspace__search" variant="inline" size="sm" placeholder="搜索发件人、主题或正文" aria-label="搜索邮件" :show-shortcut-badge="false" :show-action-button="true" action-button-text="搜索" @search="runSearch" @clear="runSearch" /><PButton type="button" variant="secondary" size="sm" class="mail-workspace__advanced-trigger" :aria-label="allFolders || Object.values(advancedFilters).some(v=>v !== undefined && v !== '') ? '编辑高级筛选' : '高级筛选'" @click="advancedOpen=true"><SlidersHorizontal :size="16" /></PButton></div>
+          <div v-if="!isDraftFolder" class="mail-workspace__search-container">
+            <PUnifiedSearchBar
+              v-model="searchText"
+              class="mail-workspace__search"
+              variant="inline"
+              size="sm"
+              placeholder="搜索发件人、主题或正文"
+              aria-label="搜索邮件"
+              :show-action-button="true"
+              action-button-text="搜索"
+              :enable-preview="false"
+              :auto-navigate-on-select="false"
+              :clearable="true"
+              input-test-id="mail-search-input"
+              @search="runSearch"
+              @clear="runSearch"
+            />
+            <PButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              class="mail-workspace__advanced-trigger"
+              :aria-label="allFolders || Object.values(advancedFilters).some(v=>v !== undefined && v !== '') ? '编辑高级筛选' : '高级筛选'"
+              @click="advancedOpen=true"
+            >
+              <SlidersHorizontal :size="16" />
+            </PButton>
+          </div>
           <button v-if="allFolders || Object.values(advancedFilters).some(v=>v !== undefined && v !== '')" class="mail-workspace__filter-note" @click="clearAdvancedSearch">高级筛选已启用 · 点击清除</button>
           <div v-if="!isDraftFolder" class="mail-workspace__list-options"><label><input type="checkbox" :checked="allVisibleSelected" aria-label="选择当前列表全部邮件" @change="selectVisibleAll" /><span>{{ selection.size ? `已选 ${selection.size} 封` : '选择' }}</span></label><PSegmentedControl class="mail-workspace__view-mode" :model-value="conversationMode ? 'thread' : 'single'" :options="[{ label: '会话', value: 'thread' }, { label: '单封', value: 'single' }]" @update:model-value="conversationMode = $event === 'thread'" /></div>
           <Transition name="mail-bulk-slide">
@@ -259,7 +286,7 @@ import PModal from '@/components/ui/PModal.vue'
 import PBadge from '@/components/ui/PBadge.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PInput from '@/components/ui/PInput.vue'
-import PSearchInput from '@/components/ui/PSearchInput.vue'
+import PUnifiedSearchBar from '@/components/search/PUnifiedSearchBar.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PSheet from '@/components/ui/PSheet.vue'

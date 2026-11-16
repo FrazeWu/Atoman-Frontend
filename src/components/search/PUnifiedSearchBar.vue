@@ -35,6 +35,8 @@ export interface PUnifiedSearchBarProps {
   clearable?: boolean
   disabled?: boolean
   actionButtonText?: string
+  showActionButton?: boolean
+  ariaLabel?: string
   inputTestId?: string
   dropdownTestId?: string
 }
@@ -54,6 +56,8 @@ const props = withDefaults(defineProps<PUnifiedSearchBarProps>(), {
   clearable: true,
   disabled: false,
   actionButtonText: '搜索',
+  showActionButton: undefined,
+  ariaLabel: '搜索',
   inputTestId: '',
   dropdownTestId: '',
 })
@@ -63,6 +67,7 @@ const emit = defineEmits<{
   (e: 'update:scope', scope: string): void
   (e: 'search', query: string, scope?: string): void
   (e: 'select', hit: SearchHit): void
+  (e: 'clear'): void
 }>()
 
 const router = useRouter()
@@ -145,7 +150,7 @@ const handleSelectItem = (item: SearchHit) => {
   isDropdownOpen.value = false
   activeIndex.value = -1
 
-  if (props.autoNavigateOnSelect && item.href) {
+  if (props.autoNavigateOnSelect && item.href && router) {
     const target = safeSearchHref(item.href)
     void router.push(target)
   }
@@ -157,7 +162,7 @@ const handleViewAll = () => {
   activeIndex.value = -1
   emit('search', trimmed, props.scope)
 
-  if (props.autoNavigateOnSelect) {
+  if (props.autoNavigateOnSelect && router) {
     void router.push({
       path: '/search',
       query: writeSearchQuery({
@@ -178,7 +183,7 @@ const handleSearch = (q: string, s?: string) => {
   activeIndex.value = -1
   emit('search', q, s)
 
-  if (props.autoNavigateOnSelect) {
+  if (props.autoNavigateOnSelect && router) {
     void router.push({
       path: '/search',
       query: writeSearchQuery({
@@ -229,9 +234,11 @@ watch(activeIndex, async (idx) => {
 
 const handleClear = () => {
   query.value = ''
+  emit('update:modelValue', '')
   preview.reset()
   isDropdownOpen.value = false
   activeIndex.value = -1
+  emit('clear')
 }
 
 const handleClickOutside = (ev: MouseEvent) => {
@@ -262,6 +269,8 @@ onUnmounted(() => {
       :clearable="clearable"
       :disabled="disabled"
       :action-button-text="actionButtonText"
+      :show-action-button="showActionButton"
+      :aria-label="ariaLabel"
       :input-test-id="inputTestId"
       :dropdown-test-id="dropdownTestId"
       :show-dropdown="isDropdownOpen && hasDropdownContent"
@@ -279,6 +288,15 @@ onUnmounted(() => {
       @blur="handleBlur"
       @keydown="handleKeydown"
     >
+      <template #prefix>
+        <slot name="prefix" />
+      </template>
+      <template #scopes>
+        <slot name="scopes" />
+      </template>
+      <template #action>
+        <slot name="action" />
+      </template>
       <template #dropdown>
         <div
           id="unified-search-preview-listbox"

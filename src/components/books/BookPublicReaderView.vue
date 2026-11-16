@@ -176,6 +176,7 @@ import type { BookChapterAnchor } from '@/api/bookPrivate'
 import type { ReadingMark, ReadingAnchor } from '@/api/bookReading'
 import type { BookAnnotation, BookHighlightColor, BookHighlightStyle } from '@/api/books'
 import { textSelection, pdfSelection, epubSelection, epubMarkRange, textRange, highlightedText, highlightColors, type HighlightSelection } from '@/utils/bookMarkAnchors'
+import { errorMessage as formatErrorMessage } from '@/utils/logger'
 
 type EpubBook = any
 type EpubRendition = any
@@ -1117,7 +1118,7 @@ onMounted(async () => {
     else if (asset.value.format === 'cbz' || asset.value.format === 'cbr') await loadComic()
     else await loadEPUB()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '公共正文打开失败，请稍后重试'
+    errorMessage.value = formatErrorMessage(error, '公共正文打开失败，请稍后重试')
   } finally {
     isLoading.value = false
     if (!disposed && !errorMessage.value) props.source?.onReady?.()

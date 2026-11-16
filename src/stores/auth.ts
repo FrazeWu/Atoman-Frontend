@@ -73,18 +73,28 @@ async function parseApiResponse(response: Response): Promise<AuthApiPayload> {
   }
 }
 
+const standardAuthTranslations: Record<string, string> = {
+  'Unauthorized': '账号未登录或登录已失效',
+  'Invalid credentials': '用户名或密码不正确',
+  'User not found': '用户不存在',
+  'Token expired': '登录已过期，请重新登录',
+  'Token has expired': '登录已过期，请重新登录',
+  'Internal server error': '服务暂时不可用，请稍后重试',
+}
+
 function authErrorMessage(payload: AuthApiError, fallback: string) {
   if (payload.code === 'auth.password_not_set') return '请使用第三方账号登录'
   if (payload.code === 'auth.rate_limited') return '尝试次数过多，请稍后重试'
   const rawMessage = payload.error || payload.message
+  if (!rawMessage) return fallback
   if (rawMessage === 'Turnstile verification is required') return '请先完成人机验证'
   if (rawMessage === 'Turnstile verification failed') return '人机验证失败，请重试'
   if (rawMessage === 'Turnstile is not configured') return '注册服务暂未完成验证配置，请稍后重试'
   if (rawMessage === 'Invalid site handle') return '用户名只能使用小写字母、数字或连字符'
   if (rawMessage === 'Site handle is reserved') return '该用户名暂时不可用'
   if (rawMessage === 'Site handle is already in use') return '该用户名已被使用'
-  if (payload.error) return payload.error
-  if (payload.message) return payload.message
+  if (standardAuthTranslations[rawMessage]) return standardAuthTranslations[rawMessage]
+  if (/[㐀-鿿]/.test(rawMessage)) return rawMessage
   return fallback
 }
 

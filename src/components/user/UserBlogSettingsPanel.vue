@@ -154,7 +154,7 @@
 </template>
 
 <script setup lang="ts">
-import { reportError } from '@/utils/logger'
+import { errorMessage, reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { onMounted, ref, computed } from 'vue'
 import { Camera, Undo2 } from 'lucide-vue-next'
@@ -252,7 +252,7 @@ const selectAvatar = async (event: Event) => {
     success.value = true
     setTimeout(() => { success.value = false }, 3000)
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '头像更新失败，请重新选择图片'
+    error.value = errorMessage(e, '头像更新失败，请重新选择图片')
   } finally {
     uploadingAvatar.value = false
   }
@@ -275,7 +275,7 @@ const restoreAvatar = async () => {
     form.value.avatar_url = restored.url
     authStore.updateUser({ avatar_url: restored.url })
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '恢复头像失败，请重试'
+    error.value = errorMessage(e, '恢复头像失败，请重试')
   } finally {
     restoringAvatar.value = false
   }
@@ -298,7 +298,7 @@ const loadProfile = async () => {
     }
     profileLoaded.value = true
   } catch (e) {
-    profileError.value = e instanceof Error ? e.message : '资料加载失败，请重试'
+    profileError.value = errorMessage(e, '资料加载失败，请重试')
     reportError(e)
   } finally {
     profileLoading.value = false
@@ -341,7 +341,7 @@ const save = async () => {
     success.value = true
     setTimeout(() => { success.value = false }, 3000)
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '网络错误，请重试'
+    error.value = errorMessage(e, '网络错误，请重试')
   } finally {
     saving.value = false
   }

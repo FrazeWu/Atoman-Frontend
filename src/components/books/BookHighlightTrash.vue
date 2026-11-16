@@ -16,7 +16,7 @@
       </div>
     </li></ul>
     <PButton v-if="items.length<total" variant="secondary" :disabled="busy||loading" @click="load(true)">加载更多已删除划线</PButton>
-    <PConfirm :show="!!eraseCandidate" title="彻底销毁这条划线？" message="将立即擦除已删除的原文、批注和阅读定位，之后无法恢复。若原先选择保留公开快照，销毁私人划线并不会撤销那份公开副本。" confirm-text="确认永久销毁" :danger="true" :loading="busy" @cancel="eraseCandidate=undefined" @confirm="erase" />
+    <PConfirm :show="!!eraseCandidate" title="彻底销毁划线" message="将立即擦除已删除的原文、批注和阅读定位，之后无法恢复。若原先选择保留公开快照，销毁私人划线并不会撤销那份公开副本。" confirm-text="确认永久销毁" :danger="true" :loading="busy" @cancel="eraseCandidate=undefined" @confirm="erase" />
   </section>
 </template>
 <script setup lang="ts">

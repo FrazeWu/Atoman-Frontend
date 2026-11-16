@@ -159,7 +159,7 @@
 
     <PConfirm
       :show="!!removing"
-      title="移出书架？"
+      title="移出书架"
       message="移出后可在图书页面重新添加，阅读进度与笔记仍将保留。"
       @confirm="remove"
       @cancel="removing = null"
@@ -167,7 +167,7 @@
 
     <PConfirm
       :show="confirmPurge"
-      title="清理全部离线缓存？"
+      title="清理离线缓存"
       message="将释放本机占用的离线存储空间。连接网络后可随时重新下载。"
       @confirm="handlePurgeAllCache"
       @cancel="confirmPurge = false"

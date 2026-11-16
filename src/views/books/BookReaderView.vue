@@ -178,6 +178,7 @@ import BookQuoteActionModal from '@/components/books/BookQuoteActionModal.vue'
 import { useDraftStagingStore } from '@/stores/draftStaging'
 import type { PDFDocumentProxy } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { loadPdfEngine, loadEpubEngine } from '@/utils/bookReaderEngines'
+import { errorMessage as formatErrorMessage } from '@/utils/logger'
 import BookReaderSkeleton from '@/components/books/BookReaderSkeleton.vue'
 import PButton from '@/components/ui/PButton.vue'
 import BookReaderDisplayControls from '@/components/books/BookReaderDisplayControls.vue'
@@ -516,7 +517,7 @@ async function loadReader() {
       }
     }
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '电子书打开失败，请稍后重试'
+    errorMessage.value = formatErrorMessage(error, '电子书打开失败，请稍后重试')
   } finally {
     isLoading.value = false
   }
@@ -631,7 +632,7 @@ async function saveState() {
     const saved = await saveBookReadingState(asset.value.id, mergeBookReadingProgress(localInput, remote))
     applyReadingState(saved)
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '阅读位置保存失败'
+    errorMessage.value = formatErrorMessage(error, '阅读位置保存失败')
   } finally {
     isSaving.value = false
   }

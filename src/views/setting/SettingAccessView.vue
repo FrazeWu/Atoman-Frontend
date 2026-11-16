@@ -31,7 +31,7 @@
       <PSectionHeader
         title="模块管理"
         kicker="模块配置"
-        description="从这里进入各模块的详细管理，详情内容不会直接铺在本页。"
+        description="进入各模块的独立配置与权限管理。"
       />
 
       <div class="setting-access__module-list">
@@ -140,7 +140,7 @@
               <div class="setting-access__detail-settings">
                 <span>
                   <strong>全文抓取策略</strong>
-                  <small>决定 external_rss 订阅源是否允许逐个开启全文抓取。</small>
+                  <small>决定外部订阅源是否允许开启全文抓取。</small>
                 </span>
                 <select v-model="draft.settings.feed.full_text_mode" aria-label="全文抓取策略">
                   <option value="per_source">按订阅源选择</option>

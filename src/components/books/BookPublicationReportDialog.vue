@@ -17,13 +17,21 @@
       </label>
       <PTextarea v-model="note" label="补充说明" :rows="3" placeholder="选择其他时请填写说明" />
       <p v-if="error" class="book-report__error" role="alert">{{ error }}</p>
-      <div class="book-report__actions">
-        <PButton type="button" size="sm" variant="secondary" @click="$emit('update:modelValue', false)">取消</PButton>
-        <button type="button" class="book-report__submit" data-testid="book-report-submit" :disabled="pending" @click="submit">
-          {{ pending ? '提交中...' : '提交举报' }}
-        </button>
-      </div>
     </form>
+    <template #footer>
+      <PButton type="button" size="sm" variant="secondary" @click="$emit('update:modelValue', false)">取消</PButton>
+      <PButton
+        type="button"
+        size="sm"
+        data-testid="book-report-submit"
+        :disabled="pending"
+        :loading="pending"
+        loading-text="提交中…"
+        @click="submit"
+      >
+        提交举报
+      </PButton>
+    </template>
   </PModal>
 </template>
 

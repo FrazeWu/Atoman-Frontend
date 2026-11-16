@@ -98,7 +98,7 @@
 
 	<PConfirm
       :show="discardPending"
-      title="放弃修改？"
+      title="放弃修改"
       message="未保存的用户组信息将丢失。"
       confirm-text="放弃"
       danger

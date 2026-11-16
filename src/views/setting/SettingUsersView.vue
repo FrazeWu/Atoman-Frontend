@@ -255,7 +255,7 @@
 
     <PConfirm
       :show="discardFormPending"
-      title="放弃修改？"
+      title="放弃修改"
       message="未保存的用户信息将丢失。"
       confirm-text="放弃"
       danger
@@ -265,7 +265,7 @@
 
     <PConfirm
       :show="discardPasswordPending"
-      title="放弃修改？"
+      title="放弃修改"
       message="未保存的新密码将丢失。"
       confirm-text="放弃"
       danger
@@ -318,6 +318,7 @@ import PSurface from '@/components/ui/PSurface.vue'
 import PTab from '@/components/ui/PTab.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSheetCloseGuard } from '@/composables/useSheetCloseGuard'
+import { errorMessage } from '@/utils/logger'
 import { isOwnerRole } from '@/utils/roles'
 
 type FormState = {
@@ -480,7 +481,7 @@ function updateUserSummary(updated: AdminUser) {
 }
 
 function errorText(cause: unknown, fallback: string) {
-  return cause instanceof Error && cause.message ? cause.message : fallback
+  return errorMessage(cause, fallback)
 }
 
 async function loadUsers(page = meta.value.page) {

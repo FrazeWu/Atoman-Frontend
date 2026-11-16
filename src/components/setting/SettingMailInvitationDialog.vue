@@ -50,11 +50,11 @@
       <template v-else>
         <div class="mail-invite-dialog__success" role="status" data-testid="mail-invite-issued">
           <strong>邀请码已生成</strong>
-          <p>发送给 {{ selectedUser?.display_name || selectedUser?.username }}，用户领取后仍需等待正式邮箱服务开放。</p>
+          <p>请将此邀请码发送给 {{ selectedUser?.display_name || selectedUser?.username }}。</p>
         </div>
         <label for="mail-invite-result-token">一次性邀请码</label>
         <input id="mail-invite-result-token" readonly :value="issued.token" data-testid="mail-invite-result-token" @focus="selectTokenText" />
-        <p class="mail-invite-dialog__hint">有效期至 {{ formatExpires(issued.expires_at) }}。关闭后无法再次查看，服务器只保存令牌摘要。</p>
+        <p class="mail-invite-dialog__hint">有效期至 {{ formatExpires(issued.expires_at) }}，关闭后无法再次查看，请及时复制保存。</p>
         <p v-if="copyStatus" role="status" class="mail-invite-dialog__copy-status">{{ copyStatus }}</p>
       </template>
       <p v-if="submitError" class="mail-invite-dialog__error" role="alert">{{ submitError }}</p>

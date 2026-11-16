@@ -3,7 +3,7 @@
     <div class="setting-management-overview__heading">
       <p class="settings-center__kicker">模块开关</p>
       <h2 id="management-overview-title">模块开关</h2>
-      <p>控制各模块是否在站点开放，详细管理请到下方模块管理区。</p>
+      <p>控制各模块在站点内的开放状态与基础权限。</p>
     </div>
 
     <div class="setting-management-overview__list" data-test="module-list">

@@ -156,14 +156,14 @@
     </template>
     <PConfirm
       :show="!!bestCandidate"
-      title="设为此出版版本的当前最优文件？"
-      message="系统仅展示已验证的技术指标，无法确定内容是否完整。确认后只更改出版版本的推荐文件，不影响任何用户书架、阅读进度或笔记。"
+      title="设为推荐文件"
+      message="确认后将更新该出版版本的推荐文件，现有书架、阅读进度与个人笔记保持不变。"
       @confirm="promote"
       @cancel="bestCandidate = null"
     />
     <PConfirm
       :show="!!visibilityCandidate"
-      :title="visibilityCandidate?.is_public ? '停止公开此电子书？' : '公开分享此电子书？'"
+      :title="visibilityCandidate?.is_public ? '取消公开分享' : '公开分享'"
       :message="visibilityCandidate?.is_public
         ? '其他读者将无法再打开该文件；他们已有的书架和笔记不会被删除。'
         : '请确认你拥有公开分享该电子书所需的权利。公开后，其他人可访问完整文件。'"

@@ -13,15 +13,23 @@
           <option value="other">其他</option>
         </select>
       </label>
-      <PTextarea v-model="note" label="补充说明" :rows="3" placeholder="可选" />
+      <PTextarea v-model="note" label="补充说明" :rows="3" placeholder="输入详细说明" />
       <p v-if="error" class="comment-report__error" role="alert">{{ error }}</p>
-      <div class="comment-report__actions">
-        <PButton type="button" size="sm" variant="secondary" @click="$emit('update:modelValue', false)">取消</PButton>
-        <button type="button" class="comment-report__submit" data-test="submit-report" :disabled="pending" @click="submit">
-          {{ pending ? '提交中...' : '提交' }}
-        </button>
-      </div>
     </form>
+    <template #footer>
+      <PButton type="button" size="sm" variant="secondary" @click="$emit('update:modelValue', false)">取消</PButton>
+      <PButton
+        type="button"
+        size="sm"
+        data-test="submit-report"
+        :disabled="pending"
+        :loading="pending"
+        loading-text="提交中…"
+        @click="submit"
+      >
+        提交
+      </PButton>
+    </template>
   </PModal>
 </template>
 

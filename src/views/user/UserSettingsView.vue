@@ -77,7 +77,7 @@
                   <div class="module-settings-list__item settings-block">
                     <div class="settings-block__copy">
                       <strong>订阅</strong>
-                      <small>{{ activeSubscriptionCount }} 个订阅源运行中，{{ pausedSubscriptionCount }} 个已暂停。深度管理在右侧面板完成。</small>
+                      <small>{{ activeSubscriptionCount }} 个运行中，{{ pausedSubscriptionCount }} 个已暂停。可在此调整分组与策略。</small>
                     </div>
                     <div class="settings-block__control">
                       <span class="subscription-status__badge">{{ pausedSubscriptionCount ? '部分暂停' : '运行正常' }}</span>
@@ -229,7 +229,7 @@ const settingSections: Array<{
   description: string
 }> = [
   { key: 'profile', kicker: '01 / 个人资料', label: '个人资料', description: '这些资料会显示在你的个人主页和内容中。' },
-  { key: 'security', kicker: '02 / 账号安全', label: '账号与安全', description: '保护登录凭据，查看设备和近期安全活动。' },
+  { key: 'security', kicker: '02 / 账号安全', label: '账号与安全', description: '管理密码、登录设备和安全记录。' },
   { key: 'notification', kicker: '03 / 消息通知', label: '通知', description: '只接收站内通知；账号安全和关键权限变化始终开启。' },
   { key: 'privacy', kicker: '04 / 隐私权限', label: '隐私与社交', description: '控制主页可见范围、订阅关系和私信权限。' },
   { key: 'modules', kicker: '05 / 模块管理', label: '模块设置', description: '每个内容模块使用独立设置，互不影响。' },

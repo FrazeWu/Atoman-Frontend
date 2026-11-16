@@ -31,7 +31,7 @@
         <PIcon name="books" size="sm" class="book-create__guide-icon" />
         <div class="book-create__guide-text">
           <strong>向导第 1 步：录入作品本体信息</strong>
-          <span>在此步骤填写的作者与书名将作为草稿暂存；在下一步上传具体电子书并核对版本后，系统将一并完成入库。</span>
+          <span>当前填写的图书信息将暂存为草稿，上传文件并确认后即可发布。</span>
         </div>
       </div>
 

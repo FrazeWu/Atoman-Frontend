@@ -36,7 +36,7 @@
         </article>
         <PButton v-if="history.length < historyTotal" variant="secondary" :disabled="busy" @click="moreHistory">更多修订</PButton>
         <details v-if="authenticated && head"><summary>合并重复{{ label }}</summary>
-          <p>当前条目作为来源，保留目标条目的资料。旧 ID 将指向目标，错误合并可在后续数据未变化时撤销。</p>
+          <p>当前条目将合并至目标条目，访问原条目时会自动跳转至新条目。</p>
           <label>搜索目标<input v-model="targetQuery" /></label><PButton variant="secondary" :disabled="busy || dirty" @click="searchTargets">搜索目标</PButton>
           <label>目标条目<select v-model="targetId"><option value="">请选择目标</option><option v-for="target in targets" :key="target.id" :value="target.id">{{ target.name }}</option></select></label>
           <PButton variant="secondary" :disabled="busy || !targetId || dirty" @click="preview">预览合并</PButton>
@@ -44,10 +44,10 @@
         </details>
         <div v-for="merge in merges" :key="merge.id"><p>合并 {{ merge.source_id }} → {{ merge.target_id }}（{{ merge.status === 'merged' ? '已合并' : '已撤销' }}）</p><PButton v-if="authenticated && merge.status === 'merged'" variant="secondary" :disabled="busy || dirty" @click="undoing = merge">撤销此合并</PButton></div>
       </section>
-      <PConfirm :show="confirmClose" title="放弃未保存的资料？" message="未保存的输入不会公开。" @confirm="finishClose(true)" @cancel="finishClose(false)" />
-      <PConfirm :show="!!reverting" title="恢复历史资料？" message="这会创建一条新修订，不会删除已有历史。" @confirm="revert" @cancel="reverting = null" />
-      <PConfirm :show="confirmMerge" title="确认合并重复条目？" message="将保留目标资料并迁移关联关系。请核对预览。" @confirm="merge" @cancel="confirmMerge = false" />
-      <PConfirm :show="!!undoing" title="撤销合并？" message="后续资料或关联数据有变化时，将拒绝撤销以保护新数据。" @confirm="undoMerge" @cancel="undoing = null" />
+      <PConfirm :show="confirmClose" title="放弃修改" message="未保存的输入不会公开。" @confirm="finishClose(true)" @cancel="finishClose(false)" />
+      <PConfirm :show="!!reverting" title="恢复历史版本" message="这会创建一条新修订，不会删除已有历史。" @confirm="revert" @cancel="reverting = null" />
+      <PConfirm :show="confirmMerge" title="合并条目" message="将保留目标资料并迁移关联关系。请核对预览。" @confirm="merge" @cancel="confirmMerge = false" />
+      <PConfirm :show="!!undoing" title="撤销合并" message="后续资料或关联数据有变化时，将拒绝撤销以保护新数据。" @confirm="undoMerge" @cancel="undoing = null" />
     </PSheet>
   </div>
 </template>

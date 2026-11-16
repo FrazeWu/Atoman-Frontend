@@ -133,7 +133,7 @@
   <CommentSideSheet
     v-if="forumStore.currentTopic"
     :show="commentsOpen"
-    :title="`${forumStore.currentTopic.title} · 回复`"
+    title="话题回复"
     :partial-anchor="topicContentAnchor"
     :target="{ kind: 'forum_topic', resourceId: topicId }"
     noun="回复"
@@ -145,28 +145,27 @@
   />
 
   <!-- Report Modal -->
-  <PModal v-if="reportModal.show" @close="reportModal.show = false" size="sm">
-    <h3 class="a-subtitle" style="margin-bottom:1.25rem">举报内容</h3>
+  <PModal v-if="reportModal.show" title="举报内容" size="sm" @close="reportModal.show = false">
     <div style="display:flex;flex-direction:column;gap:1rem">
       <div class="a-field">
         <label class="a-field-label">举报类型</label>
         <p class="a-muted" style="margin:0;font-size:.85rem;font-weight: 500">帖子</p>
       </div>
       <div class="a-field">
-        <label class="a-field-label">举报原因 *</label>
+        <label class="a-field-label">举报原因</label>
         <PSelect
           v-model="reportForm.reason"
           :options="reportReasonOptions"
           placeholder="请选择原因"
         />
       </div>
-      <PTextarea v-model="reportForm.note" label="补充说明" :rows="3" placeholder="可选：详细说明" />
+      <PTextarea v-model="reportForm.note" label="补充说明" :rows="3" placeholder="输入详细说明" />
     </div>
     <div v-if="reportFeedback" class="report-feedback">{{ reportFeedback }}</div>
-    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+    <template #footer>
       <PButton variant="secondary" @click="reportModal.show = false">取消</PButton>
       <PButton @click="submitReport">提交举报</PButton>
-    </div>
+    </template>
   </PModal>
 
   <PConfirm

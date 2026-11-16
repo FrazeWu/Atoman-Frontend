@@ -128,19 +128,18 @@
   </div>
 
   <!-- Category Request Modal -->
-  <PModal v-if="catReqModalOpen" @close="catReqModalOpen = false" size="md">
-    <h3 class="a-subtitle forum-modal-title">申请新分类</h3>
+  <PModal v-if="catReqModalOpen" title="申请分类" size="md" @close="catReqModalOpen = false">
     <div class="forum-modal-fields">
-      <PInput v-model="catReqForm.name" label="分类名称 *" placeholder="分类名称" />
-      <PTextarea v-model="catReqForm.description" label="描述" :rows="3" placeholder="分类用途说明" />
-      <PTextarea v-model="catReqForm.reason" label="申请说明 *" :rows="4" placeholder="填写申请说明" />
+      <PInput v-model="catReqForm.name" label="分类名称" placeholder="输入分类名称" />
+      <PTextarea v-model="catReqForm.description" label="分类描述" :rows="3" placeholder="输入分类用途说明" />
+      <PTextarea v-model="catReqForm.reason" label="申请原因" :rows="4" placeholder="输入申请原因" />
       <p v-if="catReqError" class="forum-modal-error">{{ catReqError }}</p>
       <p v-if="catReqSuccess" class="forum-modal-success">{{ catReqSuccess }}</p>
     </div>
-    <div class="forum-modal-actions">
+    <template #footer>
       <PButton variant="secondary" @click="catReqModalOpen = false">取消</PButton>
       <PButton @click="submitCategoryRequest">提交申请</PButton>
-    </div>
+    </template>
   </PModal>
 </template>
 
@@ -308,7 +307,7 @@ const loadTopics = async (resetPage = true) => {
     hasMore.value = data.meta.has_more
   } catch {
     if (generation === topicsGeneration) {
-      forumStore.error = 'Failed to fetch topics'
+      forumStore.error = '加载话题失败，请重试'
     }
   } finally {
     if (generation === topicsGeneration) {

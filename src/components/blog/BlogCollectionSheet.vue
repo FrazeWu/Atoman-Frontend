@@ -124,7 +124,7 @@ watch(collectionId, () => void loadCollection(), { immediate: true })
 <template>
   <PSheet
     :show="sheets.isActive(layer.key)"
-    :title="`合集-${collection?.name || layer.title || '未命名'}`"
+    :title="collection?.name || layer.title || '合集'"
     mode="full"
     :index="layerIndex"
     :layer-index="layerIndex"

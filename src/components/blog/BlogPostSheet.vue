@@ -35,7 +35,7 @@ const { navigation, loading: navigationLoading, direction: navigationDirection, 
 <template>
   <PSheet
     :show="sheets.isActive(layer.key)"
-    :title="`文章-${sheetTitle}`"
+    :title="sheetTitle"
     :index="layerIndex"
     :layer-index="layerIndex"
     :stack-size="stackSize"

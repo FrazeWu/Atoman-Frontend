@@ -204,16 +204,16 @@ export function usePostEditorDraftSession({
 		if (autoSaveState.value === "saving") return "正在保存中…";
 		if (autoSaveState.value === "error") return "本地草稿保存失败";
 		if (hasMeaningfulDraft(draftPayload.value))
-			return "已有编辑内容，等待下一次自动保存";
+			return "未保存";
 		return "暂无本地草稿";
 	});
 	const cloudDraftStatusText = computed(() => {
 		if (!authStore.token) return "未登录，未启用云端草稿";
 		if (serverDraftState.value === "syncing") return "正在同步到云端…";
-		if (serverDraftState.value === "error") return "同步失败，等待手动重试";
+		if (serverDraftState.value === "error") return "同步失败，请点击重试";
 		if (serverDraftSavedAt.value)
 			return `最近同步于 ${formatSavedTime(serverDraftSavedAt.value)}`;
-		if (hasMeaningfulDraft(draftPayload.value)) return "尚未生成云端草稿";
+		if (hasMeaningfulDraft(draftPayload.value)) return "未同步";
 		return "暂无云端草稿";
 	});
 	const leaveConfirmText = computed(() => {

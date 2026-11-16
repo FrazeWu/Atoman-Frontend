@@ -1,7 +1,7 @@
 <template>
   <PSheet
     :show="show"
-    :title="debate.title ? `${debate.title} · 编辑` : '辩题编辑'"
+    :title="debate.title ? `编辑 ${debate.title}` : '编辑辩题'"
     mode="full"
     close-type="header"
     @close="requestClose"
@@ -118,8 +118,8 @@
       <PInput
         v-model="editSummary"
         data-test="wiki-edit-summary"
-        label="编辑摘要"
-        placeholder="概括本次修改"
+        label="修改原因"
+        placeholder="简要说明修改内容"
         :disabled="saving"
       />
 
@@ -191,11 +191,10 @@
   </PSheet>
   <PConfirm
     :show="discardPending"
-    title="放弃修改？"
+    title="放弃修改"
     message="未保存的内容将丢失。"
     confirm-text="放弃"
     danger
-    above-player
     @confirm="confirmDiscard"
     @cancel="cancelDiscard"
   />

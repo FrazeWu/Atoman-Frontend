@@ -133,7 +133,7 @@
         @saved="handleWikiMutation"
       />
       <DebateRevisionSheet
-        :show="showRevisions"
+        :show="showRevisions && !showWikiEditor"
         :debate-id="debate.id"
         :debate-title="debate.title"
         :current-revision-id="debate.current_revision_id"
@@ -141,7 +141,7 @@
         @reverted="handleWikiMutation"
       />
       <DebateDiscussionSheet
-        :show="showDiscussion"
+        :show="showDiscussion && !showWikiEditor"
         :debate-id="debate.id"
         :debate-title="debate.title"
         @close="closeDetailSheet"

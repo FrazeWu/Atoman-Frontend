@@ -146,7 +146,7 @@ export const useDebateStore = defineStore("debate", () => {
       return true;
     } catch (e) {
       if (requestSequence !== debatesRequestSequence) return false;
-      error.value = "Failed to fetch debates";
+      error.value = "获取辩题列表失败，请重试";
       reportError(e);
       return false;
     } finally {
@@ -168,12 +168,12 @@ export const useDebateStore = defineStore("debate", () => {
         currentDebate.value = data.data;
         return data.data as Debate;
       } else {
-        error.value = "Debate not found";
+        error.value = "辩题不存在或已被删除";
         return null;
       }
     } catch (e) {
       if (!ownsRequest(currentDebateRequest, id, requestSequence)) return null;
-      error.value = "Failed to fetch debate";
+      error.value = "获取辩题失败，请重试";
       reportError(e);
       return null;
     } finally {
@@ -209,7 +209,7 @@ export const useDebateStore = defineStore("debate", () => {
         const res = await apiRequestResult(url)
         if (!ownsRequest(relationGraphRequest, id, requestSequence)) return null
         if (!res.ok) {
-          error.value = 'Failed to fetch debate relations'
+          error.value = '获取关联关系失败，请重试'
           return null
         }
         const payload = res.data
@@ -218,7 +218,7 @@ export const useDebateStore = defineStore("debate", () => {
         return relationGraph.value
       } catch (e) {
         if (!ownsRequest(relationGraphRequest, id, requestSequence)) return null
-        error.value = 'Failed to fetch debate relations'
+        error.value = '获取关联关系失败，请重试'
         reportError(e, 'Failed to fetch debate relations')
         return null
       } finally {
@@ -312,7 +312,7 @@ export const useDebateStore = defineStore("debate", () => {
       const res = await apiRequestResult(`${api.url}/debate/topics/${id}/revisions`);
       if (!ownsRequest(revisionsRequest, id, requestSequence)) return null;
       if (!res.ok) {
-        error.value = "Failed to fetch revisions";
+        error.value = "获取版本历史失败，请重试";
         return null;
       }
       const data = res.data;
@@ -321,7 +321,7 @@ export const useDebateStore = defineStore("debate", () => {
       return revisions.value;
     } catch (e) {
       if (!ownsRequest(revisionsRequest, id, requestSequence)) return null;
-      error.value = "Failed to fetch revisions";
+      error.value = "获取版本历史失败，请重试";
       reportError(e, "Failed to fetch revisions");
       return null;
     } finally {
@@ -334,13 +334,13 @@ export const useDebateStore = defineStore("debate", () => {
     try {
       const res = await apiRequestResult(`${api.url}/debate/topics/${id}/revisions/${revisionID}`);
       if (!res.ok) {
-        error.value = "Failed to fetch revision";
+        error.value = "获取版本详情失败，请重试";
         return null;
       }
       const data = res.data;
       return data.data as DebateRevision;
     } catch (e) {
-      error.value = "Failed to fetch revision";
+      error.value = "获取版本详情失败，请重试";
       reportError(e, "Failed to fetch revision");
       return null;
     }
@@ -357,13 +357,13 @@ export const useDebateStore = defineStore("debate", () => {
         `${api.url}/debate/topics/${id}/revisions/${revisionID}/diff?against=${encodeURIComponent(against)}`,
       );
       if (!res.ok) {
-        error.value = "Failed to fetch revision diff";
+        error.value = "获取对比差异失败，请重试";
         return null;
       }
       const data = res.data;
       return data.data as DebateRevisionDiff;
     } catch (e) {
-      error.value = "Failed to fetch revision diff";
+      error.value = "获取对比差异失败，请重试";
       reportError(e, "Failed to fetch revision diff");
       return null;
     }
@@ -384,7 +384,7 @@ export const useDebateStore = defineStore("debate", () => {
       });
       if (!mutation.isCurrent()) return null;
       if (!res.ok) {
-        error.value = "Failed to revert revision";
+        error.value = "回退版本失败，请重试";
         return null;
       }
       const data = res.data;
@@ -393,7 +393,7 @@ export const useDebateStore = defineStore("debate", () => {
       return currentDebate.value;
     } catch (e) {
       if (!mutation.isCurrent()) return null;
-      error.value = "Failed to revert revision";
+      error.value = "回退版本失败，请重试";
       reportError(e, "Failed to revert revision");
       return null;
     }
@@ -414,7 +414,7 @@ export const useDebateStore = defineStore("debate", () => {
       });
       if (!mutation.isCurrent()) return null;
       if (!res.ok) {
-        error.value = "Failed to reconfirm reference";
+        error.value = "重新确认引用失败，请重试";
         return null;
       }
       const data = res.data;
@@ -423,7 +423,7 @@ export const useDebateStore = defineStore("debate", () => {
       return currentDebate.value;
     } catch (e) {
       if (!mutation.isCurrent()) return null;
-      error.value = "Failed to reconfirm reference";
+      error.value = "重新确认引用失败，请重试";
       reportError(e, "Failed to reconfirm reference");
       return null;
     }
@@ -437,7 +437,7 @@ export const useDebateStore = defineStore("debate", () => {
       const res = await apiRequestResult(`${api.url}/debate/topics/${id}/votes`, { headers: authHeaders() });
       if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       if (!res.ok) {
-        error.value = "Failed to fetch votes";
+        error.value = "获取投票数据失败，请重试";
         return null;
       }
       const data = res.data;
@@ -446,7 +446,7 @@ export const useDebateStore = defineStore("debate", () => {
       return voteSummary.value;
     } catch (e) {
       if (!ownsRequest(votesRequest, id, requestSequence)) return null;
-      error.value = "Failed to fetch votes";
+      error.value = "获取投票数据失败，请重试";
       reportError(e, "Failed to fetch votes");
       return null;
     } finally {
@@ -466,7 +466,7 @@ export const useDebateStore = defineStore("debate", () => {
       });
       if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       if (!res.ok) {
-        error.value = "Failed to set vote";
+        error.value = "投票失败，请重试";
         return null;
       }
       const data = res.data;
@@ -475,7 +475,7 @@ export const useDebateStore = defineStore("debate", () => {
       return voteSummary.value;
     } catch (e) {
       if (!ownsRequest(votesRequest, id, requestSequence)) return null;
-      error.value = "Failed to set vote";
+      error.value = "投票失败，请重试";
       reportError(e, "Failed to set vote");
       return null;
     } finally {
@@ -494,7 +494,7 @@ export const useDebateStore = defineStore("debate", () => {
       });
       if (!ownsRequest(votesRequest, id, requestSequence)) return null;
       if (!res.ok) {
-        error.value = "Failed to remove vote";
+        error.value = "取消投票失败，请重试";
         return null;
       }
       const data = res.data;
@@ -503,7 +503,7 @@ export const useDebateStore = defineStore("debate", () => {
       return voteSummary.value;
     } catch (e) {
       if (!ownsRequest(votesRequest, id, requestSequence)) return null;
-      error.value = "Failed to remove vote";
+      error.value = "取消投票失败，请重试";
       reportError(e, "Failed to remove vote");
       return null;
     } finally {
@@ -516,13 +516,13 @@ export const useDebateStore = defineStore("debate", () => {
     try {
       const res = await apiRequestResult(`${api.url}/debate/topics/${id}/conclusions`);
       if (!res.ok) {
-        error.value = "Failed to fetch conclusions";
+        error.value = "获取结论记录失败，请重试";
         return null;
       }
       const data = res.data;
       return (data.data || []) as DebateConclusionEvent[];
     } catch (e) {
-      error.value = "Failed to fetch conclusions";
+      error.value = "获取结论记录失败，请重试";
       reportError(e, "Failed to fetch conclusions");
       return null;
     }

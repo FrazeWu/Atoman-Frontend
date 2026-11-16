@@ -6,13 +6,14 @@
     :partial-top-anchor="partialTopAnchor"
     partial-width="var(--a-comment-sheet-width)"
     top="calc(var(--a-topbar-height) + 7rem)"
+    :above-player="abovePlayer"
     close-type="header"
     :aria-label="sheetTitle"
     @close="$emit('close')"
   >
     <div class="publication-sheet">
       <p class="publication-sheet__intro">
-        发布前确认文章归属和展示信息，正文内容会保留在编辑器中。
+        确认文章所属合集与展示信息。
       </p>
 
       <section class="publication-sheet__section publication-sheet__mode-section">
@@ -53,7 +54,7 @@
         <PTextarea
           :model-value="summary"
           label="文章摘要（可选）"
-          placeholder="留空也可以，填写后更利于内容预览"
+          placeholder="请输入文章摘要"
           :rows="3"
           maxlength="50"
           @update:model-value="$emit('update:summary', $event)"
@@ -96,7 +97,7 @@
               v-model="pendingTagText"
               type="text"
               class="publication-tag-input"
-              :placeholder="tags.length === 0 ? '例如：设计、前端（按回车或逗号录入）' : '继续添加…'"
+              :placeholder="tags.length === 0 ? '例如：设计、前端' : '继续添加'"
               maxlength="20"
               @keydown="handleTagKeydown"
               @blur="commitPendingTag"
@@ -144,7 +145,6 @@
         <ul>
           <li v-for="warning in warnings" :key="warning.code">{{ warning.message }}</li>
         </ul>
-        <p>这些建议不会阻止发布。</p>
       </section>
 
     </div>
@@ -170,27 +170,33 @@ type Visibility = 'public' | 'followers' | 'private'
 type CollectionOption = { id: string; name: string; is_default?: boolean }
 type PublicationWarning = { code: string; message: string }
 
-const props = defineProps<{
-  show: boolean
-  intent: PublicationIntent
-  partialTopAnchor?: HTMLElement | null
-  channelName: string
-  channelCollections: CollectionOption[]
-  selectedCollectionId: string
-  summary: string
-  visibility: Visibility
-  tags: string[]
-  coverUrl: string
-  coverUploading: boolean
-  coverUploadError: string
-  scheduledAt: string
-  scheduling: boolean
-  saving: SaveTarget | null
-  schedule: BlogScheduleStatus | null
-  warnings: PublicationWarning[]
-  blockingErrors: string[]
-  error: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    show: boolean
+    intent: PublicationIntent
+    partialTopAnchor?: HTMLElement | null
+    channelName: string
+    channelCollections: CollectionOption[]
+    selectedCollectionId: string
+    summary: string
+    visibility: Visibility
+    tags: string[]
+    coverUrl: string
+    coverUploading: boolean
+    coverUploadError: string
+    scheduledAt: string
+    scheduling: boolean
+    saving: SaveTarget | null
+    schedule: BlogScheduleStatus | null
+    warnings: PublicationWarning[]
+    blockingErrors: string[]
+    error: string
+    abovePlayer?: boolean
+  }>(),
+  {
+    abovePlayer: false,
+  },
+)
 
 const emit = defineEmits<{
   (event: 'close'): void
@@ -205,7 +211,7 @@ const emit = defineEmits<{
 }>()
 
 const coverInput = ref<HTMLInputElement | null>(null)
-const sheetTitle = computed(() => props.intent === 'schedule' ? '定时发布准备' : '发布前准备')
+const sheetTitle = computed(() => props.intent === 'schedule' ? '定时发布' : '发布设置')
 const intentOptions: Array<{ label: string; value: PublicationIntent }> = [
   { label: '立即发布', value: 'publish' },
   { label: '定时发布', value: 'schedule' },
@@ -281,7 +287,7 @@ const scheduleMessage = computed(() => {
   if (!props.schedule) return ''
   if (props.schedule.status === 'failed') return props.schedule.last_error ? `发布失败：${props.schedule.last_error}` : '发布失败，请重新尝试发布'
   if (props.schedule.status === 'processing') return '正在发布'
-  if (props.schedule.status === 'pending') return `已排期，时区：${props.schedule.timezone}`
+  if (props.schedule.status === 'pending') return '已排期发布'
   if (props.schedule.status === 'published') return '已按计划发布'
   return '已取消定时发布'
 })

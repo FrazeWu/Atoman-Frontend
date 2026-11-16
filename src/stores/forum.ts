@@ -128,7 +128,7 @@ export const useForumStore = defineStore('forum', () => {
         topicsTotal.value = data.meta?.total || 0
       }
     } catch (e) {
-      if (generation === topicListGeneration) error.value = 'Failed to fetch topics'
+      if (generation === topicListGeneration) error.value = '获取话题列表失败，请重试'
     } finally {
       if (generation === topicListGeneration) topicsLoading.value = false
     }
@@ -150,10 +150,10 @@ export const useForumStore = defineStore('forum', () => {
         currentTopic.value = data.data as ForumTopic
         return currentTopic.value
       } else if (generation === topicGeneration) {
-        error.value = 'Topic not found'
+        error.value = '话题不存在或已被删除'
       }
     } catch (e) {
-      if (generation === topicGeneration) error.value = 'Failed to fetch topic'
+      if (generation === topicGeneration) error.value = '获取话题失败，请重试'
     } finally {
       if (generation === topicGeneration) loading.value = false
     }
@@ -373,7 +373,7 @@ export const useForumStore = defineStore('forum', () => {
         return true
       }
     } catch (e) {
-      if (generation === searchGeneration) error.value = 'Search failed'
+      if (generation === searchGeneration) error.value = '搜索失败，请重试'
     } finally {
       if (generation === searchGeneration) searchLoading.value = false
     }

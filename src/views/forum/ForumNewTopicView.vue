@@ -38,7 +38,7 @@
       <div class="a-field">
         <label class="a-field-label">
           标签
-          <span class="field-label-meta">（可选，回车或逗号添加）</span>
+          <span class="field-label-meta">（可选）</span>
         </label>
         <div class="tag-input-wrap">
           <span
@@ -53,7 +53,7 @@
             ref="tagInputRef"
             v-model="tagInput"
             type="text"
-            placeholder="输入标签..."
+            placeholder="输入标签后按回车"
             class="tag-input"
             @keydown.enter.prevent="addTag"
             @keydown.comma.prevent="addTag"
@@ -90,7 +90,7 @@
       <!-- Submit -->
       <div class="form-actions">
         <PButton :disabled="submitting" @click="submit">
-          {{ submitting ? (isEditing ? '保存中...' : '发布中...') : (isEditing ? '保存修改' : '发布话题') }}
+          {{ submitting ? (isEditing ? '保存中…' : '发布中…') : (isEditing ? '保存修改' : '发布话题') }}
         </PButton>
         <PButton variant="secondary" @click="router.back()">取消</PButton>
         <PButton v-if="hasDraft" variant="secondary" size="sm" @click="clearDraft">清除草稿</PButton>

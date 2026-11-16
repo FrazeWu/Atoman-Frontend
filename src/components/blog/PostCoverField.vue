@@ -36,7 +36,6 @@
           <Image :size="22" aria-hidden="true" />
         </div>
         <strong>点击或拖拽图片至此</strong>
-        <p class="a-muted">支持粘贴剪贴板图片，自动设为文章封面</p>
       </template>
     </div>
 
@@ -63,7 +62,7 @@
         移除封面
       </PButton>
     </div>
-    <p class="cover-upload-hint a-muted">支持 JPEG、PNG、GIF、WebP，最大 5MB。</p>
+    <p class="cover-upload-hint a-muted">支持拖拽、粘贴或选择图片，限 JPEG、PNG、GIF、WebP，最大 5MB。</p>
     <p v-if="error" class="cover-upload-error" role="alert">{{ error }}</p>
   </div>
 </template>

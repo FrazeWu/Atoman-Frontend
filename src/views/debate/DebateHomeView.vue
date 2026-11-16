@@ -42,7 +42,7 @@
       </template>
 
       <!-- Empty State -->
-      <PEmpty v-if="debates.length === 0" title="暂无辩题" description="成为第一个发起辩论探讨的人。" />
+      <PEmpty v-if="debates.length === 0" title="暂无辩题" description="可点击右上角发起第一个辩题。" />
 
       <!-- Debate List -->
       <div v-else class="debate-list">

@@ -131,7 +131,7 @@ watch(channelId, () => {
 <template>
   <PSheet
     :show="sheets.isActive(layer.key)"
-    :title="`频道-${channel?.name || layer.title || '未命名'}`"
+    :title="channel?.name || layer.title || '频道'"
     mode="full"
     :index="layerIndex"
     :layer-index="layerIndex"

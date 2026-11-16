@@ -125,6 +125,7 @@
     <PostPublicationSheet
       :show="publicationReviewVisible"
       :intent="publicationIntent || 'publish'"
+      :above-player="true"
       :partial-top-anchor="publicationSheetTopAnchor"
       :channel-name="studio.currentChannel?.name || ''"
       :channel-collections="channelCollections"

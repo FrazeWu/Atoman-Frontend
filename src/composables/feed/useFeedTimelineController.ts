@@ -87,7 +87,7 @@ export function useFeedTimelineController({
     if (timelineMode.value === 'priority') return '今日精选暂无未读内容'
     if (querySearch.value.trim()) return `没有找到“${querySearch.value.trim()}”`
     if (isBookmarksTimeline.value) return '还没有收藏内容'
-    if (isHubTimeline.value) return '当前订阅上下文暂无更新'
+    if (isHubTimeline.value) return '当前分类暂无更新'
     if (querySourceId.value || queryGroupId.value) return '当前筛选暂无更新'
     return subscriptions.value.length ? '订阅源暂无更新' : '订阅后开始探索'
   })

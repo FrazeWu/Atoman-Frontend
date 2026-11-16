@@ -4,6 +4,8 @@
     :title="sheetTitle"
     mode="full"
     close-type="header"
+    :layer-index="layerIndex"
+    :stack-size="stackSize"
     @close="requestClose"
   >
     <div class="rule-editor-sheet">
@@ -149,9 +151,13 @@ const props = withDefaults(defineProps<{
   subscriptions: Subscription[]
   rule?: FeedSubscriptionRule | null
   error?: string
+  layerIndex?: number
+  stackSize?: number
 }>(), {
   subscriptions: () => [],
   error: '',
+  layerIndex: 1,
+  stackSize: 2,
 })
 
 const emit = defineEmits<{
@@ -187,8 +193,8 @@ const draft = reactive<RuleEditorPayload>({
 
 const sheetTitle = computed(() => {
   const name = draft.name.trim()
-  if (name) return `${props.mode === 'create' ? '创建' : '编辑'}-${name}`
-  return props.mode === 'create' ? '创建-订阅规则' : '编辑-订阅规则'
+  if (name) return `${props.mode === 'create' ? '新建规则' : '编辑规则'} - ${name}`
+  return props.mode === 'create' ? '新建规则' : '编辑规则'
 })
 
 const selectedCategories = ref<string[]>([])

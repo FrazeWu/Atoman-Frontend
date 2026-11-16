@@ -28,7 +28,6 @@
       <button v-for="theme in themeFilters" :key="theme" type="button" class="theme-filter-btn" :class="{ active: activeTheme === theme }" :data-test="`theme-filter-${theme.toLowerCase()}`" @click="emit('update:activeTheme', activeTheme === theme ? '' : theme)">{{ theme }}</button>
     </div>
     <button v-if="authenticated && timelineMode === 'chronological'" class="filter-toggle-btn" :class="{ active: unreadOnly }" :title="unreadOnly ? '显示全部' : '只看未读'" @click="emit('toggle-unread')"><Filter :size="18" aria-hidden="true" /></button>
-    <div v-if="authenticated && timelineMode === 'chronological'" style="width: 1.5rem" />
     <PButton v-if="authenticated && timelineMode === 'chronological'" variant="secondary" size="sm" :loading="markingAllRead" loading-text="处理中..." :label="bulkReadLabel" @click="emit('toggle-all-read')" />
   </div>
 

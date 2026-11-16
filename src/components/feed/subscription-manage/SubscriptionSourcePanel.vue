@@ -238,7 +238,7 @@
                     <span>{{ diagnostic.message }}</span>
                     <span class="a-muted">{{ formatCheckedAt(diagnostic.created_at) }}</span>
                   </li>
-                  <li v-if="!subscriptionDiagnosticsFor(sub.id).length" class="a-muted">暂无近期抓取记录。</li>
+                  <li v-if="!subscriptionDiagnosticsFor(sub.id).length" class="a-muted">暂无同步记录。</li>
                 </ul>
 
                 <button
@@ -268,6 +268,8 @@
       mode="partial"
       partial-width="var(--a-comment-sheet-width)"
       close-type="header"
+      :layer-index="layerIndex + 1"
+      :stack-size="stackSize + 1"
       @close="activeSubscriptionId = null"
     >
       <div data-test="subscription-details-content" class="subscription-details-content">
@@ -338,7 +340,7 @@
             <span>{{ diagnostic.message }}</span>
             <span class="a-muted">{{ formatCheckedAt(diagnostic.created_at) }}</span>
           </li>
-          <li v-if="!subscriptionDiagnosticsFor(activeSubscription.id).length" class="a-muted">暂无近期抓取记录。</li>
+          <li v-if="!subscriptionDiagnosticsFor(activeSubscription.id).length" class="a-muted">暂无同步记录。</li>
         </ul>
 
         <button
@@ -392,7 +394,7 @@ type ManagedSubscription = Subscription & {
   hubTypes: SubscriptionHubType[]
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   groups: SubscriptionGroup[]
   subscriptions: Subscription[]
   subscriptionHubTree?: SubscriptionHubTree
@@ -407,7 +409,12 @@ const props = defineProps<{
   loadingSubscriptionDiagnosticIds?: Set<string>
   error?: string
   errorAction?: string
-}>()
+  layerIndex?: number
+  stackSize?: number
+}>(), {
+  layerIndex: 0,
+  stackSize: 1,
+})
 
 const emit = defineEmits<{
   'create-group': [name: string]

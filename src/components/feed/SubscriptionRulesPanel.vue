@@ -70,11 +70,13 @@
   <SubscriptionRuleEditorSheet
     :show="showRuleEditor"
     :mode="ruleEditorMode"
-      :groups="groups"
-      :subscriptions="subscriptions"
-      :rule="editingRule"
-      :error="saveError"
-      @close="closeRuleEditor"
+    :groups="groups"
+    :subscriptions="subscriptions"
+    :rule="editingRule"
+    :error="saveError"
+    :layer-index="layerIndex + 1"
+    :stack-size="stackSize + 1"
+    @close="closeRuleEditor"
     @submit="submitRuleEditor"
   />
 
@@ -124,8 +126,12 @@ const props = withDefaults(defineProps<{
   busy?: boolean
   saveError?: string
   abovePlayer?: boolean
+  layerIndex?: number
+  stackSize?: number
 }>(), {
   subscriptions: () => [],
+  layerIndex: 0,
+  stackSize: 1,
 })
 
 const emit = defineEmits<{

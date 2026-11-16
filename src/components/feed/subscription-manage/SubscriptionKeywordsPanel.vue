@@ -2,7 +2,7 @@
   <section class="filter-rules-section">
     <div class="filter-rules-header">
       <h3 class="a-title-xs">过滤规则</h3>
-      <p class="a-muted">在当前设备上隐藏特定来源或关键词命中的条目。</p>
+      <p class="a-muted">隐藏包含特定来源或关键词的内容。</p>
     </div>
 
     <PField label="隐藏关键词">

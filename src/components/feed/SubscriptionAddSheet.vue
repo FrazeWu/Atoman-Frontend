@@ -1,9 +1,11 @@
 <template>
   <PSheet
     :show="show"
-    :title="resolvedSourceTitle ? `添加-${resolvedSourceTitle}` : '添加-订阅'"
+    :title="resolvedSourceTitle ? `添加 ${resolvedSourceTitle}` : '添加订阅'"
     mode="full"
     close-type="header"
+    :layer-index="layerIndex"
+    :stack-size="stackSize"
     :top="top"
     @close="requestClose"
   >
@@ -118,14 +120,22 @@ import PSelect from '@/components/ui/PSelect.vue'
 import { useFeedStore } from '@/stores/feed'
 import { useSheetCloseGuard } from '@/composables/useSheetCloseGuard'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   show: boolean
   top?: string
   groups: SubscriptionGroup[]
   submitting: boolean
   error?: string
   resetKey?: number
-}>()
+  layerIndex?: number
+  stackSize?: number
+}>(), {
+  top: undefined,
+  error: '',
+  resetKey: undefined,
+  layerIndex: 0,
+  stackSize: 1,
+})
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -256,8 +266,8 @@ const selectCandidate = (feedUrl: string) => {
 const candidateStatusLabel = (candidate: ResolvedSubscriptionCandidate) => {
   const statusLabels: Record<string, string> = {
     already_subscribed: '已订阅',
-    existing_source: '已在库中',
-    new_source: '可新增',
+    existing_source: '已收录',
+    new_source: '新来源',
     not_found: '不可用',
     invalid: '无效',
   }

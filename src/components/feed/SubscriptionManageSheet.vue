@@ -10,6 +10,8 @@
     :content-max-width="props.showAdvancedTabs ? '68rem' : '44rem'"
     :action-label="hasDraftChanges ? '保存修改' : undefined"
     :action-disabled="props.busy || !hasDraftChanges"
+    :layer-index="layerIndex"
+    :stack-size="stackSize"
     @close="requestClose"
     @action="saveDrafts"
   >
@@ -143,6 +145,8 @@
         :loading-subscription-diagnostic-ids="loadingSubscriptionDiagnosticIds"
         :error="error"
         :error-action="errorAction"
+        :layer-index="layerIndex"
+        :stack-size="stackSize"
         @create-group="submitGroup"
         @update-draft-title="updateDraftTitle"
         @update-subscription="(id, payload) => emit('update-subscription', id, payload)"
@@ -170,6 +174,8 @@
         :busy="busy"
         :save-error="errorAction === 'rule' ? error : ''"
         :above-player="true"
+        :layer-index="layerIndex"
+        :stack-size="stackSize"
         @create-rule="emit('create-rule')"
         @edit-rule="emit('edit-rule', $event)"
         @save-rule="emit('save-rule', $event)"
@@ -265,9 +271,13 @@ const props = withDefaults(defineProps<{
   errorAction?: 'general' | 'save' | 'import' | 'export' | 'health' | 'sync' | 'batch' | 'rule'
   message?: string
   opmlImportResult?: FeedOPMLImportResult | null
+  layerIndex?: number
+  stackSize?: number
 }>(), {
   showAdvancedTabs: true,
   errorAction: 'general',
+  layerIndex: 0,
+  stackSize: 1,
 })
 
 const emit = defineEmits<{

@@ -1,3 +1,5 @@
+import { reportError } from '@/utils/logger'
+
 const staleChunkReloadKey = 'atoman:stale-vite-chunk-reload'
 const staleChunkReloadWindowMs = 15_000
 
@@ -50,6 +52,8 @@ export function installStaleViteChunkRecovery() {
   installed = true
 
   window.addEventListener('vite:preloadError', (event) => {
+    const payload = event instanceof CustomEvent ? event.payload : event
+    reportError(payload, '静态资源加载错误: vite preload')
     if (reloadOnce()) event.preventDefault()
   })
 }

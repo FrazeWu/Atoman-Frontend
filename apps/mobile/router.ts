@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { installRouteGuards } from '@/router/guards'
 import { installChunkLoadRecovery } from '@/router/chunkLoadRecovery'
+import { installClientErrorRouteTracking } from '@/utils/clientErrorReport'
 import { mobileInitialRoutes } from './mobileInitialRoutes'
 
 const initialRoutePaths = new Set(['/','/login','/register','/forgot-password','/search'])
@@ -34,5 +35,6 @@ router.beforeEach(async (to) => {
 
 installRouteGuards(router)
 installChunkLoadRecovery(router)
+installClientErrorRouteTracking(router)
 
 export default router

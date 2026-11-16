@@ -4,6 +4,7 @@ import type { Router } from "vue-router";
 import { VueQueryPlugin } from "@tanstack/vue-query";
 import { createQueryClient } from "@/app/providers/queryClient";
 import "./style.css";
+import { installProductionErrorReporting } from "./utils/clientErrorReport";
 import { reportError } from "./utils/logger";
 import { waitForInitialPaint } from "./utils/waitForInitialPaint";
 import {
@@ -24,17 +25,25 @@ const isMobileRuntime = () => {
 
 const mobileRuntime = isMobileRuntime();
 
+installProductionErrorReporting();
 installStaleViteChunkRecovery();
 document.documentElement.dataset.atomanApp = mobileRuntime
   ? "mobile"
   : "desktop";
 
 window.addEventListener("error", (event) => {
-  if (recoverStaleViteChunk(event.error || event.message)) return;
-  reportError(event.error || event.message, "未处理运行时错误");
+  const error = event.error || event.message;
+  if (recoverStaleViteChunk(error)) {
+    reportError(error, "静态资源加载错误");
+    return;
+  }
+  reportError(error, "未处理运行时错误");
 });
 window.addEventListener("unhandledrejection", (event) => {
-  if (recoverStaleViteChunk(event.reason)) return;
+  if (recoverStaleViteChunk(event.reason)) {
+    reportError(event.reason, "静态资源加载错误");
+    return;
+  }
   reportError(event.reason, "未处理 Promise 异常");
 });
 

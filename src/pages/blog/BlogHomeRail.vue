@@ -37,3 +37,50 @@ const emit = defineEmits<{
   (e: 'open-channel', channel: BlogChannel): void
 }>()
 </script>
+
+<style scoped>
+.blog-home__rail {
+  position: sticky;
+  top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.blog-home__rail-section {
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card);
+  overflow: hidden;
+}
+
+.blog-home__rail-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem 0.5rem;
+  background: var(--a-color-bg);
+}
+
+.blog-home__rail-header h2 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--a-color-fg);
+}
+
+.blog-home__rail-icon.is-hot {
+  color: var(--a-color-warning);
+}
+
+.blog-home__rail-list {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 1199px) {
+  .blog-home__rail {
+    display: none;
+  }
+}
+</style>

@@ -242,3 +242,35 @@ export const fetchPublishedBookAssetContent = async (assetId: string): Promise<B
     throw error
   }
 }
+
+export interface ReportPublishedBookInput {
+  reason: string
+  note?: string
+}
+
+export interface ReviewPublicationReportInput {
+  decision: 'removed' | 'rejected'
+  note?: string
+}
+
+export const reportPublishedBookAsset = (assetId: string, input: ReportPublishedBookInput) =>
+  requestEnvelope<BookPublicationReport>(assetsUrl(`/${encodeURIComponent(assetId)}/reports`), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+
+export const listPublicationReports = (query?: { limit?: number; offset?: number }) => {
+  const params = new URLSearchParams()
+  if (query?.limit !== undefined) params.set('limit', String(query.limit))
+  if (query?.offset !== undefined) params.set('offset', String(query.offset))
+  const qs = params.toString()
+  return apiGet<BookPublicationReportListResult>(booksUrl(`/admin/publication-reports${qs ? `?${qs}` : ''}`))
+}
+
+export const reviewPublicationReport = (reportId: string, input: ReviewPublicationReportInput) =>
+  requestEnvelope<BookPublicationReport>(booksUrl(`/admin/publication-reports/${encodeURIComponent(reportId)}`), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })

@@ -7,6 +7,7 @@
       <button data-test="community-tab-comment-reports" :class="{ active: tab === 'comments' }" @click="tab = 'comments'">评论举报</button>
       <button data-test="community-tab-users" :class="{ active: tab === 'users' }" @click="tab = 'users'">用户</button>
       <button data-test="community-tab-groups" :class="{ active: tab === 'groups' }" @click="tab = 'groups'">用户组</button>
+      <button data-test="community-tab-book-reports" :class="{ active: tab === 'books' }" @click="tab = 'books'">书籍举报</button>
       <button :class="{ active: tab === 'dm' }" @click="tab = 'dm'">私信举报</button>
     </nav>
 
@@ -14,6 +15,7 @@
     <SettingCommentReportsPanel v-else-if="tab === 'comments'" />
     <SettingForumUserModerationPanel v-else-if="tab === 'users'" />
     <SettingForumGroupPanel v-else-if="tab === 'groups'" />
+    <SettingBookReportsPanel v-else-if="tab === 'books'" />
     <DMAdminReportsPanel v-else />
   </section>
 </template>
@@ -24,10 +26,11 @@ import SettingForumModerationPanel from '@/components/setting/SettingForumModera
 import SettingForumGroupPanel from '@/components/setting/SettingForumGroupPanel.vue'
 import SettingForumUserModerationPanel from '@/components/setting/SettingForumUserModerationPanel.vue'
 import SettingCommentReportsPanel from '@/components/setting/SettingCommentReportsPanel.vue'
+import SettingBookReportsPanel from '@/components/setting/SettingBookReportsPanel.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import DMAdminReportsPanel from '@/components/dm/DMAdminReportsPanel.vue'
 
-const tab = ref<'moderation' | 'comments' | 'users' | 'groups' | 'dm'>('moderation')
+const tab = ref<'moderation' | 'comments' | 'users' | 'groups' | 'books' | 'dm'>('moderation')
 </script>
 
 <style scoped>

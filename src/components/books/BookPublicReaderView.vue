@@ -40,6 +40,10 @@
           <Bookmark :size="16" aria-hidden="true" />
           <span>书签</span>
         </PButton>
+        <PButton type="button" variant="ghost" :disabled="!asset || isLoading" aria-label="举报这本公共电子书" title="举报" @click="openPublicationReport">
+          <Flag :size="16" aria-hidden="true" />
+          <span>举报</span>
+        </PButton>
       </template>
       <template #status>
         <p v-if="annotationMessage" class="public-reader__feedback" role="status">{{ annotationMessage }}</p>
@@ -118,6 +122,8 @@
       </template>
     </BookReaderShell>
 
+    <BookPublicationReportDialog v-model="reportOpen" above-player :on-submit="submitPublicationReport" />
+
     <BookSelectionToolbar
       v-if="selectionToolbar"
       :position="{ x: selectionToolbar.x, y: selectionToolbar.y }"
@@ -145,7 +151,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Bookmark, Flag, Search } from 'lucide-vue-next'
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { loadPdfEngine, loadEpubEngine } from '@/utils/bookReaderEngines'
@@ -162,7 +168,9 @@ import { extractComicPages, type ComicPage } from '@/utils/bookComicArchive'
 import { findBookTextMatches, type BookTextSearchMatch } from '@/utils/bookTextSearch'
 import { getLocalBookReadingProgress, saveLocalBookReadingProgress, type LocalBookReadingProgress } from '@/utils/bookReadingProgress'
 import { bookReaderPreferencesForFormat, parseBookReaderDisplayPreferences, type BookReaderBookmark, type BookReaderDisplayPreferences, type BookReaderScrollMode } from '@/utils/bookReaderPreferences'
-import { fetchPublishedBookAssetContent, getPublishedBookAsset, type BookPublishedAsset } from '@/api/books'
+import { fetchPublishedBookAssetContent, getPublishedBookAsset, reportPublishedBookAsset, type BookPublishedAsset, type ReportPublishedBookInput } from '@/api/books'
+import BookPublicationReportDialog from '@/components/books/BookPublicationReportDialog.vue'
+import { useAuthStore } from '@/stores/auth'
 import type { BookReaderSource } from '@/types/bookReaderSource'
 import type { BookChapterAnchor } from '@/api/bookPrivate'
 import type { ReadingMark, ReadingAnchor } from '@/api/bookReading'
@@ -186,6 +194,9 @@ interface SelectionToolbarState {
 const selectionToolbar = ref<SelectionToolbarState | null>(null)
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+const reportOpen = ref(false)
 const props = defineProps<{ source?: BookReaderSource }>()
 const emit = defineEmits<{
   annotate: [selection: HighlightSelection]
@@ -1036,6 +1047,21 @@ function jumpToBookmark(bookmark: BookReaderBookmark) {
     comicPage.value = Math.min(Math.max(1, bookmark.comic_page), comicPages.value.length)
     scrollToComicPage()
   }
+}
+
+function openPublicationReport() {
+  if (!asset.value) return
+  if (!auth.isAuthenticated) {
+    void router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  reportOpen.value = true
+}
+
+async function submitPublicationReport(input: ReportPublishedBookInput) {
+  const assetId = asset.value?.id
+  if (!assetId) throw new Error('公共电子书尚未打开')
+  await reportPublishedBookAsset(assetId, input)
 }
 
 function moveEpubPage(direction: 'prev' | 'next') {

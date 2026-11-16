@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 
 import * as booksApi from '@/api/books'
 import BookPublicReaderView from '@/components/books/BookPublicReaderView.vue'
+import { useAuthStore } from '@/stores/auth'
 
 beforeEach(() => {
   setActivePinia(createPinia())
@@ -182,6 +183,55 @@ describe('BookPublicReaderView', () => {
     expect(localStorage.getItem('atoman:book-reading-progress:public-asset-5')).toContain('"theme":"night"')
     expect(localStorage.getItem('atoman:book-reading-progress:public-asset-5')).toContain('"font_scale":0.85')
     expect(JSON.parse(localStorage.getItem('atoman:book-reading-progress:public-asset-5') || '{}').display.scroll_mode).toBe('continuous')
+    wrapper.unmount()
+  })
+
+  it('登录后从公共阅读器提交书籍举报，未登录时前往登录', async () => {
+    vi.spyOn(booksApi, 'getPublishedBookAsset').mockResolvedValue({
+      id: 'public-asset-6',
+      work_id: 'work-6',
+      format: 'txt',
+      file_name: 'reportable.txt',
+      content_type: 'text/plain',
+      size: 12,
+      status: 'published',
+      created_at: '2026-08-27T00:00:00Z',
+    })
+    vi.spyOn(booksApi, 'fetchPublishedBookAssetContent').mockResolvedValue(new Blob(['Public text']))
+    const report = vi.spyOn(booksApi, 'reportPublishedBookAsset').mockResolvedValue({
+      id: 'report-1',
+      asset_id: 'public-asset-6',
+      reason: 'copyright',
+      status: 'pending',
+      created_at: '2026-08-27T00:00:00Z',
+    })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/books/public-read/:assetId', component: BookPublicReaderView },
+        { path: '/login', component: { template: '<div>登录</div>' } },
+      ],
+    })
+    await router.push('/books/public-read/public-asset-6')
+    await router.isReady()
+    const guest = mount(BookPublicReaderView, { global: { plugins: [router] } })
+    await flushPromises()
+    await guest.get('[aria-label="举报这本公共电子书"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/login')
+    expect(router.currentRoute.value.query.redirect).toBe('/books/public-read/public-asset-6')
+    guest.unmount()
+
+    await router.push('/books/public-read/public-asset-6')
+    const auth = useAuthStore()
+    auth.isAuthenticated = true
+    auth.user = { uuid: 'user-1', username: 'reader', email: 'reader@example.com', role: 'user' }
+    const wrapper = mount(BookPublicReaderView, { global: { plugins: [router], stubs: { Teleport: true } } })
+    await flushPromises()
+    await wrapper.get('[aria-label="举报这本公共电子书"]').trigger('click')
+    await wrapper.get('[data-testid="book-report-submit"]').trigger('click')
+    await flushPromises()
+    expect(report).toHaveBeenCalledWith('public-asset-6', { reason: 'copyright', note: '' })
     wrapper.unmount()
   })
 })

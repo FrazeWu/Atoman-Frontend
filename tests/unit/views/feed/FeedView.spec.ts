@@ -3733,13 +3733,85 @@ describe("FeedView", () => {
 
     await flushPromises();
 
-    expect(vi.mocked(globalThis.fetch)).toHaveBeenCalledWith(
-      expect.stringContaining("/feed/timeline?"),
-      expect.any(Object),
-    );
-    expect(String(vi.mocked(globalThis.fetch).mock.calls[0][0])).toContain(
-      "q=climate+digest",
-    );
+    const searchCall = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.map(([input]) => String(input))
+      .find((url) => url.includes("/feed/search?"));
+    expect(searchCall).toContain("q=climate+digest");
+    expect(searchCall).toContain("rank=relevance");
+    expect(
+      vi
+        .mocked(globalThis.fetch)
+        .mock.calls.some(([input]) => String(input).includes("/feed/timeline?")),
+    ).toBe(false);
+  });
+
+  it("falls back to timeline search when ranked search is not deployed", async () => {
+    routeQuery.q = "climate digest";
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/feed/search?")) {
+        return new Response(JSON.stringify({ error: "missing" }), { status: 404 });
+      }
+      return new Response(
+        JSON.stringify({ data: [], meta: { total: 0 } }),
+        { status: 200 },
+      );
+    });
+    mount(FeedView, {
+      global: {
+        stubs: {
+          PButton: PButtonStub,
+          PModal: true,
+          PEmpty: true,
+          PPageHeader: { template: "<header />" },
+          PSelect: true,
+          PField: true,
+          PClip: true,
+          PPress: true,
+          PBadge: true,
+          SubscriptionAddSheet: true,
+          SubscriptionManageSheet: true,
+          FeedArticleSheet: true,
+        },
+      },
+    });
+    await flushPromises();
+    const urls = vi.mocked(globalThis.fetch).mock.calls.map(([input]) => String(input));
+    expect(urls.some((url) => url.includes("/feed/search?"))).toBe(true);
+    expect(urls.some((url) => url.includes("/feed/timeline?") && url.includes("q=climate+digest"))).toBe(true);
+  });
+
+  it("highlights a full-text snippet returned by ranked search", async () => {
+    routeQuery.q = "酶";
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/feed/search?")) {
+        return new Response(JSON.stringify({
+          data: [{
+            type: "feed_item",
+            feed_item: {
+              id: "body-hit",
+              title: "不相关标题",
+              summary: "摘要里没有关键词",
+              link: "https://example.com/body",
+              published_at: "2026-11-01T00:00:00Z",
+              feed_source: { id: "source-1", title: "示例来源", source_type: "external_rss" },
+            },
+            published_at: "2026-11-01T00:00:00Z",
+            is_read: false,
+            search_snippet: "正文里的酶反应",
+            search_match_field: "body",
+          }],
+          meta: { total: 1, rank: "relevance" },
+        }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+    });
+    const wrapper = mount(FeedView, { global: { stubs: feedViewStubs } });
+    await flushPromises();
+    expect(wrapper.get('[data-test="feed-search-match"]').text()).toBe("匹配正文");
+    expect(wrapper.get("mark").text()).toBe("酶");
   });
 
   it("shows a feed search empty state for the active query", async () => {

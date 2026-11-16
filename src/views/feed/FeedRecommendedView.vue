@@ -33,19 +33,24 @@
                   <strong>订阅源</strong>
                   <span>{{ discoverySearchSources.length }}</span>
                 </div>
-                <button
+                <div
                   v-for="source in discoverySearchSources"
                   :key="`source-${source.id}`"
-                  type="button"
                   class="discovery-search-result"
-                  @click="openDiscoverySearchSource(source)"
                 >
-                  <span class="discovery-search-result__main">
-                    <strong>{{ source.title }}</strong>
+                  <button type="button" class="discovery-search-result__main" @click="openDiscoverySearchSource(source)">
+                    <strong><PHighlightText :text="source.title" :query="discoverySearchQuery" /></strong>
                     <small>{{ source.rssUrl || source.category }}</small>
-                  </span>
-                  <span class="discovery-search-result__status">{{ source.subscribed ? '已订阅' : '订阅源' }}</span>
-                </button>
+                  </button>
+                  <button
+                    type="button"
+                    class="discovery-search-result__subscribe"
+                    data-test="discovery-search-subscribe"
+                    :disabled="source.subscribed"
+                    @mousedown.prevent
+                    @click="subscribeDiscoverySource(source)"
+                  >{{ source.subscribed ? '已订阅' : '订阅' }}</button>
+                </div>
               </section>
 
               <section v-if="discoverySearchArticles.length" class="discovery-search-group">
@@ -61,7 +66,7 @@
                   @click="openDiscoverySearchArticle(article)"
                 >
                   <span class="discovery-search-result__main">
-                    <strong>{{ article.title }}</strong>
+                    <strong><PHighlightText :text="article.title" :query="discoverySearchQuery" /></strong>
                     <small>{{ article.sourceTitle || article.summary || '文章' }}</small>
                   </span>
                   <span class="discovery-search-result__status">文章</span>
@@ -118,6 +123,10 @@
     />
 
     <p v-if="currentThemeDescription" class="theme-desc-banner">{{ currentThemeDescription }}</p>
+    <p v-if="subscriptionNext" class="feed-explore-next" data-test="feed-explore-next" role="status">
+      <span>{{ subscriptionNext }}</span>
+      <button type="button" data-test="feed-explore-open-feed" @click="router.push('/feed')">查看订阅流</button>
+    </p>
 
     <!-- ═══════════════════════════════════════════════════════════════
          3. 核心左右双并列信息流（Dual Parallel Streams）
@@ -186,6 +195,7 @@
                   <span class="feed-meta-stat"><Bookmark :size="11" aria-hidden="true" />{{ item.bookmark_count || 0 }}</span>
                 </span>
                 <span style="color:var(--a-color-muted-soft)">{{ formatDate(item.last_published_at) }}</span>
+                <span v-if="item.score_label" class="feed-score-label" data-test="feed-recommendation-reason">{{ item.score_label }}</span>
                 <span
                   class="feed-type-tag"
                   :class="item.source_type === 'internal' ? 'feed-type-tag--blog' : 'feed-type-tag--rss'"
@@ -234,6 +244,15 @@
               <h2>推荐频道与源</h2>
               <span class="stream-count">{{ totalChannels }} 个</span>
             </div>
+            <PButton
+              v-if="authStore.isAuthenticated && unsubscribedChannelCount > 0"
+              variant="secondary"
+              size="sm"
+              data-test="feed-explore-batch-subscribe"
+              :label="`订阅本页 ${unsubscribedChannelCount} 个`"
+              :loading="batchSubscribing"
+              @click="subscribeVisibleChannels"
+            />
           </div>
 
           <PContentProgress :loading="channelsLoading" :error="channelsError" :retry="() => fetchChannelRecommendations(recommendationParams(), recommendationRequest)">
@@ -367,6 +386,7 @@ import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PToast from '@/components/ui/PToast.vue'
+import PHighlightText from '@/components/ui/PHighlightText.vue'
 import SearchSurface from '@/components/search/SearchSurface.vue'
 import ModuleSearch from '@/components/search/ModuleSearch.vue'
 import { unifiedSearchEnabled } from '@/utils/searchUrl'
@@ -382,6 +402,12 @@ import { useFeedStore } from '@/stores/feed'
 import { useAuthStore } from '@/stores/auth'
 import { useOnboardingStore } from '@/stores/onboarding'
 import { buildSourceAvatarLabel, buildSourceColor, buildSourceFaviconURL } from '@/utils/feedSourcePresentation'
+import {
+  feedExploreScrollKey,
+  partitionUnsubscribedRecommendations,
+  readExploreScroll,
+  rememberExploreScroll,
+} from '@/utils/feedExploreSubscription'
 import { deduplicateRecommendationItems, deduplicateRecommendedChannels } from '@/utils/recommendationItems'
 import {
   ALL_RECOMMENDATION_LANGUAGE,
@@ -491,6 +517,13 @@ const articlesLoading = ref(false)
 const channelsLoading = ref(false)
 const loading = computed(() => articlesLoading.value || channelsLoading.value)
 const subscribingChannelIds = ref<string[]>([])
+const batchSubscribing = ref(false)
+const subscriptionNext = ref('')
+const unsubscribedChannelCount = computed(() => {
+  const pending = partitionUnsubscribedRecommendations(channels.value)
+  return pending.externalIds.length + pending.internalChannelIds.length
+})
+let exploreScrollRestored = false
 const isChannelSubscribeBusy = (id: string) => subscribingChannelIds.value.includes(id)
 const articlesError = ref('')
 const channelsError = ref('')
@@ -711,6 +744,30 @@ function refreshRecommendationBatch() {
 }
 
 // ── 格式化与辅助方法 ──
+function currentExploreScrollKey() {
+  return feedExploreScrollKey({
+    mode: mode.value,
+    category: category.value,
+    theme: theme.value,
+    language: language.value,
+    page: page.value,
+  })
+}
+
+function persistExploreScroll() {
+  if (typeof window === 'undefined') return
+  rememberExploreScroll(window.sessionStorage, currentExploreScrollKey(), window.scrollY || 0)
+}
+
+async function restoreExploreScroll() {
+  if (exploreScrollRestored || typeof window === 'undefined') return
+  exploreScrollRestored = true
+  const y = readExploreScroll(window.sessionStorage, currentExploreScrollKey())
+  if (!y) return
+  await nextTick()
+  window.requestAnimationFrame(() => window.scrollTo(0, y))
+}
+
 function showSubscriptionFeedback(message: string, type: 'success' | 'error' = 'success') {
   subscriptionToastMessage.value = message
   subscriptionToastType.value = type
@@ -756,6 +813,7 @@ async function subscribeRecommendedChannel(item: RecommendationItem) {
         feedStore.fetchSubscriptionHubTree(),
       ])
       showSubscriptionFeedback('已订阅，可继续阅读')
+      subscriptionNext.value = `已订阅「${item.title}」，新内容会出现在订阅流。`
     } else {
       showSubscriptionFeedback('订阅失败，请重试', 'error')
     }
@@ -786,6 +844,7 @@ async function subscribeSelectedChannel() {
       ])
       source.subscribed = true
       showSubscriptionFeedback('已订阅，可继续阅读')
+      subscriptionNext.value = `已订阅「${source.title}」，新内容会出现在订阅流。`
     } else {
       showSubscriptionFeedback('订阅失败，请重试', 'error')
     }
@@ -820,7 +879,82 @@ const {
 })
 
 // ── 交互事件处理 ──
+async function subscribeVisibleChannels() {
+  if (!authStore.isAuthenticated) return
+  const { externalIds, internalChannelIds } = partitionUnsubscribedRecommendations(channels.value)
+  if (!externalIds.length && !internalChannelIds.length) return
+  batchSubscribing.value = true
+  try {
+    let created = 0
+    let already = 0
+    let failed = false
+    if (externalIds.length) {
+      const result = await feedStore.batchSubscribeSources(externalIds)
+      if (!result) {
+        failed = true
+      } else {
+        const missing = new Set((result.missingIds || []).map(String))
+        created += result.created
+        already += result.reusedIds?.length || 0
+        for (const item of channels.value) {
+          const id = item.source_id || item.id
+          if (externalIds.includes(id) && !missing.has(id)) item.subscribed = true
+        }
+      }
+    }
+    for (const id of internalChannelIds) {
+      const success = await feedStore.subscribeToChannel(id)
+      const item = channels.value.find((channel) => (channel.source_id || channel.id) === id)
+      if (success) {
+        created += 1
+        if (item) item.subscribed = true
+      } else {
+        failed = true
+      }
+    }
+    if (created > 0 || already > 0) {
+      await Promise.all([
+        feedStore.fetchSubscriptions(),
+        feedStore.fetchGroups(),
+        feedStore.fetchSubscriptionHubTree(),
+      ])
+      subscriptionNext.value = created > 0
+        ? `已订阅 ${created} 个来源，新内容会出现在订阅流。`
+        : '这些来源已在订阅中，可以回到订阅流阅读。'
+      showSubscriptionFeedback(created > 0 ? '已订阅，可继续阅读' : subscriptionNext.value)
+    } else if (failed) {
+      showSubscriptionFeedback('订阅失败，请重试', 'error')
+    }
+  } catch (error) {
+    reportError(error, 'Failed to batch subscribe:')
+    showSubscriptionFeedback('订阅失败，请重试', 'error')
+  } finally {
+    batchSubscribing.value = false
+  }
+}
+
+async function subscribeDiscoverySource(source: FeedExploreSource) {
+  if (source.subscribed || !requireLoginForSubscription({
+    id: source.id,
+    title: source.title,
+    type: 'external_rss',
+    rssUrl: source.rssUrl,
+    subscribed: Boolean(source.subscribed),
+  })) return
+  const success = source.rssUrl
+    ? await feedStore.subscribeToRSS(source.rssUrl, source.title)
+    : Boolean(await feedStore.batchSubscribeSources([source.id]))
+  if (!success) {
+    showSubscriptionFeedback('订阅失败，请重试', 'error')
+    return
+  }
+  source.subscribed = true
+  subscriptionNext.value = `已订阅「${source.title}」，新内容会出现在订阅流。`
+  showSubscriptionFeedback('已订阅，可继续阅读')
+}
+
 function openArticle(item: RecommendationItem) {
+  persistExploreScroll()
   if (item.target_path?.startsWith('/posts/')) {
     router.push(item.target_path)
     return
@@ -954,6 +1088,7 @@ function openDiscoverySearchSource(source: FeedExploreSource) {
 }
 
 function openDiscoverySearchArticle(article: DiscoverySearchArticle) {
+  persistExploreScroll()
   discoverySearchOpen.value = false
   router.push(article.targetPath)
 }
@@ -1051,8 +1186,9 @@ watch([() => authStore.isAuthenticated, () => route.query.read_article_id], ([is
 })
 
 onMounted(() => {
+  window.addEventListener('scroll', persistExploreScroll, { passive: true })
   void fetchThemes()
-  void fetchRecommendations()
+  void fetchRecommendations().finally(() => { void restoreExploreScroll() })
   if (authStore.isAuthenticated) {
     restorePendingSubscriptionSource()
     void restorePendingArticle()
@@ -1064,7 +1200,11 @@ onMounted(() => {
   }
 })
 
-onUnmounted(() => { recommendationRequest++ })
+onUnmounted(() => {
+  persistExploreScroll()
+  window.removeEventListener('scroll', persistExploreScroll)
+  recommendationRequest++
+})
 </script>
 
 <style scoped src="./feedRecommended.css"></style>

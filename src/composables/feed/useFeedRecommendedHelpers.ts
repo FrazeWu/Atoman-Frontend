@@ -113,6 +113,7 @@ export function channelSummaryText(item: RecommendationItem) {
 
 export function channelMetadataText(item: RecommendationItem) {
   const parts: string[] = []
+  if (item.score_label) parts.push(item.score_label)
   if (item.bookmark_count !== undefined) parts.push(`${item.bookmark_count} 订阅`)
   if (item.update_frequency_label) parts.push(item.update_frequency_label)
   return parts.join(' · ')

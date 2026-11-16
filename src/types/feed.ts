@@ -421,6 +421,8 @@ export interface TimelineItem {
 	published_at: string;
 	is_read: boolean;
 	priority_reason?: "subscription_priority_high" | "subscription_priority_normal" | "subscription_priority_low";
+	search_snippet?: string;
+	search_match_field?: "title" | "summary" | "author" | "source" | "body" | "content";
 }
 
 export interface FeedArticleSource {

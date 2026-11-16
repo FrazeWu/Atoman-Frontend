@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import type { Subscription, SubscriptionHubType, TimelineItem } from '@/types'
 import { buildFeedTimelineQuery } from '@/utils/feedTimelineQuery'
+import { buildFeedSearchQuery, normalizeFeedSearchRank, shouldFallbackFeedSearch, type FeedSearchRank } from '@/utils/feedSearch'
 import { reportError } from '@/utils/logger'
 
 type FeedSourceTypeFilter = 'all' | 'internal' | 'blog' | 'podcast'
@@ -47,6 +48,7 @@ export function useFeedTimelineController({
   const isBookmarksTimeline = computed(() => route.query.view === 'bookmarks')
   const queryPage = computed(() => normalizePage(route.query.page))
   const querySearch = computed(() => typeof route.query.q === 'string' ? route.query.q : '')
+  const querySearchRank = computed<FeedSearchRank>(() => normalizeFeedSearchRank(route.query.rank))
   const queryMergeDuplicates = computed(() => route.query.merge_duplicates !== 'false')
   const timelineMode = computed<'chronological' | 'priority'>(() => route.query.sort === 'priority' ? 'priority' : 'chronological')
   const searchInput = ref(querySearch.value)
@@ -111,7 +113,23 @@ export function useFeedTimelineController({
   const setSearchInRoute = async (value: string) => {
     const search = value.trim()
     await router.replace({
-      query: { ...route.query, q: search || undefined, page: undefined },
+      query: {
+        ...route.query,
+        q: search || undefined,
+        rank: search ? route.query.rank : undefined,
+        page: undefined,
+      },
+    })
+  }
+
+  const setSearchRank = async (rank: FeedSearchRank) => {
+    if (!querySearch.value.trim() || rank === querySearchRank.value) return
+    await router.replace({
+      query: {
+        ...route.query,
+        rank: rank === 'recent' ? 'recent' : undefined,
+        page: undefined,
+      },
     })
   }
 
@@ -257,6 +275,40 @@ export function useFeedTimelineController({
         if (queryHubGroupId.value) params.set('group_id', queryHubGroupId.value)
         if (queryHubMembershipId.value) params.set('membership_id', queryHubMembershipId.value)
         response = await apiRequestResult(`${apiURL}/feed/subscription-hub/updates?${params}`, { headers: authHeaders() })
+      } else if (querySearch.value.trim()) {
+        const timelineParams = buildFeedTimelineQuery({
+          page: currentPage.value,
+          limit: pageLimit,
+          sort: timelineMode.value === 'priority' ? 'priority' : undefined,
+          sourceId: querySourceId.value,
+          groupId: queryGroupId.value,
+          unreadOnly: unreadOnly.value,
+          hideDuplicates: mergeDuplicates.value && !querySourceId.value,
+          q: querySearch.value,
+        })
+        let ranked: Awaited<ReturnType<typeof apiRequestResult>> | null = null
+        try {
+          ranked = await apiRequestResult(`${apiURL}/feed/search?${buildFeedSearchQuery({
+            page: currentPage.value,
+            limit: pageLimit,
+            sourceId: querySourceId.value,
+            groupId: queryGroupId.value,
+            unreadOnly: unreadOnly.value,
+            q: querySearch.value,
+            rank: querySearchRank.value,
+          })}`, { headers: authHeaders() })
+        } catch (error) {
+          reportError(error)
+        }
+        if (requestSequence !== timelineRequestSequence) return
+        if (ranked?.ok) {
+          response = ranked
+        } else if (!ranked || shouldFallbackFeedSearch(ranked.status)) {
+          response = await apiRequestResult(`${apiURL}/feed/timeline?${timelineParams}`, { headers: authHeaders() })
+        } else {
+          timelineError.value = '搜索失败，请稍后重试'
+          return
+        }
       } else {
         const params = buildFeedTimelineQuery({
           page: currentPage.value,
@@ -266,7 +318,6 @@ export function useFeedTimelineController({
           groupId: queryGroupId.value,
           unreadOnly: unreadOnly.value,
           hideDuplicates: mergeDuplicates.value && !querySourceId.value,
-          q: querySearch.value,
         })
         response = await apiRequestResult(`${apiURL}/feed/timeline?${params}`, { headers: authHeaders() })
       }
@@ -413,6 +464,7 @@ export function useFeedTimelineController({
     queryPage,
     isBookmarksTimeline,
     querySearch,
+    querySearchRank,
     queryMergeDuplicates,
     timelineMode,
   ], async ([identity], previous) => {
@@ -448,6 +500,7 @@ export function useFeedTimelineController({
     isHubTimeline,
     isBookmarksTimeline,
     querySearch,
+    querySearchRank,
     timelineMode,
     searchInput,
     mergeDuplicates,
@@ -468,6 +521,7 @@ export function useFeedTimelineController({
     emptyTimelineText,
     clearSourceFilter,
     submitSearch,
+    setSearchRank,
     clearSearch,
     updateMergeDuplicates,
     setTimelineMode,

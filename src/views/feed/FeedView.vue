@@ -150,6 +150,7 @@
         :current-source-title="currentSourceSubscription ? currentSourceTitle : ''"
         :current-source-unread-count="currentSourceUnreadCount"
         :active-search-label="activeSearchLabel"
+        :search-rank="querySearchRank"
         :source-type-filter-options="sourceTypeFilterOptions"
         :query-source-id="querySourceId ?? undefined"
         :theme-filters="themeFilters"
@@ -160,6 +161,7 @@
         :bulk-read-label="bulkReadLabel"
         :has-new-timeline-content="hasNewTimelineContent"
         @search="submitSearch"
+        @update:search-rank="setSearchRank"
         @clear-search="clearSearch"
         @clear-source="clearSourceFilter"
         @update-merge-duplicates="updateMergeDuplicates"
@@ -191,12 +193,17 @@
             :source-interactive="Boolean(postSource(item))"
             :bookmarked="feedStore.bookmarkedPostIds.has(item.post.id)"
             :in-reading-list="readingListIds.has(item.post.id)"
+            :highlight-query="querySearch.trim()"
+            :excerpt="item.search_snippet"
             @click="openArticleSheet(item, index)"
             @open-source="openPostSourceSheet(item)"
           >
             <template #meta-extra>
               <span v-if="item.priority_reason" class="feed-priority-reason" data-test="feed-priority-reason">
                 {{ priorityReasonLabel(item.priority_reason) }}
+              </span>
+              <span v-if="feedSearchMatchLabel(item.search_match_field)" class="feed-search-match" data-test="feed-search-match">
+                {{ feedSearchMatchLabel(item.search_match_field) }}
               </span>
             </template>
             <template #actions>
@@ -233,12 +240,17 @@
             :starred="starredIds.has(item.feed_item.id)"
             :in-reading-list="readingListIds.has(item.feed_item.id)"
             :is-podcast-playing="isPodcastPlaying(item.feed_item)"
+            :highlight-query="querySearch.trim()"
+            :excerpt="item.search_snippet"
             @click="openArticleSheet(item, index)"
             @open-source="openFeedItemSourceSheet(item.feed_item)"
           >
             <template #meta-extra>
               <span v-if="item.priority_reason" class="feed-priority-reason" data-test="feed-priority-reason">
                 {{ priorityReasonLabel(item.priority_reason) }}
+              </span>
+              <span v-if="feedSearchMatchLabel(item.search_match_field)" class="feed-search-match" data-test="feed-search-match">
+                {{ feedSearchMatchLabel(item.search_match_field) }}
               </span>
               <span v-if="item.feed_item.duration" class="feed-item-duration">
                 时长: {{ item.feed_item.duration }}
@@ -393,6 +405,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
+import { feedSearchMatchLabel } from '@/utils/feedSearch'
 import ShortNoteCard from '@/components/shortnote/ShortNoteCard.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
@@ -479,6 +492,7 @@ const activeFeedView = computed<'subscriptions' | 'bookmarks'>({
         hub_group_id: undefined,
         hub_membership_id: undefined,
         q: undefined,
+        rank: undefined,
         sort: undefined,
         page: undefined,
       },
@@ -492,6 +506,7 @@ const {
   isHubTimeline,
   isBookmarksTimeline,
   querySearch,
+  querySearchRank,
   timelineMode,
   searchInput,
   mergeDuplicates,
@@ -512,6 +527,7 @@ const {
   emptyTimelineText,
   clearSourceFilter,
   submitSearch,
+  setSearchRank,
   clearSearch,
   updateMergeDuplicates,
   setTimelineMode,

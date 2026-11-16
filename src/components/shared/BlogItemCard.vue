@@ -18,6 +18,12 @@
     :show-actions="showActions"
     @click="handleClick"
   >
+    <template v-if="highlightQuery" #title>
+      <PHighlightText :text="displayTitle" :query="highlightQuery" />
+    </template>
+    <template v-if="highlightQuery && displaySummary" #summary>
+      <PHighlightText :text="displaySummary" :query="highlightQuery" />
+    </template>
     <template #visual>
       <PAvatar
         v-if="cardType === 'post'"
@@ -132,6 +138,7 @@ import EntryActions from '@/components/shared/EntryActions.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PClip from '@/components/ui/PClip.vue'
 import PContentCard from '@/components/ui/PContentCard.vue'
+import PHighlightText from '@/components/ui/PHighlightText.vue'
 import PLink from '@/components/ui/PLink.vue'
 import type { Post, ShortNote, FeedItem } from '@/types'
 import { isPlayableFeedPodcast } from '@/utils/feedPodcast'
@@ -157,6 +164,8 @@ const props = withDefaults(defineProps<{
   sourceInteractive?: boolean
   typeLabel?: string
   showActions?: boolean
+  highlightQuery?: string
+  excerpt?: string
 }>(), {
   bookmarked: false,
   inReadingList: false,
@@ -168,6 +177,8 @@ const props = withDefaults(defineProps<{
   sourceInteractive: false,
   typeLabel: '',
   showActions: true,
+  highlightQuery: '',
+  excerpt: '',
 })
 
 const emit = defineEmits<{
@@ -206,6 +217,7 @@ const displayTitle = computed(() => {
 })
 
 const displaySummary = computed(() => {
+  if (props.excerpt?.trim()) return props.excerpt.trim()
   const post = postItem.value as (Post & { excerpt?: string; description?: string }) | null
   if (post) {
     const summary = post.summary?.trim() || post.excerpt?.trim() || post.description?.trim()

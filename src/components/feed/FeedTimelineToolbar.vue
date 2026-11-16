@@ -10,9 +10,13 @@
 
   <div class="feed-actions">
     <form class="feed-search" data-test="feed-search-form" @submit.prevent="emit('search')">
-      <input v-model="searchValue" data-test="feed-search-input" class="feed-search__input" type="search" placeholder="搜索标题、来源、摘要" aria-label="搜索订阅内容" />
+      <input v-model="searchValue" data-test="feed-search-input" class="feed-search__input" type="search" placeholder="搜索标题、来源、摘要和正文" aria-label="搜索订阅内容" />
       <PButton type="submit" size="sm" label="搜索" />
       <PButton v-if="activeSearchLabel" variant="secondary" size="sm" data-test="feed-search-clear" label="清空" @click="emit('clear-search')" />
+      <div v-if="activeSearchLabel" class="feed-search-rank" role="group" aria-label="搜索排序">
+        <button type="button" data-test="feed-search-rank-relevance" :aria-pressed="searchRank !== 'recent'" @click="emit('update:searchRank', 'relevance')">相关</button>
+        <button type="button" data-test="feed-search-rank-recent" :aria-pressed="searchRank === 'recent'" @click="emit('update:searchRank', 'recent')">最新</button>
+      </div>
     </form>
     <div class="source-type-filters" aria-label="来源类型筛选"><PSegmentedControl v-model="sourceTypeValue" :options="sourceTypeFilterOptions" /></div>
     <div v-if="authenticated" class="timeline-mode" aria-label="订阅时间线模式"><PSegmentedControl v-model="timelineModeValue" :options="timelineModeOptions" /></div>
@@ -45,6 +49,7 @@ const props = defineProps<{
   currentSourceUnreadCount: number
   searchInput: string
   activeSearchLabel: string
+  searchRank?: 'relevance' | 'recent'
   sourceTypeFilter: FeedSourceTypeFilter
   sourceTypeFilterOptions: Array<{ label: string; value: FeedSourceTypeFilter; test: string }>
   querySourceId: string | undefined
@@ -67,6 +72,7 @@ const emit = defineEmits<{
   'update:timelineMode': [value: 'chronological' | 'priority']
   search: []
   'clear-search': []
+  'update:searchRank': [value: 'relevance' | 'recent']
   'clear-source': []
   'update-merge-duplicates': []
   'toggle-unread': []
@@ -75,6 +81,7 @@ const emit = defineEmits<{
 }>()
 
 const searchValue = computed({ get: () => props.searchInput, set: value => emit('update:searchInput', value) })
+const searchRank = computed(() => props.searchRank === 'recent' ? 'recent' : 'relevance')
 const sourceTypeValue = computed({ get: () => props.sourceTypeFilter, set: value => emit('update:sourceTypeFilter', value) })
 const timelineModeOptions: Array<{
   label: string
@@ -129,8 +136,20 @@ const mergeDuplicatesValue = computed({ get: () => props.mergeDuplicates, set: v
 .feed-current-source__clear { flex-shrink: 0; border: 0; padding: 0; background: transparent; color: var(--a-color-text); cursor: pointer; }
 .feed-current-source__clear:hover { text-decoration: underline; text-underline-offset: 0.18em; }
 .feed-actions { display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
-.feed-search { display: grid; grid-template-columns: minmax(12rem, 22rem) auto auto; align-items: center; gap: 0.5rem; margin-right: auto; }
+.feed-search { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-right: auto; }
+.feed-search-rank { display: inline-flex; gap: 0.25rem; }
+.feed-search-rank button {
+  min-height: var(--a-control-height-sm, 2.25rem);
+  padding: 0 0.7rem;
+  border: 0;
+  border-radius: var(--a-radius-control, 4px);
+  background: transparent;
+  color: var(--a-color-muted);
+  cursor: pointer;
+}
+.feed-search-rank button[aria-pressed="true"] { background: var(--a-color-surface-muted); color: var(--a-color-text); font-weight: 600; }
 .feed-search__input {
+  width: min(22rem, 100%);
   min-width: 0;
   height: var(--a-control-height-sm, 2.25rem);
   border: 1px solid var(--a-color-border-soft);

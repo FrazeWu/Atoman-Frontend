@@ -2205,4 +2205,48 @@ describe("FeedRecommendedView", () => {
 			expect.anything(),
 		);
 	});
+
+	it("batch-subscribes the visible sources and offers the personal feed", async () => {
+		const authStore = useAuthStore();
+		authStore.isAuthenticated = true;
+		authStore.token = "token";
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const url = String(input);
+			if (url.includes("/feed/recommend/channels")) {
+				return new Response(JSON.stringify({
+					data: [
+						{ id: "rss-1", title: "外部源", source_type: "external_rss", source_id: "rss-1", rss_url: "https://example.com/feed.xml", target_path: "/feed", subscribed: false },
+						{ id: "rss-2", title: "已订阅源", source_type: "external_rss", source_id: "rss-2", target_path: "/feed", subscribed: true },
+					],
+					meta: { total: 2 },
+				}), { status: 200 });
+			}
+			if (url.includes("/feed/sources/batch-subscribe")) {
+				return new Response(JSON.stringify({ data: { created: 1, created_ids: ["rss-1"], reused_ids: [], missing_ids: [] } }), { status: 200 });
+			}
+			return new Response(JSON.stringify({ data: [] }), { status: 200 });
+		});
+		const wrapper = mount(FeedRecommendedView, {
+			global: {
+				stubs: {
+					PPageHeader: { template: "<header />" },
+					PSegmentedControl: segmentedControlStub,
+					PButton: buttonStub,
+					PEmpty: true,
+					PModal: true,
+					PToast: { props: ["message"], template: '<p data-test="toast">{{ message }}</p>' },
+				},
+			},
+		});
+		await flushPromises();
+		await wrapper.get('[data-test="feed-explore-batch-subscribe"]').trigger("click");
+		await flushPromises();
+		expect(wrapper.get('[data-test="feed-explore-next"]').text()).toContain("已订阅 1 个来源");
+		await wrapper.get('[data-test="feed-explore-open-feed"]').trigger("click");
+		expect(routerPush).toHaveBeenCalledWith("/feed");
+		const batchCall = vi.mocked(globalThis.fetch).mock.calls.find(([input]) => String(input).includes("/feed/sources/batch-subscribe"));
+		expect(batchCall).toBeTruthy();
+		expect(String(batchCall?.[1]?.body)).toContain("rss-1");
+		expect(String(batchCall?.[1]?.body)).not.toContain("rss-2");
+	});
 });

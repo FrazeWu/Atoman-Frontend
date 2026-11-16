@@ -109,6 +109,8 @@ const channelCoverUrl = computed(() => {
   const url = video.value ? videoAvatarSource(video.value) : ''
   return url ? resolveMediaURL(url) : ''
 })
+const channelAvatarFailed = ref(false)
+watch(channelCoverUrl, () => { channelAvatarFailed.value = false })
 const processingMessage = computed(() => {
   if (!video.value || video.value.storage_type !== 'local') return ''
   if (video.value.processing_status === 'pending' || video.value.processing_status === 'processing') return '正在生成封面和播放预览，完成后会自动刷新。'
@@ -788,7 +790,12 @@ async function toggleChannelSubscription() {
         <div class="vd-meta-row">
           <RouterLink v-if="video.channel" :to="`/channels/${video.channel.slug || video.channel_id}`" class="vd-author">
             <span class="vd-author-avatar" aria-hidden="true">
-              <img v-if="channelCoverUrl" :src="channelCoverUrl" alt="">
+              <img
+                v-if="channelCoverUrl && !channelAvatarFailed"
+                :src="channelCoverUrl"
+                :alt="video.channel.name"
+                @error="channelAvatarFailed = true"
+              >
               <span v-else>{{ video.channel.name.slice(0, 1) }}</span>
             </span>
             <span class="vd-author-copy">

@@ -62,7 +62,7 @@ describe('BooksDiscoverView Skeletons and Empty States', () => {
     // While loading, PSkeletonCard components should be rendered in the grid
     const skeletons = wrapper.findAllComponents(PSkeletonCard)
     expect(skeletons.length).toBe(12)
-    expect(skeletons[0].props('aspect')).toBe('3/4')
+    expect(skeletons[0].props('aspect')).toBe('2/3')
 
     // Complete loading
     resolveWorks({ items: [], total: 0 })

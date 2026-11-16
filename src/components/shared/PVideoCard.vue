@@ -23,6 +23,7 @@ const authStore = useAuthStore()
 const bookmarks = useVideoBookmarks()
 const watchLaterError = ref('')
 const thumbnailFailed = ref(false)
+const avatarFailed = ref(false)
 const avatarUrl = computed(() => {
   const url = videoAvatarSource(props.video)
   return url ? resolveMediaImageURL(url, { width: 64 }) : ''
@@ -43,6 +44,7 @@ const thumbnailMobileSrcSet = computed(() => {
 })
 
 watch(thumbnailSource, () => { thumbnailFailed.value = false })
+watch(avatarUrl, () => { avatarFailed.value = false })
 
 async function toggleWatchLater() {
   if (!authStore.isAuthenticated) {
@@ -128,7 +130,16 @@ const avatarLetter = () =>
 
     <RouterLink :to="to || `/videos/watch/${video.id}`" class="vc-info">
       <div class="vc-avatar" aria-hidden="true">
-        <img v-if="avatarUrl" :src="avatarUrl" :alt="video.channel?.name || video.user?.username || ''" width="64" height="64" loading="lazy" decoding="async" />
+        <img
+          v-if="avatarUrl && !avatarFailed"
+          :src="avatarUrl"
+          :alt="video.channel?.name || video.user?.username || ''"
+          width="64"
+          height="64"
+          loading="lazy"
+          decoding="async"
+          @error="avatarFailed = true"
+        />
         <span v-else>{{ avatarLetter() }}</span>
       </div>
       <div class="vc-text">

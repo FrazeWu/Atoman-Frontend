@@ -51,6 +51,7 @@ const recommendationOptions = [
   { label: '探索', value: 'discover' },
 ]
 let recommendationRequestSequence = 0
+const failedCovers = ref(new Set<string>())
 
 async function loadEpisodes() {
   loading.value = true
@@ -153,7 +154,7 @@ function playEpisode(ep: PodcastEpisode) {
       >
         <template #skeleton>
           <div class="ph-recommendation-grid" aria-label="正在加载推荐">
-            <div v-for="i in 4" :key="i" class="ph-recommendation-card ph-recommendation-card-skeleton">
+            <div v-for="i in 4" :key="i" class="ph-recommendation-card ph-recommendation-skeleton">
               <PSkeleton height="7rem" variant="rect" />
               <div class="ph-recommendation-content">
                 <PSkeleton width="80%" height="20px" variant="text" />
@@ -175,7 +176,13 @@ function playEpisode(ep: PodcastEpisode) {
             class="ph-recommendation-card"
           >
             <div class="ph-recommendation-cover">
-              <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.title" loading="lazy" />
+              <img
+                v-if="item.imageUrl && !failedCovers.has(item.id)"
+                :src="item.imageUrl"
+                :alt="item.title"
+                loading="lazy"
+                @error="failedCovers.add(item.id)"
+              />
               <Headphones v-else :size="28" aria-hidden="true" />
             </div>
             <div class="ph-recommendation-content">
@@ -208,11 +215,14 @@ function playEpisode(ep: PodcastEpisode) {
         <template #skeleton>
           <div class="ph-episode-list" aria-label="正在加载单集">
             <div v-for="i in 4" :key="i" class="ph-episode-skel-card">
-              <PSkeleton width="5rem" height="5rem" variant="rect" style="border-radius: var(--a-radius-control); flex-shrink: 0;" />
-              <div style="flex:1;display:flex;flex-direction:column;gap:0.5rem;">
+              <div class="ph-episode-cover">
+                <PSkeleton width="100%" height="100%" variant="rect" style="border-radius: var(--a-radius-control);" />
+              </div>
+              <div class="ph-episode-content">
                 <PSkeleton width="40%" height="18px" />
                 <PSkeleton width="90%" height="14px" />
               </div>
+              <PSkeleton width="36px" height="36px" variant="circle" class="ph-episode-skel-action" />
             </div>
           </div>
         </template>
@@ -220,7 +230,13 @@ function playEpisode(ep: PodcastEpisode) {
         <div v-else class="ph-episode-list">
         <article v-for="ep in episodes" :key="ep.id" class="ph-episode-row">
           <div class="ph-episode-cover">
-            <img v-if="episodeCover(ep)" :src="episodeCover(ep)" :alt="ep.post?.title || '单集封面'" loading="lazy" />
+            <img
+              v-if="episodeCover(ep) && !failedCovers.has(ep.id)"
+              :src="episodeCover(ep)"
+              :alt="ep.post?.title || '单集封面'"
+              loading="lazy"
+              @error="failedCovers.add(ep.id)"
+            />
             <Headphones v-else :size="24" aria-hidden="true" />
           </div>
           <div class="ph-episode-content">
@@ -424,7 +440,8 @@ function playEpisode(ep: PodcastEpisode) {
   -webkit-line-clamp: 2;
 }
 
-.ph-recommendation-skeleton {
+.ph-recommendation-skeleton,
+.ph-recommendation-card-skeleton {
   min-height: 7rem;
   border-radius: var(--a-radius-card);
 }
@@ -435,14 +452,19 @@ function playEpisode(ep: PodcastEpisode) {
 }
 
 .ph-episode-skel-card {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr) 40px;
   gap: 1rem;
+  align-items: center;
   min-height: 5.5rem;
   padding: 0.85rem 1rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
+}
+
+.ph-episode-skel-action {
+  justify-self: center;
 }
 
 .ph-episode-row {
@@ -542,7 +564,8 @@ function playEpisode(ep: PodcastEpisode) {
     grid-template-columns: 5.5rem minmax(0, 1fr);
   }
 
-  .ph-episode-row {
+  .ph-episode-row,
+  .ph-episode-skel-card {
     grid-template-columns: 4.5rem minmax(0, 1fr) 40px;
     gap: 0.75rem;
   }
@@ -553,8 +576,13 @@ function playEpisode(ep: PodcastEpisode) {
 }
 
 @media (max-width: 440px) {
-  .ph-episode-row {
+  .ph-episode-row,
+  .ph-episode-skel-card {
     grid-template-columns: 4rem minmax(0, 1fr);
+  }
+
+  .ph-episode-skel-action {
+    display: none;
   }
 
   .ph-episode-cover {

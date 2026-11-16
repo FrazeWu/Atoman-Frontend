@@ -11,7 +11,7 @@
         :aria-label="`打开艺人 ${displayName}`"
       >
         <img
-          v-if="optimizedImageUrl"
+          v-if="optimizedImageUrl && !imageLoadFailed"
           :src="optimizedImageUrl"
           :alt="displayName"
           class="avatar-image"
@@ -19,6 +19,7 @@
           decoding="async"
           width="240"
           height="240"
+          @error="imageLoadFailed = true"
         />
         <span v-else class="avatar-placeholder-text">{{ artistInitial }}</span>
       </button>
@@ -74,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Bookmark, BookmarkCheck, Headphones, Users } from 'lucide-vue-next'
 import PMediaCard from '@/components/ui/PMediaCard.vue'
 import { resolveMediaImageURL } from '@/utils/mediaUrl'
@@ -116,6 +117,8 @@ const imageUrl = computed(() => {
 const optimizedImageUrl = computed(() => {
   return props.artist.image_url ? resolveMediaImageURL(props.artist.image_url, { width: 240 }) : ''
 })
+const imageLoadFailed = ref(false)
+watch(optimizedImageUrl, () => { imageLoadFailed.value = false })
 
 const displayName = computed(() => props.artist.display_name || props.artist.name)
 

@@ -30,7 +30,7 @@ import { computed } from 'vue'
 import PSkeleton from './PSkeleton.vue'
 
 const props = withDefaults(defineProps<{
-  aspect?: '3/4' | '1/1' | '16/9' | 'auto'
+  aspect?: '2/3' | '3/4' | '1/1' | '16/9' | 'auto'
   lines?: number
   bordered?: boolean
 }>(), {
@@ -40,6 +40,7 @@ const props = withDefaults(defineProps<{
 })
 
 const aspectClass = computed(() => {
+  if (props.aspect === '2/3') return '2-3'
   if (props.aspect === '3/4') return '3-4'
   if (props.aspect === '1/1') return '1-1'
   if (props.aspect === '16/9') return '16-9'
@@ -66,6 +67,10 @@ const aspectClass = computed(() => {
   position: relative;
   overflow: hidden;
   border-radius: var(--a-radius-card, 4px);
+}
+
+.p-skeleton-card__media--2-3 {
+  aspect-ratio: 2 / 3;
 }
 
 .p-skeleton-card__media--3-4 {

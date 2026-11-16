@@ -49,7 +49,7 @@ const ariaLabel = computed(() => {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background-color: var(--color-bg-surface, #ffffff);
+  background-color: var(--a-color-bg, #ffffff);
   box-sizing: border-box;
 }
 
@@ -58,10 +58,10 @@ const ariaLabel = computed(() => {
   max-width: 580px;
   min-height: 440px;
   aspect-ratio: 1 / 1.414;
-  border: 1px solid var(--color-border-subtle, rgba(0, 0, 0, 0.08));
-  border-radius: 4px;
+  border: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.08));
+  border-radius: var(--a-radius-card, 4px);
   box-shadow: none !important;
-  background-color: var(--color-bg-surface, #ffffff);
+  background-color: var(--a-color-bg, #ffffff);
   padding: 2.5rem 2rem;
   display: flex;
   flex-direction: column;
@@ -83,8 +83,8 @@ const ariaLabel = computed(() => {
 .book-reader-skeleton__title {
   height: 1.25rem;
   width: 45%;
-  background-color: var(--color-fill-muted, rgba(0, 0, 0, 0.06));
-  border-radius: 4px;
+  background-color: var(--a-color-surface-muted, rgba(0, 0, 0, 0.06));
+  border-radius: var(--a-radius-control, 4px);
 }
 
 .book-reader-skeleton__body {
@@ -96,8 +96,8 @@ const ariaLabel = computed(() => {
 
 .book-reader-skeleton__line {
   height: 0.85rem;
-  background-color: var(--color-fill-muted, rgba(0, 0, 0, 0.05));
-  border-radius: 4px;
+  background-color: var(--a-color-surface-muted, rgba(0, 0, 0, 0.05));
+  border-radius: var(--a-radius-control, 4px);
 }
 
 .book-reader-skeleton__spacer {

@@ -407,7 +407,8 @@ onUnmounted(() => {
 }
 
 .feed-skeleton {
-  height: 7rem;
+  height: 5.5rem;
+  border-radius: var(--a-radius-card);
 }
 
 

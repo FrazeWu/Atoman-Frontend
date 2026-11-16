@@ -12,7 +12,7 @@
         :aria-label="`打开歌单 ${displayTitle}`"
       >
         <img
-          v-if="optimizedCoverUrl"
+          v-if="optimizedCoverUrl && !imageLoadFailed"
           :src="optimizedCoverUrl"
           :alt="playlist.title"
           class="cover-image"
@@ -21,6 +21,7 @@
           :loading="priority ? 'eager' : 'lazy'"
           :fetchpriority="priority ? 'high' : 'auto'"
           decoding="async"
+          @error="imageLoadFailed = true"
         />
         <span v-else class="cover-placeholder">
           <Music2 :size="28" aria-hidden="true" />
@@ -63,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Bookmark, BookmarkCheck, Music2 } from 'lucide-vue-next'
 
 import PMediaCard from '@/components/ui/PMediaCard.vue'
@@ -98,6 +99,8 @@ defineEmits<{
 
 const coverUrl = computed(() => props.playlist.cover_url || '')
 const optimizedCoverUrl = computed(() => coverUrl.value ? resolveMediaImageURL(coverUrl.value, { width: 320 }) : '')
+const imageLoadFailed = ref(false)
+watch(optimizedCoverUrl, () => { imageLoadFailed.value = false })
 
 const displayTitle = computed(() => {
   const owner = props.playlist.owner_username?.trim()

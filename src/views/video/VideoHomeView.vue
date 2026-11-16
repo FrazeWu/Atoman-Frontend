@@ -232,7 +232,7 @@ watch(sort, () => {
           <div v-for="i in 8" :key="i" class="vh-skel">
             <PSkeleton variant="rect" height="auto" style="aspect-ratio: 16/9; width: 100%;" />
             <div class="vh-skel-info">
-              <PSkeleton variant="circle" width="2.25rem" height="2.25rem" style="flex-shrink: 0;" />
+              <PSkeleton variant="rect" width="2.25rem" height="2.25rem" style="flex-shrink: 0; border-radius: var(--a-radius-control);" />
               <div class="vh-skel-lines">
                 <PSkeleton variant="text" width="85%" />
                 <PSkeleton variant="text" width="55%" />
@@ -397,8 +397,8 @@ watch(sort, () => {
 .vh-skel { display: flex; flex-direction: column; gap: 0; }
 .vh-skel-info {
   display: flex;
-  gap: 0.65rem;
-  padding: 0.6rem 0 0;
+  gap: 0.75rem;
+  padding: 0.75rem 0 0;
 }
 .vh-skel-lines {
   flex: 1;

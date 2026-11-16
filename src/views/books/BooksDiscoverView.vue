@@ -182,7 +182,7 @@
 
     <!-- 加载中状态 -->
     <div v-else-if="loading" class="book-catalog__grid" role="status" aria-label="正在加载图书">
-      <PSkeletonCard v-for="n in 12" :key="n" aspect="3/4" />
+      <PSkeletonCard v-for="n in 12" :key="n" aspect="2/3" />
     </div>
 
     <!-- 主体内容 -->

@@ -14,7 +14,12 @@
       <CreatorThemeScope :creator-id="channel.user?.uuid || channel.user_id" :preset-config="activeTheme?.preset_config">
         <section class="channel-identity-card" aria-labelledby="channel-title">
         <div class="channel-identity-card__cover" aria-hidden="true">
-          <img v-if="channel.cover_url" :src="resolveMediaURL(channel.cover_url)" alt="" />
+          <img
+            v-if="channel.cover_url && !coverFailed"
+            :src="resolveMediaURL(channel.cover_url)"
+            :alt="channel.name"
+            @error="coverFailed = true"
+          />
           <span v-else>{{ channel.name.slice(0, 1).toUpperCase() }}</span>
         </div>
 
@@ -208,6 +213,8 @@ const isThemeDrawerOpen = ref(false)
 const loading = ref(true)
 const loadError = ref('')
 const channel = ref<Channel | null>(null)
+const coverFailed = ref(false)
+watch(() => channel.value?.cover_url, () => { coverFailed.value = false })
 const collections = ref<Collection[]>([])
 const channelPosts = ref<Post[]>([])
 const activeCollectionId = ref<string | null>(null)

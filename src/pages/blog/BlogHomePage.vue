@@ -116,7 +116,7 @@
 
         <!-- 主文章列表流 -->
         <div v-if="isStreamLoading && !initialStreamReady" class="blog-home__skeleton-list">
-          <div v-for="i in 5" :key="i" class="a-skeleton" style="height: 8rem; border-radius: var(--a-radius-card);" />
+          <div v-for="i in 5" :key="i" class="a-skeleton blog-home__skeleton-item" />
         </div>
 
         <PEmpty v-else-if="streamError && !streamItems.length" title="内容加载失败" :description="streamError" />

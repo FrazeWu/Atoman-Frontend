@@ -9,6 +9,7 @@ const props = defineProps<{ module: StudioModule }>()
 const auth = useAuthStore()
 const lifecycle = useContentLifecycle()
 const items = ref<ContinueContentItem[]>([])
+const failedCovers = ref(new Set<string>())
 const labels: Record<StudioModule, string> = { blog: '继续阅读', podcast: '继续收听', video: '继续观看' }
 const icons = { blog: BookOpen, podcast: Headphones, video: Play }
 
@@ -29,7 +30,13 @@ onMounted(async () => {
         class="continue-item"
       >
         <div class="continue-cover">
-          <img v-if="item.cover_url" :src="item.cover_url" :alt="item.title" loading="lazy" />
+          <img
+            v-if="item.cover_url && !failedCovers.has(item.content_id)"
+            :src="item.cover_url"
+            :alt="item.title"
+            loading="lazy"
+            @error="failedCovers.add(item.content_id)"
+          />
           <component :is="icons[module]" v-else :size="22" aria-hidden="true" />
         </div>
         <div class="continue-copy">
@@ -46,7 +53,7 @@ onMounted(async () => {
 
 <style scoped>
 .continue-section { margin: 0 0 1.5rem; padding: 0; }
-.continue-section h2 { margin: 0 0 0.85rem; font-size: 1.05rem; font-weight: 600; color: var(--a-color-fg); }
+.continue-section h2 { margin: 0 0 0.85rem; font-size: 1.05rem; font-weight: var(--a-font-weight-strong, 500); color: var(--a-color-fg); }
 .continue-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
 .continue-item {
   min-width: 0;

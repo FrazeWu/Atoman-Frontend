@@ -1,7 +1,12 @@
 .recommendation-skeleton {
   display: grid;
   gap: 0.5rem;
-  padding: 1rem;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.feed-timeline-box > .recommendation-skeleton:first-child {
+  border-top: 1px solid var(--a-color-border-soft);
 }
 
 .feed-recommendation-actions {

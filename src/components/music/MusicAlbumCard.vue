@@ -2,7 +2,7 @@
   <PMediaCard variant="square" class="music-album-card">
     <div class="cover-frame">
       <button type="button" class="cover-action" :aria-label="`打开专辑 ${album.title}`" @click="emit('click')">
-        <picture v-if="optimizedCoverUrl">
+        <picture v-if="optimizedCoverUrl && !imageLoadFailed">
           <source media="(max-width: 768px)" :srcset="coverMobileSrcSet || optimizedCoverUrl" sizes="calc((100vw - 3rem) / 2)" />
           <img
             :src="optimizedCoverUrl"
@@ -15,6 +15,7 @@
             :loading="priority ? 'eager' : 'lazy'"
             :fetchpriority="priority ? 'high' : 'auto'"
             decoding="async"
+            @error="imageLoadFailed = true"
           />
         </picture>
         <span v-else class="cover-placeholder">
@@ -96,7 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Bookmark, BookmarkCheck, Disc3, Headphones, Users } from 'lucide-vue-next'
 import PMediaCard from '@/components/ui/PMediaCard.vue'
 import { resolveMediaImageSrcSet, resolveMediaImageURL } from '@/utils/mediaUrl'
@@ -174,6 +175,8 @@ const coverUrl = computed(() => {
 const optimizedCoverUrl = computed(() => coverUrl.value ? resolveMediaImageURL(coverUrl.value, { width: 180 }) : '')
 const coverSrcSet = computed(() => coverUrl.value ? resolveMediaImageSrcSet(coverUrl.value, [180, 320]) : '')
 const coverMobileSrcSet = computed(() => coverUrl.value ? resolveMediaImageSrcSet(coverUrl.value, [180]) : '')
+const imageLoadFailed = ref(false)
+watch(optimizedCoverUrl, () => { imageLoadFailed.value = false })
 
 const artistNames = computed(() => {
   if (props.album.artists && props.album.artists.length) {

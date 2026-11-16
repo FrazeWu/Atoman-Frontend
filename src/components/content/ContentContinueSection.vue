@@ -84,5 +84,14 @@ onMounted(async () => {
 .continue-track { grid-column: 1 / -1; height: 3px; overflow: hidden; border-radius: 9999px; background: var(--a-color-border-soft); }
 .continue-track div { width: 100%; height: 100%; transform-origin: left; background: var(--a-color-fg); }
 .continue-item:focus-visible { outline: 2px solid var(--a-color-fg); outline-offset: 3px; }
-@media (max-width: 768px) { .continue-list { grid-template-columns: 1fr; } }
+@media (max-width: 1024px) {
+  .continue-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .continue-list {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

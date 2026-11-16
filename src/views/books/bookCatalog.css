@@ -67,7 +67,7 @@
 .book-discover__controls .p-segmented-item.active {
   background: var(--a-color-bg, #ffffff) !important;
   color: var(--a-color-text, #0f172a) !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 1px rgba(0, 0, 0, 0.04) !important;
+  box-shadow: none !important;
 }
 
 .book-catalog__grid {
@@ -137,18 +137,18 @@
   display: grid;
   gap: 0.5rem;
   padding: 0.875rem 1.125rem;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  border-radius: 8px;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card, 4px);
   background: var(--a-color-bg, #ffffff);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: none;
   overflow-wrap: anywhere;
-  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .book-catalog__row:hover {
-  border-color: rgba(0, 0, 0, 0.08);
+  border-color: var(--a-color-border);
   background: var(--a-color-surface-muted, #f8fafc);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
 }
 
 .book-catalog section {
@@ -379,7 +379,7 @@
 
 .book-catalog__summary-title {
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--a-color-text, #1c1c1e);
 }
 
@@ -466,7 +466,7 @@
 
 .book-catalog__step3-title {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--a-color-text, #1c1c1e);
   margin: 0;
 }
@@ -510,13 +510,11 @@
   display: flex;
   justify-content: center;
   position: relative;
-  border-radius: 4px;
+  border-radius: var(--a-radius-card, 4px);
   overflow: hidden;
-  border: none;
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg, #ffffff);
-  box-shadow:
-    0 12px 30px -4px rgba(0, 0, 0, 0.16),
-    0 3px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
 }
 
 /* Info Column */
@@ -536,7 +534,7 @@
 
 .book-catalog__work-title {
   font-size: clamp(1.75rem, 3vw, 2.35rem);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.025em;
   color: var(--a-color-text, #1c1c1e);
   line-height: 1.2;
@@ -639,7 +637,7 @@
 
 .book-catalog__rating-big-score {
   font-size: 1.75rem;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--a-color-text, #1c1c1e);
   line-height: 1;
 }
@@ -682,7 +680,7 @@
 
 .book-catalog__section-header h2 {
   font-size: 1.35rem;
-  font-weight: 700;
+  font-weight: 600;
   margin: 0;
   color: var(--a-color-text, #1c1c1e);
 }
@@ -719,16 +717,16 @@
   gap: 1.25rem;
   padding: 1.25rem 1.5rem;
   background-color: var(--a-color-bg, #ffffff);
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  border-radius: var(--a-radius-card, 4px);
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: none;
+  transition: border-color 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .book-catalog__edition-card:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: none;
+  border-color: var(--a-color-border);
 }
 
 @media (min-width: 640px) {
@@ -742,11 +740,11 @@
   width: 90px;
   flex-shrink: 0;
   position: relative;
-  border-radius: 4px;
+  border-radius: var(--a-radius-card, 4px);
   overflow: hidden;
-  border: none;
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-bg, #ffffff);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 
 .book-catalog__edition-meta {
@@ -766,7 +764,7 @@
 
 .book-catalog__edition-title-link {
   font-size: 1.05rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--a-color-text, #1c1c1e);
   text-decoration: none;
   transition: color 0.15s ease;
@@ -975,9 +973,9 @@
   gap: 1rem;
   padding: 1.25rem 1.5rem;
   background: var(--a-color-bg, #ffffff);
-  border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  border-radius: var(--a-radius-card, 4px);
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: none;
 }
 
 @media (min-width: 640px) {
@@ -1004,9 +1002,9 @@
 
 .edition-best-card__format {
   font-size: 0.6875rem;
-  font-weight: 700;
+  font-weight: 600;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   text-transform: uppercase;
   background: #1e293b;
   color: #ffffff;
@@ -1046,7 +1044,7 @@
 
 .edition-best-card__filename {
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--a-color-text, #1c1c1e);
   word-break: break-all;
 }
@@ -1112,7 +1110,7 @@
 
 .book-overview-heading {
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--a-color-text, #1c1c1e);
   margin: 0;
   letter-spacing: -0.01em;
@@ -1136,10 +1134,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.875rem 1.25rem;
-  border-radius: 10px;
+  border-radius: var(--a-radius-card, 4px);
   background: var(--a-color-bg, #ffffff);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--a-color-border-soft);
+  box-shadow: none;
 }
 
 .book-overview-author-info {
@@ -1207,7 +1205,7 @@
 
 .book-editions-heading {
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--a-color-text, #1c1c1e);
   margin: 0;
 }
@@ -1267,7 +1265,7 @@
 
 .book-quotes-title {
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--a-color-text, #1c1c1e);
   margin: 0;
 }
@@ -1296,11 +1294,11 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 1.125rem 1.25rem;
-  border-radius: 10px;
+  border-radius: var(--a-radius-card, 4px);
   background: var(--a-color-bg, #ffffff);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-left: 3px solid #f59e0b;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--a-color-border-soft);
+  border-left: 3px solid var(--a-color-warning);
+  box-shadow: none;
 }
 
 .book-quote-text {

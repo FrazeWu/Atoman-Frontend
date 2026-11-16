@@ -120,14 +120,14 @@ watch(
   aspect-ratio: 2 / 3;
   width: 100%;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: var(--a-radius-card, 4px);
   background: var(--a-color-bg);
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: none;
+  border: 1px solid var(--a-color-border-soft);
   user-select: none;
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .book-cover img {
@@ -172,10 +172,10 @@ watch(
 
 .book-cover__modern-tag {
   font-size: 0.625rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: var(--a-color-muted);
   margin-top: 0.125rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -188,9 +188,9 @@ watch(
 
 .book-cover__modern-title {
   font-size: 0.9375rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.35;
-  color: #0f172a;
+  color: var(--a-color-fg);
   letter-spacing: -0.01em;
   margin: 0;
   display: -webkit-box;
@@ -212,7 +212,7 @@ watch(
 }
 
 .book-cover__modern-footer {
-  border-top: 1px solid var(--a-color-border-soft, #f1f5f9);
+  border-top: 1px solid var(--a-color-border-soft);
   padding-top: 0.5rem;
   margin-top: auto;
 }
@@ -220,7 +220,7 @@ watch(
 .book-cover__modern-author {
   font-size: 0.75rem;
   font-weight: 500;
-  color: #475569;
+  color: var(--a-color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

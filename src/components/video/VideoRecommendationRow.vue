@@ -137,6 +137,8 @@ function markThumbnailFailed(videoID: string) {
 }
 
 .vrr__title {
+  flex: 1;
+  min-width: 0;
   display: -webkit-box;
   overflow: hidden;
   margin: 0;
@@ -178,9 +180,15 @@ function markThumbnailFailed(videoID: string) {
   white-space: nowrap;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .vrr__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .vrr__grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

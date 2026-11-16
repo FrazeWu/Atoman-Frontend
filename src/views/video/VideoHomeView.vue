@@ -371,7 +371,7 @@ watch(sort, () => {
 /* Grid */
 .vh-grid {
   display: grid;
-  grid-template-columns: repeat(1, 1fr);
+  grid-template-columns: repeat(1, minmax(0, 1fr));
   gap: 2rem 1.25rem;
 }
 
@@ -382,15 +382,15 @@ watch(sort, () => {
 }
 
 @media (min-width: 520px) {
-  .vh-grid { grid-template-columns: repeat(2, 1fr); }
+  .vh-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (min-width: 840px) {
-  .vh-grid { grid-template-columns: repeat(3, 1fr); }
+  .vh-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
-@media (min-width: 1100px) {
-  .vh-grid { grid-template-columns: repeat(4, 1fr); }
+@media (min-width: 1280px) {
+  .vh-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 /* Skeleton card */

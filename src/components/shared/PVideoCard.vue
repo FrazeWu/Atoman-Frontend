@@ -270,6 +270,10 @@ const avatarLetter = () =>
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  max-width: 48%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   background: rgba(15, 23, 42, 0.82);
   color: #fff;
   font-size: 11px;
@@ -361,6 +365,10 @@ const avatarLetter = () =>
   color: var(--a-color-muted);
   font-weight: 500;
   letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 .vc-stats {
   display: flex;

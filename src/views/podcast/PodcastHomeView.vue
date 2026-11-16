@@ -403,6 +403,12 @@ function playEpisode(ep: PodcastEpisode) {
 }
 
 .ph-recommendation-content h3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.35;
   color: var(--a-color-text);
   font-size: 1rem;
   font-weight: 500;
@@ -482,7 +488,13 @@ function playEpisode(ep: PodcastEpisode) {
 }
 
 .ph-episode-title {
-  width: fit-content;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  line-height: 1.35;
   color: var(--a-color-text);
   font-size: 1.05rem;
   font-weight: 500;

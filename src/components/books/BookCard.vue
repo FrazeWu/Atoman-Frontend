@@ -87,8 +87,8 @@ const ratingText = computed(() => {
 }
 
 .book-card:hover :deep(.book-cover) {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 24px -4px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+  box-shadow: none;
 }
 
 .book-card__meta {
@@ -124,7 +124,7 @@ const ratingText = computed(() => {
   gap: 0.25rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #d97706;
+  color: var(--a-color-warning, #d97706);
   flex-shrink: 0;
 }
 
@@ -140,6 +140,7 @@ const ratingText = computed(() => {
 }
 
 .book-card__author {
+  flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

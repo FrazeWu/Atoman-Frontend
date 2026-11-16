@@ -221,6 +221,8 @@ const compactCount = (value: number) => {
 }
 
 .feed-source-card__title {
+  flex: 1;
+  min-width: 0;
   margin: 0;
   font-size: 0.92rem;
   font-weight: 600;
@@ -320,6 +322,8 @@ const compactCount = (value: number) => {
 }
 
 .preview-title {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

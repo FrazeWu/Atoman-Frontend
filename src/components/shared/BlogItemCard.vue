@@ -326,6 +326,10 @@ function formatCount(value?: number) {
   cursor: pointer;
   font: inherit;
   text-align: left;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .blog-item-card__source-button:hover,

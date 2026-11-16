@@ -103,7 +103,8 @@ async function subscribeShow() {
 <style scoped>
 .ps-state { text-align: center; padding: 6rem 0; color: var(--a-color-muted); }
 .ps-wrap { width: 100%; padding: 2rem 0 4rem; }
-.ps-header { display: flex; gap: 1.5rem; margin-bottom: 2rem; border-bottom: 1px solid var(--a-color-border-soft); padding-bottom: 1.75rem; }
+.ps-header { display: flex; gap: 1.5rem; margin-bottom: 2rem; border-bottom: 1px solid var(--a-color-border-soft); padding-bottom: 1.75rem; min-width: 0; }
+.ps-header > div { flex: 1; min-width: 0; }
 .ps-cover { width: 8rem; height: 8rem; border-radius: var(--a-radius-card); object-fit: cover; flex-shrink: 0; border: 1px solid var(--a-color-border-soft); }
 .ps-name { font-size: 1.5rem; font-weight: 500; color: var(--a-color-fg); margin: 0; }
 .ps-desc { font-size: 0.875rem; color: var(--a-color-muted); margin-top: 0.35rem; line-height: 1.5; }
@@ -114,6 +115,22 @@ async function subscribeShow() {
 .ps-ep:hover { border-color: var(--a-color-border); background: var(--a-color-surface-muted); box-shadow: none; }
 .ps-ep-cover { width: 2.75rem; height: 2.75rem; border-radius: var(--a-radius-control); object-fit: cover; flex-shrink: 0; }
 .ps-ep-num { font-size: 0.75rem; color: var(--a-color-muted); flex-shrink: 0; }
-.ps-ep-title { min-width: 0; flex: 1; font-size: 0.9rem; font-weight: 500; text-decoration: none; color: var(--a-color-fg); }
+.ps-ep-title { min-width: 0; flex: 1; font-size: 0.9rem; font-weight: 500; text-decoration: none; color: var(--a-color-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ps-ep-title:hover { text-decoration: underline; }
+
+@media (max-width: 640px) {
+  .ps-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+  }
+  .ps-cover {
+    width: 6rem;
+    height: 6rem;
+  }
+  .ps-actions {
+    justify-content: center;
+  }
+}
 </style>

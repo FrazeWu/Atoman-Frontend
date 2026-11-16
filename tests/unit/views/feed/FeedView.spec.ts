@@ -152,7 +152,11 @@ describe("FeedView", () => {
       .fn()
       .mockResolvedValue(undefined) as any;
     feedStore.fetchStarredIds = vi.fn().mockResolvedValue(undefined) as any;
-    feedStore.fetchReadingListIds = vi.fn().mockResolvedValue(undefined) as any;
+    // Auto-add toggles membership only after saved ids have loaded. The real
+    // fetch sets this flag; a no-op stub makes every subscription auto-add skip.
+    feedStore.fetchReadingListIds = vi.fn().mockImplementation(async () => {
+      feedStore.readingListCatalogReady = true;
+    }) as any;
     feedStore.fetchUnreadFeedItemCount = vi.fn().mockResolvedValue(1) as any;
     feedStore.createSubscriptionRule = vi
       .fn()

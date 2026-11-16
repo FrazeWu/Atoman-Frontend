@@ -65,7 +65,11 @@ export function searchCatalogWorks(
   if (filters?.minRating) params.set('min_rating', String(filters.minRating))
   if (filters?.yearFrom) params.set('year_from', String(filters.yearFrom))
   if (filters?.yearTo) params.set('year_to', String(filters.yearTo))
-  return apiGet<CatalogPage>(url(`/works?${params.toString()}`), { signal: actualSignal })
+  // URLSearchParams encodes spaces as "+". The books API uses encodeURIComponent
+  // (%20) everywhere else, and a "+" would be a literal plus for parsers that
+  // do not apply form-urlencoded rules.
+  const queryString = params.toString().replace(/\+/g, '%20')
+  return apiGet<CatalogPage>(url(`/works?${queryString}`), { signal: actualSignal })
 }
 
 export const getCatalogWorkFacets = (query = '', signal?: AbortSignal) =>

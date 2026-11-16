@@ -1,5 +1,5 @@
 <template>
-  <section class="note-editor a-content-frame" aria-label="编辑笔记合集">
+  <section class="note-editor" aria-label="编辑笔记合集">
     <PPageHeader :title="newCollection?'创建笔记合集':'编辑笔记合集'" sub="私人草稿与发布快照分离；只有主动发布才会更新分享内容。" />
     <nav><RouterLink :to="`/books/work/${workId}/collections`">返回我的合集</RouterLink> · <RouterLink :to="`/books/work/${workId}/notes`">作品笔记</RouterLink></nav>
     <p v-if="loading">正在读取草稿…</p><p v-else-if="loadError" role="alert">{{ loadError }}</p>
@@ -171,7 +171,7 @@ async function copyLink(){if(!sharePath.value)return;try{await navigator.clipboa
 onMounted(async()=>{if(newCollection.value&&['highlight','chapter_note'].includes(String(route.query.kind||''))&&typeof route.query.note_id==='string')draft.items=[{kind:route.query.kind as 'highlight'|'chapter_note',id:route.query.note_id}];await Promise.all([load(),fetchNotes()])})
 </script>
 <style scoped>
-.note-editor{display:grid;gap:1rem;max-width:62rem;padding:1.25rem 1.5rem 3rem;margin-inline:auto}
+.note-editor{display:grid;gap:1rem;width:100%}
 .note-editor>label,.note-editor__panel>label{display:grid;gap:.45rem}
 .note-editor input:not([type=checkbox]),.note-editor textarea,.note-editor select{width:100%;background:var(--a-color-surface,transparent);color:inherit;border:1px solid var(--a-color-border-soft);border-radius:.5rem;padding:.7rem}
 .note-editor__panel{border:1px solid var(--a-color-border-soft);border-radius:.75rem;padding:1rem}

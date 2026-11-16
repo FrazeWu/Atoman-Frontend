@@ -1,5 +1,5 @@
 <template>
-  <section class="work-notes a-content-frame" aria-label="作品笔记时间线">
+  <section class="work-notes" aria-label="作品笔记时间线">
     <PPageHeader title="我的笔记" :sub="workTitle ? `${workTitle} · 跨电子书文件汇总` : '按作品汇总不同电子书上的划线与笔记'" />
     <nav class="work-notes__navigation">
       <RouterLink :to="`/books/work/${workId}`">返回作品详情</RouterLink>
@@ -148,7 +148,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.work-notes { display:flex; flex-direction:column; gap:1rem; max-width:1050px; padding:1rem 1.25rem 3rem; margin:0 auto; }
+.work-notes { display:flex; flex-direction:column; gap:1rem; width: 100%; }
 .work-notes__navigation { display:flex; gap:1.25rem; font-size:.9rem; }
 .work-notes__navigation a,.work-notes__link { color:var(--a-color-primary, #3764a6); text-decoration:none; }
 .work-notes__toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:.8rem; font-size:.9rem; }

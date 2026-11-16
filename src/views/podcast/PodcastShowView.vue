@@ -102,7 +102,7 @@ async function subscribeShow() {
 
 <style scoped>
 .ps-state { text-align: center; padding: 6rem 0; color: var(--a-color-muted); }
-.ps-wrap { max-width: 52rem; margin: 0 auto; padding: 2rem 0 4rem; }
+.ps-wrap { width: 100%; padding: 2rem 0 4rem; }
 .ps-header { display: flex; gap: 1.5rem; margin-bottom: 2rem; border-bottom: 1px solid var(--a-color-border-soft); padding-bottom: 1.75rem; }
 .ps-cover { width: 8rem; height: 8rem; border-radius: var(--a-radius-card); object-fit: cover; flex-shrink: 0; border: 1px solid var(--a-color-border-soft); }
 .ps-name { font-size: 1.5rem; font-weight: 500; color: var(--a-color-fg); margin: 0; }

@@ -3,7 +3,7 @@
   padding-block: 1rem;
   padding-bottom: calc(var(--a-space-12, 3rem) + 140px);
   background-color: var(--a-color-bg, #ffffff);
-  max-width: 960px;
+  width: 100%;
 }
 
 .book-catalog__toolbar,

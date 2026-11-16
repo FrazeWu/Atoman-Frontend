@@ -191,14 +191,14 @@ onBeforeUnmount(() => loadMoreObserver?.disconnect())
 
 <style scoped>
 .short-note-timeline {
-  max-width: 75rem;
+  width: 100%;
   padding-top: 1.5rem;
   padding-bottom: 3rem;
 }
 
 .short-note-timeline__layout {
   display: grid;
-  grid-template-columns: minmax(var(--a-content-main-min-width), 1fr) var(--a-recommendation-width);
+  grid-template-columns: minmax(0, 1fr) var(--a-recommendation-width);
   gap: var(--a-content-column-gap);
   align-items: start;
   margin-top: 1rem;
@@ -378,9 +378,6 @@ onBeforeUnmount(() => loadMoreObserver?.disconnect())
 }
 
 @media (max-width: 1199px) {
-  .short-note-timeline {
-    max-width: 42rem;
-  }
   .short-note-timeline__layout {
     display: block;
   }

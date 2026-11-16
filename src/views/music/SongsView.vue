@@ -438,8 +438,7 @@ onBeforeUnmount(() => {
 .songs-view {
   display: grid;
   gap: 1.25rem;
-  max-width: 56rem;
-  margin: 0 auto;
+  width: 100%;
   padding: 1.5rem 0 calc(3rem + var(--a-content-bottom-offset, 0px));
 }
 

@@ -1,5 +1,5 @@
 <template>
-  <section class="public-notes a-content-frame" aria-label="公开读书笔记">
+  <section class="public-notes" aria-label="公开读书笔记">
     <div class="public-notes__header-wrapper">
       <PPageHeader
         title="公开读书笔记"
@@ -102,9 +102,7 @@ onMounted(() => {
 
 <style scoped>
 .public-notes {
-  max-width: 58rem;
-  margin-inline: auto;
-  padding: 1.5rem 1rem 3.5rem;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;

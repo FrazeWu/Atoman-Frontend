@@ -67,7 +67,7 @@ const sections = [
 .debate-rules__header { max-width: 780px; padding-bottom: 40px; border-bottom: 1px solid var(--a-color-border-soft); }
 .debate-rules__eyebrow, .debate-rules__label { margin: 0; color: var(--a-color-muted); font-size: 12px; font-weight: 600; letter-spacing: 0; }
 .debate-rules h1 { margin: 12px 0 0; font-size: 34px; font-weight: 500; line-height: 1.2; }
-.debate-rules__layout { display: grid; grid-template-columns: 184px minmax(0, 720px); gap: 72px; padding-top: 40px; }
+.debate-rules__layout { display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: var(--a-content-column-gap, 2rem); padding-top: 40px; }
 .debate-rules__nav { position: sticky; top: 24px; display: grid; align-content: start; gap: 4px; }
 .debate-rules__nav a { min-height: 36px; padding: 8px 10px; color: var(--a-color-muted); font-size: 13px; line-height: 20px; text-decoration: none; }
 .debate-rules__nav a:hover, .debate-rules__nav a:focus-visible { color: var(--a-color-text); background: var(--a-color-bg); outline: none; }
@@ -82,7 +82,7 @@ const sections = [
 .debate-rules strong { color: var(--a-color-text); font-weight: 600; }
 
 @media (max-width: 720px) {
-  .debate-rules { padding: 28px 16px 64px; }
+  .debate-rules { padding: 28px 0 64px; }
   .debate-rules__header { padding-bottom: 28px; }
   .debate-rules h1 { font-size: 28px; }
   .debate-rules__layout { grid-template-columns: minmax(0, 1fr); gap: 28px; padding-top: 24px; }

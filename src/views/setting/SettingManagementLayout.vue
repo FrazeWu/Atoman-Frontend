@@ -1,5 +1,5 @@
 <template>
-  <section class="setting-management-layout">
+  <section class="setting-management-layout a-content-frame">
     <PPageHeader title="站点设置" sub="管理平台访问权限、用户角色、社区与模块配置" mb="1.5rem">
       <template #action>
         <PButton
@@ -65,7 +65,7 @@ function selectDirectoryItem(id: string) {
 </script>
 
 <style scoped>
-.setting-management-layout { display: grid; gap: 1.5rem; padding-bottom: 8rem; }
+.setting-management-layout { display: grid; gap: 1.5rem; }
 .setting-management-layout__shell { display: grid; grid-template-columns: max(12rem, var(--a-sidebar-width)) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
 .setting-management-layout__directory-trigger { display: none; align-self: start; }
 

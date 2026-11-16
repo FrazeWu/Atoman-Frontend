@@ -396,9 +396,6 @@ const hasResults = computed(
 <style scoped>
 .unified-search {
   width: 100%;
-  max-width: 64rem;
-  padding: 2.5rem 1.5rem 4rem;
-  margin-inline: auto;
   color: var(--a-color-text-primary, #0f172a);
 }
 
@@ -408,7 +405,7 @@ const hasResults = computed(
 
 .search-title {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: -0.02em;
   margin: 0 0 1rem;
   color: var(--a-color-text-primary, #0f172a);

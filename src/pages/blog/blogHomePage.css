@@ -1,6 +1,5 @@
 .blog-home {
-  max-width: 72rem;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .blog-home__digest {

@@ -1,5 +1,5 @@
 <template>
-  <section class="note-collections a-content-frame" aria-label="笔记合集">
+  <section class="note-collections" aria-label="笔记合集">
     <div class="note-collections__header-wrapper">
       <PPageHeader
         title="我的笔记合集"
@@ -119,12 +119,10 @@ onMounted(() => {
 
 <style scoped>
 .note-collections {
-  max-width: 58rem;
-  margin-inline: auto;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  padding: 1.5rem 1rem 3.5rem;
 }
 
 .note-collections__header-wrapper {

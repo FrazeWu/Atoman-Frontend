@@ -1,5 +1,5 @@
 <template>
-  <article class="shared-notes a-content-frame" aria-label="已发布的读书笔记">
+  <article class="shared-notes" aria-label="已发布的读书笔记">
     <div v-if="loading" role="status" class="shared-notes__loading">
       <div class="shared-notes__spinner" aria-hidden="true" />
       <p>正在打开分享的笔记…</p>
@@ -198,9 +198,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .shared-notes {
-  max-width: 48rem;
-  margin-inline: auto;
-  padding: 2.25rem 1.25rem 4rem;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;

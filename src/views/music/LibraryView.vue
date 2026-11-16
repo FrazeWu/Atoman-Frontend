@@ -339,7 +339,7 @@ onUnmounted(() => clearTimeout(queryTimer))
 </template>
 
 <style scoped>
-.music-library { display: grid; gap: 1.25rem; max-width: 72rem; margin: 0 auto; padding: 1.5rem 0 3rem; }
+.music-library { display: grid; gap: 1.25rem; width: 100%; }
 .music-library__unauth { padding: 3rem 0; }
 .music-library__toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .music-library__sort { display: flex; gap: 0.4rem; }

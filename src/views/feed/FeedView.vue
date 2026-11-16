@@ -823,14 +823,14 @@ onUnmounted(() => {
 
 .feed-header-sticky {
   position: sticky;
-  top: 56px;
+  top: var(--a-topbar-height);
   z-index: var(--a-z-navigation);
   background: var(--a-color-bg);
   margin-top: -3rem;
   padding-top: 3rem;
-  padding-left: 2rem;
-  padding-right: 2rem;
-  margin-left: -2rem;
-  margin-right: -2rem;
+  padding-left: var(--a-content-padding-x);
+  padding-right: var(--a-content-padding-x);
+  margin-left: calc(-1 * var(--a-content-padding-x));
+  margin-right: calc(-1 * var(--a-content-padding-x));
 }
 </style>

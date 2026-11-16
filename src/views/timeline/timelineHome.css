@@ -84,7 +84,7 @@
 
 .tl-shell {
   display: grid;
-  grid-template-columns: minmax(320px, var(--a-recommendation-width, 24rem)) minmax(0, 1fr);
+  grid-template-columns: minmax(320px, var(--a-recommendation-width, 20rem)) minmax(0, 1fr);
   gap: var(--a-content-column-gap, 2rem);
   align-items: start;
 }

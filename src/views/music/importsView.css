@@ -2,9 +2,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
-  max-width: 72rem;
-  margin: 0 auto;
-  padding: 1.5rem 1.5rem calc(4rem + var(--a-content-bottom-offset, 0px));
+  width: 100%;
+  padding: 1.5rem 0 calc(4rem + var(--a-content-bottom-offset, 0px));
   container-type: inline-size;
 }
 .music-imports-view__header {

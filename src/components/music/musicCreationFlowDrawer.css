@@ -121,7 +121,7 @@
   bottom: var(--a-content-bottom-offset) !important;
 }
 :global(.creation-flow-drawer.p-sheet-mobile-page) {
-  bottom: calc(64px + env(safe-area-inset-bottom, 0px) + var(--mobile-app-player-reserved-height, 0px));
+  bottom: calc(var(--a-content-bottom-offset, 0px) + env(safe-area-inset-bottom, 0px));
   padding-bottom: 0;
 }
 :global(.creation-flow-drawer .p-sheet-mobile-page__content) { padding-bottom: 1rem; }

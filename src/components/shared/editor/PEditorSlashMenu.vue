@@ -134,7 +134,7 @@ watch(
   background: var(--a-color-surface-muted);
   color: var(--a-color-text-secondary);
   flex-shrink: 0;
-  transition: all 0.12s ease;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 .p-editor-slash-menu__item.is-active .p-editor-slash-menu__icon-box {

@@ -119,8 +119,7 @@ defineEmits<{
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-pill, 9999px);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.06);
-  backdrop-filter: blur(12px);
+  box-shadow: none !important;
   user-select: none;
   animation: bubble-pop-in 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -148,7 +147,7 @@ defineEmits<{
   background: transparent;
   color: var(--a-color-text-secondary);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .p-editor-bubble-menu__btn:hover {

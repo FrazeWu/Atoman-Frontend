@@ -13,7 +13,7 @@
 .feed-recommended-view {
   max-width: 78rem;
   margin: 0 auto;
-  padding: 0 1.25rem 5rem;
+  padding: 0 1.25rem calc(5rem + var(--a-content-bottom-offset, 0px));
   display: grid;
   gap: 1.75rem;
 }
@@ -359,7 +359,7 @@
 @media (max-width: 720px) {
   .feed-recommended-view {
     gap: 1rem;
-    padding: 0 0 1rem;
+    padding: 0 0 calc(4rem + var(--a-content-bottom-offset, 0px));
   }
 
   .discovery-pills-bar {

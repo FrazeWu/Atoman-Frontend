@@ -150,7 +150,7 @@ const onPaste = (event: ClipboardEvent) => {
 
 .cover-upload-card.is-dragging {
   border-color: var(--a-color-primary, #2563eb) !important;
-  border-style: dashed;
+  border-style: solid;
   background-color: var(--a-color-primary-subtle, rgba(37, 99, 235, 0.04));
 }
 
@@ -181,7 +181,7 @@ const onPaste = (event: ClipboardEvent) => {
   text-align: center;
   gap: 0.45rem;
   padding: 1.5rem 1rem;
-  border: 1px dashed var(--a-border-color, #e2e8f0);
+  border: 1px solid var(--a-border-color, #e2e8f0);
   background: var(--a-color-bg);
   cursor: pointer;
   user-select: none;

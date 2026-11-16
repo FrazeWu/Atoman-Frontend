@@ -5,6 +5,7 @@
       v-if="isMobile && show && showBackdrop && isTopLayer"
       class="p-sheet-mobile-backdrop"
       :class="backdropClass"
+      :style="{ zIndex: backdropZIndex }"
       aria-hidden="true"
       @click="$emit('close')"
     />
@@ -560,12 +561,15 @@ const sheetStyle = computed(() => {
 })
 
 const mobileSheetStyle = computed(() => {
-  if (props.mode !== 'partial' || props.side !== 'right') return undefined
-
-  return {
-    width: `min(${props.partialWidth || 'var(--a-comment-sheet-width)'}, calc(100vw - 1rem))`,
-    'max-width': 'calc(100vw - 1rem)',
+  const styles: Record<string, string> = {}
+  if (props.abovePlayer) {
+    styles.zIndex = 'var(--a-z-player-sheet)'
   }
+  if (props.mode === 'partial' && props.side === 'right') {
+    styles.width = `min(${props.partialWidth || 'var(--a-comment-sheet-width)'}, calc(100vw - 1rem))`
+    styles['max-width'] = 'calc(100vw - 1rem)'
+  }
+  return Object.keys(styles).length ? styles : undefined
 })
 </script>
 
@@ -683,6 +687,18 @@ const mobileSheetStyle = computed(() => {
   cursor: default;
 }
 
+.p-sheet-mobile-page.p-sheet-mobile-page--above-player {
+  z-index: var(--a-z-player-sheet);
+}
+
+.p-sheet-mobile-backdrop.p-sheet-mobile-backdrop--above-player {
+  z-index: var(--a-z-player-sheet-backdrop);
+}
+
+:global(html[data-player-active="true"]) .p-sheet-mobile-page:not(.p-sheet-mobile-page--above-player) {
+  bottom: var(--a-content-bottom-offset, var(--a-player-reserved-height, 64px));
+}
+
 .p-sheet-mobile-page__content {
   flex: 1;
   min-width: 0;
@@ -690,7 +706,7 @@ const mobileSheetStyle = computed(() => {
   min-height: 0;
   overflow-y: auto;
   overflow-x: clip;
-  padding: 0 1rem calc(64px + env(safe-area-inset-bottom, 0px) + var(--mobile-app-player-reserved-height, 0px));
+  padding: 0 1rem calc(64px + env(safe-area-inset-bottom, 0px) + var(--a-content-bottom-offset, 0px));
 }
 
 .p-sheet-mobile-backdrop {
@@ -727,6 +743,10 @@ const mobileSheetStyle = computed(() => {
   box-shadow: none !important;
 }
 
+:global(html[data-player-active="true"]) .p-sheet-root:not(.p-sheet-root--above-player) .p-sheet-layer.is-left {
+  bottom: var(--a-content-bottom-offset, var(--a-player-reserved-height, 68px)) !important;
+}
+
 .p-sheet-layer.is-bottom {
   left: 0;
   right: 0;
@@ -734,6 +754,10 @@ const mobileSheetStyle = computed(() => {
   border-top: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card, 4px) var(--a-radius-card, 4px) 0 0;
   box-shadow: none !important;
+}
+
+:global(html[data-player-active="true"]) .p-sheet-root:not(.p-sheet-root--above-player) .p-sheet-layer.is-bottom {
+  bottom: var(--a-content-bottom-offset, var(--a-player-reserved-height, 68px)) !important;
 }
 
 .p-sheet-backdrop {
@@ -1063,7 +1087,7 @@ const mobileSheetStyle = computed(() => {
 
   .p-sheet-panel.is-right .sheet-content,
   .p-sheet-panel.is-left .sheet-content {
-    padding: 4rem 1rem 1rem;
+    padding: 4rem 1rem calc(5rem + var(--a-content-bottom-offset, 0px));
   }
 
   .p-sheet-footer {

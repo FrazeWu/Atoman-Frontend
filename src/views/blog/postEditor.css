@@ -363,7 +363,7 @@
   font-size: 0.72rem;
   cursor: pointer;
   line-height: 1.2;
-  transition: all 0.12s ease;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 .editor-outline-pill-btn:hover {

@@ -799,7 +799,7 @@ onBeforeUnmount(() => {
   background: transparent;
   color: var(--a-color-muted);
   cursor: pointer;
-  transition: all 140ms ease;
+  transition: background-color 140ms ease, color 140ms ease;
 }
 .mail-compose__topbar-close:hover {
   background: var(--a-color-surface-muted);
@@ -820,9 +820,8 @@ onBeforeUnmount(() => {
   justify-content: center;
   gap: 12px;
   background: rgba(255, 255, 255, 0.94);
-  border: 2px dashed var(--a-color-primary);
+  border: 2px solid var(--a-color-primary);
   border-radius: var(--a-radius-card);
-  backdrop-filter: blur(2px);
   color: var(--a-color-primary);
   pointer-events: none;
 }
@@ -915,7 +914,7 @@ onBeforeUnmount(() => {
   font-weight: 500;
   padding: 5px 9px;
   cursor: pointer;
-  transition: all 140ms ease;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
 }
 .mail-compose__pill-btn:hover:not(:disabled) {
   background: var(--a-color-surface-muted);
@@ -1041,7 +1040,7 @@ onBeforeUnmount(() => {
   color: var(--a-color-muted);
   cursor: pointer;
   border-radius: var(--a-radius-control);
-  transition: all 140ms ease;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
 }
 .mail-compose__attachment-remove:hover {
   background: var(--a-color-surface-muted);

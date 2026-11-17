@@ -201,7 +201,7 @@ const submit = () => {
   flex-direction: column;
   background: var(--a-color-surface, #ffffff);
   border: 1px solid color-mix(in srgb, var(--a-color-text) 12%, transparent);
-  border-radius: 20px;
+  border-radius: 4px;
   padding: 0.625rem 0.85rem 0.5rem;
   transition: border-color var(--a-motion-micro, 150ms) ease;
   box-shadow: none !important;
@@ -264,7 +264,7 @@ const submit = () => {
   width: 2rem;
   height: 2rem;
   border: none;
-  border-radius: 9999px;
+  border-radius: 4px;
   background: transparent;
   color: var(--a-color-muted);
   cursor: pointer;
@@ -288,7 +288,7 @@ const submit = () => {
   color: var(--a-color-muted);
   background: color-mix(in srgb, var(--a-color-text) 5%, transparent);
   padding: 0.2rem 0.55rem;
-  border-radius: 9999px;
+  border-radius: 4px;
   user-select: none;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -332,7 +332,7 @@ const submit = () => {
 .dm-composer__image {
   position: relative;
   width: max-content;
-  border-radius: var(--a-radius-card, 8px);
+  border-radius: 4px;
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
   margin-bottom: 0.5rem;
@@ -354,7 +354,7 @@ const submit = () => {
   display: grid;
   place-items: center;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 9999px;
+  border-radius: 4px;
   background: var(--a-color-bg);
   color: var(--a-color-text-secondary);
   cursor: pointer;

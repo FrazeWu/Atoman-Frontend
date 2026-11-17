@@ -49,15 +49,15 @@ const selectMailbox = (event: Event) => emit('select-mailbox', (event.target as 
   display: flex;
   align-items: center;
   width: 100%;
-  background: var(--a-color-surface-muted, #f4f4f5);
+  background: color-mix(in srgb, var(--a-color-text) 5%, transparent);
   border: 1px solid transparent;
-  border-radius: var(--a-radius-card, 10px);
+  border-radius: 4px;
   transition: background-color var(--a-motion-micro, 150ms) ease, border-color var(--a-motion-micro, 150ms) ease;
   box-shadow: none !important;
 }
 
 .dm-mailbox-selector__wrapper:hover {
-  background: color-mix(in srgb, var(--a-color-surface-muted) 80%, var(--a-color-border-soft));
+  background: color-mix(in srgb, var(--a-color-text) 8%, transparent);
 }
 
 .dm-mailbox-selector__wrapper:focus-within {
@@ -84,7 +84,7 @@ const selectMailbox = (event: Event) => emit('select-mailbox', (event.target as 
   color: var(--a-color-text);
   background: transparent;
   border: none;
-  border-radius: var(--a-radius-card, 10px);
+  border-radius: 4px;
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;

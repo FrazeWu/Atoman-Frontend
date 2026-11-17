@@ -388,7 +388,7 @@ const copyMessage = async (content?: string) => {
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 1.25rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
+  border-bottom: none;
   background: var(--a-color-bg);
   box-shadow: none !important;
 }
@@ -404,7 +404,7 @@ const copyMessage = async (content?: string) => {
 .dm-header-avatar-mini {
   width: 2.25rem;
   height: 2.25rem;
-  border-radius: 9999px;
+  border-radius: 4px;
   overflow: hidden;
   background: linear-gradient(135deg, color-mix(in srgb, var(--a-color-primary) 18%, var(--a-color-surface-muted)), var(--a-color-surface-muted));
   display: flex;
@@ -459,7 +459,7 @@ const copyMessage = async (content?: string) => {
 
 .dm-header-block-btn {
   border: none;
-  border-radius: 9999px;
+  border-radius: 4px;
   background: color-mix(in srgb, var(--a-color-text) 5%, transparent);
   padding: 0.3rem 0.75rem;
   font-size: 0.78rem;
@@ -482,7 +482,7 @@ const copyMessage = async (content?: string) => {
   height: 2rem;
   padding: 0 0.5rem;
   border: none;
-  border-radius: 9999px;
+  border-radius: 4px;
   background: color-mix(in srgb, var(--a-color-text) 5%, transparent);
   color: var(--a-color-text-secondary);
   cursor: pointer;
@@ -521,7 +521,7 @@ const copyMessage = async (content?: string) => {
   margin-bottom: 0.75rem;
   padding: 0.35rem 0.75rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card, 8px);
+  border-radius: 4px;
   background: var(--a-color-bg);
   color: var(--a-color-text-secondary);
   cursor: pointer;
@@ -560,6 +560,7 @@ const copyMessage = async (content?: string) => {
   background: transparent;
   padding: 0.2rem 0.65rem;
   user-select: none;
+  border-radius: 4px;
   border: none;
 }
 
@@ -604,7 +605,7 @@ const copyMessage = async (content?: string) => {
 .dm-bubble {
   position: relative;
   padding: 0.65rem 0.95rem;
-  border-radius: 18px 18px 18px 4px;
+  border-radius: 4px;
   word-break: break-word;
   background: color-mix(in srgb, var(--a-color-text) 6%, var(--a-color-bg));
   border: none;
@@ -616,7 +617,7 @@ const copyMessage = async (content?: string) => {
 .dm-message.self .dm-bubble {
   background: color-mix(in srgb, var(--a-color-text) 6%, var(--a-color-bg));
   border: none;
-  border-radius: 18px 18px 4px 18px;
+  border-radius: 4px;
   color: var(--a-color-text);
 }
 
@@ -635,7 +636,7 @@ const copyMessage = async (content?: string) => {
   max-height: 16rem;
   margin-bottom: 0.35rem;
   object-fit: contain;
-  border-radius: var(--a-radius-card, 8px);
+  border-radius: 4px;
 }
 
 /* 气泡微时间与对勾 */
@@ -690,7 +691,7 @@ const copyMessage = async (content?: string) => {
   padding: 2px;
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card, 8px);
+  border-radius: 4px;
   box-shadow: none;
   transition: opacity var(--a-motion-micro, 150ms) ease, visibility var(--a-motion-micro, 150ms) ease;
 }
@@ -712,7 +713,7 @@ const copyMessage = async (content?: string) => {
   border: 0;
   background: transparent;
   color: var(--a-color-text-secondary);
-  border-radius: var(--a-radius-card, 6px);
+  border-radius: 4px;
   cursor: pointer;
   transition: background-color var(--a-motion-micro, 150ms) ease, color var(--a-motion-micro, 150ms) ease;
 }

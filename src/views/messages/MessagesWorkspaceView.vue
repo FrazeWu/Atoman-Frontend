@@ -370,7 +370,8 @@ defineExpose({
 
 .dm-workspace__sidebar-header {
   padding: 0.75rem 0.75rem 0.5rem;
-  background: var(--a-color-surface-muted, #fbfbfb);
+  background: transparent;
+  border-bottom: none;
   transition: background-color var(--a-motion-micro, 150ms) ease;
 }
 

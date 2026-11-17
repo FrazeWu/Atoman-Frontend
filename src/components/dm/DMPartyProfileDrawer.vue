@@ -174,7 +174,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
+  border-bottom: none;
   box-sizing: border-box;
 }
 
@@ -191,7 +191,7 @@ onUnmounted(() => {
   justify-content: center;
   width: 30px;
   height: 30px;
-  border-radius: 9999px;
+  border-radius: 4px;
   border: none;
   background: color-mix(in srgb, var(--a-color-text) 5%, transparent);
   color: var(--a-color-muted);
@@ -227,7 +227,7 @@ onUnmounted(() => {
 .dm-profile-drawer__avatar {
   width: 72px;
   height: 72px;
-  border-radius: 9999px;
+  border-radius: 4px;
   object-fit: cover;
   border: 1px solid var(--a-color-border-soft);
   display: block;
@@ -236,7 +236,7 @@ onUnmounted(() => {
 .dm-profile-drawer__avatar-fallback {
   width: 72px;
   height: 72px;
-  border-radius: 9999px;
+  border-radius: 4px;
   background: linear-gradient(135deg, color-mix(in srgb, var(--a-color-primary) 18%, var(--a-color-surface-muted)), var(--a-color-surface-muted));
   color: var(--a-color-primary);
   font-size: 1.75rem;
@@ -266,7 +266,7 @@ onUnmounted(() => {
   font-size: 0.72rem;
   font-weight: 600;
   padding: 2px 8px;
-  border-radius: 9999px;
+  border-radius: 4px;
   background: var(--a-color-surface-muted);
   color: var(--a-color-text-secondary);
   border: 1px solid var(--a-color-border-soft);
@@ -289,7 +289,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  border-radius: var(--a-radius-card, 10px);
+  border-radius: 4px;
   border: 1px solid transparent;
   background: color-mix(in srgb, var(--a-color-text) 5%, transparent);
   color: var(--a-color-text);

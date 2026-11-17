@@ -171,7 +171,7 @@ const formatTime = (value: string | null): string => {
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  background: var(--a-color-bg);
+  background: transparent;
   box-shadow: none !important;
 }
 
@@ -187,7 +187,7 @@ const formatTime = (value: string | null): string => {
   align-items: center;
   width: 100%;
   border: 1px solid transparent;
-  border-radius: 9999px;
+  border-radius: 4px;
   background: color-mix(in srgb, var(--a-color-text) 5%, transparent);
   transition: border-color var(--a-motion-micro, 150ms) ease, background-color var(--a-motion-micro, 150ms) ease;
   box-shadow: none !important;
@@ -250,7 +250,7 @@ const formatTime = (value: string | null): string => {
   gap: 0.75rem;
   padding: 0.55rem 0.75rem;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 4px;
   background: transparent;
   color: var(--a-color-text);
   text-align: left;
@@ -276,7 +276,7 @@ const formatTime = (value: string | null): string => {
   width: 2.625rem;
   height: 2.625rem;
   flex-shrink: 0;
-  border-radius: 9999px;
+  border-radius: 4px;
   overflow: hidden;
   background: linear-gradient(135deg, color-mix(in srgb, var(--a-color-primary) 18%, var(--a-color-surface-muted)), var(--a-color-surface-muted));
   display: flex;
@@ -377,18 +377,12 @@ const formatTime = (value: string | null): string => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9999px;
+  border-radius: 4px;
   background: var(--a-color-primary);
   color: var(--a-color-primary-contrast, #ffffff);
   font-size: 0.6875rem;
   font-weight: 700;
   line-height: 1;
-}
-
-.dm-conversation-list--linear .dm-conversation-list__unread {
-  border-radius: 3px;
-  font-family: ui-monospace, SFMono-Regular, monospace;
-  font-size: 0.625rem;
 }
 
 .dm-conversation-list__empty {

@@ -1,5 +1,8 @@
 <template>
-  <section class="dm-conversation-pane" data-testid="dm-conversation-pane">
+  <section
+    class="dm-conversation-pane"
+    data-testid="dm-conversation-pane"
+  >
     <!-- 头部栏 -->
     <header class="dm-conversation-header">
       <button
@@ -12,7 +15,23 @@
         返回
       </button>
 
-      <h2>{{ conversation?.other_party.display_name || targetLabel }}</h2>
+      <div class="dm-header-user-info">
+        <div v-if="conversation?.other_party" class="dm-header-avatar-mini">
+          <img
+            v-if="conversation.other_party.avatar_url"
+            :src="conversation.other_party.avatar_url"
+            :alt="conversation.other_party.display_name"
+            class="dm-header-avatar-img"
+          />
+          <span v-else class="dm-header-avatar-text">
+            {{ monogramFor(conversation.other_party.display_name) }}
+          </span>
+        </div>
+        <div class="dm-header-titles">
+          <h2 class="dm-header-name">{{ conversation?.other_party.display_name || targetLabel }}</h2>
+          <span class="dm-header-subtitle">私信对话</span>
+        </div>
+      </div>
 
       <div class="dm-header-actions">
         <button
@@ -169,6 +188,12 @@ const emit = defineEmits<{
   report: [messageId: string]
   'toggle-drawer': []
 }>()
+
+const monogramFor = (name?: string): string => {
+  const trimmed = name?.trim()
+  if (!trimmed) return '?'
+  return (Array.from(trimmed)[0] || '?').toUpperCase()
+}
 
 const scroller = ref<HTMLElement | null>(null)
 const toast = useToast()
@@ -353,6 +378,7 @@ const copyMessage = async (content?: string) => {
   grid-template-rows: auto minmax(0, 1fr) auto;
   height: 100%;
   background: var(--a-color-bg);
+  box-shadow: none !important;
 }
 
 /* 头部栏 */
@@ -361,42 +387,90 @@ const copyMessage = async (content?: string) => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0 1rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  padding: 0.5rem 1.25rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
   background: var(--a-color-bg);
+  box-shadow: none !important;
 }
 
-.dm-conversation-header h2 {
-  margin: 0;
+.dm-header-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
   flex: 1;
-  font-size: 1rem;
-  font-weight: 500;
+  min-width: 0;
+}
+
+.dm-header-avatar-mini {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--a-color-primary) 18%, var(--a-color-surface-muted)), var(--a-color-surface-muted));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dm-header-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dm-header-avatar-text {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--a-color-primary);
+  user-select: none;
+}
+
+.dm-header-titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.dm-header-name {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
   color: var(--a-color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.dm-header-subtitle {
+  font-size: 0.6875rem;
+  color: var(--a-color-muted);
+  line-height: 1.2;
 }
 
 .dm-header-actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .dm-header-block-btn {
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  padding: 0.25rem 0.65rem;
-  font-size: 0.8rem;
+  border: none;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--a-color-text) 5%, transparent);
+  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem;
   font-weight: 500;
   color: var(--a-color-text-secondary);
   cursor: pointer;
-  transition: background-color var(--a-motion-micro), color var(--a-motion-micro), border-color var(--a-motion-micro);
+  transition: background-color var(--a-motion-micro, 150ms) ease, color var(--a-motion-micro, 150ms) ease;
 }
 
 .dm-header-block-btn:hover {
-  background: var(--a-color-surface-muted);
+  background: color-mix(in srgb, var(--a-color-text) 10%, transparent);
   color: var(--a-color-text);
 }
 
@@ -407,13 +481,13 @@ const copyMessage = async (content?: string) => {
   justify-content: center;
   height: 2rem;
   padding: 0 0.5rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
+  border: none;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--a-color-text) 5%, transparent);
   color: var(--a-color-text-secondary);
   cursor: pointer;
-  font-size: 0.85rem;
-  transition: background-color var(--a-motion-micro), color var(--a-motion-micro), border-color var(--a-motion-micro);
+  font-size: 0.8125rem;
+  transition: background-color var(--a-motion-micro, 150ms) ease, color var(--a-motion-micro, 150ms) ease;
 }
 
 .dm-header-drawer-btn {
@@ -423,7 +497,7 @@ const copyMessage = async (content?: string) => {
 
 .dm-header-drawer-btn:hover,
 .dm-header-back-btn:hover {
-  background: var(--a-color-surface-muted);
+  background: color-mix(in srgb, var(--a-color-text) 10%, transparent);
   color: var(--a-color-text);
 }
 
@@ -431,10 +505,15 @@ const copyMessage = async (content?: string) => {
 .dm-conversation-pane__messages {
   min-height: 0;
   overflow: auto;
-  padding: 1rem;
+  padding: 1rem 1.25rem;
   display: flex;
   flex-direction: column;
   background: var(--a-color-bg);
+  transition: background-color var(--a-motion-micro, 150ms) ease;
+}
+
+.dm-conversation-pane--card .dm-conversation-pane__messages {
+  background: var(--a-color-surface-subtle, #f8f9fa);
 }
 
 .dm-load-older-btn {
@@ -442,12 +521,13 @@ const copyMessage = async (content?: string) => {
   margin-bottom: 0.75rem;
   padding: 0.35rem 0.75rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
+  border-radius: var(--a-radius-card, 8px);
   background: var(--a-color-bg);
   color: var(--a-color-text-secondary);
   cursor: pointer;
-  font-size: 0.8rem;
-  transition: background-color var(--a-motion-micro), color var(--a-motion-micro);
+  font-size: 0.78rem;
+  font-weight: 500;
+  transition: background-color var(--a-motion-micro, 150ms) ease;
 }
 
 .dm-load-older-btn:hover:not(:disabled) {
@@ -463,31 +543,31 @@ const copyMessage = async (content?: string) => {
 .dm-conversation-pane__empty {
   margin: auto;
   color: var(--a-color-muted);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
 }
 
 /* 日期指示条 */
 .dm-date-divider {
   display: flex;
   justify-content: center;
-  margin: 0.75rem 0;
+  margin: 1rem 0 0.5rem;
 }
 
 .dm-date-divider span {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 500;
   color: var(--a-color-muted);
-  background: var(--a-color-surface-muted);
+  background: transparent;
   padding: 0.2rem 0.65rem;
-  border-radius: var(--a-radius-card);
   user-select: none;
+  border: none;
 }
 
 /* 消息成组 */
 .dm-message-group {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   margin-bottom: 12px;
 }
 
@@ -500,17 +580,17 @@ const copyMessage = async (content?: string) => {
 }
 
 .dm-message-group__sender {
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.72rem;
+  font-weight: 600;
   color: var(--a-color-text-secondary);
   margin-bottom: 2px;
-  padding-left: 0.25rem;
+  padding-left: 0.35rem;
 }
 
 /* 消息单项与气泡 */
 .dm-message {
   position: relative;
-  max-width: 78%;
+  max-width: 76%;
   display: flex;
   align-items: flex-end;
   gap: 0.35rem;
@@ -523,26 +603,29 @@ const copyMessage = async (content?: string) => {
 
 .dm-bubble {
   position: relative;
-  padding: 0.45rem 0.65rem;
-  border-radius: var(--a-radius-card);
+  padding: 0.65rem 0.95rem;
+  border-radius: 18px 18px 18px 4px;
   word-break: break-word;
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
+  background: color-mix(in srgb, var(--a-color-text) 6%, var(--a-color-bg));
+  border: none;
   color: var(--a-color-text);
-  line-height: 1.45;
+  line-height: 1.5;
+  box-shadow: none !important;
 }
 
 .dm-message.self .dm-bubble {
-  background: color-mix(in srgb, var(--a-color-primary) 10%, var(--a-color-bg));
-  border: 1px solid color-mix(in srgb, var(--a-color-primary) 20%, transparent);
+  background: color-mix(in srgb, var(--a-color-text) 6%, var(--a-color-bg));
+  border: none;
+  border-radius: 18px 18px 4px 18px;
   color: var(--a-color-text);
 }
 
 .dm-bubble-text {
   margin: 0;
   white-space: pre-wrap;
-  font-size: 0.925rem;
-  line-height: 1.45;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--a-color-text);
   display: inline;
 }
 
@@ -552,7 +635,7 @@ const copyMessage = async (content?: string) => {
   max-height: 16rem;
   margin-bottom: 0.35rem;
   object-fit: contain;
-  border-radius: var(--a-radius-control);
+  border-radius: var(--a-radius-card, 8px);
 }
 
 /* 气泡微时间与对勾 */
@@ -560,7 +643,7 @@ const copyMessage = async (content?: string) => {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  margin-left: 0.4rem;
+  margin-left: 0.45rem;
   font-size: 0.625rem;
   color: var(--a-color-muted);
   user-select: none;
@@ -607,9 +690,9 @@ const copyMessage = async (content?: string) => {
   padding: 2px;
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
+  border-radius: var(--a-radius-card, 8px);
   box-shadow: none;
-  transition: opacity var(--a-motion-micro), visibility var(--a-motion-micro);
+  transition: opacity var(--a-motion-micro, 150ms) ease, visibility var(--a-motion-micro, 150ms) ease;
 }
 
 .dm-message:hover .dm-message-toolbar,
@@ -629,9 +712,9 @@ const copyMessage = async (content?: string) => {
   border: 0;
   background: transparent;
   color: var(--a-color-text-secondary);
-  border-radius: var(--a-radius-control);
+  border-radius: var(--a-radius-card, 6px);
   cursor: pointer;
-  transition: background-color var(--a-motion-micro), color var(--a-motion-micro);
+  transition: background-color var(--a-motion-micro, 150ms) ease, color var(--a-motion-micro, 150ms) ease;
 }
 
 .dm-toolbar-btn:hover {

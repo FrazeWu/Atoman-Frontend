@@ -1,5 +1,9 @@
 <template>
-  <section class="dm-conversation-list" data-testid="dm-conversation-list" aria-label="私信会话">
+  <section
+    class="dm-conversation-list"
+    data-testid="dm-conversation-list"
+    aria-label="私信会话"
+  >
     <!-- 顶部搜索栏 -->
     <div class="dm-conversation-list__search">
       <div class="dm-conversation-list__search-wrapper">
@@ -168,12 +172,13 @@ const formatTime = (value: string | null): string => {
   height: 100%;
   min-height: 0;
   background: var(--a-color-bg);
+  box-shadow: none !important;
 }
 
 .dm-conversation-list__search {
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
+  padding: 0.375rem 0.75rem 0.5rem;
+  border-bottom: none;
+  background: transparent;
 }
 
 .dm-conversation-list__search-wrapper {
@@ -181,34 +186,35 @@ const formatTime = (value: string | null): string => {
   display: flex;
   align-items: center;
   width: 100%;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control, 4px);
-  background: var(--a-color-bg);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--a-color-text) 5%, transparent);
+  transition: border-color var(--a-motion-micro, 150ms) ease, background-color var(--a-motion-micro, 150ms) ease;
+  box-shadow: none !important;
 }
 
 .dm-conversation-list__search-wrapper:focus-within {
-  border-color: var(--a-color-primary);
-  outline: 1px solid var(--a-color-primary);
-  box-shadow: none;
+  border-color: color-mix(in srgb, var(--a-color-primary) 35%, transparent);
+  background: var(--a-color-bg);
+  outline: none;
+  box-shadow: none !important;
 }
 
 .dm-conversation-list__search-icon {
   position: absolute;
-  left: 0.625rem;
+  left: 0.75rem;
   color: var(--a-color-muted);
   pointer-events: none;
 }
 
 .dm-conversation-search-input {
   width: 100%;
-  height: 2rem;
-  padding: 0 0.625rem 0 2rem;
-  font-size: 0.8125rem;
+  height: 2.25rem;
+  padding: 0 0.75rem 0 2.25rem;
+  font-size: 0.84rem;
   color: var(--a-color-text);
   background: transparent;
   border: none;
-  border-radius: 4px;
   outline: none;
 }
 
@@ -216,63 +222,79 @@ const formatTime = (value: string | null): string => {
   color: var(--a-color-muted);
 }
 
+.dm-conversation-list__search-kbd {
+  margin-right: 0.5rem;
+  padding: 0.15rem 0.35rem;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.6875rem;
+  color: var(--a-color-muted);
+  background: var(--a-color-bg);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: 4px;
+}
+
 .dm-conversation-list__scroll-area {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  padding-top: 0.25rem;
+  padding-bottom: 0.5rem;
 }
 
 .dm-conversation-list__item {
   position: relative;
-  width: 100%;
+  width: calc(100% - 1rem);
+  margin: 0.2rem 0.5rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 0.875rem;
-  border: none;
-  border-bottom: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
+  padding: 0.55rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
   color: var(--a-color-text);
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.12s ease;
+  transition: background-color var(--a-motion-micro, 150ms) ease;
+  box-shadow: none !important;
 }
 
 .dm-conversation-list__item:hover {
-  background: var(--a-color-surface-muted);
+  background: color-mix(in srgb, var(--a-color-text) 5%, transparent);
 }
 
 .dm-conversation-list__item.is-active,
-.dm-conversation-list__item.active {
-  background: var(--a-color-surface-muted);
-  border-left: 2px solid var(--a-color-primary);
-  box-shadow: none;
+.dm-conversation-list__item.active,
+.dm-conversation-list__item.selected {
+  background: color-mix(in srgb, var(--a-color-text) 8%, transparent);
+  border-color: transparent;
+  box-shadow: none !important;
 }
 
 .dm-conversation-list__avatar-wrap {
   position: relative;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.625rem;
+  height: 2.625rem;
   flex-shrink: 0;
-  border-radius: 4px;
+  border-radius: 9999px;
   overflow: hidden;
-  background: var(--a-color-surface-muted);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--a-color-primary) 18%, var(--a-color-surface-muted)), var(--a-color-surface-muted));
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: none !important;
 }
 
 .dm-conversation-list__avatar {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 4px;
 }
 
 .dm-conversation-list__avatar-fallback {
   font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--a-color-text-secondary);
+  font-weight: 700;
+  color: var(--a-color-primary);
   user-select: none;
 }
 
@@ -293,22 +315,28 @@ const formatTime = (value: string | null): string => {
 
 .dm-conversation-list__name {
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--a-color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: -0.01em;
 }
 
 .dm-conversation-list__item.is-active .dm-conversation-list__name,
 .dm-conversation-list__item.active .dm-conversation-list__name {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .dm-conversation-list__time {
   font-size: 0.6875rem;
   color: var(--a-color-muted);
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.dm-conversation-list--linear .dm-conversation-list__time {
+  font-family: ui-monospace, SFMono-Regular, monospace;
 }
 
 .dm-conversation-list__row--bottom {
@@ -325,7 +353,7 @@ const formatTime = (value: string | null): string => {
 
 .dm-conversation-list__outgoing-icon {
   flex-shrink: 0;
-  color: var(--a-color-muted);
+  color: var(--a-color-primary);
 }
 
 .dm-conversation-list__preview {
@@ -336,24 +364,35 @@ const formatTime = (value: string | null): string => {
   white-space: nowrap;
 }
 
+.dm-conversation-list__item.is-active .dm-conversation-list__preview,
+.dm-conversation-list__item.active .dm-conversation-list__preview {
+  color: var(--a-color-text-secondary);
+}
+
 .dm-conversation-list__unread {
   flex-shrink: 0;
   min-width: 1.125rem;
   height: 1.125rem;
-  padding: 0 0.3125rem;
+  padding: 0 0.35rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 9999px;
   background: var(--a-color-primary);
   color: var(--a-color-primary-contrast, #ffffff);
   font-size: 0.6875rem;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1;
 }
 
+.dm-conversation-list--linear .dm-conversation-list__unread {
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.625rem;
+}
+
 .dm-conversation-list__empty {
-  margin: 2rem 1rem;
+  margin: 2.5rem 1rem;
   text-align: center;
   color: var(--a-color-muted);
   font-size: 0.875rem;
@@ -361,16 +400,17 @@ const formatTime = (value: string | null): string => {
 
 .dm-conversation-list__more {
   display: block;
-  width: calc(100% - 2rem);
+  width: calc(100% - 1.5rem);
   margin: 1rem auto;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control, 4px);
+  border-radius: var(--a-radius-card, 8px);
   background: var(--a-color-bg);
   color: var(--a-color-text-secondary);
   font-size: 0.8125rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.12s ease;
+  transition: background-color var(--a-motion-micro, 150ms) ease;
 }
 
 .dm-conversation-list__more:hover {

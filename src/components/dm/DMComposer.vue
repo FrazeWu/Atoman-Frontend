@@ -1,64 +1,87 @@
 <template>
-  <form class="dm-composer" data-testid="dm-composer" :aria-disabled="disabled" @submit.prevent="submit">
-    <p v-if="disabled" class="dm-composer__reply-as">已拉黑此用户</p>
-    <p v-else-if="replyAsLabel" data-testid="dm-reply-as" class="dm-composer__reply-as">
-      将以{{ replyAsLabel }}回复
-    </p>
+  <form
+    class="dm-composer"
+    data-testid="dm-composer"
+    :aria-disabled="disabled"
+    @submit.prevent="submit"
+  >
+    <!-- 悬浮输入卡片 -->
+    <div class="dm-composer__card">
+      <!-- 待发图片预览卡片 -->
+      <div v-if="image" class="dm-composer__image" data-testid="dm-composer-image">
+        <img :src="image.url" alt="待发送图片" />
+        <button
+          type="button"
+          class="dm-composer__image-remove"
+          aria-label="移除图片"
+          title="移除图片"
+          data-testid="dm-remove-image"
+          @click="emit('remove-image')"
+        >
+          <X :size="14" />
+        </button>
+      </div>
 
-    <!-- 待发图片预览卡片 -->
-    <div v-if="image" class="dm-composer__image" data-testid="dm-composer-image">
-      <img :src="image.url" alt="待发送图片" />
-      <button
-        type="button"
-        class="dm-composer__image-remove"
-        aria-label="移除图片"
-        title="移除图片"
-        data-testid="dm-remove-image"
-        @click="emit('remove-image')"
-      >
-        <X :size="14" />
-      </button>
-    </div>
-
-    <!-- 输入框 -->
-    <textarea
-      :value="modelValue"
-      :disabled="disabled || sending"
-      :placeholder="disabled ? '当前会话无法发送消息' : '输入私信'"
-      rows="3"
-      @input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
-      @keydown="onKeydown"
-      @paste="onPaste"
-    />
-
-    <!-- 操作区 -->
-    <div class="dm-composer__actions">
-      <input
-        ref="fileInput"
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        hidden
-        @change="chooseImage"
-      />
-      <button
-        type="button"
-        class="dm-composer__btn"
+      <!-- 输入框 -->
+      <textarea
+        ref="textareaRef"
+        :value="modelValue"
         :disabled="disabled || sending"
-        aria-label="添加图片"
-        title="添加图片"
-        @click="fileInput?.click()"
-      >
-        <ImageIcon :size="18" />
-      </button>
-      <button
-        type="submit"
-        class="dm-composer__btn dm-composer__btn--submit"
-        :disabled="disabled || sending || (!modelValue.trim() && !image)"
-        aria-label="发送"
-        title="发送"
-      >
-        <Send :size="18" />
-      </button>
+        :placeholder="disabled ? '当前会话无法发送消息' : '输入私信...'"
+        rows="1"
+        class="dm-composer__textarea"
+        @input="onInput"
+        @keydown="onKeydown"
+        @paste="onPaste"
+      />
+
+      <!-- 底部工具栏 -->
+      <div class="dm-composer__toolbar">
+        <div class="dm-composer__toolbar-left">
+          <input
+            ref="fileInput"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            hidden
+            @change="chooseImage"
+          />
+          <button
+            type="button"
+            class="dm-composer__btn dm-composer__btn--upload"
+            :disabled="disabled || sending"
+            aria-label="添加图片"
+            title="添加图片"
+            @click="fileInput?.click()"
+          >
+            <Plus :size="16" />
+          </button>
+
+          <span
+            v-if="replyAsLabel && !disabled"
+            data-testid="dm-reply-as"
+            class="dm-composer__reply-as"
+          >
+            将以{{ replyAsLabel }}回复
+          </span>
+          <span v-else-if="disabled" class="dm-composer__reply-as">
+            已拉黑此用户
+          </span>
+        </div>
+
+        <div class="dm-composer__toolbar-right">
+          <span class="dm-composer__shortcut-hint">Enter 发送</span>
+          <button
+            type="submit"
+            class="dm-composer__btn dm-composer__btn--submit"
+            :class="{ 'is-ready': Boolean(modelValue.trim() || image) }"
+            :disabled="disabled || sending || (!modelValue.trim() && !image)"
+            aria-label="发送"
+            title="发送"
+          >
+            <ArrowUp :size="16" />
+          </button>
+        </div>
+      </div>
     </div>
 
     <p v-if="error" role="alert" class="dm-composer__error">{{ error }}</p>
@@ -66,8 +89,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { ImageIcon, Send, X } from 'lucide-vue-next'
+import { computed, nextTick, ref, watch } from 'vue'
+import { ArrowUp, Plus, X } from 'lucide-vue-next'
 import type { DMImage } from '@/api/dm'
 
 const props = withDefaults(
@@ -97,7 +120,32 @@ const emit = defineEmits<{
 }>()
 
 const fileInput = ref<HTMLInputElement | null>(null)
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const image = computed(() => props.image)
+
+const adjustHeight = () => {
+  const el = textareaRef.value
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = `${Math.min(el.scrollHeight, 140)}px`
+}
+
+const onInput = (event: Event) => {
+  const val = (event.target as HTMLTextAreaElement).value
+  emit('update:modelValue', val)
+  nextTick(adjustHeight)
+}
+
+watch(
+  () => props.modelValue,
+  (val) => {
+    if (!val) {
+      nextTick(() => {
+        if (textareaRef.value) textareaRef.value.style.height = 'auto'
+      })
+    }
+  }
+)
 
 const chooseImage = (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
@@ -137,102 +185,163 @@ const submit = () => {
 
 <style scoped>
 .dm-composer {
-  display: grid;
-  gap: 0.65rem;
-  border-top: 1px solid var(--a-color-border-soft);
-  padding: 0.85rem 1rem;
-  background: var(--a-color-bg);
-}
-
-.dm-composer textarea {
+  display: flex;
+  flex-direction: column;
+  padding: 0 1.25rem 1.25rem;
+  background: transparent;
+  box-shadow: none !important;
+  max-width: 900px;
   width: 100%;
-  resize: vertical;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  color: var(--a-color-text);
-  padding: 0.65rem;
+  margin: 0 auto;
+}
+
+.dm-composer__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--a-color-surface, #ffffff);
+  border: 1px solid color-mix(in srgb, var(--a-color-text) 12%, transparent);
+  border-radius: 20px;
+  padding: 0.625rem 0.85rem 0.5rem;
+  transition: border-color var(--a-motion-micro, 150ms) ease;
+  box-shadow: none !important;
+}
+
+.dm-composer__card:focus-within {
+  border-color: color-mix(in srgb, var(--a-color-text) 28%, transparent);
+}
+
+.dm-composer__textarea {
+  width: 100%;
+  min-height: 2.25rem;
+  max-height: 8.5rem;
+  padding: 0.25rem 0.35rem;
   font: inherit;
-  font-size: 0.925rem;
+  font-size: 0.9375rem;
   line-height: 1.5;
-  transition: border-color var(--a-motion-micro);
+  color: var(--a-color-text);
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  overflow-y: auto;
 }
 
-.dm-composer textarea:focus {
-  outline: 2px solid var(--a-color-primary);
-  outline-offset: 0;
-  border-color: var(--a-color-primary);
-  box-shadow: none;
+.dm-composer__textarea::placeholder {
+  color: var(--a-color-muted);
 }
 
-.dm-composer textarea:disabled {
-  background: var(--a-color-surface-muted);
+.dm-composer__textarea:disabled {
   cursor: not-allowed;
   color: var(--a-color-muted);
 }
 
-.dm-composer__reply-as,
-.dm-composer__error {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--a-color-muted);
-}
-
-.dm-composer__error {
-  color: var(--a-color-danger);
-}
-
-.dm-composer__actions {
+.dm-composer__toolbar {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.dm-composer__toolbar-left {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
+  min-width: 0;
+}
+
+.dm-composer__toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
 }
 
 .dm-composer__btn {
   display: grid;
   place-items: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-bg);
-  color: var(--a-color-text-secondary);
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--a-color-muted);
   cursor: pointer;
-  transition: background-color var(--a-motion-micro), color var(--a-motion-micro), border-color var(--a-motion-micro);
+  transition: all var(--a-motion-micro, 150ms) ease;
+  flex-shrink: 0;
 }
 
-.dm-composer__btn:hover:not(:disabled) {
+.dm-composer__btn--upload {
+  border: 1px solid color-mix(in srgb, var(--a-color-text) 12%, transparent);
+  color: var(--a-color-text-secondary);
+}
+
+.dm-composer__btn--upload:hover:not(:disabled) {
   background: var(--a-color-surface-muted);
   color: var(--a-color-text);
 }
 
-.dm-composer__btn--submit {
-  background: color-mix(in srgb, var(--a-color-primary) 10%, var(--a-color-bg));
-  border-color: color-mix(in srgb, var(--a-color-primary) 25%, transparent);
-  color: var(--a-color-primary);
+.dm-composer__reply-as {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--a-color-muted);
+  background: color-mix(in srgb, var(--a-color-text) 5%, transparent);
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  user-select: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.dm-composer__btn--submit:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--a-color-primary) 18%, var(--a-color-bg));
+.dm-composer__shortcut-hint {
+  font-size: 0.72rem;
+  color: var(--a-color-muted);
+  user-select: none;
+}
+
+.dm-composer__btn--submit {
+  width: 2rem;
+  height: 2rem;
+  background: color-mix(in srgb, var(--a-color-text) 8%, transparent);
+  color: var(--a-color-muted);
+}
+
+.dm-composer__btn--submit.is-ready:not(:disabled) {
+  background: var(--a-color-text, #18181b);
+  color: var(--a-color-bg, #ffffff);
+}
+
+.dm-composer__btn--submit.is-ready:hover:not(:disabled) {
+  opacity: 0.88;
 }
 
 .dm-composer__btn:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
+.dm-composer__error {
+  margin: 0.25rem 0 0 0.5rem;
+  font-size: 0.75rem;
+  color: var(--a-color-danger);
+}
+
+/* 待发图片卡片 */
 .dm-composer__image {
   position: relative;
   width: max-content;
-  border-radius: var(--a-radius-control);
+  border-radius: var(--a-radius-card, 8px);
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
+  margin-bottom: 0.5rem;
 }
 
 .dm-composer__image img {
   display: block;
-  width: 6.5rem;
-  height: 6.5rem;
+  width: 5.5rem;
+  height: 5.5rem;
   object-fit: cover;
 }
 
@@ -245,12 +354,12 @@ const submit = () => {
   display: grid;
   place-items: center;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
+  border-radius: 9999px;
   background: var(--a-color-bg);
   color: var(--a-color-text-secondary);
   cursor: pointer;
   box-shadow: none;
-  transition: background-color var(--a-motion-micro), color var(--a-motion-micro);
+  transition: background-color var(--a-motion-micro, 150ms) ease;
 }
 
 .dm-composer__image-remove:hover {

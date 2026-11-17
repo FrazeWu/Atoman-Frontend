@@ -3,7 +3,7 @@
     class="messages-workspace"
     data-testid="dm-workspace-layout"
   >
-    <!-- 左栏：收件箱选择器与会话列表 (320px) -->
+    <!-- 左栏：收件箱选择器与会话列表 (300px) -->
     <aside
       class="dm-workspace__sidebar"
       :class="{ 'dm-workspace__sidebar--hidden-mobile': isMobile && mobileShowingConversation }"
@@ -63,14 +63,15 @@
       </template>
 
       <!-- 空状态占位 -->
-      <PEmpty
-        v-else
-        class="dm-empty-placeholder"
-        data-testid="dm-empty-placeholder"
-        title="未选择会话"
-        description="从左侧列表中选择联系人开始交流"
-        align="center"
-      />
+      <div v-else class="dm-empty-container">
+        <PEmpty
+          class="dm-empty-placeholder"
+          data-testid="dm-empty-placeholder"
+          title="未选择会话"
+          description="从左侧列表中选择联系人开始交流"
+          align="center"
+        />
+      </div>
     </main>
 
     <!-- 右栏：桌面端联系人名片抽屉 (280px) -->
@@ -351,23 +352,26 @@ defineExpose({
   background: var(--a-color-bg, #ffffff);
   overflow: hidden;
   transition: height var(--a-motion-state, 220ms) ease;
+  box-shadow: none !important;
 }
 
-/* 左栏：会话列表 (320px) */
+/* 左栏：会话列表 (300px) */
 .dm-workspace__sidebar {
   display: flex;
   flex-direction: column;
-  width: 320px;
-  flex: 0 0 320px;
+  width: 300px;
+  flex: 0 0 300px;
   height: 100%;
-  border-right: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg, #ffffff);
+  border-right: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
+  background: var(--a-color-surface-muted, #fbfbfb);
   overflow: hidden;
+  transition: background-color var(--a-motion-micro, 150ms) ease;
 }
 
 .dm-workspace__sidebar-header {
-  padding: 0.75rem 0.75rem 0;
-  background: var(--a-color-bg, #ffffff);
+  padding: 0.75rem 0.75rem 0.5rem;
+  background: var(--a-color-surface-muted, #fbfbfb);
+  transition: background-color var(--a-motion-micro, 150ms) ease;
 }
 
 /* 中栏：聊天舞台 (flex: 1) */
@@ -389,9 +393,18 @@ defineExpose({
   width: 280px;
   flex: 0 0 280px;
   height: 100%;
-  border-left: 1px solid var(--a-color-border-soft);
+  border-left: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
   background: var(--a-color-bg, #ffffff);
   overflow: hidden;
+}
+
+/* 空状态容器 */
+.dm-empty-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--a-color-bg);
 }
 
 /* 居中占位区域 */

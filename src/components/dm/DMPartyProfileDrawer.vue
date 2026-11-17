@@ -163,7 +163,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background: var(--a-color-bg);
-  border-left: 1px solid var(--a-color-border-soft);
+  border-left: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
   flex-shrink: 0;
   box-sizing: border-box;
 }
@@ -174,7 +174,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  border-bottom: 1px solid var(--a-color-border-soft);
+  border-bottom: 1px solid color-mix(in srgb, var(--a-color-text) 6%, transparent);
   box-sizing: border-box;
 }
 
@@ -189,20 +189,19 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--a-radius-control, 4px);
-  border: 1px solid transparent;
-  background: transparent;
+  width: 30px;
+  height: 30px;
+  border-radius: 9999px;
+  border: none;
+  background: color-mix(in srgb, var(--a-color-text) 5%, transparent);
   color: var(--a-color-muted);
   cursor: pointer;
-  transition: color var(--a-motion-micro, 140ms) ease,
-              background-color var(--a-motion-micro, 140ms) ease;
+  transition: all var(--a-motion-micro, 140ms) ease;
 }
 
 .dm-profile-drawer__close-btn:hover {
   color: var(--a-color-text);
-  background-color: var(--a-color-surface-muted);
+  background-color: color-mix(in srgb, var(--a-color-text) 10%, transparent);
 }
 
 .dm-profile-drawer__body {
@@ -226,22 +225,22 @@ onUnmounted(() => {
 }
 
 .dm-profile-drawer__avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: var(--a-radius-control, 4px);
+  width: 72px;
+  height: 72px;
+  border-radius: 9999px;
   object-fit: cover;
   border: 1px solid var(--a-color-border-soft);
   display: block;
 }
 
 .dm-profile-drawer__avatar-fallback {
-  width: 64px;
-  height: 64px;
-  border-radius: var(--a-radius-control, 4px);
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-text-secondary);
-  font-size: 1.5rem;
-  font-weight: 600;
+  width: 72px;
+  height: 72px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--a-color-primary) 18%, var(--a-color-surface-muted)), var(--a-color-surface-muted));
+  color: var(--a-color-primary);
+  font-size: 1.75rem;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -250,10 +249,11 @@ onUnmounted(() => {
 
 .dm-profile-drawer__name {
   margin: 0 0 6px;
-  font-size: 1.05rem;
-  font-weight: 500;
+  font-size: 1.1rem;
+  font-weight: 700;
   color: var(--a-color-text);
   word-break: break-all;
+  letter-spacing: -0.01em;
 }
 
 .dm-profile-drawer__meta {
@@ -263,10 +263,10 @@ onUnmounted(() => {
 }
 
 .dm-profile-drawer__badge {
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 2px 6px;
-  border-radius: var(--a-radius-control, 4px);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
   background: var(--a-color-surface-muted);
   color: var(--a-color-text-secondary);
   border: 1px solid var(--a-color-border-soft);
@@ -281,17 +281,17 @@ onUnmounted(() => {
 .dm-profile-drawer__actions {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .dm-profile-drawer__action-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
-  border-radius: var(--a-radius-control, 4px);
+  padding: 10px 14px;
+  border-radius: var(--a-radius-card, 10px);
   border: 1px solid transparent;
-  background: transparent;
+  background: color-mix(in srgb, var(--a-color-text) 5%, transparent);
   color: var(--a-color-text);
   font-size: 0.875rem;
   font-weight: 500;
@@ -300,13 +300,12 @@ onUnmounted(() => {
   text-align: left;
   width: 100%;
   box-sizing: border-box;
-  transition: color var(--a-motion-micro, 140ms) ease,
-              background-color var(--a-motion-micro, 140ms) ease,
-              border-color var(--a-motion-micro, 140ms) ease;
+  transition: all var(--a-motion-micro, 140ms) ease;
+  box-shadow: none !important;
 }
 
 .dm-profile-drawer__action-item:hover {
-  background-color: var(--a-color-surface-muted);
+  background-color: color-mix(in srgb, var(--a-color-text) 9%, transparent);
   color: var(--a-color-text);
 }
 

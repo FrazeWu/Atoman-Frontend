@@ -281,4 +281,23 @@ describe('PSearchInput.vue', () => {
       expect(input.attributes('aria-autocomplete')).toBe('both')
     })
   })
+
+  it('gates update:modelValue during IME composition', async () => {
+    const wrapper = mount(PSearchInput, {
+      props: {
+        modelValue: '',
+      },
+    })
+
+    const input = wrapper.find<HTMLInputElement>('input[type="search"]')
+
+    await input.trigger('compositionstart')
+
+    input.element.value = 'wang'
+    await input.trigger('input')
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+
+    await input.trigger('compositionend')
+    expect(wrapper.emitted('update:modelValue')).toEqual([['wang']])
+  })
 })

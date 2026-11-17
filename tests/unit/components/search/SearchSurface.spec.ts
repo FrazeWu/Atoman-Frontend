@@ -74,4 +74,29 @@ describe('SearchSurface.vue', () => {
     await wrapper.setProps({ open: true, hint: '输入名称开始搜索' })
     expect(wrapper.find('.search-frame').classes()).not.toContain('is-compact')
   })
+
+  it('gates update:query during IME composition', async () => {
+    const wrapper = mount(SearchSurface, {
+      props: {
+        query: '',
+        open: false,
+        eyebrow: 'Search',
+        inputTestId: 'test-search-input',
+      },
+    })
+
+    const input = wrapper.find<HTMLInputElement>('[data-testid="test-search-input"]')
+
+    // Simulate compositionstart
+    await input.trigger('compositionstart')
+
+    // Simulate typing while composing
+    input.element.value = 'wang'
+    await input.trigger('input')
+    expect(wrapper.emitted('update:query')).toBeUndefined()
+
+    // Simulate compositionend
+    await input.trigger('compositionend')
+    expect(wrapper.emitted('update:query')).toEqual([['wang']])
+  })
 })

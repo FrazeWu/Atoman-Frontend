@@ -104,11 +104,24 @@ const shouldShowBadge = computed(() => {
 })
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
+const isComposing = ref(false)
+
+const handleCompositionStart = () => {
+  isComposing.value = true
+}
+
+const handleCompositionEnd = (e: Event) => {
+  if (!isComposing.value) return
+  isComposing.value = false
+  handleInput(e)
+}
 
 const handleInput = (e: Event) => {
   const target = e.target as HTMLInputElement
   const value = target.value
   innerValue.value = value
+
+  if (isComposing.value) return
 
   if (props.debounceMs > 0) {
     if (debounceTimer) clearTimeout(debounceTimer)
@@ -246,6 +259,8 @@ defineExpose({
         :aria-label="ariaLabel"
         :data-testid="inputTestId || undefined"
         @input="handleInput"
+        @compositionstart="handleCompositionStart"
+        @compositionend="handleCompositionEnd"
         @keydown="handleKeydown"
         @keydown.enter="handleEnter"
         @focus="handleFocus"
@@ -551,8 +566,8 @@ defineExpose({
 .p-search-input__dropdown {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
-  right: 0;
+  left: -1px;
+  right: -1px;
   background-color: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);

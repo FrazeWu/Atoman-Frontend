@@ -18,12 +18,15 @@
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
             <input
+              ref="inputRef"
               :value="query"
               class="search-input"
               type="text"
               :placeholder="placeholder"
               :data-testid="inputTestId"
               @input="handleInput"
+              @compositionstart="handleCompositionStart"
+              @compositionend="handleCompositionEnd"
               @focus="$emit('focus')"
               @blur="$emit('blur')"
               @keydown.enter="$emit('submit')"
@@ -71,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useSlots } from 'vue'
+import { computed, ref, useSlots } from 'vue'
 
 const props = withDefaults(defineProps<{
   query: string
@@ -111,6 +114,9 @@ const emit = defineEmits<{
   submit: []
 }>()
 
+const inputRef = ref<HTMLInputElement | null>(null)
+const isComposing = ref(false)
+
 const showDropdown = computed(() => (
   props.open && (
     props.loading ||
@@ -126,9 +132,26 @@ const dropdownStyle = computed(() => (
     : {}
 ))
 
+function handleCompositionStart() {
+  isComposing.value = true
+}
+
+function handleCompositionEnd(event: Event) {
+  if (!isComposing.value) return
+  isComposing.value = false
+  handleInput(event)
+}
+
 function handleInput(event: Event) {
+  if (isComposing.value) return
   emit('update:query', (event.target as HTMLInputElement).value)
 }
+
+defineExpose({
+  inputRef,
+  focus: () => inputRef.value?.focus(),
+  blur: () => inputRef.value?.blur(),
+})
 </script>
 
 <style scoped>
@@ -325,14 +348,15 @@ function handleInput(event: Event) {
 .search-frame.is-overlay-results .search-dropdown {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
-  right: 0;
+  left: -1px;
+  right: -1px;
   margin-top: 0;
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control, 4px);
   box-shadow: none !important;
   z-index: 80;
+  box-sizing: border-box;
 }
 
 .search-dropdown__hint {

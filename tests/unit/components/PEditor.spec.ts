@@ -421,6 +421,75 @@ describe("PEditor", () => {
 		]);
 	});
 
+	it("allows Select All and Delete when protectFirstLine is enabled", async () => {
+		const wrapper = await mountEditor({
+			modelValue: "# Old Title\nSome content paragraph\nAnother line",
+			mode: FUTURE_NORMAL_MODE,
+			protectFirstLine: true,
+		});
+		const view = EditorView.findFromDOM(
+			wrapper.get(".cm-content").element as HTMLElement,
+		)!;
+
+		// Select All and delete (Cmd+A -> Delete)
+		view.dispatch({
+			selection: { anchor: 0, head: view.state.doc.length },
+		});
+		view.dispatch({
+			changes: { from: 0, to: view.state.doc.length, insert: "" },
+		});
+		await nextTick();
+
+		expect(view.state.doc.toString()).toBe("# \n");
+		expect(view.state.selection.main.head).toBe(2);
+		expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual(["# \n"]);
+	});
+
+	it("allows Select All and Type over when protectFirstLine is enabled", async () => {
+		const wrapper = await mountEditor({
+			modelValue: "# Old Title\nSome content paragraph",
+			mode: FUTURE_NORMAL_MODE,
+			protectFirstLine: true,
+		});
+		const view = EditorView.findFromDOM(
+			wrapper.get(".cm-content").element as HTMLElement,
+		)!;
+
+		// Select All and type new text (Cmd+A -> 'Brand New Article\nNew body')
+		view.dispatch({
+			selection: { anchor: 0, head: view.state.doc.length },
+		});
+		view.dispatch({
+			changes: { from: 0, to: view.state.doc.length, insert: "Brand New Article\nNew body" },
+		});
+		await nextTick();
+
+		expect(view.state.doc.toString()).toBe("# Brand New Article\nNew body");
+		expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual(["# Brand New Article\nNew body"]);
+	});
+
+	it("prevents deleting '# ' prefix via backspace at position 2", async () => {
+		const wrapper = await mountEditor({
+			modelValue: "# Title\nBody",
+			mode: FUTURE_NORMAL_MODE,
+			protectFirstLine: true,
+		});
+		const view = EditorView.findFromDOM(
+			wrapper.get(".cm-content").element as HTMLElement,
+		)!;
+
+		// Cursor at pos 2 (# |Title), attempt backspace on pos 1..2
+		view.dispatch({ selection: { anchor: 2 } });
+		view.dispatch({
+			changes: { from: 1, to: 2, insert: "" },
+			selection: { anchor: 1 },
+		});
+		await nextTick();
+
+		// Should be prevented; document remains intact
+		expect(view.state.doc.toString()).toBe("# Title\nBody");
+	});
+
 	it("keeps collab sessions in the requested focused mode", async () => {
 		const wrapper = await mountEditor({
 			modelValue: "hello",

@@ -585,8 +585,29 @@ function initCodeMirror() {
       EditorState.transactionFilter.of((tr) => {
         if (!tr.docChanged) return tr
         const firstLine = tr.newDoc.line(1).text
-        if (!firstLine.startsWith('# ')) return []
-        return tr
+        if (firstLine.startsWith('# ')) return tr
+
+        if (tr.newDoc.length === 0) {
+          return [
+            {
+              changes: { from: 0, to: tr.startState.doc.length, insert: '# \n' },
+              selection: { anchor: 2 },
+            },
+          ]
+        }
+
+        if (tr.startState.selection.main.empty && tr.startState.selection.main.head <= 2) {
+          return []
+        }
+
+        const atStart = tr.newSelection.main.head === 0
+        return [
+          tr,
+          {
+            changes: { from: 0, insert: '# ' },
+            ...(atStart ? { selection: { anchor: 2 } } : {}),
+          },
+        ]
       })
     )
     extensions.push(

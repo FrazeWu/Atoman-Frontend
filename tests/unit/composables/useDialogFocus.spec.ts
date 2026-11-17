@@ -497,9 +497,10 @@ describe("useDialogFocus", () => {
     });
   });
 
-  describe("Body Scroll Lock", () => {
-    it("locks body scroll on open and unlocks on close", async () => {
+  describe("Document Scroll Lock", () => {
+    it("locks document scroll on open and unlocks on close without breaking body sticky", async () => {
       expect(activeScrollLockCount).toBe(0);
+      expect(document.documentElement.style.overflow).toBe("");
       expect(document.body.style.overflow).toBe("");
 
       const open = ref(false);
@@ -511,11 +512,13 @@ describe("useDialogFocus", () => {
       open.value = true;
       await flush();
       expect(activeScrollLockCount).toBe(1);
-      expect(document.body.style.overflow).toBe("hidden");
+      expect(document.documentElement.style.overflow).toBe("hidden");
+      expect(document.body.style.overflow).toBe("");
 
       open.value = false;
       await flush();
       expect(activeScrollLockCount).toBe(0);
+      expect(document.documentElement.style.overflow).toBe("");
       expect(document.body.style.overflow).toBe("");
     });
 
@@ -531,22 +534,22 @@ describe("useDialogFocus", () => {
       open1.value = true;
       await flush();
       expect(activeScrollLockCount).toBe(1);
-      expect(document.body.style.overflow).toBe("hidden");
+      expect(document.documentElement.style.overflow).toBe("hidden");
 
       open2.value = true;
       await flush();
       expect(activeScrollLockCount).toBe(2);
-      expect(document.body.style.overflow).toBe("hidden");
+      expect(document.documentElement.style.overflow).toBe("hidden");
 
       open2.value = false;
       await flush();
       expect(activeScrollLockCount).toBe(1);
-      expect(document.body.style.overflow).toBe("hidden");
+      expect(document.documentElement.style.overflow).toBe("hidden");
 
       open1.value = false;
       await flush();
       expect(activeScrollLockCount).toBe(0);
-      expect(document.body.style.overflow).toBe("");
+      expect(document.documentElement.style.overflow).toBe("");
     });
 
     it("respects lockScroll: false", async () => {
@@ -557,7 +560,7 @@ describe("useDialogFocus", () => {
       open.value = true;
       await flush();
       expect(activeScrollLockCount).toBe(0);
-      expect(document.body.style.overflow).toBe("");
+      expect(document.documentElement.style.overflow).toBe("");
     });
   });
 });

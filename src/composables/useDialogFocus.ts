@@ -13,6 +13,7 @@ export interface UseDialogFocusOptions {
     | "auto"
     | "first-input"
     | "close-button"
+    | false
     | HTMLElement
     | (() => HTMLElement | null);
   lockScroll?: boolean;
@@ -94,7 +95,7 @@ export function getFocusableElements(container: HTMLElement | null): HTMLElement
   return elements.filter(isElementVisible);
 }
 
-let originalBodyOverflow = "";
+let originalHtmlOverflow = "";
 export let activeScrollLockCount = 0;
 const activeDialogStack: symbol[] = [];
 
@@ -112,10 +113,15 @@ export function hasActiveDialog(): boolean {
 
 export function resetScrollLockForTesting(): void {
   activeScrollLockCount = 0;
-  originalBodyOverflow = "";
+  originalHtmlOverflow = "";
   activeDialogStack.length = 0;
-  if (typeof document !== "undefined" && document.body) {
-    document.body.style.overflow = "";
+  if (typeof document !== "undefined") {
+    if (document.documentElement) {
+      document.documentElement.style.overflow = "";
+    }
+    if (document.body) {
+      document.body.style.overflow = "";
+    }
   }
 }
 
@@ -141,10 +147,10 @@ export function useDialogFocus(
     if (options.lockScroll === false) return;
     if (hasLockedScroll) return;
     hasLockedScroll = true;
-    if (typeof document !== "undefined" && document.body) {
+    if (typeof document !== "undefined" && document.documentElement) {
       if (activeScrollLockCount === 0) {
-        originalBodyOverflow = document.body.style.overflow;
-        document.body.style.overflow = "hidden";
+        originalHtmlOverflow = document.documentElement.style.overflow;
+        document.documentElement.style.overflow = "hidden";
       }
     }
     activeScrollLockCount++;
@@ -154,10 +160,10 @@ export function useDialogFocus(
     if (!hasLockedScroll) return;
     hasLockedScroll = false;
     activeScrollLockCount = Math.max(0, activeScrollLockCount - 1);
-    if (typeof document !== "undefined" && document.body) {
+    if (typeof document !== "undefined" && document.documentElement) {
       if (activeScrollLockCount === 0) {
-        document.body.style.overflow = originalBodyOverflow;
-        originalBodyOverflow = "";
+        document.documentElement.style.overflow = originalHtmlOverflow;
+        originalHtmlOverflow = "";
       }
     }
   };
@@ -186,8 +192,10 @@ export function useDialogFocus(
   const focusDialog = async () => {
     await nextTick();
     if (!root.value) return;
+    if (!isCurrentTopLayer()) return;
 
     const initial = options.initialFocus ?? "auto";
+    if (initial === false) return;
 
     if (initial instanceof HTMLElement && initial.isConnected) {
       initial.focus({ preventScroll: options.preventScroll });
@@ -369,6 +377,17 @@ export function useDialogFocus(
     },
     { immediate: true },
   );
+
+  if (options.isTopLayer !== undefined) {
+    watch(
+      () => unref(options.isTopLayer),
+      (isTop, wasTop) => {
+        if (open.value && isTop && !wasTop) {
+          void focusDialog();
+        }
+      },
+    );
+  }
 
   if (getCurrentInstance()) {
     onBeforeUnmount(() => {

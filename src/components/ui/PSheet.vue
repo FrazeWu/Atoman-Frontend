@@ -59,6 +59,7 @@
           :class="backdropClass"
           :style="{ top: backdropTop, zIndex: backdropZIndex, left: backdropLeft }"
           @click="$emit('close')"
+          @wheel.prevent
         />
       </Transition>
 
@@ -84,7 +85,7 @@
           @keydown="handlePanelKeydown"
           @wheel="handleLayerWheel"
         >
-          <div v-if="showLayerRail" class="sheet-layer-rail">
+          <div v-if="showLayerRail" class="sheet-layer-rail" @wheel.prevent>
             <div class="sheet-layer-controls" @click.stop>
               <button
                 ref="closeButtonRef"
@@ -317,17 +318,24 @@ const closeLabel = computed(() => props.isTopLayer
   ? `关闭${railTitle.value}`
   : `关闭${railTitle.value}及上方页面`)
 
-const focusManagementOpen = computed(() => (
+const sheetOpen = computed(() => (
   props.show
-  && props.isTopLayer
   && !isMobile.value
-  && props.focusOnOpen
   && (!partialRequested.value || (partialResolved.value && !isPartial.value))
 ))
-const { handleKeydown } = useDialogFocus(focusManagementOpen, panelRef, () => emit('close'))
+const isTopLayerRef = computed(() => props.isTopLayer)
+const { handleKeydown } = useDialogFocus(
+  sheetOpen,
+  panelRef,
+  () => emit('close'),
+  {
+    initialFocus: props.focusOnOpen ? 'auto' : false,
+    isTopLayer: isTopLayerRef,
+  },
+)
 const handlePanelKeydown = (event: KeyboardEvent) => {
   if (!props.isTopLayer) return
-  if (focusManagementOpen.value) {
+  if (sheetOpen.value) {
     handleKeydown(event)
   } else if (event.key === 'Escape') {
     event.preventDefault()

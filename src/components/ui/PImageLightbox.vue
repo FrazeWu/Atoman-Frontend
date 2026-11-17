@@ -11,6 +11,7 @@
         tabindex="-1"
         @click.self="close"
         @keydown="handleKeydown"
+        @wheel.prevent
       >
         <div class="p-lightbox-header">
           <span v-if="images.length > 1" class="p-lightbox-counter">

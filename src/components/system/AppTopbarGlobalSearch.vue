@@ -20,6 +20,7 @@
           v-if="showSearch"
           class="palette-overlay"
           @click.self="closeSearch"
+          @wheel.self.prevent
         >
           <div
             ref="searchPanelRef"
@@ -518,6 +519,7 @@ onBeforeUnmount(() => {
 .palette-body {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0.75rem 1rem;
   min-height: 180px;
   max-height: 420px;

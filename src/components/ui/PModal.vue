@@ -6,6 +6,7 @@
         class="p-modal-backdrop"
         :class="[{ 'p-modal-backdrop--above-player': abovePlayer }, backdropClass]"
         @click.self="handleBackdropClick"
+        @wheel.self.prevent
       >
         <div
           ref="dialogRef"

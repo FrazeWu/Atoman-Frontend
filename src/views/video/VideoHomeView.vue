@@ -322,7 +322,7 @@ watch(sort, () => {
 /* Sticky filter bar */
 .vh-bar {
   position: sticky;
-  top: 0;
+  top: var(--a-topbar-height, 56px);
   z-index: 10;
   background: var(--a-color-bg);
   display: flex;

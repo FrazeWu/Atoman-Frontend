@@ -4,9 +4,7 @@
 
 .booklists {
   color: var(--a-color-text);
-  padding-block: 1.5rem;
-  max-width: 64rem;
-  margin-inline: auto;
+  width: 100%;
 }
 
 .booklists__header {

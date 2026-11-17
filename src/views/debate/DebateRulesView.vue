@@ -1,5 +1,5 @@
 <template>
-  <main class="debate-rules a-page-xl">
+  <section class="debate-rules a-page-xl">
     <PPageHeader title="辩论规则" mb="1.5rem" />
 
     <div class="debate-rules__layout">
@@ -46,7 +46,7 @@
         </section>
       </div>
     </div>
-  </main>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -68,7 +68,7 @@ const sections = [
 .debate-rules__eyebrow, .debate-rules__label { margin: 0; color: var(--a-color-muted); font-size: 12px; font-weight: 600; letter-spacing: 0; }
 .debate-rules h1 { margin: 12px 0 0; font-size: 34px; font-weight: 500; line-height: 1.2; }
 .debate-rules__layout { display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: var(--a-content-column-gap, 2rem); padding-top: 40px; }
-.debate-rules__nav { position: sticky; top: 24px; display: grid; align-content: start; gap: 4px; }
+.debate-rules__nav { position: sticky; top: calc(var(--a-topbar-height, 56px) + 1.5rem); display: grid; align-content: start; gap: 4px; }
 .debate-rules__nav a { min-height: 36px; padding: 8px 10px; color: var(--a-color-muted); font-size: 13px; line-height: 20px; text-decoration: none; }
 .debate-rules__nav a:hover, .debate-rules__nav a:focus-visible { color: var(--a-color-text); background: var(--a-color-bg); outline: none; }
 .debate-rules__content { min-width: 0; }

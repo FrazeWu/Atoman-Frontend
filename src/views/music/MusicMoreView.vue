@@ -1,5 +1,5 @@
 <template>
-  <main class="music-more-view">
+  <section class="music-more-view">
     <PPageHeader title="更多音乐" mb="1.25rem" />
 
     <nav class="music-more-view__links" aria-label="更多音乐功能">
@@ -54,7 +54,7 @@
         </li>
       </ul>
     </section>
-  </main>
+  </section>
 </template>
 
 <script setup lang="ts">

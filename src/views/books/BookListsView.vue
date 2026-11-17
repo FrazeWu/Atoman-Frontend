@@ -1,11 +1,10 @@
 <template>
   <section class="booklists">
-    <div class="booklists__header">
-      <PPageHeader title="书单" sub="把值得读的书，整理成一条阅读线索。" />
-      <div v-if="auth.isAuthenticated" class="booklists__header-actions">
+    <PPageHeader title="书单" sub="把值得读的书，整理成一条阅读线索。">
+      <template v-if="auth.isAuthenticated" #action>
         <PButton to="/books/lists/new" variant="primary">创建书单</PButton>
-      </div>
-    </div>
+      </template>
+    </PPageHeader>
 
     <div class="booklists__toolbar">
       <div class="booklists__segmented-wrap">

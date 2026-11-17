@@ -115,7 +115,7 @@ function playEpisode(ep: PodcastEpisode) {
 
 <template>
   <div class="ph-page">
-    <PPageHeader title="播客" mb="1.5rem">
+    <PPageHeader title="播客" mb="1.25rem">
       <template #action>
         <div class="ph-search">
           <PUnifiedSearchBar

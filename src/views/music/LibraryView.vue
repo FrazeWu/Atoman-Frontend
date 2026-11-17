@@ -218,7 +218,7 @@ onUnmounted(() => clearTimeout(queryTimer))
 </script>
 
 <template>
-  <main class="music-library">
+  <section class="music-library">
     <PPageHeader title="收藏" mb="0">
       <template #action>
         <PSegmentedControl v-model="kind" :options="options" />
@@ -335,7 +335,7 @@ onUnmounted(() => clearTimeout(queryTimer))
         @change="load"
       />
     </template>
-  </main>
+  </section>
 </template>
 
 <style scoped>

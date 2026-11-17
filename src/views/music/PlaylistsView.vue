@@ -108,7 +108,7 @@ watch(isAuthenticated, (authenticated) => {
 </script>
 
 <template>
-  <main class="music-playlists-view">
+  <section class="music-playlists-view">
     <PPageHeader title="歌单" mb="1.25rem">
       <template #action>
         <div v-if="isAuthenticated" class="music-playlists__header-actions">
@@ -231,7 +231,7 @@ watch(isAuthenticated, (authenticated) => {
         <p v-else class="music-playlists__empty">还没有收藏歌单</p>
       </section>
     </template>
-  </main>
+  </section>
 </template>
 
 <style scoped>

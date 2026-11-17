@@ -1,5 +1,5 @@
 <template>
-  <main class="debate-page">
+  <section class="debate-page">
     <div v-if="loading && !debate" class="debate-page__state">加载中...</div>
     <div v-else-if="!debate" class="debate-page__state">辩题不存在</div>
 
@@ -147,7 +147,7 @@
         @close="closeDetailSheet"
       />
     </template>
-  </main>
+  </section>
 </template>
 
 <script setup lang="ts">

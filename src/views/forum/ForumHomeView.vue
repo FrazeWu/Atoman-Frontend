@@ -1,6 +1,6 @@
 <template>
   <div class="forum-page">
-    <main class="forum-main">
+    <section class="forum-main">
       <PPageHeader title="论坛" mb="1.25rem">
         <template #action>
           <div class="forum-header-actions">
@@ -124,7 +124,7 @@
       <div v-if="hasMore && !forumStore.topicsLoading" class="load-more-wrap">
         <PButton variant="secondary" @click="loadMore" :loading="loadingMore">加载更多</PButton>
       </div>
-    </main>
+    </section>
   </div>
 
   <!-- Category Request Modal -->

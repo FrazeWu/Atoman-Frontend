@@ -1,7 +1,5 @@
 .book-catalog {
   color: var(--a-color-text, #1c1c1e);
-  padding-block: 1rem;
-  padding-bottom: calc(var(--a-space-12, 3rem) + 140px);
   background-color: var(--a-color-bg, #ffffff);
   width: 100%;
 }

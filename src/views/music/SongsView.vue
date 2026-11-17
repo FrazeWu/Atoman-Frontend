@@ -264,7 +264,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main class="songs-view">
+  <section class="songs-view">
     <PPageHeader :title="tagName ? `标签：${tagName}` : '歌曲检索'" mb="1.25rem">
       <template #action>
         <PButton v-if="tagID" size="sm" variant="secondary" @click="clearTagFilter">清除标签筛选</PButton>
@@ -431,7 +431,7 @@ onBeforeUnmount(() => {
         @change="runSearch"
       />
     </div>
-  </main>
+  </section>
 </template>
 
 <style scoped>

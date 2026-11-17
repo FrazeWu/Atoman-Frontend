@@ -1,5 +1,5 @@
 <template>
-  <section class="books-notes-page a-content-frame">
+  <section class="books-notes-page">
     <PPageHeader title="笔记" sub="全书划线摘录与随手阅读笔记" mb="0" />
 
     <!-- 顶部工具栏 -->

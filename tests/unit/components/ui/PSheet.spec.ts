@@ -42,6 +42,14 @@ describe('PSheet.vue mobile gestures', () => {
     delete document.documentElement.dataset.atomanApp
   })
 
+  it('keeps the mobile backdrop when desktop background interaction is enabled', () => {
+    const wrapper = mount(PSheet, {
+      props: { show: true, mode: 'partial', allowBackgroundInteraction: true },
+    })
+    expect(wrapper.find('.p-sheet-mobile-backdrop').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
   it('emits close event when mobile sheet gesture dismisses', async () => {
     const wrapper = mount(PSheet, {
       props: { show: true, title: '测试抽屉' },

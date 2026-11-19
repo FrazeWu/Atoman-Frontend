@@ -40,6 +40,61 @@ const mountSheet = (
 };
 
 describe("FeedArticleSheet", () => {
+	it("keeps focus in the nested partial comment sheet", async () => {
+		const wrapper = mountSheet({
+			attachTo: document.body,
+			props: {
+				show: true,
+				article: { type: "feed_item", feed_item: { id: "focus-item", title: "焦点复现", summary: "正文" } } as any,
+			},
+			global: {
+				stubs: {
+					CommentSection: { template: '<textarea aria-label="评论焦点复现" />' },
+				},
+			},
+		});
+		await wrapper.vm.$nextTick();
+		await wrapper.get('[data-test="feed-article-comments-trigger"]').trigger("click");
+		await wrapper.vm.$nextTick();
+		const textarea = wrapper.get<HTMLTextAreaElement>('textarea[aria-label="评论焦点复现"]');
+		textarea.element.focus();
+		expect(document.activeElement).toBe(textarea.element);
+		const panels = wrapper.findAll('.p-sheet-panel');
+		expect(panels[1].classes()).toContain('is-partial');
+		expect(wrapper.findAll('.p-sheet-backdrop')).toHaveLength(1);
+		const title = wrapper.get('.article-title');
+		const wheel = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 100 });
+		title.element.dispatchEvent(wheel);
+		expect(wheel.defaultPrevented).toBe(false);
+		expect(wrapper.findComponent({ name: 'CommentSideSheet' }).props('show')).toBe(true);
+
+		textarea.element.blur();
+		const selection = window.getSelection()!;
+		const range = document.createRange();
+		range.selectNodeContents(title.element);
+		selection.addRange(range);
+		expect(selection.toString()).toContain('焦点复现');
+		await title.trigger('click');
+		expect(wrapper.findComponent({ name: 'CommentSideSheet' }).props('show')).toBe(true);
+		selection.removeAllRanges();
+
+		const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+		title.element.dispatchEvent(click);
+		await wrapper.vm.$nextTick();
+		expect(click.defaultPrevented).toBe(true);
+		expect(wrapper.findComponent({ name: 'CommentSideSheet' }).props('show')).toBe(false);
+		expect(wrapper.emitted('close')).toBeUndefined();
+
+		await wrapper.get('[data-test="feed-article-comments-trigger"]').trigger('click');
+		await wrapper.vm.$nextTick();
+		const reopened = wrapper.get<HTMLTextAreaElement>('textarea[aria-label="评论焦点复现"]');
+		reopened.element.focus();
+		reopened.element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+		await wrapper.vm.$nextTick();
+		expect(wrapper.findComponent({ name: 'CommentSideSheet' }).props('show')).toBe(false);
+		expect(wrapper.emitted('close')).toBeUndefined();
+	});
+
 	beforeEach(() => {
 		consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 		consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);

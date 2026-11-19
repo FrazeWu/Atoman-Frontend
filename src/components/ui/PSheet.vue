@@ -54,7 +54,7 @@
       <!-- Backdrop to catch clicks outside the sheet -->
       <Transition name="fade" appear>
         <div
-          v-if="show && showBackdrop && isTopLayer"
+          v-if="show && showBackdrop && isTopLayer && !(allowBackgroundInteraction && isPartial)"
           class="p-sheet-backdrop"
           :class="backdropClass"
           :style="{ top: backdropTop, zIndex: backdropZIndex, left: backdropLeft }"
@@ -167,6 +167,7 @@
 
           <div
             class="sheet-content hide-scrollbar"
+            @click.capture="emit('content-click', $event)"
             :class="{
               'sheet-content--compact': !hasHeader,
               'sheet-content--has-close': showHeaderClose,
@@ -240,6 +241,8 @@ const props = withDefaults(defineProps<{
   // 阅读器等带滚动/变换容器的页面可显式脱离移动端父级定位上下文。
   teleportMobile?: boolean
   focusOnOpen?: boolean
+  trapFocus?: boolean
+  allowBackgroundInteraction?: boolean
   navigation?: {
     previous?: { label: string } | null
     next?: { label: string } | null
@@ -269,6 +272,8 @@ const props = withDefaults(defineProps<{
   teleport: true,
   teleportMobile: false,
   focusOnOpen: true,
+  trapFocus: true,
+  allowBackgroundInteraction: false,
   navigationLoading: false,
   navigationKey: '',
   navigationDirection: 'next',
@@ -279,6 +284,7 @@ const emit = defineEmits<{
   (event: 'activate'): void
   (event: 'mode-change', mode: 'full' | 'partial'): void
   (event: 'navigate', direction: 'previous' | 'next'): void
+  (event: 'content-click', originalEvent: MouseEvent): void
 }>()
 
 const slots = useSlots()
@@ -323,7 +329,7 @@ const sheetOpen = computed(() => (
   && !isMobile.value
   && (!partialRequested.value || (partialResolved.value && !isPartial.value))
 ))
-const isTopLayerRef = computed(() => props.isTopLayer)
+const isTopLayerRef = computed(() => props.isTopLayer && props.trapFocus)
 const { handleKeydown } = useDialogFocus(
   sheetOpen,
   panelRef,
@@ -331,10 +337,11 @@ const { handleKeydown } = useDialogFocus(
   {
     initialFocus: props.focusOnOpen ? 'auto' : false,
     isTopLayer: isTopLayerRef,
+    preventScroll: true,
   },
 )
 const handlePanelKeydown = (event: KeyboardEvent) => {
-  if (!props.isTopLayer) return
+  if (!props.isTopLayer || !props.trapFocus) return
   if (sheetOpen.value) {
     handleKeydown(event)
   } else if (event.key === 'Escape') {
@@ -470,7 +477,8 @@ const updatePartialBounds = () => {
 }
 
 const handlePartialEscape = (event: KeyboardEvent) => {
-  if (!props.show || !props.isTopLayer || event.defaultPrevented || event.key !== 'Escape') return
+  // 全宽层由焦点管理处理 Esc，避免它抢先关闭上方的非模态评论层。
+  if (!isPartial.value || !props.show || !props.isTopLayer || event.defaultPrevented || event.key !== 'Escape') return
   event.preventDefault()
   event.stopPropagation()
   emit('close')

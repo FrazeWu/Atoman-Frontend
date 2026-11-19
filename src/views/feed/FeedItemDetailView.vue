@@ -61,6 +61,7 @@ import FeedSourceArticlesSheet from '@/components/feed/FeedSourceArticlesSheet.v
 import PEmpty from '@/components/ui/PEmpty.vue'
 import { useApi } from '@/composables/useApi'
 import { feedArticleRouteState, readFeedArticleRouteState, type FeedArticleRouteState } from '@/composables/feed/feedArticleRouteState'
+import { useFeedSubscriptionState } from '@/composables/feed/useFeedSubscriptionState'
 import { useAuthStore } from '@/stores/auth'
 import { usePlayerStore } from '@/stores/player'
 import { useFeedStore } from '@/stores/feed'
@@ -74,6 +75,7 @@ const api = useApi()
 const authStore = useAuthStore()
 const playerStore = usePlayerStore()
 const feedStore = useFeedStore()
+const { resolveSubscriptionState, ensureSubscriptionState } = useFeedSubscriptionState()
 const isMobileApp = isStandaloneMobileApp()
 
 const loading = ref(false)
@@ -98,21 +100,16 @@ const isPodcastPlaying = computed(() => (
 ))
 
 const articleSource = computed<FeedArticleSource | null>(() => {
-  if (routeState.value?.source) return routeState.value.source
+  if (routeState.value?.source) return resolveSubscriptionState(routeState.value.source)
   const feedItem = item.value
   if (!feedItem?.feed_source_id) return null
-  const subscription = feedStore.subscriptions.find((entry) => (
-    entry.feed_source_id === feedItem.feed_source_id
-    || entry.feed_source?.id === feedItem.feed_source_id
-  ))
-  return {
+  return resolveSubscriptionState({
     type: 'external_rss',
     id: feedItem.feed_source?.id || feedItem.feed_source_id,
     title: feedItem.feed_source?.title || 'RSS',
     rssUrl: feedItem.feed_source?.rss_url,
-    subscriptionId: subscription?.id,
-    subscribed: Boolean(subscription),
-  }
+    subscribed: false,
+  })
 })
 const articleIndex = computed(() => routeState.value?.articles.findIndex(
   (entry) => (entry.type === 'feed_item' || entry.type === 'project_update') && entry.feed_item?.id === item.value?.id,
@@ -175,10 +172,10 @@ async function subscribeSource() {
     await router.push({ path: '/login', query: { redirect } })
     return
   }
-  if (source.type !== 'external_rss' || !source.rssUrl) return
-
   sourceSubscribeBusy.value = true
   try {
+    if (!await ensureSubscriptionState() || articleSource.value?.subscribed) return
+    if (source.type !== 'external_rss' || !source.rssUrl) return
     const success = await feedStore.subscribeToRSS(source.rssUrl, source.title)
     if (!success) return
     await Promise.all([
@@ -186,9 +183,6 @@ async function subscribeSource() {
       feedStore.fetchGroups(),
       feedStore.fetchSubscriptionHubTree(),
     ])
-    routeState.value = routeState.value
-      ? { ...routeState.value, source: { ...source, subscribed: true } }
-      : routeState.value
   } finally {
     sourceSubscribeBusy.value = false
   }
@@ -312,6 +306,8 @@ async function fetchItem(id: string) {
 watch(() => String(route.params.id || ''), (id) => {
   if (id) void fetchItem(id)
 }, { immediate: true })
+
+watch(() => authStore.isAuthenticated, () => { void ensureSubscriptionState() }, { immediate: true })
 </script>
 
 <style scoped>

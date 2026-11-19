@@ -156,6 +156,7 @@ const formattedLastUpdated = computed(() => {
 const subscribeButtonLabel = computed(() => {
   if (props.source.subscribed) return '已订阅'
   if (props.subscribeBusy) return '处理中'
+  if (props.source.subscriptionStateKnown === false) return '确认订阅状态'
   return '订阅'
 })
 

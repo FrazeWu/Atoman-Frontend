@@ -46,10 +46,10 @@
                     type="button"
                     class="discovery-search-result__subscribe"
                     data-test="discovery-search-subscribe"
-                    :disabled="source.subscribed"
+                    :disabled="source.subscribed || isChannelSubscribeBusy(source.id)"
                     @mousedown.prevent
                     @click="subscribeDiscoverySource(source)"
-                  >{{ source.subscribed ? '已订阅' : '订阅' }}</button>
+                  >{{ source.subscribed ? '已订阅' : source.subscriptionStateKnown === false ? '确认订阅状态' : '订阅' }}</button>
                 </div>
               </section>
 
@@ -273,7 +273,7 @@
             <FeedSourceIdentityCard
               v-for="item in channels"
               :key="item.id"
-              :source="{ ...toRecommendedSource(item), subscribed: Boolean(item.subscribed) }"
+              :source="{ ...toRecommendedSource(item), subscriptionStateKnown: item.subscriptionStateKnown }"
               :color="buildSourceColor(item.title || item.id)"
               :avatar-label="buildSourceAvatarLabel(item.title)"
               :display-url="''"
@@ -372,6 +372,7 @@
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useFeedSubscriptionState } from '@/composables/feed/useFeedSubscriptionState'
 import { useRoute, useRouter } from 'vue-router'
 import { Bookmark, BookmarkCheck, Clock, Eye, Gauge } from 'lucide-vue-next'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -448,6 +449,7 @@ const router = useRouter()
 const route = useRoute()
 const api = useApi()
 const feedStore = useFeedStore()
+const { resolveSubscriptionState, ensureSubscriptionState } = useFeedSubscriptionState()
 const authStore = useAuthStore()
 const onboardingStore = useOnboardingStore()
 
@@ -529,7 +531,14 @@ const articlesError = ref('')
 const channelsError = ref('')
 let recommendationRequest = 0
 const articles = ref<RecommendationItem[]>([])
-const channels = ref<RecommendationItem[]>([])
+const channelSnapshots = ref<RecommendationItem[]>([])
+const channels = computed({
+  get: () => channelSnapshots.value.map(item => {
+    const state = resolveSubscriptionState({ ...sourceFromRecommendation(item), ...sourceSubscriptionContext(item) })
+    return { ...item, subscribed: state.subscribed, subscriptionStateKnown: state.subscriptionStateKnown }
+  }),
+  set: (items: RecommendationItem[]) => { channelSnapshots.value = items },
+})
 
 const page = ref(normalizePage(route.query.page))
 const pageSize = 20
@@ -538,7 +547,11 @@ const totalChannels = ref(0)
 
 // ── 抽屉与详情交互状态 ──
 const showChannelSheet = ref(false)
-const selectedChannelSource = ref<FeedArticleSource | null>(null)
+const selectedChannelSnapshot = ref<FeedArticleSource | null>(null)
+const selectedChannelSource = computed({
+  get: () => selectedChannelSnapshot.value ? resolveSubscriptionState(selectedChannelSnapshot.value) : null,
+  set: (source: FeedArticleSource | null) => { selectedChannelSnapshot.value = source },
+})
 const channelArticles = ref<TimelineItem[]>([])
 const channelArticlesLoading = ref(false)
 const selectedChannelSubscribeBusy = ref(false)
@@ -552,13 +565,18 @@ const {
   discoverySearchOpen,
   discoverySearchLoading,
   discoverySearchError,
-  discoverySearchSources,
+  discoverySearchSources: discoverySearchSnapshots,
   discoverySearchArticles,
   handleDiscoverySearchInput,
   handleDiscoverySearchFocus,
   handleDiscoverySearchBlur,
   searchDiscovery,
 } = useFeedDiscoverySearch()
+
+const discoverySearchSources = computed(() => discoverySearchSnapshots.value.map(source => ({
+  ...source,
+  ...resolveSubscriptionState({ type: 'external_rss' as const, ...source }),
+})))
 
 const showAddModal = ref(false)
 const addingSubscription = ref(false)
@@ -699,25 +717,6 @@ async function fetchChannelRecommendations(params: string, request: number) {
         await feedStore.fetchSubscriptions()
       }
       if (request !== recommendationRequest) return
-      const subscribedChannelIds = new Set(
-        feedStore.subscriptions
-          .filter((subscription) => (
-            subscription.feed_source?.source_type === 'internal_channel'
-            && !subscription.is_paused
-            && Boolean(subscription.feed_source.source_id)
-          ))
-          .map((subscription) => subscription.feed_source?.source_id as string),
-      )
-      for (const item of items) {
-        item.subscribed = Boolean(item.subscribed) || (item.source_type === 'external_rss'
-          ? feedStore.subscriptions.some((subscription) => (
-            subscription.feed_source_id === (item.source_id || item.id)
-            || subscription.feed_source?.id === (item.source_id || item.id)
-          ))
-          : feedStore.subscriptionsLoaded
-            ? subscribedChannelIds.has(item.source_id || item.id)
-            : false)
-      }
     }
     channels.value = deduplicateRecommendedChannels(items)
     const total = Number(payload?.meta?.total ?? payload?.total)
@@ -799,14 +798,14 @@ function requireLoginForSubscription(source: RecommendationItem | FeedArticleSou
 }
 
 async function subscribeRecommendedChannel(item: RecommendationItem) {
-  if (item.subscribed || !requireLoginForSubscription(item)) return
+  if (item.subscribed || isChannelSubscribeBusy(item.id) || !requireLoginForSubscription(item)) return
   subscribingChannelIds.value.push(item.id)
   try {
+    if (!await ensureSubscriptionState() || resolveSubscriptionState({ ...sourceFromRecommendation(item), ...sourceSubscriptionContext(item) }).subscribed) return
     const success = item.source_type === 'external_rss'
       ? await feedStore.subscribeToRSS(item.rss_url || '', item.title)
-      : await feedStore.subscribeToChannel(item.id)
+      : await feedStore.subscribeToChannel(item.source_id || item.id)
     if (success) {
-      item.subscribed = true
       await Promise.all([
         feedStore.fetchSubscriptions(),
         feedStore.fetchGroups(),
@@ -827,9 +826,10 @@ async function subscribeRecommendedChannel(item: RecommendationItem) {
 
 async function subscribeSelectedChannel() {
   const source = selectedChannelSource.value
-  if (!source || source.subscribed || !requireLoginForSubscription(source)) return
+  if (!source || source.subscribed || selectedChannelSubscribeBusy.value || !requireLoginForSubscription(source)) return
   selectedChannelSubscribeBusy.value = true
   try {
+    if (!await ensureSubscriptionState() || selectedChannelSource.value?.subscribed) return
     let success: boolean
     if (source.type === 'external_rss') {
       success = await feedStore.subscribeToRSS(source.rssUrl || '', source.title)
@@ -842,7 +842,6 @@ async function subscribeSelectedChannel() {
         feedStore.fetchGroups(),
         feedStore.fetchSubscriptionHubTree(),
       ])
-      source.subscribed = true
       showSubscriptionFeedback('已订阅，可继续阅读')
       subscriptionNext.value = `已订阅「${source.title}」，新内容会出现在订阅流。`
     } else {
@@ -880,11 +879,12 @@ const {
 
 // ── 交互事件处理 ──
 async function subscribeVisibleChannels() {
-  if (!authStore.isAuthenticated) return
-  const { externalIds, internalChannelIds } = partitionUnsubscribedRecommendations(channels.value)
-  if (!externalIds.length && !internalChannelIds.length) return
+  if (!authStore.isAuthenticated || batchSubscribing.value) return
   batchSubscribing.value = true
   try {
+    if (!await ensureSubscriptionState()) return
+    const { externalIds, internalChannelIds } = partitionUnsubscribedRecommendations(channels.value)
+    if (!externalIds.length && !internalChannelIds.length) return
     let created = 0
     let already = 0
     let failed = false
@@ -893,21 +893,14 @@ async function subscribeVisibleChannels() {
       if (!result) {
         failed = true
       } else {
-        const missing = new Set((result.missingIds || []).map(String))
         created += result.created
         already += result.reusedIds?.length || 0
-        for (const item of channels.value) {
-          const id = item.source_id || item.id
-          if (externalIds.includes(id) && !missing.has(id)) item.subscribed = true
-        }
       }
     }
     for (const id of internalChannelIds) {
       const success = await feedStore.subscribeToChannel(id)
-      const item = channels.value.find((channel) => (channel.source_id || channel.id) === id)
       if (success) {
         created += 1
-        if (item) item.subscribed = true
       } else {
         failed = true
       }
@@ -934,23 +927,29 @@ async function subscribeVisibleChannels() {
 }
 
 async function subscribeDiscoverySource(source: FeedExploreSource) {
-  if (source.subscribed || !requireLoginForSubscription({
+  if (source.subscribed || isChannelSubscribeBusy(source.id) || !requireLoginForSubscription({
     id: source.id,
     title: source.title,
     type: 'external_rss',
     rssUrl: source.rssUrl,
     subscribed: Boolean(source.subscribed),
   })) return
-  const success = source.rssUrl
-    ? await feedStore.subscribeToRSS(source.rssUrl, source.title)
-    : Boolean(await feedStore.batchSubscribeSources([source.id]))
-  if (!success) {
-    showSubscriptionFeedback('订阅失败，请重试', 'error')
-    return
+  subscribingChannelIds.value.push(source.id)
+  try {
+    if (!await ensureSubscriptionState() || resolveSubscriptionState({ type: 'external_rss', ...source }).subscribed) return
+    const success = source.rssUrl
+      ? await feedStore.subscribeToRSS(source.rssUrl, source.title)
+      : Boolean(await feedStore.batchSubscribeSources([source.id]))
+    if (!success) {
+      showSubscriptionFeedback('订阅失败，请重试', 'error')
+      return
+    }
+    await Promise.all([feedStore.fetchSubscriptions(), feedStore.fetchSubscriptionHubTree()])
+    subscriptionNext.value = `已订阅「${source.title}」，新内容会出现在订阅流。`
+    showSubscriptionFeedback('已订阅，可继续阅读')
+  } finally {
+    subscribingChannelIds.value = subscribingChannelIds.value.filter(id => id !== source.id)
   }
-  source.subscribed = true
-  subscriptionNext.value = `已订阅「${source.title}」，新内容会出现在订阅流。`
-  showSubscriptionFeedback('已订阅，可继续阅读')
 }
 
 function openArticle(item: RecommendationItem) {
@@ -995,7 +994,7 @@ function openArticleSource(item: RecommendationItem) {
 }
 
 function openRecommendedChannel(item: RecommendationItem) {
-  openArticleSource(item)
+  openSource({ ...sourceFromRecommendation(item), ...sourceSubscriptionContext(item) })
 }
 
 async function fetchChannelArticles(source: FeedArticleSource) {
@@ -1184,6 +1183,8 @@ watch([() => authStore.isAuthenticated, () => route.query.read_article_id], ([is
     void restorePendingArticle()
   }
 })
+
+watch(() => authStore.isAuthenticated, () => { void ensureSubscriptionState() }, { immediate: true })
 
 onMounted(() => {
   window.addEventListener('scroll', persistExploreScroll, { passive: true })

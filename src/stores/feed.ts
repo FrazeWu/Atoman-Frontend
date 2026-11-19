@@ -121,6 +121,7 @@ export const useFeedStore = defineStore("feed", () => {
 		syncingAllSubscriptions,
 		subscriptionSyncResults,
 		fetchSubscriptions,
+		invalidateSubscriptions,
 		fetchGroups,
 		createGroup,
 		updateGroup,
@@ -141,7 +142,10 @@ export const useFeedStore = defineStore("feed", () => {
 		syncSubscription,
 		syncAllSubscriptions,
 		clearCoreState,
-	} = createFeedCoreState();
+	} = createFeedCoreState(
+		() => fetchSubscriptionHubTree(true),
+		removed => removeSubscriptionHubSources(removed.map(entry => entry.feed_source_id)),
+	);
 
 	const {
 		subscriptionRules,
@@ -179,16 +183,30 @@ export const useFeedStore = defineStore("feed", () => {
 		subscriptions,
 		fetchSubscriptions,
 		fetchGroups,
+		onSubscriptionsChanged: () => fetchSubscriptionHubTree(true),
+		invalidateSubscriptions,
+		onSubscriptionsRemoved: removed => removeSubscriptionHubSources(removed.map(entry => entry.feed_source_id)),
+		onEntityUnsubscribed: (type, id) => removeSubscriptionHubSources(
+			subscriptionHubTree.value.types.flatMap(node => node.groups)
+				.flatMap(group => group.memberships)
+				.filter(entry => entry.feed_source?.source_type === type && entry.feed_source.source_id === id)
+				.map(entry => entry.feed_source_id),
+		),
 	});
 
 	const {
 		subscriptionHubTree,
+		subscriptionHubTreeLoaded,
 		loadingSubscriptionHubTree,
 		subscriptionHubTreeError,
 		fetchSubscriptionHubTree,
+		removeSubscriptionHubSources,
 		unsubscribeSubscriptionHubSource,
 		clearSubscriptionHubState,
-	} = createSubscriptionHubState();
+	} = createSubscriptionHubState(feedSourceId => {
+		invalidateSubscriptions();
+		subscriptions.value = subscriptions.value.filter(entry => entry.feed_source_id !== feedSourceId);
+	});
 
 	const {
 		starredItemIds,
@@ -494,6 +512,7 @@ export const useFeedStore = defineStore("feed", () => {
 		groups,
 		starGroups,
 		subscriptionHubTree,
+		subscriptionHubTreeLoaded,
 		loadingSubscriptionHubTree,
 		subscriptionHubTreeError,
 		timeline,

@@ -1,5 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
+import { createPinia, getActivePinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -22,6 +22,40 @@ describe("FeedItemDetailView", () => {
     vi.restoreAllMocks();
     setActivePinia(createPinia());
     isMobileApp.value = false;
+  });
+
+  it.each([false, true])("订阅列表更新后覆盖文章来源旧快照（已有路由快照：%s）", async (restoreSnapshot) => {
+    const feedStore = useFeedStore();
+    const item = { id: "subscription-state-item", feed_source_id: "source-state", title: "订阅状态文章", feed_source: { id: "source-state", title: "订阅源", rss_url: "https://example.test/rss" } };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ item, reader: {} }));
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: "/feed/item/:id", component: FeedItemDetailView }],
+    });
+    await router.push("/feed/item/subscription-state-item");
+    await router.isReady();
+    window.history.replaceState(restoreSnapshot ? feedArticleRouteState({
+      article: { type: "feed_item", feed_item: item } as any,
+      articles: [], sourceArticles: [],
+      source: { id: "source-state", title: "订阅源", type: "external_rss", subscribed: false },
+    }) : {}, "", "/feed/item/subscription-state-item");
+    const wrapper = mount(FeedItemDetailView, {
+      global: { plugins: [getActivePinia()!, router], stubs: { FeedArticleSheet: true, FeedSourceArticlesSheet: true, PEmpty: true } },
+    });
+    try {
+      await flushPromises();
+      feedStore.subscriptions = [{ id: "subscription-state", feed_source_id: "source-state", feed_source: { ...item.feed_source, source_type: "external_rss" } }] as any;
+      feedStore.subscriptionsLoaded = true;
+      await flushPromises();
+      expect(wrapper.findComponent({ name: "FeedArticleSheet" }).props("source").subscribed).toBe(true);
+      feedStore.subscriptionHubTreeLoaded = true;
+      feedStore.subscriptions = [];
+      await flushPromises();
+      expect(wrapper.findComponent({ name: "FeedArticleSheet" }).props("source").subscribed).toBe(false);
+    } finally {
+      wrapper.unmount();
+      window.history.replaceState({}, "", "/");
+    }
   });
 
   it("移动端关闭详情时返回原来的个人列表", async () => {
@@ -77,7 +111,7 @@ describe("FeedItemDetailView", () => {
           reader: {},
         });
       }
-      return response({ ok: true });
+      return response([]);
     });
 
     const router = createRouter({

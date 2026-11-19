@@ -27,7 +27,7 @@ const apiErrorMessage = (payload: unknown, fallback: string) => {
 	return typeof message === "string" && message.trim() ? message : fallback;
 };
 
-export const createFeedCoreState = () => {
+export const createFeedCoreState = (onSubscriptionsChanged?: () => Promise<unknown>, onSubscriptionsRemoved?: (removed: Subscription[]) => void) => {
 	const subscriptions = ref<Subscription[]>([]);
 	const subscriptionsLoaded = ref(false);
 	const groups = ref<SubscriptionGroup[]>([]);
@@ -40,14 +40,19 @@ export const createFeedCoreState = () => {
 	);
 
 	let subscriptionsRequestGeneration = 0;
+	let subscriptionsMutationGeneration = 0;
 	let groupsRequestGeneration = 0;
 	let sessionGeneration = 0;
 
 	const subscriptionRequests = createRequestCoalescer<boolean>();
 	const groupRequests = createRequestCoalescer<boolean>();
+	const invalidateSubscriptions = () => {
+		subscriptionsMutationGeneration += 1;
+		subscriptionsRequestGeneration += 1;
+	};
 	const fetchSubscriptions = () => {
 		const owner = useAuthStore();
-		return subscriptionRequests(JSON.stringify([sessionGeneration, owner.user?.uuid, owner.token, owner.isAuthenticated]), async () => {
+		return subscriptionRequests(JSON.stringify([sessionGeneration, subscriptionsMutationGeneration, owner.user?.uuid, owner.token, owner.isAuthenticated]), async () => {
 		const authStore = useAuthStore();
 		const generation = ++subscriptionsRequestGeneration;
 		const userId = authStore.user?.uuid;
@@ -295,6 +300,7 @@ export const createFeedCoreState = () => {
 	): Promise<boolean> => {
 		const authStore = useAuthStore();
 		if (!authStore.isAuthenticated) return false;
+		const generation = sessionGeneration;
 		try {
 			const res = await apiRequestResult(`${api.url}/feed/subscriptions`, {
 				method: "POST",
@@ -308,8 +314,10 @@ export const createFeedCoreState = () => {
 					title,
 				}),
 			});
-			if (!res.ok) return false;
+			if (!res.ok || generation !== sessionGeneration) return false;
+			invalidateSubscriptions();
 			await fetchSubscriptions();
+			await onSubscriptionsChanged?.();
 			return true;
 		} catch (e) {
 			reportError(e, "Failed to subscribe");
@@ -319,6 +327,7 @@ export const createFeedCoreState = () => {
 
 	const unsubscribe = async (subscriptionId: string): Promise<boolean> => {
 		const authStore = useAuthStore();
+		const generation = sessionGeneration;
 		try {
 			const res = await apiRequestResult(
 				`${api.url}/feed/subscriptions/${subscriptionId}`,
@@ -327,8 +336,12 @@ export const createFeedCoreState = () => {
 					headers: { Authorization: `Bearer ${authStore.token}` },
 				},
 			);
-			if (!res.ok) return false;
+			if (!res.ok || generation !== sessionGeneration) return false;
+			invalidateSubscriptions();
+			onSubscriptionsRemoved?.(subscriptions.value.filter(entry => entry.id === subscriptionId));
+			subscriptions.value = subscriptions.value.filter(entry => entry.id !== subscriptionId);
 			await fetchSubscriptions();
+			await onSubscriptionsChanged?.();
 			return true;
 		} catch (e) {
 			reportError(e, "Failed to unsubscribe");
@@ -371,6 +384,7 @@ export const createFeedCoreState = () => {
 	const batchDeleteSubscriptions = async (ids: string[]): Promise<boolean> => {
 		const authStore = useAuthStore();
 		if (!authStore.isAuthenticated || !ids.length) return false;
+		const generation = sessionGeneration;
 		try {
 			const res = await apiRequestResult(
 				`${api.url}/feed/subscriptions/batch-delete`,
@@ -383,8 +397,12 @@ export const createFeedCoreState = () => {
 					body: JSON.stringify({ ids }),
 				},
 			);
-			if (!res.ok) return false;
+			if (!res.ok || generation !== sessionGeneration) return false;
+			invalidateSubscriptions();
+			onSubscriptionsRemoved?.(subscriptions.value.filter(entry => ids.includes(entry.id)));
+			subscriptions.value = subscriptions.value.filter(entry => !ids.includes(entry.id));
 			await fetchSubscriptions();
+			await onSubscriptionsChanged?.();
 			return true;
 		} catch (e) {
 			reportError(e, "Failed to batch delete subscriptions");
@@ -626,6 +644,7 @@ export const createFeedCoreState = () => {
 	};
 
 	return {
+		invalidateSubscriptions,
 		subscriptions,
 		subscriptionsLoaded,
 		groups,

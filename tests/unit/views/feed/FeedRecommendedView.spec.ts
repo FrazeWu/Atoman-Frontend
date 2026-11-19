@@ -616,9 +616,13 @@ describe("FeedRecommendedView", () => {
 		authStore.isAuthenticated = true;
 		const feedStore = useFeedStore();
 		vi.spyOn(feedStore, "isSubscribedToChannel").mockResolvedValue(false);
+		feedStore.subscriptionsLoaded = true;
+		feedStore.subscriptionHubTreeLoaded = true;
+		vi.spyOn(feedStore, "fetchSubscriptions").mockResolvedValue(true);
+		vi.spyOn(feedStore, "fetchSubscriptionHubTree").mockResolvedValue(true);
 		const subscribeSpy = vi
 			.spyOn(feedStore, "subscribeToChannel")
-			.mockResolvedValue(true);
+			.mockImplementation(async (id) => { setSubscribedChannel(id); return true; });
 
 		const wrapper = mount(FeedRecommendedView, {
 			global: {
@@ -651,6 +655,44 @@ describe("FeedRecommendedView", () => {
 		expect(wrapper.find('[data-test="feed-source-subscribe"]').text()).toContain(
 			"已订阅",
 		);
+	});
+
+	it("推荐卡片和已打开的来源详情随订阅关系同步，暂停也算已订阅", async () => {
+		useAuthStore().isAuthenticated = true;
+		const feed = useFeedStore();
+		feed.subscriptionsLoaded = true;
+		feed.subscriptionHubTreeLoaded = true;
+		vi.spyOn(globalThis, "fetch").mockImplementation(async input => new Response(JSON.stringify({
+			data: String(input).includes("/feed/recommend/channels")
+				? [{ id: "chan-1", title: "频道", source_type: "internal_channel", subscribed: true }]
+				: [],
+		}), { status: 200 }));
+		const wrapper = mount(FeedRecommendedView, {
+			global: { stubs: {
+				PPageHeader: true, PEmpty: true, PButton: true, PModal: true,
+				FeedSourceArticlesSheet: true, FeedArticleSheet: true,
+			} },
+		});
+		try {
+			await flushPromises();
+			const button = () => wrapper.get('[data-test="feed-source-subscribe"]');
+			expect(button().text()).toBe("订阅");
+			await wrapper.get('[data-test="channel-card"]').trigger("click");
+			await flushPromises();
+			const source = () => wrapper.findComponent({ name: "FeedSourceArticlesSheet" }).props("source");
+			expect(source().subscribed).toBe(false);
+			setSubscribedChannel("chan-1");
+			feed.subscriptions[0].is_paused = true;
+			await flushPromises();
+			expect(button().text()).toBe("已订阅");
+			expect(source().subscribed).toBe(true);
+			feed.subscriptions = [];
+			await flushPromises();
+			expect(button().text()).toBe("订阅");
+			expect(source().subscribed).toBe(false);
+		} finally {
+			wrapper.unmount();
+		}
 	});
 
 	it("redirects unauthenticated visitors to login with source intent and preserved filters", async () => {
@@ -750,6 +792,8 @@ describe("FeedRecommendedView", () => {
 		authStore.token = "valid-token";
 		const feedStore = useFeedStore();
 		const subscribeSpy = vi.spyOn(feedStore, "subscribeToChannel").mockResolvedValue(true);
+		feedStore.subscriptionsLoaded = true;
+		feedStore.subscriptionHubTreeLoaded = true;
 		vi.spyOn(feedStore, "fetchSubscriptions").mockResolvedValue();
 		vi.spyOn(feedStore, "fetchGroups").mockResolvedValue();
 		vi.spyOn(feedStore, "fetchSubscriptionHubTree").mockResolvedValue();
@@ -2223,6 +2267,12 @@ describe("FeedRecommendedView", () => {
 			}
 			if (url.includes("/feed/sources/batch-subscribe")) {
 				return new Response(JSON.stringify({ data: { created: 1, created_ids: ["rss-1"], reused_ids: [], missing_ids: [] } }), { status: 200 });
+			}
+			if (url.includes("/feed/subscription-hub/tree")) {
+				return new Response(JSON.stringify({ data: { types: [] } }), { status: 200 });
+			}
+			if (url.endsWith("/feed/subscriptions")) {
+				return new Response(JSON.stringify({ data: [{ id: "sub-2", feed_source_id: "rss-2" }] }), { status: 200 });
 			}
 			return new Response(JSON.stringify({ data: [] }), { status: 200 });
 		});

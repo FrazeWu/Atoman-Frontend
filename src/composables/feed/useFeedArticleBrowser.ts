@@ -4,6 +4,7 @@ import { isStandaloneMobileApp } from "@/utils/appRuntime";
 import { apiRequestResult } from "@/api/client";
 import { useApiUrl } from "@/composables/useApi";
 import { feedArticleRouteState } from "@/composables/feed/feedArticleRouteState";
+import { useFeedSubscriptionState } from "@/composables/feed/useFeedSubscriptionState";
 import { useAuthStore } from "@/stores/auth";
 import { useFeedStore } from "@/stores/feed";
 import type {
@@ -35,6 +36,7 @@ export function useFeedArticleBrowser({
 }: FeedArticleBrowserOptions) {
 	const authStore = useAuthStore();
 	const feedStore = useFeedStore();
+	const { resolveSubscriptionState, findSubscription, findHubMembership: findHubMembershipForSource, ensureSubscriptionState } = useFeedSubscriptionState();
 	const apiURL = useApiUrl();
 	const route = useRoute();
 	const router = useRouter();
@@ -57,7 +59,11 @@ export function useFeedArticleBrowser({
 			return feedItemSource(article.feed_item);
 		return null;
 	});
-	const selectedSource = ref<FeedArticleSource | null>(null);
+	const selectedSourceSnapshot = ref<FeedArticleSource | null>(null);
+	const selectedSource = computed({
+		get: () => selectedSourceSnapshot.value ? withSubscriptionState(selectedSourceSnapshot.value) : null,
+		set: (source: FeedArticleSource | null) => { selectedSourceSnapshot.value = source; },
+	});
 	const sourceArticles = ref<TimelineItem[]>([]);
 	const sourceArticlesLoading = ref(false);
 	const sourceSubscribeBusy = ref(false);
@@ -166,54 +172,13 @@ export function useFeedArticleBrowser({
 	};
 
 	const findSubscriptionForSource = (source: FeedArticleSource) => {
-		if (source.type === "internal_channel") {
-			return subscriptions.value.find(
-				(subscription) =>
-					subscription.feed_source?.source_type === "internal_channel" &&
-					subscription.feed_source.source_id === source.id,
-			);
-		}
-		if (source.type === "external_rss") {
-			return subscriptions.value.find(
-				(subscription) =>
-					subscription.feed_source_id === source.id ||
-					subscription.feed_source?.id === source.id ||
-					(!!source.rssUrl && subscription.feed_source?.rss_url === source.rssUrl),
-			);
-		}
-		return undefined;
-	};
-
-	const findHubMembershipForSource = (source: FeedArticleSource) => {
-		for (const typeNode of feedStore.subscriptionHubTree.types) {
-			for (const group of typeNode.groups) {
-				const membership = group.memberships.find((entry) => {
-					const feedSource = entry.feed_source;
-					if (source.type === "internal_channel") {
-						return feedSource?.source_type === "internal_channel" &&
-							(feedSource.source_id === source.id || feedSource.id === source.id);
-					}
-					return source.type === "external_rss" &&
-						(entry.feed_source_id === source.id ||
-							feedSource?.id === source.id ||
-							(!!source.rssUrl && feedSource?.rss_url === source.rssUrl));
-				});
-				if (membership) return membership;
-			}
-		}
-		return undefined;
+		return findSubscription(source, subscriptions.value);
 	};
 
 	const withSubscriptionState = (
 		source: FeedArticleSource,
 	): FeedArticleSource => {
-		const subscription = findSubscriptionForSource(source);
-		const hubMembership = findHubMembershipForSource(source);
-		return {
-			...source,
-			subscriptionId: subscription?.id || source.subscriptionId,
-			subscribed: Boolean(subscription || hubMembership || source.subscribed),
-		};
+		return resolveSubscriptionState(source, subscriptions.value);
 	};
 
 	const sourceDisplayTitle = (
@@ -372,12 +337,14 @@ export function useFeedArticleBrowser({
 		if (
 			!selectedSource.value ||
 			selectedSource.value.subscribed ||
+			sourceSubscribeBusy.value ||
 			!authStore.isAuthenticated
 		)
 			return;
 
 		sourceSubscribeBusy.value = true;
 		try {
+			if (!await ensureSubscriptionState() || selectedSource.value?.subscribed) return;
 			let success = false;
 			if (selectedSource.value.type === "internal_channel") {
 				success = await feedStore.subscribeToChannel(selectedSource.value.id);

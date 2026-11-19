@@ -47,7 +47,7 @@
 
           <PButton
             v-if="source && showSubscribe"
-            :label="source.subscribed ? '已订阅' : '订阅'"
+            :label="source.subscribed ? '已订阅' : source.subscriptionStateKnown === false ? '确认订阅状态' : '订阅'"
             :variant="source.subscribed ? 'secondary' : 'primary'"
             :disabled="source.subscribed || subscribeBusy"
             :loading="subscribeBusy"

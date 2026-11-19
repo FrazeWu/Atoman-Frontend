@@ -162,6 +162,7 @@ export interface FeedExploreSource {
 	recentItemCount: number;
 	lastPublishedAt?: string;
 	subscribed: boolean;
+	subscriptionStateKnown?: boolean;
 	recentItems: FeedExploreRecentItem[];
 	description?: string;
 	updateFrequencyLabel?: string;
@@ -433,6 +434,7 @@ export interface FeedArticleSource {
 	imageUrl?: string;
 	subscriptionId?: string;
 	subscribed: boolean;
+	subscriptionStateKnown?: boolean;
 	healthStatus?: "healthy" | "warning" | "error";
 	lastCheckedAt?: string;
 	itemCount?: number;

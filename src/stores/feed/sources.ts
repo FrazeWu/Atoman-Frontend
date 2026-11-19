@@ -70,12 +70,20 @@ interface FeedSourcesDependencies {
 	subscriptions: Ref<Subscription[]>;
 	fetchSubscriptions: () => Promise<boolean>;
 	fetchGroups: () => Promise<boolean>;
+	onSubscriptionsChanged?: () => Promise<unknown>;
+	onSubscriptionsRemoved?: (removed: Subscription[]) => void;
+	onEntityUnsubscribed?: (type: string, id: string) => void;
+	invalidateSubscriptions?: () => void;
 }
 
 export const createFeedSourcesState = ({
 	subscriptions,
 	fetchSubscriptions,
 	fetchGroups,
+	onSubscriptionsChanged,
+	onSubscriptionsRemoved,
+	onEntityUnsubscribed,
+	invalidateSubscriptions,
 }: FeedSourcesDependencies) => {
 	const error = ref<string | null>(null);
 	let sessionGeneration = 0;
@@ -84,7 +92,9 @@ export const createFeedSourcesState = ({
 	const refreshAndConfirmSubscription = async (
 		matches: (subscription: Subscription) => boolean,
 	) => {
+		invalidateSubscriptions?.();
 		const refreshed = await fetchSubscriptions();
+		await onSubscriptionsChanged?.();
 		return refreshed && subscriptions.value.some(matches);
 	};
 
@@ -103,8 +113,20 @@ export const createFeedSourcesState = ({
 					headers: { Authorization: `Bearer ${authStore.token}` },
 				},
 			);
-			if (isCurrentSession(generation) && res.ok) return true;
+			if (isCurrentSession(generation) && res.ok) {
+				invalidateSubscriptions?.();
+				if (method === "DELETE") {
+					onEntityUnsubscribed?.(`internal_${entity}`, id);
+					const removed = subscriptions.value.filter(entry => entry.feed_source?.source_type === `internal_${entity}` && entry.feed_source.source_id === id);
+					onSubscriptionsRemoved?.(removed);
+					subscriptions.value = subscriptions.value.filter(entry => !removed.includes(entry));
+				}
+				await Promise.all([fetchSubscriptions(), onSubscriptionsChanged?.()]);
+				return isCurrentSession(generation);
+			}
 			if (method === "POST" && res.status === 409 && isAlreadySubscribedPayload(res.data)) {
+				invalidateSubscriptions?.();
+				await Promise.all([fetchSubscriptions(), onSubscriptionsChanged?.()]);
 				return isCurrentSession(generation);
 			}
 			return false;
@@ -380,7 +402,9 @@ export const createFeedSourcesState = ({
 			if (!res.ok) return null;
 			const data = res.data;
 			if (!isCurrentSession(generation)) return null;
+			invalidateSubscriptions?.();
 			await fetchSubscriptions();
+			await onSubscriptionsChanged?.();
 			return {
 				created: Number(data.data?.created || 0),
 				reusedIds: data.data?.reused_ids || [],
@@ -414,7 +438,8 @@ export const createFeedSourcesState = ({
 			}
 			const result = res.data;
 			if (!isCurrentSession(generation)) return null;
-			await Promise.all([fetchGroups(), fetchSubscriptions()]);
+			invalidateSubscriptions?.();
+			await Promise.all([fetchGroups(), fetchSubscriptions(), onSubscriptionsChanged?.()]);
 			return result;
 		} catch (e) {
 			reportError(e, "Failed to import OPML");
@@ -491,7 +516,8 @@ export const createFeedSourcesState = ({
 					return false;
 				}
 			}
-			await fetchSubscriptions();
+			invalidateSubscriptions?.();
+			await Promise.all([fetchSubscriptions(), onSubscriptionsChanged?.()]);
 			return true;
 		} catch (e) {
 			reportError(e, "Failed to create subscription from provider");
@@ -530,7 +556,11 @@ export const createFeedSourcesState = ({
 				},
 			);
 			if (!res.ok || !isCurrentSession(generation)) return false;
+			invalidateSubscriptions?.();
+			onSubscriptionsRemoved?.([subscription]);
+			subscriptions.value = subscriptions.value.filter(entry => entry.id !== subscription.id);
 			await fetchSubscriptions();
+			await onSubscriptionsChanged?.();
 			return true;
 		} catch (e) {
 			reportError(e, "Failed to unsubscribe from RSS");

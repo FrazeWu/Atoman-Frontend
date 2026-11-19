@@ -275,6 +275,8 @@ describe("useFeedArticleBrowser", () => {
     authStore.isAuthenticated = true;
     authStore.token = "token";
     const feedStore = useFeedStore();
+    feedStore.subscriptionsLoaded = true;
+    feedStore.subscriptionHubTreeLoaded = true;
     vi.spyOn(feedStore, "subscribeToChannel").mockResolvedValue(true);
     const fetchSubscriptions = vi.spyOn(feedStore, "fetchSubscriptions").mockResolvedValue(true);
     const fetchGroups = vi.spyOn(feedStore, "fetchGroups").mockResolvedValue(true);

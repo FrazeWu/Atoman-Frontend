@@ -43,7 +43,7 @@
           <PButton
             v-if="showSourceSubscribe && articleSource"
             data-test="feed-article-subscribe-source"
-            :label="articleSource.subscribed ? '已订阅' : '订阅来源'"
+            :label="articleSource.subscribed ? '已订阅' : articleSource.subscriptionStateKnown === false ? '确认订阅状态' : '订阅来源'"
             :variant="articleSource.subscribed ? 'secondary' : 'primary'"
             :disabled="articleSource.subscribed"
             :loading="sourceSubscribeBusy"
@@ -125,7 +125,7 @@
           <PButton
             v-if="showSourceSubscribe && articleSource"
             data-test="feed-article-subscribe-source"
-            :label="articleSource.subscribed ? '已订阅' : '订阅来源'"
+            :label="articleSource.subscribed ? '已订阅' : articleSource.subscriptionStateKnown === false ? '确认订阅状态' : '订阅来源'"
             :variant="articleSource.subscribed ? 'secondary' : 'primary'"
             :disabled="articleSource.subscribed"
             :loading="sourceSubscribeBusy"

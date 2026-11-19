@@ -12,6 +12,7 @@
     :stack-size="stackSize"
     :index="index"
     :above-player="abovePlayer"
+    :allow-background-interaction="allowBackgroundInteraction"
     @close="$emit('close')"
     @activate="$emit('activate')"
     @mode-change="$emit('mode-change', $event)"
@@ -60,6 +61,7 @@ withDefaults(defineProps<{
   stackSize?: number
   index?: number
   abovePlayer?: boolean
+  allowBackgroundInteraction?: boolean
 }>(), {
   title: '评论',
   partialAnchor: null,
@@ -78,6 +80,7 @@ withDefaults(defineProps<{
   stackSize: 1,
   index: undefined,
   abovePlayer: false,
+  allowBackgroundInteraction: false,
 })
 
 defineEmits<{

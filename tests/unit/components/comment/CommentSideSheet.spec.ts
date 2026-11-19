@@ -12,6 +12,7 @@ const PSheetStub = defineComponent({
     partialWidth: String,
     title: String,
     abovePlayer: Boolean,
+    allowBackgroundInteraction: Boolean,
   },
   emits: ['close', 'activate', 'mode-change'],
   template: '<section><slot /></section>',
@@ -37,6 +38,7 @@ describe('CommentSideSheet', () => {
         partialAnchor: anchor,
         partialWidth: 'var(--a-comment-sheet-width)',
         abovePlayer: true,
+        allowBackgroundInteraction: true,
       },
       global: {
         stubs: {
@@ -52,6 +54,7 @@ describe('CommentSideSheet', () => {
       partialWidth: 'var(--a-comment-sheet-width)',
       title: '视频评论',
       abovePlayer: true,
+      allowBackgroundInteraction: true,
     })
     expect(wrapper.findComponent(CommentSectionStub).props('abovePlayer')).toBe(true)
 

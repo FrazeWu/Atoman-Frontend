@@ -7,15 +7,17 @@
     reading-mode
     :is-shifted="commentsBlockParent"
     :is-top-layer="!commentsBlockParent"
+    :trap-focus="!commentsOpen"
     :index="index"
     :ref="presentation === 'page' ? setPageContentAnchor : undefined"
-    :class="{ 'feed-article-page': presentation === 'page' }"
+    v-bind="presentation === 'page' ? { class: 'feed-article-page', onClickCapture: handleArticleClickWhileCommenting } : {}"
     :navigation="presentation === 'sheet' ? articleNavigation : undefined"
     :navigation-key="presentation === 'sheet' ? articleKey : undefined"
     :navigation-direction="navigationDirection"
     @close="$emit('close')"
     @activate="closeComments"
     @navigate="navigateSheet"
+    @content-click="handleArticleClickWhileCommenting"
   >
     <template v-if="article && article.type === 'post' && article.post">
       <div class="article-eyebrow">
@@ -274,6 +276,7 @@
   <CommentSideSheet
     v-if="article && isFeedItemTimeline(article) && article.feed_item"
     :show="commentsOpen"
+    allow-background-interaction
     :title="commentSheetTitle"
     :partial-anchor="presentation === 'page' ? pageContentAnchor : null"
     :index="presentation === 'page' ? 0 : (index || 0) + 1"
@@ -376,6 +379,15 @@ const openComments = () => {
 const closeComments = () => {
   commentsOpen.value = false
   commentSheetMode.value = 'partial'
+}
+
+function handleArticleClickWhileCommenting(event: MouseEvent) {
+  if (!commentsOpen.value || commentsBlockParent.value) return
+  // 拖选正文用于引用时保持评论打开；普通点击只收起评论，不触发正文操作。
+  if (window.getSelection()?.toString()) return
+  event.preventDefault()
+  event.stopPropagation()
+  closeComments()
 }
 type FeedContentMode = 'rss' | 'full_text'
 const feedContentMode = ref<FeedContentMode>(defaultFeedContentMode(props.reader))

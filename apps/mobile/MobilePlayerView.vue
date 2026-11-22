@@ -307,14 +307,17 @@
           <button
             type="button"
             class="mobile-player-view__control mobile-player-view__control--primary"
-            :class="{ 'is-loading': player.isLoading }"
-            :aria-label="player.isPlaying ? '暂停' : '播放'"
-            :title="player.isPlaying ? '暂停' : '播放'"
-            @click="player.togglePlay"
+            :class="{ 'is-loading': player.isLoading && !hasPlaybackError, 'has-error': hasPlaybackError }"
+            :aria-label="hasPlaybackError ? '重试播放' : player.isLoading ? '正在加载' : player.isPlaying ? '暂停' : '播放'"
+            :title="hasPlaybackError ? '音频加载失败，点击重试' : player.isLoading ? '正在加载' : player.isPlaying ? '暂停' : '播放'"
+            @click="hasPlaybackError ? player.retryPlayback() : player.togglePlay()"
           >
             <span class="mobile-play-icon-stage" aria-hidden="true">
               <Transition name="player-icon-swap" mode="out-in">
-                <span v-if="player.isLoading" key="loading" class="play-icon-glyph play-icon-glyph--loading">
+                <span v-if="hasPlaybackError" key="retry" class="play-icon-glyph">
+                  <MIcon name="rotate-ccw" size="md" />
+                </span>
+                <span v-else-if="player.isLoading" key="loading" class="play-icon-glyph play-icon-glyph--loading">
                   <span class="mobile-player-view__spinner" />
                 </span>
                 <span v-else-if="player.isPlaying" key="pause" class="play-icon-glyph">
@@ -443,6 +446,7 @@ import { modulePathUrl } from '@/router/siteUrls'
 import { resolveMediaImageURL } from '@/utils/mediaUrl'
 
 const player = usePlayerStore()
+const hasPlaybackError = computed(() => Boolean(player.playbackError) && !player.isPlaying)
 const router = useRouter()
 const authStore = useAuthStore()
 const { requireLogin } = useLoginRedirect()

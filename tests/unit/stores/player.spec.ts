@@ -1257,6 +1257,131 @@ describe("player store", () => {
 		}
 	});
 
+	it("does not show a spinner for passive iOS-style media loadstart after pausing", async () => {
+		const store = usePlayerStore();
+		store.playSong({id:"passive",title:"Passive",audio_url:"passive.mp3"} as Song);
+		const audio = audioInstances.at(-1)!;
+		await audio.play.mock.results.at(-1)?.value;
+		audio.emit("playing");
+		store.togglePlay();
+		expect(store.isLoading).toBe(false);
+		audio.emit("loadstart");
+		expect(store.isLoading).toBe(false);
+		expect(store.isPlaying).toBe(false);
+	});
+
+	it("stops pending iOS play promises after 15 seconds and allows manual retry", async () => {
+		vi.useFakeTimers();
+		try {
+			let resolveFirst!: () => void;
+			audioPlayImplementation = () => new Promise<void>(resolve => {resolveFirst = resolve});
+			const store = usePlayerStore();
+			store.playSong({id:"pending",title:"Pending",audio_url:"pending.mp3"} as Song);
+			const audio = audioInstances.at(-1)!;
+			expect(store.isLoading).toBe(true);
+			await vi.advanceTimersByTimeAsync(14_999);
+			expect(store.isLoading).toBe(true);
+			await vi.advanceTimersByTimeAsync(1);
+			expect(store.isLoading).toBe(false);
+			expect(store.isPlaying).toBe(false);
+			expect(store.playbackError).toBe("音频启动超时，点击重试");
+			expect(audio.pause).toHaveBeenCalled();
+			audio.emit("error");
+			expect(store.playbackError).toBe("音频启动超时，点击重试");
+			resolveFirst();
+			await Promise.resolve();
+			expect(store.playbackError).toBe("音频启动超时，点击重试");
+			store.retryPlayback();
+			expect(audio.play).toHaveBeenCalledTimes(2);
+			expect(store.isLoading).toBe(true);
+			expect(store.playbackError).toBe("");
+		} finally {
+			vi.clearAllTimers();
+			vi.useRealTimers();
+		}
+	});
+
+	it("treats real audio progress as success even if Safari play() never settles", async () => {
+		vi.useFakeTimers();
+		try {
+			audioPlayImplementation = () => new Promise<void>(() => {});
+			const store = usePlayerStore();
+			store.playSong({id:"progress",title:"Progress",audio_url:"progress.mp3"} as Song);
+			const audio = audioInstances.at(-1)!;
+			audio.paused = false;
+			audio.currentTime = 0.75;
+			audio.emit("timeupdate");
+			expect(store.isLoading).toBe(false);
+			expect(store.isPlaying).toBe(true);
+			await vi.advanceTimersByTimeAsync(20_000);
+			expect(store.playbackError).toBe("");
+		} finally {
+			vi.clearAllTimers();
+			vi.useRealTimers();
+		}
+	});
+
+	it("ends buffering spinners after 20 seconds without time progression", async () => {
+		vi.useFakeTimers();
+		try {
+			const store = usePlayerStore();
+			store.playSong({id:"stall",title:"Stall",audio_url:"stall.mp3"} as Song);
+			const audio = audioInstances.at(-1)!;
+			await audio.play.mock.results.at(-1)?.value;
+			audio.paused = false;
+			audio.currentTime = 4;
+			audio.emit("playing");
+			audio.emit("waiting");
+			expect(store.isLoading).toBe(true);
+			await vi.advanceTimersByTimeAsync(20_000);
+			expect(store.isLoading).toBe(false);
+			expect(store.isPlaying).toBe(false);
+			expect(store.playbackError).toBe("音频缓冲超时，点击重试");
+		} finally {
+			vi.clearAllTimers();
+			vi.useRealTimers();
+		}
+	});
+
+	it("cancels a buffering watchdog on canplay without hiding an active playback", async () => {
+		vi.useFakeTimers();
+		try {
+			const store = usePlayerStore();
+			store.playSong({id:"resume",title:"Resume",audio_url:"resume.mp3"} as Song);
+			const audio = audioInstances.at(-1)!;
+			await audio.play.mock.results.at(-1)?.value;
+			audio.paused = false;
+			audio.currentTime = 5;
+			audio.emit("playing");
+			audio.emit("waiting");
+			audio.emit("canplay");
+			expect(store.isLoading).toBe(false);
+			await vi.advanceTimersByTimeAsync(25_000);
+			expect(store.playbackError).toBe("");
+			expect(store.isPlaying).toBe(true);
+		} finally {
+			vi.clearAllTimers();
+			vi.useRealTimers();
+		}
+	});
+
+	it("preserves the iOS retry tap when online even if audio was cached", async () => {
+		const original = navigator;
+		try {
+			vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X)', maxTouchPoints: 5, onLine: true });
+			const store = usePlayerStore();
+			store.playSong({id:"ios-retry",title:"Retry",audio_url:"https://assets.atoman.org/audio/ios-retry.mp3"} as Song);
+			const audio = audioInstances.at(-1)!;
+			store.isCurrentAudioCached = true;
+			audio.play.mockClear();
+			const result = store.retryPlayback();
+			expect(audio.play).toHaveBeenCalledOnce();
+			await result;
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
+
 	it("a rejected play promise cannot automatically skip the source", async () => {
 		const player = usePlayerStore();
 		player.playAlbum([

@@ -1,6 +1,14 @@
 export const audioStartPrefetchBytes = 512 * 1024
 export const audioStartPrefetchConcurrency = 4
 
+/** iOS browsers use WebKit media policies even when their brand is not Safari. */
+export function isIOSWebKit(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const userAgent = navigator.userAgent || ''
+  return /iP(hone|od|ad)/i.test(userAgent) ||
+    (/Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1)
+}
+
 export const computeActualVolume = (v: number): number => {
   const clamped = Math.max(0, Math.min(1, Number.isFinite(v) ? v : 1))
   return Math.pow(clamped, 2)
@@ -28,7 +36,10 @@ export async function transitionAudioSource(
   prepareNext: () => void,
   durationMs = 35,
 ): Promise<void> {
-  if (!targetAudio || targetAudio.paused || targetAudio.currentTime <= 0) {
+  if (!targetAudio || targetAudio.paused || targetAudio.currentTime <= 0 || isIOSWebKit()) {
+    // Safari may reject a new play() call after an awaited fade and pause,
+    // because that call is no longer within the user's tap gesture.
+    // Keep the source switch synchronous on iOS and do not force a pause.
     prepareNext()
     return
   }

@@ -142,6 +142,35 @@ describe('MobilePlayerView Gestures (Pull-to-Dismiss & Swipe-to-Skip)', () => {
     expect(containerStyle).not.toContain('translateY(40px)')
   })
 
+  it('makes the main mobile play button retry on a playback timeout', async () => {
+    const wrapper = createWrapper()
+    const store = usePlayerStore()
+    const retry = vi.spyOn(store, 'retryPlayback').mockResolvedValue(undefined)
+    const toggle = vi.spyOn(store, 'togglePlay').mockImplementation(() => {})
+    store.playbackError = '音频启动超时，点击重试'
+    store.isLoading = false
+    await wrapper.vm.$nextTick()
+    const button = wrapper.find('.mobile-player-view__control--primary')
+    expect(button.attributes('aria-label')).toBe('重试播放')
+    expect(button.attributes('title')).toContain('点击重试')
+    await button.trigger('click')
+    expect(retry).toHaveBeenCalledOnce()
+    expect(toggle).not.toHaveBeenCalled()
+  })
+
+  it('exposes loading state accessibly and returns to Play when pending load clears', async () => {
+    const wrapper = createWrapper()
+    const store = usePlayerStore()
+    store.playbackError = ''
+    store.isLoading = true
+    await wrapper.vm.$nextTick()
+    const button = wrapper.find('.mobile-player-view__control--primary')
+    expect(button.attributes('aria-label')).toBe('正在加载')
+    store.isLoading = false
+    await wrapper.vm.$nextTick()
+    expect(button.attributes('aria-label')).toBe('播放')
+  })
+
   it('touches originating on interactive controls do not initiate pull-to-dismiss dragging', async () => {
     const wrapper = createWrapper()
     const playBtn = wrapper.find('.mobile-player-view__control--primary')

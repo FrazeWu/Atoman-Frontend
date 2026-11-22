@@ -58,6 +58,7 @@ import {
 	resolvePlaybackAudioUrl as resolveAudioEngineUrl,
 	transitionAudioSource,
 	AudioPrefetcher,
+	isIOSWebKit,
 } from "@/utils/audioEngine";
 
 export { computeActualVolume, fadeOutAudio };
@@ -194,6 +195,49 @@ export const usePlayerStore = defineStore("player", () => {
 	let cachedAudioObjectUrl = "";
 	let playGeneration = 0;
 	let playRequested = false;
+	const playbackStartTimeoutMs = 15_000;
+	const playbackBufferTimeoutMs = 20_000;
+	let playbackLoadingTimeout: ReturnType<typeof setTimeout> | null = null;
+
+	const clearPlaybackLoadingTimeout = () => {
+		if (playbackLoadingTimeout !== null) clearTimeout(playbackLoadingTimeout);
+		playbackLoadingTimeout = null;
+	};
+
+	const startPlaybackLoadingTimeout = (
+		player: HTMLAudioElement,
+		generation: number,
+		mode: 'start' | 'buffering',
+	) => {
+		clearPlaybackLoadingTimeout();
+		const duration = mode === 'start' ? playbackStartTimeoutMs : playbackBufferTimeoutMs;
+		const previousTime = player.currentTime;
+		playbackLoadingTimeout = setTimeout(() => {
+			playbackLoadingTimeout = null;
+			if (audio !== player || generation !== playGeneration) return;
+			if (mode === 'start' ? !playRequested : !isLoading.value) return;
+			// WebKit can advance playback without resolving play() promptly.
+			if (!player.paused && player.currentTime > previousTime + 0.1) {
+				playRequested = false;
+				isLoading.value = false;
+				isPlaying.value = true;
+				return;
+			}
+			// A pending play() promise can stay unsettled forever on iOS.
+			// Invalidate it and offer a fresh user-gesture retry rather than spin.
+			playGeneration += 1;
+			playRequested = false;
+			isLoading.value = false;
+			isPlaying.value = false;
+			playbackError.value = mode === 'start'
+				? '音频启动超时，点击重试'
+				: '音频缓冲超时，点击重试';
+			player.pause();
+			pauseListening();
+			updateMediaSessionPlaybackState('paused');
+		}, duration);
+	};
+
 	let reloadCurrentAudioFn = async (_automatic: boolean) => {};
 	let startSongFn = (_song: Song, _startAt?: number, _persistPrevious?: boolean, _fromRecovery?: boolean) => {};
 
@@ -328,6 +372,7 @@ export const usePlayerStore = defineStore("player", () => {
 		}
 
 		playGeneration += 1;
+		clearPlaybackLoadingTimeout();
 		playRequested = false;
 		isLoading.value = false;
 		resetAudioRecovery();
@@ -363,6 +408,7 @@ export const usePlayerStore = defineStore("player", () => {
 	};
 
 	const resetPlaybackForSession = () => {
+		clearPlaybackLoadingTimeout();
 		resetAudioRecovery();
 		clearMediaSession();
 		musicAccountGeneration += 1;
@@ -481,6 +527,7 @@ export const usePlayerStore = defineStore("player", () => {
 	}
 
 	const pauseCurrentAudio = (player: HTMLAudioElement) => {
+		clearPlaybackLoadingTimeout();
 		resetAudioRecovery();
 		playGeneration += 1;
 		playRequested = false;
@@ -502,15 +549,23 @@ export const usePlayerStore = defineStore("player", () => {
 		nextAudio.preload = "auto";
 		nextAudio.addEventListener("loadstart", () => {
 			if (audio !== nextAudio) return;
-			isLoading.value = true;
-			playbackError.value = "";
+			// iOS may defer preload indefinitely until a user gesture. A passive
+			// src/metadata load must not put the Play button in a stuck spinner.
+			if (playRequested || isPlaying.value) {
+				isLoading.value = true;
+				playbackError.value = "";
+			}
 		});
 		nextAudio.addEventListener("waiting", () => {
 			if (audio !== nextAudio) return;
-			if (isPlaying.value) isLoading.value = true;
+			if (isPlaying.value) {
+				isLoading.value = true;
+				startPlaybackLoadingTimeout(nextAudio, playGeneration, 'buffering');
+			}
 		});
 		nextAudio.addEventListener("playing", () => {
 			if (audio !== nextAudio) return;
+			clearPlaybackLoadingTimeout();
 			playRequested = false;
 			isLoading.value = false;
 			isPlaying.value = true;
@@ -519,6 +574,7 @@ export const usePlayerStore = defineStore("player", () => {
 		nextAudio.addEventListener("pause", () => {
 			if (audio !== nextAudio) return;
 			if (!nextAudio.paused) return;
+			clearPlaybackLoadingTimeout();
 			playRequested = false;
 			isPlaying.value = false;
 			isLoading.value = false;
@@ -527,6 +583,8 @@ export const usePlayerStore = defineStore("player", () => {
 		});
 		nextAudio.addEventListener("error", () => {
 			if (audio !== nextAudio) return;
+			clearPlaybackLoadingTimeout();
+			if (playbackError.value.includes('超时')) return;
 			// Repeated browser error events after all queue candidates failed
 			// must not replace the actionable terminal error message.
 			if (playbackError.value.startsWith("队列音源均无法播放")) return;
@@ -541,7 +599,10 @@ export const usePlayerStore = defineStore("player", () => {
 		});
 		nextAudio.addEventListener("canplay", () => {
 			if (audio !== nextAudio) return;
-			isLoading.value = false;
+			if (!playRequested) {
+				clearPlaybackLoadingTimeout();
+				isLoading.value = false;
+			}
 			if (!currentSong.value) return;
 			currentSongStartCached = true;
 			prefetchQueueAudioStarts();
@@ -552,6 +613,13 @@ export const usePlayerStore = defineStore("player", () => {
 		nextAudio.addEventListener("progress", updateBuffered);
 		nextAudio.addEventListener("timeupdate", () => {
 			if (audio !== nextAudio) return;
+			if (!nextAudio.paused && nextAudio.currentTime > 0.1 && (playRequested || isLoading.value)) {
+				// Trust actual progress even when Safari's play() promise is pending.
+				clearPlaybackLoadingTimeout();
+				playRequested = false;
+				isPlaying.value = true;
+				isLoading.value = false;
+			}
 			if (nextAudio.currentTime === 0 && currentTime.value > 0 && nextAudio.paused) {
 				return;
 			}
@@ -662,11 +730,13 @@ export const usePlayerStore = defineStore("player", () => {
 		playRequested = true;
 		playbackError.value = "";
 		lastPlayInitiatedAt = Date.now();
+		startPlaybackLoadingTimeout(player, generation, 'start');
 		player.volume = computeActualVolume(volume.value);
 		player
 			.play()
 			.then(() => {
 				if (generation !== playGeneration || player !== audio) return;
+				clearPlaybackLoadingTimeout();
 				playRequested = false;
 				isPlaying.value = true;
 				playbackError.value = "";
@@ -684,6 +754,7 @@ export const usePlayerStore = defineStore("player", () => {
 			})
 			.catch((err) => {
 				if (generation !== playGeneration || player !== audio) return;
+				clearPlaybackLoadingTimeout();
 				playRequested = false;
 				isLoading.value = false;
 				playbackError.value = "无法播放此音频，请重试";
@@ -867,6 +938,7 @@ export const usePlayerStore = defineStore("player", () => {
 	};
 
 	const startSong = (song: Song, startAt?: number, persistPrevious = true, fromRecovery = false) => {
+		clearPlaybackLoadingTimeout();
 		if (!fromRecovery) resetAudioRecovery();
 		else clearRecoveryTimer();
 		const normalizedSong = normalizePlaybackSong(song, resolvePlaybackAudioUrl);
@@ -1278,6 +1350,7 @@ export const usePlayerStore = defineStore("player", () => {
 
 	const reloadCurrentAudio = async (automatic: boolean) => {
 		if (!currentSong.value) return;
+		clearPlaybackLoadingTimeout();
 		if (!automatic) resetAudioRecovery();
 		const player = ensureAudio();
 		const resumePosition = currentTime.value;
@@ -1286,7 +1359,9 @@ export const usePlayerStore = defineStore("player", () => {
 		player.pause();
 		let targetSrc = resolvePlaybackAudioUrl(currentSong.value.audio_url);
 		const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
-		if (isCurrentAudioCached.value || isOffline) {
+		if (isOffline || (isCurrentAudioCached.value && !isIOSWebKit())) {
+			// Online iOS retries must call play() synchronously inside the tap.
+			// Awaiting IndexedDB to fetch a cached Blob loses that gesture.
 			const blobUrl = await getCachedMediaObjectURL(currentSong.value.audio_url);
 			if (blobUrl) {
 				releaseCachedAudioObjectUrl();

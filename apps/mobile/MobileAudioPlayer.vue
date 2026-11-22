@@ -52,13 +52,16 @@
         type="button"
         class="mobile-mini-player__action mobile-mini-player__action--play"
         data-testid="player-play-btn"
-        :aria-label="player.isPlaying ? '暂停' : '播放'"
-        :title="player.isPlaying ? '暂停' : '播放'"
-        @click.stop="player.togglePlay()"
+        :aria-label="hasPlaybackError ? '重试播放' : player.isLoading ? '正在加载' : player.isPlaying ? '暂停' : '播放'"
+        :title="hasPlaybackError ? '音频加载失败，点击重试' : player.isLoading ? '正在加载' : player.isPlaying ? '暂停' : '播放'"
+        @click.stop="hasPlaybackError ? player.retryPlayback() : player.togglePlay()"
       >
         <span class="mobile-play-icon-stage" aria-hidden="true">
           <Transition name="player-icon-swap" mode="out-in">
-            <span v-if="player.isLoading" key="loading" class="play-icon-glyph play-icon-glyph--loading">
+            <span v-if="hasPlaybackError" key="retry" class="play-icon-glyph">
+              <MIcon name="rotate-ccw" size="sm" />
+            </span>
+            <span v-else-if="player.isLoading" key="loading" class="play-icon-glyph play-icon-glyph--loading">
               <span class="mobile-mini-player__spinner" />
             </span>
             <span v-else-if="player.isPlaying" key="pause" class="play-icon-glyph">
@@ -87,6 +90,7 @@ import { useMusicFavoritePlaylist } from '@/composables/useMusicFavoritePlaylist
 import MIcon from '@mobile/components/ui/MIcon.vue'
 
 const player = usePlayerStore()
+const hasPlaybackError = computed(() => Boolean(player.playbackError) && !player.isPlaying)
 const router = useRouter()
 const route = useRoute()
 

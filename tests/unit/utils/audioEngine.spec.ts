@@ -7,6 +7,7 @@ import {
   audioStartPrefetchBytes,
   audioStartPrefetchConcurrency,
   transitionAudioSource,
+  isIOSWebKit,
 } from '@/utils/audioEngine'
 
 describe('audioEngine constants', () => {
@@ -69,7 +70,37 @@ describe('AudioPrefetcher', () => {
   })
 })
 
+describe('isIOSWebKit', () => {
+  it('detects iPhone and touch-enabled iPadOS desktop user agents', () => {
+    try {
+      vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X)', maxTouchPoints: 5 })
+      expect(isIOSWebKit()).toBe(true)
+      vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', maxTouchPoints: 5 })
+      expect(isIOSWebKit()).toBe(true)
+      vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', maxTouchPoints: 0 })
+      expect(isIOSWebKit()).toBe(false)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+})
+
 describe('transitionAudioSource', () => {
+  it('preserves an iPhone tap by preparing the next track synchronously without a pause', async () => {
+    const targetAudio = { paused: false, currentTime: 10, volume: 0.8, pause: vi.fn() } as unknown as HTMLAudioElement
+    try {
+      vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X)', maxTouchPoints: 5 })
+      const prepareNext = vi.fn()
+      const pending = transitionAudioSource(targetAudio, 'next.mp3', prepareNext, 1000)
+      expect(prepareNext).toHaveBeenCalledOnce()
+      expect(targetAudio.pause).not.toHaveBeenCalled()
+      expect(targetAudio.volume).toBe(0.8)
+      await pending
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('smoothly transitions audio source with micro-fadeout when audio is playing', async () => {
     const targetAudio = {
       paused: false,

@@ -109,6 +109,10 @@ export const siteAccessFeatures: Partial<Record<ModuleRoomKey, { key: ModuleFeat
 /** Modules with a dedicated management panel in addition to the shared permission rows. */
 export const siteAccessDetailModules: ModuleRoomKey[] = ['feed', 'music', 'forum']
 
+const extraAllowedModuleFeatures: Partial<Record<ModuleRoomKey, ModuleFeatureKey[]>> = {
+  books: ['books.submit', 'books.review', 'books.publish_asset'],
+}
+
 const buildDefaultModules = (): Record<ModuleRoomKey, ModuleAccess> => {
   const modules = {} as Record<ModuleRoomKey, ModuleAccess>
 
@@ -156,7 +160,10 @@ export function mergeSiteAccess(input: SiteAccessInput): SiteAccess {
     const partial = input?.modules?.[key]
     if (!partial) continue
 
-    const allowedFeatures = new Set((siteAccessFeatures[key] ?? []).map((feature) => feature.key))
+    const allowedFeatures = new Set<ModuleFeatureKey>([
+      ...(siteAccessFeatures[key] ?? []).map((feature) => feature.key),
+      ...(extraAllowedModuleFeatures[key] ?? []),
+    ])
     const incomingFeatures = Object.fromEntries(
       Object.entries(partial.features ?? {}).filter(([feature]) => allowedFeatures.has(feature as ModuleFeatureKey)),
     ) as Partial<Record<ModuleFeatureKey, boolean>>

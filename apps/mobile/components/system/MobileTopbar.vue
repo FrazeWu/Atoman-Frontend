@@ -43,6 +43,11 @@
         @click="emit('notifications')"
       >
         <MIcon name="bell" size="md" :stroke-width="1.8" />
+        <span
+          v-if="unreadBadge"
+          class="mobile-topbar__badge"
+          data-testid="notifications-badge"
+        >{{ unreadBadge }}</span>
       </button>
     </div>
   </header>
@@ -60,14 +65,21 @@ const props = withDefaults(
     title?: string
     showBack?: boolean
     hideActions?: boolean
+    unreadCount?: number
   }>(),
   {
     currentSpace: 'global',
     title: undefined,
     showBack: false,
     hideActions: false,
+    unreadCount: 0,
   }
 )
+
+const unreadBadge = computed(() => {
+  if (!props.unreadCount || props.unreadCount <= 0) return ''
+  return props.unreadCount > 99 ? '99+' : String(props.unreadCount)
+})
 
 const emit = defineEmits<{
   (e: 'open-drawer'): void
@@ -167,6 +179,7 @@ const displayLabel = computed(() => {
 }
 
 .mobile-topbar__action {
+  position: relative;
   width: 44px;
   height: 44px;
   display: inline-flex;
@@ -178,6 +191,23 @@ const displayLabel = computed(() => {
   color: var(--a-color-fg, #0f172a);
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.mobile-topbar__badge {
+  position: absolute;
+  top: 5px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-primary);
+  color: var(--a-color-bg);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .mobile-topbar__action:active {

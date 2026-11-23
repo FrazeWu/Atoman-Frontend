@@ -125,6 +125,11 @@ export function useBlogSheets() {
 
 	const returnToLayer = (key: string) => stack.popTo(key);
 
+	const updateLayerTitle = (key: string, title: string) => {
+		const target = stack.layers.value.find((layer) => layer.key === key);
+		if (target) target.title = title;
+	};
+
 	return {
 		layers: stack.layers,
 		renderLayers: stack.renderLayers,
@@ -139,6 +144,7 @@ export function useBlogSheets() {
 		replaceShortNote,
 		closeLayer,
 		returnToLayer,
+		updateLayerTitle,
 		closeTop: stack.pop,
 		closeAll: stack.clear,
 		isTop: stack.isTop,

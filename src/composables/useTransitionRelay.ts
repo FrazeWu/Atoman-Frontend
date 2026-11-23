@@ -1,9 +1,11 @@
 import { reportError } from '@/utils/logger'
 import { useSheetStore } from '@/stores/sheet'
+import { useBlogSheets } from '@/composables/blog/useBlogSheets'
 import { motionTimings } from '@/config/motion'
 
 export function useTransitionRelay() {
   const sheetStore = useSheetStore()
+  const blogSheets = useBlogSheets()
 
   const checkRelay = () => {
     const raw = localStorage.getItem('atoman_transition_relay')
@@ -23,6 +25,11 @@ export function useTransitionRelay() {
         // 错峰弹出：等待背景浮出动画进行到 200ms
       setTimeout(() => {
         sheetStore.pushSheet(sheetData, false) // 不记录历史，因为这是跳转后的初始状态
+        if (relay.type === 'post') {
+          blogSheets.openPost(String(relay.data.id), sheetData.title)
+        } else if (relay.type === 'collection') {
+          blogSheets.openCollection(String(relay.data.id), sheetData.title, String(relay.data.channel_id || ''))
+        }
       }, motionTimings.relayDelay)
       }
     } catch (e) {

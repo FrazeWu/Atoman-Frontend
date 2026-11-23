@@ -4,14 +4,21 @@ import { onScopeDispose, ref } from "vue";
 import { defineStore, getActivePinia } from "pinia";
 import { registerSessionReset } from "@/stores/sessionReset";
 import type {
+  CreateDebateChallengeInput,
+  CreateDebateEntryInput,
   Debate,
+  DebateChallenge,
+  DebateChallengeVoteDecision,
   DebateConclusionEvent,
+  DebateEntry,
+  DebateEvidenceRating,
   DebateGraph,
   DebateRevision,
   DebateRevisionDiff,
   DebateStatus,
   DebateVoteDirection,
   DebateVoteSummary,
+  UpdateDebateEntryInput,
 } from "@/types";
 import { useAuthStore } from "@/stores/auth";
 import { useApi } from '@/composables/useApi'
@@ -74,6 +81,10 @@ export const useDebateStore = defineStore("debate", () => {
   const revisions = ref<DebateRevision[]>([]);
 	const relationGraph = ref<DebateGraph | null>(null);
 	const relationLoading = ref(false);
+  const entries = ref<DebateEntry[]>([]);
+  const entriesLoading = ref(false);
+  const challenges = ref<DebateChallenge[]>([]);
+  const challengesLoading = ref(false);
   const loading = ref(false);
   const wikiSaving = ref(false);
   const revisionsLoading = ref(false);
@@ -86,6 +97,8 @@ export const useDebateStore = defineStore("debate", () => {
   const revisionsRequest: OwnedRequest = { sequence: 0, ownerID: null };
   const votesRequest: OwnedRequest = { sequence: 0, ownerID: null };
   const relationGraphRequest: OwnedRequest = { sequence: 0, ownerID: null };
+  const entriesRequest: OwnedRequest = { sequence: 0, ownerID: null };
+  const challengesRequest: OwnedRequest = { sequence: 0, ownerID: null };
 
   const authHeaders = (): Record<string, string> => {
     const authStore = useAuthStore();
@@ -561,6 +574,279 @@ export const useDebateStore = defineStore("debate", () => {
 		}
 	}
 
+  const extractApiError = (res: { data?: unknown }, fallback: string): string => {
+    const payload = res.data as { message?: unknown; error?: unknown } | undefined;
+    if (payload?.error && typeof payload.error === "object") {
+      const msg = (payload.error as { message?: unknown }).message;
+      if (typeof msg === "string" && msg.trim()) return msg;
+    }
+    if (typeof payload?.message === "string" && payload.message.trim()) return payload.message;
+    return fallback;
+  };
+
+  const setEvidenceVote = async (id: string, rating: DebateEvidenceRating): Promise<DebateVoteSummary | null> => {
+    const requestSequence = beginOwnedRequest(votesRequest, id);
+    votesLoading.value = true;
+    error.value = null;
+    try {
+      const res = await apiRequestResult(`${api.url}/debate/topics/${id}/evidence-vote`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ rating }),
+      });
+      if (!ownsRequest(votesRequest, id, requestSequence)) return null;
+      if (!res.ok) {
+        error.value = extractApiError(res, "证据评估失败，请重试");
+        return null;
+      }
+      const data = res.data;
+      if (!ownsRequest(votesRequest, id, requestSequence)) return null;
+      voteSummary.value = data.data as DebateVoteSummary;
+      return voteSummary.value;
+    } catch (e) {
+      if (!ownsRequest(votesRequest, id, requestSequence)) return null;
+      error.value = "证据评估失败，请重试";
+      reportError(e, "Failed to set evidence vote");
+      return null;
+    } finally {
+      if (ownsRequest(votesRequest, id, requestSequence)) votesLoading.value = false;
+    }
+  };
+
+  const removeEvidenceVote = async (id: string): Promise<DebateVoteSummary | null> => {
+    const requestSequence = beginOwnedRequest(votesRequest, id);
+    votesLoading.value = true;
+    error.value = null;
+    try {
+      const res = await apiRequestResult(`${api.url}/debate/topics/${id}/evidence-vote`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!ownsRequest(votesRequest, id, requestSequence)) return null;
+      if (!res.ok) {
+        error.value = extractApiError(res, "取消证据评估失败，请重试");
+        return null;
+      }
+      const data = res.data;
+      if (!ownsRequest(votesRequest, id, requestSequence)) return null;
+      voteSummary.value = data.data as DebateVoteSummary;
+      return voteSummary.value;
+    } catch (e) {
+      if (!ownsRequest(votesRequest, id, requestSequence)) return null;
+      error.value = "取消证据评估失败，请重试";
+      reportError(e, "Failed to remove evidence vote");
+      return null;
+    } finally {
+      if (ownsRequest(votesRequest, id, requestSequence)) votesLoading.value = false;
+    }
+  };
+
+  const fetchEntries = async (debateId: string): Promise<DebateEntry[] | null> => {
+    const requestSequence = beginOwnedRequest(entriesRequest, debateId);
+    entriesLoading.value = true;
+    error.value = null;
+    try {
+      const res = await apiRequestResult(`${api.url}/debate/topics/${debateId}/entries`, { headers: authHeaders() });
+      if (!ownsRequest(entriesRequest, debateId, requestSequence)) return null;
+      if (!res.ok) {
+        error.value = extractApiError(res, "获取结构化论据失败，请重试");
+        return null;
+      }
+      const items = (res.data?.data || []) as DebateEntry[];
+      if (!ownsRequest(entriesRequest, debateId, requestSequence)) return null;
+      entries.value = items;
+      return items;
+    } catch (e) {
+      if (!ownsRequest(entriesRequest, debateId, requestSequence)) return null;
+      error.value = "获取结构化论据失败，请重试";
+      reportError(e, "Failed to fetch debate entries");
+      return null;
+    } finally {
+      if (ownsRequest(entriesRequest, debateId, requestSequence)) entriesLoading.value = false;
+    }
+  };
+
+  const createEntry = async (debateId: string, input: CreateDebateEntryInput): Promise<DebateEntry | null> => {
+    error.value = null;
+    try {
+      const res = await apiRequestResult(`${api.url}/debate/topics/${debateId}/entries`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) {
+        error.value = extractApiError(res, "提交论据失败，请重试");
+        return null;
+      }
+      const created = res.data?.data as DebateEntry;
+      if (entriesRequest.ownerID === debateId || currentDebate.value?.id === debateId) {
+        entries.value = [...entries.value, created];
+      }
+      return created;
+    } catch (e) {
+      error.value = "提交论据失败，请重试";
+      reportError(e, "Failed to create debate entry");
+      return null;
+    }
+  };
+
+  const updateEntry = async (debateId: string, entryId: string, input: UpdateDebateEntryInput): Promise<DebateEntry | null> => {
+    error.value = null;
+    try {
+      const res = await apiRequestResult(`${api.url}/debate/topics/${debateId}/entries/${entryId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) {
+        error.value = extractApiError(res, "更新论据失败，请重试");
+        return null;
+      }
+      const updated = res.data?.data as DebateEntry;
+      if (entriesRequest.ownerID === debateId || currentDebate.value?.id === debateId) {
+        entries.value = entries.value.map((item) => (item.id === entryId ? updated : item));
+      }
+      return updated;
+    } catch (e) {
+      error.value = "更新论据失败，请重试";
+      reportError(e, "Failed to update debate entry");
+      return null;
+    }
+  };
+
+  const deleteEntry = async (debateId: string, entryId: string): Promise<boolean> => {
+    error.value = null;
+    try {
+      const res = await apiRequestResult(`${api.url}/debate/topics/${debateId}/entries/${entryId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        error.value = extractApiError(res, "删除论据失败，请重试");
+        return false;
+      }
+      if (entriesRequest.ownerID === debateId || currentDebate.value?.id === debateId) {
+        const removedIds = new Set<string>([entryId]);
+        for (const item of entries.value) {
+          if (item.parent_id && removedIds.has(item.parent_id)) removedIds.add(item.id);
+        }
+        for (const item of entries.value) {
+          if (item.parent_id && removedIds.has(item.parent_id)) removedIds.add(item.id);
+        }
+        entries.value = entries.value.filter((item) => !removedIds.has(item.id));
+      }
+      return true;
+    } catch (e) {
+      error.value = "删除论据失败，请重试";
+      reportError(e, "Failed to delete debate entry");
+      return false;
+    }
+  };
+
+  const fetchChallenges = async (
+    debateId: string,
+    status?: "" | "open" | "resolved" | "upheld" | "dismissed",
+  ): Promise<DebateChallenge[] | null> => {
+    const requestSequence = beginOwnedRequest(challengesRequest, debateId);
+    challengesLoading.value = true;
+    error.value = null;
+    try {
+      const query = status ? `?status=${encodeURIComponent(status)}` : "";
+      const res = await apiRequestResult(`${api.url}/debate/topics/${debateId}/challenges${query}`, { headers: authHeaders() });
+      if (!ownsRequest(challengesRequest, debateId, requestSequence)) return null;
+      if (!res.ok) {
+        error.value = extractApiError(res, "获取质询列表失败，请重试");
+        return null;
+      }
+      const items = (res.data?.data || []) as DebateChallenge[];
+      if (!ownsRequest(challengesRequest, debateId, requestSequence)) return null;
+      challenges.value = items;
+      return items;
+    } catch (e) {
+      if (!ownsRequest(challengesRequest, debateId, requestSequence)) return null;
+      error.value = "获取质询列表失败，请重试";
+      reportError(e, "Failed to fetch debate challenges");
+      return null;
+    } finally {
+      if (ownsRequest(challengesRequest, debateId, requestSequence)) challengesLoading.value = false;
+    }
+  };
+
+  const createChallenge = async (debateId: string, input: CreateDebateChallengeInput): Promise<DebateChallenge | null> => {
+    error.value = null;
+    try {
+      const res = await apiRequestResult(`${api.url}/debate/topics/${debateId}/challenges`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) {
+        error.value = extractApiError(res, "发起质询失败，请重试");
+        return null;
+      }
+      const created = res.data?.data as DebateChallenge;
+      if (challengesRequest.ownerID === debateId || currentDebate.value?.id === debateId) {
+        challenges.value = [created, ...challenges.value];
+      }
+      return created;
+    } catch (e) {
+      error.value = "发起质询失败，请重试";
+      reportError(e, "Failed to create challenge");
+      return null;
+    }
+  };
+
+  const voteChallenge = async (
+    debateId: string,
+    challengeId: string,
+    decision: DebateChallengeVoteDecision,
+  ): Promise<DebateChallenge | null> => {
+    error.value = null;
+    try {
+      const res = await apiRequestResult(`${api.url}/debate/topics/${debateId}/challenges/${challengeId}/vote`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ decision }),
+      });
+      if (!res.ok) {
+        error.value = extractApiError(res, "质询投票失败，请重试");
+        return null;
+      }
+      const updated = res.data?.data as DebateChallenge;
+      if (challengesRequest.ownerID === debateId || currentDebate.value?.id === debateId) {
+        challenges.value = challenges.value.map((item) => (item.id === challengeId ? updated : item));
+      }
+      return updated;
+    } catch (e) {
+      error.value = "质询投票失败，请重试";
+      reportError(e, "Failed to vote challenge");
+      return null;
+    }
+  };
+
+  const removeChallengeVote = async (debateId: string, challengeId: string): Promise<DebateChallenge | null> => {
+    error.value = null;
+    try {
+      const res = await apiRequestResult(`${api.url}/debate/topics/${debateId}/challenges/${challengeId}/vote`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        error.value = extractApiError(res, "取消质询投票失败，请重试");
+        return null;
+      }
+      const updated = res.data?.data as DebateChallenge;
+      if (challengesRequest.ownerID === debateId || currentDebate.value?.id === debateId) {
+        challenges.value = challenges.value.map((item) => (item.id === challengeId ? updated : item));
+      }
+      return updated;
+    } catch (e) {
+      error.value = "取消质询投票失败，请重试";
+      reportError(e, "Failed to remove challenge vote");
+      return null;
+    }
+  };
+
   const resetStore = () => {
     debatesRequestSequence += 1;
     currentDebateLoadingSequence += 1;
@@ -569,6 +855,8 @@ export const useDebateStore = defineStore("debate", () => {
     invalidateOwnedRequest(revisionsRequest);
     invalidateOwnedRequest(votesRequest);
     invalidateOwnedRequest(relationGraphRequest);
+    invalidateOwnedRequest(entriesRequest);
+    invalidateOwnedRequest(challengesRequest);
     debates.value = [];
     debatesTotal.value = 0;
     debatesMeta.value = { page: 1, page_size: 20, total: 0, has_more: false };
@@ -576,11 +864,15 @@ export const useDebateStore = defineStore("debate", () => {
 		voteSummary.value = null;
 		revisions.value = [];
 		relationGraph.value = null;
+    entries.value = [];
+    challenges.value = [];
     loading.value = false;
     wikiSaving.value = false;
     revisionsLoading.value = false;
     votesLoading.value = false;
 		relationLoading.value = false;
+    entriesLoading.value = false;
+    challengesLoading.value = false;
     error.value = null;
   };
 
@@ -596,6 +888,10 @@ export const useDebateStore = defineStore("debate", () => {
 		revisions,
 		relationGraph,
 		relationLoading,
+    entries,
+    entriesLoading,
+    challenges,
+    challengesLoading,
     loading,
 		wikiSaving,
 		revisionsLoading,
@@ -612,8 +908,18 @@ export const useDebateStore = defineStore("debate", () => {
 		fetchVotes,
 		setVote,
 		removeVote,
+    setEvidenceVote,
+    removeEvidenceVote,
 		fetchConclusions,
 		fetchRelationGraph,
+    fetchEntries,
+    createEntry,
+    updateEntry,
+    deleteEntry,
+    fetchChallenges,
+    createChallenge,
+    voteChallenge,
+    removeChallengeVote,
     createDebate,
     searchDebates,
 		searchCitableDebates,

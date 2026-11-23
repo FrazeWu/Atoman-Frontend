@@ -6,6 +6,7 @@ import {
   getVisibleModuleKeys,
   isModuleFeatureEnabled,
   mergeSiteAccess,
+  siteAccessDetailModules,
 } from '@/config/siteAccess'
 
 describe('site access config', () => {
@@ -94,5 +95,45 @@ describe('site access config', () => {
     expect(access.settings.feed.allow_manage_sources).toBe(false)
     expect(access.settings.feed.allow_add_source).toBe(true)
     expect(access.settings.feed.full_text_mode).toBe('disabled')
+  })
+
+  it('provides debate threshold defaults, clamps bounds and exposes debate detail module', () => {
+    const defaults = mergeSiteAccess(null)
+    expect(defaults.settings.debate).toEqual({
+      conclusion_min_votes: 5,
+      conclusion_threshold_percent: 75,
+      challenge_min_votes: 5,
+    })
+    expect(siteAccessDetailModules).toContain('debate')
+
+    const custom = mergeSiteAccess({
+      settings: {
+        debate: {
+          conclusion_min_votes: 8,
+          conclusion_threshold_percent: 80,
+          challenge_min_votes: 6,
+        },
+      },
+    })
+    expect(custom.settings.debate).toEqual({
+      conclusion_min_votes: 8,
+      conclusion_threshold_percent: 80,
+      challenge_min_votes: 6,
+    })
+
+    const clamped = mergeSiteAccess({
+      settings: {
+        debate: {
+          conclusion_min_votes: 1,
+          conclusion_threshold_percent: 99,
+          challenge_min_votes: 500,
+        },
+      },
+    })
+    expect(clamped.settings.debate).toEqual({
+      conclusion_min_votes: 3,
+      conclusion_threshold_percent: 95,
+      challenge_min_votes: 100,
+    })
   })
 })

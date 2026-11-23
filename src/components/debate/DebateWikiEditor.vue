@@ -50,6 +50,34 @@
         </PButton>
 
         <div v-if="referenceOpen" class="reference-picker">
+          <div class="reference-picker__modes" role="group" aria-label="引用类型">
+            <button
+              type="button"
+              class="reference-picker__mode"
+              :class="{ 'is-active': referenceMode === 'relation' }"
+              data-test="reference-mode-relation"
+              @click="referenceMode = 'relation'"
+            >
+              关联辩题（立场关系）
+            </button>
+            <button
+              type="button"
+              class="reference-picker__mode"
+              :class="{ 'is-active': referenceMode === 'general' }"
+              data-test="reference-mode-general"
+              @click="referenceMode = 'general'"
+            >
+              站内资源 / 背景引用
+            </button>
+          </div>
+
+          <DebateReferencePicker
+            v-if="referenceMode === 'general'"
+            :exclude-debate-id="debate.id"
+            @select="insertGeneralReference"
+          />
+
+          <template v-else>
           <PInput
             v-model="referenceQuery"
             data-test="reference-search"
@@ -105,6 +133,7 @@
               插入
             </PButton>
           </div>
+          </template>
         </div>
       </div>
 
@@ -202,7 +231,8 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-
+import type { ReferenceTarget } from '@/api/reference/references'
+import DebateReferencePicker from '@/components/debate/DebateReferencePicker.vue'
 import PEditor from '@/components/shared/PEditor.vue'
 import type { ResourceReferenceLabels } from '@/components/shared/editor/resourceReferenceExtension'
 import PButton from '@/components/ui/PButton.vue'
@@ -255,6 +285,7 @@ const conflictSnapshots = ref<{
 } | null>(null)
 const conflictSnapshotStatus = ref<'idle' | 'loading' | 'loaded' | 'error'>('idle')
 const referenceOpen = ref(false)
+const referenceMode = ref<'relation' | 'general'>('relation')
 const referenceQuery = ref('')
 const referenceSearching = ref(false)
 const referenceResults = ref<Debate[]>([])
@@ -286,7 +317,9 @@ const serverReferenceLabels = computed<ResourceReferenceLabels>(() => Object.fro
       qualifierLabel: reference.relation?.stance === 'support'
         ? '支撑'
         : reference.relation?.stance === 'oppose' ? '反驳' : undefined,
-      state: reference.relation?.state ?? (reference.target.available ? 'active' : 'unavailable'),
+      state: (reference.relation?.state === 'rejected' || reference.challenge?.status === 'upheld')
+        ? 'rejected'
+        : (reference.relation?.state ?? (reference.target.available ? 'active' : 'unavailable')),
     },
   ]),
 ))
@@ -331,6 +364,7 @@ function startSession() {
   conflictSnapshots.value = null
   conflictSnapshotStatus.value = 'idle'
   referenceOpen.value = false
+  referenceMode.value = 'relation'
   referenceQuery.value = ''
   referenceResults.value = []
   selectedReference.value = null
@@ -381,6 +415,16 @@ function selectReference(candidate: Debate) {
   referenceStance.value = null
 }
 
+function appendReferenceMarker(marker: string) {
+  const separator = content.value.length === 0
+    ? ''
+    : content.value.endsWith('\n\n')
+      ? ''
+      : content.value.endsWith('\n') ? '\n' : '\n\n'
+  content.value = `${content.value}${separator}${marker}`
+  emit('update:content', content.value)
+}
+
 function insertReference() {
   if (!selectedReference.value || !referenceStance.value) return
   draftReferenceLabels.value = {
@@ -391,17 +435,22 @@ function insertReference() {
       state: 'active',
     },
   }
-  const marker = `@debate:${selectedReference.value.id}:${referenceStance.value}`
-  const separator = content.value.length === 0
-    ? ''
-    : content.value.endsWith('\n\n')
-      ? ''
-      : content.value.endsWith('\n') ? '\n' : '\n\n'
-  content.value = `${content.value}${separator}${marker}`
-  emit('update:content', content.value)
+  appendReferenceMarker(`@debate:${selectedReference.value.id}:${referenceStance.value}`)
   referenceOpen.value = false
   selectedReference.value = null
   referenceStance.value = null
+}
+
+function insertGeneralReference(token: string, target: ReferenceTarget) {
+  draftReferenceLabels.value = {
+    ...draftReferenceLabels.value,
+    [`${target.type}:${target.id}`]: {
+      title: target.label || target.id,
+      state: 'active',
+    },
+  }
+  appendReferenceMarker(token)
+  referenceOpen.value = false
 }
 
 function parseTags() {
@@ -692,6 +741,31 @@ async function save() {
 
 .wiki-editor__error {
   color: var(--a-color-danger);
+}
+
+.reference-picker__modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.reference-picker__mode {
+  min-height: 34px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.reference-picker__mode.is-active {
+  border-color: var(--a-color-primary);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
+  font-weight: 600;
 }
 
 .wiki-editor__footer {

@@ -19,6 +19,7 @@
           <div class="conclusion-timeline__label">
             <span v-if="index === 0" class="conclusion-timeline__current">当前结论</span>
             <span v-else class="conclusion-timeline__past">历史结论</span>
+            <span v-if="item.evidence_weak" class="conclusion-timeline__weak">证据薄弱</span>
           </div>
           <div class="conclusion-timeline__votes" aria-label="投票分布">
             <span>{{ item.yes_votes }} 是</span>
@@ -26,6 +27,13 @@
             <span>{{ item.no_votes }} 否</span>
             <span class="conclusion-timeline__sep" aria-hidden="true">·</span>
             <span>{{ item.total_votes }} 人</span>
+          </div>
+          <div v-if="hasEvidenceSnapshot(item)" class="conclusion-timeline__evidence">
+            <span>证据 {{ item.active_evidence_count ?? 0 }} 条</span>
+            <template v-if="evidenceRatingTotal(item) > 0">
+              <span class="conclusion-timeline__sep" aria-hidden="true">·</span>
+              <span>充分 {{ item.evidence_sufficient ?? 0 }} / 部分 {{ item.evidence_partial ?? 0 }} / 不足 {{ item.evidence_insufficient ?? 0 }}</span>
+            </template>
           </div>
           <time
             class="conclusion-timeline__time"
@@ -46,6 +54,16 @@ import type { DebateConclusionEvent } from '@/types'
 defineProps<{
   items: DebateConclusionEvent[]
 }>()
+
+function evidenceRatingTotal(item: DebateConclusionEvent) {
+  return (item.evidence_sufficient ?? 0) + (item.evidence_partial ?? 0) + (item.evidence_insufficient ?? 0)
+}
+
+function hasEvidenceSnapshot(item: DebateConclusionEvent) {
+  return item.active_evidence_count !== undefined
+    || item.evidence_weak !== undefined
+    || evidenceRatingTotal(item) > 0
+}
 
 function formatDate(isoString: string) {
   try {
@@ -128,8 +146,30 @@ function formatDateFull(isoString: string) {
 }
 
 .conclusion-timeline__label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   font-weight: 600;
+}
+
+.conclusion-timeline__weak {
+  padding: 1px 6px;
+  border: 1px solid var(--a-color-warning);
+  border-radius: var(--a-radius-control);
+  color: var(--a-color-warning);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.conclusion-timeline__evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  color: var(--a-color-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 .conclusion-timeline__current {

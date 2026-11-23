@@ -37,9 +37,10 @@ export interface ResourceReference {
 const resourceKindSet = new Set<string>(resourceKinds)
 const uuidPattern = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
 const referencePattern = new RegExp(
-  `@([a-z]+):(${uuidPattern})(?::([a-z]+))?`,
+  `@([a-z_]+):(${uuidPattern})(?::([a-z]+))?`,
   'g',
 )
+const candidateReferencePattern = /@[a-z_]+:[^\s`<>，。；、：！？）)》」』"'.,]+/gi
 const excludedMarkdownNodes = new Set([
   'InlineCode',
   'FencedCode',
@@ -110,7 +111,7 @@ export function parseResourceReferences(content: string): ResourceReference[] {
     const to = from + match[0].length
     if (!hasValidBoundaries(content, from, to) || overlapsExcludedRange(from, to, excludedRanges)) continue
     if (kind === 'debate') {
-      if (qualifier !== 'support' && qualifier !== 'oppose') continue
+      if (qualifier !== '' && qualifier !== 'support' && qualifier !== 'oppose') continue
     } else if (qualifier !== '') {
       continue
     }
@@ -130,10 +131,15 @@ export function parseResourceReferences(content: string): ResourceReference[] {
 
 export function hasInvalidDebateReferenceSyntax(content: string) {
   const validReferences = new Set(
-    parseResourceReferences(content)
-      .filter(reference => reference.kind === 'debate')
-      .map(reference => reference.raw),
+    parseResourceReferences(content).map(reference => reference.raw),
   )
-  const candidates = content.match(/@[a-z]+:[^\s`<>]+/gi) ?? []
-  return candidates.some(candidate => !validReferences.has(candidate))
+  const excludedRanges = collectExcludedRanges(content)
+  for (const match of content.matchAll(candidateReferencePattern)) {
+    const index = match.index
+    const candidate = match[0]
+    if (index === undefined) continue
+    if (overlapsExcludedRange(index, index + candidate.length, excludedRanges)) continue
+    if (!validReferences.has(candidate)) return true
+  }
+  return false
 }

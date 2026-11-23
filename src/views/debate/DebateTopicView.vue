@@ -84,9 +84,49 @@
               v-if="debateCitationReferences.length"
               :references="debateCitationReferences"
             />
+            <div
+              v-if="citationActionItems.length"
+              class="debate-citations-actions"
+              data-test="wiki-citation-actions"
+            >
+              <div
+                v-for="item in citationActionItems"
+                :key="item.key"
+                class="debate-citation-action"
+              >
+                <span class="debate-citation-action__label">{{ item.label }}</span>
+                <span v-if="item.rejected" class="debate-citation-action__badge is-rejected">已驳回</span>
+                <span v-else-if="item.openChallenge" class="debate-citation-action__badge is-open">
+                  质询中（{{ item.openChallenge.uphold_votes }} 支持 / {{ item.openChallenge.dismiss_votes }} 驳回）
+                </span>
+                <button
+                  v-else-if="item.canChallenge"
+                  type="button"
+                  class="debate-citation-action__btn"
+                  :data-test="`challenge-citation-${item.targetId}`"
+                  @click="openChallengeModal(item)"
+                >
+                  质询引用
+                </button>
+              </div>
+            </div>
             <p v-if="reconfirmError" data-test="reconfirm-error" class="debate-content__error" role="alert">
               {{ reconfirmError }}
             </p>
+            <DebateStructuredPanel
+              :debate-id="debate.id"
+              :archived="debate.status === 'archived'"
+              :entries="entries"
+              :loading="entriesLoading"
+              :can-moderate="isAdmin"
+              :current-user-id="String(authStore.user?.id || '')"
+              :mutating="entryMutating"
+              :action-error="entryError"
+              @create="handleCreateEntry"
+              @update="handleUpdateEntry"
+              @delete="handleDeleteEntry"
+              @challenge="openChallengeModal($event)"
+            />
           </div>
 
           <div
@@ -115,6 +155,25 @@
               />
             </template>
           </div>
+
+          <div
+            v-show="activeTab === 'challenges'"
+            id="debate-panel-challenges"
+            role="tabpanel"
+            aria-labelledby="debate-tab-challenges"
+            class="debate-challenges"
+          >
+            <DebateChallengePanel
+              v-if="activeTab === 'challenges'"
+              :challenges="challenges"
+              :loading="challengesLoading"
+              :archived="debate.status === 'archived'"
+              :voting-challenge-id="votingChallengeId"
+              @vote="handleVoteChallenge"
+              @remove-vote="handleRemoveChallengeVote"
+              @filter-change="handleChallengeFilterChange"
+            />
+          </div>
         </section>
 
         <aside class="debate-sidebar" aria-label="投票">
@@ -124,10 +183,24 @@
             :unavailable="voteLoadState === 'error'"
             @vote="handleVote"
             @remove="handleRemoveVote"
+            @evidence-vote="handleEvidenceVote"
+            @evidence-remove="handleRemoveEvidenceVote"
           />
           <DebateConclusionTimeline :items="conclusions" />
         </aside>
       </div>
+
+      <DebateChallengeModal
+        :show="challengeModal.show"
+        :debate-id="debate.id"
+        :target-type="challengeModal.targetType"
+        :target-id="challengeModal.targetId"
+        :target-label="challengeModal.targetLabel"
+        :submitting="challengeSubmitting"
+        :error="challengeModalError"
+        @close="challengeModal.show = false"
+        @submit="handleCreateChallenge"
+      />
 
       <DebateWikiEditor
         :show="showWikiEditor"
@@ -159,10 +232,13 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ChevronLeft, History, MessageSquare, Pencil } from 'lucide-vue-next'
 
+import DebateChallengeModal from '@/components/debate/DebateChallengeModal.vue'
+import DebateChallengePanel from '@/components/debate/DebateChallengePanel.vue'
 import DebateConclusionTimeline from '@/components/debate/DebateConclusionTimeline.vue'
 import DebateDiscussionSheet from '@/components/debate/DebateDiscussionSheet.vue'
 import DebateRelationGraph from '@/components/debate/DebateRelationGraph.vue'
 import DebateRevisionSheet from '@/components/debate/DebateRevisionSheet.vue'
+import DebateStructuredPanel from '@/components/debate/DebateStructuredPanel.vue'
 import DebateVotePanel from '@/components/debate/DebateVotePanel.vue'
 import DebateWikiEditor from '@/components/debate/DebateWikiEditor.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -171,29 +247,46 @@ import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
 import { useDebateStore } from '@/stores/debate'
 import type {
+  CreateDebateChallengeInput,
+  CreateDebateEntryInput,
   Debate,
   ContentReference,
+  DebateChallengeReasonCode,
+  DebateChallengeTargetType,
+  DebateChallengeVoteDecision,
   DebateConclusionEvent,
+  DebateEvidenceRating,
   DebateGraph,
   DebateReference,
+  DebateReferenceChallenge,
   DebateResourceKind,
   DebateVoteDirection,
+  UpdateDebateEntryInput,
 } from '@/types'
 import { normalizeDebateReferences } from '@/utils/debateReferences'
 import { parseResourceReferences } from '@/utils/resourceReferences'
 
-type DebateTab = 'content' | 'tree' | 'graph'
-type RelationView = Exclude<DebateTab, 'content'>
+type DebateTab = 'content' | 'tree' | 'graph' | 'challenges'
+type RelationView = 'tree' | 'graph'
 type DebateDetailSheet = 'discussion' | 'revisions'
 
 const relationTabs = [
   { value: 'tree' as const, label: '辩论树' },
   { value: 'graph' as const, label: '关系图' },
 ]
-const tabs = [
+const entries = computed(() => debateStore.entries ?? [])
+const entriesLoading = computed(() => Boolean(debateStore.entriesLoading))
+const challenges = computed(() => debateStore.challenges ?? [])
+const challengesLoading = computed(() => Boolean(debateStore.challengesLoading))
+const openChallengesCount = computed(() => challenges.value.filter(item => item.status === 'open').length)
+const tabs = computed(() => [
   { value: 'content' as const, label: '正文' },
   ...relationTabs,
-]
+  {
+    value: 'challenges' as const,
+    label: openChallengesCount.value > 0 ? `质询 (${openChallengesCount.value})` : '质询',
+  },
+])
 
 const kindLabels: Record<DebateResourceKind, string> = {
   post: '文章',
@@ -238,6 +331,23 @@ const activeDetailSheet = computed<DebateDetailSheet | null>(() => {
 })
 const reconfirmingRelationId = ref('')
 const reconfirmError = ref('')
+const entryMutating = ref(false)
+const entryError = ref('')
+const votingChallengeId = ref('')
+const challengeSubmitting = ref(false)
+const challengeModalError = ref('')
+const challengeStatusFilter = ref<'' | 'open' | 'resolved'>('open')
+const challengeModal = ref<{
+  show: boolean
+  targetType: DebateChallengeTargetType
+  targetId: string
+  targetLabel: string
+}>({
+  show: false,
+  targetType: 'relation',
+  targetId: '',
+  targetLabel: '',
+})
 const routeDebateSettled = ref(false)
 const voteOwnerID = ref('')
 const voteLoadState = ref<'loading' | 'ready' | 'error'>('loading')
@@ -248,11 +358,52 @@ const relationBaseRequestSequence: Record<RelationView, number> = { tree: 0, gra
 const relationViewEpoch: Record<RelationView, number> = { tree: 0, graph: 0 }
 
 const routeDebateID = computed(() => String(route.params.id || ''))
+const isAdmin = computed(() => authStore.user?.role === 'admin')
 const debate = computed(() => {
   if (!routeDebateSettled.value || debateStore.currentDebate?.id !== routeDebateID.value) return null
   return debateStore.currentDebate
 })
 const debateCitationReferences = computed(() => normalizeDebateReferences(debate.value?.references ?? []))
+
+interface CitationActionItem {
+  key: string
+  label: string
+  targetType: DebateChallengeTargetType
+  targetId: string
+  targetLabel: string
+  rejected: boolean
+  openChallenge?: DebateReferenceChallenge
+  canChallenge: boolean
+}
+
+function isReferenceRejected(reference: ContentReference) {
+  return reference.relation?.state === 'rejected' || reference.challenge?.status === 'upheld'
+}
+
+const citationActionItems = computed<CitationActionItem[]>(() => debateCitationReferences.value.map((reference, index) => {
+  const rejected = isReferenceRejected(reference)
+  const openChallenge = reference.challenge?.status === 'open' ? reference.challenge : undefined
+  const targetType: DebateChallengeTargetType = reference.relation ? 'relation' : 'reference'
+  const targetId = reference.relation ? reference.relation.id : reference.id
+  const canChallenge = Boolean(
+    targetId
+    && !rejected
+    && !openChallenge
+    && debate.value?.status !== 'archived'
+    && !(reference.relation && reference.relation.state === 'unavailable')
+    && !targetId.startsWith('legacy-reference-'),
+  )
+  return {
+    key: targetId || `${reference.target.type}:${reference.target.id}:${index}`,
+    label: reference.target.label || reference.raw,
+    targetType,
+    targetId,
+    targetLabel: reference.target.label || reference.raw,
+    rejected,
+    openChallenge,
+    canChallenge,
+  }
+}))
 const ownedVoteSummary = computed(() => (
   voteLoadState.value === 'ready' && voteOwnerID.value === routeDebateID.value
     ? debateStore.voteSummary
@@ -314,12 +465,18 @@ watch(() => String(route.params.id || ''), (id) => {
   resetRelationViews()
   reconfirmingRelationId.value = ''
   reconfirmError.value = ''
+  entryError.value = ''
+  challengeModalError.value = ''
+  challengeModal.value.show = false
+  challengeStatusFilter.value = 'open'
   activeTab.value = 'content'
   lastLoadedRelationView.value = null
   showWikiEditor.value = false
   conclusions.value = []
   void loadRouteDebate(id)
   void loadRouteVotes(id)
+  void loadRouteEntries(id)
+  void loadRouteChallenges(id)
   void debateStore.fetchConclusions?.(id)?.then((result) => {
     if (routeDebateID.value === id && result) conclusions.value = result
   })
@@ -343,27 +500,36 @@ async function loadRouteVotes(id: string) {
   voteLoadState.value = 'error'
 }
 
+async function loadRouteEntries(id: string) {
+  await debateStore.fetchEntries?.(id)
+}
+
+async function loadRouteChallenges(id: string) {
+  await debateStore.fetchChallenges?.(id, '')
+}
+
 async function selectTab(tab: DebateTab) {
   const previousTab = activeTab.value
-  if (previousTab !== 'content' && previousTab !== tab) invalidateRelationView(previousTab)
+  if ((previousTab === 'tree' || previousTab === 'graph') && previousTab !== tab) invalidateRelationView(previousTab)
   activeTab.value = tab
-  if (tab === 'content') return
+  if (tab === 'content' || tab === 'challenges') return
   lastLoadedRelationView.value = tab
   await loadRelationView(tab)
 }
 
 async function handleTabKeydown(event: KeyboardEvent, currentTab: DebateTab) {
-  const currentIndex = tabs.findIndex(tab => tab.value === currentTab)
+  const tabList = tabs.value
+  const currentIndex = tabList.findIndex(tab => tab.value === currentTab)
   let targetIndex: number | null = null
-  if (event.key === 'ArrowRight') targetIndex = (currentIndex + 1) % tabs.length
-  if (event.key === 'ArrowLeft') targetIndex = (currentIndex - 1 + tabs.length) % tabs.length
+  if (event.key === 'ArrowRight') targetIndex = (currentIndex + 1) % tabList.length
+  if (event.key === 'ArrowLeft') targetIndex = (currentIndex - 1 + tabList.length) % tabList.length
   if (event.key === 'Home') targetIndex = 0
-  if (event.key === 'End') targetIndex = tabs.length - 1
+  if (event.key === 'End') targetIndex = tabList.length - 1
   if (targetIndex === null) return
 
   event.preventDefault()
   const tablist = (event.currentTarget as HTMLElement).closest('[role="tablist"]')
-  void selectTab(tabs[targetIndex]!.value)
+  void selectTab(tabList[targetIndex]!.value)
   await nextTick()
   tablist?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[targetIndex]?.focus()
 }
@@ -459,7 +625,9 @@ function removeExpandingNode(view: RelationView, nodeID: string) {
 }
 
 function restoreCurrentRootGraph() {
-  const view = activeTab.value === 'content' ? lastLoadedRelationView.value : activeTab.value
+  const view = activeTab.value === 'tree' || activeTab.value === 'graph'
+    ? activeTab.value
+    : lastLoadedRelationView.value
   if (!view) return
   const current = relationGraphs.value[view]
   if (current?.root_id === routeDebateID.value) debateStore.relationGraph = current
@@ -504,6 +672,13 @@ async function handleExpand(view: RelationView, nodeID: string) {
   }
 }
 
+async function refreshConclusions(debateID: string) {
+  const result = await debateStore.fetchConclusions?.(debateID)
+  if (routeDebateID.value === debateID && result) {
+    conclusions.value = result
+  }
+}
+
 async function handleVote(direction: DebateVoteDirection) {
   const debateID = debate.value?.id
   if (!debateID) return
@@ -517,7 +692,10 @@ async function handleVote(direction: DebateVoteDirection) {
   }
   voteOwnerID.value = debateID
   voteLoadState.value = 'ready'
-  await debateStore.fetchDebate(debateID)
+  await Promise.all([
+    debateStore.fetchDebate(debateID),
+    refreshConclusions(debateID),
+  ])
 }
 
 async function handleRemoveVote() {
@@ -533,7 +711,198 @@ async function handleRemoveVote() {
   }
   voteOwnerID.value = debateID
   voteLoadState.value = 'ready'
+  await Promise.all([
+    debateStore.fetchDebate(debateID),
+    refreshConclusions(debateID),
+  ])
+}
+
+async function handleEvidenceVote(rating: DebateEvidenceRating) {
+  const debateID = debate.value?.id
+  if (!debateID) return
+  voteLoadState.value = 'loading'
+  const summary = await debateStore.setEvidenceVote?.(debateID, rating)
+  if (routeDebateID.value !== debateID) return
+  if (!summary) {
+    voteOwnerID.value = ''
+    voteLoadState.value = 'error'
+    return
+  }
+  voteOwnerID.value = debateID
+  voteLoadState.value = 'ready'
   await debateStore.fetchDebate(debateID)
+}
+
+async function handleRemoveEvidenceVote() {
+  const debateID = debate.value?.id
+  if (!debateID) return
+  voteLoadState.value = 'loading'
+  const summary = await debateStore.removeEvidenceVote?.(debateID)
+  if (routeDebateID.value !== debateID) return
+  if (!summary) {
+    voteOwnerID.value = ''
+    voteLoadState.value = 'error'
+    return
+  }
+  voteOwnerID.value = debateID
+  voteLoadState.value = 'ready'
+  await debateStore.fetchDebate(debateID)
+}
+
+async function handleCreateEntry(input: CreateDebateEntryInput) {
+  const debateID = debate.value?.id
+  if (!debateID) return
+  entryMutating.value = true
+  entryError.value = ''
+  try {
+    const created = await debateStore.createEntry?.(debateID, input)
+    if (!created) {
+      entryError.value = debateStore.error || '提交论据失败，请重试'
+      return
+    }
+    await Promise.all([
+      debateStore.fetchDebate(debateID),
+      debateStore.fetchVotes(debateID),
+      debateStore.fetchEntries?.(debateID),
+    ])
+  } finally {
+    entryMutating.value = false
+  }
+}
+
+async function handleUpdateEntry(entryId: string, input: UpdateDebateEntryInput) {
+  const debateID = debate.value?.id
+  if (!debateID) return
+  entryMutating.value = true
+  entryError.value = ''
+  try {
+    const updated = await debateStore.updateEntry?.(debateID, entryId, input)
+    if (!updated) {
+      entryError.value = debateStore.error || '更新论据失败，请重试'
+      return
+    }
+    await Promise.all([
+      debateStore.fetchDebate(debateID),
+      debateStore.fetchEntries?.(debateID),
+    ])
+  } finally {
+    entryMutating.value = false
+  }
+}
+
+async function handleDeleteEntry(entryId: string) {
+  const debateID = debate.value?.id
+  if (!debateID) return
+  entryMutating.value = true
+  entryError.value = ''
+  try {
+    const ok = await debateStore.deleteEntry?.(debateID, entryId)
+    if (!ok) {
+      entryError.value = debateStore.error || '删除论据失败，请重试'
+      return
+    }
+    await Promise.all([
+      debateStore.fetchDebate(debateID),
+      debateStore.fetchVotes(debateID),
+      debateStore.fetchEntries?.(debateID),
+      debateStore.fetchChallenges?.(debateID, ''),
+    ])
+  } finally {
+    entryMutating.value = false
+  }
+}
+
+async function openChallengeModal(target: {
+  targetType: DebateChallengeTargetType
+  targetId: string
+  targetLabel: string
+}) {
+  if (!authStore.isAuthenticated && !(await authStore.restoreSession())) {
+    await router.push('/login')
+    return
+  }
+  challengeModalError.value = ''
+  challengeModal.value = {
+    show: true,
+    targetType: target.targetType,
+    targetId: target.targetId,
+    targetLabel: target.targetLabel,
+  }
+}
+
+async function handleCreateChallenge(payload: {
+  target_type: DebateChallengeTargetType
+  target_id: string
+  reason_code: DebateChallengeReasonCode
+  rationale: string
+}) {
+  const debateID = debate.value?.id
+  if (!debateID) return
+  challengeSubmitting.value = true
+  challengeModalError.value = ''
+  try {
+    const created = await debateStore.createChallenge?.(debateID, payload as CreateDebateChallengeInput)
+    if (!created) {
+      challengeModalError.value = debateStore.error || '提交质询失败，请重试'
+      return
+    }
+    challengeModal.value.show = false
+    await Promise.all([
+      debateStore.fetchDebate(debateID),
+      debateStore.fetchEntries?.(debateID),
+      debateStore.fetchChallenges?.(debateID, ''),
+    ])
+  } finally {
+    challengeSubmitting.value = false
+  }
+}
+
+async function refreshAfterChallengeVote(debateID: string, status?: string) {
+  const tasks: Promise<unknown>[] = [debateStore.fetchChallenges?.(debateID, '')]
+  if (status === 'upheld' || status === 'dismissed') {
+    tasks.push(
+      debateStore.fetchDebate(debateID),
+      debateStore.fetchEntries?.(debateID),
+      debateStore.fetchVotes(debateID),
+      refreshLoadedRelationView(),
+    )
+  }
+  await Promise.all(tasks)
+}
+
+async function handleVoteChallenge(challengeId: string, decision: DebateChallengeVoteDecision) {
+  const debateID = debate.value?.id
+  if (!debateID) return
+  votingChallengeId.value = challengeId
+  try {
+    const updated = await debateStore.voteChallenge?.(debateID, challengeId, decision)
+    if (updated) {
+      await refreshAfterChallengeVote(debateID, updated.status)
+    }
+  } finally {
+    votingChallengeId.value = ''
+  }
+}
+
+async function handleRemoveChallengeVote(challengeId: string) {
+  const debateID = debate.value?.id
+  if (!debateID) return
+  votingChallengeId.value = challengeId
+  try {
+    const updated = await debateStore.removeChallengeVote?.(debateID, challengeId)
+    if (updated) {
+      await refreshAfterChallengeVote(debateID, updated.status)
+    }
+  } finally {
+    votingChallengeId.value = ''
+  }
+}
+
+async function handleChallengeFilterChange(status: '' | 'open' | 'resolved') {
+  challengeStatusFilter.value = status
+  const debateID = debate.value?.id
+  if (!debateID) return
+  await debateStore.fetchChallenges?.(debateID, '')
 }
 
 async function handleWikiMutation(updated: Debate) {
@@ -542,6 +911,7 @@ async function handleWikiMutation(updated: Debate) {
   await Promise.all([
     debateStore.fetchDebate(debateID),
     debateStore.fetchRevisions(debateID),
+    debateStore.fetchChallenges?.(debateID, ''),
     refreshLoadedRelationView(),
   ])
 }
@@ -597,7 +967,9 @@ function appendText(root: HTMLElement, className: string, text: string) {
 
 function renderReferenceChip(reference: ContentReference) {
   const relation = reference.relation
-  const state = relation?.state ?? (reference.target.available ? 'active' : 'unavailable')
+  const state = isReferenceRejected(reference)
+    ? 'rejected'
+    : (relation?.state ?? (reference.target.available ? 'active' : 'unavailable'))
   const root = document.createElement('span')
   root.className = `debate-reference debate-reference--${state}`
   root.dataset.generatedDebateReference = 'true'
@@ -609,10 +981,16 @@ function renderReferenceChip(reference: ContentReference) {
   if (relation?.stance === 'support') appendText(root, 'debate-reference__qualifier', '支撑')
   if (relation?.stance === 'oppose') appendText(root, 'debate-reference__qualifier', '反驳')
 
-  const stateText = state === 'stale'
-    ? '来源结论已变化'
-    : state === 'unavailable' ? '不可用' : '有效'
+  const stateText = state === 'rejected'
+    ? '已驳回'
+    : state === 'stale'
+      ? '来源结论已变化'
+      : state === 'unavailable' ? '不可用' : '有效'
   appendText(root, 'debate-reference__state', stateText)
+
+  if (state !== 'rejected' && reference.challenge?.status === 'open') {
+    appendText(root, 'debate-reference__challenge', '质询中')
+  }
 
   if (state === 'stale' && relation) {
     const button = document.createElement('button')
@@ -789,6 +1167,81 @@ function formatDate(value: string) {
 .debate-content :deep(.debate-reference__action:hover:not(:disabled)) { color: var(--a-color-primary); }
 .debate-content :deep(.debate-reference__action:focus-visible) { outline: 2px solid var(--a-color-primary); outline-offset: 1px; }
 .debate-content :deep(.debate-reference__action:disabled) { cursor: wait; opacity: 0.6; }
+.debate-content :deep(.debate-reference--rejected) {
+  border-color: var(--a-color-danger);
+}
+.debate-content :deep(.debate-reference--rejected .debate-reference__title) { text-decoration: line-through; }
+.debate-content :deep(.debate-reference--rejected .debate-reference__state) { color: var(--a-color-danger); }
+.debate-content :deep(.debate-reference__challenge) {
+  padding: 1px 5px;
+  border: 1px solid var(--a-color-warning);
+  border-radius: var(--a-radius-control);
+  color: var(--a-color-warning);
+  font-size: 0.72em;
+  white-space: nowrap;
+}
+
+.debate-citations-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-surface-muted);
+}
+
+.debate-citation-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.debate-citation-action__label {
+  color: var(--a-color-text-secondary);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.debate-citation-action__badge {
+  padding: 2px 7px;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  font-size: 11px;
+}
+
+.debate-citation-action__badge.is-open {
+  border-color: var(--a-color-warning);
+  color: var(--a-color-warning);
+}
+
+.debate-citation-action__badge.is-rejected {
+  border-color: var(--a-color-danger);
+  color: var(--a-color-danger);
+}
+
+.debate-citation-action__btn {
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  padding: 3px 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+
+.debate-citation-action__btn:hover {
+  border-color: var(--a-color-primary);
+  color: var(--a-color-primary);
+}
+
+.debate-challenges {
+  min-width: 0;
+}
 
 @media (max-width: 1023px) {
   .debate-layout {

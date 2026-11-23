@@ -567,4 +567,60 @@ describe('debate store', () => {
     expect(created).toBeNull()
     expect(store.error).toBe('请从候选中选择有效引用')
   })
+
+  it('supports structured entries CRUD and evidence sufficiency votes', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({ data: [{ id: 'entry-1', entry_type: 'claim' }] }))
+      .mockResolvedValueOnce(response({ data: { id: 'entry-2', parent_id: 'entry-1', entry_type: 'evidence' } }))
+      .mockResolvedValueOnce(response({ data: { id: 'entry-2', parent_id: 'entry-1', entry_type: 'evidence', content: 'updated' } }))
+      .mockResolvedValueOnce(response({ data: { message: 'Entry deleted' } }))
+      .mockResolvedValueOnce(response({ data: { yes_votes: 1, no_votes: 0, total_votes: 1, current_direction: '', current_user_vote: '', evidence_sufficient: 1, evidence_total: 1, current_user_evidence_vote: 'sufficient' } }))
+      .mockResolvedValueOnce(response({ data: { yes_votes: 1, no_votes: 0, total_votes: 1, current_direction: '', current_user_vote: '', evidence_sufficient: 0, evidence_total: 0, current_user_evidence_vote: '' } }))
+
+    const store = useDebateStore()
+    await store.fetchEntries('topic-1')
+    expect(store.entries.map(item => item.id)).toEqual(['entry-1'])
+
+    await store.createEntry('topic-1', { entry_type: 'evidence', parent_id: 'entry-1', content: '@post:abc' })
+    expect(store.entries.map(item => item.id)).toEqual(['entry-1', 'entry-2'])
+
+    await store.updateEntry('topic-1', 'entry-2', { content: 'updated' })
+    expect(store.entries.find(item => item.id === 'entry-2')?.content).toBe('updated')
+
+    await store.deleteEntry('topic-1', 'entry-1')
+    expect(store.entries).toEqual([])
+
+    const evVoted = await store.setEvidenceVote('topic-1', 'sufficient')
+    expect(evVoted?.current_user_evidence_vote).toBe('sufficient')
+    expect(store.voteSummary?.evidence_sufficient).toBe(1)
+
+    const evRemoved = await store.removeEvidenceVote('topic-1')
+    expect(evRemoved?.current_user_evidence_vote).toBe('')
+  })
+
+  it('supports community challenge listing, creation, voting and reset', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({ data: [{ id: 'ch-1', status: 'open', uphold_votes: 0 }] }))
+      .mockResolvedValueOnce(response({ data: { id: 'ch-2', status: 'open', uphold_votes: 0 } }))
+      .mockResolvedValueOnce(response({ data: { id: 'ch-2', status: 'open', uphold_votes: 1, current_user_vote: 'uphold' } }))
+      .mockResolvedValueOnce(response({ data: { id: 'ch-2', status: 'open', uphold_votes: 0, current_user_vote: '' } }))
+
+    const store = useDebateStore()
+    await store.fetchChallenges('topic-1', 'open')
+    expect(fetch).toHaveBeenNthCalledWith(1, '/api/v1/debate/topics/topic-1/challenges?status=open', { credentials: 'include', headers: {} })
+    expect(store.challenges.map(c => c.id)).toEqual(['ch-1'])
+
+    await store.createChallenge('topic-1', { target_type: 'entry', target_id: 'e-1', reason_code: 'mismatch', rationale: 'why' })
+    expect(store.challenges.map(c => c.id)).toEqual(['ch-2', 'ch-1'])
+
+    await store.voteChallenge('topic-1', 'ch-2', 'uphold')
+    expect(store.challenges[0]?.uphold_votes).toBe(1)
+
+    await store.removeChallengeVote('topic-1', 'ch-2')
+    expect(store.challenges[0]?.uphold_votes).toBe(0)
+
+    store.resetStore()
+    expect(store.entries).toEqual([])
+    expect(store.challenges).toEqual([])
+  })
 })

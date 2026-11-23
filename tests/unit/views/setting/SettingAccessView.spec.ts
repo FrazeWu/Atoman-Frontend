@@ -142,4 +142,26 @@ describe('SettingAccessView section sync', () => {
     expect(save.mock.calls[0]?.[0]?.modules?.podcast?.enabled).toBe(false)
     expect(save.mock.calls[0]?.[1]).toBe('admin-token')
   })
+
+  it('opens debate detail management panel and saves clamped debate thresholds', async () => {
+    const save = vi.fn(async () => undefined)
+    siteAccessState.save = save
+    const wrapper = mount(SettingAccessView, { global: { stubs } })
+
+    await wrapper.get('[data-test="module-manage-debate"]').trigger('click')
+    await wrapper.get('[data-test="debate-setting-conclusion-min-votes"]').setValue('8')
+    await wrapper.get('[data-test="debate-setting-conclusion-threshold-percent"]').setValue('80')
+    await wrapper.get('[data-test="debate-setting-challenge-min-votes"]').setValue('2')
+
+    const saveButton = wrapper.findAll('.setting-access__actions button').find((b) => b.text().includes('保存设置'))
+    expect(saveButton).toBeDefined()
+    await saveButton!.trigger('click')
+
+    expect(save).toHaveBeenCalledTimes(1)
+    expect(save.mock.calls[0]?.[0]?.settings?.debate).toEqual({
+      conclusion_min_votes: 8,
+      conclusion_threshold_percent: 80,
+      challenge_min_votes: 3,
+    })
+  })
 })

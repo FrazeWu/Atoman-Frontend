@@ -196,11 +196,11 @@ describe('DebateTopicView relation experience', () => {
     store = buildStore()
   })
 
-  it('使用正文、辩论树和关系图三个主标签，且只保留三个页面动作', async () => {
+  it('使用正文、辩论树、关系图和质询四个主标签，且只保留三个页面动作', async () => {
     const wrapper = mountView()
     await flushPromises()
 
-    expect(wrapper.findAll('[role="tab"]').map(item => item.text())).toEqual(['正文', '辩论树', '关系图'])
+    expect(wrapper.findAll('[role="tab"]').map(item => item.text())).toEqual(['正文', '辩论树', '关系图', '质询'])
     expect(wrapper.get('[role="tab"][aria-selected="true"]').text()).toBe('正文')
     expect(wrapper.find('[data-test="direct-relation-action"]').exists()).toBe(false)
     expect(wrapper.findAll('[data-test^="topic-action-"]').map(item => item.text().trim())).toEqual([
@@ -708,7 +708,8 @@ describe('DebateTopicView relation experience', () => {
     expect(wrapper.find('#debate-panel-content').exists()).toBe(true)
     expect(wrapper.find('#debate-panel-tree').exists()).toBe(true)
     expect(wrapper.find('#debate-panel-graph').exists()).toBe(true)
-    expect(wrapper.findAll('[role="tab"]').map(tab => tab.attributes('tabindex'))).toEqual(['0', '-1', '-1'])
+    expect(wrapper.find('#debate-panel-challenges').exists()).toBe(true)
+    expect(wrapper.findAll('[role="tab"]').map(tab => tab.attributes('tabindex'))).toEqual(['0', '-1', '-1', '-1'])
 
     await wrapper.findAll('[role="tab"]')[0]!.trigger('keydown', { key: 'ArrowRight' })
     await flushPromises()
@@ -720,16 +721,16 @@ describe('DebateTopicView relation experience', () => {
     await tabButtons[1]!.trigger('keydown', { key: 'End' })
     await flushPromises()
     tabButtons = wrapper.findAll('[role="tab"]')
-    expect(tabButtons[2]!.attributes('aria-selected')).toBe('true')
+    expect(tabButtons[3]!.attributes('aria-selected')).toBe('true')
 
-    await tabButtons[2]!.trigger('keydown', { key: 'Home' })
+    await tabButtons[3]!.trigger('keydown', { key: 'Home' })
     await flushPromises()
     tabButtons = wrapper.findAll('[role="tab"]')
     expect(tabButtons[0]!.attributes('aria-selected')).toBe('true')
 
     await tabButtons[0]!.trigger('keydown', { key: 'ArrowLeft' })
     await flushPromises()
-    expect(wrapper.findAll('[role="tab"]')[2]!.attributes('aria-selected')).toBe('true')
+    expect(wrapper.findAll('[role="tab"]')[3]!.attributes('aria-selected')).toBe('true')
     focusSpy.mockRestore()
     wrapper.unmount()
   })

@@ -3,7 +3,7 @@ import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, typ
 
 import { parseResourceReferences, type ResourceReference } from '@/utils/resourceReferences'
 
-export type ResourceReferenceState = 'active' | 'stale' | 'unavailable'
+export type ResourceReferenceState = 'active' | 'stale' | 'unavailable' | 'rejected'
 
 export interface ResourceReferenceLabel {
   title: string
@@ -45,6 +45,7 @@ const stateLabels: Record<ResourceReferenceState, string> = {
   active: '有效',
   stale: '待确认',
   unavailable: '不可用',
+  rejected: '已驳回',
 }
 
 class ResourceReferenceWidget extends WidgetType {
@@ -162,6 +163,15 @@ const referenceTheme = EditorView.baseTheme({
   '.resource-reference--unavailable .resource-reference__state': {
     color: 'var(--a-color-danger)',
     textDecoration: 'none',
+  },
+  '.resource-reference--rejected': {
+    borderColor: 'var(--a-color-danger)',
+  },
+  '.resource-reference--rejected .resource-reference__title': {
+    textDecoration: 'line-through',
+  },
+  '.resource-reference--rejected .resource-reference__state': {
+    color: 'var(--a-color-danger)',
   },
 })
 

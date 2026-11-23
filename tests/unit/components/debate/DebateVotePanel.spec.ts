@@ -84,4 +84,41 @@ describe('DebateVotePanel', () => {
     expect(wrapper.text()).not.toContain('暂无')
     expect(wrapper.text()).not.toContain('0')
   })
+
+  it('渲染共识阈值、证据薄弱软提醒及独立证据充分性投票', async () => {
+    const authStore = useAuthStore()
+    authStore.isAuthenticated = true
+
+    const summary: DebateVoteSummary = {
+      yes_votes: 8,
+      no_votes: 2,
+      total_votes: 10,
+      current_direction: 'yes',
+      current_user_vote: 'yes',
+      conclusion_min_votes: 8,
+      conclusion_threshold_percent: 80,
+      evidence_sufficient: 1,
+      evidence_partial: 2,
+      evidence_insufficient: 4,
+      evidence_total: 7,
+      current_user_evidence_vote: 'partial',
+      active_evidence_count: 1,
+      evidence_weak: true,
+    }
+
+    const wrapper = mount(DebateVotePanel, {
+      props: { summary },
+    })
+
+    expect(wrapper.text()).toContain('至少 8 人参与且任一方超过 80%')
+    expect(wrapper.find('[data-test="evidence-weak-warning"]').exists()).toBe(true)
+
+    await wrapper.get('[data-test="evidence-vote-partial"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.emitted('evidence-remove')?.[0]).toEqual([])
+
+    await wrapper.get('[data-test="evidence-vote-sufficient"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.emitted('evidence-vote')?.[0]).toEqual(['sufficient'])
+  })
 })

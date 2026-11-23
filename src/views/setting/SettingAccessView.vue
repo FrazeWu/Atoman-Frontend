@@ -199,6 +199,59 @@
               <SettingForumModeratorPanel v-if="draft.modules.forum.enabled" />
               <p v-else class="setting-access__detail-disabled" role="status">论坛模块已关闭，请先开启论坛模块。</p>
             </template>
+
+            <template v-else-if="selectedModule === 'debate'">
+              <div class="setting-access__detail-settings setting-access__detail-settings--stack">
+                <label>
+                  <span>
+                    <strong>结论形成最低投票人数</strong>
+                    <small>有效参与立场投票达到该人数后才会判定是否形成共识结论（范围 3-100）。</small>
+                  </span>
+                  <input
+                    v-model.number="draft.settings.debate.conclusion_min_votes"
+                    data-test="debate-setting-conclusion-min-votes"
+                    class="setting-access__number-input"
+                    type="number"
+                    min="3"
+                    max="100"
+                    step="1"
+                    @change="clampDebateSettings"
+                  />
+                </label>
+                <label>
+                  <span>
+                    <strong>结论赞同/反对比例阈值（%）</strong>
+                    <small>某一方得票比例需严格大于该阈值才形成结论或通过质询（范围 51-95）。</small>
+                  </span>
+                  <input
+                    v-model.number="draft.settings.debate.conclusion_threshold_percent"
+                    data-test="debate-setting-conclusion-threshold-percent"
+                    class="setting-access__number-input"
+                    type="number"
+                    min="51"
+                    max="95"
+                    step="1"
+                    @change="clampDebateSettings"
+                  />
+                </label>
+                <label>
+                  <span>
+                    <strong>引用质询最低投票人数</strong>
+                    <small>社区对引用或证据质询投票达到该人数并超过阈值时自动结案（范围 3-100）。</small>
+                  </span>
+                  <input
+                    v-model.number="draft.settings.debate.challenge_min_votes"
+                    data-test="debate-setting-challenge-min-votes"
+                    class="setting-access__number-input"
+                    type="number"
+                    min="3"
+                    max="100"
+                    step="1"
+                    @change="clampDebateSettings"
+                  />
+                </label>
+              </div>
+            </template>
           </div>
         </main>
       </div>
@@ -299,6 +352,20 @@ function isDetailModule(value: string): value is ModuleRoomKey {
   return detailModuleOrder.includes(value as ModuleRoomKey)
 }
 
+function clampInteger(value: unknown, min: number, max: number, fallback: number): number {
+  const num = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(num)) return fallback
+  return Math.min(max, Math.max(min, Math.round(num)))
+}
+
+function clampDebateSettings() {
+  draft.value.settings.debate = {
+    conclusion_min_votes: clampInteger(draft.value.settings.debate.conclusion_min_votes, 3, 100, 5),
+    conclusion_threshold_percent: clampInteger(draft.value.settings.debate.conclusion_threshold_percent, 51, 95, 75),
+    challenge_min_votes: clampInteger(draft.value.settings.debate.challenge_min_votes, 3, 100, 5),
+  }
+}
+
 function openDetail(key: ModuleRoomKey, updateRoute = true) {
   if (!hasDetail(key)) return
   selectedModule.value = key
@@ -340,6 +407,7 @@ function scrollToRouteSection() {
 }
 
 async function save() {
+  clampDebateSettings()
   saving.value = true
   saved.value = false
   error.value = ''
@@ -637,6 +705,20 @@ onMounted(async () => {
   width: 1rem;
   height: 1rem;
   accent-color: var(--a-color-primary);
+}
+
+.setting-access__number-input {
+  width: 6.5rem;
+  min-height: 2.375rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control);
+  background: var(--a-color-bg);
+  color: var(--a-color-text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .setting-access__detail-settings--stack {

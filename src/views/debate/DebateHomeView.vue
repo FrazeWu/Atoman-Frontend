@@ -64,6 +64,12 @@
                 结论 · {{ conclusionLabels[debate.conclusion_type] }}
               </span>
               <span
+                v-if="(debate.conclusion_type === 'yes' || debate.conclusion_type === 'no') && debate.stats?.evidence_weak"
+                class="debate-weak-badge"
+              >
+                证据薄弱
+              </span>
+              <span
                 class="debate-status-badge"
                 :class="{ 'is-archived': debate.status === 'archived' }"
               >
@@ -89,6 +95,14 @@
           <!-- 底部统计 -->
           <footer class="debate-card__footer">
             <div class="debate-card__stats">
+              <template v-if="debate.stats">
+                <span>论点 {{ debate.stats.claim_count }}</span>
+                <span class="debate-dot" aria-hidden="true">·</span>
+                <span>证据 {{ debate.stats.active_evidence_count }}</span>
+                <span class="debate-dot" aria-hidden="true">·</span>
+                <span>投票 {{ debate.stats.vote_count }}</span>
+                <span class="debate-dot" aria-hidden="true">·</span>
+              </template>
               <span>浏览 {{ debate.view_count || 0 }}</span>
             </div>
           </footer>
@@ -530,6 +544,15 @@ watch([routeStatus, routeTag], ([status, tag]) => {
   border: none;
   background: var(--a-color-surface-muted);
   color: var(--a-color-text-secondary);
+}
+
+.debate-weak-badge {
+  padding: 0.15em 0.5em;
+  border: 1px solid var(--a-color-warning);
+  border-radius: var(--a-radius-control);
+  color: var(--a-color-warning);
+  font-size: 0.68rem;
+  font-weight: 500;
 }
 
 .debate-create-form-wrap {

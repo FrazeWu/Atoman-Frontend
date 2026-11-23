@@ -1,7 +1,20 @@
+import type { ResolvedReference } from "@/api/reference/references";
 import type { User } from "./user";
 
 export type DebateVoteDirection = "yes" | "no";
-export type DebateReferenceState = "active" | "stale" | "unavailable";
+export type DebateReferenceState = "active" | "stale" | "unavailable" | "rejected";
+export type DebateEntryType = "claim" | "evidence" | "rebuttal";
+export type DebateEntryStance = "support" | "oppose" | "neutral";
+export type DebateEntryStatus = "active" | "rejected";
+export type DebateEvidenceRating = "sufficient" | "partial" | "insufficient";
+export type DebateChallengeTargetType = "relation" | "reference" | "entry";
+export type DebateChallengeReasonCode =
+	| "mismatch"
+	| "outdated"
+	| "low_reliability"
+	| "irrelevant";
+export type DebateChallengeStatus = "open" | "upheld" | "dismissed";
+export type DebateChallengeVoteDecision = "uphold" | "dismiss";
 export type DebateResourceKind =
 	| "post"
 	| "short_note"
@@ -46,6 +59,14 @@ export interface DebateReferenceRelation {
 	conclusion_direction?: DebateVoteDirection;
 }
 
+export interface DebateReferenceChallenge {
+	id: string;
+	status: DebateChallengeStatus;
+	reason_code: DebateChallengeReasonCode;
+	uphold_votes: number;
+	dismiss_votes: number;
+}
+
 export interface ContentReference {
 	id: string;
 	field: string;
@@ -54,6 +75,18 @@ export interface ContentReference {
 	raw: string;
 	target: ContentReferenceTarget;
 	relation?: DebateReferenceRelation;
+	challenge?: DebateReferenceChallenge;
+}
+
+export interface DebateStats {
+	claim_count: number;
+	active_evidence_count: number;
+	rebuttal_count: number;
+	vote_count: number;
+	evidence_sufficient: number;
+	evidence_partial: number;
+	evidence_insufficient: number;
+	evidence_weak: boolean;
 }
 
 export interface LegacyDebateReference {
@@ -82,6 +115,7 @@ export interface Debate {
 	current_conclusion_event_id?: string;
 	references: DebateReference[];
 	conclusion_type?: DebateVoteDirection | "";
+	stats?: DebateStats;
 	created_at: string;
 	updated_at: string;
 }
@@ -126,6 +160,15 @@ export interface DebateVoteSummary {
 	total_votes: number;
 	current_direction: DebateVoteDirection | "";
 	current_user_vote: DebateVoteDirection | "";
+	conclusion_min_votes?: number;
+	conclusion_threshold_percent?: number;
+	evidence_sufficient?: number;
+	evidence_partial?: number;
+	evidence_insufficient?: number;
+	evidence_total?: number;
+	current_user_evidence_vote?: DebateEvidenceRating | "";
+	active_evidence_count?: number;
+	evidence_weak?: boolean;
 }
 
 export interface DebateConclusionEvent {
@@ -135,8 +178,75 @@ export interface DebateConclusionEvent {
 	yes_votes: number;
 	no_votes: number;
 	total_votes: number;
+	evidence_sufficient?: number;
+	evidence_partial?: number;
+	evidence_insufficient?: number;
+	active_evidence_count?: number;
+	evidence_weak?: boolean;
 	created_at: string;
 	updated_at: string;
+}
+
+export interface DebateEntry {
+	id: string;
+	debate_id: string;
+	parent_id?: string | null;
+	user_id: string;
+	user?: User;
+	entry_type: DebateEntryType;
+	stance: DebateEntryStance;
+	title: string;
+	content: string;
+	status: DebateEntryStatus;
+	rejected_challenge_id?: string | null;
+	references: ResolvedReference[];
+	open_challenge?: DebateReferenceChallenge;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateDebateEntryInput {
+	parent_id?: string;
+	entry_type: DebateEntryType;
+	stance?: DebateEntryStance;
+	title?: string;
+	content: string;
+}
+
+export interface UpdateDebateEntryInput {
+	stance?: DebateEntryStance;
+	title?: string;
+	content: string;
+}
+
+export interface DebateChallenge {
+	id: string;
+	debate_id: string;
+	target_type: DebateChallengeTargetType;
+	target_id: string;
+	target_label?: string;
+	target_preview?: string;
+	created_by: string;
+	creator?: User;
+	reason_code: DebateChallengeReasonCode;
+	rationale: string;
+	references: ResolvedReference[];
+	status: DebateChallengeStatus;
+	uphold_votes: number;
+	dismiss_votes: number;
+	current_user_vote?: DebateChallengeVoteDecision | "";
+	min_votes: number;
+	threshold_percent: number;
+	resolved_at?: string | null;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface CreateDebateChallengeInput {
+	target_type: DebateChallengeTargetType;
+	target_id: string;
+	reason_code: DebateChallengeReasonCode;
+	rationale: string;
 }
 
 export interface DebateRelation {

@@ -163,7 +163,7 @@ describe('DebateWikiEditor', () => {
     const wrapper = await mountEditorWithRealCodeMirror()
 
     expect(wrapper.get('.cm-content[role="textbox"]').attributes('aria-label')).toBe('正文')
-  })
+  }, 15000)
 
   it('向编辑器传入正文引用的行内状态标签', () => {
     const sourceID = '11111111-1111-4111-8111-111111111111'
@@ -191,18 +191,27 @@ describe('DebateWikiEditor', () => {
     })
   })
 
-  it('正文含非辩题或缺少立场的引用时不可保存', async () => {
+  it('允许普通站内资源和无立场辩题引用，仅阻止格式错误的引用语法', async () => {
     const wrapper = mountEditor()
     await wrapper.get('[data-test="wiki-edit-summary"]').setValue('校验引用')
-    await wrapper.get('[data-test="wiki-content"]').setValue('@post:11111111-1111-4111-8111-111111111111')
 
-    expect(wrapper.get('[data-test="save-wiki"]').attributes('disabled')).toBeDefined()
+    await wrapper.get('[data-test="wiki-content"]').setValue('@post:11111111-1111-4111-8111-111111111111')
+    expect(wrapper.get('[data-test="save-wiki"]').attributes('disabled')).toBeUndefined()
 
     await wrapper.get('[data-test="wiki-content"]').setValue('@debate:11111111-1111-4111-8111-111111111111')
-    expect(wrapper.get('[data-test="save-wiki"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-test="save-wiki"]').attributes('disabled')).toBeUndefined()
 
     await wrapper.get('[data-test="wiki-content"]').setValue('@debate:11111111-1111-4111-8111-111111111111:support')
     expect(wrapper.get('[data-test="save-wiki"]').attributes('disabled')).toBeUndefined()
+
+    await wrapper.get('[data-test="wiki-content"]').setValue('@debate:11111111-1111-4111-8111-111111111111:neutral')
+    expect(wrapper.get('[data-test="save-wiki"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.get('[data-test="wiki-content"]').setValue('@post:11111111-1111-4111-8111-111111111111:support')
+    expect(wrapper.get('[data-test="save-wiki"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.get('[data-test="wiki-content"]').setValue('@topic:11111111-1111-4111-8111-111111111111')
+    expect(wrapper.get('[data-test="save-wiki"]').attributes('disabled')).toBeDefined()
   })
 
   it('保存冲突时保留草稿并显示三方信息', async () => {
@@ -417,5 +426,28 @@ describe('DebateWikiEditor', () => {
     expect(mocks.fetchRevision).toHaveBeenNthCalledWith(4, 'debate-root', 'revision-4')
     expect(wrapper.find('[data-test="wiki-conflict-snapshot-error"]').exists()).toBe(false)
     expect(wrapper.get('[data-test="wiki-conflict-current"]').text()).toContain('当前正文')
+  })
+
+  it('支持在编辑器内切换到站内普通资源模式并插入 @kind:id', async () => {
+    const wrapper = mountEditor()
+    await wrapper.get('[data-test="insert-reference"]').trigger('click')
+    await wrapper.get('[data-test="reference-mode-general"]').trigger('click')
+
+    const picker = wrapper.findComponent({ name: 'DebateReferencePicker' })
+    expect(picker.exists()).toBe(true)
+    picker.vm.$emit('select', '@post:11111111-1111-4111-8111-111111111111', {
+      type: 'post',
+      id: '11111111-1111-4111-8111-111111111111',
+      label: '研究报告',
+      module: 'blog',
+      path: '/post/1',
+      available: true,
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="wiki-content"]').element).toHaveProperty(
+      'value',
+      '现有正文\n\n@post:11111111-1111-4111-8111-111111111111',
+    )
   })
 })

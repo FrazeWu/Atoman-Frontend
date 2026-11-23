@@ -24,6 +24,12 @@ export type ModuleAccess = {
   features: Partial<Record<ModuleFeatureKey, boolean>>
 }
 
+export interface SiteAccessDebateSettings {
+  conclusion_min_votes: number
+  conclusion_threshold_percent: number
+  challenge_min_votes: number
+}
+
 export type SiteAccessSettings = {
   feed: {
     allow_manage_sources: boolean
@@ -41,6 +47,7 @@ export type SiteAccessSettings = {
       lock_topic: boolean
     }
   }
+  debate: SiteAccessDebateSettings
 }
 
 export type SiteAccess = {
@@ -65,6 +72,7 @@ type SiteAccessSettingsInput = Partial<{
     allow_category_request: boolean
     moderator_permissions: Partial<SiteAccessSettings['forum']['moderator_permissions']>
   }>
+  debate: Partial<SiteAccessDebateSettings>
 }>
 
 export type SiteAccessInput = {
@@ -107,7 +115,7 @@ export const siteAccessFeatures: Partial<Record<ModuleRoomKey, { key: ModuleFeat
 }
 
 /** Modules with a dedicated management panel in addition to the shared permission rows. */
-export const siteAccessDetailModules: ModuleRoomKey[] = ['feed', 'music', 'forum']
+export const siteAccessDetailModules: ModuleRoomKey[] = ['feed', 'music', 'forum', 'debate']
 
 const extraAllowedModuleFeatures: Partial<Record<ModuleRoomKey, ModuleFeatureKey[]>> = {
   books: ['books.submit', 'books.review', 'books.publish_asset'],
@@ -127,6 +135,11 @@ const buildDefaultModules = (): Record<ModuleRoomKey, ModuleAccess> => {
   return modules
 }
 
+const normalizeIntRange = (value: unknown, min: number, max: number, fallback: number): number => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback
+  return Math.min(max, Math.max(min, Math.round(value)))
+}
+
 const buildDefaultSettings = (): SiteAccessSettings => ({
   feed: {
     allow_manage_sources: true,
@@ -143,6 +156,11 @@ const buildDefaultSettings = (): SiteAccessSettings => ({
       pin_topic: true,
       lock_topic: true,
     },
+  },
+  debate: {
+    conclusion_min_votes: 5,
+    conclusion_threshold_percent: 75,
+    challenge_min_votes: 5,
   },
 })
 
@@ -197,6 +215,13 @@ export function mergeSiteAccess(input: SiteAccessInput): SiteAccess {
         ...settings.forum.moderator_permissions,
         ...(input.settings.forum.moderator_permissions ?? {}),
       },
+    }
+  }
+  if (input?.settings?.debate) {
+    settings.debate = {
+      conclusion_min_votes: normalizeIntRange(input.settings.debate.conclusion_min_votes, 3, 100, settings.debate.conclusion_min_votes),
+      conclusion_threshold_percent: normalizeIntRange(input.settings.debate.conclusion_threshold_percent, 51, 95, settings.debate.conclusion_threshold_percent),
+      challenge_min_votes: normalizeIntRange(input.settings.debate.challenge_min_votes, 3, 100, settings.debate.challenge_min_votes),
     }
   }
 

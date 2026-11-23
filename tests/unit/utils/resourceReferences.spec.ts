@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseResourceReferences, resourceKinds } from '@/utils/resourceReferences'
+import { hasInvalidDebateReferenceSyntax, parseResourceReferences, resourceKinds } from '@/utils/resourceReferences'
 
 const DEBATE_ID = '01900000-0000-7000-8000-000000000001'
 const ALBUM_ID = '01900000-0000-7000-8000-000000000002'
@@ -41,11 +41,35 @@ describe('resourceReferences', () => {
     }])
   })
 
+  it('解析不带立场后缀的辩题背景引用及含下划线资源类型', () => {
+    const rawDebate = `@debate:${DEBATE_ID}`
+    const rawShortNote = `@short_note:${ALBUM_ID}`
+    const content = `背景来自 ${rawDebate}，参考短笺 ${rawShortNote}。`
+
+    expect(parseResourceReferences(content)).toEqual([
+      {
+        raw: rawDebate,
+        kind: 'debate',
+        id: DEBATE_ID,
+        qualifier: '',
+        from: content.indexOf(rawDebate),
+        to: content.indexOf(rawDebate) + rawDebate.length,
+      },
+      {
+        raw: rawShortNote,
+        kind: 'short_note',
+        id: ALBUM_ID,
+        qualifier: '',
+        from: content.indexOf(rawShortNote),
+        to: content.indexOf(rawShortNote) + rawShortNote.length,
+      },
+    ])
+  })
+
   it('忽略未知类型、无效 UUID、非法 qualifier 和尾随冒号', () => {
     const invalidReferences = [
       `@topic:${DEBATE_ID}`,
       '@album:not-a-uuid',
-      `@debate:${DEBATE_ID}`,
       `@debate:${DEBATE_ID}:neutral`,
       `@album:${ALBUM_ID}:support`,
       `@album:${ALBUM_ID}:`,
@@ -53,6 +77,15 @@ describe('resourceReferences', () => {
     ]
 
     expect(parseResourceReferences(invalidReferences.join(' '))).toEqual([])
+  })
+
+  it('hasInvalidDebateReferenceSyntax 接受有效资源与无立场辩题引用并拒绝格式错误', () => {
+    expect(hasInvalidDebateReferenceSyntax(`@debate:${DEBATE_ID} 与 @post:${ALBUM_ID}`)).toBe(false)
+    expect(hasInvalidDebateReferenceSyntax(`@debate:${DEBATE_ID}:support 与 @short_note:${ALBUM_ID}。`)).toBe(false)
+    expect(hasInvalidDebateReferenceSyntax('`@topic:bad-syntax`')).toBe(false)
+    expect(hasInvalidDebateReferenceSyntax(`@debate:${DEBATE_ID}:neutral`)).toBe(true)
+    expect(hasInvalidDebateReferenceSyntax(`@album:${ALBUM_ID}:support`)).toBe(true)
+    expect(hasInvalidDebateReferenceSyntax(`@topic:${DEBATE_ID}`)).toBe(true)
   })
 
   it('在 Unicode 正文和标点中保留重复引用的准确位置', () => {

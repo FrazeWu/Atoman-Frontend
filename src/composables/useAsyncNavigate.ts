@@ -1,12 +1,14 @@
 import { reportError } from '@/utils/logger'
 import { useTransitionStore } from '@/stores/transition'
 import { useSheetStore } from '@/stores/sheet'
+import { useBlogSheets } from '@/composables/blog/useBlogSheets'
 import { useTransitionRelay } from '@/composables/useTransitionRelay'
 import { useRouter } from 'vue-router'
 
 export function useAsyncNavigate() {
   const transition = useTransitionStore()
   const sheet = useSheetStore()
+  const blogSheets = useBlogSheets()
   const router = useRouter()
   let moduleNavigationRequest = 0
   let navigationRequest = 0
@@ -39,6 +41,7 @@ export function useAsyncNavigate() {
 
       // 4. 请求成功且接力数据写入成功，开始收场动画
       sheet.clearStack(false)
+      blogSheets.closeAll?.()
 
       // The app resolves this promise from transitionend, with a safety fallback.
       await transition.triggerExit()
@@ -66,6 +69,7 @@ export function useAsyncNavigate() {
     const request = ++moduleNavigationRequest
     const navigation = ++navigationRequest
     sheet.clearStack(false)
+    blogSheets.closeAll?.()
     transition.startModuleNavigation()
 
     try {

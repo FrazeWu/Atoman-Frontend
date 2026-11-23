@@ -59,24 +59,51 @@ export const useDraftStagingStore = defineStore('draftStaging', () => {
     pendingQuote.value = null
   }
 
+  function clearLocalEditorDrafts() {
+    try {
+      if (typeof localStorage === 'undefined') return
+      const keysToRemove: string[] = []
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i)
+        if (key?.startsWith('blog_editor_')) {
+          keysToRemove.push(key)
+        }
+      }
+      for (const key of keysToRemove) {
+        localStorage.removeItem(key)
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
+
   const pinia = getActivePinia()
-  if (pinia) onScopeDispose(registerSessionReset(pinia, clearPendingQuote))
+  if (pinia) {
+    onScopeDispose(registerSessionReset(pinia, () => {
+      clearPendingQuote()
+      clearLocalEditorDrafts()
+    }))
+  }
 
   return {
     pendingQuote,
     setPendingQuote,
     consumePendingQuote,
     clearPendingQuote,
+    clearLocalEditorDrafts,
   }
 })
 
-export function hasExistingBlogPostDraft(): boolean {
+export function hasExistingBlogPostDraft(currentUserId?: string): boolean {
   try {
     if (typeof localStorage === 'undefined') return false
     const raw = localStorage.getItem('blog_editor_blog:new')
     if (!raw) return false
     const parsed = JSON.parse(raw)
     const payload = parsed?.payload
+    if (payload?.owner_id && currentUserId && payload.owner_id !== currentUserId) {
+      return false
+    }
     return Boolean(payload && (payload.title?.trim() || payload.content?.trim()))
   } catch {
     return false

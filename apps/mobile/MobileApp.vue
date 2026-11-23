@@ -9,6 +9,7 @@
       :show-back="isSubRoute"
       :hide-actions="isSubRoute"
       :title="isSubRoute ? subRouteTitle : undefined"
+      :unread-count="inboxUnreadCount"
       @back="handleBack"
       @open-drawer="isDrawerOpen = true"
       @search="handleSearch"
@@ -50,11 +51,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useAuthStore } from '@/stores/auth'
-import { useInboxStore } from '@/stores/inbox'
 import { useMailUnreadStore } from '@/stores/mailUnread'
 import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
@@ -93,7 +93,6 @@ const route = useRoute()
 const router = useRouter()
 const siteAccessStore = useSiteAccessStore()
 const authStore = useAuthStore()
-const inboxStore = useInboxStore()
 const mailUnread = useMailUnreadStore()
 const playerPresence = usePlayerPresenceStore()
 const apiUrl = useApiUrl()
@@ -261,10 +260,7 @@ watch(() => route.fullPath, () => {
 const reportPageView = () => {
   if (isAuthRoute.value) return
   try {
-    void Promise.resolve(authStore.restoreSession?.())
-      .catch(() => false)
-      .then(() => apiRequest(`${apiUrl}/site/visits`, { method: 'POST', keepalive: true }))
-      .catch(() => {})
+    void apiRequest(`${apiUrl}/site/visits`, { method: 'POST', keepalive: true }).catch(() => {})
   } catch {
     // ignore
   }
@@ -298,20 +294,29 @@ onBeforeUnmount(() => {
   cancelStartupTasks?.()
 })
 // Stay updated when the user is browsing outside Webmail.
+const inboxStoreRef = shallowRef<{ totalUnread: number; bootstrap: () => Promise<void>; disconnect: () => void } | null>(null)
+const inboxUnreadCount = computed(() => inboxStoreRef.value?.totalUnread ?? 0)
+
 watch(
   () => authStore.isAuthenticated,
   (isAuthenticated) => {
     if (isAuthenticated) {
-      void inboxStore.bootstrap()
-    } else {
-      inboxStore.disconnect()
+      void import('@/stores/inbox').then(({ useInboxStore }) => {
+        const store = useInboxStore()
+        inboxStoreRef.value = store
+        if (authStore.isAuthenticated) {
+          void store.bootstrap()
+        }
+      }).catch(() => {})
+    } else if (inboxStoreRef.value) {
+      inboxStoreRef.value.disconnect()
     }
   },
   { immediate: true },
 )
 onMounted(() => mailUnread.start())
 onBeforeUnmount(() => {
-  inboxStore.disconnect()
+  inboxStoreRef.value?.disconnect()
   mailUnread.stop()
 })
 </script>

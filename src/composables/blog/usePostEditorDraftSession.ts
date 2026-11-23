@@ -32,6 +32,7 @@ export interface PostEditorDraftForm {
 
 export interface EditorDraftPayload extends PostEditorDraftForm {
 	context_key: string;
+	owner_id?: string;
 	source_content_id?: string;
 	channel_id?: string;
 	collection_id?: string;
@@ -132,7 +133,10 @@ export function usePostEditorDraftSession({
 		clearDraft: clearLocalDraft,
 	} = useAutoSave<EditorDraftPayload>({
 		getDraftKey: () => `blog_editor_${draftContextKey.value}`,
-		getPayload: () => draftPayload.value,
+		getPayload: () => ({
+			...draftPayload.value,
+			...(authStore.user?.uuid ? { owner_id: authStore.user.uuid } : {}),
+		}),
 		shouldPersist: hasMeaningfulDraft,
 	});
 
@@ -305,7 +309,15 @@ export function usePostEditorDraftSession({
 		}
 	};
 	const getLatestDraftCandidate = async () => {
-		const localDraft = loadDraft();
+		let localDraft = loadDraft();
+		if (
+			localDraft?.payload?.owner_id &&
+			authStore.user?.uuid &&
+			localDraft.payload.owner_id !== authStore.user.uuid
+		) {
+			clearLocalDraft();
+			localDraft = null;
+		}
 		const serverDraft = await fetchServerDraft();
 		const candidates: DraftCandidate[] = [];
 		if (localDraft && hasMeaningfulDraft(localDraft.payload)) {

@@ -28,6 +28,16 @@ describe("books module foundation", () => {
     expect(siteAccessFeatures.books).toEqual([]);
     expect(access.modules.books.enabled).toBe(true);
     expect(access.modules.books.features).toEqual({});
+
+    const customized = mergeSiteAccess({
+      modules: {
+        books: {
+          enabled: true,
+          features: { "books.submit": false },
+        },
+      },
+    });
+    expect(customized.modules.books.features["books.submit"]).toBe(false);
   });
 
   it("keeps books enabled by default while retaining its routes and navigation", () => {

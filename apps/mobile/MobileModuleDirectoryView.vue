@@ -28,6 +28,7 @@
         <RouterLink to="/inbox" class="mobile-module-directory__row">
           <Bell :size="20" aria-hidden="true" />
           <span>通知</span>
+          <span v-if="inboxStore.totalUnread > 0" class="mobile-module-directory__unread">{{ inboxStore.totalUnread > 99 ? '99+' : inboxStore.totalUnread }}</span>
           <ChevronRight :size="18" aria-hidden="true" />
         </RouterLink>
         <RouterLink to="/mail" class="mobile-module-directory__row">
@@ -67,12 +68,14 @@ import { RouterLink, useRoute } from 'vue-router'
 import { Bell, Check, ChevronRight, LogIn, Mail, MessageCircle, PenLine, Settings, UserRound } from 'lucide-vue-next'
 import { getMobileMoreItems } from '@/composables/useResponsiveShell'
 import { useAuthStore } from '@/stores/auth'
+import { useInboxStore } from '@/stores/inbox'
 import { useMailUnreadStore } from '@/stores/mailUnread'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { MOBILE_MODULES } from './mobileRoutes'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const inboxStore = useInboxStore()
 const mailUnread = useMailUnreadStore()
 const siteAccessStore = useSiteAccessStore()
 const moduleSet = new Set<string>(MOBILE_MODULES)

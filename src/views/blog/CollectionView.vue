@@ -272,6 +272,7 @@ const fetchCollection = async () => {
 
       if (props.id && collection.value) {
         sheetStore.updateSheetTitle(props.id, 'collection', collection.value.name)
+        blogSheets.updateLayerTitle(`collection:${props.id}`, collection.value.name)
       }
     } else if (res.status !== 404) {
       loadError.value = '合集加载失败，请重试'

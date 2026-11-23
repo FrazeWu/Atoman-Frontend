@@ -263,4 +263,60 @@ describe('ShortNoteCard', () => {
     expect(commentSheet.props('show')).toBe(false)
     expect(wrapper.find('[data-test="short-note-comment-sheet"]').exists()).toBe(false)
   })
+
+  it('渲染正文中内联引用链接与底部统一引用卡片且点击不展开讨论', async () => {
+    const pinia = createPinia()
+    const content = '很有启发的观点 @article:01900000-0000-7000-8000-000000000111 值得深入'
+    const token = '@article:01900000-0000-7000-8000-000000000111'
+    const start = Array.from(content.slice(0, content.indexOf(token))).length
+    const noteWithRefs: ShortNote = {
+      ...mockNote,
+      id: 'note-with-refs',
+      content,
+      references: [
+        {
+          kind: 'resource',
+          target_type: 'article',
+          target_id: '01900000-0000-7000-8000-000000000111',
+          field: 'content',
+          start,
+          end: start + Array.from(token).length,
+          label: '核心算法演进',
+          excerpt: '拆解阶段一到阶段三的设计权衡',
+          source_name: '系统观察',
+          published_at: '2026-11-19T10:00:00Z',
+          module: 'feed',
+          path: '/item/01900000-0000-7000-8000-000000000111',
+          available: true,
+        },
+      ],
+    }
+
+    const wrapper = mount(ShortNoteCard, {
+      props: { note: noteWithRefs },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true, CommentSideSheet: CommentSideSheetStub, PImageLightbox: true },
+      },
+    })
+
+    const inlineLink = wrapper.get('[data-test="short-note-inline-ref-link"]')
+    expect(inlineLink.text()).toBe('@核心算法演进')
+    expect(inlineLink.attributes('href')).toBe('/feed/item/01900000-0000-7000-8000-000000000111')
+
+    const refCard = wrapper.get('[data-test="reference-card"]')
+    expect(refCard.text()).toContain('资讯')
+    expect(refCard.text()).toContain('核心算法演进')
+    expect(refCard.text()).toContain('拆解阶段一到阶段三的设计权衡')
+    expect(refCard.text()).toContain('系统观察')
+    expect(refCard.text()).toContain('2026/11/19')
+
+    await inlineLink.trigger('click')
+    await refCard.trigger('click')
+    await flushPromises()
+
+    const commentSheet = wrapper.findComponent(CommentSideSheetStub)
+    expect(commentSheet.props('show')).toBe(false)
+    expect(wrapper.find('[data-test="short-note-comment-sheet"]').exists()).toBe(false)
+  })
 })

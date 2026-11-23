@@ -4,6 +4,7 @@ import type { DebateResourceKind } from '@/types'
 
 export const resourceKinds = [
   'post',
+  'short_note',
   'thread',
   'debate',
   'feed',

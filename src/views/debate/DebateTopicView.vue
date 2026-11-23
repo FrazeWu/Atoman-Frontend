@@ -80,6 +80,10 @@
               v-html="renderedContent"
             />
             <p v-else class="debate-workspace__empty">暂无正文</p>
+            <PReferenceCardList
+              v-if="debateCitationReferences.length"
+              :references="debateCitationReferences"
+            />
             <p v-if="reconfirmError" data-test="reconfirm-error" class="debate-content__error" role="alert">
               {{ reconfirmError }}
             </p>
@@ -162,6 +166,7 @@ import DebateRevisionSheet from '@/components/debate/DebateRevisionSheet.vue'
 import DebateVotePanel from '@/components/debate/DebateVotePanel.vue'
 import DebateWikiEditor from '@/components/debate/DebateWikiEditor.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PReferenceCardList from '@/components/shared/PReferenceCardList.vue'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import { useAuthStore } from '@/stores/auth'
 import { useDebateStore } from '@/stores/debate'
@@ -192,6 +197,7 @@ const tabs = [
 
 const kindLabels: Record<DebateResourceKind, string> = {
   post: '文章',
+  short_note: '短笺',
   thread: '主题',
   debate: '辩题',
   feed: '订阅源',
@@ -246,6 +252,7 @@ const debate = computed(() => {
   if (!routeDebateSettled.value || debateStore.currentDebate?.id !== routeDebateID.value) return null
   return debateStore.currentDebate
 })
+const debateCitationReferences = computed(() => normalizeDebateReferences(debate.value?.references ?? []))
 const ownedVoteSummary = computed(() => (
   voteLoadState.value === 'ready' && voteOwnerID.value === routeDebateID.value
     ? debateStore.voteSummary
@@ -598,7 +605,7 @@ function renderReferenceChip(reference: ContentReference) {
   root.dataset.resourceReference = `${reference.target.type}:${reference.target.id}`
 
   appendText(root, 'debate-reference__kind', kindLabels[reference.target.type])
-  appendText(root, 'debate-reference__title', reference.target.label)
+  appendText(root, 'debate-reference__title', reference.target.label || reference.raw)
   if (relation?.stance === 'support') appendText(root, 'debate-reference__qualifier', '支撑')
   if (relation?.stance === 'oppose') appendText(root, 'debate-reference__qualifier', '反驳')
 

@@ -47,10 +47,55 @@
               <span class="book-quote-action-modal__option-sub">另起一篇空白博文草稿并填入书摘</span>
             </div>
           </button>
+
+          <button
+            type="button"
+            class="book-quote-action-modal__option"
+            data-testid="quote-target-short-note"
+            @click="choose('short_note', 'replace')"
+          >
+            <div class="book-quote-action-modal__option-icon">
+              <MessageSquare :size="16" aria-hidden="true" />
+            </div>
+            <div class="book-quote-action-modal__option-text">
+              <span class="book-quote-action-modal__option-title">转为随手短笺</span>
+              <span class="book-quote-action-modal__option-sub">快速发布轻量阅读随笔与灵感</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            class="book-quote-action-modal__option"
+            data-testid="quote-target-forum"
+            @click="choose('forum', 'replace')"
+          >
+            <div class="book-quote-action-modal__option-icon">
+              <MessagesSquare :size="16" aria-hidden="true" />
+            </div>
+            <div class="book-quote-action-modal__option-text">
+              <span class="book-quote-action-modal__option-title">发起论坛讨论</span>
+              <span class="book-quote-action-modal__option-sub">围绕此段摘录发起开放讨论主题</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            class="book-quote-action-modal__option"
+            data-testid="quote-target-debate"
+            @click="choose('debate', 'replace')"
+          >
+            <div class="book-quote-action-modal__option-icon">
+              <Scale :size="16" aria-hidden="true" />
+            </div>
+            <div class="book-quote-action-modal__option-text">
+              <span class="book-quote-action-modal__option-title">发起辩论命题</span>
+              <span class="book-quote-action-modal__option-sub">基于书中观点发起正反方辩论</span>
+            </div>
+          </button>
         </div>
       </div>
 
-      <!-- 常规目标选择（长文 / 短笺） -->
+      <!-- 常规目标选择（长文 / 短笺 / 论坛 / 辩论） -->
       <div v-else class="book-quote-action-modal__options">
         <button
           type="button"
@@ -81,6 +126,36 @@
             <span class="book-quote-action-modal__option-sub">快速发布轻量阅读随笔与灵感</span>
           </div>
         </button>
+
+        <button
+          type="button"
+          class="book-quote-action-modal__option"
+          data-testid="quote-target-forum"
+          @click="choose('forum', 'replace')"
+        >
+          <div class="book-quote-action-modal__option-icon">
+            <MessagesSquare :size="16" aria-hidden="true" />
+          </div>
+          <div class="book-quote-action-modal__option-text">
+            <span class="book-quote-action-modal__option-title">发起论坛讨论</span>
+            <span class="book-quote-action-modal__option-sub">围绕此段摘录发起开放讨论主题</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          class="book-quote-action-modal__option"
+          data-testid="quote-target-debate"
+          @click="choose('debate', 'replace')"
+        >
+          <div class="book-quote-action-modal__option-icon">
+            <Scale :size="16" aria-hidden="true" />
+          </div>
+          <div class="book-quote-action-modal__option-text">
+            <span class="book-quote-action-modal__option-title">发起辩论命题</span>
+            <span class="book-quote-action-modal__option-sub">基于书中观点发起正反方辩论</span>
+          </div>
+        </button>
       </div>
     </div>
 
@@ -94,10 +169,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CornerDownRight, FileText, MessageSquare, Plus } from 'lucide-vue-next'
+import { CornerDownRight, FileText, MessageSquare, MessagesSquare, Plus, Scale } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PModal from '@/components/ui/PModal.vue'
-import { hasExistingBlogPostDraft } from '@/stores/draftStaging'
+import { hasExistingBlogPostDraft, type DiscussionQuoteTarget } from '@/stores/draftStaging'
 import type { BookAnnotation } from '@/api/books'
 
 const props = withDefaults(
@@ -116,7 +191,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   close: []
-  select: [payload: { target: 'blog_post' | 'short_note'; mode: 'append' | 'replace' }]
+  select: [payload: { target: DiscussionQuoteTarget; mode: 'append' | 'replace' }]
 }>()
 
 const effectiveHasDraft = computed(() => {
@@ -126,7 +201,7 @@ const effectiveHasDraft = computed(() => {
   return hasExistingBlogPostDraft()
 })
 
-const choose = (target: 'blog_post' | 'short_note', mode: 'append' | 'replace') => {
+const choose = (target: DiscussionQuoteTarget, mode: 'append' | 'replace') => {
   emit('select', { target, mode })
 }
 </script>

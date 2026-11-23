@@ -18,6 +18,7 @@ import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
 import BlogRelatedPosts, { type BlogRelatedPost } from '@/components/blog/BlogRelatedPosts.vue'
 import BlogMediaContent from '@/components/blog/BlogMediaContent.vue'
+import PReferenceCardList from '@/components/shared/PReferenceCardList.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
@@ -888,6 +889,10 @@ defineExpose({
           <footer class="academic-paper__footer"><span>发布 {{ formatAcademicDate(publicationDate) }}</span><span>第 {{ index + 1 }} 页</span><span>更新 {{ formatAcademicDate(post.updated_at) }}</span></footer>
         </section>
       </div>
+      <PReferenceCardList
+        v-if="post.references?.length"
+        :references="post.references"
+      />
       <PostRatingControl :rating-score="post.rating_score" :rating-count="post.rating_count" :viewer-rating="post.viewer_rating" :loading="ratingLoading" :error-message="ratingError" @rate="ratePost" @clear="clearPostRating" />
       <div class="post-sheet-actions-row">
         <PDropdown v-if="isSheet && !bookmarked" class="post-bookmark-dropdown" position="right">

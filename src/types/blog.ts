@@ -371,6 +371,7 @@ export interface ShortNote {
 	edited: boolean;
 	created_at: string;
 	updated_at: string;
+	references?: ResolvedReference[];
 }
 
 export interface BlogContentVersion {

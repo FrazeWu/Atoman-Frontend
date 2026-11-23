@@ -31,7 +31,7 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import ShortNoteComposer from '@/components/shortnote/ShortNoteComposer.vue'
 import { useApi } from '@/composables/useApi'
 import { useAuthStore } from '@/stores/auth'
-import { formatBookQuoteCitation, useDraftStagingStore } from '@/stores/draftStaging'
+import { formatDiscussionQuote, useDraftStagingStore } from '@/stores/draftStaging'
 import type { ShortNote } from '@/types'
 
 const route = useRoute()
@@ -58,7 +58,7 @@ async function load() {
     loading.value = false
     const staged = draftStagingStore.consumePendingQuote('short_note')
     if (staged) {
-      stagedInitialContent.value = formatBookQuoteCitation(staged)
+      stagedInitialContent.value = formatDiscussionQuote(staged).content
     }
     return
   }

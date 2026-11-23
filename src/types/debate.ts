@@ -4,6 +4,7 @@ export type DebateVoteDirection = "yes" | "no";
 export type DebateReferenceState = "active" | "stale" | "unavailable";
 export type DebateResourceKind =
 	| "post"
+	| "short_note"
 	| "thread"
 	| "debate"
 	| "feed"
@@ -29,6 +30,9 @@ export interface ContentReferenceTarget {
 	id: string;
 	label: string;
 	subtitle?: string;
+	excerpt?: string;
+	source_name?: string;
+	published_at?: string;
 	module?: string;
 	path?: string;
 	available: boolean;

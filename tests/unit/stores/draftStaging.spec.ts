@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { formatBookQuoteCitation, useDraftStagingStore } from '@/stores/draftStaging'
+import {
+  formatBookQuoteCitation,
+  formatDiscussionQuote,
+  useDraftStagingStore,
+} from '@/stores/draftStaging'
 
 describe('draftStaging store and formatters', () => {
   beforeEach(() => {
@@ -91,5 +95,60 @@ describe('draftStaging store and formatters', () => {
     expect(store.pendingQuote).not.toBeNull()
     store.clearPendingQuote()
     expect(store.pendingQuote).toBeNull()
+  })
+
+  it('formats feed_article citations across all four targets with bounded short_note and clean debate title', () => {
+    const token = '@article:01900000-0000-7000-8000-000000000123'
+    const longQuote = '长摘录'.repeat(260)
+
+    const shortNote = formatDiscussionQuote({
+      sourceType: 'feed_article',
+      target: 'short_note',
+      mode: 'replace',
+      title: `标题不应保留 ${token}`,
+      sourceName: '技术周刊',
+      quoteText: longQuote,
+      referenceToken: token,
+    })
+    expect(Array.from(shortNote.content).length).toBeLessThanOrEqual(500)
+    expect(shortNote.content).toContain(token)
+
+    const debate = formatDiscussionQuote({
+      sourceType: 'feed_article',
+      target: 'debate',
+      mode: 'replace',
+      title: `带符号标题 ${token}`,
+      sourceName: '技术周刊',
+      author: '李四',
+      quoteText: '关键论点摘录',
+      referenceToken: token,
+    })
+    expect(debate.title).not.toContain(token)
+    expect(debate.title).toContain('带符号标题')
+    expect(debate.content).toContain('> 关键论点摘录')
+    expect(debate.content).toContain(`背景材料：${token}`)
+
+    const forum = formatDiscussionQuote({
+      sourceType: 'blog_post',
+      target: 'forum',
+      mode: 'replace',
+      title: '一篇长文',
+      quoteText: '摘录段落',
+      referenceToken: '@post:01900000-0000-7000-8000-000000000456',
+    })
+    expect(forum.title).toContain('关于「一篇长文」的讨论')
+    expect(forum.content).toContain('参考来源：@post:01900000-0000-7000-8000-000000000456')
+
+    const bookDebate = formatDiscussionQuote({
+      sourceType: 'book_annotation',
+      target: 'debate',
+      mode: 'replace',
+      title: '沙丘',
+      bookTitle: '沙丘',
+      bookAuthor: '赫伯特',
+      quoteText: '恐惧是思维的杀手。',
+    })
+    expect(bookDebate.title).toContain('《沙丘》中的观点是否成立？')
+    expect(bookDebate.content).not.toContain('@highlight:')
   })
 })

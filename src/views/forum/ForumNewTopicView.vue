@@ -107,12 +107,14 @@ import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PEditor from '@/components/shared/PEditor.vue'
 import { useForumStore } from '@/stores/forum'
 import { useAuthStore } from '@/stores/auth'
+import { formatDiscussionQuote, useDraftStagingStore } from '@/stores/draftStaging'
 import type { ForumDraft } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 const forumStore = useForumStore()
 const authStore = useAuthStore()
+const draftStagingStore = useDraftStagingStore()
 const isEditing = computed(() => Boolean(route.params.id && route.params.id !== 'new'))
 const topicId = computed(() => String(route.params.id || ''))
 const DRAFT_KEY = computed(() => isEditing.value ? `edit_topic:${topicId.value}` : 'new_topic')
@@ -274,6 +276,19 @@ onMounted(async () => {
     tags.value = [...(topic.tags || [])]
   }
   await restoreDraft()
+  if (!isEditing.value) {
+    const staged = draftStagingStore.consumePendingQuote('forum')
+    if (staged) {
+      const formatted = formatDiscussionQuote(staged)
+      if (staged.mode === 'append' && editorValue.value.trim()) {
+        editorValue.value = `${editorValue.value.trim()}\n\n${formatted.content}`
+      } else {
+        const heading = formatted.title ? `# ${formatted.title}\n\n` : ''
+        editorValue.value = `${heading}${formatted.content}`
+      }
+      hasDraft.value = false
+    }
+  }
   autosaveEnabled = true
 })
 </script>

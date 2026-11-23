@@ -82,4 +82,26 @@ describe('BookQuoteActionModal', () => {
 
     expect(wrapper.emitted('select')?.[0]).toEqual([{ target: 'blog_post', mode: 'append' }])
   })
+
+  it('supports selecting forum and debate discussion targets', async () => {
+    const wrapper = mount(BookQuoteActionModal, {
+      props: {
+        open: true,
+        item: { id: 'a1', text: '引用文本' } as any,
+        bookTitle: '百年孤独',
+        hasExistingDraft: false,
+      },
+      global: {
+        stubs: { Teleport: true },
+      },
+    })
+
+    await wrapper.get('[data-testid="quote-target-forum"]').trigger('click')
+    await wrapper.get('[data-testid="quote-target-debate"]').trigger('click')
+
+    expect(wrapper.emitted('select')).toEqual([
+      [{ target: 'forum', mode: 'replace' }],
+      [{ target: 'debate', mode: 'replace' }],
+    ])
+  })
 })

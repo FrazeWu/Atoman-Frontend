@@ -17,6 +17,7 @@ export const updateResourceReferenceLabels = StateEffect.define<ResourceReferenc
 
 const kindLabels: Record<ResourceReference['kind'], string> = {
   post: '文章',
+  short_note: '短笺',
   thread: '主题',
   debate: '辩题',
   feed: '订阅源',

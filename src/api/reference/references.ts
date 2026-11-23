@@ -14,6 +14,9 @@ export interface ReferenceTarget {
   id: string
   label: string
   subtitle?: string
+  excerpt?: string
+  source_name?: string
+  published_at?: string
   module: string
   path: string
   available: boolean
@@ -28,6 +31,9 @@ export interface ResolvedReference {
   end: number
   label?: string
   subtitle?: string
+  excerpt?: string
+  source_name?: string
+  published_at?: string
   module?: string
   path?: string
   available: boolean

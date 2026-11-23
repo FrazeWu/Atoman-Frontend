@@ -61,7 +61,23 @@
       @keydown.enter="toggleComments"
       @keydown.space="toggleComments"
     >
-      <p class="sticky-content">{{ note.content }}</p>
+      <p class="sticky-content">
+        <template v-for="(seg, idx) in contentSegments" :key="idx">
+          <a
+            v-if="seg.type === 'link'"
+            :href="seg.href"
+            class="sticky-ref-link"
+            data-test="short-note-inline-ref-link"
+            @click.stop="handleReferenceLinkClick($event, seg.href)"
+          >{{ seg.text }}</a>
+          <span
+            v-else-if="seg.type === 'unavailable'"
+            class="sticky-ref-unavailable"
+            data-test="short-note-inline-ref-unavailable"
+          >{{ seg.text }}</span>
+          <template v-else>{{ seg.text }}</template>
+        </template>
+      </p>
 
       <!-- 媒体多图缩略平铺 -->
       <div
@@ -84,6 +100,14 @@
         v-if="note.media_attachment"
         :attachment="note.media_attachment"
         class="sticky-media-attachment"
+        @click.stop
+      />
+
+      <PReferenceCardList
+        v-if="note.references?.length"
+        :references="note.references"
+        compact
+        class="sticky-references"
         @click.stop
       />
     </div>
@@ -135,15 +159,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, watchEffect } from 'vue'
 import { Heart, MessageSquare, Pencil, Trash2 } from 'lucide-vue-next'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { apiRequestEnvelope } from '@/api/client'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PInteractionActions from '@/components/ui/PInteractionActions.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PInteractionCard from '@/components/ui/PInteractionCard.vue'
 import PImageLightbox from '@/components/ui/PImageLightbox.vue'
+import PReferenceCardList from '@/components/shared/PReferenceCardList.vue'
 import MediaAttachmentCard from '@/components/shortnote/MediaAttachmentCard.vue'
 import { useApi } from '@/composables/useApi'
+import { segmentReferencedText } from '@/composables/useReferenceRendering'
 import { useShortNoteSync } from '@/composables/blog/useShortNoteSync'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
@@ -155,7 +181,32 @@ const props = defineProps<{ note: ShortNote; isRead?: boolean }>()
 const emit = defineEmits<{ delete: [note: ShortNote]; 'mark-read': [] }>()
 
 const api = useApi()
+let router: ReturnType<typeof useRouter> | undefined
+try {
+  router = useRouter()
+} catch {
+  router = undefined
+}
 const authStore = useAuthStore()
+const contentSegments = computed(() => segmentReferencedText(props.note.content, props.note.references))
+
+function handleReferenceLinkClick(event: MouseEvent, href: string) {
+  event.stopPropagation()
+  if (
+    event.defaultPrevented
+    || event.button !== 0
+    || event.metaKey
+    || event.ctrlKey
+    || event.shiftKey
+    || event.altKey
+  ) {
+    return
+  }
+  if (href.startsWith('/') && !href.startsWith('//') && router && typeof router.push === 'function') {
+    event.preventDefault()
+    void router.push(href)
+  }
+}
 const { getNoteState, updateNoteState, isNoteRead, markNoteAsRead } = useShortNoteSync()
 const feedStore = useFeedStore()
 const interactions = useInteractions('blog', 'short_note', props.note.id)
@@ -572,6 +623,17 @@ function formatDate(value: string) {
   border-color: var(--a-color-text);
   color: var(--a-color-fg);
   background: var(--a-color-surface-muted);
+}
+
+.sticky-ref-link {
+  color: var(--a-color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.sticky-ref-unavailable {
+  color: var(--a-color-muted);
+  text-decoration: line-through;
 }
 
 </style>

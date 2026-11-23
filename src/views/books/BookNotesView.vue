@@ -279,7 +279,7 @@ import PSkeleton from '@/components/ui/PSkeleton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import BookQuoteActionModal from '@/components/books/BookQuoteActionModal.vue'
-import { useDraftStagingStore } from '@/stores/draftStaging'
+import { useDraftStagingStore, type DiscussionQuoteTarget } from '@/stores/draftStaging'
 import { useToast } from '@/composables/useToast'
 import {
   listBookNotes,
@@ -327,12 +327,13 @@ function openQuoteModal(item: BookAnnotation) {
   quoteModalOpen.value = true
 }
 
-function handleQuoteSelect(payload: { target: 'blog_post' | 'short_note'; mode: 'append' | 'replace' }) {
+function handleQuoteSelect(payload: { target: DiscussionQuoteTarget; mode: 'append' | 'replace' }) {
   if (!activeQuoteItem.value) return
   draftStagingStore.setPendingQuote({
     sourceType: 'book_annotation',
     annotationId: activeQuoteItem.value.id,
     assetId: activeQuoteItem.value.asset_id,
+    title: activeQuoteItem.value.book_title || '书籍摘录',
     bookTitle: activeQuoteItem.value.book_title || '书籍摘录',
     bookAuthor: activeQuoteItem.value.book_author,
     quoteText: activeQuoteItem.value.text,
@@ -341,11 +342,13 @@ function handleQuoteSelect(payload: { target: 'blog_post' | 'short_note'; mode: 
     mode: payload.mode,
   })
   quoteModalOpen.value = false
-  if (payload.target === 'blog_post') {
-    void router.push('/studio/blog/new')
-  } else {
-    void router.push('/posts/notes/new')
+  const routeByTarget: Record<DiscussionQuoteTarget, string> = {
+    blog_post: '/studio/blog/new',
+    short_note: '/posts/notes/new',
+    forum: '/forum/new',
+    debate: '/debate?compose=1',
   }
+  void router.push(routeByTarget[payload.target])
 }
 
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null

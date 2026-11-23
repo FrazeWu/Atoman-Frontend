@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // @ts-expect-error Isolated TypeScript diagnostics do not load the Vue SFC module resolver.
 import FeedArticleSheet from "@/components/feed/FeedArticleSheet.vue";
 import { useAuthStore } from "../../../../src/stores/auth";
+import { useDraftStagingStore } from "../../../../src/stores/draftStaging";
 import { useFeedStore } from "../../../../src/stores/feed";
 
 const mountedWrappers = new Set<VueWrapper>();
@@ -30,8 +31,8 @@ const mountSheet = (
 			...options.global,
 			plugins: [pinia],
 			provide: {
-				...(options.global?.provide || {}),
 				[routerKey as symbol]: router,
+				...(options.global?.provide || {}),
 			},
 		},
 	});
@@ -1131,6 +1132,105 @@ describe("FeedArticleSheet", () => {
 		const commentSheet = wrapper.findComponent({ name: "CommentSideSheet" });
 		await commentSheet.vm.$emit("count-change", 5);
 		expect(commentsTrigger.attributes("aria-label")).toBe("评论 (5)");
+	});
+
+	it("未登录点击发起讨论时跳转登录页并携带 redirect", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [
+				{ path: "/", component: { template: "<div />" } },
+				{ path: "/login", component: { template: "<div />" } },
+			],
+		});
+		await router.push("/");
+		await router.isReady();
+		const pushSpy = vi.spyOn(router, "push");
+
+		const wrapper = mountSheet({
+			props: {
+				show: true,
+				article: {
+					type: "feed_item",
+					feed_item: {
+						id: "discuss-auth-1",
+						feed_source_id: "src-1",
+						title: "需登录文章",
+						summary: "正文摘要",
+					},
+				} as any,
+			},
+			global: {
+				provide: { [routerKey as symbol]: router },
+				stubs: { PSheet: { template: "<section><slot /></section>" }, Teleport: true },
+			},
+		});
+
+		await wrapper.get('[data-test="feed-article-discuss-trigger"]').trigger("click");
+
+		expect(pushSpy).toHaveBeenCalledWith({ path: "/login", query: { redirect: "/" } });
+		expect(wrapper.find('[data-testid="discuss-target-forum"]').exists()).toBe(false);
+	});
+
+	it("已登录点击发起讨论时暂存来源引用、关闭抽屉并跳转到目标讨论页", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [
+				{ path: "/", component: { template: "<div />" } },
+				{ path: "/forum/new", component: { template: "<div />" } },
+			],
+		});
+		await router.push("/");
+		await router.isReady();
+		const pushSpy = vi.spyOn(router, "push");
+
+		const wrapper = mountSheet(
+			{
+				props: {
+					show: true,
+					article: {
+						type: "feed_item",
+						feed_item: {
+							id: "01900000-0000-7000-8000-000000000888",
+							feed_source_id: "src-1",
+							feed_source: { id: "src-1", title: "工程周刊" },
+							author: "张三",
+							title: "检索系统评测方法",
+							summary: "默认摘要片段内容",
+						},
+					} as any,
+				},
+				global: {
+					provide: { [routerKey as symbol]: router },
+					stubs: { PSheet: { template: "<section><slot /></section>" }, Teleport: true },
+				},
+			},
+			(auth) => {
+				auth.token = "token";
+				auth.isAuthenticated = true;
+				auth.user = { uuid: "user-1", username: "reader", role: "user" } as any;
+			},
+		);
+
+		vi.spyOn(window, "getSelection").mockReturnValue({ toString: () => "用户高亮选中的原句" } as Selection);
+
+		await wrapper.get('[data-test="feed-article-discuss-trigger"]').trigger("click");
+		await wrapper.vm.$nextTick();
+
+		const forumBtn = wrapper.get('[data-testid="discuss-target-forum"]');
+		await forumBtn.trigger("click");
+
+		const stagingStore = useDraftStagingStore();
+		expect(stagingStore.pendingQuote).toMatchObject({
+			sourceType: "feed_article",
+			target: "forum",
+			title: "检索系统评测方法",
+			sourceName: "工程周刊",
+			author: "张三",
+			quoteText: "用户高亮选中的原句",
+			referenceToken: "@article:01900000-0000-7000-8000-000000000888",
+		});
+		expect(wrapper.emitted("close")).toHaveLength(1);
+		expect(pushSpy).toHaveBeenCalledWith("/forum/new");
 	});
 });
 

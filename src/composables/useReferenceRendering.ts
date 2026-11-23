@@ -41,3 +41,67 @@ export function applyResolvedReferences(content: string, references: ResolvedRef
   }
   return points.join('')
 }
+
+export type ReferencedTextSegment =
+  | { type: 'text'; text: string }
+  | { type: 'link'; text: string; href: string; targetType: ResolvedReference['target_type']; targetId?: string }
+  | { type: 'unavailable'; text: string; targetType: ResolvedReference['target_type']; targetId?: string }
+
+export function segmentReferencedText(
+  content: string,
+  references: ResolvedReference[] = [],
+  field = 'content',
+): ReferencedTextSegment[] {
+  if (!content) return []
+  if (!references.length) return [{ type: 'text', text: content }]
+
+  const points = Array.from(content)
+  const items = references
+    .filter((reference) => !reference.field || reference.field === field)
+    .filter((reference) => reference.start >= 0 && reference.end > reference.start && reference.end <= points.length)
+    .sort((left, right) => left.start - right.start || left.end - right.end)
+
+  if (!items.length) {
+    return [{ type: 'text', text: content }]
+  }
+
+  const segments: ReferencedTextSegment[] = []
+  let cursor = 0
+  for (const reference of items) {
+    if (reference.start < cursor) continue
+    if (reference.start > cursor) {
+      segments.push({ type: 'text', text: points.slice(cursor, reference.start).join('') })
+    }
+    const rawSlice = points.slice(reference.start, reference.end).join('')
+    if (!reference.available) {
+      segments.push({
+        type: 'unavailable',
+        text: reference.label ? `@${reference.label}` : '（引用已失效）',
+        targetType: reference.target_type,
+        targetId: reference.target_id,
+      })
+      cursor = reference.end
+      continue
+    }
+    const visible = reference.target_type === 'user' && reference.subtitle?.startsWith('@')
+      ? reference.subtitle
+      : reference.label ? `@${reference.label}` : rawSlice
+    const href = referenceHref(reference)
+    if (visible && href !== '#') {
+      segments.push({
+        type: 'link',
+        text: visible,
+        href,
+        targetType: reference.target_type,
+        targetId: reference.target_id,
+      })
+    } else {
+      segments.push({ type: 'text', text: rawSlice })
+    }
+    cursor = reference.end
+  }
+  if (cursor < points.length) {
+    segments.push({ type: 'text', text: points.slice(cursor).join('') })
+  }
+  return segments
+}

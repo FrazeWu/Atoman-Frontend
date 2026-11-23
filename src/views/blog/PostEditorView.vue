@@ -305,7 +305,7 @@ import {
   type PostEditorDraftForm,
   type SaveTarget,
 } from '@/composables/blog/usePostEditorDraftSession'
-import { formatBookQuoteCitation, useDraftStagingStore } from '@/stores/draftStaging'
+import { formatDiscussionQuote, useDraftStagingStore } from '@/stores/draftStaging'
 
 const route = useRoute()
 const router = useRouter()
@@ -910,16 +910,16 @@ const ingestPendingBookQuote = async () => {
     recoveryModalVisible.value = false
     pendingDraftCandidate.value = null
   }
-  const formattedQuote = formatBookQuoteCitation(staged)
+  const formatted = formatDiscussionQuote(staged)
   if (staged.mode === 'append') {
     form.value.content = form.value.content?.trim()
-      ? `${form.value.content.trim()}\n\n${formattedQuote}`
-      : formattedQuote
+      ? `${form.value.content.trim()}\n\n${formatted.content}`
+      : formatted.content
   } else {
-    if (!form.value.title?.trim()) {
-      form.value.title = `《${staged.bookTitle}》读后感`
+    if (!form.value.title?.trim() && formatted.title) {
+      form.value.title = formatted.title
     }
-    form.value.content = formattedQuote
+    form.value.content = formatted.content
   }
   replaceCollaborativeDocumentFromForm()
   void syncDraftNow()

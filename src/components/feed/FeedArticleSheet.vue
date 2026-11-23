@@ -7,7 +7,7 @@
     reading-mode
     :is-shifted="commentsBlockParent"
     :is-top-layer="!commentsBlockParent"
-    :trap-focus="!commentsOpen"
+    :trap-focus="!commentsOpen && !discussModalOpen"
     :index="index"
     :ref="presentation === 'page' ? setPageContentAnchor : undefined"
     v-bind="presentation === 'page' ? { class: 'feed-article-page', onClickCapture: handleArticleClickWhileCommenting } : {}"
@@ -80,11 +80,27 @@
             <Clock :size="15" aria-hidden="true" />
             <span>{{ postInReadingList ? '已稍后读' : '稍后读' }}</span>
           </button>
+          <button
+            v-if="article.post.id"
+            type="button"
+            class="article-action-btn"
+            data-test="feed-article-discuss-trigger"
+            aria-label="发起讨论"
+            title="基于这篇文章或选中片段发起讨论"
+            @click="openDiscussModal"
+          >
+            <MessageSquarePlus :size="15" aria-hidden="true" />
+            <span>发起讨论</span>
+          </button>
         </div>
       </div>
       
       <p v-if="article.post.summary" class="article-summary">{{ article.post.summary }}</p>
       <div class="prose-blog article-body" v-html="renderedContent" @click="handleArticleBodyClick"></div>
+      <PReferenceCardList
+        v-if="article.post.references?.length"
+        :references="article.post.references"
+      />
       <PostRatingControl
         :rating-score="article.post.rating_score"
         :rating-count="article.post.rating_count"
@@ -173,6 +189,17 @@
             <Check v-if="feedItemStarred" :size="15" aria-hidden="true" />
             <Bookmark v-else :size="15" aria-hidden="true" />
             <span>{{ feedItemStarred ? '已收藏' : '收藏' }}</span>
+          </button>
+          <button
+            type="button"
+            class="article-action-btn"
+            data-test="feed-article-discuss-trigger"
+            aria-label="发起讨论"
+            title="基于这篇文章或选中片段发起讨论"
+            @click="openDiscussModal"
+          >
+            <MessageSquarePlus :size="15" aria-hidden="true" />
+            <span>发起讨论</span>
           </button>
           <button
             type="button"
@@ -286,13 +313,21 @@
     @mode-change="commentSheetMode = $event"
     @count-change="commentCount = $event"
   />
+  <QuoteDiscussModal
+    :open="discussModalOpen"
+    :quote-text="discussQuoteText"
+    :source-title="discussSourceInfo?.title || ''"
+    :source-subtitle="discussSourceInfo?.sourceName || ''"
+    @close="discussModalOpen = false"
+    @select="handleDiscussSelect"
+  />
 </template>
 
 <script setup lang="ts">
 import '@/assets/editor.css'
 import '@/assets/feed-reader.css'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Bookmark, Check, Clock, MessageSquare, Play } from 'lucide-vue-next'
+import { Bookmark, Check, Clock, MessageSquare, MessageSquarePlus, Play } from 'lucide-vue-next'
 import { apiRequestResult } from '@/api/client'
 import type { FeedArticleSource, FeedItem, FeedItemReader, FeedReaderVariant, Post, TimelineItem } from '@/types'
 import PSheet from '@/components/ui/PSheet.vue'
@@ -300,6 +335,8 @@ import PButton from '@/components/ui/PButton.vue'
 import PLink from '@/components/ui/PLink.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
+import PReferenceCardList from '@/components/shared/PReferenceCardList.vue'
+import QuoteDiscussModal from '@/components/shared/QuoteDiscussModal.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
 import FeedContentFeedback from '@/components/feed/FeedContentFeedback.vue'
@@ -315,6 +352,7 @@ import { safeExternalUrl } from '@/utils/safeExternalUrl'
 import { useRouter } from 'vue-router'
 import { useSafeLink } from '@/composables/useSafeLink'
 import { useAuthStore } from '@/stores/auth'
+import { useDraftStagingStore, type DiscussionQuoteTarget } from '@/stores/draftStaging'
 import { usePlayerStore } from '@/stores/player'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useFeedStore } from '@/stores/feed'
@@ -352,6 +390,7 @@ const router = useRouter()
 const { renderMarkdown, runtimeState: markdownRuntimeState } = useMarkdownRenderer()
 const { postEmbeds, musicEmbeds, videoEmbeds, load: loadMediaEmbeds } = useBlogMediaEmbeds()
 const authStore = useAuthStore()
+const draftStagingStore = useDraftStagingStore()
 const { requireLogin } = useLoginRedirect()
 const api = useApi()
 const feedStore = useFeedStore()
@@ -362,6 +401,8 @@ const ratingError = ref('')
 const feedCoverFailed = ref(false)
 const feedCoverCandidateIndex = ref(0)
 const commentsOpen = ref(false)
+const discussModalOpen = ref(false)
+const discussQuoteText = ref('')
 const commentSheetMode = ref<'full' | 'partial'>('partial')
 const commentsBlockParent = computed(() => commentsOpen.value && commentSheetMode.value === 'full')
 const commentCount = ref<number | undefined>(undefined)
@@ -440,10 +481,12 @@ const handleFeedCoverError = () => {
 }
 
 
-watch([() => props.article?.feed_item?.id, () => props.reader?.default_variant], () => {
+watch([() => props.article?.feed_item?.id, () => props.article?.post?.id, () => props.reader?.default_variant], () => {
   feedCoverFailed.value = false
   feedCoverCandidateIndex.value = 0
   commentsOpen.value = false
+  discussModalOpen.value = false
+  discussQuoteText.value = ''
   commentSheetMode.value = 'partial'
   commentCount.value = undefined
   ratingError.value = ''
@@ -698,7 +741,7 @@ const handleReadMore = (post: Post) => {
 }
 
 const handleKeydown = (event: KeyboardEvent) => {
-  if (!props.show || !props.article || commentsOpen.value || event.defaultPrevented) return
+  if (!props.show || !props.article || commentsOpen.value || discussModalOpen.value || event.defaultPrevented) return
   const target = event.target
   if (target instanceof HTMLElement && target.matches('input, textarea, select, [contenteditable="true"]')) return
   if (event.key === 'ArrowLeft' && props.hasPrevious) {
@@ -717,6 +760,86 @@ const navigateSheet = (direction: 'previous' | 'next') => {
   navigationDirection.value = direction
   if (direction === 'previous') emit('previous')
   else emit('next')
+}
+
+function buildFallbackExcerpt(raw: string, maxChars = 240): string {
+  const stripped = raw
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/[`*_>#~=-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const chars = Array.from(stripped)
+  if (chars.length <= maxChars) return stripped
+  return `${chars.slice(0, maxChars).join('').trim()}…`
+}
+
+const discussSourceInfo = computed(() => {
+  const item = props.article
+  if (!item) return null
+  if (item.type === 'post' && item.post) {
+    return {
+      sourceType: 'blog_post' as const,
+      referenceToken: `@post:${item.post.id}`,
+      title: item.post.title || '博客文章',
+      sourceName: item.post.channel?.name || '博客',
+      author: item.post.user?.display_name || item.post.user?.username || undefined,
+      fallbackExcerpt: item.post.summary?.trim() || buildFallbackExcerpt(item.post.content || ''),
+    }
+  }
+  if (isFeedItemTimeline(item) && item.feed_item) {
+    return {
+      sourceType: 'feed_article' as const,
+      referenceToken: `@article:${item.feed_item.id}`,
+      title: item.feed_item.title || 'RSS 文章',
+      sourceName: feedSourceTitle.value || 'RSS',
+      author: item.feed_item.author || undefined,
+      fallbackExcerpt: item.feed_item.summary?.trim() || buildFallbackExcerpt(feedBodyHtml.value || ''),
+    }
+  }
+  return null
+})
+
+function openDiscussModal() {
+  if (!requireLogin()) return
+  const info = discussSourceInfo.value
+  if (!info) return
+  const selected = typeof window !== 'undefined'
+    ? (window.getSelection()?.toString().trim() ?? '')
+    : ''
+  const selectedChars = Array.from(selected)
+  const clippedSelection = selectedChars.length > 400
+    ? `${selectedChars.slice(0, 400).join('').trim()}…`
+    : selected
+  discussQuoteText.value = clippedSelection || info.fallbackExcerpt
+  discussModalOpen.value = true
+}
+
+function handleDiscussSelect(payload: { target: DiscussionQuoteTarget; mode: 'append' | 'replace' }) {
+  const info = discussSourceInfo.value
+  if (!info) return
+  draftStagingStore.setPendingQuote({
+    sourceType: info.sourceType,
+    target: payload.target,
+    mode: payload.mode,
+    title: info.title,
+    sourceName: info.sourceName,
+    author: info.author,
+    quoteText: discussQuoteText.value,
+    referenceToken: info.referenceToken,
+  })
+  discussModalOpen.value = false
+  if (props.presentation === 'sheet') {
+    emit('close')
+  }
+  const routeByTarget: Record<DiscussionQuoteTarget, string> = {
+    short_note: '/posts/notes/new',
+    forum: '/forum/new',
+    debate: '/debate?compose=1',
+    blog_post: '/studio/blog/new',
+  }
+  void router.push(routeByTarget[payload.target])
 }
 
 onMounted(() => window.addEventListener('keydown', handleKeydown))

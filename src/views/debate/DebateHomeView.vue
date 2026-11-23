@@ -141,6 +141,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useDebateStore } from '@/stores/debate'
 import PReferenceField from '@/components/shared/PReferenceField.vue'
 import { useAuthStore } from '@/stores/auth'
+import { formatDiscussionQuote, useDraftStagingStore } from '@/stores/draftStaging'
 import PButton from '@/components/ui/PButton.vue'
 import PContentProgress from '@/components/ui/PContentProgress.vue'
 import PSkeleton from '@/components/ui/PSkeleton.vue'
@@ -157,6 +158,7 @@ const router = useRouter()
 const route = useRoute()
 const debateStore = useDebateStore()
 const authStore = useAuthStore()
+const draftStagingStore = useDraftStagingStore()
 
 const debates = computed(() => debateStore.debates)
 const debatesTotal = computed(() => debateStore.debatesTotal)
@@ -287,11 +289,38 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('zh-CN')
 }
 
+const ingestPendingDebateQuote = async () => {
+  const composeFlag = queryValue(route.query.compose)
+  const staged = draftStagingStore.consumePendingQuote('debate')
+  if (staged) {
+    const formatted = formatDiscussionQuote(staged)
+    createForm.value = {
+      title: formatted.title,
+      content: formatted.content,
+    }
+    showCreateModal.value = true
+  } else if (composeFlag === '1' && authStore.isAuthenticated) {
+    showCreateModal.value = true
+  }
+  if (composeFlag) {
+    const nextQuery = { ...route.query }
+    delete nextQuery.compose
+    await router.replace({ query: nextQuery })
+  }
+}
+
 onMounted(async () => {
   if (!authStore.isAuthenticated) await authStore.restoreSession()
   filterStatus.value = routeStatus.value
   filterTag.value = routeTag.value
+  await ingestPendingDebateQuote()
   void fetchDebates()
+})
+
+watch(() => queryValue(route.query.compose), (composeFlag) => {
+  if (composeFlag) {
+    void ingestPendingDebateQuote()
+  }
 })
 
 watch([routeStatus, routeTag], ([status, tag]) => {

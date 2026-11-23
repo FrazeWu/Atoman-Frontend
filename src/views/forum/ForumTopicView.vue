@@ -112,6 +112,10 @@
             v-html="renderedTopicContent"
             @click="handleTopicContentClick"
           />
+          <PReferenceCardList
+            v-if="forumStore.currentTopic.references?.length"
+            :references="forumStore.currentTopic.references"
+          />
 
       </div>
     </template>
@@ -195,6 +199,7 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import InteractionBar from '@/components/shared/InteractionBar.vue'
+import PReferenceCardList from '@/components/shared/PReferenceCardList.vue'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import { useApi } from '@/composables/useApi'
 import { useInteractions } from '@/composables/useInteractions'

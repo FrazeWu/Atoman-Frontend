@@ -6,9 +6,9 @@ const DEBATE_ID = '01900000-0000-7000-8000-000000000001'
 const ALBUM_ID = '01900000-0000-7000-8000-000000000002'
 
 describe('resourceReferences', () => {
-  it('定义全站可引用的 17 类资源', () => {
+  it('定义全站可引用的 18 类资源', () => {
     expect(resourceKinds).toEqual([
-      'post', 'thread', 'debate', 'feed', 'article', 'artist', 'album', 'song',
+      'post', 'short_note', 'thread', 'debate', 'feed', 'article', 'artist', 'album', 'song',
       'playlist', 'podcast', 'episode', 'video', 'person', 'event', 'channel',
       'collection', 'comment',
     ])

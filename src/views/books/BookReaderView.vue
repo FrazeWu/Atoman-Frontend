@@ -175,7 +175,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Bookmark, Download, Save, Search } from 'lucide-vue-next'
 import BookQuoteActionModal from '@/components/books/BookQuoteActionModal.vue'
-import { useDraftStagingStore } from '@/stores/draftStaging'
+import { useDraftStagingStore, type DiscussionQuoteTarget } from '@/stores/draftStaging'
 import type { PDFDocumentProxy } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { loadPdfEngine, loadEpubEngine } from '@/utils/bookReaderEngines'
 import { errorMessage as formatErrorMessage } from '@/utils/logger'
@@ -1108,12 +1108,13 @@ function handleQuoteAnnotation(annotation: BookAnnotation) {
   quoteModalOpen.value = true
 }
 
-function onQuoteModalSelect(payload: { target: 'blog_post' | 'short_note'; mode: 'append' | 'replace' }) {
+function onQuoteModalSelect(payload: { target: DiscussionQuoteTarget; mode: 'append' | 'replace' }) {
   if (!activeQuoteAnnotation.value) return
   draftStagingStore.setPendingQuote({
     sourceType: 'book_annotation',
     annotationId: activeQuoteAnnotation.value.id,
     assetId: activeQuoteAnnotation.value.asset_id,
+    title: asset.value?.title || '书籍摘录',
     bookTitle: asset.value?.title || '书籍摘录',
     bookAuthor: asset.value?.author,
     quoteText: activeQuoteAnnotation.value.text,
@@ -1122,11 +1123,13 @@ function onQuoteModalSelect(payload: { target: 'blog_post' | 'short_note'; mode:
     mode: payload.mode,
   })
   quoteModalOpen.value = false
-  if (payload.target === 'blog_post') {
-    void router.push('/studio/blog/new')
-  } else {
-    void router.push('/posts/notes/new')
+  const routeByTarget: Record<DiscussionQuoteTarget, string> = {
+    blog_post: '/studio/blog/new',
+    short_note: '/posts/notes/new',
+    forum: '/forum/new',
+    debate: '/debate?compose=1',
   }
+  void router.push(routeByTarget[payload.target])
 }
 
 async function handleDeleteAnnotation(annotationId: string) {

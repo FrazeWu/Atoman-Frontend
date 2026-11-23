@@ -3,7 +3,7 @@
     <PPageHeader title="短笺" />
     <div class="short-note-timeline__layout">
       <main class="short-note-timeline__stream">
-        <ShortNoteComposer v-if="authStore.isAuthenticated" :key="composerKey" compact :submitting="publishing" @submit="publish" />
+        <ShortNoteComposer v-if="authStore.isAuthenticated" :key="composerKey" :initial-content="stagedInitialContent" compact :submitting="publishing" @submit="publish" />
         <div v-if="loading && !notes.length" class="short-note-timeline__loading">
           <div v-for="index in 3" :key="index" class="a-skeleton short-note-timeline__skeleton" />
         </div>
@@ -86,11 +86,14 @@ import ShortNoteComposer from '@/components/shortnote/ShortNoteComposer.vue'
 import { useApi } from '@/composables/useApi'
 import { useBlogSheets } from '@/composables/useBlogSheets'
 import { useAuthStore } from '@/stores/auth'
+import { formatBookQuoteCitation, useDraftStagingStore } from '@/stores/draftStaging'
 import type { ShortNote } from '@/types'
 
 type ListMeta = { has_more?: boolean }
 const api = useApi()
 const authStore = useAuthStore()
+const draftStagingStore = useDraftStagingStore()
+const stagedInitialContent = ref('')
 const blogSheets = useBlogSheets()
 const notes = ref<ShortNote[]>([])
 const loading = ref(false)
@@ -159,6 +162,7 @@ async function publish(payload: { content: string; media_urls: string[] }) {
       body: JSON.stringify(payload),
     })
     notes.value.unshift(response.data)
+    stagedInitialContent.value = ''
     composerKey.value += 1
   } catch {
     error.value = '发布失败，请重试'
@@ -184,7 +188,13 @@ async function confirmRemove() {
     deletePending.value = null
   }
 }
-onMounted(() => void load())
+onMounted(() => {
+  const staged = draftStagingStore.consumePendingQuote('short_note')
+  if (staged) {
+    stagedInitialContent.value = formatBookQuoteCitation(staged)
+  }
+  void load()
+})
 watch(loadMoreSentinel, observeLoadMoreSentinel)
 onBeforeUnmount(() => loadMoreObserver?.disconnect())
 </script>

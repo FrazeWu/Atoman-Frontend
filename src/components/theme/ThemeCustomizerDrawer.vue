@@ -3,7 +3,7 @@
     :show="open"
     side="right"
     mode="partial"
-    partial-width="420px"
+    partial-width="var(--a-comment-sheet-width)"
     title="装扮空间"
     close-type="header"
     :above-player="true"

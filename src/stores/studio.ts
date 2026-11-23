@@ -1,5 +1,5 @@
-import { computed, ref, watch } from "vue";
-import { defineStore } from "pinia";
+import { computed, onScopeDispose, ref, watch } from "vue";
+import { defineStore, getActivePinia } from "pinia";
 
 import {
 	apiDeleteJson,
@@ -11,6 +11,7 @@ import {
 } from "@/api/client";
 import { useApi } from "@/composables/useApi";
 import { useAuthStore } from "@/stores/auth";
+import { registerSessionReset } from "@/stores/sessionReset";
 import type {
 	StudioAnalytics,
 	StudioAnalyticsFilters,
@@ -738,6 +739,9 @@ export const useStudioStore = defineStore("studio", () => {
 			if (!isAuthenticated) reset();
 		},
 	);
+
+	const pinia = getActivePinia();
+	if (pinia) onScopeDispose(registerSessionReset(pinia, reset));
 
 	return {
 		currentChannel,

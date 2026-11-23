@@ -268,7 +268,12 @@ const submit = () => {
   background: transparent;
   color: var(--a-color-muted);
   cursor: pointer;
-  transition: all var(--a-motion-micro, 150ms) ease;
+  transition:
+    color var(--a-motion-micro, 150ms) ease,
+    background-color var(--a-motion-micro, 150ms) ease,
+    border-color var(--a-motion-micro, 150ms) ease,
+    opacity var(--a-motion-micro, 150ms) ease,
+    transform var(--a-motion-micro, 150ms) ease;
   flex-shrink: 0;
 }
 

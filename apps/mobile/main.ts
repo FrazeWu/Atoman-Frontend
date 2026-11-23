@@ -1,5 +1,9 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
+import { VueQueryPlugin } from "@tanstack/vue-query";
+import { createQueryClient } from "@/app/providers/queryClient";
+import { installProductionErrorReporting } from "@/utils/clientErrorReport";
+import { initMediaOfflineCacheIndex } from "@/utils/mediaOfflineCache";
 import { reportError } from "@/utils/logger";
 import {
 	installStaleViteChunkRecovery,
@@ -8,6 +12,7 @@ import {
 import { waitForInitialPaint } from "@/utils/waitForInitialPaint";
 import "../../src/style.css";
 
+installProductionErrorReporting();
 installStaleViteChunkRecovery();
 document.documentElement.dataset.atomanApp = "mobile";
 
@@ -37,9 +42,11 @@ const bootstrap = async () => {
 		reportError(error, "移动端路由加载失败");
 	});
 
+	app.use(VueQueryPlugin, { queryClient: createQueryClient() });
 	app.use(createPinia());
 	app.use(router);
 	app.mount("#app");
+	void initMediaOfflineCacheIndex();
 };
 
 void bootstrap().catch((error) => {

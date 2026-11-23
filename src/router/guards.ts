@@ -34,11 +34,18 @@ let studioRoutesPromise: Promise<RouteRecordRaw[]> | null = null;
 
 const isStudioPath = (path: string) => path === "/studio" || path.startsWith("/studio/");
 
-async function ensureStudioRoutes(router: Router) {
-	if (router.hasRoute("studio-dashboard")) return;
+async function ensureStudioRoutes(router: Router, skipDashboard = false) {
+	if (router.hasRoute("studio-content")) return;
 	studioRoutesPromise ??= import("@/router/routes/studio").then(({ studioRoutes }) => studioRoutes);
 	for (const route of await studioRoutesPromise) {
-		router.addRoute(route);
+		if (skipDashboard && route.path === "/studio" && Array.isArray(route.children)) {
+			router.addRoute({
+				...route,
+				children: route.children.filter((child) => child.path !== ""),
+			});
+		} else {
+			router.addRoute(route);
+		}
 	}
 }
 
@@ -53,9 +60,14 @@ function resolveGuestRedirect(value: unknown) {
 
 export function installRouteGuards(router: Router) {
 	router.beforeEach(async (to, _from) => {
-		if (isStudioPath(to.path) && !router.hasRoute("studio-dashboard")) {
-			await ensureStudioRoutes(router);
-			return to.fullPath;
+		const hasMobileStudioRoot = router
+			.getRoutes()
+			.some((record) => record.path === "/studio" && record.meta?.mobileStudioRoot);
+		if (isStudioPath(to.path) && !router.hasRoute("studio-content")) {
+			if (!(hasMobileStudioRoot && to.path === "/studio")) {
+				await ensureStudioRoutes(router, hasMobileStudioRoot);
+				return to.fullPath;
+			}
 		}
 
 		const authStore = useAuthStore();

@@ -609,7 +609,7 @@ onMounted(() => {
   position: fixed;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.45);
-  z-index: 10004;
+  z-index: var(--a-z-player-modal-backdrop, 750);
 }
 
 .mobile-action-sheet {
@@ -617,7 +617,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 10005;
+  z-index: var(--a-z-player-modal, 760);
   background-color: #ffffff;
   border-top-left-radius: 14px;
   border-top-right-radius: 14px;
@@ -737,7 +737,6 @@ onMounted(() => {
   font-weight: 500;
   z-index: 200;
   pointer-events: none;
-  backdrop-filter: blur(8px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   white-space: nowrap;
 }

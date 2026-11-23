@@ -64,13 +64,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import MSheet from '@mobile/components/ui/MSheet.vue'
 import MButton from '@mobile/components/ui/MButton.vue'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 
-defineProps<{
+const props = defineProps<{
   modelValue: boolean
+  initialContent?: string
 }>()
 
 const emit = defineEmits<{
@@ -81,6 +82,16 @@ const emit = defineEmits<{
 const content = ref('')
 const previewImage = ref('')
 const submitting = ref(false)
+
+watch(
+  () => [props.modelValue, props.initialContent] as const,
+  ([open, initial]) => {
+    if (open && initial && !content.value) {
+      content.value = initial
+    }
+  },
+  { immediate: true },
+)
 
 function handleImageSelected(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]

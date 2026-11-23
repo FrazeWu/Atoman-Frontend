@@ -1,6 +1,7 @@
 import { apiRequest, apiRequestResult } from "@/api/client";
-import { ref } from "vue";
-import { defineStore } from "pinia";
+import { onScopeDispose, ref } from "vue";
+import { defineStore, getActivePinia } from "pinia";
+import { registerSessionReset } from "@/stores/sessionReset";
 
 import { useApi } from "@/composables/useApi";
 
@@ -647,6 +648,23 @@ export const useAdminFeedFulltextStore = defineStore(
 			settings.value = result.data;
 			return settings.value;
 		}
+
+		function resetStore() {
+			health.value = null;
+			settings.value = null;
+			sources.value = [];
+			onboardingRecommendations.value = [];
+			items.value = [];
+			sourcesMeta.value = { total: 0, page: 1, limit: 20 };
+			itemsMeta.value = { total: 0, page: 1, limit: 20 };
+			loadingHealth.value = false;
+			loadingSources.value = false;
+			loadingItems.value = false;
+			loadingSettings.value = false;
+		}
+
+		const pinia = getActivePinia();
+		if (pinia) onScopeDispose(registerSessionReset(pinia, resetStore));
 
 		return {
 			health,

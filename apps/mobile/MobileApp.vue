@@ -54,6 +54,7 @@ import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch 
 import { useRoute, useRouter } from 'vue-router'
 import { useSiteAccessStore } from '@/stores/siteAccess'
 import { useAuthStore } from '@/stores/auth'
+import { useInboxStore } from '@/stores/inbox'
 import { useMailUnreadStore } from '@/stores/mailUnread'
 import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
@@ -92,6 +93,7 @@ const route = useRoute()
 const router = useRouter()
 const siteAccessStore = useSiteAccessStore()
 const authStore = useAuthStore()
+const inboxStore = useInboxStore()
 const mailUnread = useMailUnreadStore()
 const playerPresence = usePlayerPresenceStore()
 const apiUrl = useApiUrl()
@@ -259,10 +261,10 @@ watch(() => route.fullPath, () => {
 const reportPageView = () => {
   if (isAuthRoute.value) return
   try {
-    const res = apiRequest(`${apiUrl}/site/visits`, { method: 'POST', keepalive: true })
-    if (res && typeof (res as Promise<unknown>).catch === 'function') {
-      void (res as Promise<unknown>).catch(() => {})
-    }
+    void Promise.resolve(authStore.restoreSession?.())
+      .catch(() => false)
+      .then(() => apiRequest(`${apiUrl}/site/visits`, { method: 'POST', keepalive: true }))
+      .catch(() => {})
   } catch {
     // ignore
   }
@@ -296,8 +298,22 @@ onBeforeUnmount(() => {
   cancelStartupTasks?.()
 })
 // Stay updated when the user is browsing outside Webmail.
+watch(
+  () => authStore.isAuthenticated,
+  (isAuthenticated) => {
+    if (isAuthenticated) {
+      void inboxStore.bootstrap()
+    } else {
+      inboxStore.disconnect()
+    }
+  },
+  { immediate: true },
+)
 onMounted(() => mailUnread.start())
-onBeforeUnmount(() => mailUnread.stop())
+onBeforeUnmount(() => {
+  inboxStore.disconnect()
+  mailUnread.stop()
+})
 </script>
 
 <style>
@@ -329,7 +345,6 @@ body {
   overscroll-behavior-x: none;
   --mobile-app-player-height: 56px;
   --mobile-app-player-reserved-height: 0px;
-  --a-z-navigation: 1000;
   --a-color-bg: #ffffff;
   --a-color-fg: #1c1c1e;
   --a-color-text: #1c1c1e;
@@ -356,6 +371,25 @@ body {
   --a-shadow-hover: none;
   --a-shadow-active: none;
   --a-font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+:root.dark .mobile-app-shell,
+:root[data-theme="dark"] .mobile-app-shell,
+html.dark .mobile-app-shell {
+  --a-color-bg: #090a0f;
+  --a-color-fg: #f1f5f9;
+  --a-color-text: #f1f5f9;
+  --a-color-text-secondary: #94a3b8;
+  --a-color-surface: #12141c;
+  --a-color-surface-muted: #181b25;
+  --a-color-border: rgba(255, 255, 255, 0.14);
+  --a-color-border-soft: rgba(255, 255, 255, 0.08);
+  --a-color-muted: #94a3b8;
+  --a-color-muted-soft: #94a3b8;
+  --a-color-primary: #3b82f6;
+  --a-color-primary-hover: #60a5fa;
+  --a-color-primary-pressed: #2563eb;
+  --a-color-primary-contrast: #ffffff;
 }
 
 .mobile-app-main {

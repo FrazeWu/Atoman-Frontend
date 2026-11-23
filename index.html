@@ -60,6 +60,13 @@
       }
     </script>
     <link rel="icon" type="image/svg+xml" href="/atoman-house.svg" />
+    <script>
+      try {
+        if (localStorage.getItem("theme") === "dark") {
+          document.documentElement.classList.add("dark");
+        }
+      } catch {}
+    </script>
     <link rel="preconnect" href="https://api.atoman.org" crossorigin />
     <link rel="dns-prefetch" href="//api.atoman.org" />
     <script>

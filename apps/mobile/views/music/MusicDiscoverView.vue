@@ -465,7 +465,6 @@ onMounted(() => {
   border-radius: 2px;
   background: rgba(0, 0, 0, 0.65);
   color: #ffffff;
-  backdrop-filter: blur(4px);
 }
 
 .mobile-music-discover__featured-info {

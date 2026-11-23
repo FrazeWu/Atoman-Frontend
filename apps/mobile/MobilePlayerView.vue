@@ -1409,9 +1409,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  background-color: rgba(18, 18, 18, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background-color: rgba(18, 18, 18, 0.92);
   color: #ffffff;
   font-size: 12px;
   font-weight: 600;
@@ -1883,7 +1881,6 @@ onUnmounted(() => {
   font-weight: 500;
   box-shadow: none !important;
   pointer-events: none;
-  backdrop-filter: blur(8px);
   white-space: nowrap;
 }
 

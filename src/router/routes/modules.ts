@@ -56,6 +56,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				{
 					path: "notes/:id",
 					component: () => import("@/views/blog/ShortNoteDetailView.vue"),
+					beforeEnter: (to) => (to.params.id === "new" ? { path: "/posts/notes", query: to.query, hash: to.hash } : true),
 				},
 				{
 					path: "notes/:id/edit",

@@ -129,7 +129,7 @@ function handleClose() {
 .m-sheet {
   position: fixed;
   inset: 0;
-  z-index: 1050;
+  z-index: var(--a-z-player-sheet, 740);
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -147,7 +147,7 @@ function handleClose() {
   z-index: 1;
   width: 100%;
   max-height: calc(var(--mobile-viewport-height, 100dvh) * 0.88);
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border-top-left-radius: var(--a-radius-control, 4px);
   border-top-right-radius: var(--a-radius-control, 4px);
   border-top: 1px solid var(--a-color-border-soft, #e2e8f0);

@@ -85,8 +85,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
+import { escapeHtml, useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
 import MIcon from '@mobile/components/ui/MIcon.vue'
 import MAvatar from '@mobile/components/ui/MAvatar.vue'
 import { getPostById } from '@/entities/post/api/postApi'
@@ -123,18 +122,15 @@ const canRetry = ref(false)
 const progressPercent = ref(0)
 
 const currentPost = computed(() => props.post || loadedPost.value)
+const { renderMarkdown } = useMarkdownRenderer()
 
 const renderedMarkdown = computed(() => {
   const raw = currentPost.value?.content || ''
   if (!raw) return ''
   try {
-    const html = marked.parse(raw, { async: false }) as string
-    if (typeof DOMPurify !== 'undefined' && DOMPurify.sanitize) {
-      return DOMPurify.sanitize(html)
-    }
-    return html
+    return renderMarkdown(raw)
   } catch {
-    return raw
+    return escapeHtml(raw)
   }
 })
 

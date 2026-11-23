@@ -3,7 +3,7 @@
     :show="true"
     :title="title"
     mode="partial"
-    partial-width="42rem"
+    partial-width="var(--a-comment-sheet-width)"
     panel-class="studio-management-sheet"
     side="right"
     close-type="header"

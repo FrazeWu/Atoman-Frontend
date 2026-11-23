@@ -196,7 +196,11 @@ onUnmounted(() => {
   background: color-mix(in srgb, var(--a-color-text) 5%, transparent);
   color: var(--a-color-muted);
   cursor: pointer;
-  transition: all var(--a-motion-micro, 140ms) ease;
+  transition:
+    color var(--a-motion-micro, 140ms) ease,
+    background-color var(--a-motion-micro, 140ms) ease,
+    border-color var(--a-motion-micro, 140ms) ease,
+    opacity var(--a-motion-micro, 140ms) ease;
 }
 
 .dm-profile-drawer__close-btn:hover {
@@ -300,7 +304,11 @@ onUnmounted(() => {
   text-align: left;
   width: 100%;
   box-sizing: border-box;
-  transition: all var(--a-motion-micro, 140ms) ease;
+  transition:
+    color var(--a-motion-micro, 140ms) ease,
+    background-color var(--a-motion-micro, 140ms) ease,
+    border-color var(--a-motion-micro, 140ms) ease,
+    opacity var(--a-motion-micro, 140ms) ease;
   box-shadow: none !important;
 }
 

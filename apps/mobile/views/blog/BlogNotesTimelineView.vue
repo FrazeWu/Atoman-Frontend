@@ -130,6 +130,7 @@
     <!-- Composer Sheet -->
     <ShortNoteComposerSheet
       v-model="showComposer"
+      :initial-content="stagedInitialContent"
       @submit="handlePublishNote"
     />
   </div>
@@ -137,9 +138,10 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { getActivePinia } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
+import { formatBookQuoteCitation, useDraftStagingStore } from '@/stores/draftStaging'
 import { useApi } from '@/composables/useApi'
 import { apiRequestEnvelope } from '@/api/client'
 import MIcon from '@mobile/components/ui/MIcon.vue'
@@ -173,10 +175,19 @@ const props = withDefaults(
 )
 
 const router = useRouter()
+let route: ReturnType<typeof useRoute> | null = null
+try {
+  route = useRoute()
+} catch {
+  // Optional outside router context
+}
 const api = useApi()
-const authStore = getActivePinia() ? useAuthStore() : null
+const pinia = getActivePinia()
+const authStore = pinia ? useAuthStore() : null
+const draftStagingStore = pinia ? useDraftStagingStore() : null
 
 const showComposer = ref(false)
+const stagedInitialContent = ref('')
 const loading = ref(props.initialNotes === undefined)
 const loadError = ref('')
 const publishError = ref('')
@@ -240,6 +251,7 @@ async function handlePublishNote(payload: { content: string; image?: string }) {
       optimisticNote.id = String(saved.id)
       if (saved.created_at) optimisticNote.created_at = saved.created_at
     }
+    stagedInitialContent.value = ''
   } catch {
     notes.value = notes.value.filter((note) => note !== optimisticNote)
     publishError.value = '短笺发布失败，请重试。'
@@ -291,6 +303,13 @@ async function loadData() {
 }
 
 onMounted(() => {
+  const staged = draftStagingStore?.consumePendingQuote('short_note')
+  if (staged) {
+    stagedInitialContent.value = formatBookQuoteCitation(staged)
+    showComposer.value = true
+  } else if (route?.query?.compose === '1') {
+    showComposer.value = true
+  }
   if (!props.initialNotes) {
     void loadData()
   }

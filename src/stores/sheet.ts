@@ -1,5 +1,6 @@
-import { ref } from 'vue'
-import { defineStore } from 'pinia'
+import { onScopeDispose, ref } from 'vue'
+import { defineStore, getActivePinia } from 'pinia'
+import { registerSessionReset } from '@/stores/sessionReset'
 
 export interface Sheet {
   id: string
@@ -76,6 +77,9 @@ export const useSheetStore = defineStore('sheet', () => {
       stack.value = []
     }
   }
+
+  const pinia = getActivePinia()
+  if (pinia) onScopeDispose(registerSessionReset(pinia, () => clearStack(false)))
 
   return {
     stack,

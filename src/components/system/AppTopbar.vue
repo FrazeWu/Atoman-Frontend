@@ -54,6 +54,16 @@
         >
           <span class="nav-link-name">{{ room.name }}</span>
         </RouterLink>
+        <RouterLink
+          v-for="room in secondaryNavRooms"
+          :key="room.key"
+          :to="moduleUrl(room.key)"
+          class="nav-link"
+          :class="{ active: isRoomActive(room.key) }"
+          @click="handleModuleNavigation"
+        >
+          <span class="nav-link-name">{{ room.name }}</span>
+        </RouterLink>
       </nav>
 
       <div class="nav-right">
@@ -85,8 +95,9 @@ import { useAuthStore } from '@/stores/auth'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { useSheetStore } from '@/stores/sheet'
 import { useSiteAccessStore } from '@/stores/siteAccess'
+import { useBlogSheets } from '@/composables/useBlogSheets'
 import { moduleUrl } from '@/router/siteUrls'
-import { isRoomRouteActive, moduleRooms, topbarNavOrder, type ModuleRoomKey } from '@/config/moduleRooms'
+import { isRoomRouteActive, moduleNavOrder, moduleRooms, topbarNavOrder, type ModuleRoomKey } from '@/config/moduleRooms'
 import { appVersion } from '@/config/appVersion'
 import { resolveSiteContext } from '@/router/siteContext'
 import AppTopbarGlobalSearch from '@/components/system/AppTopbarGlobalSearch.vue'
@@ -100,6 +111,7 @@ const route = useRoute()
 
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const sheetStore = useSheetStore()
+const blogSheets = useBlogSheets()
 const playerPresence = usePlayerPresenceStore()
 const MobileModuleSwitcher = defineAsyncComponent(() => import('@/components/system/MobileModuleSwitcher.vue'))
 const AppTopbarAuthControls = defineAsyncComponent(() => import('@/components/system/AppTopbarAuthControls.vue'))
@@ -108,6 +120,7 @@ let mobileViewportQuery: MediaQueryList | null = null
 
 const handleBrandClick = () => {
   requestLyricsClose()
+  blogSheets.closeAll()
   if (sheetStore.stack.length > 0) {
     sheetStore.clearStack(true)
   }
@@ -120,6 +133,7 @@ const requestLyricsClose = () => {
 
 const handleModuleNavigation = () => {
   requestLyricsClose()
+  blogSheets.closeAll()
   if (sheetStore.stack.length > 0) sheetStore.clearStack(false)
 }
 
@@ -132,6 +146,7 @@ const isAuthPage = computed(() => {
 })
 
 const navRooms = computed(() => topbarNavOrder.filter((key) => siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key]))
+const secondaryNavRooms = computed(() => moduleNavOrder.filter((key) => !topbarNavOrder.includes(key) && siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key]))
 const siteContext = computed(() => {
   const queryStart = route.fullPath.indexOf('?')
   const search = queryStart >= 0 ? route.fullPath.slice(queryStart) : ''

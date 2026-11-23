@@ -33,7 +33,7 @@
         <!-- Space List -->
         <nav class="mobile-space-drawer__nav" aria-label="空间列表">
           <button
-            v-for="space in spaces"
+            v-for="space in visibleSpaces"
             :key="space.key"
             type="button"
             class="mobile-space-drawer__item"
@@ -57,7 +57,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { getActivePinia } from 'pinia'
 import MIcon from '@mobile/components/ui/MIcon.vue'
+import { moduleRooms, type ModuleRoomKey } from '@/config/moduleRooms'
+import { useSiteAccessStore } from '@/stores/siteAccess'
 import { ATOMAN_SPACES, type SpaceDefinition } from './spaceConstants'
 
 const props = withDefaults(
@@ -72,6 +76,13 @@ const props = withDefaults(
     teleport: false,
     spaces: () => ATOMAN_SPACES,
   }
+)
+
+const siteAccessStore = getActivePinia() ? useSiteAccessStore() : null
+const visibleSpaces = computed(() =>
+  props.spaces.filter((space) =>
+    !siteAccessStore || !(space.key in moduleRooms) || siteAccessStore.isModuleVisible(space.key as ModuleRoomKey)
+  )
 )
 
 const emit = defineEmits<{
@@ -96,7 +107,7 @@ const handleSelect = (spaceKey: string) => {
 .mobile-space-drawer-root {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: var(--a-z-sheet-backdrop, 300);
   display: flex;
 }
 
@@ -109,13 +120,13 @@ const handleSelect = (spaceKey: string) => {
 
 .mobile-space-drawer {
   position: relative;
-  z-index: 1001;
+  z-index: var(--a-z-sheet, 310);
   width: 280px;
   max-width: 80vw;
   height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border-right: 1px solid var(--a-color-border-soft, #e2e8f0);
   box-shadow: none;
   animation: slideIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
@@ -219,7 +230,7 @@ const handleSelect = (spaceKey: string) => {
   line-height: 1;
   letter-spacing: 0.04em;
   color: var(--a-color-muted, #64748b);
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border: 1px solid var(--a-color-border-soft, #e2e8f0);
   border-radius: 4px;
 }

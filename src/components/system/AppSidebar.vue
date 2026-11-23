@@ -58,6 +58,7 @@
         :index="index + 1"
         :icon="item.icon"
         :exact="item.exact"
+        :active="item.active?.(route?.path ?? '')"
         router-active
         :is-focused="isSidebarFocused(index)"
       >

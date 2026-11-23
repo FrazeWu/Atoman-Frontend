@@ -71,7 +71,7 @@ async function confirm() {
 }
 </script>
 <style scoped>
-.mobile-song-playlist-picker__backdrop{position:fixed;inset:0;z-index:10010;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55)}
+.mobile-song-playlist-picker__backdrop{position:fixed;inset:0;z-index:var(--a-z-player-modal,760);display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55)}
 .mobile-song-playlist-picker__panel{width:min(100%,480px);max-height:80dvh;overflow:auto;padding:20px 18px calc(22px + env(safe-area-inset-bottom));background:var(--a-color-surface,#fff);color:var(--a-color-text,#111);border-radius:16px 16px 0 0}
 .mobile-song-playlist-picker__header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
 .mobile-song-playlist-picker__header strong{font-size:18px}

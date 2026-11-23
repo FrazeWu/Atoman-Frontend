@@ -1,7 +1,8 @@
 import { apiRequestResult } from '@/api/client'
 import { reportError } from '@/utils/logger'
-import { ref } from "vue";
-import { defineStore } from "pinia";
+import { onScopeDispose, ref } from "vue";
+import { defineStore, getActivePinia } from "pinia";
+import { registerSessionReset } from "@/stores/sessionReset";
 import type {
   Debate,
   DebateConclusionEvent,
@@ -582,6 +583,9 @@ export const useDebateStore = defineStore("debate", () => {
 		relationLoading.value = false;
     error.value = null;
   };
+
+  const pinia = getActivePinia();
+  if (pinia) onScopeDispose(registerSessionReset(pinia, resetStore));
 
   return {
     debates,

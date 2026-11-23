@@ -10,6 +10,8 @@ describe('desktop right sheet mode contract', () => {
     const revision = read('src/components/debate/DebateRevisionSheet.vue')
     const crop = read('src/components/music/MusicSquareImageCropSheet.vue')
     const security = read('src/components/user/AccountSecurityPanel.vue')
+    const themeDrawer = read('src/components/theme/ThemeCustomizerDrawer.vue')
+    const studioSheet = read('src/components/studio/StudioManagementSheet.vue')
     const style = read('src/style.css')
 
     expect(style).toContain('--a-comment-sheet-width: 42rem;')
@@ -17,6 +19,8 @@ describe('desktop right sheet mode contract', () => {
     expect(crop).toMatch(/<PSheet[\s\S]*?mode="partial"[\s\S]*?partial-width="var\(--a-comment-sheet-width\)"/)
     expect(security).toMatch(/title="登录设备详情"[\s\S]*?mode="partial"[\s\S]*?partial-width="var\(--a-comment-sheet-width\)"/)
     expect(security).toMatch(/title="安全日志详情"[\s\S]*?mode="partial"[\s\S]*?partial-width="var\(--a-comment-sheet-width\)"/)
+    expect(themeDrawer).toMatch(/<PSheet[\s\S]*?mode="partial"[\s\S]*?partial-width="var\(--a-comment-sheet-width\)"/)
+    expect(studioSheet).toMatch(/<PSheet[\s\S]*?mode="partial"[\s\S]*?partial-width="var\(--a-comment-sheet-width\)"/)
   })
 
   it('keeps source article and source item lists as full sheets', () => {

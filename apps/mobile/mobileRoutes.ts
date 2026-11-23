@@ -93,7 +93,11 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	{
 		path: "/studio",
 		component: () => import("./views/studio/StudioMobileView.vue"),
-		meta: { restoreSession: true },
+		meta: { restoreSession: true, mobileStudioRoot: true },
+	},
+	{
+		path: "/studio/editor/:id",
+		redirect: (to) => `/studio/blog/${String(to.params.id)}/edit`,
 	},
 	{
 		path: "/books",
@@ -195,6 +199,10 @@ export const mobileRoutes: RouteRecordRaw[] = [
 		component: () => import('./views/blog/BlogArticlesView.vue'),
 	},
 	{
+		path: "/posts/new",
+		redirect: "/studio/blog/new",
+	},
+	{
 		path: "/posts/notes",
 		component: () => import("./views/blog/BlogNotesTimelineView.vue"),
 	},
@@ -206,6 +214,7 @@ export const mobileRoutes: RouteRecordRaw[] = [
 	{
 		path: "/posts/notes/:id",
 		component: () => import("./views/blog/ShortNoteDetailMobileView.vue"),
+		beforeEnter: (to) => (to.params.id === "new" ? { path: "/posts/notes", query: { ...to.query, compose: "1" }, hash: to.hash } : true),
 	},
 	{
 		path: "/posts/me",

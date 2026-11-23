@@ -1,7 +1,8 @@
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
-import { ref } from 'vue'
-import { defineStore } from 'pinia'
+import { onScopeDispose, ref } from 'vue'
+import { defineStore, getActivePinia } from 'pinia'
+import { registerSessionReset } from '@/stores/sessionReset'
 import type { TimelineEvent, TimelinePerson, PersonLocation } from '@/types'
 import { useAuthStore } from '@/stores/auth'
 import { useApi } from '@/composables/useApi'
@@ -449,6 +450,25 @@ export const useTimelineStore = defineStore('timeline', () => {
       throw e
     }
   }
+
+  const resetStore = () => {
+    eventsRequestSequence += 1
+    personsRequestSequence += 1
+    personRequestSequence += 1
+    events.value = []
+    eventsTotal.value = 0
+    currentEvent.value = null
+    persons.value = []
+    personsTotal.value = 0
+    currentPerson.value = null
+    personsLoading.value = false
+    personsError.value = null
+    loading.value = false
+    error.value = null
+  }
+
+  const pinia = getActivePinia()
+  if (pinia) onScopeDispose(registerSessionReset(pinia, resetStore))
 
   return {
     events,

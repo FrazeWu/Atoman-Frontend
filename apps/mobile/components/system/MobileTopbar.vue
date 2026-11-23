@@ -103,7 +103,7 @@ const displayLabel = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: #ffffff;
+  background-color: var(--a-color-bg, #ffffff);
   border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
 }
 

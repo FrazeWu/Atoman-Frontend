@@ -1019,8 +1019,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   height: 48px;
   padding: 0 8px;
-  background-color: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
+  background-color: var(--a-color-bg, #ffffff);
   border: none;
 }
 
@@ -1378,7 +1377,7 @@ onBeforeUnmount(() => {
   position: fixed;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.45);
-  z-index: 10004;
+  z-index: var(--a-z-player-modal-backdrop, 750);
 }
 
 .mobile-action-sheet {
@@ -1386,7 +1385,7 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 10005;
+  z-index: var(--a-z-player-modal, 760);
   background-color: #ffffff;
   border-top-left-radius: 14px;
   border-top-right-radius: 14px;
@@ -1566,7 +1565,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .mobile-playlist-detail__icon-btn--danger{color:var(--a-color-danger,#d14343)}
-.mobile-playlist-delete-confirm{position:fixed;inset:0;z-index:10000;display:flex;align-items:flex-end;justify-content:center}
+.mobile-playlist-delete-confirm{position:fixed;inset:0;z-index:var(--a-z-player-modal,760);display:flex;align-items:flex-end;justify-content:center}
 .mobile-playlist-delete-confirm__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55)}
 .mobile-playlist-delete-confirm__panel{position:relative;width:min(100%,480px);padding:24px 20px calc(20px + env(safe-area-inset-bottom));background:var(--a-color-surface,#fff);border-radius:16px 16px 0 0;box-shadow:0 -6px 36px rgba(0,0,0,.15)}
 .mobile-playlist-delete-confirm__panel h2{font-size:18px;font-weight:650;margin:0 0 12px}

@@ -725,9 +725,7 @@ watch(() => route.params.albumId, (id, previous) => {
   justify-content: space-between;
   height: 48px;
   padding: 0 12px;
-  background-color: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background-color: var(--a-color-bg, #ffffff);
   border: none;
 }
 
@@ -1127,7 +1125,7 @@ watch(() => route.params.albumId, (id, previous) => {
   position: fixed;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.45);
-  z-index: 10004;
+  z-index: var(--a-z-player-modal-backdrop, 750);
 }
 
 .mobile-action-sheet {
@@ -1135,7 +1133,7 @@ watch(() => route.params.albumId, (id, previous) => {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 10005;
+  z-index: var(--a-z-player-modal, 760);
   background-color: #ffffff;
   border-top-left-radius: 14px;
   border-top-right-radius: 14px;

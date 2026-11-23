@@ -1,5 +1,6 @@
-import { ref } from 'vue'
-import { defineStore } from 'pinia'
+import { onScopeDispose, ref } from 'vue'
+import { defineStore, getActivePinia } from 'pinia'
+import { registerSessionReset } from '@/stores/sessionReset'
 
 export interface BookQuotePayload {
   sourceType: 'book_annotation'
@@ -57,6 +58,9 @@ export const useDraftStagingStore = defineStore('draftStaging', () => {
   function clearPendingQuote() {
     pendingQuote.value = null
   }
+
+  const pinia = getActivePinia()
+  if (pinia) onScopeDispose(registerSessionReset(pinia, clearPendingQuote))
 
   return {
     pendingQuote,

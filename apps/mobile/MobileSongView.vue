@@ -544,7 +544,7 @@ watch(songId, loadSong, { immediate: true })
 </style>
 
 <style scoped>
-.mobile-song-view__picker-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1100;display:flex;align-items:flex-end;justify-content:center}
+.mobile-song-view__picker-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:var(--a-z-player-modal,760);display:flex;align-items:flex-end;justify-content:center}
 .mobile-song-view__picker{width:100%;max-width:540px;max-height:70dvh;overflow:auto;background:var(--a-color-surface);padding:20px;border-radius:16px 16px 0 0;overscroll-behavior:contain}
 .mobile-song-view__picker-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .mobile-song-view__picker-item{display:flex;align-items:center;gap:10px;min-height:48px}

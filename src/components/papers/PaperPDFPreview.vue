@@ -2,7 +2,7 @@
   <section class="paper-pdf" aria-label="PDF 预览">
     <div class="paper-pdf__toolbar">
       <button type="button" title="上一页" aria-label="上一页" :disabled="page <= 1 || !pageCount" @click="jump(page - 1)">‹</button>
-      <input v-model="pageInput" class="paper-pdf__page-input" aria-label="页码" inputmode="numeric" @change="jump(Number(pageInput))" @keydown.enter.prevent="jump(Number(pageInput))" />
+      <input v-model="pageInput" class="paper-pdf__page-input" aria-label="页码" inputmode="numeric" @focus="editingPageInput = true" @input="editingPageInput = true" @blur="commitPageInput" @keydown.enter.prevent="commitPageInput" />
       <span class="paper-pdf__count">/ {{ pageCount || '—' }}</span>
       <button type="button" title="下一页" aria-label="下一页" :disabled="page >= pageCount || !pageCount" @click="jump(page + 1)">›</button>
       <span class="paper-pdf__separator"></span>
@@ -18,10 +18,10 @@
     <div v-if="loading" class="paper-pdf__notice" role="status">{{ pageCount ? '正在更新预览，保留当前页面…' : '正在读取 PDF…' }}</div>
     <div ref="scroller" class="paper-pdf__scroll" tabindex="0" @scroll.passive="onScroll">
       <div v-if="!pageCount" class="paper-pdf__placeholder">{{ loading ? '正在加载编译结果' : '暂无可预览的 PDF' }}</div>
-      <div v-for="item in pages" :key="item.number" :ref="el => registerPage(item.number, el as HTMLElement | null)" class="paper-pdf__sheet" :data-page="item.number" :data-rendered="item.ready ? 'true' : 'false'" @dblclick="onPDFDoubleClick($event,item)" :style="{width: item.width + 'px',height:item.height + 'px'}">
+      <div v-for="item in pages" :key="displayedJob + ':' + item.number" :ref="el => registerPage(item.number, el as HTMLElement | null)" class="paper-pdf__sheet" :data-page="item.number" :data-rendered="item.ready ? 'true' : 'false'" @dblclick="onPDFDoubleClick($event,item)" :style="{width: item.width + 'px',height:item.height + 'px'}">
         <canvas :ref="el => registerCanvas(item.number, el as HTMLCanvasElement | null)" :aria-label="'PDF 第 ' + item.number + ' 页'" />
         <div v-if="item.error" class="paper-pdf__page-error">第 {{ item.number }} 页暂时无法渲染 <button type="button" @click="retryPage(item.number)">重试</button></div>
-        <span v-else-if="!item.ready" class="paper-pdf__page-loading">第 {{ item.number }} 页</span>
+        <span v-else-if="!item.ready && !item.hasPixels" class="paper-pdf__page-loading">第 {{ item.number }} 页</span>
         <span v-if="marker?.page===item.number" class="paper-pdf__sync-marker" :style="{left:(marker.x/item.naturalWidth*100)+'%',top:(marker.y/item.naturalHeight*100)+'%'}" aria-hidden="true" />
       </div>
     </div>
@@ -40,11 +40,14 @@ const emit=defineEmits<{ 'pdf-position':[value:{jobId:string;page:number;x:numbe
 const marker=ref<{page:number;x:number;y:number}|null>(null)
 let markerTimer:ReturnType<typeof setTimeout>|undefined
 const displayedJob=ref('')
-type Page = {number:number; naturalWidth:number; naturalHeight:number; width:number;height:number;ready:boolean;error:boolean}
+type Page = {number:number; naturalWidth:number; naturalHeight:number; width:number;height:number;ready:boolean;error:boolean;hasPixels:boolean}
 const scroller=ref<HTMLElement|null>(null)
 const pages=ref<Page[]>([])
 const pageCount=computed(()=>pages.value.length)
 const page=ref(1), pageInput=ref('1')
+const editingPageInput=ref(false)
+let resizeTimer:ReturnType<typeof setTimeout>|undefined
+let preferredPage=0
 const zoom=ref('width')
 const zoomLevels=[50,75,100,125,150,200]
 const documentBlob=shallowRef<Blob>()
@@ -62,15 +65,25 @@ const canvases=new Map<number,HTMLCanvasElement>()
 const rendering=new Map<number,RenderTask>()
 let busy=false
 const pending=new Set<number>()
+let wantedPages=new Set<number>()
+const MAX_RENDER_PAGES=12
+const MAX_CACHED_PIXELS=24_000_000
 
 function registerPage(n:number,el:HTMLElement|null){if(el)elements.set(n,el);else elements.delete(n)}
 function registerCanvas(n:number,el:HTMLCanvasElement|null){if(el)canvases.set(n,el);else canvases.delete(n)}
 function anchor(){
  const box=scroller.value
- const el=elements.get(page.value)
- if(!box||!el)return {page:page.value,offset:0}
- const y=box.getBoundingClientRect().top-el.getBoundingClientRect().top
- return {page:page.value,offset:Math.max(0,Math.min(1,y/Math.max(1,el.clientHeight)))}
+ if(!box||box.clientWidth===0||box.clientHeight===0)return {page:page.value,offset:0}
+ const top=box.getBoundingClientRect().top+8
+ let chosen=elements.get(page.value)
+ let chosenNumber=page.value
+ for(const [n,el] of elements){
+  const r=el.getBoundingClientRect()
+  if(r.bottom>top){chosen=el;chosenNumber=n;break}
+ }
+ if(!chosen)return {page:page.value,offset:0}
+ const y=top-chosen.getBoundingClientRect().top
+ return {page:chosenNumber,offset:Math.max(0,Math.min(1,y/Math.max(1,chosen.clientHeight)))}
 }
 function restore(a:{page:number;offset:number}){
  const box=scroller.value,el=elements.get(Math.min(pageCount.value,Math.max(1,a.page)))
@@ -90,12 +103,15 @@ function scaleFor(p:Page){
  return Math.max(.1,Math.min(3,scale||1))
 }
 async function resizePages(keep=true){
+ const box=scroller.value
+ if(!box||box.clientWidth===0||box.clientHeight===0)return
  const a=anchor()
+ const dimensions=pages.value.map(p=>{const s=scaleFor(p);return [Math.max(1,Math.round(p.naturalWidth*s)),Math.max(1,Math.round(p.naturalHeight*s))] as const})
+ if(dimensions.every(([w,h],i)=>pages.value[i]?.width===w&&pages.value[i]?.height===h)){schedule();return}
  cancelRenders()
- for(const p of pages.value){
-  const s=scaleFor(p)
-  p.width=Math.round(p.naturalWidth*s);p.height=Math.round(p.naturalHeight*s)
-  p.ready=false;p.error=false
+ for(const [i,p] of pages.value.entries()){
+  const size=dimensions[i]!
+  p.width=size[0];p.height=size[1];p.ready=false;p.error=false
  }
  await nextTick()
  if(keep)restore(a)
@@ -103,7 +119,7 @@ async function resizePages(keep=true){
 }
 function visiblePages(){
  const box=scroller.value
- if(!box)return [page.value]
+ if(!box||box.clientWidth===0||box.clientHeight===0)return []
  const r=box.getBoundingClientRect()
  const list:number[]=[]
  let nearest=page.value, distance=Infinity
@@ -115,20 +131,24 @@ function visiblePages(){
    if(d<distance){distance=d;nearest=n}
   }
  }
- if(distance!==Infinity){page.value=nearest;pageInput.value=String(nearest)}
- return list.sort((a,b)=>Math.abs(a-page.value)-Math.abs(b-page.value))
+ if(distance!==Infinity){
+  page.value=preferredPage&&list.includes(preferredPage)?preferredPage:nearest
+  if(!editingPageInput.value)pageInput.value=String(page.value)
+ }
+ preferredPage=0
+ return list.sort((a,b)=>Math.abs(a-page.value)-Math.abs(b-page.value)).slice(0,MAX_RENDER_PAGES)
 }
 function schedule(){
  if(disposed||scheduled)return
  scheduled=requestAnimationFrame(()=>{
   scheduled=0
-  const wanted=new Set(visiblePages())
+  const wanted=new Set(visiblePages());wantedPages=wanted
   for(const [n,t] of rendering)if(!wanted.has(n))t.cancel()
   for(const n of pending)if(!wanted.has(n))pending.delete(n)
   for(const p of pages.value){
-   if(!wanted.has(p.number)&&Math.abs(p.number-page.value)>4&&p.ready){
+   if(!wanted.has(p.number)&&p.hasPixels){
     const c=canvases.get(p.number);if(c){c.width=1;c.height=1}
-    p.ready=false
+    p.ready=false;p.hasPixels=false
    }
   }
   for(const n of wanted){const p=pages.value[n-1];if(p&&!p.ready&&!p.error&&!rendering.has(n))pending.add(n)}
@@ -147,7 +167,7 @@ async function pump(){
    if(!p||!current||!c||p.ready)continue
    try{
     const target=await current.getPage(n)
-    if(disposed||serial!==renderSerial||current!==doc||canvases.get(n)!==c)continue
+    if(disposed||serial!==renderSerial||current!==doc||canvases.get(n)!==c||!wantedPages.has(n))continue
     const natural=target.getViewport({scale:1})
     if(!(natural.width>0&&natural.height>0))throw new Error('invalid page')
     const newDimensions=Math.abs(natural.width-p.naturalWidth)>.5||Math.abs(natural.height-p.naturalHeight)>.5
@@ -158,32 +178,41 @@ async function pump(){
     const displayScale=scaleFor(p)
     const dpr=Math.max(1,Math.min(window.devicePixelRatio||1,2))
     const scale=Math.min(displayScale*dpr,4096/natural.width,4096/natural.height,Math.sqrt(8_000_000/(natural.width*natural.height)))
-    const viewport=target.getViewport({scale})
+    const viewport=target.getViewport({scale:Math.min(scale,Math.sqrt(MAX_CACHED_PIXELS/Math.max(3,wantedPages.size)/(natural.width*natural.height)))})
     if(!Number.isFinite(viewport.width)||!Number.isFinite(viewport.height))throw new Error('invalid viewport')
-    const ctx=c.getContext('2d',{alpha:false})
+    // Keep the last complete pixels visible until a fresh render succeeds.
+    // Cancellation should never clear the canvas or expose partial pixels.
+    const staging=document.createElement('canvas')
+    const ctx=staging.getContext('2d',{alpha:false})
     if(!ctx)throw new Error('canvas unavailable')
-    c.width=Math.max(1,Math.floor(viewport.width));c.height=Math.max(1,Math.floor(viewport.height))
-    const t=target.render({canvas:c,canvasContext:ctx,viewport,annotationMode:0})
-    rendering.set(n,t)
-    await t.promise
-    if(!disposed&&serial===renderSerial&&current===doc)p.ready=true
+    staging.width=Math.max(1,Math.floor(viewport.width));staging.height=Math.max(1,Math.floor(viewport.height))
+    try{
+     const t=target.render({canvas:staging,canvasContext:ctx,viewport,annotationMode:0})
+     rendering.set(n,t)
+     await t.promise
+     if(disposed||serial!==renderSerial||current!==doc||canvases.get(n)!==c||!wantedPages.has(n))continue
+     const output=c.getContext('2d',{alpha:false})
+     if(!output)throw new Error('canvas unavailable')
+     c.width=staging.width;c.height=staging.height;output.drawImage(staging,0,0)
+     p.ready=true;p.hasPixels=true
+    }finally{staging.width=1;staging.height=1}
    }catch(e){
     if(!disposed&&serial===renderSerial&&current===doc&&(e as Error)?.name!=='RenderingCancelledException')p.error=true
-   }finally{rendering.delete(n);if(!disposed&&serial!==renderSerial)schedule()}
+   }finally{rendering.delete(n);if(!disposed&&!p.ready&&!p.error)schedule()}
   }
  }finally{busy=false}
 }
 async function load(){
  if(disposed)return
  const serial=++loadSerial
- const a=anchor()
+ const pid=props.projectId,jid=props.jobId,revision=props.revision
  abort?.abort();abort=new AbortController()
  void pendingTask?.destroy().catch(()=>{})
  pendingTask=undefined
  loading.value=true;error.value=''
  let next:PDFDocumentLoadingTask|undefined
  try{
-  const blob=await getPaperCompilePDF(props.projectId,props.jobId,abort.signal)
+  const blob=await getPaperCompilePDF(pid,jid,abort.signal)
   if(disposed||serial!==loadSerial)return
   const {getDocument}=await loadPdfEngine()
   const data=await blob.arrayBuffer()
@@ -198,14 +227,18 @@ async function load(){
   const natural=first.getViewport({scale:1})
   if(!(natural.width>0&&natural.height>0))throw new Error('invalid viewport')
   const old=task
+  const a=anchor()
   cancelRenders()
   await Promise.allSettled([...rendering.values()].map(t=>t.promise))
   if(disposed||serial!==loadSerial){await next.destroy();return}
   doc=incoming;task=next;pendingTask=undefined
-  documentBlob.value=blob;displayedRevision.value=props.revision;displayedJob.value=props.jobId;emit('displayed-job',props.jobId)
-  pages.value=Array.from({length:incoming.numPages},(_,i)=>({number:i+1,naturalWidth:natural.width,naturalHeight:natural.height,width:1,height:1,ready:false,error:false}))
+  documentBlob.value=blob;displayedRevision.value=revision;displayedJob.value=jid
+  pages.value=Array.from({length:incoming.numPages},(_,i)=>({number:i+1,naturalWidth:natural.width,naturalHeight:natural.height,width:1,height:1,ready:false,error:false,hasPixels:false}))
   page.value=Math.min(incoming.numPages,a.page);pageInput.value=String(page.value)
+  editingPageInput.value=false
+  await nextTick()
   await resizePages(false)
+  emit('displayed-job',jid)
   await nextTick();restore(a);schedule()
   if(old&&old!==task)void old.destroy().catch(()=>{})
  }catch{
@@ -213,10 +246,16 @@ async function load(){
   if(!disposed&&serial===loadSerial)error.value='PDF 加载失败。请重试或下载上一次成功的结果。'
  }finally{if(!disposed&&serial===loadSerial){loading.value=false;pendingTask=undefined}}
 }
+function commitPageInput(){
+ if(!editingPageInput.value)return
+ editingPageInput.value=false
+ const raw=pageInput.value.trim()
+ jump(raw?Number(raw):page.value)
+}
 function jump(n:number){
  if(!pageCount.value)return
  const target=Number.isFinite(n)?Math.max(1,Math.min(pageCount.value,Math.trunc(n))):page.value
- page.value=target;pageInput.value=String(target);restore({page:target,offset:0})
+ preferredPage=target;page.value=target;pageInput.value=String(target);restore({page:target,offset:0})
 }
 function adjustZoom(direction:number){
  const p=pages.value[page.value-1];if(!p)return
@@ -233,11 +272,17 @@ function download(){
 }
 watch(()=>[props.projectId,props.jobId],()=>void load())
 onMounted(()=>{
- if(scroller.value&&typeof ResizeObserver!=='undefined'){observer=new ResizeObserver(()=>{if(pageCount.value)void resizePages(true)});observer.observe(scroller.value)}
+ if(scroller.value&&typeof ResizeObserver!=='undefined'){
+  observer=new ResizeObserver(()=>{
+   if(resizeTimer)clearTimeout(resizeTimer)
+   resizeTimer=setTimeout(()=>{if(!disposed&&pageCount.value)void resizePages(true)},100)
+  })
+  observer.observe(scroller.value)
+ }
  void load()
 })
 onBeforeUnmount(()=>{
- disposed=true;loadSerial++;abort?.abort();observer?.disconnect();cancelAnimationFrame(scheduled);cancelRenders();if(markerTimer)clearTimeout(markerTimer)
+ disposed=true;loadSerial++;abort?.abort();observer?.disconnect();cancelAnimationFrame(scheduled);cancelRenders();if(markerTimer)clearTimeout(markerTimer);if(resizeTimer)clearTimeout(resizeTimer)
  void pendingTask?.destroy().catch(()=>{});void task?.destroy().catch(()=>{})
  documentBlob.value=undefined
 })
@@ -254,7 +299,7 @@ async function showPosition(n:number,x:number,y:number,jobId:string){
  await nextTick()
  const box=scroller.value,el=elements.get(n)
  if(!box||!el)return false
- page.value=n;pageInput.value=String(n)
+ preferredPage=n;page.value=n;pageInput.value=String(n)
  box.scrollTop+=el.getBoundingClientRect().top-box.getBoundingClientRect().top+y/p.naturalHeight*el.clientHeight-box.clientHeight*.4
  box.scrollLeft=Math.max(0,el.offsetLeft+x/p.naturalWidth*el.clientWidth-box.clientWidth*.5)
  marker.value={page:n,x,y}

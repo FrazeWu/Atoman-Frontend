@@ -13,8 +13,8 @@ function fixturePDF(): Buffer {
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 320 300] /Resources << /Font << /F1 7 0 R >> >> /Contents 5 0 R >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 320 300] /Resources << /Font << /F1 7 0 R >> >> /Contents 6 0 R >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 320 600] /Resources << /Font << /F1 7 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 320 600] /Resources << /Font << /F1 7 0 R >> >> /Contents 6 0 R >>',
     stream('Papers acceptance page one'),
     stream('Papers acceptance page two'),
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
@@ -33,6 +33,7 @@ function fixturePDF(): Buffer {
 }
 
 test.describe('Papers isolated browser acceptance', () => {
+  test.setTimeout(120000)
   test('renders a genuine PDF, paginates, downloads identical bytes and stays private when disabled', async ({ page, baseURL }) => {
     const origin = new URL(baseURL!).origin
     expect(new URL(origin).hostname).toMatch(/^(localhost|127\.0\.0\.1)$/)
@@ -67,22 +68,44 @@ test.describe('Papers isolated browser acceptance', () => {
     })
     await page.goto('/papers/project-a')
     const canvas = page.locator('.paper-pdf canvas')
-    await expect(page.getByText('1 / 2', { exact: true })).toBeVisible()
-    await expect(page.getByText('正在渲染页面...')).toHaveCount(0)
+    const first = page.locator('.paper-pdf__sheet[data-page="1"]')
+    const second = page.locator('.paper-pdf__sheet[data-page="2"]')
+    await expect(first).toHaveAttribute('data-rendered','true',{timeout:30000})
+    await expect(canvas).toHaveCount(2)
     // Actual nonwhite glyph pixels prove PDF.js rendered the page.
-    const ink = () => canvas.evaluate(el => {
+    const ink = (sheet: typeof first) => sheet.locator('canvas').evaluate(el => {
       const c = el as HTMLCanvasElement
       const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data
       let ink = 0
       for (let i = 0; i < d.length; i += 4) if (d[i + 3]! > 0 && d[i]! < 150 && d[i + 1]! < 150 && d[i + 2]! < 150) ink++
       return ink
     })
-    await expect.poll(ink).toBeGreaterThan(50)
-    await page.getByRole('button', { name: '下一页', exact: true }).click()
-    await expect(page.getByText('2 / 2', { exact: true })).toBeVisible()
-    await expect(page.getByText('正在渲染页面...')).toHaveCount(0)
-    await expect.poll(ink).toBeGreaterThan(50)
-    await expect(page.getByRole('button', { name: '下一页', exact: true })).toBeDisabled()
+    await expect.poll(()=>ink(first)).toBeGreaterThan(50)
+    const pageInput=page.getByRole('textbox',{name:'页码'})
+    // Scroll-driven page updates must not overwrite a typed page number.
+    await pageInput.fill('2')
+    await page.locator('.paper-pdf__scroll').evaluate(el => {
+      el.scrollTop=0
+      el.dispatchEvent(new Event('scroll'))
+    })
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+    await expect(pageInput).toHaveValue('2')
+    await pageInput.press('Enter')
+    await expect.poll(()=>second.evaluate(el=>{
+      const r=el.getBoundingClientRect(),b=el.closest('.paper-pdf__scroll')!.getBoundingClientRect()
+      return Math.max(0,Math.min(r.bottom,b.bottom)-Math.max(r.top,b.top))
+    })).toBeGreaterThan(100)
+    await expect(second).toHaveAttribute('data-rendered','true',{timeout:30000})
+    await expect.poll(()=>ink(second)).toBeGreaterThan(50)
+    // A new scale can be pending while old complete pixels remain visible.
+    await page.getByLabel('PDF 缩放').selectOption('125')
+    await expect.poll(()=>ink(second)).toBeGreaterThan(50)
+    await expect(second).toHaveAttribute('data-rendered','true',{timeout:30000})
+    await expect.poll(()=>ink(second)).toBeGreaterThan(50)
+    await pageInput.fill('1')
+    await pageInput.press('Enter')
+    await expect(first).toHaveAttribute('data-rendered','true',{timeout:30000})
+    await expect.poll(()=>ink(first)).toBeGreaterThan(50)
     const downloadPromise = page.waitForEvent('download')
     await page.getByRole('button', { name: '下载 PDF', exact: true }).click()
     const download = await downloadPromise

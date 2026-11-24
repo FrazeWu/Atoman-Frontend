@@ -41,6 +41,26 @@ describe("static page SEO", () => {
 		);
 	});
 
+	it("publishes the verified open-source community identity without a duplicate WebSite node", () => {
+		const withOldSchema = shell.replace("</head>", '<script data-default-meta type="application/ld+json">{"@type":"WebSite","name":"old"}</script></head>');
+		const html = buildStaticPageHtml(withOldSchema, "/", "www.atoman.org");
+		const scripts = [...html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)];
+		expect(scripts).toHaveLength(1);
+		const graph = JSON.parse(scripts[0][1])["@graph"];
+		const organization = graph.find((node: Record<string, unknown>) => node["@type"] === "Organization");
+		const website = graph.find((node: Record<string, unknown>) => node["@type"] === "WebSite");
+		expect(organization.name).toBe("Atoman");
+		expect(organization.alternateName).toBe("凹凸庵");
+		expect(organization.url).toBe("https://www.atoman.org/");
+		expect(organization.logo).toBe("https://www.atoman.org/atoman-house.svg");
+		expect(organization.email).toBe("support@atoman.org");
+		expect(website.publisher["@id"]).toBe(organization["@id"]);
+		expect(organization).not.toHaveProperty("legalName");
+		expect(organization).not.toHaveProperty("address");
+		expect(organization).not.toHaveProperty("aggregateRating");
+		expect(buildStaticPageHtml(withOldSchema, "/music", "www.atoman.org")).not.toContain("#organization");
+	});
+
 	it("renders independent metadata and a www canonical for public module pages", () => {
 		const html = buildStaticPageHtml(shell, "/feed/", "www.atoman.org");
 

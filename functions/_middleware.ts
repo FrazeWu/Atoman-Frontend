@@ -191,7 +191,7 @@ export async function onRequest(context: MiddlewareContext) {
 				missingSeoPage = true;
 				transformedHtml = buildMissingPublicContentHtml(staticHtml);
 			} else {
-				transformedHtml = injectPublicSectionListing(transformedHtml, listing.html);
+				transformedHtml = injectPublicSectionListing(transformedHtml, listing.html, listing.itemLists);
 			}
 		}
 		const headers = new Headers(response.headers);

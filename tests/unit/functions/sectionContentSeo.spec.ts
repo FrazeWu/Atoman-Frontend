@@ -132,6 +132,71 @@ describe("public section SEO link previews", () => {
     expect(html).not.toContain('name="robots" content="noindex');
   });
 
+  it.each([
+    ["/music", 2],
+    ["/music/albums", 1],
+    ["/music/artists", 1],
+    ["/music/songs", 1],
+    ["/music/songs?page=2", 1],
+  ] as const)("renders ordered ItemList JSON-LD from the same public records as %s", async (path, count) => {
+    const unsafeLabel = 'A </script><script>alert(1)</script> $&';
+    const fetcher = vi.fn(async (url: string) => {
+      const field = url.includes("/artists") ? "name" : "title";
+      const id = url.includes("/artists") ? "artist-1" : url.includes("/albums") ? "album-1" : "song-1";
+      return new Response(JSON.stringify({
+        data: [
+          { id, [field]: unsafeLabel, visibility: "public", lifecycle_status: "active" },
+          { id: id + "-private", [field]: "Private record", visibility: "private", lifecycle_status: "active" },
+          { id: id + "-retired", [field]: "Retired record", lifecycle_status: "retired" },
+          { id: id + "-2", [field]: "Second public record", lifecycle_status: "active" },
+        ],
+        meta: { total: 80, has_more: true },
+      }), { headers: { "content-type": "application/json" } });
+    });
+    const response = await pageMiddleware({
+      request: new Request("https://preview.atoman-frontend.pages.dev" + path),
+      env: { VITE_API_URL: "https://api.atoman.org/api", SEO_ORIGIN: { fetch: fetcher } },
+      next: async () => new Response(shell, { headers: { "content-type": "text/html" } }),
+    });
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    const scripts = [...html.matchAll(/<script data-page-meta="section-list" type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+    expect(scripts).toHaveLength(count);
+    expect(html).not.toContain('</script><script>alert(1)</script>');
+    expect(html).not.toContain("Private record");
+    expect(html).not.toContain("Retired record");
+    for (const script of scripts) {
+      const data = JSON.parse(script[1]);
+      expect(data["@context"]).toBe("https://schema.org");
+      expect(data["@type"]).toBe("ItemList");
+      expect(data.numberOfItems).toBe(2);
+      expect(data.itemListElement.map((item: {position: number}) => item.position)).toEqual([1, 2]);
+      expect(data.itemListElement[0].name).toBe(unsafeLabel);
+      expect(data.itemListElement[1].name).toBe("Second public record");
+      for (const item of data.itemListElement) {
+        expect(item["@type"]).toBe("ListItem");
+        expect(item.url.startsWith("https://www.atoman.org/music/")).toBe(true);
+        expect(html).toContain('href="' + new URL(item.url).pathname + '"');
+      }
+    }
+  });
+
+  it("omits ItemList on failed, empty and out-of-range archives", async () => {
+    for (const data of [
+      new Response("temporarily unavailable", { status: 503 }),
+      json([]),
+      new Response(JSON.stringify({ data: [], meta: { total: 3, has_more: false } }),
+        { headers: { "content-type": "application/json" } }),
+    ]) {
+      const response = await pageMiddleware({
+        request: new Request("https://www.atoman.org/music/songs?page=9"),
+        env: { SEO_ORIGIN: { fetch: async () => data.clone() } },
+        next: async () => new Response(shell, { headers: { "content-type": "text/html" } }),
+      });
+      expect(await response.text()).not.toContain('data-page-meta="section-list"');
+    }
+  });
+
   it("leaves noindex and 404 behavior alone", async () => {
     const mock = vi.fn(async () => json([]));
     vi.stubGlobal("fetch", mock);

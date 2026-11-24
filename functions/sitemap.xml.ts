@@ -79,7 +79,7 @@ export async function onRequest(context: SitemapContext) {
 				Accept: "application/json",
 				"User-Agent": "Atoman-Edge-SSR/1.0 (+https://www.atoman.org)",
 			},
-			signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(4000) : undefined,
+			signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(7000) : undefined,
 		});
 		if (!response.ok) throw new Error("SEO sitemap unavailable");
 		const payload = (await response.json()) as { data?: unknown };

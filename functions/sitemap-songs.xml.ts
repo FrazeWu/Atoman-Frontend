@@ -59,7 +59,7 @@ export async function onRequest(context: SongsSitemapContext) {
       `${apiBase}/music/songs?page=${sourcePage}&page_size=${sourcePageSize}`,
       {
         headers: { Accept: "application/json" },
-        signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(5000) : undefined,
+        signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(7000) : undefined,
       },
     );
     if (!response.ok) return unavailable();

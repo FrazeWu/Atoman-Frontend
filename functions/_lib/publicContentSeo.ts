@@ -138,7 +138,7 @@ async function getJson(url: string, fetcher: Fetcher): Promise<JsonValue> {
 			Accept: "application/json",
 			"User-Agent": "Atoman-Edge-SSR/1.0 (+https://www.atoman.org)",
 		},
-		signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(4000) : undefined,
+		signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(7000) : undefined,
 	});
 	if (response.status === 404 || response.status === 400) return null;
 	if (!response.ok)
@@ -980,7 +980,7 @@ async function fetchListPage(
 			Accept: "application/json",
 			"User-Agent": "Atoman-Edge-SSR/1.0 (+https://www.atoman.org)",
 		},
-		signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(4000) : undefined,
+		signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(7000) : undefined,
 	});
 	if (!response.ok)
 		throw new Error(`Public sitemap source unavailable: ${path}`);
@@ -1012,7 +1012,7 @@ async function fetchBookCollection(apiBase: string, path: string, fetcher: Fetch
 				Accept: "application/json",
 				"User-Agent": "Atoman-Edge-SSR/1.0 (+https://www.atoman.org)",
 			},
-			signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(4000) : undefined,
+			signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(7000) : undefined,
 		});
 		if (!response.ok) throw new Error(`Book sitemap source unavailable: ${path}`);
 		const payload = record(unwrap(parseJsonValue(await response.json())));

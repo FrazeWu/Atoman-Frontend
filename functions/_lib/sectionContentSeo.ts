@@ -96,7 +96,7 @@ async function getGroup(apiBase: string, source: PublicListSource, fetcher: Publ
       : source.endpoint;
     const response = await fetcher(apiBase + endpoint, {
       headers: { accept: "application/json" },
-      signal: typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(2500) : undefined,
+      signal: typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(7000) : undefined,
     });
     if (!response.ok) return emptyGroup;
     const payload: unknown = await response.json();

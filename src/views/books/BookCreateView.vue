@@ -1540,7 +1540,29 @@ async function save(withEdition: boolean) {
 function resolveLeave(leave: boolean) { leaveOpen.value = false; leaveResolve?.(leave); leaveResolve = undefined }
 onBeforeRouteLeave(() => { if (finished.value) return true; if (busy.value) return false; if (!dirty.value) return true; leaveOpen.value = true; return new Promise<boolean>(resolve => { leaveResolve = resolve }) })
 function beforeUnload(event: BeforeUnloadEvent) { if (dirty.value || busy.value) { event.preventDefault(); event.returnValue = '' } }
-onMounted(async () => { window.addEventListener('beforeunload', beforeUnload); if (typeof route.query.work === 'string') { workChoice.value = route.query.work; await next() } })
+onMounted(async () => {
+  window.addEventListener('beforeunload', beforeUnload)
+  if (typeof route.query.work === 'string') {
+    workChoice.value = route.query.work
+    await next()
+  } else if (typeof route.query.author === 'string' && route.query.author.trim()) {
+    workChoice.value = 'new'
+    const authorName = route.query.author.trim()
+    try {
+      const res = await searchWikiPeople(authorName)
+      const exact = res.items.find(p => normalizedPersonName(p.name) === normalizedPersonName(authorName))
+      if (exact) {
+        addExistingAuthor(exact)
+      } else {
+        personQuery.value = authorName
+        addNewAuthor()
+      }
+    } catch {
+      personQuery.value = authorName
+      addNewAuthor()
+    }
+  }
+})
 onBeforeUnmount(() => { if (publisherDebounce) clearTimeout(publisherDebounce); publisherRequest?.abort(); alive = false; if (workDebounce) clearTimeout(workDebounce); if (personDebounce) clearTimeout(personDebounce); personRequestSequence++; searchController?.abort(); window.removeEventListener('beforeunload', beforeUnload); leaveResolve?.(false) })
 </script>
 

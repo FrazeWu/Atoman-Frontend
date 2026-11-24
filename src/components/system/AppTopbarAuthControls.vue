@@ -255,21 +255,13 @@ const logout = async () => {
 }
 
 .mail-btn {
-  width: auto;
+  width: 2.75rem;
   min-width: 2.75rem;
-  gap: 0.35rem;
-  padding-inline: 0.625rem;
+  padding-inline: 0;
 }
 
 .mail-btn__label {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-@media (max-width: 960px) {
-  .mail-btn { width: 2.75rem; padding-inline: 0; }
-  .mail-btn__label { display: none; }
+  display: none;
 }
 
 .notif-btn__icon {

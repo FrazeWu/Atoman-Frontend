@@ -1,6 +1,6 @@
 <template>
   <div v-if="visible" class="module-create-action">
-    <PButton :to="config.to" size="sm" :data-testid="`module-create-${module}`">
+    <PButton :to="config.to" size="sm" variant="secondary" :data-testid="`module-create-${module}`">
       <component :is="config.icon" :size="16" aria-hidden="true" />
       {{ config.label }}
     </PButton>

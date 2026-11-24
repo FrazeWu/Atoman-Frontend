@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { Search, X, Loader2 } from 'lucide-vue-next'
+import { Search, X, Loader2, ChevronDown, Check } from 'lucide-vue-next'
 
 export interface SearchScopeOption {
   label: string
@@ -17,6 +17,7 @@ export interface PSearchInputProps {
   placeholder?: string
   showActionButton?: boolean
   actionButtonText?: string
+  actionButtonVariant?: 'primary' | 'secondary' | 'neutral'
   scopes?: SearchScopeOption[]
   scope?: string
   showSearchIcon?: boolean
@@ -46,6 +47,7 @@ const props = withDefaults(defineProps<PSearchInputProps>(), {
   placeholder: '搜索...',
   showActionButton: undefined,
   actionButtonText: '搜索',
+  actionButtonVariant: 'primary',
   scopes: () => [],
   scope: '',
   showSearchIcon: true,
@@ -87,6 +89,30 @@ const localScope = computed({
     emit('update:scope', val)
   },
 })
+
+const isScopeOpen = ref(false)
+const scopeDropdownRef = ref<HTMLElement | null>(null)
+
+const currentScopeLabel = computed(() => {
+  const found = props.scopes?.find((s) => s.value === localScope.value)
+  return found?.label || props.scopes?.[0]?.label || ''
+})
+
+const selectScope = (val: string) => {
+  localScope.value = val
+  isScopeOpen.value = false
+}
+
+const toggleScopeDropdown = () => {
+  if (props.disabled) return
+  isScopeOpen.value = !isScopeOpen.value
+}
+
+const handleScopeClickOutside = (e: MouseEvent) => {
+  if (scopeDropdownRef.value && !scopeDropdownRef.value.contains(e.target as Node)) {
+    isScopeOpen.value = false
+  }
+}
 
 const actualSize = computed(() => {
   if (props.size) return props.size
@@ -181,12 +207,14 @@ const handleGlobalKeydown = (e: KeyboardEvent) => {
 }
 
 onMounted(() => {
+  document.addEventListener('click', handleScopeClickOutside)
   if (props.enableGlobalShortcut) {
     window.addEventListener('keydown', handleGlobalKeydown)
   }
 })
 
 onUnmounted(() => {
+  document.removeEventListener('click', handleScopeClickOutside)
   if (debounceTimer) clearTimeout(debounceTimer)
   if (props.enableGlobalShortcut) {
     window.removeEventListener('keydown', handleGlobalKeydown)
@@ -214,14 +242,54 @@ defineExpose({
     ]"
     role="search"
   >
-    <!-- Scope Selector (Option 1A Integrated Bar) -->
-    <div v-if="scopes && scopes.length > 0" class="p-search-input__scope">
+    <!-- Scope Selector (Cupertino Dropdown) -->
+    <div v-if="scopes && scopes.length > 0" ref="scopeDropdownRef" class="p-search-input__scope">
       <slot name="scopes">
+        <button
+          type="button"
+          class="p-search-input__scope-trigger"
+          :disabled="disabled"
+          aria-haspopup="listbox"
+          :aria-expanded="isScopeOpen"
+          aria-label="搜索范围"
+          @click="toggleScopeDropdown"
+        >
+          <span class="p-search-input__scope-label">{{ currentScopeLabel }}</span>
+          <ChevronDown class="p-search-input__scope-chevron" :class="{ 'is-open': isScopeOpen }" :size="12" />
+        </button>
+
+        <!-- Cupertino Floating Popover Menu -->
+        <transition name="p-scope-menu">
+          <div
+            v-if="isScopeOpen"
+            class="p-search-input__scope-menu"
+            role="listbox"
+            aria-label="搜索范围选项"
+          >
+            <button
+              v-for="item in scopes"
+              :key="item.value"
+              type="button"
+              class="p-search-input__scope-option"
+              :class="{ 'is-selected': item.value === localScope }"
+              role="option"
+              :aria-selected="item.value === localScope"
+              @click="selectScope(item.value)"
+            >
+              <Check v-if="item.value === localScope" class="p-search-input__scope-check" :size="13" />
+              <span v-else class="p-search-input__scope-check-spacer" />
+              <span class="p-search-input__scope-option-text">{{ item.label }}</span>
+            </button>
+          </div>
+        </transition>
+
+        <!-- Hidden Native Select for Screen Readers and Automated Tests -->
         <select
           v-model="localScope"
-          class="p-search-input__scope-select"
+          class="p-search-input__scope-select sr-only"
           :disabled="disabled"
-          aria-label="搜索范围"
+          tabindex="-1"
+          aria-hidden="true"
         >
           <option
             v-for="item in scopes"
@@ -294,6 +362,7 @@ defineExpose({
         <button
           type="button"
           class="p-search-input__action-btn"
+          :class="`p-search-input__action-btn--${actionButtonVariant}`"
           :disabled="disabled || loading"
           @click="handleActionClick"
         >
@@ -374,9 +443,13 @@ defineExpose({
   border-bottom-left-radius: calc(var(--a-radius-control, 4px) - 1px);
   padding: 0 4px;
   flex-shrink: 0;
+  position: relative;
 }
 
-.p-search-input__scope-select {
+.p-search-input__scope-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border: none;
   background: transparent;
   color: var(--a-color-text-secondary);
@@ -384,13 +457,110 @@ defineExpose({
   font-weight: 500;
   padding: 0 8px;
   height: 100%;
-  outline: none;
   cursor: pointer;
-  box-shadow: none !important;
+  outline: none;
+  border-radius: calc(var(--a-radius-control, 4px) - 1px);
+  transition: color 0.15s ease, background-color 0.15s ease;
+  user-select: none;
 }
 
-.p-search-input__scope-select:disabled {
+.p-search-input__scope-trigger:hover:not(:disabled) {
+  color: var(--a-color-text);
+  background-color: var(--a-color-bg-hover, rgba(0, 0, 0, 0.04));
+}
+
+.p-search-input__scope-trigger:disabled {
   cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.p-search-input__scope-label {
+  line-height: 1;
+}
+
+.p-search-input__scope-chevron {
+  transition: transform 0.18s ease;
+  color: var(--a-color-text-tertiary, #94a3b8);
+}
+
+.p-search-input__scope-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+/* Floating Popover Menu (Zero OS Default Styling) */
+.p-search-input__scope-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 108px;
+  background: var(--a-color-bg, #ffffff);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 4px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.p-search-input__scope-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--a-color-text);
+  background: transparent;
+  border: none;
+  border-radius: var(--a-radius-control, 4px);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.12s ease;
+}
+
+.p-search-input__scope-option:hover {
+  background-color: var(--a-color-bg-hover, rgba(0, 0, 0, 0.04));
+}
+
+.p-search-input__scope-option.is-selected {
+  font-weight: 500;
+  color: var(--a-color-primary, #007aff);
+}
+
+.p-search-input__scope-check {
+  color: var(--a-color-primary, #007aff);
+  flex-shrink: 0;
+}
+
+.p-search-input__scope-check-spacer {
+  width: 13px;
+  flex-shrink: 0;
+}
+
+.p-search-input__scope-select.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Transitions */
+.p-scope-menu-enter-active,
+.p-scope-menu-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.p-scope-menu-enter-from,
+.p-scope-menu-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 /* Main Input Section */
@@ -536,7 +706,20 @@ defineExpose({
   box-shadow: none !important;
   border-top-right-radius: calc(var(--a-radius-control, 4px) - 1px);
   border-bottom-right-radius: calc(var(--a-radius-control, 4px) - 1px);
-  transition: background-color 0.15s ease, opacity 0.15s ease;
+  transition: background-color 0.15s ease, opacity 0.15s ease, color 0.15s ease;
+}
+
+.p-search-input__action-btn--secondary,
+.p-search-input__action-btn--neutral {
+  background-color: var(--a-color-surface-muted, #f4f4f5);
+  color: var(--a-color-text, #374151);
+  border-left: 1px solid var(--a-border-subtle, rgba(0, 0, 0, 0.08));
+}
+
+.p-search-input__action-btn--secondary:hover:not(:disabled),
+.p-search-input__action-btn--neutral:hover:not(:disabled) {
+  background-color: var(--a-color-border-soft, #e4e4e7);
+  color: var(--a-color-text-emphasis, #111827);
 }
 
 .p-search-input--sm .p-search-input__action-btn {

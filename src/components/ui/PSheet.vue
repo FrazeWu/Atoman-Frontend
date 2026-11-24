@@ -75,6 +75,7 @@
               'is-shifted': isShifted,
               'is-partial': isPartial,
               'is-partial-pending': partialRequested && !partialResolved,
+              'is-reading-mode': readingMode,
             },
           ]"
           :style="sheetStyle"
@@ -958,6 +959,11 @@ const mobileSheetStyle = computed(() => {
 
 .is-right .sheet-content--has-bookmark-close {
   padding-left: 6.5rem;
+}
+
+.is-right.is-reading-mode .sheet-content--has-bookmark-close {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .is-left .sheet-content--has-bookmark-close {

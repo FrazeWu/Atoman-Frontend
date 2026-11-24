@@ -22,7 +22,7 @@ const { data: post, isLoading, error, refetch } = usePostQuery(postSlugOrId)
     <div v-else-if="error" class="post-detail-page__error" style="padding: 3rem 1rem;">
       <PEmpty title="文章加载失败" :description="error.message">
         <template #action>
-          <PButton variant="primary" size="sm" @click="() => refetch()">重新加载</PButton>
+          <PButton variant="secondary" size="sm" @click="() => refetch()">重新加载</PButton>
         </template>
       </PEmpty>
     </div>

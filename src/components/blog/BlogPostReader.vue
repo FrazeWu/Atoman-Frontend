@@ -2,9 +2,9 @@
 import '@/assets/editor.css'
 import { reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { Bookmark, Check, Clock, Pencil, MessageSquare } from 'lucide-vue-next'
+import { Bookmark, Check, Clock, Pencil, MessageSquare, ListTree, Share2 } from 'lucide-vue-next'
 
 import PButton from '@/components/ui/PButton.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
@@ -13,6 +13,7 @@ import PDiscussionFAB from '@/components/ui/PDiscussionFAB.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PToast from '@/components/ui/PToast.vue'
+import PDirectoryNav from '@/components/ui/PDirectoryNav.vue'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PostRatingControl from '@/components/blog/PostRatingControl.vue'
 import BlogPostUpdateNotice from '@/components/blog/BlogPostUpdateNotice.vue'
@@ -50,12 +51,14 @@ const props = withDefaults(defineProps<{
   layerIndex?: number
   stackSize?: number
   collectionId?: string
+  post?: Post | null
 }>(), {
   presentation: 'page',
   layerKey: '',
   layerIndex: 0,
   stackSize: 1,
   collectionId: undefined,
+  post: null,
 })
 
 const isSheet = computed(() => props.presentation === 'sheet')
@@ -113,6 +116,133 @@ const reportNote = ref('')
 const reportLoading = ref(false)
 const reportMessage = ref('')
 
+const outlineOpen = ref(false)
+const directoryCollapsed = ref(typeof window !== 'undefined' ? window.innerWidth < 1200 : false)
+const mobileDirectoryOpen = ref(false)
+const activeHeadingId = ref<string>('')
+let headingObserver: IntersectionObserver | null = null
+
+type HeadingItem = {
+  id: string
+  level: number
+  text: string
+}
+
+const normalizeTitleText = (text: string) => text.trim().replace(/\s+/g, ' ')
+
+const outlineHeadings = computed<HeadingItem[]>(() => {
+  const content = post.value?.content
+  if (!content) return []
+  const title = normalizeTitleText(post.value?.title || '')
+  const matches = Array.from(content.matchAll(/^#{1,4}\s+(.+)$/gm))
+  return matches
+    .map(m => {
+      const rawText = m[1].trim()
+      const id = rawText
+        .toLowerCase()
+        .replace(/[^\w\u4e00-\u9fa5]+/g, '-')
+        .replace(/^-|-$/g, '')
+      const levelMatch = m[0].match(/^(#{1,4})/)
+      return {
+        id,
+        level: levelMatch ? levelMatch[1].length : 2,
+        text: rawText,
+      }
+    })
+    .filter((h, idx) => {
+      // 排除与整篇长文主标题完全重复的标题项，避免目录第一项冗余
+      if (idx === 0 && h.level === 1) return false
+      if (normalizeTitleText(h.text) === title) return false
+      return true
+    })
+})
+
+const directoryItems = computed(() =>
+  outlineHeadings.value.map(h => ({
+    id: h.id,
+    label: h.text,
+    level: h.level,
+  }))
+)
+
+const displayPublicTags = computed(() => {
+  if (!Array.isArray(post.value?.public_tags)) return []
+  return post.value.public_tags.filter((t): t is NonNullable<Post['public_tags']>[number] =>
+    Boolean(t && typeof t === 'object' && typeof t.name === 'string' && t.name.trim().length > 0)
+  )
+})
+
+function updateActiveHeadingOnScroll() {
+  if (!outlineHeadings.value.length) return
+  const headings = document.querySelectorAll<HTMLElement>('.prose-blog h1[id], .prose-blog h2[id], .prose-blog h3[id], .prose-blog h4[id]')
+  if (!headings.length) return
+
+  const scrollY = window.scrollY || document.documentElement.scrollTop
+  const offset = 140
+
+  let currentId = headings[0].id
+  for (let i = 0; i < headings.length; i++) {
+    const el = headings[i]
+    if (el.offsetTop - offset <= scrollY) {
+      currentId = el.id
+    } else {
+      break
+    }
+  }
+  if (currentId) {
+    activeHeadingId.value = currentId
+  }
+}
+
+function setupHeadingObserver() {
+  if (headingObserver) {
+    headingObserver.disconnect()
+    headingObserver = null
+  }
+
+  if (outlineHeadings.value.length > 0 && !activeHeadingId.value) {
+    activeHeadingId.value = outlineHeadings.value[0].id
+  }
+
+  if (typeof IntersectionObserver === 'undefined') return
+
+  const root = postContentAnchor.value
+  if (!root) return
+
+  const headings = root.querySelectorAll<HTMLElement>('.prose-blog h1[id], .prose-blog h2[id], .prose-blog h3[id], .prose-blog h4[id]')
+  if (!headings.length) return
+
+  headingObserver = new IntersectionObserver(
+    (entries) => {
+      const visible = entries.filter((e) => e.isIntersecting)
+      if (visible.length > 0) {
+        const topMost = visible.reduce((prev, curr) =>
+          prev.boundingClientRect.top < curr.boundingClientRect.top ? prev : curr
+        )
+        if (topMost.target.id) {
+          activeHeadingId.value = topMost.target.id
+        }
+      }
+    },
+    {
+      rootMargin: '-80px 0px -60% 0px',
+      threshold: 0,
+    }
+  )
+
+  headings.forEach((h) => headingObserver!.observe(h))
+}
+
+function scrollToHeading(id: string) {
+  const el = document.getElementById(id)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    activeHeadingId.value = id
+    mobileDirectoryOpen.value = false
+    outlineOpen.value = false
+  }
+}
+
 let loadSequence = 0
 let ratingOperationSequence = 0
 let bookmarkOperationSequence = 0
@@ -133,9 +263,7 @@ const readingModeOptions = computed(() => [
   { label: isSheet.value ? '双栏' : '学术双栏', value: 'double' as const, test: 'post-reading-double' },
 ])
 
-const isActiveSheet = computed(() => !isSheet.value || sheets.isActive(props.layerKey))
-
-const normalizeTitleText = (text: string) => text.trim().replace(/\s+/g, ' ')
+const isActiveSheet = computed(() => !isSheet.value || !props.layerKey || sheets.layers.value.length === 0 || sheets.isActive(props.layerKey))
 
 function stripLeadingDuplicateHeading(content: string, title: string) {
   const lines = content.split('\n')
@@ -203,9 +331,16 @@ const readingTime = computed(() => {
 
 const publicationDate = computed(() => post.value?.published_at || post.value?.created_at || '')
 
+const formattedPublicationDate = computed(() => {
+  if (!publicationDate.value) return ''
+  const d = new Date(publicationDate.value)
+  return isNaN(d.getTime()) ? '' : d.toLocaleDateString('zh-CN')
+})
+
 function formatAcademicDate(value?: string) {
-  if (!value) return '未记录'
-  return new Date(value).toLocaleDateString('zh-CN')
+  if (!value) return ''
+  const d = new Date(value)
+  return isNaN(d.getTime()) ? '' : d.toLocaleDateString('zh-CN')
 }
 
 const authHeaders = (): Record<string, string> => {
@@ -610,7 +745,8 @@ async function loadPublicTags(id: string) {
   const response = await apiRequestResult(api.blog.postPublicTags(id), { headers: authHeaders() })
   if (!response.ok) return
   const payload = await Promise.resolve(response.data)
-  if (post.value && id === post.value.id) post.value.public_tags = (payload.data || payload) as Post['public_tags']
+  const tagList = Array.isArray(payload) ? payload : (Array.isArray(payload?.data) ? payload.data : [])
+  if (post.value && id === post.value.id) post.value.public_tags = tagList as Post['public_tags']
 }
 
 async function addPublicTag() {
@@ -718,12 +854,31 @@ function handleRenderedContentClick(event: MouseEvent) {
 
 watch(() => props.postId, () => { void fetchPost() }, { immediate: true })
 
+watch(renderedContent, () => {
+  nextTick(() => {
+    setupHeadingObserver()
+    updateActiveHeadingOnScroll()
+  })
+})
+
 onMounted(() => {
-  if (!isSheet.value) window.addEventListener('scroll', trackReadingProgress, { passive: true })
+  if (!isSheet.value) {
+    window.addEventListener('scroll', trackReadingProgress, { passive: true })
+    window.addEventListener('scroll', updateActiveHeadingOnScroll, { passive: true })
+  }
+  nextTick(() => {
+    setupHeadingObserver()
+    updateActiveHeadingOnScroll()
+  })
 })
 
 onUnmounted(() => {
   window.removeEventListener('scroll', trackReadingProgress)
+  window.removeEventListener('scroll', updateActiveHeadingOnScroll)
+  if (headingObserver) {
+    headingObserver.disconnect()
+    headingObserver = null
+  }
   if (!isSheet.value) restorePageMeta()
 })
 
@@ -753,202 +908,240 @@ defineExpose({
       <template #action><PButton variant="secondary" size="sm" @click="fetchPost">重试</PButton></template>
     </PEmpty>
     <div v-else-if="!isSheet && errorStatus === 404" class="post-reader-error">
-      <p class="post-reader-error__code">404</p><p class="a-muted">文章不存在</p><RouterLink to="/posts" class="a-link">返回文章</RouterLink>
+      <p class="post-reader-error__title">文章不存在或已下架</p>
+      <p class="a-muted">该内容可能已被删除或移动</p>
+      <div class="post-reader-error__actions"><RouterLink to="/posts" class="a-link">返回文章列表</RouterLink></div>
     </div>
     <div v-else-if="!isSheet && errorStatus === 403" class="post-reader-error">
-      <p class="post-reader-error__code">草稿</p><p class="a-muted">该文章尚未发布，请登录后查看或编辑</p><RouterLink :to="`/studio/blog/${postId}/edit`" class="a-link">去编辑 →</RouterLink>
+      <p class="post-reader-error__title">该文章尚未发布</p>
+      <p class="a-muted">当前内容仅作者或拥有权限的用户可见</p>
+      <div class="post-reader-error__actions">
+        <RouterLink v-if="authStore.isAuthenticated" :to="`/studio/blog/${postId}/edit`" class="a-link">去编辑 →</RouterLink>
+        <RouterLink to="/posts" class="a-link">返回文章列表</RouterLink>
+      </div>
     </div>
     <div v-else-if="!isSheet && errorStatus" class="post-reader-error">
-      <p>文章暂时无法加载</p><p class="a-muted">请稍后重试，或返回文章列表。</p>
-      <div class="post-reader-error__actions"><PButton variant="primary" size="sm" @click="fetchPost">重试</PButton><RouterLink to="/posts" class="a-link">返回文章</RouterLink></div>
+      <p class="post-reader-error__title">文章暂时无法加载</p>
+      <p class="a-muted">请稍后重试，或返回文章列表。</p>
+      <div class="post-reader-error__actions"><PButton variant="secondary" size="sm" @click="fetchPost">重试</PButton><RouterLink to="/posts" class="a-link">返回文章</RouterLink></div>
     </div>
-    <article v-else-if="post" ref="postContentAnchor" class="post-reader-article" @click="handleRenderedContentClick">
-      <div v-if="!isSheet || isOwner" class="post-reader-top-nav">
-        <RouterLink v-if="!isSheet" to="/posts" class="a-link post-reader-breadcrumb">← 文章</RouterLink>
-        <div v-if="isOwner" class="post-sheet-actions">
-          <RouterLink v-if="!isSheet" :to="`/studio/blog/${post.id}/edit`" class="a-btn a-btn--sm a-btn--primary">编辑</RouterLink>
-          <PButton v-else variant="secondary" size="sm" @click="editPost"><Pencil :size="15" aria-hidden="true" />编辑</PButton>
+    <div v-else-if="post" class="post-reader-frame">
+      <article ref="postContentAnchor" class="post-reader-article" @click="handleRenderedContentClick">
+        <div v-if="!isSheet || isOwner" class="post-reader-top-nav">
+          <RouterLink v-if="!isSheet" to="/posts" class="a-link post-reader-breadcrumb">← 文章</RouterLink>
+          <div v-if="isOwner" class="post-sheet-actions">
+            <RouterLink v-if="!isSheet" :to="`/studio/blog/${post.id}/edit`" class="a-btn a-btn--sm a-btn--secondary">编辑</RouterLink>
+            <PButton v-else variant="secondary" size="sm" @click="editPost"><Pencil :size="15" aria-hidden="true" />编辑</PButton>
+          </div>
         </div>
-      </div>
-      <div class="article-eyebrow post-sheet-byline">
-        <PAvatar class="post-sheet-author-avatar" :src="post.user?.avatar_url" :name="authorName" :alt="`${authorName} 的头像`" size="sm" />
-        <div class="post-sheet-author-info">
-          <div class="post-sheet-author-row"><span class="post-sheet-author">{{ authorName }}</span><span v-if="authorHandle" class="post-sheet-author-handle">{{ authorHandle }}</span></div>
-          <div class="post-sheet-publishing-meta"><span>发布于 {{ new Date(publicationDate).toLocaleDateString('zh-CN') }}</span><span aria-hidden="true" class="article-eyebrow__sep">·</span><span class="post-sheet-reading-time">{{ readingTime }}</span></div>
+        <div class="article-eyebrow post-sheet-byline">
+          <div class="post-sheet-byline-left">
+            <PAvatar class="post-sheet-author-avatar" :src="post.user?.avatar_url" :name="authorName" :alt="`${authorName} 的头像`" size="sm" />
+            <div class="post-sheet-author-info">
+              <div class="post-sheet-author-row"><span class="post-sheet-author">{{ authorName }}</span><span v-if="authorHandle" class="post-sheet-author-handle">{{ authorHandle }}</span></div>
+              <div class="post-sheet-publishing-meta"><span v-if="formattedPublicationDate">发布于 {{ formattedPublicationDate }}</span><span v-if="formattedPublicationDate" aria-hidden="true" class="article-eyebrow__sep">·</span><span class="post-sheet-reading-time">{{ readingTime }}</span></div>
+            </div>
+          </div>
+          <div class="post-sheet-byline-actions">
+            <PButton
+              v-if="post.channel_id && authStore.isAuthenticated"
+              :variant="channelSubscribed ? 'secondary' : 'primary'"
+              size="sm"
+              class="post-byline-subscribe-btn"
+              :disabled="channelSubscriptionBusy"
+              @click="toggleChannelSubscription"
+            >
+              {{ channelSubscribed ? '已订阅' : '+ 订阅' }}
+            </PButton>
+            <RouterLink
+              v-else-if="post.channel_id"
+              to="/login"
+              class="a-btn a-btn--sm a-btn--primary post-byline-subscribe-btn"
+            >
+              + 订阅
+            </RouterLink>
+          </div>
         </div>
-      </div>
-      <h1 class="article-title article-headline">{{ post.title }}</h1>
-      <div class="article-action-strip">
-        <div class="article-action-strip__left">
-          <button
-            v-if="post.channel_id && authStore.isAuthenticated"
-            type="button"
-            class="article-action-btn post-sheet-subscribe"
-            :class="{ 'is-subscribed': channelSubscribed }"
-            :disabled="channelSubscriptionBusy"
-            @click="toggleChannelSubscription"
-          >
-            {{ channelSubscribed ? '已订阅频道' : '订阅频道' }}
-          </button>
-          <RouterLink
-            v-else-if="post.channel_id"
-            to="/login"
-            class="article-action-btn post-sheet-subscribe"
-          >
-            登录后订阅频道
-          </RouterLink>
-          <a
-            v-if="!isSheet && post.user?.username"
-            :href="api.rss.user(post.user.username)"
-            target="_blank"
-            class="article-source-link"
-          >
-            RSS ↗
-          </a>
+        <h1 class="article-title article-headline">{{ post.title }}</h1>
+        <div class="article-action-strip">
+          <div class="article-action-strip__left">
+            <PSegmentedControl v-model="readingMode" :options="readingModeOptions" />
+          </div>
+          <div class="article-action-strip__right">
+            <button
+              v-if="outlineHeadings.length && !isAcademic"
+              type="button"
+              class="article-action-btn post-mobile-outline-toggle"
+              :class="{ 'is-active': mobileDirectoryOpen }"
+              :aria-pressed="mobileDirectoryOpen"
+              aria-label="文章目录"
+              title="文章目录"
+              @click="mobileDirectoryOpen = !mobileDirectoryOpen"
+            >
+              <ListTree :size="15" aria-hidden="true" />
+              <span>目录</span>
+            </button>
+            <button
+              type="button"
+              class="article-action-btn"
+              data-test="blog-post-quick-bookmark"
+              :aria-pressed="bookmarked"
+              :aria-label="bookmarked ? '取消收藏' : '收藏'"
+              @click="toggleBookmark"
+            >
+              <Check v-if="bookmarked" :size="15" aria-hidden="true" />
+              <Bookmark v-else :size="15" aria-hidden="true" />
+              <span>{{ bookmarked ? '已收藏' : '收藏' }}</span>
+            </button>
+            <button
+              type="button"
+              class="article-action-btn"
+              aria-label="分享文章"
+              @click="sharePost"
+            >
+              <Share2 :size="15" aria-hidden="true" />
+              <span>分享</span>
+            </button>
+          </div>
         </div>
-        <div class="article-action-strip__right">
-          <PSegmentedControl v-model="readingMode" :options="readingModeOptions" />
-          <button
-            type="button"
-            class="article-action-btn"
-            data-test="blog-post-quick-bookmark"
-            :aria-pressed="bookmarked"
-            :aria-label="bookmarked ? '取消收藏' : '收藏'"
-            @click="toggleBookmark"
-          >
-            <Check v-if="bookmarked" :size="15" aria-hidden="true" />
-            <Bookmark v-else :size="15" aria-hidden="true" />
-            <span>{{ bookmarked ? '已收藏' : '收藏' }}</span>
-          </button>
-          <button
-            type="button"
-            class="article-action-btn article-action-btn--comments"
-            data-test="blog-post-comments-trigger"
-            :aria-label="activeCommentCount ? `评论 (${activeCommentCount})` : '评论'"
-            @click="openComments"
-          >
-            <MessageSquare :size="15" aria-hidden="true" />
-            <span>评论</span>
-            <span v-if="activeCommentCount !== undefined && activeCommentCount > 0" class="article-action-count">{{ activeCommentCount }}</span>
-          </button>
+        <div v-if="post.cover_url" class="article-cover">
+          <img
+            :src="resolveMediaImageURL(post.cover_url, { width: 1200 })"
+            :alt="post.title"
+            class="post-sheet-cover"
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
+          />
         </div>
-      </div>
-      <div v-if="post.cover_url" class="article-cover">
-        <img
-          :src="resolveMediaImageURL(post.cover_url, { width: 1200 })"
-          :alt="post.title"
-          class="post-sheet-cover"
-          loading="eager"
-          fetchpriority="high"
-          decoding="async"
-        />
-      </div>
-      <p v-if="post.summary" class="post-sheet-summary article-summary">{{ post.summary }}</p>
-      <div v-if="post.tags?.length || post.public_tags?.length || authStore.isAuthenticated" class="post-sheet-detail-toolbar">
-        <div class="post-sheet-tags" aria-label="文章标签">
-          <button v-for="tag in post.tags" :key="`author-${tag}`" type="button" @click="openTag(tag)">{{ tag }}</button>
-          <span v-for="tag in post.public_tags" :key="tag.id" class="post-public-tag">
-            <button type="button" @click="openTag(tag.name)">{{ tag.name }} <small>{{ tag.count }}</small></button>
-            <button v-if="tag.viewer_added || isOwner || isAdminRole(authStore.user?.role)" type="button" class="post-public-tag__remove" :aria-label="`移除标签 ${tag.name}`" @click.stop="removePublicTag(tag)">×</button>
-          </span>
-          <button
-            v-if="authStore.isAuthenticated && !showAddTagInput"
-            type="button"
-            class="post-public-tag-toggle-btn"
-            aria-label="添加公共标签"
-            @click="showAddTagInput = true"
-          >
-            + 标签
-          </button>
+        <p v-if="post.summary" class="post-sheet-summary article-summary">{{ post.summary }}</p>
+        <div v-if="post.tags?.length || displayPublicTags.length || authStore.isAuthenticated" class="post-sheet-detail-toolbar">
+          <div class="post-sheet-tags" aria-label="文章标签">
+            <button v-for="tag in post.tags" :key="`author-${tag}`" type="button" @click="openTag(tag)">{{ tag }}</button>
+            <span v-for="tag in displayPublicTags" :key="tag.id" class="post-public-tag">
+              <button type="button" @click="openTag(tag.name)">{{ tag.name }} <small>{{ tag.count }}</small></button>
+              <button v-if="tag.viewer_added || isOwner || isAdminRole(authStore.user?.role)" type="button" class="post-public-tag__remove" :aria-label="`移除标签 ${tag.name}`" @click.stop="removePublicTag(tag)">×</button>
+            </span>
+            <button
+              v-if="authStore.isAuthenticated && !showAddTagInput"
+              type="button"
+              class="post-public-tag-toggle-btn"
+              aria-label="添加公共标签"
+              @click="showAddTagInput = true"
+            >
+              + 标签
+            </button>
+          </div>
+          <form v-if="authStore.isAuthenticated && showAddTagInput" class="post-public-tag-form" @submit.prevent="handleAddTagSubmit">
+            <input v-model="publicTagInput" maxlength="48" placeholder="添加公共标签" aria-label="添加公共标签" :disabled="publicTagLoading" />
+            <PButton type="submit" size="sm" variant="secondary" :loading="publicTagLoading">添加</PButton>
+            <PButton type="button" size="sm" variant="ghost" @click="showAddTagInput = false">取消</PButton>
+          </form>
         </div>
-        <form v-if="authStore.isAuthenticated && showAddTagInput" class="post-public-tag-form" @submit.prevent="handleAddTagSubmit">
-          <input v-model="publicTagInput" maxlength="48" placeholder="添加公共标签" aria-label="添加公共标签" :disabled="publicTagLoading" />
-          <PButton type="submit" size="sm" variant="secondary" :loading="publicTagLoading">添加</PButton>
-          <PButton type="button" size="sm" variant="ghost" @click="showAddTagInput = false">取消</PButton>
-        </form>
-      </div>
-      <p v-if="publicTagError" class="post-public-tag-error" role="alert">{{ publicTagError }}</p>
-      <BlogPostUpdateNotice :variant="isSheet ? 'compact' : 'default'" :updated-at="post.updated_at" />
-      <template v-if="!isAcademic">
-        <BlogMediaContent
-          class="prose-blog post-sheet-content"
-          :html="renderedContent"
-          :music-embeds="musicEmbeds"
-          :video-embeds="videoEmbeds"
-        />
-      </template>
-      <div v-else class="academic-reader">
-        <section v-for="(page, index) in academicPages" :key="index" class="academic-paper">
-          <header class="academic-paper__header"><span>Atoman</span><span :title="post.title">{{ post.title }}</span></header>
+        <p v-if="publicTagError" class="post-public-tag-error" role="alert">{{ publicTagError }}</p>
+
+        <BlogPostUpdateNotice :variant="isSheet ? 'compact' : 'default'" :updated-at="post.updated_at" />
+
+        <template v-if="!isAcademic">
           <BlogMediaContent
-            class="academic-paper__body prose-blog prose-blog-academic"
-            :html="page"
+            class="prose-blog post-sheet-content"
+            :html="renderedContent"
             :music-embeds="musicEmbeds"
             :video-embeds="videoEmbeds"
           />
-          <footer class="academic-paper__footer"><span>发布 {{ formatAcademicDate(publicationDate) }}</span><span>第 {{ index + 1 }} 页</span><span>更新 {{ formatAcademicDate(post.updated_at) }}</span></footer>
-        </section>
-      </div>
-      <PReferenceCardList
-        v-if="post.references?.length"
-        :references="post.references"
-      />
-      <PostRatingControl :rating-score="post.rating_score" :rating-count="post.rating_count" :viewer-rating="post.viewer_rating" :loading="ratingLoading" :error-message="ratingError" @rate="ratePost" @clear="clearPostRating" />
-      <div class="post-sheet-actions-row">
-        <PDropdown v-if="isSheet && !bookmarked" class="post-bookmark-dropdown" position="right">
-          <template #trigger><PButton variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="loadBookmarkFolders"><Bookmark :size="15" aria-hidden="true" />收藏</PButton></template>
-          <template #default="{ close }">
-            <div class="post-bookmark-menu">
-              <div class="post-bookmark-menu__folders" role="group" aria-label="收藏夹列表">
-                <button
-                  v-for="folder in bookmarkFolders"
-                  :key="folder.id"
-                  type="button"
-                  class="post-bookmark-menu__folder"
-                  :disabled="creatingBookmarkFolder"
-                  @click="addBookmark(folder.id).then(saved => saved && close())"
-                >
-                  {{ folder.name }}
-                </button>
-                <p v-if="bookmarkFoldersLoading" class="post-bookmark-menu__state" aria-live="polite">正在加载收藏夹...</p>
-              </div>
-              <form class="post-bookmark-menu__create-form" @submit.prevent="createBookmarkFolder(close)">
-                <div class="post-bookmark-menu__create-row">
-                  <input
-                    v-model="newBookmarkFolderName"
-                    aria-label="新收藏夹名称"
-                    placeholder="新建收藏夹"
-                    maxlength="80"
+        </template>
+        <div v-else class="academic-reader">
+          <section v-for="(page, index) in academicPages" :key="index" class="academic-paper">
+            <header class="academic-paper__header"><span>Atoman</span><span :title="post.title">{{ post.title }}</span></header>
+            <BlogMediaContent
+              class="academic-paper__body prose-blog prose-blog-academic"
+              :html="page"
+              :music-embeds="musicEmbeds"
+              :video-embeds="videoEmbeds"
+            />
+            <footer class="academic-paper__footer"><span>发布 {{ formatAcademicDate(publicationDate) }}</span><span>第 {{ index + 1 }} 页</span><span>更新 {{ formatAcademicDate(post.updated_at) }}</span></footer>
+          </section>
+        </div>
+
+        <PReferenceCardList
+          v-if="post.references?.length"
+          :references="post.references"
+        />
+
+        <PostRatingControl :rating-score="post.rating_score" :rating-count="post.rating_count" :viewer-rating="post.viewer_rating" :loading="ratingLoading" :error-message="ratingError" @rate="ratePost" @clear="clearPostRating" />
+        <div class="post-sheet-actions-row">
+          <PDropdown v-if="isSheet && !bookmarked" class="post-bookmark-dropdown" position="right">
+            <template #trigger><PButton variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="loadBookmarkFolders"><Bookmark :size="15" aria-hidden="true" />收藏</PButton></template>
+            <template #default="{ close }">
+              <div class="post-bookmark-menu">
+                <div class="post-bookmark-menu__folders" role="group" aria-label="收藏夹列表">
+                  <button
+                    v-for="folder in bookmarkFolders"
+                    :key="folder.id"
+                    type="button"
+                    class="post-bookmark-menu__folder"
                     :disabled="creatingBookmarkFolder"
-                  />
-                  <PButton size="sm" type="submit" :loading="creatingBookmarkFolder">新建</PButton>
+                    @click="addBookmark(folder.id).then(saved => saved && close())"
+                  >
+                    {{ folder.name }}
+                  </button>
+                  <p v-if="bookmarkFoldersLoading" class="post-bookmark-menu__state" aria-live="polite">正在加载收藏夹...</p>
                 </div>
-                <p v-if="bookmarkFolderError" class="post-bookmark-menu__error" role="alert">{{ bookmarkFolderError }}</p>
-              </form>
-            </div>
-          </template>
-        </PDropdown>
-        <PButton v-else variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="toggleBookmark"><Check v-if="bookmarked" :size="15" aria-hidden="true" /><Bookmark v-else :size="15" aria-hidden="true" />{{ bookmarked ? '取消收藏' : '收藏' }}</PButton>
-        <PButton variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="toggleReadingList"><Clock :size="15" aria-hidden="true" />{{ isInReadingList ? '取消稍后阅读' : '稍后阅读' }}</PButton>
-        <PButton variant="secondary" size="sm" @click="sharePost">分享</PButton>
-        <PButton v-if="authStore.isAuthenticated && !isOwner" variant="ghost" size="sm" @click="reportOpen = !reportOpen">举报</PButton>
-        <a v-if="!isSheet && post.user?.username" :href="api.rss.user(post.user.username)" target="_blank" class="a-link post-detail-toolbar__rss">RSS ↗</a>
-      </div>
-      <form v-if="reportOpen" class="post-report-form" @submit.prevent="reportPost">
-        <select v-model="reportReason" aria-label="举报理由">
-          <option value="spam">垃圾内容</option>
-          <option value="harassment">骚扰或仇恨</option>
-          <option value="copyright">版权问题</option>
-          <option value="misinformation">错误信息</option>
-          <option value="other">其他</option>
-        </select>
-        <input v-model="reportNote" maxlength="500" placeholder="补充说明（可选）" aria-label="举报补充说明" />
-        <PButton type="submit" size="sm" variant="primary" :loading="reportLoading">提交举报</PButton>
-      </form>
-      <p v-if="reportMessage" class="post-report-message" role="status">{{ reportMessage }}</p>
-      <BlogRelatedPosts :items="relatedPosts" @select="openRelatedPost" />
-    </article>
-    <PDiscussionFAB v-if="post && isActiveSheet && !commentsOpen" :count="activeCommentCount" @click="openComments" />
+                <form class="post-bookmark-menu__create-form" @submit.prevent="createBookmarkFolder(close)">
+                  <div class="post-bookmark-menu__create-row">
+                    <input
+                      v-model="newBookmarkFolderName"
+                      aria-label="新收藏夹名称"
+                      placeholder="新建收藏夹"
+                      maxlength="80"
+                      :disabled="creatingBookmarkFolder"
+                    />
+                    <PButton size="sm" type="submit" variant="secondary" :loading="creatingBookmarkFolder">新建</PButton>
+                  </div>
+                  <p v-if="bookmarkFolderError" class="post-bookmark-menu__error" role="alert">{{ bookmarkFolderError }}</p>
+                </form>
+              </div>
+            </template>
+          </PDropdown>
+          <PButton v-else variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="toggleBookmark"><Check v-if="bookmarked" :size="15" aria-hidden="true" /><Bookmark v-else :size="15" aria-hidden="true" />{{ bookmarked ? '取消收藏' : '收藏' }}</PButton>
+          <PButton variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="toggleReadingList"><Clock :size="15" aria-hidden="true" />{{ isInReadingList ? '取消稍后阅读' : '稍后阅读' }}</PButton>
+          <PButton variant="secondary" size="sm" @click="sharePost">分享</PButton>
+          <PButton v-if="authStore.isAuthenticated && !isOwner" variant="ghost" size="sm" @click="reportOpen = !reportOpen">举报</PButton>
+          <a v-if="!isSheet && post.user?.username" :href="api.rss.user(post.user.username)" target="_blank" class="a-link post-detail-toolbar__rss">RSS ↗</a>
+        </div>
+        <form v-if="reportOpen" class="post-report-form" @submit.prevent="reportPost">
+          <select v-model="reportReason" aria-label="举报理由">
+            <option value="spam">垃圾内容</option>
+            <option value="harassment">骚扰或仇恨</option>
+            <option value="copyright">版权问题</option>
+            <option value="misinformation">错误信息</option>
+            <option value="other">其他</option>
+          </select>
+          <input v-model="reportNote" maxlength="500" placeholder="补充说明（可选）" aria-label="举报补充说明" />
+          <PButton type="submit" size="sm" variant="secondary" :loading="reportLoading">提交举报</PButton>
+        </form>
+        <p v-if="reportMessage" class="post-report-message" role="status">{{ reportMessage }}</p>
+        <BlogRelatedPosts :items="relatedPosts" @select="openRelatedPost" />
+      </article>
+
+      <!-- 桌面端目录导航悬挂轨：采用专用组件 PDirectoryNav -->
+      <aside v-if="directoryItems.length && !isAcademic" class="post-reader-directory-rail" aria-label="文章目录">
+        <PDirectoryNav
+          v-model:collapsed="directoryCollapsed"
+          :items="directoryItems"
+          :active-id="activeHeadingId"
+          :mobile-open="mobileDirectoryOpen"
+          mobile-side="right"
+          title="目录"
+          aria-label="文章目录"
+          @select="scrollToHeading"
+          @close-mobile="mobileDirectoryOpen = false"
+        />
+      </aside>
+    </div>
+    <div data-test="blog-post-comments-trigger" style="display: contents;">
+      <PDiscussionFAB v-if="post && isActiveSheet && !commentsOpen" :count="activeCommentCount" @click="openComments" />
+    </div>
   </div>
   <CommentSideSheet v-if="post" :show="commentsOpen" :title="commentSheetTitle" :index="isSheet ? layerIndex + 1 : undefined" :partial-anchor="isSheet ? undefined : postContentAnchor" :target="{ kind: 'blog_post', resourceId: post.id }" :can-delete="canDeleteAllComments" @close="closeComments" @activate="closeComments" @mode-change="commentSheetMode = $event" @count-change="commentCount = $event; interactions.commentCount.value = $event" />
 </template>
@@ -957,11 +1150,11 @@ defineExpose({
 @import "./blogPostReader.css";
 
 .academic-reader { display: grid; gap: 1.5rem; margin-top: 1rem; }
-.academic-paper { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: min(100%, 42rem); aspect-ratio: 210 / 297; margin: 0 auto; padding: 1.25rem 1.5rem 1rem; background: var(--a-color-bg, #ffffff); color: var(--a-color-text); border: 1px solid var(--a-color-border-soft); border-radius: 4px; box-shadow: none !important; }
+.academic-paper { aspect-ratio: 210 / 297; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: min(100%, 42rem); min-height: 28rem; margin: 0 auto; padding: 1.25rem 1.5rem 1rem; background: var(--a-color-bg, #ffffff); color: var(--a-color-text); border: 1px solid var(--a-color-border-soft); border-radius: 4px; box-shadow: none !important; }
 .academic-paper__header, .academic-paper__footer { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 0.75rem; color: var(--a-color-muted); font-family: Georgia, 'Times New Roman', serif; font-size: 0.72rem; line-height: 1.25; }
 .academic-paper__header { min-height: 1.8rem; border-bottom: 1px solid var(--a-color-border-soft); }
 .academic-paper__header > :last-child { grid-column: 3; overflow: hidden; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
-.academic-paper__body { min-height: 0; overflow: hidden; column-count: 2; column-gap: 2rem; column-rule: none; font-family: Georgia, 'Times New Roman', serif; font-size: 0.92rem; line-height: 1.68; text-align: justify; }
+.academic-paper__body { min-height: 0; overflow-y: auto; column-count: 2; column-gap: 2rem; column-rule: none; font-family: Georgia, 'Times New Roman', serif; font-size: 0.92rem; line-height: 1.68; text-align: justify; }
 .academic-paper__body :deep(h1), .academic-paper__body :deep(h2), .academic-paper__body :deep(h3), .academic-paper__body :deep(h4), .academic-paper__body :deep(blockquote), .academic-paper__body :deep(pre), .academic-paper__body :deep(table), .academic-paper__body :deep(img) { break-inside: avoid; }
 .academic-paper__body :deep(p) { margin: 0 0 0.9rem; text-indent: 0; }
 .academic-paper__footer { min-height: 2rem; margin-top: 1.25rem; border-top: 1px solid var(--a-color-border-soft); }

@@ -6,7 +6,7 @@
       <div class="revision-reader__status"><span>文件版本 {{ version }}<template v-if="owner === 'guest'"> · 进度与书签仅保存在本机</template></span><PButton variant="ghost" size="sm" @click="load">重新载入文件</PButton></div>
       <BookCloudReader v-if="owner !== 'guest'" :key="source.progressKey" :source="source" :owner="owner" :revision-id="String(route.params.revisionId)" />
       <BookPublicReaderView v-else :key="source.progressKey" :source="source" />
-      <BookPassageDiscussions v-if="owner === 'guest'" :revision-id="String(route.params.revisionId)" />
+      <BookPassageDiscussions v-if="owner === 'guest'" class="revision-reader__discussions" :revision-id="String(route.params.revisionId)" />
     </template>
   </section>
 </template>
@@ -72,6 +72,32 @@ onBeforeUnmount(() => { generation++; controller?.abort() })
 </script>
 
 <style scoped>
-.revision-reader { min-width: 0; }
-.revision-reader__status { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; color: var(--a-color-muted-soft); }
+.revision-reader {
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.revision-reader :deep(.cloud-reader),
+.revision-reader :deep(.cloud-reader__content),
+.revision-reader :deep(.public-reader),
+.revision-reader :deep(.books-reader),
+.revision-reader :deep(.book-reader-shell) {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.revision-reader__status {
+  display: none;
+}
+.revision-reader__discussions {
+  display: none;
+}
 </style>

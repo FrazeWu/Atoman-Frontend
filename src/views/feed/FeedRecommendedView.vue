@@ -1,8 +1,8 @@
 <template>
   <div class="feed-recommended-view">
     <PPageHeader
+      class="discovery-page-header"
       title="发现"
-      description="探索优质博客、独立订阅源、深度专栏与全网精选好文。"
     />
 
     <!-- ═══════════════════════════════════════════════════════════════
@@ -84,6 +84,7 @@
           v-model="language"
           :options="recommendationLanguageOptions"
           placeholder="语言"
+          size="sm"
           class="discovery-lang-select"
         />
         <PButton
@@ -136,9 +137,8 @@
         <section class="stream-column" aria-label="精选文章">
           <div class="stream-column__head">
             <div class="stream-column__title-group">
-              <span class="section-badge section-badge--hot">ARTICLES</span>
               <h2>精选文章</h2>
-              <span class="stream-count">{{ totalArticles }} 篇</span>
+              <span class="stream-count">· {{ totalArticles }} 篇</span>
             </div>
             <div class="stream-sub-filters">
               <PSegmentedControl v-model="mode" :options="modeOptions" />
@@ -240,9 +240,8 @@
         <section class="stream-column" aria-label="推荐频道">
           <div class="stream-column__head">
             <div class="stream-column__title-group">
-              <span class="section-badge">CHANNELS</span>
               <h2>推荐频道与源</h2>
-              <span class="stream-count">{{ totalChannels }} 个</span>
+              <span class="stream-count">· {{ totalChannels }} 个</span>
             </div>
             <PButton
               v-if="authStore.isAuthenticated && unsubscribedChannelCount > 0"
@@ -307,7 +306,7 @@
 
       <div class="feed-recommendation-actions">
         <PButton
-          variant="primary"
+          variant="secondary"
           label="换一批"
           :loading="loading"
           data-test="feed-recommend-refresh"

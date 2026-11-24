@@ -13,10 +13,10 @@
         <div class="book-catalog__cover-col">
           <BookCover
             variant="work"
-            :src="work.cover_url || work.editions?.[0]?.cover_url"
-            :title="work.title"
+            :src="currentEdition?.cover_url || work.cover_url || work.editions?.[0]?.cover_url"
+            :title="currentEdition?.title || work.title"
             :seed="work.id"
-            :subtitle="work.subtitle || work.original_title"
+            :subtitle="currentEdition?.subtitle || work.subtitle || work.original_title"
             :author="work.authors.map(author => author.name).join(' / ')"
             eager
           />
@@ -24,13 +24,14 @@
 
         <div class="book-catalog__info-col">
           <div class="book-catalog__work-header">
-            <h1 class="book-catalog__work-title">{{ work.title }}</h1>
+            <h1 class="book-catalog__work-title">{{ currentEdition?.title || work.title }}</h1>
             <div class="book-catalog__work-authors">
               <RouterLink
                 v-for="author in work.authors"
                 :key="author.id"
-                :to="{ path: '/books', query: { q: author.name } }"
+                :to="`/books/author/${author.id}?from=${encodeURIComponent(route.fullPath)}`"
                 class="book-catalog__author-badge book-catalog__author-link"
+                :title="`查看作者 ${author.name} 的主页`"
               >
                 {{ author.name }}
               </RouterLink>
@@ -41,8 +42,31 @@
             </div>
           </div>
 
-          <div v-if="work.subtitle || work.original_title" class="book-catalog__meta-row">
-            <span v-if="work.subtitle" class="book-catalog__meta-pill">{{ work.subtitle }}</span>
+          <!-- 多版本快速切换器 -->
+          <div v-if="work.editions.length > 1" class="book-catalog__edition-selector">
+            <label for="work-edition-select" class="book-catalog__edition-select-label">当前版本：</label>
+            <div class="book-catalog__edition-select-wrap">
+              <select
+                id="work-edition-select"
+                :value="currentEdition?.id"
+                class="book-catalog__edition-select"
+                aria-label="选择图书版本"
+                @change="selectEdition(($event.target as HTMLSelectElement).value)"
+              >
+                <option
+                  v-for="ed in work.editions"
+                  :key="ed.id"
+                  :value="ed.id"
+                >
+                  {{ ed.title || work.title }}{{ ed.edition_statement ? ` (${ed.edition_statement})` : '' }}{{ ed.publisher ? ` · ${ed.publisher}` : '' }}
+                </option>
+              </select>
+              <ChevronDown :size="14" class="book-catalog__edition-select-chevron" aria-hidden="true" />
+            </div>
+          </div>
+
+          <div v-if="work.subtitle || work.original_title || currentEdition?.subtitle" class="book-catalog__meta-row">
+            <span v-if="currentEdition?.subtitle || work.subtitle" class="book-catalog__meta-pill">{{ currentEdition?.subtitle || work.subtitle }}</span>
             <span v-if="work.original_title" class="book-catalog__meta-pill book-catalog__meta-pill--subtle">
               原作名：{{ work.original_title }}
             </span>
@@ -82,8 +106,8 @@
 
           <div class="book-catalog__hero-actions">
             <PButton
-              v-if="work.editions.length"
-              :to="'/books/edition/' + work.editions[0].id"
+              v-if="currentEdition"
+              :to="'/books/edition/' + currentEdition.id"
               class="book-catalog__hero-primary-btn"
             >
               开始阅读
@@ -126,21 +150,19 @@
           <div v-if="work.authors?.length" class="book-overview-section">
             <h3 class="book-overview-heading">作者</h3>
             <div class="book-overview-authors">
-              <div v-for="author in work.authors" :key="author.id" class="book-overview-author-card">
+              <RouterLink
+                v-for="author in work.authors"
+                :key="author.id"
+                :to="`/books/author/${author.id}?from=${encodeURIComponent(route.fullPath)}`"
+                class="book-overview-author-card book-overview-author-card--link"
+              >
+                <div class="book-overview-author-avatar">{{ author.name.slice(0, 1) }}</div>
                 <div class="book-overview-author-info">
                   <span class="book-overview-author-name">{{ author.name }}</span>
-                  <span class="book-overview-author-role">作者</span>
+                  <span class="book-overview-author-role">作者 · 查看主页</span>
                 </div>
-                <BookWikiPanel
-                  kind="person"
-                  :entity-id="author.id"
-                  :authenticated="auth.isAuthenticated"
-                  button-text="修改资料"
-                  size="sm"
-                  variant="ghost"
-                  @changed="refreshWork"
-                />
-              </div>
+                <ChevronRight :size="16" class="book-overview-author-arrow" aria-hidden="true" />
+              </RouterLink>
             </div>
           </div>
 
@@ -162,12 +184,12 @@
           </div>
         </section>
 
-        <!-- 2. 版本与译本 Tab (Option 1A) -->
-        <section v-show="activeTab === 'editions'" class="book-catalog__tab-panel" aria-label="版本与译本">
+        <!-- 2. 出版版本 Tab (原版) -->
+        <section v-show="activeTab === 'editions'" class="book-catalog__tab-panel" aria-label="出版版本">
           <div class="book-editions-header">
             <div class="book-editions-title-row">
-              <h3 class="book-editions-heading">版本与译本</h3>
-              <span v-if="work.editions.length" class="book-catalog__badge">{{ work.editions.length }} 个版本</span>
+              <h3 class="book-editions-heading">出版版本</h3>
+              <span v-if="originalEditions.length" class="book-catalog__badge">{{ originalEditions.length }} 个版本</span>
             </div>
             <PButton
               size="sm"
@@ -178,19 +200,14 @@
             </PButton>
           </div>
 
-          <!-- 语言快捷小胶囊筛选 (Option 1A) -->
-          <div v-if="languageFilterOptions.length > 2" class="book-editions-filter-bar">
-            <PSegmentedControl
-              v-model="selectedLanguage"
-              :options="languageFilterOptions"
-              size="sm"
-            />
-          </div>
-
-          <p v-if="!work.editions.length" class="book-catalog__empty-hint">暂无出版信息，不影响图书公开展示。</p>
-          <p v-else-if="!filteredEditions.length" class="book-catalog__empty-hint">该分类下暂无对应版本。</p>
+          <p v-if="!originalEditions.length" class="book-catalog__empty-hint">暂无出版信息，不影响图书公开展示。</p>
           <ul v-else class="book-catalog__edition-cards">
-            <li v-for="edition in filteredEditions" :key="edition.id" class="book-catalog__edition-card">
+            <li
+              v-for="edition in originalEditions"
+              :key="edition.id"
+              class="book-catalog__edition-card"
+              :class="{ 'is-active-edition': edition.id === currentEdition?.id }"
+            >
               <div class="book-catalog__edition-cover-col">
                 <BookCover
                   variant="edition"
@@ -205,6 +222,90 @@
                   <RouterLink :to="`/books/edition/${edition.id}`" class="book-catalog__edition-title-link">
                     {{ edition.title || work.title }}
                   </RouterLink>
+                  <span v-if="edition.id === currentEdition?.id" class="book-catalog__active-edition-pill">
+                    当前选定
+                  </span>
+                  <span v-if="edition.edition_statement" class="book-catalog__edition-statement-pill">
+                    {{ edition.edition_statement }}
+                  </span>
+                  <span v-if="edition.subtitle" class="book-catalog__edition-sub">{{ edition.subtitle }}</span>
+                </div>
+                <div class="book-catalog__edition-info-lines">
+                  <div class="book-catalog__edition-line">
+                    <span v-if="edition.publisher" class="book-catalog__edition-publisher">{{ edition.publisher }}</span>
+                    <span v-if="edition.published_date" class="book-catalog__edition-date">{{ edition.published_date.slice(0, 7) }}</span>
+                  </div>
+                  <div class="book-catalog__edition-line book-catalog__edition-line--subtle">
+                    <span v-if="edition.isbn13 || edition.isbn10">ISBN {{ edition.isbn13 || edition.isbn10 }}</span>
+                    <span v-if="edition.language">{{ edition.language === 'zh' ? '中文' : edition.language }}</span>
+                    <span v-if="edition.page_count">{{ edition.page_count }} 页</span>
+                  </div>
+                </div>
+
+                <div class="book-catalog__edition-footer-row">
+                  <template v-if="edition.id === currentEdition?.id">
+                    <PButton size="sm" :to="'/books/edition/' + edition.id">
+                      开始阅读
+                    </PButton>
+                    <PButton size="sm" variant="secondary" :to="'/books/edition/' + edition.id">
+                      版本详情
+                    </PButton>
+                  </template>
+                  <template v-else>
+                    <PButton size="sm" variant="secondary" @click="selectEdition(edition.id)">
+                      选为当前版本
+                    </PButton>
+                    <PButton size="sm" variant="secondary" :to="'/books/edition/' + edition.id">
+                      查看版本
+                    </PButton>
+                  </template>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <!-- 3. 翻译译本 Tab -->
+        <section v-show="activeTab === 'translations'" class="book-catalog__tab-panel" aria-label="翻译译本">
+          <div class="book-editions-header">
+            <div class="book-editions-title-row">
+              <h3 class="book-editions-heading">翻译译本</h3>
+              <span v-if="translationEditions.length" class="book-catalog__badge">{{ translationEditions.length }} 个译本</span>
+            </div>
+            <PButton
+              size="sm"
+              variant="secondary"
+              :to="auth.isAuthenticated ? { path: '/books/new', query: { ...route.query, work: work.id } } : { path: '/login', query: { redirect: route.fullPath } }"
+            >
+              + 添加译本
+            </PButton>
+          </div>
+
+          <p v-if="!translationEditions.length" class="book-catalog__empty-hint">暂无翻译译本信息。</p>
+          <ul v-else class="book-catalog__edition-cards">
+            <li
+              v-for="edition in translationEditions"
+              :key="edition.id"
+              class="book-catalog__edition-card"
+              :class="{ 'is-active-edition': edition.id === currentEdition?.id }"
+            >
+              <div class="book-catalog__edition-cover-col">
+                <BookCover
+                  variant="edition"
+                  :src="edition.cover_url || work.cover_url"
+                  :title="edition.title || work.title"
+                  :author="edition.publisher || work.authors.map(author => author.name).join(' / ')"
+                />
+              </div>
+
+              <div class="book-catalog__edition-meta">
+                <div class="book-catalog__edition-header-row">
+                  <RouterLink :to="`/books/edition/${edition.id}`" class="book-catalog__edition-title-link">
+                    {{ edition.title || work.title }}
+                  </RouterLink>
+                  <span v-if="edition.id === currentEdition?.id" class="book-catalog__active-edition-pill">
+                    当前选定
+                  </span>
                   <span v-if="edition.edition_statement" class="book-catalog__edition-statement-pill">
                     {{ edition.edition_statement }}
                   </span>
@@ -226,21 +327,22 @@
                 </div>
 
                 <div class="book-catalog__edition-footer-row">
-                  <PButton size="sm" variant="secondary" :to="'/books/edition/' + edition.id">
-                    查看版本
-                  </PButton>
-                  <div class="book-catalog__edition-wiki-inline">
-                    <BookWikiPanel
-                      kind="edition"
-                      :entity-id="edition.id"
-                      :work-id="work.id"
-                      :authenticated="auth.isAuthenticated"
-                      button-text="修改资料"
-                      size="sm"
-                      variant="ghost"
-                      @changed="refreshWork"
-                    />
-                  </div>
+                  <template v-if="edition.id === currentEdition?.id">
+                    <PButton size="sm" :to="'/books/edition/' + edition.id">
+                      开始阅读
+                    </PButton>
+                    <PButton size="sm" variant="secondary" :to="'/books/edition/' + edition.id">
+                      版本详情
+                    </PButton>
+                  </template>
+                  <template v-else>
+                    <PButton size="sm" variant="secondary" @click="selectEdition(edition.id)">
+                      选为当前版本
+                    </PButton>
+                    <PButton size="sm" variant="secondary" :to="'/books/edition/' + edition.id">
+                      查看版本
+                    </PButton>
+                  </template>
                 </div>
               </div>
             </li>
@@ -299,9 +401,9 @@
             </template>
             <template #action>
               <PButton
-                v-if="work.editions.length"
+                v-if="currentEdition"
                 size="sm"
-                :to="'/books/edition/' + work.editions[0].id"
+                :to="'/books/edition/' + currentEdition.id"
               >
                 开始阅读
               </PButton>
@@ -320,7 +422,7 @@ import { useAuthStore } from '@/stores/auth'
 import PButton from '@/components/ui/PButton.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
-import { Quote } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, Quote } from 'lucide-vue-next'
 import BookWorkCommunity from '@/components/books/BookWorkCommunity.vue'
 import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
 import BookCover from '@/components/books/BookCover.vue'
@@ -344,58 +446,71 @@ const loading = ref(true)
 const error = ref('')
 let alive = true
 
-type WorkTab = 'overview' | 'editions' | 'reviews' | 'quotes'
+const selectedEditionId = ref<string>('')
+
+watch(
+  [() => work.value?.editions, () => route.query.edition],
+  ([editions, qEdition]) => {
+    if (!editions?.length) {
+      selectedEditionId.value = ''
+      return
+    }
+    const queryId = typeof qEdition === 'string' ? qEdition : ''
+    if (queryId && editions.some(e => e.id === queryId)) {
+      selectedEditionId.value = queryId
+    } else if (!selectedEditionId.value || !editions.some(e => e.id === selectedEditionId.value)) {
+      selectedEditionId.value = editions[0].id
+    }
+  },
+  { immediate: true }
+)
+
+const currentEdition = computed(() => {
+  if (!work.value?.editions?.length) return null
+  return work.value.editions.find(e => e.id === selectedEditionId.value) || work.value.editions[0]
+})
+
+function selectEdition(id: string) {
+  selectedEditionId.value = id
+  void router.replace({
+    query: {
+      ...route.query,
+      edition: id,
+    },
+  })
+}
+
+const originalEditions = computed(() => {
+  if (!work.value?.editions) return []
+  return work.value.editions.filter(ed => !ed.translators?.length)
+})
+
+const translationEditions = computed(() => {
+  if (!work.value?.editions) return []
+  return work.value.editions.filter(ed => Boolean(ed.translators?.length))
+})
+
+type WorkTab = 'overview' | 'editions' | 'translations' | 'reviews' | 'quotes'
 
 const activeTab = ref<WorkTab>(
-  ['overview', 'editions', 'reviews', 'quotes'].includes(String(route.query.tab))
+  ['overview', 'editions', 'translations', 'reviews', 'quotes'].includes(String(route.query.tab))
     ? (String(route.query.tab) as WorkTab)
     : 'overview'
 )
 
-const tabOptions = computed(() => [
-  { label: '简介', value: 'overview' as WorkTab },
-  { label: `版本与译本${work.value?.editions?.length ? ` (${work.value.editions.length})` : ''}`, value: 'editions' as WorkTab },
-  { label: '书评', value: 'reviews' as WorkTab },
-  { label: '书摘', value: 'quotes' as WorkTab },
-])
-
-const selectedLanguage = ref<string>('all')
-
-const languageCounts = computed(() => {
-  if (!work.value?.editions) return {}
-  const map: Record<string, number> = {}
-  for (const ed of work.value.editions) {
-    const lang = (ed.language || 'zh').toLowerCase()
-    map[lang] = (map[lang] || 0) + 1
+const tabOptions = computed(() => {
+  const opts = [
+    { label: '简介', value: 'overview' as WorkTab },
+    { label: `版本${originalEditions.value.length ? ` (${originalEditions.value.length})` : ''}`, value: 'editions' as WorkTab },
+  ]
+  if (translationEditions.value.length > 0) {
+    opts.push({ label: `译本 (${translationEditions.value.length})`, value: 'translations' as WorkTab })
   }
-  return map
-})
-
-const languageFilterOptions = computed(() => {
-  if (!work.value?.editions?.length) return []
-  const opts = [{ label: `全部 (${work.value.editions.length})`, value: 'all' }]
-  const langNames: Record<string, string> = {
-    zh: '中文',
-    en: '英文',
-    ja: '日文',
-    fr: '法文',
-    de: '德文',
-    ru: '俄文',
-    es: '西文',
-  }
-  for (const [lang, count] of Object.entries(languageCounts.value)) {
-    opts.push({
-      label: `${langNames[lang] || lang.toUpperCase()} (${count})`,
-      value: lang,
-    })
-  }
+  opts.push(
+    { label: '书评', value: 'reviews' as WorkTab },
+    { label: '书摘', value: 'quotes' as WorkTab },
+  )
   return opts
-})
-
-const filteredEditions = computed(() => {
-  if (!work.value?.editions) return []
-  if (selectedLanguage.value === 'all') return work.value.editions
-  return work.value.editions.filter(ed => (ed.language || 'zh').toLowerCase() === selectedLanguage.value)
 })
 
 const quotes = ref<WorkNoteItem[]>([])

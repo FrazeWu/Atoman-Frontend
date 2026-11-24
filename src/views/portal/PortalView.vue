@@ -7,7 +7,7 @@
           <span>ATOMAN</span>
         </div>
         <h1 class="portal-hot__hero-title">
-          内容聚合
+          今日精选 · 内容聚合
         </h1>
         <p class="portal-hot__hero-subtitle">
           探索全站精选与最新动态

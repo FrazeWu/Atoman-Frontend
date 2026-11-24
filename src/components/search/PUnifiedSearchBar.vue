@@ -35,6 +35,7 @@ export interface PUnifiedSearchBarProps {
   clearable?: boolean
   disabled?: boolean
   actionButtonText?: string
+  actionButtonVariant?: 'primary' | 'secondary' | 'neutral'
   showActionButton?: boolean
   ariaLabel?: string
   inputTestId?: string
@@ -56,6 +57,7 @@ const props = withDefaults(defineProps<PUnifiedSearchBarProps>(), {
   clearable: true,
   disabled: false,
   actionButtonText: '搜索',
+  actionButtonVariant: 'primary',
   showActionButton: undefined,
   ariaLabel: '搜索',
   inputTestId: '',
@@ -269,6 +271,7 @@ onUnmounted(() => {
       :clearable="clearable"
       :disabled="disabled"
       :action-button-text="actionButtonText"
+      :action-button-variant="actionButtonVariant"
       :show-action-button="showActionButton"
       :aria-label="ariaLabel"
       :input-test-id="inputTestId"

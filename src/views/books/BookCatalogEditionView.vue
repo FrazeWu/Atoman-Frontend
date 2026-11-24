@@ -30,14 +30,23 @@
               <RouterLink
                 v-for="author in work.authors"
                 :key="author.id"
-                :to="{ path: '/books', query: { q: author.name } }"
+                :to="`/books/author/${author.id}?from=${encodeURIComponent(route.fullPath)}`"
                 class="book-catalog__author-badge book-catalog__author-link"
+                :title="`查看作者 ${author.name} 的主页`"
               >
                 {{ author.name }}
               </RouterLink>
-              <span v-if="edition.translators?.length" class="book-catalog__author-badge book-catalog__author-badge--translator">
-                {{ edition.translators.map(p => p.name).join(' / ') }} 译
-              </span>
+              <template v-if="edition.translators?.length">
+                <RouterLink
+                  v-for="translator in edition.translators"
+                  :key="translator.id"
+                  :to="`/books/author/${translator.id}?from=${encodeURIComponent(route.fullPath)}`"
+                  class="book-catalog__author-badge book-catalog__author-badge--translator book-catalog__author-link"
+                  :title="`查看译者 ${translator.name} 的主页`"
+                >
+                  {{ translator.name }} 译
+                </RouterLink>
+              </template>
             </div>
           </div>
 
@@ -45,7 +54,7 @@
           <div class="book-edition__meta-grid">
             <div v-for="field in fields" :key="field.key" class="book-edition__meta-cell">
               <span class="book-edition__meta-label">{{ field.label }}</span>
-              <span class="book-edition__meta-value">{{ field.value || '待补充' }}</span>
+              <span class="book-edition__meta-value">{{ field.value || '—' }}</span>
             </div>
           </div>
 
@@ -89,7 +98,7 @@
             <PButton v-if="auth.isAuthenticated" size="sm" variant="secondary" :disabled="!!busyFile" @click="addToShelf(bestFile)">
               加入书架
             </PButton>
-            <PButton v-if="bestFile.can_manage" size="sm" variant="ghost" :disabled="!!busyFile" @click="confirmVisibility(bestFile)">
+            <PButton v-if="bestFile.can_manage" size="sm" variant="secondary" :disabled="!!busyFile" @click="confirmVisibility(bestFile)">
               {{ bestFile.is_public ? '停止公开' : '公开分享' }}
             </PButton>
           </div>
@@ -204,14 +213,30 @@ const loading = ref(true)
 const edition = computed(() => work.value?.editions.find(item => item.id === metadata.value?.entity_id))
 const bestFile = computed(() => files.value.find(item => item.is_best) || files.value[0])
 const otherFiles = computed(() => files.value.filter(item => item.revision_id !== bestFile.value?.revision_id))
-const fields = computed(() => [
-  { key: 'publisher', label: '出版社', value: edition.value?.publisher },
-  { key: 'language', label: '语言', value: edition.value?.language },
-  { key: 'date', label: '出版年月', value: edition.value?.published_date?.slice(0, 7) },
-  { key: 'edition', label: '版次', value: edition.value?.edition_statement },
-  { key: 'isbn', label: 'ISBN', value: edition.value?.isbn13 || edition.value?.isbn10 },
-  { key: 'pages', label: '页数', value: edition.value?.page_count ? String(edition.value.page_count) + ' 页' : undefined },
-])
+const languageLabels: Record<string, string> = {
+  zh: '中文',
+  'zh-cn': '简体中文',
+  'zh-tw': '繁体中文',
+  en: '英语',
+  ja: '日语',
+  fr: '法语',
+  de: '德语',
+  ru: '俄语',
+  es: '西班牙语',
+}
+
+const fields = computed(() => {
+  const rawLang = edition.value?.language
+  const langDisplay = rawLang ? (languageLabels[rawLang.toLowerCase()] || rawLang) : undefined
+  return [
+    { key: 'publisher', label: '出版社', value: edition.value?.publisher },
+    { key: 'language', label: '语言', value: langDisplay },
+    { key: 'date', label: '出版年月', value: edition.value?.published_date?.slice(0, 7) },
+    { key: 'edition', label: '版次', value: edition.value?.edition_statement },
+    { key: 'isbn', label: 'ISBN', value: edition.value?.isbn13 || edition.value?.isbn10 },
+    { key: 'pages', label: '页数', value: edition.value?.page_count ? String(edition.value.page_count) + ' 页' : undefined },
+  ]
+})
 let generation = 0
 async function load() {
   const current = ++generation

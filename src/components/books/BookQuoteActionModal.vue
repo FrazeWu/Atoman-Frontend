@@ -268,17 +268,17 @@ const choose = (target: DiscussionQuoteTarget, mode: 'append' | 'replace') => {
 }
 
 .book-quote-action-modal__option:hover {
-  border-color: var(--a-color-primary, #10b981);
-  background: color-mix(in srgb, var(--a-color-primary, #10b981) 4%, #ffffff);
+  border-color: var(--a-color-primary, #007aff);
+  background: color-mix(in srgb, var(--a-color-primary, #007aff) 4%, #ffffff);
 }
 
 .book-quote-action-modal__option.is-highlight {
-  border-color: color-mix(in srgb, var(--a-color-primary, #10b981) 40%, var(--a-color-border-soft));
+  border-color: color-mix(in srgb, var(--a-color-primary, #007aff) 40%, var(--a-color-border-soft));
 }
 
 .book-quote-action-modal__option-icon {
   margin-top: 0.125rem;
-  color: var(--a-color-primary, #10b981);
+  color: var(--a-color-primary, #007aff);
   flex-shrink: 0;
 }
 

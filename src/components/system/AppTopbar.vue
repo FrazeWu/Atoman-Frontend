@@ -69,17 +69,7 @@
           >
             <span class="nav-link-name">{{ room.name }}</span>
           </RouterLink>
-          <a
-            class="nav-link oraclegraph-nav-link"
-            href="https://oracle.fazong.eu.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="甲骨文学习平台（在新标签页打开）"
-            title="甲骨文学习 · OracleGraph"
-            data-testid="oraclegraph-nav-link"
-          >
-            <span class="nav-link-name">甲骨文</span>
-          </a>
+
         </div>
       </nav>
 
@@ -307,15 +297,17 @@ const toggleTheme = (event: MouseEvent) => {
   position: absolute;
   left: calc(50% + var(--a-sidebar-width, 0px) / 2);
   bottom: 0;
-  width: 20px;
+  width: 0;
   height: 1px;
   transform: translateX(-50%);
-  background: var(--a-color-fg);
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--a-color-border-soft, rgba(0, 0, 0, 0.12));
+  opacity: 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .topbar.is-scrolled::after {
   width: calc((100% - var(--a-sidebar-width, 0px)) * 0.75);
+  opacity: 1;
 }
 
 :root.dark .topbar,
@@ -639,12 +631,6 @@ html.dark .topbar--auth {
   background: var(--a-color-surface-muted);
 }
 
-/* OracleGraph follows Papers in the main module navigation. */
-.oraclegraph-nav-link {
-  flex: 0 0 auto;
-  white-space: nowrap;
-  font-weight: 500;
-}
 /* Signed-in users have a wider account action group. Compact the module row
    first, then allow only the leading tabs to scroll, never the final pair. */
 @media (min-width: 721px) and (max-width: 1600px) {

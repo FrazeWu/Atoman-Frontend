@@ -1,47 +1,10 @@
 <template>
-  <form class="short-note-composer" :class="{ 'is-compact': compact }" @submit.prevent="submit">
-    <div class="short-note-composer__field">
-      <PTextarea
-        v-model="content"
-        aria-label="短笺内容"
-        :rows="compact ? 3 : 5"
-        :maxlength="500"
-        placeholder="写点什么..."
-        :disabled="submitting"
-      >
-        <template #suffix>
-          <span class="short-note-composer__count" :class="{ 'is-limit': charCount >= 500 }">
-            {{ charCount }}/500
-          </span>
-        </template>
-      </PTextarea>
-    </div>
-
-    <!-- 图片预览 -->
-    <div v-if="mediaUrls.length" ref="mediaElement" data-testid="short-note-media" class="short-note-composer__media">
-      <div v-for="(url, index) in mediaUrls" :key="url" class="short-note-composer__preview">
-        <img :src="resolveMediaURL(url)" alt="上传的图片" />
-        <button
-          type="button"
-          data-testid="short-note-drag-handle"
-          class="short-note-composer__drag-handle"
-          aria-label="拖拽排序图片"
-          title="拖拽排序图片"
-        >
-          <GripVertical :size="14" />
-        </button>
-        <button
-          type="button"
-          class="short-note-composer__remove-btn"
-          aria-label="移除图片"
-          title="移除图片"
-          @click="removeImage(index)"
-        >
-          <X :size="14" />
-        </button>
-      </div>
-    </div>
-
+  <form
+    ref="formRef"
+    class="short-note-composer"
+    :class="{ 'is-compact': compact, 'is-expanded': isExpanded }"
+    @submit.prevent="submit"
+  >
     <!-- 视听附件预览卡片 -->
     <div
       v-if="attachedMedia"
@@ -82,36 +45,101 @@
       </button>
     </div>
 
-    <p v-if="uploadError" class="short-note-composer__error" role="alert">{{ uploadError }}</p>
-
-    <div class="short-note-composer__actions">
-      <div class="short-note-composer__tools">
-        <label class="short-note-composer__image-button" :class="{ 'is-disabled': uploading || mediaUrls.length >= 9 }">
-          <ImagePlus :size="16" aria-hidden="true" />
-          <span>{{ uploading ? '上传中...' : `图片 ${mediaUrls.length}/9` }}</span>
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            multiple
-            :disabled="uploading || mediaUrls.length >= 9"
-            @change="uploadImages"
-          />
-        </label>
+    <!-- 图片预览 -->
+    <div v-if="mediaUrls.length" ref="mediaElement" data-testid="short-note-media" class="short-note-composer__media">
+      <div v-for="(url, index) in mediaUrls" :key="url" class="short-note-composer__preview">
+        <img :src="resolveMediaURL(url)" alt="上传的图片" />
         <button
           type="button"
-          class="short-note-composer__media-button"
-          :class="{ 'is-disabled': submitting || uploading }"
-          :disabled="submitting || uploading"
-          aria-label="视听"
-          @click="openMediaPicker"
+          data-testid="short-note-drag-handle"
+          class="short-note-composer__drag-handle"
+          aria-label="拖拽排序图片"
+          title="拖拽排序图片"
         >
-          <Music :size="16" aria-hidden="true" />
-          <span>视听</span>
+          <GripVertical :size="14" />
+        </button>
+        <button
+          type="button"
+          class="short-note-composer__remove-btn"
+          aria-label="移除图片"
+          title="移除图片"
+          @click="removeImage(index)"
+        >
+          <X :size="14" />
         </button>
       </div>
-      <PButton type="submit" :disabled="!content.trim() || charCount > 500" :loading="submitting">
-        {{ submitLabel }}
-      </PButton>
+    </div>
+
+    <p v-if="uploadError" class="short-note-composer__error" role="alert">{{ uploadError }}</p>
+
+    <!-- 主编辑交互区：写点什么在左，发布在右下角（发布永远停靠在最下一行），横线右侧到发布左侧留空间隙，图片视听位于横线左侧下方 -->
+    <div class="short-note-composer__main">
+      <div class="short-note-composer__editor-row">
+        <!-- 输入框与每行信纸横线 -->
+        <div class="short-note-composer__input-box" :style="{ height: `${inputHeight}px` }">
+          <PTextarea
+            v-model="content"
+            aria-label="短笺内容"
+            :rows="1"
+            :maxlength="500"
+            placeholder="写点什么..."
+            :disabled="submitting"
+            @focus="onFocus"
+            @blur="onBlur"
+            @input="onInput"
+            @keydown="onKeydown"
+          />
+        </div>
+
+        <!-- 右侧独立的发布操作：永远底对齐在最下一行，左侧横线不接上 -->
+        <div class="short-note-composer__action-col">
+          <PButton
+            type="submit"
+            size="sm"
+            variant="primary"
+            class="short-note-composer__submit"
+            :disabled="!content.trim() || charCount > 500"
+            :loading="submitting"
+          >
+            {{ submitLabel }}
+          </PButton>
+        </div>
+      </div>
+
+      <!-- 横线左侧下方：图片、视听与字数统计 -->
+      <div class="short-note-composer__subline">
+        <div class="short-note-composer__tools">
+          <label class="short-note-composer__tool-btn short-note-composer__image-button" :class="{ 'is-disabled': uploading || mediaUrls.length >= 9 }">
+            <ImagePlus :size="15" aria-hidden="true" />
+            <span>{{ uploading ? '上传中...' : (mediaUrls.length ? `图片 ${mediaUrls.length}/9` : '图片') }}</span>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              multiple
+              :disabled="uploading || mediaUrls.length >= 9"
+              @change="uploadImages"
+            />
+          </label>
+
+          <button
+            type="button"
+            class="short-note-composer__tool-btn short-note-composer__media-button"
+            :class="{ 'is-disabled': submitting || uploading }"
+            :disabled="submitting || uploading"
+            aria-label="视听"
+            @click="openMediaPicker"
+          >
+            <Music :size="15" aria-hidden="true" />
+            <span>视听</span>
+          </button>
+        </div>
+
+        <div v-if="charCount > 0" class="short-note-composer__meta">
+          <span class="short-note-composer__count" :class="{ 'is-limit': charCount >= 500 }">
+            {{ charCount }}/500
+          </span>
+        </div>
+      </div>
     </div>
 
     <MediaPickerModal
@@ -170,22 +198,10 @@ const typeLabelMap: Record<MediaPickerType, string> = {
 
 const api = useApi()
 const authStore = useAuthStore()
+const formRef = ref<HTMLFormElement | null>(null)
+const isFocused = ref(false)
 const content = ref(props.initialContent)
 const mediaUrls = ref([...props.initialMediaUrls])
-
-interface ShortNoteDraftPayload {
-  content: string
-  mediaUrls: string[]
-}
-
-const { autoSaveState, triggerAutoSave, loadDraft, clearDraft } = useAutoSave<ShortNoteDraftPayload>({
-  getDraftKey: () => 'atoman:short_note_composer_draft',
-  getPayload: () => ({
-    content: content.value,
-    mediaUrls: mediaUrls.value,
-  }),
-  shouldPersist: (payload) => Boolean(payload.content.trim() || payload.mediaUrls.length > 0),
-})
 const attachedMedia = ref<MediaPickerItem | null>(
   props.initialMediaAttachment
     ? {
@@ -208,6 +224,121 @@ let sortable: Sortable | null = null
 const uploading = ref(false)
 const uploadError = ref('')
 const charCount = computed(() => Array.from(content.value).length)
+
+const isExpanded = computed(() => {
+  return (
+    isFocused.value ||
+    Boolean(content.value.trim()) ||
+    mediaUrls.value.length > 0 ||
+    Boolean(attachedMedia.value)
+  )
+})
+
+const LINE_HEIGHT = 36
+const inputHeight = ref(LINE_HEIGHT)
+
+function onFocus() {
+  isFocused.value = true
+  adjustHeight()
+}
+
+function onBlur(event: FocusEvent) {
+  const nextTarget = event.relatedTarget as HTMLElement | null
+  if (formRef.value?.contains(nextTarget)) return
+  if (!content.value.trim() && !mediaUrls.value.length && !attachedMedia.value) {
+    isFocused.value = false
+    adjustHeight()
+  }
+}
+
+function clampContent(val: string): string {
+  // 严格限制不能输入第 6 行（最多 5 行内容，最多 4 个换行符）
+  const lines = val.split('\n')
+  if (lines.length > 5) {
+    return lines.slice(0, 5).join('\n')
+  }
+  return val
+}
+
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter') {
+    const text = content.value
+    const newlineLines = text.split('\n').length
+    // 已达到 5 行，阻止 Enter 键继续生成第 6 行
+    if (newlineLines >= 5) {
+      event.preventDefault()
+      return
+    }
+    const el = formRef.value?.querySelector('textarea')
+    if (el) {
+      const scrollLines = Math.max(Math.ceil((el.scrollHeight - 4) / LINE_HEIGHT), 1)
+      if (scrollLines >= 5) {
+        event.preventDefault()
+        return
+      }
+    }
+  }
+}
+
+function onInput() {
+  const clamped = clampContent(content.value)
+  if (clamped !== content.value) {
+    content.value = clamped
+  }
+  adjustHeight()
+}
+
+function adjustHeight() {
+  nextTick(() => {
+    const el = formRef.value?.querySelector('textarea')
+    if (!el) return
+    let text = content.value
+    const splitLines = text.split('\n')
+    if (splitLines.length > 5) {
+      text = splitLines.slice(0, 5).join('\n')
+      content.value = text
+    }
+    // 内容为空时严格保持单行 36px，绝不点击后自动变成两行
+    if (!text || !text.trim()) {
+      inputHeight.value = LINE_HEIGHT
+      el.style.overflowY = 'hidden'
+      return
+    }
+    // 自动折行超过 5 行时，截断多余字符确保不能输入第六行
+    while (text.length > 0 && Math.ceil((el.scrollHeight - 4) / LINE_HEIGHT) > 5) {
+      text = text.slice(0, -1)
+      el.value = text
+      content.value = text
+    }
+    const newlineLines = text.split('\n').length
+    const scrollLines = Math.max(Math.ceil((el.scrollHeight - 4) / LINE_HEIGHT), 1)
+    const lines = Math.min(Math.max(newlineLines, scrollLines), 5)
+    inputHeight.value = lines * LINE_HEIGHT
+    el.style.overflowY = 'hidden'
+  })
+}
+
+watch(content, () => {
+  adjustHeight()
+})
+
+watch(isExpanded, () => {
+  adjustHeight()
+})
+
+interface ShortNoteDraftPayload {
+  content: string
+  mediaUrls: string[]
+}
+
+const { autoSaveState, triggerAutoSave, loadDraft, clearDraft } = useAutoSave<ShortNoteDraftPayload>({
+  getDraftKey: () => 'atoman:short_note_composer_draft',
+  getPayload: () => ({
+    content: content.value,
+    mediaUrls: mediaUrls.value,
+  }),
+  shouldPersist: (payload) => Boolean(payload.content.trim() || payload.mediaUrls.length > 0),
+})
 
 const attachmentSubtitle = computed(() => {
   if (!attachedMedia.value) return ''
@@ -292,6 +423,7 @@ onMounted(() => {
     }
   }
   void nextTick(syncSortable)
+  adjustHeight()
 })
 onBeforeUnmount(() => sortable?.destroy())
 
@@ -356,6 +488,11 @@ function submit() {
   }
   emit('submit', payload)
   clearDraft()
+  content.value = ''
+  mediaUrls.value = []
+  attachedMedia.value = null
+  isFocused.value = false
+  adjustHeight()
 }
 
 defineExpose({
@@ -366,31 +503,137 @@ defineExpose({
 
 <style scoped>
 .short-note-composer {
-  display: grid;
-  gap: 1rem;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-  background: var(--a-color-bg);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  box-shadow: none;
-  transition: border-color 0.15s ease;
-}
-
-.short-note-composer:focus-within {
-  border-color: var(--a-color-border);
-  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  padding: 0.65rem 0.25rem 0;
+  background: transparent;
+  gap: 0.5rem;
 }
 
 .short-note-composer.is-compact {
+  padding: 0.55rem 0.25rem 0;
+}
+
+/* 核心布局：输入行与右侧发布同行，底对齐保证发布永远在最下一行；横线右侧到发布左侧留空间隙，图片视听位于横线左侧下方 */
+.short-note-composer__main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.short-note-composer__editor-row {
+  display: flex;
+  align-items: flex-end;
   gap: 0.85rem;
+  width: 100%;
+}
+
+.short-note-composer__input-box {
+  flex: 1;
+  min-width: 0;
+  border-bottom: 1px solid var(--a-color-border-soft);
+  box-sizing: border-box;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 35px,
+    var(--a-color-border-soft) 35px,
+    var(--a-color-border-soft) 36px
+  );
+  background-size: 100% 36px;
+  background-repeat: repeat-y;
+  transition: height 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.short-note-composer :deep(.p-field),
+.short-note-composer :deep(.p-textarea-wrapper) {
+  height: 100%;
+  margin: 0;
+  gap: 0;
+  display: block;
+}
+
+.short-note-composer :deep(.p-textarea) {
+  width: 100%;
+  height: 100% !important;
+  border: none !important;
+  background: transparent !important;
+  font-size: 0.92rem;
+  line-height: 36px !important;
+  resize: none;
+  box-shadow: none !important;
+  color: var(--a-color-fg);
+  padding: 1px 0 0 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+  overflow-y: hidden;
+  display: block;
+}
+
+.short-note-composer :deep(.p-textarea:focus) {
+  outline: none !important;
+}
+
+.short-note-composer :deep(.p-textarea::placeholder) {
+  color: var(--a-color-muted);
+  line-height: 36px;
+}
+
+/* 右侧发布操作列：底对齐固定在最下一行，高度与行高一致，左侧横线不接上 */
+.short-note-composer__action-col {
+  flex-shrink: 0;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 横线左侧下方操作区：图片、视听与字数，带向下弹出滑入动画 */
+.short-note-composer__subline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-top: 0.4rem;
+  padding-bottom: 0.2rem;
+  box-sizing: border-box;
+  animation: sublineSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes sublineSlideDown {
+  from {
+    opacity: 0.6;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.short-note-composer__tools {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.short-note-composer__meta {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
 }
 
 .short-note-composer__count {
-  padding: 0.5rem 0.75rem;
-  color: var(--a-color-muted);
   font-size: 0.75rem;
-  transition: color 0.2s ease;
+  color: var(--a-color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .short-note-composer__count.is-limit {
@@ -398,199 +641,50 @@ defineExpose({
   font-weight: 600;
 }
 
-.short-note-composer__media {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.short-note-composer__preview {
-  position: relative;
-  aspect-ratio: 1;
-  overflow: hidden;
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-surface-muted);
-  border: 1px solid var(--a-color-border-soft);
-}
-
-.short-note-composer__preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.short-note-composer__drag-handle {
-  position: absolute;
-  top: 0.3rem;
-  left: 0.3rem;
-  display: grid;
-  width: 1.6rem;
-  height: 1.6rem;
-  place-items: center;
-  border: 0;
-  border-radius: var(--a-radius-control);
-  background: color-mix(in srgb, var(--a-color-text) 65%, transparent);
-  color: var(--a-color-bg);
-  cursor: grab;
-  touch-action: none;
-  transition: background 0.15s ease;
-}
-
-.short-note-composer__drag-handle:active {
-  cursor: grabbing;
-  background: color-mix(in srgb, var(--a-color-text) 85%, transparent);
-}
-
-.short-note-composer__remove-btn {
-  position: absolute;
-  top: 0.3rem;
-  right: 0.3rem;
-  display: grid;
-  width: 1.6rem;
-  height: 1.6rem;
-  place-items: center;
-  border: 0;
-  border-radius: var(--a-radius-control);
-  background: color-mix(in srgb, var(--a-color-text) 65%, transparent);
-  color: var(--a-color-bg);
-  cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.short-note-composer__remove-btn:hover {
-  background: var(--a-color-danger);
-  transform: scale(1.05);
-}
-
-.short-note-composer__attachment {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.625rem 0.75rem;
-  background: var(--a-color-surface-muted);
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-}
-
-.short-note-composer__attachment-cover {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 4px;
-  background: var(--a-color-surface-soft, rgba(0, 0, 0, 0.05));
-  color: var(--a-color-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.short-note-composer__attachment-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.short-note-composer__attachment-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.short-note-composer__attachment-title {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--a-color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.short-note-composer__attachment-subtitle {
-  font-size: 0.75rem;
-  color: var(--a-color-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-top: 0.125rem;
-}
-
-.short-note-composer__attachment-badge {
-  font-size: 0.6875rem;
-  padding: 0.125rem 0.5rem;
-  border-radius: 9999px;
-  background: var(--a-color-surface-soft, rgba(0, 0, 0, 0.05));
-  color: var(--a-color-muted);
-  flex-shrink: 0;
-}
-
-.short-note-composer__attachment-remove {
-  display: grid;
-  width: 1.5rem;
-  height: 1.5rem;
-  place-items: center;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--a-color-muted);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: color 0.15s ease, background-color 0.15s ease;
-}
-
-.short-note-composer__attachment-remove:hover {
-  background: var(--a-color-danger);
-  color: #ffffff;
-}
-
-.short-note-composer__actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-top: 0.25rem;
-}
-
-.short-note-composer__tools {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.short-note-composer__image-button,
-.short-note-composer__media-button {
+.short-note-composer__tool-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.45rem 0.85rem;
-  color: var(--a-color-fg);
-  background: var(--a-color-surface-muted);
-  border: 1px solid var(--a-color-border-soft);
+  gap: 0.35rem;
+  height: 28px;
+  padding: 0 0.55rem;
+  color: var(--a-color-muted);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: var(--a-radius-control);
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 500;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
-.short-note-composer__image-button:hover:not(.is-disabled),
-.short-note-composer__media-button:hover:not(.is-disabled) {
-  background: var(--a-color-bg);
-  border-color: var(--a-color-border);
-  color: var(--a-color-primary);
+.short-note-composer__tool-btn:hover:not(.is-disabled) {
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
 }
 
-.short-note-composer__image-button.is-disabled,
-.short-note-composer__media-button.is-disabled {
+.short-note-composer__tool-btn.is-disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.short-note-composer__image-button input {
+.short-note-composer__tool-btn input {
   position: absolute;
   width: 1px;
   height: 1px;
   overflow: hidden;
   clip: rect(0 0 0 0);
+}
+
+.short-note-composer__submit {
+  height: 28px;
+  min-width: 3.75rem;
+  padding: 0 0.75rem;
+  border-radius: var(--a-radius-control);
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .short-note-composer__error {

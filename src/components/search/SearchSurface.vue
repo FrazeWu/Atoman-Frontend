@@ -234,23 +234,24 @@ defineExpose({
 .search-btn {
   border: none;
   border-radius: 0 calc(var(--a-radius-control, 4px) - 1px) calc(var(--a-radius-control, 4px) - 1px) 0;
-  background: var(--a-color-primary, #0ea5e9);
-  color: #ffffff;
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
   cursor: pointer;
   font-family: inherit;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
-  padding: 0 1.1rem;
+  padding: 0 0.95rem;
   white-space: nowrap;
   box-shadow: none !important;
-  transition: filter 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .search-btn:hover {
-  filter: brightness(0.96);
+  background: color-mix(in srgb, var(--a-color-surface-muted) 75%, var(--a-color-border-soft));
+  color: var(--a-color-fg);
 }
 
 .search-frame__head {

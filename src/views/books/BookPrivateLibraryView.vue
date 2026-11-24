@@ -1,6 +1,6 @@
 <template>
   <section class="book-catalog file-library">
-    <PPageHeader title="我的书架" sub="管理与阅读已添加的图书及离线文件。" />
+    <PPageHeader title="我的书架" sub="管理与阅读已添加的图书。" />
 
     <!-- 顶部状态切换 (Cupertino Segmented Control) -->
     <div class="file-library__nav">
@@ -9,37 +9,6 @@
         :options="statusOptions"
         @update:model-value="handleStatusChange"
       />
-    </div>
-
-    <!-- 离线存储管理条 -->
-    <div class="file-library__storage-bar">
-      <div class="file-library__storage-info">
-        <HardDrive :size="16" class="file-library__storage-icon" aria-hidden="true" />
-        <span class="file-library__storage-text">
-          本地存储：{{ storageInfo.count > 0 ? `${storageInfo.count} 本已缓存 · 占用 ${storageSizeFormatted}` : '暂无离线文件' }}
-        </span>
-      </div>
-      <div class="file-library__storage-actions">
-        <PButton
-          v-if="storageInfo.count > 0"
-          size="sm"
-          variant="ghost"
-          class="file-library__storage-purge-btn"
-          @click="confirmPurge = true"
-        >
-          <Trash2 :size="13" aria-hidden="true" />
-          <span>清理离线缓存</span>
-        </PButton>
-        <PButton
-          size="sm"
-          variant="ghost"
-          class="file-library__storage-refresh-btn"
-          title="刷新本地缓存状态"
-          @click="refreshStorageInfo"
-        >
-          <RotateCw :size="13" aria-hidden="true" />
-        </PButton>
-      </div>
     </div>
 
     <!-- 筛选、排序与搜索工具栏 -->
@@ -102,10 +71,6 @@
               >{{ entry.title }}</button>
               <div class="file-library__meta">
                 <span>{{ entry.format.toUpperCase() }} · {{ labelForStatus(entry.status) }}</span>
-                <span v-if="isCached(entry.revision_id)" class="file-library__offline-badge" title="已保存在本机离线存储">
-                  <Check :size="11" aria-hidden="true" />
-                  <span>已离线</span>
-                </span>
               </div>
             </div>
             <div v-if="entry.archived || entry.has_better || !entry.file_available" class="file-library__flags">
@@ -139,13 +104,6 @@
                       <option v-for="item in shelfStatuses" :key="item.value" :value="item.value">{{ item.label }}</option>
                     </select>
                   </label>
-                  <button
-                    type="button"
-                    :disabled="!!busy || cachingRevisionId === entry.revision_id"
-                    @click="toggleOfflineCache(entry)"
-                  >
-                    {{ cachingRevisionId === entry.revision_id ? '正在下载…' : (isCached(entry.revision_id) ? '清除离线缓存' : '下载离线阅读') }}
-                  </button>
                   <button type="button" :disabled="!!busy" @click="update(entry, { archived: !entry.archived })">{{ entry.archived ? '取消归档' : '归档' }}</button>
                   <button type="button" class="file-library__remove-btn" :disabled="!!busy" @click="removing = entry">移出书架</button>
                 </div>
@@ -164,21 +122,13 @@
       @confirm="remove"
       @cancel="removing = null"
     />
-
-    <PConfirm
-      :show="confirmPurge"
-      title="清理离线缓存"
-      message="将释放本机占用的离线存储空间。连接网络后可随时重新下载。"
-      @confirm="handlePurgeAllCache"
-      @cancel="confirmPurge = false"
-    />
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, Compass, MoreHorizontal, HardDrive, Trash2, RotateCw, Check } from 'lucide-vue-next'
+import { Search, Compass, MoreHorizontal } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
@@ -187,16 +137,6 @@ import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import BookCover from '@/components/books/BookCover.vue'
 import { listFileShelf, saveFileShelf, removeFileShelf, type FileShelfStatus, type FileShelfSort, type FileShelfItem } from '@/api/bookFileShelf'
 import { resourceReaderPath } from '@/api/bookResources'
-import {
-  initBookOfflineCache,
-  isRevisionCachedSync,
-  cacheBookRevision,
-  removeCachedBookRevision,
-  getBookOfflineStorageInfo,
-  clearAllBookOfflineCache,
-  formatStorageBytes,
-  type BookOfflineStorageInfo,
-} from '@/utils/bookOfflineCache'
 import './bookCatalog.css'
 
 const router = useRouter()
@@ -206,7 +146,6 @@ const statusOptions = [
   { value: 'reading', label: '在读' },
   { value: 'unstarted', label: '想读' },
   { value: 'finished', label: '已读' },
-  { value: 'offline', label: '本地离线' },
 ]
 
 const shelfStatuses: { value: FileShelfStatus; label: string }[] = [
@@ -226,47 +165,21 @@ const loading = ref(true)
 const busy = ref('')
 const error = ref('')
 const removing = ref<FileShelfItem | null>(null)
-const confirmPurge = ref(false)
-const cachingRevisionId = ref('')
-
-const storageInfo = ref<BookOfflineStorageInfo>({
-  count: 0,
-  totalBytes: 0,
-  revisionIds: [],
-})
-
-const cachedRevisionsSet = computed(() => new Set(storageInfo.value.revisionIds))
-const storageSizeFormatted = computed(() => formatStorageBytes(storageInfo.value.totalBytes))
 
 const visible = computed(() => entries.value.filter(e => {
   const matchesArchive = archiveFilter.value === 'all' || (archiveFilter.value === 'archived' ? e.archived : !e.archived)
   const matchesQuery = !query.value || e.title.toLocaleLowerCase().includes(query.value.toLocaleLowerCase())
-  const matchesStatus = !status.value || status.value === 'offline' || e.status === status.value
-  const matchesOffline = status.value !== 'offline' || cachedRevisionsSet.value.has(e.revision_id)
-  return matchesArchive && matchesQuery && matchesStatus && matchesOffline
+  const matchesStatus = !status.value || e.status === status.value
+  return matchesArchive && matchesQuery && matchesStatus
 }))
 
 const labelForStatus = (s: FileShelfStatus) => shelfStatuses.find(x => x.value === s)?.label ?? s
-
-function isCached(revisionId: string): boolean {
-  return cachedRevisionsSet.value.has(revisionId) || isRevisionCachedSync(revisionId)
-}
-
-async function refreshStorageInfo() {
-  const ids = await initBookOfflineCache()
-  const info = await getBookOfflineStorageInfo()
-  storageInfo.value = {
-    ...info,
-    revisionIds: Array.from(new Set([...info.revisionIds, ...Array.from(ids)])),
-  }
-}
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    const apiStatus = status.value === 'offline' ? '' : status.value
-    const result = await listFileShelf({ sort: sort.value, status: apiStatus })
+    const result = await listFileShelf({ sort: sort.value, status: status.value })
     entries.value = result.items
     total.value = result.total
   } catch {
@@ -278,19 +191,14 @@ async function load() {
 
 function handleStatusChange(val: string) {
   status.value = val
-  if (val !== 'offline') {
-    void load()
-  } else if (entries.value.length === 0) {
-    void load()
-  }
+  void load()
 }
 
 async function more() {
   if (busy.value) return
   busy.value = 'more'
   try {
-    const apiStatus = status.value === 'offline' ? '' : status.value
-    const result = await listFileShelf({ sort: sort.value, status: apiStatus, offset: entries.value.length })
+    const result = await listFileShelf({ sort: sort.value, status: status.value, offset: entries.value.length })
     entries.value.push(...result.items)
     total.value = result.total
   } catch {
@@ -331,31 +239,8 @@ async function remove() {
   }
 }
 
-async function toggleOfflineCache(entry: FileShelfItem) {
-  const revisionId = entry.revision_id
-  if (isCached(revisionId)) {
-    await removeCachedBookRevision(revisionId)
-    await refreshStorageInfo()
-  } else {
-    cachingRevisionId.value = revisionId
-    try {
-      await cacheBookRevision(revisionId)
-      await refreshStorageInfo()
-    } finally {
-      cachingRevisionId.value = ''
-    }
-  }
-}
-
-async function handlePurgeAllCache() {
-  confirmPurge.value = false
-  await clearAllBookOfflineCache()
-  await refreshStorageInfo()
-}
-
 onMounted(() => {
   void load()
-  void refreshStorageInfo()
 })
 </script>
 
@@ -371,57 +256,6 @@ onMounted(() => {
   justify-content: flex-start;
   overflow-x: auto;
   padding-bottom: 0.25rem;
-}
-
-.file-library__storage-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  background: rgba(0, 0, 0, 0.02);
-  border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  font-size: 0.75rem;
-}
-
-.file-library__storage-info {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  color: var(--a-color-text-secondary, #64748b);
-  font-weight: 500;
-}
-
-.file-library__storage-icon {
-  color: var(--a-color-text-secondary, #94a3b8);
-}
-
-.file-library__storage-text {
-  font-size: 0.75rem;
-}
-
-.file-library__storage-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.file-library__storage-purge-btn {
-  height: 24px;
-  padding: 0 0.5rem;
-  font-size: 0.6875rem;
-  color: var(--a-color-danger, #e11d48);
-}
-
-.file-library__storage-refresh-btn {
-  height: 24px;
-  width: 24px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .file-library__toolbar {
@@ -625,18 +459,6 @@ onMounted(() => {
   gap: 0.35rem;
   color: var(--a-color-text-secondary, #64748b);
   font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.file-library__offline-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  font-size: 0.6875rem;
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.08);
-  padding: 0.1rem 0.35rem;
-  border-radius: 4px;
   font-weight: 500;
 }
 

@@ -144,9 +144,11 @@ describe('AppSidebar blog navigation', () => {
     const items = wrapper.findAllComponents(PSidebarItem)
     const discoveryItem = items.find((item) => item.text().trim() === '发现')
     const postsItem = items.find((item) => item.text().trim() === '博文')
+    const bookmarksItem = items.find((item) => item.text().trim() === '收藏')
 
     expect(discoveryItem?.props('to')).toBe('/posts')
     expect(postsItem?.props('to')).toBe('/posts/articles')
+    expect(bookmarksItem?.props('to')).toBe('/posts/bookmarks')
   })
 
   it('marks the current blog page as active', async () => {

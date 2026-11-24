@@ -12,9 +12,12 @@
     @close="$emit('close')"
   >
     <div class="publication-sheet">
-      <p class="publication-sheet__intro">
-        确认文章所属合集与展示信息。
-      </p>
+      <div class="publication-sheet__header">
+        <h2 class="publication-sheet__title">{{ sheetTitle }}</h2>
+        <p class="publication-sheet__intro">
+          确认文章所属合集与展示信息，点击顶部“确认发布”即可完成发布。
+        </p>
+      </div>
 
       <section class="publication-sheet__section publication-sheet__mode-section">
         <div class="publication-sheet__section-title">发布方式</div>
@@ -211,7 +214,7 @@ const emit = defineEmits<{
 }>()
 
 const coverInput = ref<HTMLInputElement | null>(null)
-const sheetTitle = computed(() => props.intent === 'schedule' ? '定时发布' : '发布设置')
+const sheetTitle = computed(() => props.intent === 'schedule' ? '定时发布' : '确认发布')
 const intentOptions: Array<{ label: string; value: PublicationIntent }> = [
   { label: '立即发布', value: 'publish' },
   { label: '定时发布', value: 'schedule' },
@@ -301,6 +304,21 @@ const triggerCoverUpload = () => coverInput.value?.click()
   min-width: 0;
   flex-direction: column;
   gap: 1.15rem;
+}
+
+.publication-sheet__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.publication-sheet__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--a-color-text);
 }
 
 .publication-sheet__intro,

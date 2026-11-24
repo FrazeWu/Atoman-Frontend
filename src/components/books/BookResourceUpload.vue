@@ -201,6 +201,10 @@ onBeforeUnmount(() => { alive = false; controller?.abort(); clearTimeout(timer);
   min-width: 0;
 }
 
+.resource-upload__fields :deep(#resource-language) {
+  max-width: 280px;
+}
+
 .resource-upload__file-picker {
   display: flex;
   flex-direction: column;

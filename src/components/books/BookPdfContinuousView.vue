@@ -23,6 +23,7 @@ const emit = defineEmits<{ 'position-change': [page: number, offset: number, adv
 const container = ref<HTMLDivElement>()
 const viewerRoot = ref<HTMLDivElement>()
 let pdfViewer: any = null
+let resizeObserver: ResizeObserver | null = null
 let disposed = false
 let initialized = false
 let deliberateJump = false
@@ -176,6 +177,12 @@ onMounted(async () => {
     const viewer = new PDFViewer(options)
     pdfViewer = viewer
     window.addEventListener('resize', handleViewportResize)
+    if (typeof ResizeObserver !== 'undefined' && root) {
+      resizeObserver = new ResizeObserver(() => {
+        handleViewportResize()
+      })
+      resizeObserver.observe(root)
+    }
     linkService.setViewer(viewer)
     eventBus.on('pagesinit', () => {
       if (disposed) return
@@ -206,6 +213,8 @@ onMounted(async () => {
 })
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleViewportResize)
+  resizeObserver?.disconnect()
+  resizeObserver = null
   disposed = true
   if (pendingFrame) cancelAnimationFrame(pendingFrame)
   abort.abort()
@@ -216,12 +225,46 @@ defineExpose({ goToPage })
 </script>
 
 <style scoped>
-.book-pdf-continuous { position: relative; width: 100%; min-width: 0; height: min(72vh, 800px); }
-.book-pdf-continuous__scroll { position: absolute; inset: 0; overflow: auto; background: var(--book-reader-canvas, #ebeef2); }
+.book-pdf-continuous {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 100% !important;
+  max-height: 100% !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.book-pdf-continuous__scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain !important;
+  background: var(--book-reader-canvas, #ebeef2);
+}
+
+.book-pdf-continuous__scroll :deep(.pdfViewer) {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
 .book-pdf-continuous__scroll :deep(.pdfViewer .page) {
   margin: 1.5rem auto;
+  max-width: calc(100% - 2rem);
+  box-sizing: border-box;
   border: 0 !important;
-  border-radius: 3px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+  border-radius: var(--a-radius-card, 4px);
+  box-shadow: none !important;
+}
+
+.book-pdf-continuous__scroll :deep(.pdfViewer .page canvas) {
+  max-width: 100%;
+  height: auto !important;
+  box-sizing: border-box;
 }
 </style>

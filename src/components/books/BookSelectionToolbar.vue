@@ -263,33 +263,27 @@ onUnmounted(() => {
   position: fixed;
   transform: translate(-50%, -100%) translateY(-10px);
   background: var(--p-surface-elevated, #ffffff);
-  border: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.08));
-  border-radius: 9999px;
-  box-shadow:
-    0 14px 32px -4px rgba(0, 0, 0, 0.16),
-    0 4px 12px rgba(0, 0, 0, 0.06),
-    0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  box-shadow: none !important;
   z-index: 120;
   display: flex;
   flex-direction: column;
   user-select: none;
   min-width: 14.5rem;
-  transition: border-radius 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+  transition: border-radius 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :global(.dark) .book-selection-toolbar,
 :global([data-theme='dark']) .book-selection-toolbar,
 :global([data-reader-theme='night']) .book-selection-toolbar {
-  background: rgba(36, 36, 40, 0.92);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 16px 36px -4px rgba(0, 0, 0, 0.55),
-    0 4px 14px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  background: rgba(36, 36, 40, 0.95);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: none !important;
 }
 
 .book-selection-toolbar.has-note-open {
-  border-radius: 16px;
+  border-radius: var(--a-radius-card, 4px);
   min-width: 18rem;
 }
 
@@ -312,39 +306,38 @@ onUnmounted(() => {
 .book-selection-toolbar__color-btn {
   width: 20px;
   height: 20px;
-  border-radius: 9999px;
-  border: 0;
+  border-radius: var(--a-radius-control, 4px);
+  border: 1px solid rgba(0, 0, 0, 0.15);
   cursor: pointer;
   padding: 0;
   position: relative;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
-  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, outline-color 0.15s ease;
+  box-shadow: none;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), outline-color 0.15s ease;
 }
 
 .book-selection-toolbar__color-btn[data-color="yellow"] {
-  background: linear-gradient(135deg, #fef08a, #facc15);
+  background: #fde047;
 }
 
 .book-selection-toolbar__color-btn[data-color="green"] {
-  background: linear-gradient(135deg, #a7f3d0, #34d399);
+  background: #86efac;
 }
 
 .book-selection-toolbar__color-btn[data-color="blue"] {
-  background: linear-gradient(135deg, #bae6fd, #60a5fa);
+  background: #93c5fd;
 }
 
 .book-selection-toolbar__color-btn[data-color="pink"] {
-  background: linear-gradient(135deg, #fbcfe8, #f472b6);
+  background: #f472b6;
 }
 
 .book-selection-toolbar__color-btn:hover {
-  transform: scale(1.18);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transform: scale(1.15);
 }
 
 .book-selection-toolbar__color-btn.is-active {
-  outline: 2px solid #007aff;
-  outline-offset: 2px;
+  outline: 2px solid var(--a-color-primary, #007aff);
+  outline-offset: 1px;
 }
 
 .book-selection-toolbar__icon-btn {
@@ -356,7 +349,7 @@ onUnmounted(() => {
   padding: 0;
   background: transparent;
   border: none;
-  border-radius: 9999px;
+  border-radius: var(--a-radius-control, 4px);
   color: #4b5563;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
@@ -432,10 +425,10 @@ onUnmounted(() => {
   color: var(--a-color-text, #1f2937);
   background: rgba(0, 0, 0, 0.03);
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 10px;
+  border-radius: var(--a-radius-control, 4px);
   resize: none;
   outline: none;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 :global(.dark) .book-selection-toolbar__textarea,
@@ -448,8 +441,10 @@ onUnmounted(() => {
 
 .book-selection-toolbar__textarea:focus {
   background: var(--a-color-bg, #ffffff);
-  border-color: #007aff;
-  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.16);
+  border-color: var(--a-color-primary, #007aff);
+  outline: 2px solid var(--a-color-primary, #007aff);
+  outline-offset: 1px;
+  box-shadow: none !important;
 }
 
 :global(.dark) .book-selection-toolbar__textarea:focus,

@@ -11,7 +11,7 @@ export const relatedLinks: readonly RelatedLink[] = [
 		action: "docker-proxy",
 	},
 	{
-		label: "阮一峰的网络日志",
+		label: "阮一峰",
 		href: "https://www.ruanyifeng.com/blog/",
 	},
 	{
@@ -37,5 +37,10 @@ export const relatedLinks: readonly RelatedLink[] = [
 	{
 		label: "COOLSHELL",
 		href: "https://coolshell.cn/",
+	},
+	{
+		label: "甲骨文",
+		href: "https://oracle.fazong.eu.org/",
+		action: "oraclegraph",
 	},
 ] as const;

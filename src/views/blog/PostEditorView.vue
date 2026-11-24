@@ -19,7 +19,7 @@
         v-if="!editorLoadFailed"
         class="editor-layout"
       >
-        <main class="col-center a-card-sm">
+        <main class="col-center">
           <template v-if="contentReady">
             <PostEditorTopbar
               :is-edit="isEdit"
@@ -32,6 +32,7 @@
               :publication-open="publicationReviewVisible"
               :publication-can-confirm="canConfirmPublication"
               :publication-busy="Boolean(saving) || scheduling || coverUploading"
+              :publication-intent="publicationIntent || undefined"
               @import-file="handleFileUpload"
               @open-draft-manager="openDraftManager"
               @export-markdown="handleMarkdownExport"
@@ -64,14 +65,17 @@
               </div>
               <div class="editor-top-info__group editor-top-info__group--secondary">
                 <span>{{ contentMode === 'markdown' ? 'Markdown' : 'Visual' }}</span>
-                <span class="editor-top-info__sep" aria-hidden="true">·</span>
-                <span>{{ lineNumbersVisible ? '行号已开启' : '行号已关闭' }}</span>
+                <template v-if="contentMode !== 'visual'">
+                  <span class="editor-top-info__sep" aria-hidden="true">·</span>
+                  <span>{{ lineNumbersVisible ? '行号已开启' : '行号已关闭' }}</span>
+                </template>
               </div>
             </div>
 
             <div class="editor-format-row">
               <PostEditorFormattingToolbar
-                :line-numbers="lineNumbersVisible"
+                :line-numbers="contentMode === 'visual' ? false : lineNumbersVisible"
+                :hide-line-numbers="contentMode === 'visual'"
                 :outline-open="outlineOpen"
                 :outline-count="outlineHeadings.length"
                 @command="executeFormattingCommand"
@@ -98,7 +102,7 @@
                     :show-sync-scroll-toggle="false"
                     :show-toolbar="false"
                     :show-reference-trigger="false"
-                    :line-numbers="lineNumbersVisible"
+                    :line-numbers="contentMode === 'visual' ? false : lineNumbersVisible"
                     :show-whitespace="true"
                     @update:line-numbers="lineNumbersVisible = $event"
                     @collab-ready="handleCollabReady"
@@ -427,6 +431,11 @@ const editorReadingTime = computed(() => (
 const editorBody = computed({
   get: () => `# ${form.value.title}\n${form.value.content}`,
   set: (val: string) => {
+    if (!val || val === '# ' || val === '# \n') {
+      form.value.title = ''
+      form.value.content = ''
+      return
+    }
     const nl = val.indexOf('\n')
     const firstLine = nl >= 0 ? val.slice(0, nl) : val
     const titleMatch = firstLine.match(/^#+\s*(.*)$/)
@@ -435,7 +444,8 @@ const editorBody = computed({
     } else {
       form.value.title = firstLine
     }
-    form.value.content = nl >= 0 ? val.slice(nl + 1) : ''
+    const rawContent = nl >= 0 ? val.slice(nl + 1) : ''
+    form.value.content = rawContent === '\n' ? '' : rawContent
   },
 })
 

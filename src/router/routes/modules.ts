@@ -68,6 +68,10 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 					meta: { requiresAuth: true },
 				},
 				{
+					path: "collections",
+					redirect: () => ({ path: "/posts/bookmarks", query: { tab: "collection" } }),
+				},
+				{
 					path: "subscriptions",
 					component: () => import("@/views/blog/BlogSubscriptionsView.vue"),
 					meta: { requiresAuth: true },
@@ -227,6 +231,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				{ path: "note-shares/:shareKey", component: () => import("@/views/books/BookNoteShareView.vue") },
 				{ path: "shared-notes", component: () => import("@/views/books/BookNotePublicIndexView.vue") },
 				{ path: "edition/:editionId", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'edition' } }, meta: { bookCatalog: true } },
+				{ path: "author/:personId", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'author' } }, meta: { bookCatalog: true } },
 				{
 					path: "tags",
 					redirect: "/books/lists",
@@ -255,7 +260,21 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				},
 				{
 					path: "read/:workId/:assetId/:revisionId",
-					component: () => import("@/views/books/BookRevisionReaderView.vue"),
+					components: { default: booksHomeView, overlay: bookCatalogSheet },
+					props: { overlay: { view: 'reader' } },
+					meta: { bookCatalog: true, restoreSession: true },
+				},
+				{
+					path: "read/:assetId",
+					components: { default: booksHomeView, overlay: bookCatalogSheet },
+					props: { overlay: { view: 'private-reader' } },
+					meta: { bookCatalog: true, requiresAuth: true },
+				},
+				{
+					path: "public-read/:assetId",
+					components: { default: booksHomeView, overlay: bookCatalogSheet },
+					props: { overlay: { view: 'public-reader' } },
+					meta: { bookCatalog: true },
 				},
 			],
 		},

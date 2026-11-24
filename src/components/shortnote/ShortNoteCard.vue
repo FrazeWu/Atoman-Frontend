@@ -19,6 +19,7 @@
         <span class="sticky-author">{{ author }}</span>
         <span v-if="note.user?.username" class="sticky-handle">@{{ note.user.username }}</span>
         <span
+          v-if="voteTotal > 0"
           class="sticky-stat"
           :aria-label="`点赞率 ${likeRate}，赞踩总数 ${voteTotal}`"
           title="点赞率（赞踩总数）"
@@ -407,17 +408,17 @@ function formatDate(value: string) {
   background: var(--a-color-surface-muted);
 }
 
-/* Hover 状态：显示完整贯穿黑线 */
+/* Hover 状态：显示浅色贯穿边线 */
 .sticky-memo-card:hover::before,
 .sticky-memo-card:focus-within::before {
   top: 0;
   bottom: 0;
   left: 0;
-  width: 2.5px;
+  width: 2px;
   height: 100%;
   transform: none;
   border-radius: 0;
-  background-color: var(--a-color-text);
+  background-color: var(--a-color-border);
   opacity: 1;
 }
 
@@ -594,23 +595,21 @@ function formatDate(value: string) {
 .sticky-pill-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.25rem 0.65rem;
+  gap: 0.35rem;
+  padding: 0.25rem 0.55rem;
   border-radius: var(--a-radius-control);
-  border: 1px solid var(--a-color-border-soft);
-  background: var(--a-color-bg);
+  border: 1px solid transparent;
+  background: transparent;
   font-size: 0.72rem;
   font-weight: 500;
   color: var(--a-color-muted);
   cursor: pointer;
-  transition: color 0.15s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .sticky-pill-btn:hover {
-  border-color: var(--a-color-border);
-  color: var(--a-color-fg);
   background: var(--a-color-surface-muted);
-  transform: translateY(-1px);
+  color: var(--a-color-fg);
 }
 
 .sticky-pill-btn.is-liked {

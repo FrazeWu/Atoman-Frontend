@@ -13,15 +13,8 @@
       </div>
 
       <div class="editor-topbar__center">
-        <PSegmentedControl
-          :model-value="contentMode"
-          :options="contentModeOptions"
-          @update:model-value="value => $emit('update:content-mode', value as 'markdown' | 'visual')"
-        />
-      </div>
-
-      <div class="editor-topbar__actions">
         <PButton
+          v-if="contentMode !== 'visual'"
           type="button"
           variant="ghost"
           size="sm"
@@ -35,6 +28,14 @@
           <Eye v-else :size="16" aria-hidden="true" />
           <span class="editor-topbar__btn-text">{{ previewOpen ? '关闭实时预览' : '实时预览' }}</span>
         </PButton>
+      </div>
+
+      <div class="editor-topbar__actions">
+        <PSegmentedControl
+          :model-value="contentMode"
+          :options="contentModeOptions"
+          @update:model-value="value => $emit('update:content-mode', value as 'markdown' | 'visual')"
+        />
 
         <PButton
           type="button"
@@ -44,7 +45,7 @@
           :title="contentSource === 'imported' ? '重新导入 Markdown' : '导入 Markdown'"
           @click="handleImport"
         >
-          <Upload :size="16" aria-hidden="true" />
+          <FileInput :size="16" aria-hidden="true" />
           <span class="editor-topbar__btn-text">{{ contentSource === 'imported' ? '重新导入' : '导入 Markdown' }}</span>
         </PButton>
 
@@ -104,7 +105,7 @@
           data-testid="editor-publish-action"
           @click="$emit('save-published')"
         >
-          {{ publicationOpen ? '确认' : '发布' }}
+          {{ publicationOpen ? (publicationIntent === 'schedule' ? '确认定时发布' : '确认发布') : '发布' }}
         </PButton>
 
         <input ref="fileInput" type="file" accept=".md,.markdown,.txt" class="hidden-file-input" @change="$emit('import-file', $event)" />
@@ -115,7 +116,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ArrowLeft, Download, Ellipsis, Eye, EyeOff, FileText, History, Upload } from 'lucide-vue-next'
+import { ArrowLeft, Download, Ellipsis, Eye, EyeOff, FileInput, FileText, History } from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
@@ -133,6 +134,7 @@ defineProps<{
   publicationOpen?: boolean
   publicationCanConfirm?: boolean
   publicationBusy?: boolean
+  publicationIntent?: 'publish' | 'schedule'
 }>()
 
 defineEmits<{

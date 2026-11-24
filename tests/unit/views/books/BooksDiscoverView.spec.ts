@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import * as catalogApi from '@/api/bookCatalog'
 import * as communityApi from '@/api/bookCommunity'
 import * as wikiApi from '@/api/bookWiki'
+import * as listsApi from '@/api/book/lists'
 import BooksDiscoverView from '@/views/books/BooksDiscoverView.vue'
 import PSkeletonCard from '@/components/ui/PSkeletonCard.vue'
 import PEmpty from '@/components/ui/PEmpty.vue'
@@ -116,5 +117,56 @@ describe('BooksDiscoverView Skeletons and Empty States', () => {
     expect(empty.props('title')).toBe('暂无收录图书')
     expect(wrapper.find('.book-discover__empty-state').exists()).toBe(true)
     expect(empty.text()).toContain('添加第一本图书')
+  })
+
+  it('renders PEmpty when book list search returns no lists', async () => {
+    vi.spyOn(listsApi, 'searchBookLists').mockResolvedValue({
+      items: [],
+      total: 0,
+      limit: 24,
+      offset: 0,
+    })
+
+    const { wrapper } = await setupView('/books?type=lists&q=unknown')
+    await flushPromises()
+
+    const empty = wrapper.findComponent(PEmpty)
+    expect(empty.exists()).toBe(true)
+    expect(empty.props('title')).toBe('未找到相关书单')
+    expect(empty.props('description')).toBe('试试输入其他关键词，或前往书单专区创建一份')
+  })
+
+  it('renders book list cards when book lists are returned', async () => {
+    vi.spyOn(listsApi, 'searchBookLists').mockResolvedValue({
+      items: [
+        {
+          id: 'list-1',
+          owner_id: 'user-1',
+          visibility: 'public',
+          published_version: 1,
+          title: '硬科幻经典必读书单',
+          description: '收录三体、基地等经典太空歌剧与硬科幻杰作',
+          item_count: 5,
+          published_at: '2026-11-20T00:00:00Z',
+          changes: {
+            items_added: 0,
+            items_removed: 0,
+            recommendations_changed: 0,
+            order_changed: false,
+            metadata_changed: false,
+          },
+        },
+      ],
+      total: 1,
+      limit: 24,
+      offset: 0,
+    })
+
+    const { wrapper } = await setupView('/books?type=lists&q=科幻')
+    await flushPromises()
+
+    expect(wrapper.find('.book-discover__booklist-card').exists()).toBe(true)
+    expect(wrapper.find('.book-discover__booklist-title').text()).toContain('硬科幻经典必读书单')
+    expect(wrapper.find('.book-discover__booklist-badge').text()).toContain('5 本图书')
   })
 })

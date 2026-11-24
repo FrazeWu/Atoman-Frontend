@@ -137,6 +137,10 @@ export function useDialogFocus(
   let isListening = false;
 
   const isCurrentTopLayer = (): boolean => {
+    const stackIndex = activeDialogStack.indexOf(dialogId);
+    if (stackIndex !== -1 && stackIndex < activeDialogStack.length - 1) {
+      return false;
+    }
     if (options.isTopLayer !== undefined) {
       return Boolean(unref(options.isTopLayer));
     }
@@ -319,21 +323,29 @@ export function useDialogFocus(
     close();
   };
 
+  let isTrappingFocus = false;
+
   const handleGlobalFocusIn = (event: FocusEvent) => {
+    if (isTrappingFocus) return;
     if (!isCurrentTopLayer()) return;
     if (!root.value) return;
     const target = event.target as HTMLElement | null;
     if (target && root.value.contains(target)) return;
 
-    event.preventDefault();
-    const elements = getFocusableElements(root.value);
-    if (elements.length > 0) {
-      elements[0].focus({ preventScroll: options.preventScroll });
-    } else {
-      if (!root.value.hasAttribute("tabindex")) {
-        root.value.setAttribute("tabindex", "-1");
+    isTrappingFocus = true;
+    try {
+      event.preventDefault();
+      const elements = getFocusableElements(root.value);
+      if (elements.length > 0) {
+        elements[0].focus({ preventScroll: options.preventScroll });
+      } else {
+        if (!root.value.hasAttribute("tabindex")) {
+          root.value.setAttribute("tabindex", "-1");
+        }
+        root.value.focus({ preventScroll: options.preventScroll });
       }
-      root.value.focus({ preventScroll: options.preventScroll });
+    } finally {
+      isTrappingFocus = false;
     }
   };
 

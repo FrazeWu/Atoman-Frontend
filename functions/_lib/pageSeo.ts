@@ -90,9 +90,9 @@ const pageMeta: Record<string, StaticPageMeta> = {
 const publicSectionLinks: Record<string, string[]> = {
   "/": ["/feed", "/posts", "/books", "/music", "/forum", "/podcasts", "/videos"],
   "/feed": ["/posts", "/podcasts", "/videos", "/music"],
-  "/posts": ["/posts/articles", "/feed", "/forum", "/debate"],
+  "/posts": ["/posts/articles", "/feed", "/forum", "/debate", "/timeline"],
   "/posts/articles": ["/posts", "/feed", "/forum"],
-  "/books": ["/books/lists", "/posts", "/forum"],
+  "/books": ["/books/lists", "/posts", "/forum", "/timeline"],
   "/books/lists": ["/books", "/posts"],
   "/music": ["/music/albums", "/music/artists", "/music/songs", "/podcasts", "/videos", "/posts"],
   "/music/albums": ["/music", "/music/artists", "/music/songs"],

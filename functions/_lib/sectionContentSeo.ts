@@ -1,4 +1,6 @@
 import { resolveApiBase } from "./blogSeo";
+import { publicArchivePageNumbers } from "../../src/utils/publicArchivePages";
+import { publicVideoCollections } from "../../src/utils/publicVideoCollections";
 
 type PublicItem = Record<string, unknown>;
 type PublicFetcher = typeof fetch;
@@ -131,14 +133,28 @@ async function getGroup(apiBase: string, source: PublicListSource, fetcher: Publ
       && metadata.total > page * pageSize
     );
     const pageUrl = (n: number) => archivePath + (n > 1 ? "?page=" + String(n) : "");
+    const numbers = archivePath === "/music/songs" && typeof metadata?.total === "number"
+      ? publicArchivePageNumbers(page, metadata.total, pageSize) : [];
+    const numberedPager = numbers.length
+      ? '<details><summary>跳转页码</summary><ul>' + numbers.map((n) =>
+        '<li>' + (n === page ? '<span aria-current="page">' + n + '</span>'
+          : '<a href="' + escapeHtml(pageUrl(n)) + '" aria-label="第 ' + n + ' 页">' + n + '</a>') + '</li>'
+        ).join("") + '</ul></details>' : "";
     const pager = archivePath
       ? '<nav aria-label="目录分页">'
         + (page > 1 ? '<a rel="prev" href="' + escapeHtml(pageUrl(page - 1)) + '">上一页</a>' : '')
         + (hasMore ? '<a rel="next" href="' + escapeHtml(pageUrl(page + 1)) + '">下一页</a>' : '')
-        + '</nav>'
+        + numberedPager + '</nav>'
       : "";
+    const collections = source.routePrefix === "/videos/watch/"
+      ? publicVideoCollections(items.filter(publicRecord)).slice(0, 100) : [];
+    const collectionLinks = collections.length
+      ? '<section class="seo-public-listing-group"><h3>公开视频合集</h3><ul>' +
+        collections.map((collection) => '<li><a href="/videos/collections/' +
+          encodeURIComponent(collection.id) + '">' + escapeHtml(collection.name) + '</a></li>').join("") +
+        '</ul></section>' : "";
     return { html: '<section class="seo-public-listing-group"><h3>' + escapeHtml(source.heading)
-      + '</h3><ul>' + valid.join("") + '</ul>' + pager + '</section>', outOfRange: false };
+      + '</h3><ul>' + valid.join("") + '</ul>' + pager + '</section>' + collectionLinks, outOfRange: false };
   } catch {
     // A temporary API failure should never hide the section or change indexing.
     return emptyGroup;

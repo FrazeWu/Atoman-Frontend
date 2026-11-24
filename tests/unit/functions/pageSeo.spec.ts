@@ -83,6 +83,7 @@ describe("static page SEO", () => {
 		expect(books).toContain('<main class="seo-static-fallback" data-seo-fallback="section">');
 		expect(books).toContain('<h1>图书馆</h1>');
 		expect(books).toContain('href="/books/lists"');
+		expect(books).toContain('href="/timeline"');
 		expect(books).not.toContain('HOME ONLY');
 		expect(music).toContain('<h1>音乐档案</h1>');
 		expect(music).toContain('href="/podcasts"');

@@ -15,6 +15,7 @@ import PSegmentedControl from "@/components/ui/PSegmentedControl.vue";
 import PEmpty from "@/components/ui/PEmpty.vue";
 import PButton from "@/components/ui/PButton.vue";
 import PaginationBar from "@/components/ui/PaginationBar.vue";
+import { publicArchivePageNumbers } from "@/utils/publicArchivePages";
 import ModuleSearch from '@/components/search/ModuleSearch.vue';
 import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl';
 
@@ -55,6 +56,7 @@ const browseSongs = ref<MusicSongListItem[]>([]);
 const browseLoading = ref(false);
 const browseError = ref("");
 const browseHasMore = ref(false);
+const browseTotal = ref(0);
 let browseRequestID = 0;
 const browsePage = computed(() => {
   const raw = queryValue(route.query.page);
@@ -62,6 +64,7 @@ const browsePage = computed(() => {
   const next = Number(raw);
   return next <= 5000 ? next : 1;
 });
+const browsePageLinks = computed(() => publicArchivePageNumbers(browsePage.value, browseTotal.value, 20));
 const browsePageUrl = (targetPage: number) =>
   targetPage > 1 ? "/music/songs?page=" + String(targetPage) : "/music/songs";
 
@@ -75,10 +78,12 @@ async function loadBrowseSongs() {
     if (request !== browseRequestID) return;
     browseSongs.value = result.data;
     browseHasMore.value = result.meta.has_more;
+    browseTotal.value = result.meta.total;
   } catch {
     if (request !== browseRequestID) return;
     browseSongs.value = [];
     browseHasMore.value = false;
+    browseTotal.value = 0;
     browseError.value = "歌曲目录加载失败";
   } finally {
     if (request === browseRequestID) browseLoading.value = false;
@@ -347,6 +352,15 @@ onBeforeUnmount(() => {
         <span>第 {{ browsePage }} 页</span>
         <RouterLink v-if="browseHasMore" :to="browsePageUrl(browsePage + 1)" rel="next">下一页</RouterLink>
       </nav>
+      <details v-if="!browseLoading && !browseError && browsePageLinks.length" class="songs-view__page-jump">
+        <summary>跳转页码（共 {{ Math.ceil(browseTotal / 20) }} 页）</summary>
+        <nav aria-label="歌曲目录页码">
+          <template v-for="targetPage in browsePageLinks" :key="targetPage">
+            <span v-if="targetPage === browsePage" aria-current="page">{{ targetPage }}</span>
+            <RouterLink v-else :to="browsePageUrl(targetPage)" :aria-label="'第 ' + targetPage + ' 页'">{{ targetPage }}</RouterLink>
+          </template>
+        </nav>
+      </details>
     </section>
 
     <p v-else-if="loading" class="state">搜索中...</p>
@@ -542,6 +556,12 @@ onBeforeUnmount(() => {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+.songs-view__page-jump { font-size: 0.875rem; }
+.songs-view__page-jump summary { cursor: pointer; text-align: center; }
+.songs-view__page-jump nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; margin-top: 0.5rem; }
+.songs-view__page-jump nav > * { min-width: 2rem; padding: 0.4rem; text-align: center; color: var(--a-color-text); }
+.songs-view__page-jump nav [aria-current="page"] { font-weight: 700; text-decoration: underline; }
 
 .songs-view__results {
   display: grid;

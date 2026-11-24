@@ -367,6 +367,27 @@ describe("public content SEO", () => {
 		expect(unknownPrecision.structuredData.datePublished).toBeUndefined();
 	});
 
+	it("links video members to their public collections and collections back to their members", async () => {
+		const id = "01a02565-0cc8-7ba7-93e0-c4b698b30974";
+		const other = { id: "other-collection", name: "另一个合集" };
+		const collection = { id, name: "公开合集" };
+		const video = { id: "01a02565-0cc9-7ba7-93e0-c4b698b30974", title: "视频作品", visibility: "public", status: "published",
+			collection: other, collections: [collection, { id: "private-collection", name: "私密", visibility: "private" }] };
+		const fetcher = vi.fn(async (url: string) =>
+			url.includes("collection_id=") ? json({ data: [video] }) : json({ data: video })) as unknown as typeof fetch;
+		const detail = await resolvePublicContentSeo("/videos/watch/01a02565-0cc9-7ba7-93e0-c4b698b30974", undefined, "https://www.atoman.org", fetcher);
+		const detailHtml = buildPublicContentHtml(shell, detail.content!);
+		expect(detailHtml).toContain('href="/videos/collections/' + id + '"');
+		expect(detailHtml).toContain("所属合集");
+		expect(detailHtml).not.toContain("private-collection");
+		const collectionPage = await resolvePublicContentSeo("/videos/collections/" + id, undefined, "https://www.atoman.org", fetcher);
+		expect(collectionPage.content?.title).toContain("公开合集");
+		expect(collectionPage.content?.title).not.toContain("另一个合集");
+		const collectionHtml = buildPublicContentHtml(shell, collectionPage.content!);
+		expect(collectionHtml).toContain('href="/videos/watch/01a02565-0cc9-7ba7-93e0-c4b698b30974"');
+		expect(collectionHtml).toContain("合集视频");
+	});
+
 	it("marks aggregated feed item pages as noindex without a homepage canonical", () => {
 		const html = buildAggregatedContentHtml(shell);
 

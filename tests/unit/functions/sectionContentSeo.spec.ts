@@ -72,6 +72,36 @@ describe("public section SEO link previews", () => {
     expect(listing).not.toContain("草稿视频");
   });
 
+  it("links and deduplicates real collections on the public video directory", async () => {
+    const collection = { id: "collection-1", name: "公开视频合集" };
+    const fetcher = vi.fn(async () => json([
+      { id: "video-1", title: "公开视频", visibility: "public", status: "published",
+        collection, collections: [collection, { id: "private-collection", name: "私密合集", visibility: "private" }] },
+      { id: "video-2", title: "第二个视频", visibility: "public", status: "published", collection },
+      { id: "private-video", title: "私密视频", visibility: "private", status: "published",
+        collection: { id: "hidden-collection", name: "隐藏合集" } },
+      { id: "draft-video", title: "草稿", visibility: "public", status: "draft",
+        collection: { id: "draft-collection", name: "草稿合集" } },
+    ])) as unknown as typeof fetch;
+    const listing = await loadPublicSectionListing("/videos", undefined, "https://www.atoman.org", fetcher);
+    expect(listing.split('href="/videos/collections/collection-1"').length - 1).toBe(1);
+    expect(listing).not.toContain("private-collection");
+    expect(listing).not.toContain("hidden-collection");
+    expect(listing).not.toContain("draft-collection");
+  });
+
+  it("makes deeply paginated public songs reachable directly from the directory", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      data: [{ id: "song-1", title: "公开歌曲", lifecycle_status: "active" }],
+      meta: { page: 1, page_size: 20, total: 1041, has_more: true },
+    }), { headers: { "content-type": "application/json" } })) as unknown as typeof fetch;
+    const listing = await loadPublicSectionListing("/music/songs", undefined, "https://www.atoman.org", fetcher);
+    expect(listing).toContain('href="/music/songs?page=30"');
+    expect(listing).toContain('href="/music/songs?page=53"');
+    expect(listing).not.toContain('href="/music/songs?page=54"');
+    expect(listing).not.toContain('href="/music/songs?page=1"');
+  });
+
   it("fails open for unavailable APIs and does not rewrite non-section pages", async () => {
     const failing = vi.fn(async () => { throw new Error("503"); }) as unknown as typeof fetch;
     const listing = await loadPublicSectionListing("/videos", undefined, "https://www.atoman.org", failing);

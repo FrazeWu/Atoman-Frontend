@@ -1,3 +1,4 @@
+import { publicVideoCollections } from "../../src/utils/publicVideoCollections";
 import {
 	injectSeoFallbackHtml,
 	resolveApiBase,
@@ -690,6 +691,10 @@ async function loadVideo(apiBase: string, id: string, fetcher: Fetcher) {
 		},
 		text(video.thumbnail_url) || undefined,
 		date(video.updated_at),
+		publicVideoCollections([video]).map((collection) => ({
+			href: canonicalOrigin + "/videos/collections/" + encodeURIComponent(collection.id),
+			label: collection.name,
+		})),
 	);
 }
 
@@ -712,11 +717,8 @@ async function loadVideoCollection(
 				video?.status === "published",
 		);
 	if (!videos.length) return undefined;
-	const collection =
-		record(videos[0].collection) ||
-		array(videos[0].collections).map(record).find(Boolean);
-	if (!collection || !text(collection.id) || !text(collection.name))
-		return undefined;
+	const collection = publicVideoCollections(videos).find((entry) => entry.id === id);
+	if (!collection) return undefined;
 	const name = text(collection.name);
 	const description = plainText(
 		collection.description,
@@ -738,6 +740,11 @@ async function loadVideoCollection(
 		},
 		text(collection.cover_url) || text(videos[0].thumbnail_url) || undefined,
 		date(collection.updated_at),
+		videos.filter((video) => /^[a-zA-Z0-9_-]{1,100}$/.test(text(video.id)) && text(video.title))
+			.slice(0, 100).map((video) => ({
+				href: canonicalOrigin + "/videos/watch/" + encodeURIComponent(text(video.id)),
+				label: text(video.title),
+			})),
 	);
 }
 
@@ -855,7 +862,7 @@ export function buildPublicContentHtml(html: string, item: PublicContentSeo) {
 		const candidate = text(value);
 		try {
 			const url = new URL(candidate);
-			return url.origin === canonicalOrigin && /^\/(?:music\/(?:artist|album|song)|books\/(?:work|edition))\/[a-f0-9-]{36}$/i.test(url.pathname)
+			return url.origin === canonicalOrigin && /^\/(?:music\/(?:artist|album|song)|books\/(?:work|edition)|videos\/(?:watch|collections))\/[a-f0-9-]{36}$/i.test(url.pathname)
 				? url.pathname : undefined;
 		} catch { return undefined; }
 	};
@@ -891,6 +898,8 @@ export function buildPublicContentHtml(html: string, item: PublicContentSeo) {
 		: item.path.startsWith("/books/work/") ? "出版版本"
 		: item.path.startsWith("/books/edition/") ? "所属作品"
 		: item.path.startsWith("/books/lists/") ? "书单作品"
+		: item.path.startsWith("/videos/collections/") ? "合集视频"
+		: item.path.startsWith("/videos/watch/") ? "所属合集"
 		: entity["@type"] === "MusicAlbum" ? "专辑曲目" : "相邻曲目";
 	const relatedHtml = relatedLinks.length
 		? `<nav aria-label="相关作品"><h2>${relatedHeading}</h2><ul>${relatedLinks.map((link) =>

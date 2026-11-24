@@ -2,8 +2,6 @@
 name = "atoman-frontend"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-06-25"
-# Route immutable previous deployment requests through the public endpoint.
-compatibility_flags = ["global_fetch_strictly_public"]
 
 
 [[r2_buckets]]

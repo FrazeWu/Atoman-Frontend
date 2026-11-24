@@ -1,8 +1,9 @@
+import { createSeoApiFetcher, type SeoOriginBinding } from "./_lib/seoOriginFetcher";
 import { buildSitemapXml, resolveApiBase, type SitemapItem } from "./_lib/blogSeo";
 
 type SongsSitemapContext = {
   request: Request;
-  env: { VITE_API_URL?: string };
+  env: { VITE_API_URL?: string; SEO_ORIGIN?: SeoOriginBinding };
 };
 
 const canonicalOrigin = "https://www.atoman.org";
@@ -53,7 +54,8 @@ export async function onRequest(context: SongsSitemapContext) {
   const sourcePage = page ?? 1;
 
   try {
-    const response = await fetch(
+    const seoFetcher = createSeoApiFetcher(context.env.SEO_ORIGIN);
+    const response = await seoFetcher(
       `${apiBase}/music/songs?page=${sourcePage}&page_size=${sourcePageSize}`,
       {
         headers: { Accept: "application/json" },

@@ -1,3 +1,4 @@
+import { createSeoApiFetcher, type SeoOriginBinding } from "./_lib/seoOriginFetcher";
 import {
 	buildSitemapXml,
 	isCanonicalSitemapPath,
@@ -8,7 +9,7 @@ import { collectPublicSitemapItems } from "./_lib/publicContentSeo";
 
 type SitemapContext = {
 	request: Request;
-	env: { VITE_API_URL?: string };
+	env: { VITE_API_URL?: string; SEO_ORIGIN?: SeoOriginBinding };
 };
 
 const canonicalOrigin = "https://www.atoman.org";
@@ -72,7 +73,8 @@ export async function onRequest(context: SitemapContext) {
 			? "https://api.atoman.org/api"
 			: undefined;
 		const apiBase = resolveApiBase(context.env.VITE_API_URL || defaultApi, requestUrl.origin);
-		const response = await fetch(`${apiBase}/blog/seo/sitemap`, {
+		const seoFetcher = createSeoApiFetcher(context.env.SEO_ORIGIN);
+		const response = await seoFetcher(`${apiBase}/blog/seo/sitemap`, {
 			headers: {
 				Accept: "application/json",
 				"User-Agent": "Atoman-Edge-SSR/1.0 (+https://www.atoman.org)",
@@ -87,7 +89,7 @@ export async function onRequest(context: SitemapContext) {
 			.filter((item) => isAllowedSitemapPath(item.path))
 			.forEach((item) => itemsByPath.set(item.path, item));
 		try {
-			const publicItems = await collectPublicSitemapItems(apiBase);
+			const publicItems = await collectPublicSitemapItems(apiBase, seoFetcher);
 			publicItems.forEach((item) => {
 				const existing = itemsByPath.get(item.path);
 				if (!existing?.last_modified || item.last_modified)

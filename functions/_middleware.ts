@@ -1,4 +1,5 @@
 import { buildStaticPageHtml, isKnownPagePath } from "./_lib/pageSeo";
+import { createSeoApiFetcher, type SeoOriginBinding } from "./_lib/seoOriginFetcher";
 import { injectPublicSectionListing, loadPublicSectionListing } from "./_lib/sectionContentSeo";
 import {
 	buildAggregatedContentHtml,
@@ -19,6 +20,7 @@ type MiddlewareContext = {
 	request: Request;
 	env?: {
 		VITE_API_URL?: string;
+		SEO_ORIGIN?: SeoOriginBinding;
 		FRONTEND_RELEASE_ASSETS?: {
 			get: (key: string) => Promise<ArchivedAsset | null>;
 		};
@@ -131,6 +133,7 @@ export async function onRequest(context: MiddlewareContext) {
 	try {
 		const requestUrl = new URL(context.request.url);
 		const html = await response.clone().text();
+		const seoFetcher = createSeoApiFetcher(context.env?.SEO_ORIGIN);
 		const staticHtml = buildStaticPageHtml(
 			html,
 			requestUrl.pathname,
@@ -141,6 +144,7 @@ export async function onRequest(context: MiddlewareContext) {
 			requestUrl.pathname,
 			context.env?.VITE_API_URL,
 			requestUrl.origin,
+			seoFetcher,
 		);
 		const missingSeoPage =
 			(lookup.matched && !lookup.content && !lookup.retryable) ||
@@ -159,7 +163,7 @@ export async function onRequest(context: MiddlewareContext) {
 				requestUrl.pathname,
 				context.env?.VITE_API_URL,
 				requestUrl.origin,
-				fetch,
+				seoFetcher,
 				requestUrl.searchParams,
 			);
 			transformedHtml = injectPublicSectionListing(transformedHtml, listing);

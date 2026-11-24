@@ -1,0 +1,8 @@
+name = "atoman-seo-origin"
+main = "index.js"
+compatibility_date = "2026-11-24"
+workers_dev = false
+
+[[vpc_services]]
+binding = "PRIVATE_ORIGIN"
+service_id = "01a20b34-a449-7b81-bf50-c2b14b8b21ac"

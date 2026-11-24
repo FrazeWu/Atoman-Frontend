@@ -1,8 +1,9 @@
+import { createSeoApiFetcher, type SeoOriginBinding } from "../../_lib/seoOriginFetcher";
 import { buildArticleHtml, resolveApiBase, type BlogSeoPost } from '../../_lib/blogSeo'
 
 type ArticleContext = {
   request: Request
-  env: { VITE_API_URL?: string }
+  env: { VITE_API_URL?: string; SEO_ORIGIN?: SeoOriginBinding }
   params: { id?: string | string[] }
   next: () => Promise<Response>
 }
@@ -43,7 +44,8 @@ export async function onRequest(context: ArticleContext) {
   try {
     const requestUrl = new URL(context.request.url)
     const apiBase = resolveApiBase(context.env.VITE_API_URL, requestUrl.origin)
-    const response = await fetch(`${apiBase}/blog/seo/posts/${encodeURIComponent(id)}`, {
+    const seoFetcher = createSeoApiFetcher(context.env.SEO_ORIGIN)
+    const response = await seoFetcher(`${apiBase}/blog/seo/posts/${encodeURIComponent(id)}`, {
       headers: {
         Accept: 'application/json',
         'User-Agent': 'Atoman-Edge-SSR/1.0 (+https://www.atoman.org)',

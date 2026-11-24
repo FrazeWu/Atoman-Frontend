@@ -126,3 +126,24 @@ export async function getPaperCompilePDF(projectId: string, jobId: string, signa
   if (blob.size < 8 || await blob.slice(0, 5).text() !== '%PDF-') throw new Error('PDF 格式不正确')
   return blob
 }
+
+export interface PaperApplication {
+  id: string
+  user_id: string
+  username?: string
+  reason: string
+  status: 'pending' | 'approved' | 'rejected'
+  review_note: string
+  reviewed_at?: string
+  created_at: string
+  notification_status: '' | 'pending' | 'sending' | 'sent' | 'failed'
+  notification_sent_at?: string
+}
+export const getPaperApplication = () =>
+  papersRequest<{ application: PaperApplication | null }>('/application')
+export const submitPaperApplication = (reason: string) =>
+  papersRequest<PaperApplication>('/application', 'POST', { reason })
+export const listPaperApplications = (status: PaperApplication['status'], page = 1) =>
+  papersRequest<PaperApplication[]>(`/admin/applications?status=${encodeURIComponent(status)}&page=${page}`)
+export const reviewPaperApplication = (id: string, decision: 'approved' | 'rejected', note = '') =>
+  papersRequest<PaperApplication>(`/admin/applications/${encodeURIComponent(id)}/review`, 'POST', { decision, note })

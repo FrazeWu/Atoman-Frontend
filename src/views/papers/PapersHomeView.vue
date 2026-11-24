@@ -1,10 +1,22 @@
 <template>
   <main class="a-page-md papers-home">
-    <PPageHeader title="Papers" sub="私有 LaTeX 论文项目 · 仅受邀用户可使用" />
+    <PPageHeader title="Papers" sub="在线 LaTeX 编辑与编译 · 申请审核制" />
     <p v-if="loading" aria-live="polite">正在加载论文项目...</p>
     <section v-else-if="!allowed" class="papers-home__notice">
-      <h2>尚未开通访问权限</h2>
-      <p>Atoman Papers 目前仅向受邀用户开放。需要管理员为你的账号开通权限。</p>
+      <h2>{{ application?.status === 'pending' ? '申请审核中' : application?.status === 'rejected' ? '申请未通过' : application?.status === 'approved' ? '访问权限暂未开放' : '申请使用 Atoman Papers' }}</h2>
+      <p v-if="application?.status === 'pending'">申请已提交，请等待管理员审核。通过后会向你的 Atoman 账号邮箱发送通知。</p>
+      <template v-else-if="application?.status === 'rejected'">
+        <p>{{ application.review_note || '申请暂未通过。' }}</p>
+        <p>审核完成七天后可重新申请。</p>
+      </template>
+      <p v-else-if="application?.status === 'approved'">请联系管理员恢复权限。</p>
+      <p v-else>提交使用申请，审核通过后即可创建私有论文项目。通知邮件将发送到你当前账号绑定的邮箱。</p>
+      <form v-if="canApply && !accessError" class="papers-home__apply" @submit.prevent="apply">
+        <label for="paper-application-reason">申请理由</label>
+        <textarea id="paper-application-reason" v-model.trim="reason" rows="4" maxlength="1000" minlength="5" required :disabled="applying" placeholder="简要说明你的科研、写作或 LaTeX 使用需求（至少 5 字）" />
+        <PButton type="submit" :disabled="applying || reason.length < 5">提交申请</PButton>
+      </form>
+      <PButton v-else size="sm" variant="secondary" @click="load">刷新状态</PButton>
       <p v-if="error" role="alert" class="papers-home__error">{{ error }}</p>
     </section>
     <section v-else class="papers-home__body">
@@ -26,15 +38,18 @@
         </RouterLink>
       </div>
     </section>
+    <PaperApplicationReview v-if="canReview" />
   </main>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
-import { paperAccess, listPaperProjects, createPaperProject, type PaperProject } from '@/api/papers'
+import { paperAccess, listPaperProjects, createPaperProject, getPaperApplication, submitPaperApplication, type PaperProject, type PaperApplication } from '@/api/papers'
+import { useAuthStore } from '@/stores/auth'
+import PaperApplicationReview from '@/components/papers/PaperApplicationReview.vue'
 
 const router = useRouter()
 const loading = ref(true)
@@ -43,15 +58,32 @@ const creating = ref(false)
 const projectName = ref('')
 const projects = ref<PaperProject[]>([])
 const error = ref('')
+const auth = useAuthStore()
+const canReview = computed(() => auth.user?.role === 'admin' || auth.user?.role === 'owner')
+const application = ref<PaperApplication | null>(null)
+const reason = ref('')
+const applying = ref(false)
+const accessError = ref(false)
+const canApply = computed(() => !application.value || (application.value.status === 'rejected' && !!application.value.reviewed_at && Date.now() - new Date(application.value.reviewed_at).getTime() >= 7 * 86400000))
+async function apply(){
+  if (applying.value || reason.value.length < 5) return
+  applying.value=true;error.value=''
+  try {application.value=await submitPaperApplication(reason.value);reason.value=''}
+  catch {error.value='提交申请失败，请刷新状态后重试。'}
+  finally {applying.value=false}
+}
 
 async function load() {
   loading.value = true
+  accessError.value = false
   error.value = ''
   try {
     allowed.value = (await paperAccess()).allowed
     if (allowed.value) projects.value = await listPaperProjects()
+    else application.value = (await getPaperApplication()).application
   } catch {
     allowed.value = false
+    accessError.value = true
     error.value = '无法确认 Papers 访问权限，请稍后重试。'
   } finally {
     loading.value = false
@@ -89,4 +121,6 @@ onMounted(load)
 .papers-home__card:hover { border-color: var(--text-primary, #4a5867); }
 .papers-home__error { color: #b91c1c; }
 @media (max-width: 600px) { .papers-home { padding: 20px 16px 48px; } .papers-home__actions { flex-direction: column; } }
+.papers-home__apply {display:grid;gap:10px;margin-top:16px;max-width:620px}
+.papers-home__apply textarea {padding:12px;border:1px solid var(--border,#d9dce2);border-radius:8px;background:var(--surface,#fff);color:inherit;width:100%;box-sizing:border-box;resize:vertical}
 </style>

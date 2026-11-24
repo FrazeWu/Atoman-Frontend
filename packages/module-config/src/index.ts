@@ -112,6 +112,7 @@ export const moduleNavOrder: ModuleRoomKey[] = [
 	"timeline",
 	"podcast",
 	"video",
+	"papers",
 ];
 
 export const topbarNavOrder: ModuleRoomKey[] = [
@@ -121,6 +122,7 @@ export const topbarNavOrder: ModuleRoomKey[] = [
 	"video",
 	"podcast",
 	"books",
+	"papers",
 ];
 
 export const notificationRoom = {

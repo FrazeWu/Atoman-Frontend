@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildAppRoutes } from '@/router/buildAppRoutes'
-import { moduleRooms, moduleNavOrder } from '@/config/moduleRooms'
+import { moduleRooms, moduleNavOrder, topbarNavOrder } from '@/config/moduleRooms'
 
 describe('Papers private module routing', () => {
   it('registers an authenticated papers index and workspace', () => {
@@ -14,7 +14,8 @@ describe('Papers private module routing', () => {
     expect(moduleRooms.papers.publicPathSegment).toBe('papers')
   })
 
-  it('does not automatically advertise a private beta in public module navigation', () => {
-    expect(moduleNavOrder).not.toContain('papers')
+  it('advertises Papers as the last Topbar module', () => {
+    expect(moduleNavOrder.at(-1)).toBe('papers')
+    expect(topbarNavOrder.at(-1)).toBe('papers')
   })
 })

@@ -10,7 +10,7 @@ bucket_name = "atoman-frontend-releases"
 
 [[services]]
 binding = "SEO_ORIGIN"
-service = "atoman-seo-origin"
+service = "atoman-seo-origin-canary"
 
 [vars]
 VITE_API_URL = "https://api.atoman.org/api"

@@ -37,6 +37,19 @@ export async function papersRequest<T>(path: string, method = 'GET', body?: unkn
 export const paperAccess = () => papersRequest<{ allowed: boolean }>('/access')
 export const listPaperProjects = () => papersRequest<PaperProject[]>('/projects')
 export const createPaperProject = (name: string) => papersRequest<PaperProject>('/projects', 'POST', { name })
+export interface TrashedPaperProject extends PaperProject { trashed_at: string }
+export const renamePaperProject = (id:string,name:string,baseRevision:number) =>
+  papersRequest<PaperProject>('/projects/'+encodeURIComponent(id),'PATCH',{name,base_revision:baseRevision})
+export async function trashPaperProject(id:string){
+ const response=await apiRequest(useApiUrl()+'/papers/projects/'+encodeURIComponent(id),{method:'DELETE',cache:'no-store'})
+ if(!response.ok)throw new Error('无法移入回收站')
+}
+export const listTrashedPaperProjects=()=>papersRequest<TrashedPaperProject[]>('/projects/trash')
+export const restorePaperProject=(id:string)=>papersRequest<PaperProject>('/projects/'+encodeURIComponent(id)+'/restore','POST')
+export interface PaperUpload {path:string;kind:'text'|'binary';content:string}
+export interface PaperManagedProject {project:PaperProject;files:PaperFile[]}
+export const managePaperFiles=(id:string,change:{action:'upload'|'rename'|'delete'|'set_main';base_revision:number;file_id?:string;path?:string;uploads?:PaperUpload[]})=>
+ papersRequest<PaperManagedProject>('/projects/'+encodeURIComponent(id)+'/files/manage','POST',change)
 export const getPaperProject = (id: string) => papersRequest<PaperProject>(`/projects/${encodeURIComponent(id)}`)
 export const listPaperFiles = (id: string) => papersRequest<PaperFile[]>(`/projects/${encodeURIComponent(id)}/files`)
 export const getPaperFile = (projectId: string, fileId: string) =>

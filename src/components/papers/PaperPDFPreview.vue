@@ -5,6 +5,8 @@
       <input v-model="pageInput" class="paper-pdf__page-input" aria-label="页码" inputmode="numeric" @focus="editingPageInput = true" @input="editingPageInput = true" @blur="commitPageInput" @keydown.enter.prevent="commitPageInput" />
       <span class="paper-pdf__count">/ {{ pageCount || '—' }}</span>
       <button type="button" title="下一页" aria-label="下一页" :disabled="page >= pageCount || !pageCount" @click="jump(page + 1)">›</button>
+      <button type="button" :disabled="!pageCount" :aria-expanded="outlineOpen" @click="toggleOutline">目录</button>
+      <button type="button" :disabled="!pageCount" :aria-pressed="textMode" title="切换文字选择；关闭后可双击定位源码" @click="toggleTextMode">{{ textMode?'选字中':'选择文字' }}</button>
       <span class="paper-pdf__separator"></span>
       <button type="button" title="缩小" aria-label="缩小" :disabled="!pageCount" @click="adjustZoom(-1)">−</button>
       <select v-model="zoom" aria-label="PDF 缩放" @change="resizePages(true)">
@@ -14,29 +16,115 @@
       <button type="button" title="放大" aria-label="放大" :disabled="!pageCount" @click="adjustZoom(1)">+</button>
       <button type="button" class="paper-pdf__download" :disabled="!documentBlob" title="下载 PDF" @click="download">下载 PDF</button>
     </div>
+    <div v-if="outlineOpen" class="paper-pdf__outline" aria-label="PDF 目录">
+      <p v-if="outlineLoading">正在读取 PDF 书签…</p>
+      <p v-else-if="!outline.length">此 PDF 没有内嵌目录。</p>
+      <button v-for="(entry,i) in outline" :key="i" type="button" :style="{paddingLeft:(entry.depth*12+8)+'px'}" @click="jump(entry.page);outlineOpen=false">{{ entry.title }} <small>{{ entry.page }}</small></button>
+    </div>
+    <div v-if="textMode" class="paper-pdf__text-note">可拖选和复制 PDF 文字；关闭选字模式后恢复双击定位。</div>
     <div v-if="error" class="paper-pdf__notice" role="alert">{{ error }} <button type="button" @click="load">重试</button></div>
     <div v-if="loading" class="paper-pdf__notice" role="status">{{ pageCount ? '正在更新预览，保留当前页面…' : '正在读取 PDF…' }}</div>
     <div ref="scroller" class="paper-pdf__scroll" tabindex="0" @scroll.passive="onScroll">
       <div v-if="!pageCount" class="paper-pdf__placeholder">{{ loading ? '正在加载编译结果' : '暂无可预览的 PDF' }}</div>
       <div v-for="item in pages" :key="displayedJob + ':' + item.number" :ref="el => registerPage(item.number, el as HTMLElement | null)" class="paper-pdf__sheet" :data-page="item.number" :data-rendered="item.ready ? 'true' : 'false'" @dblclick="onPDFDoubleClick($event,item)" :style="{width: item.width + 'px',height:item.height + 'px'}">
         <canvas :ref="el => registerCanvas(item.number, el as HTMLCanvasElement | null)" :aria-label="'PDF 第 ' + item.number + ' 页'" />
+        <div v-if="textMode" class="textLayer paper-pdf__text-layer" aria-label="PDF 可选择文字"></div>
         <div v-if="item.error" class="paper-pdf__page-error">第 {{ item.number }} 页暂时无法渲染 <button type="button" @click="retryPage(item.number)">重试</button></div>
         <span v-else-if="!item.ready && !item.hasPixels" class="paper-pdf__page-loading">第 {{ item.number }} 页</span>
         <span v-if="marker?.page===item.number" class="paper-pdf__sync-marker" :style="{left:(marker.x/item.naturalWidth*100)+'%',top:(marker.y/item.naturalHeight*100)+'%'}" aria-hidden="true" />
       </div>
     </div>
-    <div class="paper-pdf__footer"><span>PDF 源码版本 {{ displayedRevision || revision }}</span><span>{{ pageCount ? page + ' / ' + pageCount : '' }}</span></div>
+    <div class="paper-pdf__footer"><span>{{ assetName || ('PDF 源码版本 ' + (displayedRevision || revision)) }}</span><span>{{ pageCount ? page + ' / ' + pageCount : '' }}</span></div>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
-import type { PDFDocumentProxy, PDFDocumentLoadingTask, RenderTask } from 'pdfjs-dist/legacy/build/pdf.mjs'
+import type { PDFDocumentProxy, PDFDocumentLoadingTask, RenderTask, TextLayer } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { getPaperCompilePDF } from '@/api/papers'
 import { loadPdfEngine } from '@/utils/bookReaderEngines'
 
-const props=defineProps<{projectId:string;jobId:string;revision:number}>()
+const props=defineProps<{projectId:string;jobId:string;revision:number;assetBlob?:Blob;assetName?:string}>()
 const emit=defineEmits<{ 'pdf-position':[value:{jobId:string;page:number;x:number;y:number}]; 'displayed-job':[jobId:string] }>()
+const textMode=ref(false)
+const outlineOpen=ref(false),outlineLoading=ref(false)
+const outline=ref<{title:string;page:number;depth:number}[]>([])
+let outlineEpoch=0,outlineLoaded=false
+let textEpoch=0
+const textTasks=new Map<number,TextLayer>()
+const textDone=new Set<number>()
+let textBusy=false
+function clearText(){
+ textEpoch++
+ for(const t of textTasks.values())t.cancel()
+ textTasks.clear();textDone.clear()
+ for(const el of elements.values())el.querySelector('.paper-pdf__text-layer')?.replaceChildren()
+}
+function toggleTextMode(){
+ textMode.value=!textMode.value;clearText()
+ if(textMode.value)void nextTick().then(()=>renderVisibleText())
+}
+async function renderVisibleText(){
+ if(!textMode.value||textBusy||disposed||!doc)return
+ const current=doc,epoch=textEpoch
+ textBusy=true
+ try{
+  const engine=await loadPdfEngine()
+  if(!engine.TextLayer){for(const n of wantedPages)textDone.add(n);return}
+  for(const n of wantedPages){
+   if(disposed||!textMode.value||epoch!==textEpoch||doc!==current)break
+   const p=pages.value[n-1]
+   const layer=elements.get(n)?.querySelector<HTMLElement>('.paper-pdf__text-layer')
+   if(!p?.ready||!layer||textDone.has(n)||textTasks.has(n))continue
+   try{
+    const target=await current.getPage(n),content=await target.getTextContent()
+    if(disposed||epoch!==textEpoch||doc!==current||!wantedPages.has(n)||!layer.isConnected)continue
+    // Limit DOM nodes and text retained for hostile imported PDFs.
+    if(content.items.length>12000){textDone.add(n);continue}
+    const viewport=target.getViewport({scale:scaleFor(p)})
+    layer.style.setProperty('--total-scale-factor',String(viewport.scale*(viewport.userUnit||1)))
+    layer.style.setProperty('--scale-factor',String(viewport.scale))
+    layer.replaceChildren()
+    const task=new engine.TextLayer({textContentSource:content,container:layer,viewport})
+    textTasks.set(n,task)
+    await task.render()
+    if(!disposed&&epoch===textEpoch&&current===doc&&wantedPages.has(n))textDone.add(n)
+   }catch{if(epoch===textEpoch&&current===doc)textDone.add(n)}
+   finally{if(epoch===textEpoch)textTasks.delete(n)}
+  }
+ }finally{
+  textBusy=false
+  if(!disposed&&textMode.value&&[...wantedPages].some(n=>pages.value[n-1]?.ready&&!textDone.has(n)&&!textTasks.has(n)&&!!elements.get(n)?.querySelector('.paper-pdf__text-layer')?.isConnected))void renderVisibleText()
+ }
+}
+async function toggleOutline(){
+ outlineOpen.value=!outlineOpen.value
+ if(!outlineOpen.value||outlineLoaded||outlineLoading.value||!doc)return
+ const current=doc,epoch=++outlineEpoch
+ outlineLoading.value=true
+ try{
+  const items=await current.getOutline()
+  const result:{title:string;page:number;depth:number}[]=[]
+  type Item=NonNullable<Awaited<ReturnType<PDFDocumentProxy['getOutline']>>>[number]
+  const stack=(items||[]).slice(0,300).reverse().map(item=>({item,depth:0}))
+  let visited=0
+  while(stack.length&&visited++<300){
+   if(disposed||epoch!==outlineEpoch||current!==doc)return
+   const {item,depth}=stack.pop()!
+   try{
+    const dest=typeof item.dest==='string'?await current.getDestination(item.dest):item.dest
+    if(Array.isArray(dest)&&dest.length){
+     const target=dest[0]
+     const index=typeof target==='number'?target:target&&typeof target==='object'?await current.getPageIndex(target):-1
+     if(Number.isInteger(index)&&index>=0&&index<current.numPages)result.push({title:String(item.title||'第 '+(index+1)+' 页').slice(0,200),page:index+1,depth})
+    }
+   }catch{/* Unsupported/external destination: deliberately skip. */}
+   if(depth<7&&item.items?.length)for(const child of (item.items as Item[]).slice(0,300).reverse())stack.push({item:child,depth:depth+1})
+  }
+  if(!disposed&&epoch===outlineEpoch&&current===doc){outline.value=result;outlineLoaded=true}
+ }catch{/* Outline is optional; PDF rendering remains available. */}
+ finally{if(epoch===outlineEpoch)outlineLoading.value=false}
+}
 const marker=ref<{page:number;x:number;y:number}|null>(null)
 let markerTimer:ReturnType<typeof setTimeout>|undefined
 const displayedJob=ref('')
@@ -92,7 +180,7 @@ function restore(a:{page:number;offset:number}){
  onScroll()
 }
 function cancelRenders(){
- renderSerial++
+ renderSerial++;clearText()
  for(const t of rendering.values())t.cancel()
  pending.clear()
 }
@@ -150,9 +238,13 @@ function schedule(){
     const c=canvases.get(p.number);if(c){c.width=1;c.height=1}
     p.ready=false;p.hasPixels=false
    }
+   if(!wanted.has(p.number)){
+    textTasks.get(p.number)?.cancel();textTasks.delete(p.number);textDone.delete(p.number)
+    elements.get(p.number)?.querySelector('.paper-pdf__text-layer')?.replaceChildren()
+   }
   }
   for(const n of wanted){const p=pages.value[n-1];if(p&&!p.ready&&!p.error&&!rendering.has(n))pending.add(n)}
-  void pump()
+  void pump();if(textMode.value)void renderVisibleText()
  })
 }
 function onScroll(){schedule()}
@@ -200,7 +292,7 @@ async function pump(){
     if(!disposed&&serial===renderSerial&&current===doc&&(e as Error)?.name!=='RenderingCancelledException')p.error=true
    }finally{rendering.delete(n);if(!disposed&&!p.ready&&!p.error)schedule()}
   }
- }finally{busy=false}
+ }finally{busy=false;if(textMode.value)void renderVisibleText()}
 }
 async function load(){
  if(disposed)return
@@ -212,12 +304,12 @@ async function load(){
  loading.value=true;error.value=''
  let next:PDFDocumentLoadingTask|undefined
  try{
-  const blob=await getPaperCompilePDF(pid,jid,abort.signal)
+  const blob=props.assetBlob??await getPaperCompilePDF(pid,jid,abort.signal)
   if(disposed||serial!==loadSerial)return
   const {getDocument}=await loadPdfEngine()
   const data=await blob.arrayBuffer()
   if(disposed||serial!==loadSerial)return
-  next=getDocument({data,enableXfa:false,disableAutoFetch:true,stopAtErrors:false,isEvalSupported:false,useSystemFonts:true})
+  next=getDocument({data,enableXfa:false,disableAutoFetch:true,stopAtErrors:false,useSystemFonts:true})
   pendingTask=next
   const incoming=await next.promise
   if(disposed||serial!==loadSerial){await next.destroy();return}
@@ -232,6 +324,7 @@ async function load(){
   await Promise.allSettled([...rendering.values()].map(t=>t.promise))
   if(disposed||serial!==loadSerial){await next.destroy();return}
   doc=incoming;task=next;pendingTask=undefined
+  outlineEpoch++;outlineLoaded=false;outline.value=[];outlineOpen.value=false;outlineLoading.value=false
   documentBlob.value=blob;displayedRevision.value=revision;displayedJob.value=jid
   pages.value=Array.from({length:incoming.numPages},(_,i)=>({number:i+1,naturalWidth:natural.width,naturalHeight:natural.height,width:1,height:1,ready:false,error:false,hasPixels:false}))
   page.value=Math.min(incoming.numPages,a.page);pageInput.value=String(page.value)
@@ -268,9 +361,9 @@ function retryPage(n:number){const p=pages.value[n-1];if(p){p.error=false;pendin
 function download(){
  if(!documentBlob.value)return
  const url=URL.createObjectURL(documentBlob.value),a=document.createElement('a')
- a.href=url;a.download='paper.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
+ a.href=url;a.download=props.assetName||'paper.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
-watch(()=>[props.projectId,props.jobId],()=>void load())
+watch(()=>[props.projectId,props.jobId,props.assetBlob],()=>void load())
 onMounted(()=>{
  if(scroller.value&&typeof ResizeObserver!=='undefined'){
   observer=new ResizeObserver(()=>{
@@ -282,12 +375,12 @@ onMounted(()=>{
  void load()
 })
 onBeforeUnmount(()=>{
- disposed=true;loadSerial++;abort?.abort();observer?.disconnect();cancelAnimationFrame(scheduled);cancelRenders();if(markerTimer)clearTimeout(markerTimer);if(resizeTimer)clearTimeout(resizeTimer)
+ disposed=true;loadSerial++;outlineEpoch++;abort?.abort();observer?.disconnect();cancelAnimationFrame(scheduled);cancelRenders();if(markerTimer)clearTimeout(markerTimer);if(resizeTimer)clearTimeout(resizeTimer)
  void pendingTask?.destroy().catch(()=>{});void task?.destroy().catch(()=>{})
  documentBlob.value=undefined
 })
 function onPDFDoubleClick(e:MouseEvent,p:Page){
- if(!p.ready||!displayedJob.value)return
+ if(textMode.value||props.assetBlob||!p.ready||!displayedJob.value)return
  const r=(e.currentTarget as HTMLElement).getBoundingClientRect()
  if(r.width<=0||r.height<=0)return
  emit('pdf-position',{jobId:displayedJob.value,page:p.number,x:(e.clientX-r.left)/r.width*p.naturalWidth,y:(e.clientY-r.top)/r.height*p.naturalHeight})
@@ -330,4 +423,11 @@ defineExpose({jump,page,scroller,showPosition,currentPosition})
 .paper-pdf__footer{display:flex;justify-content:space-between;border-bottom:0;border-top:1px solid var(--a-color-border-soft,#d8dde3)}
 .paper-pdf__placeholder{padding:32px 8px;text-align:center;color:#475569;font-size:13px}
 .paper-pdf__sync-marker{position:absolute;pointer-events:none;transform:translate(-50%,-50%);width:76px;max-width:30%;height:17px;border:2px solid #278454;border-radius:3px;background:#64be8840;box-shadow:0 0 0 3px #69b48a25}
+.paper-pdf__toolbar button[aria-pressed=true]{background:var(--a-color-bg-subtle,#e7edf3);font-weight:600}
+.paper-pdf__outline{max-height:30%;overflow:auto;flex-shrink:0;border-bottom:1px solid var(--a-color-border-soft,#ddd);font-size:12px;padding:4px}
+.paper-pdf__outline button{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:5px 8px;text-align:left;border:0;background:transparent;color:inherit;cursor:pointer;overflow-wrap:anywhere}
+.paper-pdf__outline small{color:var(--a-color-text-secondary,#64748b)}
+.paper-pdf__text-note{padding:4px 8px;font-size:11px;color:var(--a-color-text-secondary,#64748b)}
+.paper-pdf__text-layer{position:absolute;inset:0;overflow:hidden;z-index:2;user-select:text;cursor:text}
+.paper-pdf__text-layer :deep(span){user-select:text}
 </style>

@@ -57,18 +57,43 @@
         </section>
       </form>
       <p v-if="error" role="alert" class="papers-home__error">{{ error }}</p>
-      <h2>我的论文</h2>
-      <p v-if="!projects.length" class="papers-home__empty">还没有论文项目。创建项目后会自动生成 main.tex。</p>
+      <div class="papers-home__list-heading">
+        <h2>我的论文</h2>
+        <input v-model.trim="query" aria-label="搜索论文项目" placeholder="搜索项目名称" />
+        <PButton size="sm" variant="secondary" @click="toggleTrash">{{ showTrash?'返回项目':'回收站' }}</PButton>
+      </div>
+      <section v-if="showTrash" class="papers-home__create">
+        <h3>回收站</h3>
+        <p>项目删除后保留在这里，可恢复；暂不自动清理。</p>
+        <p v-if="trashLoading">正在加载…</p>
+        <p v-else-if="!trashed.length">暂无已删除项目。</p>
+        <div v-for="item in trashed" :key="item.id" class="papers-home__trash-row">
+          <span>{{ item.name }} · {{ new Date(item.trashed_at).toLocaleDateString() }}</span>
+          <PButton size="sm" variant="secondary" :disabled="!!managing" @click="restore(item)">恢复</PButton>
+        </div>
+      </section>
+      <template v-else>
+      <p v-if="!visibleProjects.length" class="papers-home__empty">还没有论文项目。创建项目后会自动生成 main.tex。</p>
       <div v-else class="papers-home__grid">
-        <article v-for="project in projects" :key="project.id" class="papers-home__card">
+        <article v-for="project in visibleProjects" :key="project.id" class="papers-home__card">
           <RouterLink :to="'/papers/' + project.id" class="papers-home__project-link">
             <strong>{{ project.name }}</strong>
             <span>项目版本 {{ project.head_revision }}</span>
             <time :datetime="project.updated_at">{{ new Date(project.updated_at).toLocaleString() }}</time>
           </RouterLink>
-          <PButton type="button" size="sm" variant="secondary" :disabled="!!exporting" @click="exportProject(project)">{{ exporting === project.id ? '正在导出…' : '导出 ZIP' }}</PButton>
+          <div v-if="renaming===project.id" class="papers-home__rename">
+            <input v-model.trim="renameValue" maxlength="100" aria-label="新的项目名称" @keydown.enter.prevent="rename(project)" />
+            <PButton size="sm" :disabled="!renameValue||!!managing" @click="rename(project)">确认</PButton>
+            <PButton size="sm" variant="secondary" :disabled="!!managing" @click="renaming=''">取消</PButton>
+          </div>
+          <div class="papers-home__project-actions">
+            <PButton type="button" size="sm" variant="secondary" :disabled="!!exporting" @click="exportProject(project)">{{ exporting === project.id ? '正在导出…' : '导出 ZIP' }}</PButton>
+            <PButton size="sm" variant="secondary" :disabled="!!managing" @click="renaming=project.id;renameValue=project.name">重命名</PButton>
+            <PButton size="sm" variant="secondary" :disabled="!!managing" @click="deleteProject(project)">删除</PButton>
+          </div>
         </article>
       </div>
+      </template>
     </section>
   </main>
 </template>
@@ -78,7 +103,7 @@ import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
-import { paperAccess, listPaperProjects, createPaperProject, getPaperApplication, submitPaperApplication, importPaperProject, getPaperProjectZIP, downloadPaperZIP, paperImportZIPLimit, type PaperProject, type PaperApplication } from '@/api/papers'
+import { paperAccess, listPaperProjects, createPaperProject, getPaperApplication, submitPaperApplication, importPaperProject, getPaperProjectZIP, downloadPaperZIP, paperImportZIPLimit, renamePaperProject, trashPaperProject, listTrashedPaperProjects, restorePaperProject, type TrashedPaperProject, type PaperProject, type PaperApplication } from '@/api/papers'
 import { packPaperFolder, suggestPaperProjectName, unsupportedPaperFolderFiles, paperArchiveExclusion } from '@/components/papers/projectArchive'
 
 defineOptions({name:'PapersHomeView'})
@@ -88,6 +113,36 @@ const allowed = ref(false)
 const creating = ref(false)
 const projectName = ref('')
 const projects = ref<PaperProject[]>([])
+const query=ref('')
+const visibleProjects=computed(()=>projects.value.filter(p=>p.name.toLocaleLowerCase().includes(query.value.toLocaleLowerCase())))
+const showTrash=ref(false),trashLoading=ref(false)
+const trashed=ref<TrashedPaperProject[]>([])
+const managing=ref(''),renaming=ref(''),renameValue=ref('')
+async function toggleTrash(){
+ showTrash.value=!showTrash.value
+ if(!showTrash.value)return
+ trashLoading.value=true;error.value=''
+ try{trashed.value=await listTrashedPaperProjects()}catch{error.value='无法加载回收站，请重试。'}finally{trashLoading.value=false}
+}
+async function rename(p:PaperProject){
+ if(managing.value||!renameValue.value)return
+ managing.value=p.id;error.value=''
+ try{const updated=await renamePaperProject(p.id,renameValue.value,p.head_revision);projects.value=projects.value.map(x=>x.id===p.id?updated:x);renaming.value=''}
+ catch{error.value='重命名失败，请刷新项目列表后重试。'}finally{managing.value=''}
+}
+async function deleteProject(p:PaperProject){
+ if(managing.value||!window.confirm('将「'+p.name+'」移入回收站？可以恢复，源码不会立即删除。'))return
+ managing.value=p.id;error.value=''
+ try{await trashPaperProject(p.id);projects.value=projects.value.filter(x=>x.id!==p.id);renaming.value=''}
+ catch{error.value='删除失败，请刷新后重试。'}finally{managing.value=''}
+}
+async function restore(p:TrashedPaperProject){
+ if(managing.value)return
+ managing.value=p.id;error.value=''
+ try{const restored=await restorePaperProject(p.id);projects.value=[restored,...projects.value];trashed.value=trashed.value.filter(x=>x.id!==p.id)}
+ catch{error.value='恢复失败，请检查项目数量或等待旧编译任务结束。'}finally{managing.value=''}
+}
+
 const error = ref('')
 const folderInput = ref<HTMLInputElement | null>(null)
 const zipInput = ref<HTMLInputElement | null>(null)
@@ -232,4 +287,9 @@ onMounted(load)
 .papers-home__exclusion p {font-size:.84rem;line-height:1.6;margin:0;color:var(--a-color-text-secondary,#697281)}
 .papers-home__exclusion-list {max-height:220px;overflow:auto;margin:0;padding-left:22px;font-size:.83rem;line-height:1.7;overflow-wrap:anywhere}
 .papers-home__exclusion-actions {display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.papers-home__list-heading,.papers-home__project-actions,.papers-home__trash-row,.papers-home__rename{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.papers-home__list-heading h2{flex:1}
+.papers-home__list-heading input,.papers-home__rename input{min-width:0;max-width:100%;padding:8px;border:1px solid var(--a-color-border-soft,#ddd);background:var(--a-color-bg,#fff);color:inherit;border-radius:6px}
+.papers-home__rename input{flex:1}
+.papers-home__trash-row{justify-content:space-between;padding:8px 0;border-top:1px solid var(--a-color-border-soft,#ddd)}
 </style>

@@ -5,6 +5,7 @@ import PapersHomeView from '@/views/papers/PapersHomeView.vue'
 
 const mocks = vi.hoisted(() => ({
   access: vi.fn(),
+  rename:vi.fn(),trash:vi.fn(),listTrash:vi.fn(),restore:vi.fn(),
   application: vi.fn(),
   projects: vi.fn(),
   listApplications: vi.fn(),
@@ -17,6 +18,7 @@ vi.mock('@/api/papers', () => ({
   paperAccess: mocks.access,
   getPaperApplication: mocks.application,
   listPaperProjects: mocks.projects,
+  renamePaperProject:mocks.rename,trashPaperProject:mocks.trash,listTrashedPaperProjects:mocks.listTrash,restorePaperProject:mocks.restore,
   createPaperProject: vi.fn(),
   submitPaperApplication: vi.fn(),
   importPaperProject: mocks.importProject,
@@ -142,4 +144,29 @@ describe('Papers home', () => {
     }, { timeout: 5000 })
     wrapper.unmount()
   })
+})
+
+it('renames, trashes and restores an owned project through the project list',async()=>{
+ const project={id:'p1',name:'Old',head_revision:1,updated_at:'2026-11-24T00:00:00Z'}
+ const updated={...project,name:'New',head_revision:2}
+ mocks.access.mockResolvedValue({allowed:true});mocks.projects.mockResolvedValue([project])
+ mocks.rename.mockResolvedValue(updated);mocks.trash.mockResolvedValue(undefined)
+ mocks.listTrash.mockResolvedValue([{...updated,trashed_at:'2026-11-24T00:00:00Z'}]);mocks.restore.mockResolvedValue(updated)
+ const confirm=vi.fn(()=>true);vi.stubGlobal('confirm',confirm)
+ const w=mount(PapersHomeView,{global:{stubs:{PPageHeader:true}}})
+ try{
+  await flushPromises()
+  await w.findAll('button').find(b=>b.text()==='重命名')!.trigger('click')
+  await w.get('[aria-label="新的项目名称"]').setValue('New')
+  await w.findAll('button').find(b=>b.text()==='确认')!.trigger('click')
+  await flushPromises();expect(mocks.rename).toHaveBeenCalledWith('p1','New',1)
+  expect(w.get('.papers-home__card').text()).toContain('New')
+  await w.findAll('button').find(b=>b.text()==='删除')!.trigger('click')
+  await flushPromises();expect(mocks.trash).toHaveBeenCalledWith('p1');expect(w.find('.papers-home__card').exists()).toBe(false)
+  await w.findAll('button').find(b=>b.text()==='回收站')!.trigger('click')
+  await flushPromises();await w.findAll('button').find(b=>b.text()==='恢复')!.trigger('click')
+  await flushPromises();expect(mocks.restore).toHaveBeenCalledWith('p1')
+  await w.findAll('button').find(b=>b.text()==='返回项目')!.trigger('click')
+  expect(w.get('.papers-home__card').text()).toContain('New')
+ }finally{vi.unstubAllGlobals();w.unmount()}
 })

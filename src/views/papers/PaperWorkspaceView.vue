@@ -18,9 +18,26 @@
       <button v-if="compactLayout && showFiles" type="button" class="papers-workspace__files-backdrop" aria-label="关闭文件栏" @click="showFiles=false" />
       <aside class="papers-workspace__files" aria-label="论文文件">
         <div class="papers-workspace__files-heading"><h2>文件 <small>{{ files.length }}</small></h2><button v-if="compactLayout" type="button" class="papers-workspace__close-files" aria-label="关闭文件面板" @click="showFiles=false">×</button></div>
-        <button v-for="file in files" :key="file.id" type="button" :class="{ active: activeFile?.id === file.id }" :disabled="addingFile || navigating" @click="selectFile(file)">
-          {{ file.path }}<span v-if="file.kind === 'binary'" class="papers-workspace__asset-label">资源</span>
-        </button>
+        <div v-for="entry in treeRows" :key="entry.key" class="papers-workspace__file-row" :style="{paddingLeft:Math.min(entry.depth,8)*10+'px'}">
+          <button v-if="entry.kind==='folder'" type="button" class="papers-workspace__folder" :aria-expanded="!closedFolders.has(entry.path)" @click="toggleFolder(entry.path)">{{ closedFolders.has(entry.path)?'▸':'▾' }} {{ entry.name }}</button>
+          <template v-else>
+            <button type="button" :title="entry.path" :class="{active:activeFile?.id===entry.file.id}" :disabled="addingFile||navigating" @click="selectFile(entry.file)">{{ entry.name }}<span v-if="entry.file.id===project?.main_file_id" class="papers-workspace__asset-label">主文件</span><span v-else-if="entry.file.kind==='binary'" class="papers-workspace__asset-label">资源</span></button>
+            <button type="button" class="papers-workspace__file-menu" :aria-label="'管理 '+entry.path" :disabled="addingFile||navigating||switchingFile" @click="openFileMenu(entry.file)">⋯</button>
+          </template>
+        </div>
+        <div v-if="managedFile" class="papers-workspace__manage">
+          <strong>{{ managedFile.path }}</strong>
+          <label>新路径<input v-model.trim="managedPath" maxlength="512" aria-label="文件新路径" /></label>
+          <PButton size="sm" variant="secondary" :disabled="addingFile||!managedPath||managedPath===managedFile.path" @click="changeFile('rename')">重命名 / 移动</PButton>
+          <PButton v-if="managedFile.kind==='text'&&/^[^/]+\.tex$/i.test(managedFile.path)&&managedFile.id!==project?.main_file_id" size="sm" variant="secondary" :disabled="addingFile" @click="changeFile('set_main')">设为主文件</PButton>
+          <PButton v-if="managedFile.id!==project?.main_file_id" size="sm" variant="secondary" :disabled="addingFile" @click="changeFile('delete')">删除文件</PButton>
+          <PButton size="sm" variant="ghost" :disabled="addingFile" @click="managedFile=null">关闭</PButton>
+        </div>
+        <div class="papers-workspace__manage">
+          <label>上传到目录（可选）<input v-model.trim="uploadDir" placeholder="figures" maxlength="255" /></label>
+          <input ref="uploadInput" type="file" multiple hidden :disabled="addingFile" @change="uploadFiles" />
+          <PButton size="sm" variant="secondary" :disabled="addingFile||switchingFile||navigating" @click="uploadInput?.click()">{{ addingFile?'处理中…':'上传文件' }}</PButton>
+        </div>
         <form class="papers-workspace__add" @submit.prevent="addFile">
           <label for="papers-new-file">新建文本文件</label>
           <input id="papers-new-file" v-model.trim="newFilePath" placeholder="chapters/intro.tex" maxlength="512" required />
@@ -31,11 +48,18 @@
       <section class="papers-workspace__editor" aria-label="源码编辑">
         <div class="papers-workspace__editor-header">
           <span :title="activeFile?.path">{{ activeFile?.path || '请选择文件' }}</span>
+          <button type="button" class="papers-workspace__sync" :aria-expanded="outlineOpen" @click="toggleOutline">大纲</button>
           <button type="button" class="papers-workspace__sync" title="定位当前源码行对应的 PDF 内容 (Ctrl/Cmd+Shift+J)" :disabled="!syncReady || activeFile?.kind !== 'text'" @click="jumpToPDF">定位 PDF →</button>
           <PButton type="button" size="sm" variant="secondary" :disabled="!activeFile || activeFile.kind !== 'text' || saving" @click="saveNow">保存</PButton>
         </div>
+        <section v-if="outlineOpen" class="papers-workspace__outline" aria-label="论文结构大纲">
+          <div class="papers-workspace__outline-heading"><strong>项目大纲</strong><button type="button" class="papers-workspace__sync" :disabled="outlineLoading" @click="loadOutline">刷新</button></div>
+          <p v-if="outlineLoading">正在读取各 TeX 文件…</p>
+          <p v-else-if="!outlineRows.length">未找到章节标题。</p>
+          <button v-for="item in outlineRows" :key="item.fileId+':'+item.line+':'+item.title" type="button" :style="{paddingLeft:Math.max(0,item.level-1)*12+'px'}" :title="item.path+':'+item.line" @click="jumpOutline(item)">{{ item.title }} <small>{{ item.path }}:{{ item.line }}</small></button>
+        </section>
         <LatexEditor v-if="activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef" v-model="draft" :readonly="switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
-        <p v-else-if="activeFile?.kind === 'binary'" class="papers-workspace__message">此资源文件随项目编译与导出保留，不支持文本编辑。</p>
+        <PaperAssetPreview v-else-if="activeFile?.kind === 'binary'" :key="activeFile.id+':'+activeFile.revision" :file="activeFile" />
         <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
         <p v-if="exportError" class="papers-workspace__error" role="alert">{{ exportError }}</p>
         <p v-if="saveError" class="papers-workspace__error" role="alert">
@@ -111,12 +135,15 @@ import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vu
 import { ApiErrorResponseError } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import LatexEditor from '@/components/papers/LatexEditor.vue'
+import PaperAssetPreview from '@/components/papers/PaperAssetPreview.vue'
+import {paperFileTree,preparePaperUploads} from '@/components/papers/fileTools'
+import {latexHeadings,type LatexHeading} from '@/components/papers/latexLanguage'
 import PaperPDFPreview from '@/components/papers/PaperPDFPreview.vue'
 import { decodeSourceMap, sourceToPDF, pdfToSource, type PaperSourceMap } from '@/components/papers/sourceMap'
 import {
-  createPaperFile, getPaperFile, getPaperProject, listPaperFiles, savePaperFile, getPaperProjectZIP, downloadPaperZIP,
+  createPaperFile, managePaperFiles, getPaperFile, getPaperProject, listPaperFiles, savePaperFile, getPaperProjectZIP, downloadPaperZIP,
   getPaperCompileCapability, getPaperCompileJob, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, getPaperCompileSourceMap,
-  type PaperFile, type PaperProject, type PaperCompileJob, type PaperCompileDiagnostic,
+  type PaperFile, type PaperProject, type PaperCompileJob, type PaperCompileDiagnostic, type PaperUpload,
 } from '@/api/papers'
 
 defineOptions({name:'PaperWorkspaceView'})
@@ -135,8 +162,105 @@ const exportError = ref('')
 const addingFile = ref(false)
 const project = ref<PaperProject | null>(null)
 const files = ref<PaperFile[]>([])
+const closedFolders=ref(new Set<string>())
+const treeRows=computed(()=>paperFileTree(files.value,closedFolders.value))
+function toggleFolder(path:string){const next=new Set(closedFolders.value);if(next.has(path))next.delete(path);else next.add(path);closedFolders.value=next}
+const managedFile=ref<PaperFile|null>(null),managedPath=ref('')
+const uploadDir=ref(''),uploadInput=ref<HTMLInputElement|null>(null)
+function openFileMenu(file:PaperFile){managedFile.value=file;managedPath.value=file.path}
+function revealFile(path:string){const next=new Set(closedFolders.value);const parts=path.split('/');for(let i=1;i<parts.length;i++)next.delete(parts.slice(0,i).join('/'));closedFolders.value=next}
+function managementError(cause:unknown){
+ if(cause instanceof ApiErrorResponseError){
+  const labels:Record<string,string>={
+   'papers.invalid_main_file':'主文件必须是根目录 .tex；若存在 main.tex，请先重命名它，再切换主文件。',
+   'papers.file_exists':'与现有文件或文件夹路径冲突，请换一个名称。',
+   'papers.revision_conflict':'项目已被修改，请刷新后重试。',
+   'papers.main_file_required':'不能删除主文件，请先设置另一个主文件。',
+   'papers.compile_source_limit':'超出项目容量或编译兼容性限制。',
+   'papers.file_limit':'超过项目文件数量限制。'
+  }
+  return labels[cause.code]||'操作失败，请检查文件路径、格式及项目容量。'
+ }
+ return cause instanceof Error?cause.message:'文件操作失败，请重试。'
+}
+async function mutateFiles(change:{action:'upload'|'rename'|'delete'|'set_main';file_id?:string;path?:string;uploads?:PaperUpload[]}){
+ if(addingFile.value||switchingFile.value||navigating.value||!project.value)return
+ const pid=projectId.value
+ addingFile.value=true;fileError.value=''
+ try{
+  await nextTick()
+  if(!await persist()||disposed||pid!==projectId.value||navigating.value||!project.value)return
+  const result=await managePaperFiles(pid,{...change,base_revision:project.value.head_revision})
+  if(disposed||pid!==projectId.value||navigating.value)return
+  project.value=result.project;files.value=result.files
+  const prior=activeFile.value
+  if(prior){
+   const updated=result.files.find(f=>f.id===prior.id)
+   if(updated){activeFile.value={...updated,content:prior.content};revealFile(updated.path)}
+   else{activeFile.value=null;draft.value='';const main=result.files.find(f=>f.id===result.project.main_file_id);if(main)await selectFile(main)}
+  }
+  if(change.path)revealFile(change.path)
+  if(change.uploads)for(const u of change.uploads)revealFile(u.path)
+  managedFile.value=null;autoDirty=true
+  if(outlineOpen.value)void loadOutline()
+ }catch(cause){if(!disposed&&pid===projectId.value)fileError.value=managementError(cause)}
+ finally{if(pid===projectId.value){addingFile.value=false;scheduleAuto()}}
+}
+async function changeFile(action:'rename'|'delete'|'set_main'){
+ const f=managedFile.value;if(!f)return
+ if(action==='delete'&&!window.confirm('删除 '+f.path+'？请确认源码中没有仍依赖它的引用。'))return
+ if(action==='rename'&&!window.confirm('修改文件路径？引用该文件的 LaTeX 命令需要手动更新。'))return
+ await mutateFiles({action,file_id:f.id,path:action==='rename'?managedPath.value:undefined})
+}
+async function uploadFiles(event:Event){
+ const input=event.target as HTMLInputElement
+ const picked=Array.from(input.files||[]);input.value=''
+ if(!picked.length)return
+ const pid=projectId.value
+ try{const uploads=await preparePaperUploads(picked,uploadDir.value);if(!disposed&&pid===projectId.value)await mutateFiles({action:'upload',uploads})}
+ catch(cause){if(!disposed&&pid===projectId.value)fileError.value=managementError(cause)}
+}
+
 const activeFile = ref<PaperFile | null>(null)
 const draft = ref('')
+type OutlineRow=LatexHeading&{fileId:string;path:string;revision:number}
+const outlineOpen=ref(false),outlineLoading=ref(false)
+const outlineCache=shallowRef<OutlineRow[]>([])
+let outlineSerial=0
+const outlineRows=computed(()=>{
+ const a=activeFile.value
+ const rest=outlineCache.value.filter(x=>x.fileId!==a?.id&&files.value.some(f=>f.id===x.fileId&&f.revision===x.revision))
+ const local=a?.kind==='text'&&/\.tex$/i.test(a.path)?latexHeadings(draft.value).map(h=>({...h,fileId:a.id,path:a.path,revision:a.revision})):[]
+ const main=project.value?.main_file_id
+ return [...rest,...local].sort((x,y)=>(x.fileId===main?-1:0)-(y.fileId===main?-1:0)||x.path.localeCompare(y.path)||x.line-y.line).slice(0,600)
+})
+async function loadOutline(){
+ const serial=++outlineSerial,pid=projectId.value
+ outlineLoading.value=true
+ const collected:OutlineRow[]=[]
+ try{
+  const targets=files.value.filter(f=>f.kind==='text'&&/\.tex$/i.test(f.path))
+  for(let i=0;i<targets.length;i+=4){
+   const group=await Promise.allSettled(targets.slice(i,i+4).map(f=>getPaperFile(pid,f.id)))
+   if(disposed||serial!==outlineSerial||pid!==projectId.value)return
+   for(const result of group)if(result.status==='fulfilled'){
+    const f=result.value
+    for(const h of latexHeadings(f.content)){if(collected.length>=600)break;collected.push({...h,fileId:f.id,path:f.path,revision:f.revision})}
+   }
+  }
+  if(serial===outlineSerial)outlineCache.value=collected
+ }finally{if(serial===outlineSerial)outlineLoading.value=false}
+}
+function toggleOutline(){outlineOpen.value=!outlineOpen.value;if(outlineOpen.value)void loadOutline()}
+async function jumpOutline(item:OutlineRow){
+ const target=files.value.find(f=>f.id===item.fileId)
+ if(!target)return
+ if(target.id!==activeFile.value?.id&&target.revision!==item.revision){fileError.value='大纲已过期，请刷新。';return}
+ if(layoutMode.value==='pdf')layoutMode.value=compactLayout.value?'editor':'split'
+ await selectFile(target);await nextTick()
+ if(activeFile.value?.id===target.id&&activeFile.value.revision===item.revision)editorRef.value?.goToLine(item.line)
+}
+
 const newFilePath = ref('')
 const saveStatus = ref('尚未打开文件')
 const compileEnabled = ref(false)
@@ -382,19 +506,19 @@ async function selectFile(file:PaperFile){
     if(activeFile.value&&!await persist())return
     if(disposed||serial!==fileSerial||pid!==projectId.value||navigating.value)return
     fileError.value=''
-    const content=file.kind==='binary'?{...file,content:''}:await getPaperFile(pid,file.id)
+    const content=await getPaperFile(pid,file.id)
     if(disposed||serial!==fileSerial||pid!==projectId.value||navigating.value)return
     // A change emitted just before CodeMirror became read-only must also
     // be saved. Never overwrite a dirty draft with an incoming response.
     if(!await persist())return
     if(disposed||serial!==fileSerial||pid!==projectId.value||navigating.value)return
-    if(content.kind==='text'&&content.revision!==file.revision){
+    if(content.revision!==file.revision){
       const latest=await getPaperProject(pid)
       if(disposed||serial!==fileSerial||pid!==projectId.value||navigating.value)return
       project.value=latest
       files.value=files.value.map(item=>item.id===content.id?{...item,revision:content.revision}:item)
     }
-    activeFile.value=content;draft.value=content.content
+    activeFile.value=content;draft.value=content.kind==='text'?content.content:'';revealFile(content.path)
     saveStatus.value=content.kind==='binary'?'资源文件':'已保存'
     saveError.value=''
     if(compactLayout.value){showFiles.value=false;if(layoutMode.value==='pdf')layoutMode.value='editor'}
@@ -560,6 +684,7 @@ watch(projectId, () => {
   activeFile.value = null
   draft.value = ''
   files.value = []
+  closedFolders.value=new Set();managedFile.value=null;uploadDir.value='';outlineSerial++;outlineCache.value=[];outlineOpen.value=false;outlineLoading.value=false
   project.value = null
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
   void loadProject()
@@ -659,4 +784,15 @@ onBeforeUnmount(() => {
 .papers-workspace--compact .papers-workspace__editor-header .papers-workspace__sync{padding-inline:4px}
 
 .papers-workspace__sync{font-size:11px;white-space:nowrap;background:transparent;color:var(--a-color-primary,#26784b);border:1px solid var(--a-color-border-soft,#d7dde4);border-radius:4px;padding:4px 7px;cursor:pointer}.papers-workspace__sync:disabled{opacity:.4;cursor:default}.papers-workspace__sync-message{font-size:12px;padding:5px 10px;margin:0;color:var(--a-color-text-secondary,#64748b);flex-shrink:0}
+.papers-workspace__file-row{display:flex;align-items:center;min-width:0}
+.papers-workspace__file-row button:first-child{flex:1;min-width:0}
+.papers-workspace__files .papers-workspace__file-menu{width:26px!important;flex-shrink:0;text-align:center!important;font-weight:700}
+.papers-workspace__folder{font-weight:600}
+.papers-workspace__manage{display:grid;gap:5px;margin-top:10px;padding-top:8px;border-top:1px solid var(--a-color-border-soft,#ddd);font-size:12px;overflow-wrap:anywhere}
+.papers-workspace__manage label{display:grid;gap:4px}
+.papers-workspace__manage input:not([type=file]){min-width:0;width:100%;box-sizing:border-box;border:1px solid var(--a-color-border-soft,#ddd);border-radius:4px;padding:5px;color:inherit;background:var(--a-color-bg,#fff)}
+.papers-workspace__outline{display:flex;flex-direction:column;gap:4px;max-height:32%;overflow:auto;flex-shrink:0;padding:7px 9px;border-bottom:1px solid var(--a-color-border-soft,#ddd);font-size:12px}
+.papers-workspace__outline-heading{display:flex;align-items:center;justify-content:space-between}
+.papers-workspace__outline>button{display:block;text-align:left;border:0;background:transparent;color:inherit;cursor:pointer;font-size:12px;overflow-wrap:anywhere;padding-block:4px}
+.papers-workspace__outline small{color:var(--a-color-text-secondary,#64748b);font-weight:400;font-size:10px}
 </style>

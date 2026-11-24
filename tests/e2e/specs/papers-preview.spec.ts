@@ -7,17 +7,19 @@ if (process.env.CHROME_BIN) test.use({ launchOptions: { executablePath: process.
 // Only fixture documents and intercepted HTTP responses are used in this test.
 function fixturePDF(): Buffer {
   const stream = (text: string) => {
-    const body = `BT /F1 24 Tf 36 200 Td (${text}) Tj ET\n`
+    const body = `BT /F1 16 Tf 36 200 Td (${text}) Tj ET\n`
     return `<< /Length ${Buffer.byteLength(body)} >>\nstream\n${body}endstream`
   }
   const objects = [
-    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Catalog /Pages 2 0 R /Outlines 8 0 R >>',
     '<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>',
     '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 320 600] /Resources << /Font << /F1 7 0 R >> >> /Contents 5 0 R >>',
     '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 320 600] /Resources << /Font << /F1 7 0 R >> >> /Contents 6 0 R >>',
     stream('Papers acceptance page one'),
     stream('Papers acceptance page two'),
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    '<< /Type /Outlines /First 9 0 R /Last 9 0 R /Count 1 >>',
+    '<< /Title (Results page) /Parent 8 0 R /Dest [4 0 R /Fit] >>',
   ]
   let pdf = '%PDF-1.4\n'
   const offsets = [0]
@@ -41,8 +43,10 @@ test.describe('Papers isolated browser acceptance', () => {
     const prefix = '/papers/projects/project-a'
     const time = '2026-11-24T00:00:00Z'
     const project = { id: 'project-a', name: 'Papers acceptance', main_file_id: 'file-a', head_revision: 1, created_at: time, updated_at: time }
-    const file = { id: 'file-a', path: 'main.tex', kind: 'text', content: '\\documentclass{article}\n\\begin{document}Fixture\\end{document}', sha256: '', revision: 1, created_at: time, updated_at: time }
+    const file = { id: 'file-a', path: 'main.tex', kind: 'text', content: '\\documentclass{article}\n\\begin{document}\n\\section{Introduction}\nFixture\n\\end{document}', sha256: '', revision: 1, created_at: time, updated_at: time }
     const job = { id: 'job-a', project_id: 'project-a', source_revision: 1, status: 'succeeded', attempts: 1, max_attempts: 2, cancel_requested: false, pdf_available: true, created_at: time }
+    const image={...file,id:'image-a',kind:'binary',path:'figures/pixel.png',content:'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jR0cAAAAASUVORK5CYII='}
+    const resource={...file,id:'resource-a',kind:'binary',path:'figures/source.pdf',content:pdf.toString('base64')}
     let enabled = true, requests = 0
     await page.routeWebSocket('**/*', socket => socket.close())
     await page.route('**/*', async route => {
@@ -56,7 +60,9 @@ test.describe('Papers isolated browser acceptance', () => {
       if (path === '/auth/session') return route.fulfill({ headers: cors, json: { csrf_token: 'fixture-csrf', user: { uuid: 'fixture-user', username: 'fixture', email: 'fixture@example.test', role: 'user', onboarding_completed_at: time } } })
       if (path === '/site/access') return route.fulfill({ headers: cors, json: {} })
       if (path === prefix) return ok(project)
-      if (path === prefix + '/files') return ok([file])
+      if (path === prefix + '/files') return ok([file,image,resource])
+      if (path === prefix + '/files/image-a') return ok(image)
+      if (path === prefix + '/files/resource-a') return ok(resource)
       if (path === prefix + '/files/file-a') return ok(file)
       if (path === prefix + '/compile-capability') return ok({ enabled, pdf_available: enabled })
       if (path === prefix + '/compiles') return ok([job])
@@ -81,6 +87,27 @@ test.describe('Papers isolated browser acceptance', () => {
       return ink
     })
     await expect.poll(()=>ink(first)).toBeGreaterThan(50)
+    // Verify real PDF.js text, not only a control label.
+    await page.getByRole('button',{name:'选择文字',exact:true}).click()
+    const textLayer=first.locator('.paper-pdf__text-layer')
+    await expect(textLayer).toContainText('Papers acceptance page one',{timeout:15000})
+    const selected=await textLayer.evaluate(el=>{
+      const span=Array.from(el.querySelectorAll('span')).find(x=>x.textContent?.includes('Papers acceptance'))!
+      const range=document.createRange();range.selectNodeContents(span)
+      const selection=window.getSelection()!;selection.removeAllRanges();selection.addRange(range)
+      const value=selection.toString();selection.removeAllRanges();return value
+    })
+    expect(selected).toContain('Papers acceptance')
+    await page.getByRole('button',{name:'选字中',exact:true}).click()
+    await expect(textLayer).toHaveCount(0)
+    await page.getByRole('button',{name:'目录',exact:true}).click()
+    await page.getByRole('button',{name:/Results page/}).click()
+    await expect(second).toHaveAttribute('data-rendered','true',{timeout:30000})
+    await page.getByRole('button',{name:'查找替换',exact:true}).click()
+    await expect(page.locator('.cm-search')).toBeVisible()
+    await page.getByRole('button',{name:'大纲',exact:true}).click()
+    await expect(page.locator('.papers-workspace__outline')).toContainText('Introduction')
+    await page.getByRole('button',{name:'大纲',exact:true}).click()
     const pageInput=page.getByRole('textbox',{name:'页码'})
     // Scroll-driven page updates must not overwrite a typed page number.
     await pageInput.fill('2')
@@ -112,6 +139,13 @@ test.describe('Papers isolated browser acceptance', () => {
     expect(download.suggestedFilename()).toBe('paper.pdf')
     expect(await readFile((await download.path())!)).toEqual(pdf)
     expect(requests).toBe(1)
+    await page.locator('button[title="figures/pixel.png"]').click()
+    await expect(page.locator('.paper-asset img')).toBeVisible()
+    await expect.poll(()=>page.locator('.paper-asset img').evaluate(el=>(el as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+    await page.locator('button[title="figures/source.pdf"]').click()
+    await expect(page.locator('.paper-asset .paper-pdf__sheet[data-page="1"]')).toHaveAttribute('data-rendered','true',{timeout:30000})
+    await page.locator('button[title="main.tex"]').click()
+    await expect(page.locator('.cm-content')).toContainText('Introduction')
     enabled = false
     await page.reload()
     await expect(page.getByText('编译尚未开放', { exact: true })).toBeVisible()

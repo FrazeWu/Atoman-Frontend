@@ -4,7 +4,7 @@ import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
 import { defineComponent, h, nextTick } from 'vue'
 import LatexEditor from "@/components/papers/LatexEditor.vue"
 import PaperWorkspaceView from '@/views/papers/PaperWorkspaceView.vue'
-import { savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile } from '@/api/papers'
+import { managePaperFiles, savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile } from '@/api/papers'
 
 vi.mock('@/api/papers', () => ({
   getPaperProject: vi.fn(),
@@ -12,6 +12,7 @@ vi.mock('@/api/papers', () => ({
   getPaperFile: vi.fn(),
   savePaperFile: vi.fn(),
   createPaperFile: vi.fn(),
+  managePaperFiles: vi.fn(),
   getPaperProjectZIP: vi.fn(),
   downloadPaperZIP: vi.fn(),
   getPaperCompileCapability: vi.fn().mockResolvedValue({ enabled: false, pdf_available: false }),
@@ -204,8 +205,8 @@ describe('Papers save and transition regression',()=>{
    expect(savePaperFile).toHaveBeenNthCalledWith(1,'two','f2','First edit',1)
    wrapper.findComponent(LatexEditor).vm.$emit('update:modelValue','Latest edit')
    await nextTick()
-   await wrapper.findAll('button').find(b=>b.text()==='chapters/intro.tex')!.trigger('click')
-   await wrapper.findAll('button').find(b=>b.text()==='appendix.tex')!.trigger('click')
+   await wrapper.findAll('button').find(b=>b.attributes('title')==='chapters/intro.tex')!.trigger('click')
+   await wrapper.findAll('button').find(b=>b.attributes('title')==='appendix.tex')!.trigger('click')
    await flushPromises()
    expect(wrapper.find('[data-test="editor"]').text()).toBe('Latest edit')
    expect(wrapper.find('[data-test="editor"]').attributes('data-readonly')).toBe('true')
@@ -271,5 +272,34 @@ describe('Papers save and transition regression',()=>{
    await nextTick()
    expect(wrapper.find('.papers-workspace__diagnostic-location').attributes('disabled')).toBeDefined()
   }finally{wrapper.unmount()}
+ })
+})
+
+describe('Papers file management actions',()=>{
+ it('collapses a directory and uses a revision-checked rename without replacing the draft',async()=>{
+  const chapter={...f2,id:'chapter',path:'chapters/intro.tex',content:'Chapter'}
+  vi.mocked(getPaperProject).mockResolvedValue({...two} as never)
+  vi.mocked(listPaperFiles).mockResolvedValue([f2,chapter] as never)
+  vi.mocked(getPaperFile).mockImplementation(async(_id,fid)=>(fid==='chapter'?chapter:f2) as never)
+  vi.mocked(managePaperFiles).mockResolvedValue({project:{...two,head_revision:2},files:[f2,{...chapter,path:'chapters/method.tex',revision:2}]} as never)
+  const router=createRouter({history:createMemoryHistory(),routes:[{path:'/papers/:projectId',component:PaperWorkspaceView}]})
+  await router.push('/papers/two');await router.isReady()
+  const w=mount(defineComponent({render:()=>h(RouterView)}),{global:{plugins:[router]}})
+  const confirm=vi.fn(()=>true);vi.stubGlobal('confirm',confirm)
+  try{
+   await flushPromises()
+   const folder=w.find('.papers-workspace__folder')
+   expect(folder.text()).toContain('chapters')
+   await folder.trigger('click')
+   expect(w.find('[title="chapters/intro.tex"]').exists()).toBe(false)
+   await folder.trigger('click')
+   await w.find('[aria-label="管理 chapters/intro.tex"]').trigger('click')
+   await w.get('input[aria-label="文件新路径"]').setValue('chapters/method.tex')
+   await w.findAll('button').find(b=>b.text()==='重命名 / 移动')!.trigger('click')
+   await flushPromises()
+   expect(managePaperFiles).toHaveBeenCalledWith('two',{action:'rename',file_id:'chapter',path:'chapters/method.tex',base_revision:1})
+   expect(w.find('[title="chapters/method.tex"]').exists()).toBe(true)
+   expect(w.find('[data-test="editor"]').text()).toBe('Current source')
+  }finally{vi.unstubAllGlobals();w.unmount()}
  })
 })

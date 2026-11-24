@@ -17,6 +17,7 @@ vi.mock('@/api/papers', () => ({
   listPaperCompileJobs: vi.fn().mockResolvedValue([]),
   submitPaperCompile: vi.fn(),
   getPaperCompileJob: vi.fn(),
+  getPaperCompileSourceMap: vi.fn().mockResolvedValue(null),
   cancelPaperCompile: vi.fn(),
 }))
 vi.mock('@/components/papers/LatexEditor.vue', () => ({

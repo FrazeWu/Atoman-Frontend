@@ -3,12 +3,18 @@
     <header class="papers-workspace__header">
       <RouterLink to="/papers">← 我的论文</RouterLink>
       <strong>{{ project?.name || '论文工作台' }}</strong>
+      <div class="papers-workspace__layout-tools">
+        <button type="button" title="文件栏" :aria-pressed="showFiles" @click="showFiles = !showFiles">文件</button>
+        <button type="button" :aria-pressed="layoutMode === 'split'" @click="layoutMode = 'split'">分栏</button>
+        <button type="button" :aria-pressed="layoutMode === 'editor'" @click="layoutMode = 'editor'">源码</button>
+        <button type="button" :aria-pressed="layoutMode === 'pdf'" @click="layoutMode = 'pdf'">预览</button>
+      </div>
       <span class="papers-workspace__status" role="status">{{ saveStatus }}</span>
       <PButton v-if="project" type="button" size="sm" variant="secondary" :disabled="exporting || saving" @click="exportProject">{{ exporting ? '正在导出…' : '导出 ZIP' }}</PButton>
     </header>
     <p v-if="loading" class="papers-workspace__message">正在打开项目...</p>
     <p v-else-if="error" role="alert" class="papers-workspace__error">{{ error }}</p>
-    <div v-else class="papers-workspace__content">
+    <div v-else ref="workspaceRoot" class="papers-workspace__content" :class="{ 'files-hidden': !showFiles, 'editor-only': layoutMode === 'editor', 'pdf-only': layoutMode === 'pdf' }" :style="{ '--preview-width': previewWidth + '%' }">
       <aside class="papers-workspace__files" aria-label="论文文件">
         <div class="papers-workspace__files-heading"><h2>文件</h2><span>{{ files.length }}</span></div>
         <button v-for="file in files" :key="file.id" type="button" :class="{ active: activeFile?.id === file.id }" @click="selectFile(file)">
@@ -24,9 +30,10 @@
       <section class="papers-workspace__editor" aria-label="源码编辑">
         <div class="papers-workspace__editor-header">
           <span>{{ activeFile?.path || '请选择文件' }}</span>
+          <button type="button" class="papers-workspace__sync" title="定位当前源码行对应的 PDF 内容 (Ctrl/Cmd+Shift+J)" :disabled="!syncReady || activeFile?.kind !== 'text'" @click="jumpToPDF">定位 PDF →</button>
           <PButton type="button" size="sm" variant="secondary" :disabled="!activeFile || activeFile.kind !== 'text' || saving" @click="saveNow">保存</PButton>
         </div>
-        <LatexEditor v-if="activeFile?.kind === 'text'" v-model="draft" />
+        <LatexEditor v-if="activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef" v-model="draft" @show-pdf="jumpToPDF" />
         <p v-else-if="activeFile?.kind === 'binary'" class="papers-workspace__message">此资源文件随项目编译与导出保留，不支持文本编辑。</p>
         <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
         <p v-if="exportError" class="papers-workspace__error" role="alert">{{ exportError }}</p>
@@ -34,21 +41,25 @@
           {{ saveError }} 当前输入已保留在编辑器中，请先处理冲突，避免离开页面。
         </p>
       </section>
+      <div v-if="layoutMode === 'split'" class="papers-workspace__divider" role="separator" aria-label="调整编辑器和预览宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="previewWidth" @pointerdown="beginResize" @pointermove="resizeMove" @pointerup="endResize" @pointercancel="endResize" @keydown.left.prevent="previewWidth=Math.min(75,previewWidth+3)" @keydown.right.prevent="previewWidth=Math.max(25,previewWidth-3)" />
       <aside class="papers-workspace__preview" aria-label="编译预览">
         <div class="papers-workspace__preview-heading">
           <strong>PDF 预览</strong>
+          <button type="button" class="papers-workspace__sync" title="跳到预览对应源码（也可双击 PDF）" :disabled="!syncReady" @click="jumpToCode">← 源码</button>
+          <label class="papers-workspace__auto"><input type="checkbox" v-model="autoCompile" /> 自动编译</label>
           <PButton type="button" size="sm" :disabled="!compileEnabled || compiling || saving || !project || hasActiveCompile" @click="compileNow">
-            {{ compiling ? '提交中...' : '编译' }}
+            {{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}
           </PButton>
         </div>
+        <p v-if="syncMessage" class="papers-workspace__sync-message" role="status">{{ syncMessage }}</p>
         <p v-if="compileError" class="papers-workspace__error" role="alert">{{ compileError }}</p>
         <div v-if="!compileEnabled" class="papers-workspace__preview-empty">
           <strong>编译尚未开放</strong>
           <p>源码编辑与保存可用。可信编译服务尚未完成生产安全验收，编译按钮保持禁用。</p>
         </div>
-        <div v-else-if="compileJob" class="papers-workspace__preview-empty" role="status">
-          <strong>编译状态：{{ compileStateLabel }}</strong>
-          <p>源码版本 {{ compileJob.source_revision }}，已尝试 {{ compileJob.attempts }} 次。</p>
+        <div v-else-if="compileJob" class="papers-workspace__compile-status" role="status">
+          <span><strong>{{ compileStateLabel }}</strong> · 版本 {{ compileJob.source_revision }}</span>
+          <span v-if="previewStale" class="papers-workspace__stale">预览为上次成功版本</span>
           <p v-if="compileJob.failure_code">错误代码：{{ compileJob.failure_code }}</p>
           <p v-if="compileJob.cancel_requested && hasActiveCompile">取消请求已提交，等待沙箱安全回收。</p>
           <PButton v-if="canCancelCompile" type="button" size="sm" variant="secondary" :disabled="canceling" @click="cancelCompile">
@@ -59,15 +70,17 @@
           </p>
         </div>
         <div v-else class="papers-workspace__preview-empty">
-          <strong>准备编译</strong>
-          <p>先保存当前源码，再提交项目快照。编译任务将进入持久队列。</p>
+          <strong>准备编译</strong><p>点击编译生成 PDF。</p>
         </div>
         <PaperPDFPreview
-          v-if="compileEnabled && pdfEnabled && compileJob?.status === 'succeeded' && compileJob.pdf_available"
-          :key="projectId + ':' + compileJob.id"
+          v-if="compileEnabled && pdfEnabled && previewJob"
+          ref="pdfRef"
+          :key="projectId"
           :project-id="projectId"
-          :job-id="compileJob.id"
-          :revision="compileJob.source_revision"
+          :job-id="previewJob.id"
+          :revision="previewJob.source_revision"
+          @pdf-position="jumpFromPDF"
+          @displayed-job="displayedPDFJob = $event"
         />
       </aside>
     </div>
@@ -75,14 +88,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
 import LatexEditor from '@/components/papers/LatexEditor.vue'
 import PaperPDFPreview from '@/components/papers/PaperPDFPreview.vue'
+import { decodeSourceMap, sourceToPDF, pdfToSource, type PaperSourceMap } from '@/components/papers/sourceMap'
 import {
   createPaperFile, getPaperFile, getPaperProject, listPaperFiles, savePaperFile, getPaperProjectZIP, downloadPaperZIP,
-  getPaperCompileCapability, getPaperCompileJob, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile,
+  getPaperCompileCapability, getPaperCompileJob, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, getPaperCompileSourceMap,
   type PaperFile, type PaperProject, type PaperCompileJob,
 } from '@/api/papers'
 
@@ -105,6 +119,82 @@ const saveStatus = ref('尚未打开文件')
 const compileEnabled = ref(false)
 const pdfEnabled = ref(false)
 const compileJob = ref<PaperCompileJob | null>(null)
+const previewJob = ref<PaperCompileJob | null>(null)
+const previewStale = computed(() => !!previewJob.value && (previewJob.value.id !== compileJob.value?.id || previewJob.value.source_revision !== project.value?.head_revision || (activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)))
+const editorRef=ref<InstanceType<typeof LatexEditor>|null>(null)
+const pdfRef=ref<InstanceType<typeof PaperPDFPreview>|null>(null)
+const sourceMap=shallowRef<PaperSourceMap|null>(null)
+const mapJob=ref('')
+const displayedPDFJob=ref('')
+const syncMessage=ref('')
+let mapAbort:AbortController|undefined
+let mapSerial=0
+const syncReady=computed(()=>!!sourceMap.value&&!!previewJob.value&&mapJob.value===previewJob.value.id&&displayedPDFJob.value===mapJob.value&&previewJob.value.source_revision===project.value?.head_revision&&draft.value===activeFile.value?.content)
+watch(()=>[projectId.value,previewJob.value?.id] as const,async ([pid,jid])=>{
+ const serial=++mapSerial;mapAbort?.abort();mapAbort=new AbortController()
+ sourceMap.value=null;mapJob.value='';syncMessage.value=''
+ if(!jid)return
+ try{
+  const raw=await getPaperCompileSourceMap(pid,jid,mapAbort.signal)
+  if(serial!==mapSerial||disposed||projectId.value!==pid)return
+  sourceMap.value=decodeSourceMap(raw);mapJob.value=sourceMap.value?jid:''
+ }catch{if(serial===mapSerial&&!disposed)sourceMap.value=null}
+})
+function checkSync(){
+ if(!syncReady.value){syncMessage.value=previewJob.value?.source_revision!==project.value?.head_revision||draft.value!==activeFile.value?.content?'源码已更新，请重新编译后再定位。':'此 PDF 尚无定位数据，请重新编译。';return false}
+ return true
+}
+async function jumpToPDF(){
+ if(!checkSync()||!sourceMap.value||!activeFile.value)return
+ const p=sourceToPDF(sourceMap.value,activeFile.value.path,editorRef.value?.getLine?.()||1, pdfRef.value?.page||1)
+ if(!p){syncMessage.value='当前源码行没有对应的 PDF 内容。';return}
+ if(layoutMode.value==='editor')layoutMode.value='split'
+ await nextTick()
+ if(!await pdfRef.value?.showPosition(p[2],p[3]/10,p[4]/10,mapJob.value)){syncMessage.value='PDF 正在更新，请稍后再定位。';return}
+ syncMessage.value=''
+}
+async function jumpFromPDF(pos:{jobId:string;page:number;x:number;y:number}){
+ if(!checkSync()||!sourceMap.value||pos.jobId!==mapJob.value)return
+ const p=pdfToSource(sourceMap.value,pos.page,pos.x,pos.y)
+ if(!p){syncMessage.value='这个位置没有可定位的源码。';return}
+ const target=files.value.find(f=>f.path===sourceMap.value?.files[p[0]]&&f.kind==='text')
+ if(!target){syncMessage.value='没有找到对应的项目源文件。';return}
+ if(layoutMode.value==='pdf')layoutMode.value='split'
+ await selectFile(target)
+ await nextTick()
+ if(activeFile.value?.id===target.id){editorRef.value?.goToLine?.(p[1]);syncMessage.value=''}
+}
+function jumpToCode(){const pos=pdfRef.value?.currentPosition();if(pos)void jumpFromPDF(pos)}
+
+const workspaceRoot=ref<HTMLElement|null>(null)
+const previewWidth=ref(49)
+const showFiles=ref(true)
+const layoutMode=ref<'split'|'editor'|'pdf'>('split')
+const autoCompile=ref(false)
+let dragging=false
+let autoTimer:ReturnType<typeof setTimeout>|null=null
+let lastAutoCompile=0
+let autoDirty=false
+function beginResize(e:PointerEvent){dragging=true;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);resizeMove(e)}
+function resizeMove(e:PointerEvent){
+ if(!dragging||!workspaceRoot.value)return
+ const r=workspaceRoot.value.getBoundingClientRect()
+ const filesWidth=showFiles.value?(workspaceRoot.value.querySelector('.papers-workspace__files')?.clientWidth||0):0
+ previewWidth.value=Math.max(25,Math.min(75,(r.right-e.clientX)/Math.max(1,r.width-filesWidth)*100))
+}
+function endResize(){dragging=false}
+function clearAuto(){if(autoTimer)clearTimeout(autoTimer);autoTimer=null}
+function scheduleAuto(){
+ clearAuto()
+ if(!autoCompile.value||!autoDirty||!compileEnabled.value||hasActiveCompile.value||compiling.value||disposed)return
+ autoTimer=setTimeout(()=>{
+  if(!autoCompile.value||!autoDirty||hasActiveCompile.value||compiling.value||disposed||document.visibilityState==='hidden')return
+  autoDirty=false;lastAutoCompile=Date.now();void compileNow()
+ },Math.max(15000,60000-(Date.now()-lastAutoCompile)))
+}
+watch(autoCompile,enabled=>{if(enabled){autoDirty=previewStale.value||!previewJob.value;scheduleAuto()}else clearAuto()})
+watch(compileJob,job=>{if(job?.status==='succeeded'&&job.pdf_available)previewJob.value=job})
+
 const compileError = ref('')
 const compiling = ref(false)
 const canceling = ref(false)
@@ -117,6 +207,7 @@ const compileStateLabel = computed(() => {
 })
 const hasActiveCompile = computed(() => !!compileJob.value &&
   ['queued', 'running', 'recovering'].includes(compileJob.value.status))
+watch([hasActiveCompile,compiling],()=>scheduleAuto())
 const canCancelCompile = computed(() => hasActiveCompile.value && !compileJob.value?.cancel_requested)
 let compilePollTimer: ReturnType<typeof setTimeout> | null = null
 let saveTimer: ReturnType<typeof setTimeout> | null = null
@@ -147,6 +238,7 @@ async function loadProject() {
       void listPaperCompileJobs(requestedProjectId).then((history) => {
         if (!disposed && serial === loadSerial && requestedProjectId === projectId.value) {
           compileJob.value = history[0] ?? null
+          previewJob.value = history.find(job => job.status === 'succeeded' && job.pdf_available) ?? null
           scheduleCompilePoll()
         }
       }).catch(() => {})
@@ -167,7 +259,7 @@ function scheduleSave() {
 }
 
 watch(draft, (content) => {
-  if (activeFile.value?.kind === 'text' && content !== activeFile.value.content) scheduleSave()
+  if (activeFile.value?.kind === 'text' && content !== activeFile.value.content) { scheduleSave();autoDirty=true;scheduleAuto() }
 })
 
 async function persist(): Promise<boolean> {
@@ -284,6 +376,7 @@ async function compileNow() {
   if (!compileEnabled.value || compiling.value || hasActiveCompile.value || !project.value || disposed) return
   const requestedProjectId = projectId.value
   compileError.value = ''
+  clearAuto();autoDirty=false;lastAutoCompile=Date.now()
   compiling.value = true
   try {
     // Do not compile an unsaved draft, even if a debounce timer is pending.
@@ -326,7 +419,7 @@ async function cancelCompile() {
 }
 
 function onCompileVisibilityChange() {
-  if (document.visibilityState === 'visible') void refreshCompileStatus()
+  if (document.visibilityState === 'visible') { void refreshCompileStatus();scheduleAuto() }
 }
 
 async function exportProject() {
@@ -361,6 +454,9 @@ watch(projectId, () => {
   fileSerial++
   stopCompilePoll()
   compileJob.value = null
+  previewJob.value = null
+  displayedPDFJob.value='';sourceMap.value=null;mapJob.value='';mapAbort?.abort();mapSerial++;syncMessage.value=''
+  clearAuto();autoDirty=false
   compileEnabled.value = false
   pdfEnabled.value = false
   compileError.value = ''
@@ -373,7 +469,11 @@ watch(projectId, () => {
   void loadProject()
 })
 
+function onShortcut(e:KeyboardEvent){
+ if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();void compileNow()}
+}
 onMounted(() => {
+  window.addEventListener('keydown',onShortcut)
   void loadProject()
   window.addEventListener('beforeunload', beforeUnload)
   document.addEventListener('visibilitychange', onCompileVisibilityChange)
@@ -384,7 +484,10 @@ onBeforeUnmount(() => {
   loadSerial++
   fileSerial++
   if (saveTimer) clearTimeout(saveTimer)
+  clearAuto()
+  mapAbort?.abort();mapSerial++
   window.removeEventListener('beforeunload', beforeUnload)
+  window.removeEventListener('keydown',onShortcut)
   document.removeEventListener('visibilitychange', onCompileVisibilityChange)
   stopCompilePoll()
   if (activeFile.value && draft.value !== activeFile.value.content) void persist()
@@ -392,30 +495,41 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.papers-workspace { height: calc(100vh - 88px); min-height: 590px; display: flex; flex-direction: column; }
-.papers-workspace__header { display:flex; gap:18px; align-items:center; padding:15px 22px; border-bottom:1px solid var(--border,#e1e5ea); }
-.papers-workspace__header a { color:inherit; text-decoration:none; }
-.papers-workspace__header strong { flex:1; }
-.papers-workspace__status { font-size:12px; color:var(--text-secondary,#718096); }
-.papers-workspace__content { display:grid; grid-template-columns: 230px minmax(320px,1fr) minmax(250px, 38%); flex:1; min-height:0; }
-.papers-workspace__files,.papers-workspace__preview { padding:15px; overflow:auto; }
-.papers-workspace__files { border-right:1px solid var(--border,#e1e5ea); }
-.papers-workspace__files-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-.papers-workspace__files-heading h2 { font-weight:650; font-size:14px; }
-.papers-workspace__files button:not(.p-button) { display:block; width:100%; text-align:left; border:0; background:transparent; color:inherit; padding:9px; cursor:pointer; border-radius:7px; word-break:break-all; }
-.papers-workspace__files button.active { background:var(--surface-secondary,#edf1f6); font-weight:650; }
-.papers-workspace__add { margin-top:23px; display:grid; gap:9px; }
-.papers-workspace__add label { font-size:12px; font-weight:650; }
-.papers-workspace__add input { min-width:0; padding:9px; border:1px solid var(--border,#d6dde3); border-radius:7px; background:var(--surface,#fff); color:inherit; }
-.papers-workspace__editor { min-width:0; display:flex; flex-direction:column; overflow:hidden; }
-.papers-workspace__editor-header { padding:9px 16px; border-bottom:1px solid var(--border,#e1e5ea); display:flex; align-items:center; justify-content:space-between; }
-.papers-workspace__editor :deep(.papers-latex-editor) { flex:1; }
-.papers-workspace__preview { border-left:1px solid var(--border,#e1e5ea); }
-.papers-workspace__preview-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; font-weight:650; padding-bottom:14px; }
-.papers-workspace__preview-empty { padding:24px 14px; text-align:center; border:1px dashed var(--border,#ccd1d8); border-radius:10px; }
-.papers-workspace__preview-empty p,.papers-workspace__message { color:var(--text-secondary,#718096); }
-.papers-workspace__error { color:#b91c1c; padding:12px; }
-@media (max-width: 960px) { .papers-workspace { height:auto; min-height:calc(100vh - 88px); } .papers-workspace__content { grid-template-columns:160px minmax(0,1fr); min-height:650px; } .papers-workspace__preview { grid-column:1/-1; border-left:0; border-top:1px solid var(--border,#e1e5ea); } }
-@media (max-width: 600px) { .papers-workspace__content { display:flex; flex-direction:column; } .papers-workspace__files { max-height:200px; border-right:0; border-bottom:1px solid var(--border,#e1e5ea); } .papers-workspace__editor { min-height:460px; } }
-.papers-workspace__asset-label {font-size:.7rem;opacity:.65;margin-left:6px}
+.papers-workspace{height:calc(100dvh - 64px - var(--a-content-bottom-offset,0px));min-height:440px;display:flex;flex-direction:column;overflow:hidden;color:var(--a-color-text,#20242c)}
+.papers-workspace__header{display:flex;gap:12px;align-items:center;padding:8px 14px;flex-shrink:0;border-bottom:1px solid var(--a-color-border-soft,#e0e4ea);min-height:44px}
+.papers-workspace__header a{color:inherit;text-decoration:none;white-space:nowrap;font-size:12px}
+.papers-workspace__header strong{flex:1;min-width:40px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.papers-workspace__status{font-size:12px;color:var(--a-color-text-secondary,#64748b);white-space:nowrap}
+.papers-workspace__layout-tools{display:flex;gap:3px;align-items:center}
+.papers-workspace__layout-tools button{border:1px solid var(--a-color-border-soft,#dce1e7);border-radius:4px;padding:4px 7px;background:transparent;color:inherit;font-size:12px;cursor:pointer;white-space:nowrap}
+.papers-workspace__layout-tools button[aria-pressed=true]{background:var(--a-color-bg-subtle,#e7edf3);font-weight:600}
+.papers-workspace__content{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}
+.papers-workspace__files{width:196px;flex-shrink:0;min-height:0;overflow:auto;padding:10px 8px;border-right:1px solid var(--a-color-border-soft,#e0e4ea)}
+.papers-workspace__files-heading{display:flex;justify-content:space-between;align-items:center;margin:4px 6px 10px}
+.papers-workspace__files-heading h2{font-weight:650;font-size:13px;margin:0}
+.papers-workspace__files button:not(.p-button){display:block;width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:7px 6px;cursor:pointer;border-radius:4px;overflow-wrap:anywhere;font-size:12px;line-height:1.4}
+.papers-workspace__files button.active{background:var(--a-color-bg-subtle,#e7edf3);font-weight:650}
+.papers-workspace__add{margin-top:18px;display:grid;gap:6px}
+.papers-workspace__add label{font-size:12px;font-weight:600}
+.papers-workspace__add input{min-width:0;padding:6px;border:1px solid var(--a-color-border-soft,#d6dde3);border-radius:5px;background:var(--a-color-bg,#fff);color:inherit;font-size:12px}
+.papers-workspace__editor{min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden;flex:1}
+.papers-workspace__editor-header{min-height:42px;box-sizing:border-box;flex-shrink:0;padding:6px 10px;border-bottom:1px solid var(--a-color-border-soft,#e0e4ea);display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px}
+.papers-workspace__editor-header span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.papers-workspace__editor :deep(.papers-latex-editor){flex:1;min-height:0;height:auto}
+.papers-workspace__divider{width:8px;flex-shrink:0;background:var(--a-color-bg-subtle,#e5e9ee);border-left:1px solid var(--a-color-border-soft,#d0d6de);border-right:1px solid var(--a-color-border-soft,#d0d6de);cursor:col-resize;touch-action:none;position:relative}
+.papers-workspace__divider:after{content:'';position:absolute;left:2px;top:calc(50% - 18px);width:2px;height:36px;border-radius:3px;background:#9ba6b5}
+.papers-workspace__preview{flex:0 0 var(--preview-width);min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.papers-workspace__preview-heading{min-height:42px;flex-shrink:0;padding:5px 10px;display:flex;align-items:center;gap:9px;justify-content:space-between;font-size:13px;border-bottom:1px solid var(--a-color-border-soft,#e0e4ea)}
+.papers-workspace__auto{display:flex;align-items:center;gap:4px;font-weight:400;font-size:12px;margin-left:auto;white-space:nowrap}
+.papers-workspace__preview-empty{padding:24px 12px;text-align:center;font-size:13px;color:var(--a-color-text-secondary,#64748b)}
+.papers-workspace__compile-status{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:5px 10px;font-size:12px;flex-shrink:0;border-bottom:1px solid var(--a-color-border-soft,#e0e4ea);color:var(--a-color-text-secondary,#64748b)}
+.papers-workspace__compile-status p{margin:0;overflow-wrap:anywhere}.papers-workspace__stale{color:#96620a}
+.papers-workspace__message{padding:12px;font-size:13px;color:var(--a-color-text-secondary,#64748b)}
+.papers-workspace__error{color:#b91c1c;padding:6px 10px;font-size:12px;margin:0}
+.papers-workspace__asset-label{font-size:10px;opacity:.65;margin-left:6px}
+.files-hidden .papers-workspace__files,.pdf-only .papers-workspace__files,.pdf-only .papers-workspace__editor,.editor-only .papers-workspace__preview{display:none}
+.pdf-only .papers-workspace__preview{flex:1}
+@media(max-width:1000px){.papers-workspace__files{width:155px}.papers-workspace__header{gap:7px}.papers-workspace__header strong{min-width:60px}}
+@media(max-width:700px){.papers-workspace{height:calc(100dvh - 56px);min-height:320px}.papers-workspace__header{flex-wrap:wrap}.papers-workspace__header strong{min-width:80px}.papers-workspace__files{width:115px}.papers-workspace__auto{font-size:11px}.papers-workspace__preview-heading{flex-wrap:wrap}.papers-workspace__content:not(.editor-only):not(.pdf-only) .papers-workspace__files{display:none}.papers-workspace__content:not(.editor-only):not(.pdf-only) .papers-workspace__editor{min-width:0}.papers-workspace__preview{flex-basis:var(--preview-width)}}
+.papers-workspace__sync{font-size:11px;white-space:nowrap;background:transparent;color:var(--a-color-primary,#26784b);border:1px solid var(--a-color-border-soft,#d7dde4);border-radius:4px;padding:4px 7px;cursor:pointer}.papers-workspace__sync:disabled{opacity:.4;cursor:default}.papers-workspace__sync-message{font-size:12px;padding:5px 10px;margin:0;color:var(--a-color-text-secondary,#64748b);flex-shrink:0}
 </style>

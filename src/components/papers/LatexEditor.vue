@@ -9,7 +9,7 @@ import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } f
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 
 const props = defineProps<{ modelValue: string; readonly?: boolean }>()
-const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: string]; 'show-pdf': []; 'cursor-line': [line:number] }>()
 const editorRoot = ref<HTMLElement | null>(null)
 let editor: EditorView | null = null
 let applyingExternalValue = false
@@ -25,11 +25,12 @@ onMounted(() => {
         highlightActiveLine(),
         drawSelection(),
         history(),
-        keymap.of([...defaultKeymap, ...historyKeymap]),
+        keymap.of([{key:'Mod-Shift-j',run:()=>{emit('show-pdf');return true}}, ...defaultKeymap, ...historyKeymap]),
         EditorView.lineWrapping,
         EditorState.readOnly.of(Boolean(props.readonly)),
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !applyingExternalValue) emit('update:modelValue', update.state.doc.toString())
+          if(update.selectionSet||update.docChanged)emit('cursor-line',update.state.doc.lineAt(update.state.selection.main.head).number)
         }),
       ],
     }),
@@ -46,6 +47,15 @@ watch(() => props.modelValue, (next) => {
   }
 })
 
+function getLine(){return editor?editor.state.doc.lineAt(editor.state.selection.main.head).number:1}
+function goToLine(number:number){
+ if(!editor)return
+ const line=editor.state.doc.line(Math.max(1,Math.min(editor.state.doc.lines,Math.trunc(number)||1)))
+ editor.dispatch({selection:{anchor:line.from,head:line.to},effects:EditorView.scrollIntoView(line.from,{y:'center'})})
+ editor.focus()
+}
+defineExpose({getLine,goToLine})
+
 onBeforeUnmount(() => {
   editor?.destroy()
   editor = null
@@ -53,8 +63,8 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.papers-latex-editor { min-height: 460px; height: 100%; overflow: hidden; background: var(--surface, #fff); }
-.papers-latex-editor :deep(.cm-editor) { height: 100%; min-height: 460px; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 13px; line-height: 1.65; }
+.papers-latex-editor { min-height: 0; height: 100%; overflow: hidden; background: var(--surface, #fff); }
+.papers-latex-editor :deep(.cm-editor) { height: 100%; min-height: 0; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 13px; line-height: 1.65; }
 .papers-latex-editor :deep(.cm-scroller) { overflow: auto; }
 .papers-latex-editor :deep(.cm-gutters) { border-right: 1px solid var(--border, #e5e7eb); }
 .papers-latex-editor :deep(.cm-focused) { outline: none; }

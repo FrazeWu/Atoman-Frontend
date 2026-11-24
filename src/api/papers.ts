@@ -127,6 +127,26 @@ export async function getPaperCompilePDF(projectId: string, jobId: string, signa
   return blob
 }
 
+// The mapping belongs to this exact successful compilation, not the
+// current mutable editor contents. Never request host paths or raw SyncTeX.
+export async function getPaperCompileSourceMap(projectId:string, jobId:string, signal?:AbortSignal):Promise<unknown>{
+ const response=await apiRequest(`${useApiUrl()}/papers${compilePrefix(projectId)}/${encodeURIComponent(jobId)}/source-map`,{cache:'no-store',signal,credentials:'include'})
+ if(response.status===404)return null
+ if(!response.ok||!response.body)throw new Error('无法获取源码定位数据')
+ const limit=384*1024
+ if(Number(response.headers.get('content-length')||0)>limit)throw new Error('源码定位数据过大')
+ const reader=response.body.getReader();let bytes=0;const chunks:Uint8Array<ArrayBuffer>[]=[]
+ try{
+  for(;;){
+   const next=await reader.read();if(next.done)break
+   bytes+=next.value.byteLength
+   if(bytes>limit){await reader.cancel();throw new Error('源码定位数据过大')}
+   chunks.push(new Uint8Array(next.value))
+  }
+ }finally{reader.releaseLock()}
+ return JSON.parse(await new Blob(chunks).text())
+}
+
 export interface PaperApplication {
   id: string
   user_id: string

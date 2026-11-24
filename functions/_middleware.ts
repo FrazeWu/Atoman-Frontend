@@ -1,6 +1,6 @@
 import { buildStaticPageHtml, isKnownPagePath } from "./_lib/pageSeo";
 import { createSeoApiFetcher, type SeoOriginBinding } from "./_lib/seoOriginFetcher";
-import { cachedPublicSeoHtml, canStorePublicSeoHtml, publicSeoHtmlKey,
+import { cachedPublicSeoHtml, canStorePublicSeoHtml, publicSeoHtmlKeyForShell,
   queuePublicSeoHtml, runtimeSeoHtmlCache } from "./_lib/publicSeoHtmlEdgeCache";
 import { injectPublicSectionListing, loadPublicSectionListingResult } from "./_lib/sectionContentSeo";
 import {
@@ -124,24 +124,34 @@ export async function onRequest(context: MiddlewareContext) {
 	const redirect = redirectLegacyRoute(context.request);
 	if (redirect) return redirect;
 
-	const htmlCacheKey = publicSeoHtmlKey(context.request);
-	const htmlCache = htmlCacheKey ? runtimeSeoHtmlCache() : undefined;
-	if (htmlCacheKey) {
-		const cached = await cachedPublicSeoHtml(htmlCacheKey, htmlCache);
-		if (cached) return cached;
-	}
+	// Read this deployment's actual shell before consulting the HTML cache.
 	const assetKey = archivedAssetKey(context.request);
 	const response = await context.next();
 	const contentType = response.headers.get("content-type") || "";
-	if (assetKey && contentType.includes("text/html")) {
+	if (assetKey && (response.status === 404 || (response.status === 200 && contentType.includes("text/html")))) {
 		const archivedAsset = await serveArchivedAsset(context, assetKey);
 		if (archivedAsset) return archivedAsset;
+		// Missing assets are not SPA documents. Never cache a fallback HTML
+		// body for a hashed JS/CSS filename or an asset restored later.
+		return new Response(context.request.method === "HEAD" ? null : "Asset not found", {
+			status: 404,
+			headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" },
+		});
 	}
 	if (!contentType.includes("text/html")) return response;
 
 	try {
 		const requestUrl = new URL(context.request.url);
 		const html = await response.clone().text();
+		const isPreview = requestUrl.hostname.endsWith(".pages.dev");
+		const htmlCacheKey = canStorePublicSeoHtml(response, isPreview, true)
+			? await publicSeoHtmlKeyForShell(context.request, html)
+			: undefined;
+		const htmlCache = htmlCacheKey ? runtimeSeoHtmlCache() : undefined;
+		if (htmlCacheKey) {
+			const cached = await cachedPublicSeoHtml(htmlCacheKey, htmlCache);
+			if (cached) return cached;
+		}
 		const seoFetcher = createSeoApiFetcher(context.env?.SEO_ORIGIN);
 		const staticHtml = buildStaticPageHtml(
 			html,
@@ -197,6 +207,9 @@ export async function onRequest(context: MiddlewareContext) {
 		const headers = new Headers(response.headers);
 		headers.delete("content-length");
 		headers.delete("content-encoding");
+		// Static shell validators do not describe the transformed public page.
+		headers.delete("etag");
+		headers.delete("last-modified");
 		if (missingSeoPage) {
 			headers.set("cache-control", "no-store");
 			headers.set("x-robots-tag", "noindex, nofollow");

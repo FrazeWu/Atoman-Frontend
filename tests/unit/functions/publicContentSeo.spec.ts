@@ -414,6 +414,14 @@ describe("public content SEO", () => {
 		const collectionHtml = buildPublicContentHtml(shell, collectionPage.content!);
 		expect(collectionHtml).toContain('href="/videos/watch/01a02565-0cc9-7ba7-93e0-c4b698b30974"');
 		expect(collectionHtml).toContain("合集视频");
+		expect(collectionPage.content?.structuredData).toMatchObject({
+			"@type": "CollectionPage",
+			mainEntity: { "@type": "ItemList", numberOfItems: 1, itemListElement: [
+				{ "@type": "ListItem", position: 1, name: "视频作品", url: "https://www.atoman.org/videos/watch/01a02565-0cc9-7ba7-93e0-c4b698b30974" },
+			] },
+		});
+		expect(collectionHtml).not.toContain('"@type":"VideoObject"');
+		expect(collectionPage.content?.structuredData).not.toHaveProperty("hasPart");
 	});
 
 	it("marks aggregated feed item pages as noindex without a homepage canonical", () => {
@@ -458,6 +466,24 @@ describe("public content SEO", () => {
 		expect(response.status).toBe(404);
 		expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
 		expect(response.headers.get("cache-control")).toBe("no-store");
+	});
+
+	it("treats HTML or malformed JSON errors from the origin as retryable rather than missing content", async () => {
+		const request = new Request("https://www.atoman.org/music/song/01a01fed-ab42-7698-a02a-7ac4f3257f62");
+		for (const failure of [
+			() => new Response("<html>Temporary proxy error</html>", { status: 404, headers: { "content-type": "text/html" } }),
+			() => new Response("<html>Temporary proxy error</html>", { status: 404, headers: { "content-type": "application/json" } }),
+			() => new Response("Proxy bad request", { status: 400, headers: { "content-type": "text/plain" } }),
+		]) {
+			const response = await pageMiddleware({
+				request,
+				env: { SEO_ORIGIN: { fetch: async () => failure() } },
+				next: async () => new Response(shell, { headers: { "content-type": "text/html" } }),
+			});
+			expect(response.status).toBe(503);
+			expect(response.headers.get("retry-after")).toBe("60");
+			expect(response.headers.get("x-robots-tag")).toBeNull();
+		}
 	});
 
 	it("does not noindex a valid route when its SEO source fails temporarily", async () => {

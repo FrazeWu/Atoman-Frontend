@@ -142,7 +142,15 @@ async function getJson(url: string, fetcher: Fetcher): Promise<JsonValue> {
 		},
 		signal: typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(7000) : undefined,
 	});
-	if (response.status === 404 || response.status === 400) return null;
+	// A genuine catalogue miss is a JSON API response. An HTML/proxy error
+	// must not cause an otherwise public page to be de-indexed.
+	if (response.status === 404 || response.status === 400) {
+		if (!/\b(?:application\/json|application\/[\w.+-]+\+json)\b/i.test(response.headers.get("content-type") || "")) {
+			throw new Error("Non-JSON public SEO error");
+		}
+		await response.json();
+		return null;
+	}
 	if (!response.ok)
 		throw new Error(`Public SEO source returned ${response.status}`);
 	return unwrap(parseJsonValue(await response.json()));
@@ -725,6 +733,16 @@ async function loadVideoCollection(
 		collection.description,
 		`浏览视频合集“${name}”。`,
 	);
+	// A collection is a catalogue, not the primary watch page for its
+	// members. Describe the actual public links without inventing video
+	// thumbnails or upload dates required by Google's VideoObject feature.
+	const members = videos
+		.filter((video) => uuidPattern.test(text(video.id)) && text(video.title))
+		.slice(0, 100)
+		.map((video) => ({
+			href: canonicalOrigin + "/videos/watch/" + encodeURIComponent(text(video.id)),
+			label: text(video.title),
+		}));
 	return content(
 		`/videos/collections/${encodeURIComponent(id)}`,
 		`${name} | 视频合集 | Atoman`,
@@ -733,19 +751,20 @@ async function loadVideoCollection(
 			"@type": "CollectionPage",
 			name,
 			description,
-			hasPart: videos.map((video) => ({
-				"@type": "VideoObject",
-				name: text(video.title),
-				url: `${canonicalOrigin}/videos/watch/${encodeURIComponent(text(video.id))}`,
-			})),
+			mainEntity: {
+				"@type": "ItemList",
+				numberOfItems: members.length,
+				itemListElement: members.map(({ href, label }, index) => ({
+					"@type": "ListItem",
+					position: index + 1,
+					name: label,
+					url: href,
+				})),
+			},
 		},
 		text(collection.cover_url) || text(videos[0].thumbnail_url) || undefined,
 		date(collection.updated_at),
-		videos.filter((video) => /^[a-zA-Z0-9_-]{1,100}$/.test(text(video.id)) && text(video.title))
-			.slice(0, 100).map((video) => ({
-				href: canonicalOrigin + "/videos/watch/" + encodeURIComponent(text(video.id)),
-				label: text(video.title),
-			})),
+		members,
 	);
 }
 

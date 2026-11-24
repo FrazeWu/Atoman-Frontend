@@ -17,6 +17,7 @@ export const ATOMAN_SPACES: SpaceDefinition[] = [
   { key: 'books', name: '阅读', icon: 'books', badge: 'EPUB', path: '/books' },
   { key: 'blog', name: '博客', icon: 'blog', path: '/posts' },
   { key: 'debate', name: '辩论', icon: 'debate', path: '/debate' },
+  { key: 'papers', name: '论文', icon: 'file-text', path: '/papers' },
   { key: 'messages', name: '消息', icon: 'messages', path: '/inbox' },
   { key: 'studio', name: 'Studio', icon: 'studio', path: '/studio' },
 ]
@@ -32,6 +33,7 @@ export const SPACE_LABELS: Record<string, string> = {
   books: '阅读',
   blog: '博客',
   debate: '辩论',
+  papers: '论文',
   messages: '消息',
   studio: 'Studio',
   me: '个人中心',
@@ -48,6 +50,7 @@ export const SPACE_PATHS: Record<string, string> = {
   books: '/books',
   blog: '/posts',
   debate: '/debate',
+  papers: '/papers',
   messages: '/inbox',
   studio: '/studio',
 }

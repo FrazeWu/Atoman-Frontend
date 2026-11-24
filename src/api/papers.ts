@@ -17,6 +17,7 @@ export interface PaperFile {
   content: string
   sha256: string
   revision: number
+  project_head_revision?: number
   created_at: string
   updated_at: string
 }
@@ -57,6 +58,13 @@ export interface PaperCompileCapability {
 export type PaperCompileStatus =
   | 'queued' | 'running' | 'recovering' | 'succeeded' | 'failed' | 'canceled' | 'blocked'
 
+export interface PaperCompileDiagnostic {
+  tool: 'latex' | 'bibtex'
+  message: string
+  file?: string
+  line?: number
+}
+
 export interface PaperCompileJob {
   id: string
   project_id: string
@@ -67,6 +75,7 @@ export interface PaperCompileJob {
   cancel_requested: boolean
   pdf_available?: boolean
   failure_code?: string
+  diagnostics?: PaperCompileDiagnostic[]
   created_at: string
   started_at?: string
   finished_at?: string

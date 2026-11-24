@@ -99,6 +99,16 @@ export const mobileRoutes: RouteRecordRaw[] = [
 		path: "/studio/editor/:id",
 		redirect: (to) => `/studio/blog/${String(to.params.id)}/edit`,
 	},
+    {
+        path: "/papers",
+        component: () => import("@/views/papers/PapersHomeView.vue"),
+        meta: requiresAuth,
+    },
+    {
+        path: "/papers/:projectId",
+        component: () => import("@/views/papers/PaperWorkspaceView.vue"),
+        meta: { requiresAuth: true, papersWorkspace: true },
+    },
 	{
 		path: "/books",
 		component: () => import("./views/books/BooksDiscoverView.vue"),

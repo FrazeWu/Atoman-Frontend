@@ -81,6 +81,7 @@ import PButton from '@/components/ui/PButton.vue'
 import { paperAccess, listPaperProjects, createPaperProject, getPaperApplication, submitPaperApplication, importPaperProject, getPaperProjectZIP, downloadPaperZIP, paperImportZIPLimit, type PaperProject, type PaperApplication } from '@/api/papers'
 import { packPaperFolder, suggestPaperProjectName, unsupportedPaperFolderFiles, paperArchiveExclusion } from '@/components/papers/projectArchive'
 
+defineOptions({name:'PapersHomeView'})
 const router = useRouter()
 const loading = ref(true)
 const allowed = ref(false)

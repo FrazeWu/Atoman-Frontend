@@ -64,6 +64,7 @@ describe("useResponsiveShell", () => {
 			"timeline",
 			"podcast",
 			"video",
+            "papers",
 		]);
 	});
 

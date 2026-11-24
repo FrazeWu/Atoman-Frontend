@@ -24,11 +24,11 @@
     />
     <main
       class="app-main mobile-app-main"
-      :class="{ 'app-main--auth': isAuthRoute, 'mobile-app-main--no-bottom-nav': !showMobileBottomNav, 'mobile-app-main--with-player': showMobilePlayer }"
+      :class="{ 'app-main--auth': isAuthRoute, 'mobile-app-main--no-bottom-nav': !showMobileBottomNav, 'mobile-app-main--with-player': showMobilePlayer, 'mobile-app-main--papers-workspace': isPapersWorkspace }"
     >
       <RouterView v-slot="{ Component, route: viewRoute }">
         <Transition :name="mobileRouteTransition">
-          <KeepAlive :key="authStore.user?.uuid || 'guest'" :max="6">
+          <KeepAlive :key="authStore.user?.uuid || 'guest'" :max="6" :exclude="['PaperWorkspaceView', 'PapersHomeView']">
             <component :is="Component" :key="viewRoute.meta.mobileModule || /^\/(feed|music|studio)(\/|$)/.test(viewRoute.path) ? viewRoute.matched[0]?.path : viewRoute.path" />
           </KeepAlive>
         </Transition>
@@ -156,12 +156,14 @@ const subRouteTitle = computed(() => {
 })
 
 const isDetailRoute = computed(() => isMobileDetailRoute(route.path))
+const isPapersWorkspace=computed(()=>route.meta.papersWorkspace===true)
 
 const isFullscreenPlayerRoute = computed(() => (
   route.path === '/music/player' || route.path === '/music/lyrics'
 ))
 
 const showMobileTopbar = computed(() => {
+  if(isPapersWorkspace.value)return false
   if (route.path === '/feed' && typeof route.query.source_id === 'string') return false
   if (isFullscreenPlayerRoute.value) return false
   if (/^\/books\/(?:read|public-read)\//.test(route.path)) return false
@@ -176,6 +178,7 @@ const showMobileTopbar = computed(() => {
 })
 
 const showMobileBottomNav = computed(() => {
+  if(isPapersWorkspace.value)return false
   const p = (route.path || '/').replace(/\/$/, '') || '/'
   if (p === '/music/lyrics') return false
   if (/^\/music(\/|$)/.test(p)) return true
@@ -434,6 +437,12 @@ html.dark .mobile-app-shell {
 
 .mobile-app-main--no-bottom-nav.mobile-app-main--with-player {
   padding-bottom: calc(var(--mobile-app-player-height, 64px) + env(safe-area-inset-bottom, 0px));
+}
+
+.mobile-app-main--papers-workspace {
+  padding-top:env(safe-area-inset-top,0px);
+  --a-topbar-height:env(safe-area-inset-top,0px);
+  --a-content-bottom-offset:calc(env(safe-area-inset-bottom,0px) + var(--mobile-app-player-reserved-height,0px));
 }
 
 .mobile-app-shell--with-player {

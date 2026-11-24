@@ -84,10 +84,10 @@ describe('Mobile Navigation Shell', () => {
 
       expect(wrapper.find('[data-testid="drawer-backdrop"]').exists()).toBe(true)
       const items = wrapper.findAll('[data-testid="space-item"]')
-      expect(items).toHaveLength(12)
+      expect(items).toHaveLength(13)
 
       const keys = items.map((el) => el.attributes('data-space-key'))
-      expect(keys).toEqual(['global', 'feed', 'music', 'podcast', 'video', 'forum', 'timeline', 'books', 'blog', 'debate', 'messages', 'studio'])
+      expect(keys).toEqual(['global', 'feed', 'music', 'podcast', 'video', 'forum', 'timeline', 'books', 'blog', 'debate', 'papers', 'messages', 'studio'])
     })
 
     it('does not render content or drawer when open is false', () => {

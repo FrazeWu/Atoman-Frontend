@@ -1,4 +1,5 @@
 const mobileDetailPatterns = [
+  /^\/papers\/[^/]+(?:\/|$)/,
   /^\/feed\/(?:article|item)\//,
   /^\/(?:post|posts\/(?:post|notes|channel)|channel|channels|collection|users)\//,
   /^\/music\/(?:tags|artist|album|song|playlist)\//,

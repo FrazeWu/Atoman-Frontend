@@ -139,6 +139,7 @@ const MORE_ITEMS: MobileMoreItem[] = [
 		icon: Podcast,
 	},
 	{ module: "video", label: "视频", href: moduleUrl("video"), icon: Video },
+	{ module: "papers", label: "论文", href: moduleUrl("papers"), icon: FileText },
 ];
 
 export const getMobilePrimaryTabs = (

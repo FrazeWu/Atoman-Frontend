@@ -2,8 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
 import { defineComponent, h, nextTick } from 'vue'
+import LatexEditor from "@/components/papers/LatexEditor.vue"
 import PaperWorkspaceView from '@/views/papers/PaperWorkspaceView.vue'
-import { getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile } from '@/api/papers'
+import { savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile } from '@/api/papers'
 
 vi.mock('@/api/papers', () => ({
   getPaperProject: vi.fn(),
@@ -20,8 +21,9 @@ vi.mock('@/api/papers', () => ({
   getPaperCompileSourceMap: vi.fn().mockResolvedValue(null),
   cancelPaperCompile: vi.fn(),
 }))
+const jumpLine=vi.hoisted(()=>vi.fn())
 vi.mock('@/components/papers/LatexEditor.vue', () => ({
-  default: { props: ['modelValue'], template: '<pre data-test="editor">{{ modelValue }}</pre>' },
+  default: { props: ['modelValue','readonly'], emits:['update:modelValue','show-pdf'], methods:{goToLine:jumpLine,getLine:()=>1}, template: '<pre data-test="editor" :data-readonly="String(readonly)">{{ modelValue }}</pre>' },
 }))
 
 vi.mock('@/components/papers/PaperPDFPreview.vue', () => ({
@@ -175,4 +177,99 @@ describe('Verified PDF result preview', () => {
       wrapper.unmount()
     }
   })
+})
+
+describe('Papers save and transition regression',()=>{
+ const chapter={...f2,id:'chapter',path:'chapters/intro.tex',content:'Chapter original'}
+ const appendix={...f2,id:'appendix',path:'appendix.tex',content:'Appendix original'}
+ async function open(){
+   vi.mocked(getPaperProject).mockImplementation(async()=>({...two}) as never)
+   vi.mocked(listPaperFiles).mockResolvedValue([f2,chapter,appendix] as never)
+   vi.mocked(getPaperFile).mockImplementation(async(_pid,id)=>({...([f2,chapter,appendix].find(f=>f.id===id)||f2)}) as never)
+   const router=createRouter({history:createMemoryHistory(),routes:[{path:'/papers/:projectId',component:PaperWorkspaceView},{path:'/papers',component:{template:'<div>Project list</div>'}}]})
+   await router.push('/papers/two');await router.isReady()
+   const wrapper=mount(defineComponent({render:()=>h(RouterView)}),{global:{plugins:[router]}})
+   await flushPromises()
+   return {wrapper,router}
+ }
+ it('drains both edits before switching, with one in-flight save and the latest file choice',async()=>{
+  let resolveFirst:(value:unknown)=>void=()=>{}
+  let resolveSecond:(value:unknown)=>void=()=>{}
+  vi.mocked(savePaperFile).mockImplementationOnce(()=>new Promise(resolve=>{resolveFirst=resolve as never})).mockImplementationOnce(()=>new Promise(resolve=>{resolveSecond=resolve as never}))
+  const {wrapper}=await open()
+  try{
+   wrapper.findComponent(LatexEditor).vm.$emit('update:modelValue','First edit')
+   await nextTick()
+   await wrapper.findAll('button').find(b=>b.text()==='保存')!.trigger('click')
+   expect(savePaperFile).toHaveBeenNthCalledWith(1,'two','f2','First edit',1)
+   wrapper.findComponent(LatexEditor).vm.$emit('update:modelValue','Latest edit')
+   await nextTick()
+   await wrapper.findAll('button').find(b=>b.text()==='chapters/intro.tex')!.trigger('click')
+   await wrapper.findAll('button').find(b=>b.text()==='appendix.tex')!.trigger('click')
+   await flushPromises()
+   expect(wrapper.find('[data-test="editor"]').text()).toBe('Latest edit')
+   expect(wrapper.find('[data-test="editor"]').attributes('data-readonly')).toBe('true')
+   expect(savePaperFile).toHaveBeenCalledTimes(1)
+   resolveFirst({...f2,content:'First edit',revision:2,project_head_revision:2})
+   await flushPromises()
+   expect(savePaperFile).toHaveBeenNthCalledWith(2,'two','f2','Latest edit',2)
+   expect(wrapper.find('[data-test="editor"]').text()).toBe('Latest edit')
+   resolveSecond({...f2,content:'Latest edit',revision:3,project_head_revision:3})
+   await flushPromises()
+   expect(wrapper.find('[data-test="editor"]').text()).toBe('Appendix original')
+   expect(wrapper.find('[data-test="editor"]').attributes('data-readonly')).toBe('false')
+   expect(savePaperFile).toHaveBeenCalledTimes(2)
+   expect(getPaperFile).not.toHaveBeenCalledWith('two','chapter')
+  }finally{wrapper.unmount()}
+ })
+ it('keeps the local draft and refuses route exit when saving fails',async()=>{
+  vi.mocked(savePaperFile).mockRejectedValueOnce(new Error('network'))
+  const {wrapper,router}=await open()
+  try{
+   wrapper.findComponent(LatexEditor).vm.$emit('update:modelValue','Unsaved text')
+   await nextTick()
+   await router.push('/papers')
+   await flushPromises()
+   expect(router.currentRoute.value.path).toBe('/papers/two')
+   expect(wrapper.find('[data-test="editor"]').text()).toBe('Unsaved text')
+   expect(wrapper.text()).toContain('当前输入已保留')
+   expect(wrapper.find('[data-test="editor"]').attributes('data-readonly')).toBe('false')
+   vi.mocked(savePaperFile).mockResolvedValueOnce({...f2,content:'Unsaved text',revision:2,project_head_revision:2} as never)
+   await router.push('/papers')
+   await flushPromises()
+   expect(router.currentRoute.value.path).toBe('/papers')
+  }finally{wrapper.unmount()}
+ })
+ it('places running status and cancellation inside the central PDF toolbar',async()=>{
+  vi.mocked(getPaperCompileCapability).mockResolvedValue({enabled:true,pdf_available:true})
+  vi.mocked(listPaperCompileJobs).mockResolvedValue([
+   {id:'running',project_id:'two',source_revision:1,status:'running',attempts:1,max_attempts:2,cancel_requested:false},
+   {id:'old',project_id:'two',source_revision:1,status:'succeeded',pdf_available:true,attempts:1,max_attempts:2,cancel_requested:false}
+  ] as never)
+  const {wrapper}=await open()
+  try{
+   const toolbar=wrapper.find('.papers-workspace__preview-heading')
+   expect(toolbar.find('.papers-workspace__compile-status').text()).toContain('编译中')
+   expect(toolbar.find('.papers-workspace__compile-status').text()).toContain('预览为上次成功版本')
+   expect(toolbar.find('.papers-workspace__compile-status').text()).toContain('取消任务')
+  }finally{wrapper.unmount()}
+ })
+ it('navigates a diagnostic to its exact file and line and disables stale locations',async()=>{
+  vi.mocked(getPaperCompileCapability).mockResolvedValue({enabled:true,pdf_available:true})
+  vi.mocked(listPaperCompileJobs).mockResolvedValue([{
+   id:'failed',project_id:'two',source_revision:1,status:'failed',failure_code:'compile_failed',attempts:1,max_attempts:2,cancel_requested:false,
+   diagnostics:[{tool:'latex',file:'chapters/intro.tex',line:2,message:'Undefined control sequence.'}]
+  }] as never)
+  const {wrapper}=await open()
+  try{
+   expect(wrapper.text()).toContain('Undefined control sequence.')
+   await wrapper.find('.papers-workspace__diagnostic-location').trigger('click')
+   await flushPromises()
+   expect(wrapper.find('[data-test="editor"]').text()).toBe('Chapter original')
+   expect(jumpLine).toHaveBeenCalledWith(2)
+   wrapper.findComponent(LatexEditor).vm.$emit('update:modelValue','Changed source')
+   await nextTick()
+   expect(wrapper.find('.papers-workspace__diagnostic-location').attributes('disabled')).toBeDefined()
+  }finally{wrapper.unmount()}
+ })
 })

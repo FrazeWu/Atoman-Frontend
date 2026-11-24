@@ -15,6 +15,8 @@ describe('mobile module navigation ownership', () => {
     ['/posts/articles', 'blog'],
     ['/post/real-post', 'blog'],
     ['/books/work/uuid', 'books'],
+    ['/papers','papers'],
+    ['/papers/project-id','papers'],
     ['/inbox/notifications', 'messages'],
     ['/studio', 'studio'],
     ['/debate', 'debate'],

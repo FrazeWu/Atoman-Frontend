@@ -4,6 +4,8 @@ import { isMobileDetailRoute } from '../../../apps/mobile/mobileRouteMeta'
 describe('mobile detail route metadata', () => {
   it('identifies content detail and immersive routes', () => {
     expect(isMobileDetailRoute('/feed/item/123')).toBe(true)
+    expect(isMobileDetailRoute('/papers/project-id')).toBe(true)
+    expect(isMobileDetailRoute('/papers')).toBe(false)
     expect(isMobileDetailRoute('/posts/post/123')).toBe(true)
     expect(isMobileDetailRoute('/music/album/123')).toBe(true)
     expect(isMobileDetailRoute('/music/player')).toBe(true)

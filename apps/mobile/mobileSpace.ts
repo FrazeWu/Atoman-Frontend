@@ -6,6 +6,7 @@ const spaceRoutes: Array<[RegExp, MobileSpace]> = [
   [/^\/music(?:\/|$)/, 'music'],
   [/^\/feed(?:\/|$)/, 'feed'],
   [/^\/books(?:\/|$)/, 'books'],
+  [/^\/papers(?:\/|$)/, 'papers'],
   [/^\/(?:posts|post|channel|channels|collection|users)(?:\/|$)/, 'blog'],
   [/^\/debate(?:\/|$)/, 'debate'],
   [/^\/(?:inbox|messages|notifications)(?:\/|$)/, 'messages'],

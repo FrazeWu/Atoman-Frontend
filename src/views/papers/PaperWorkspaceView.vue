@@ -1,5 +1,5 @@
 <template>
-  <main class="papers-workspace">
+  <main class="papers-workspace" :class="{ 'papers-workspace--compact': compactLayout }">
     <header class="papers-workspace__header">
       <RouterLink to="/papers">← 我的论文</RouterLink>
       <strong>{{ project?.name || '论文工作台' }}</strong>
@@ -14,64 +14,82 @@
     </header>
     <p v-if="loading" class="papers-workspace__message">正在打开项目...</p>
     <p v-else-if="error" role="alert" class="papers-workspace__error">{{ error }}</p>
-    <div v-else ref="workspaceRoot" class="papers-workspace__content" :class="{ 'files-hidden': !showFiles, 'editor-only': layoutMode === 'editor', 'pdf-only': layoutMode === 'pdf' }" :style="{ '--preview-width': previewWidth + '%' }">
+    <div v-else ref="workspaceRoot" class="papers-workspace__content" :class="{ 'files-hidden': !showFiles, 'editor-only': layoutMode === 'editor', 'pdf-only': layoutMode === 'pdf' }" :style="{ '--preview-grow': previewWidth, '--editor-grow': 100-previewWidth }">
+      <button v-if="compactLayout && showFiles" type="button" class="papers-workspace__files-backdrop" aria-label="关闭文件栏" @click="showFiles=false" />
       <aside class="papers-workspace__files" aria-label="论文文件">
-        <div class="papers-workspace__files-heading"><h2>文件</h2><span>{{ files.length }}</span></div>
-        <button v-for="file in files" :key="file.id" type="button" :class="{ active: activeFile?.id === file.id }" @click="selectFile(file)">
+        <div class="papers-workspace__files-heading"><h2>文件 <small>{{ files.length }}</small></h2><button v-if="compactLayout" type="button" class="papers-workspace__close-files" aria-label="关闭文件面板" @click="showFiles=false">×</button></div>
+        <button v-for="file in files" :key="file.id" type="button" :class="{ active: activeFile?.id === file.id }" :disabled="addingFile || navigating" @click="selectFile(file)">
           {{ file.path }}<span v-if="file.kind === 'binary'" class="papers-workspace__asset-label">资源</span>
         </button>
         <form class="papers-workspace__add" @submit.prevent="addFile">
           <label for="papers-new-file">新建文本文件</label>
           <input id="papers-new-file" v-model.trim="newFilePath" placeholder="chapters/intro.tex" maxlength="512" required />
-          <PButton type="submit" size="sm" :disabled="!newFilePath || addingFile">添加文件</PButton>
+          <PButton type="submit" size="sm" :disabled="!newFilePath || addingFile || switchingFile || navigating">添加文件</PButton>
         </form>
         <p v-if="fileError" class="papers-workspace__error" role="alert">{{ fileError }}</p>
       </aside>
       <section class="papers-workspace__editor" aria-label="源码编辑">
         <div class="papers-workspace__editor-header">
-          <span>{{ activeFile?.path || '请选择文件' }}</span>
+          <span :title="activeFile?.path">{{ activeFile?.path || '请选择文件' }}</span>
           <button type="button" class="papers-workspace__sync" title="定位当前源码行对应的 PDF 内容 (Ctrl/Cmd+Shift+J)" :disabled="!syncReady || activeFile?.kind !== 'text'" @click="jumpToPDF">定位 PDF →</button>
           <PButton type="button" size="sm" variant="secondary" :disabled="!activeFile || activeFile.kind !== 'text' || saving" @click="saveNow">保存</PButton>
         </div>
-        <LatexEditor v-if="activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef" v-model="draft" @show-pdf="jumpToPDF" />
+        <LatexEditor v-if="activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef" v-model="draft" :readonly="switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
         <p v-else-if="activeFile?.kind === 'binary'" class="papers-workspace__message">此资源文件随项目编译与导出保留，不支持文本编辑。</p>
         <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
         <p v-if="exportError" class="papers-workspace__error" role="alert">{{ exportError }}</p>
         <p v-if="saveError" class="papers-workspace__error" role="alert">
-          {{ saveError }} 当前输入已保留在编辑器中，请先处理冲突，避免离开页面。
+          {{ saveError }} 当前输入已保留。
+          <button type="button" class="papers-workspace__sync" @click="copyDraft">复制当前源码</button>
+          <button type="button" class="papers-workspace__sync" :disabled="saving" @click="saveNow">重试保存</button>
         </p>
       </section>
       <div v-if="layoutMode === 'split'" class="papers-workspace__divider" role="separator" aria-label="调整编辑器和预览宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="previewWidth" @pointerdown="beginResize" @pointermove="resizeMove" @pointerup="endResize" @pointercancel="endResize" @keydown.left.prevent="previewWidth=Math.min(75,previewWidth+3)" @keydown.right.prevent="previewWidth=Math.max(25,previewWidth-3)" />
       <aside class="papers-workspace__preview" aria-label="编译预览">
         <div class="papers-workspace__preview-heading">
-          <strong>PDF 预览</strong>
-          <button type="button" class="papers-workspace__sync" title="跳到预览对应源码（也可双击 PDF）" :disabled="!syncReady" @click="jumpToCode">← 源码</button>
-          <label class="papers-workspace__auto"><input type="checkbox" v-model="autoCompile" /> 自动编译</label>
-          <PButton type="button" size="sm" :disabled="!compileEnabled || compiling || saving || !project || hasActiveCompile" @click="compileNow">
-            {{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}
-          </PButton>
+          <div class="papers-workspace__preview-left">
+            <strong>PDF 预览</strong>
+            <button type="button" class="papers-workspace__sync" title="跳到预览对应源码（也可双击 PDF）" :disabled="!syncReady" @click="jumpToCode">← 源码</button>
+          </div>
+          <div class="papers-workspace__compile-status" role="status" aria-live="polite">
+            <template v-if="compileEnabled && compileJob">
+              <span class="papers-workspace__compile-label" :class="'status-'+compileJob.status"><strong>{{ compileStateLabel }}</strong> · 版本 {{ compileJob.source_revision }}</span>
+              <span v-if="previewStale" class="papers-workspace__stale" title="当前 PDF 是上一次编译成功的版本">预览为上次成功版本</span>
+              <PButton v-if="canCancelCompile" type="button" size="sm" variant="secondary" :disabled="canceling" @click="cancelCompile">{{ canceling ? '取消中…' : '取消任务' }}</PButton>
+              <span v-else-if="compileJob.cancel_requested && hasActiveCompile">取消中…</span>
+              <button v-if="compileJob.failure_code" type="button" class="papers-workspace__sync" :aria-expanded="showDiagnostics" @click="showDiagnostics=!showDiagnostics">错误详情{{ diagnostics.length ? ' ('+diagnostics.length+')' : '' }}</button>
+            </template>
+            <span v-else-if="compileEnabled">准备编译</span>
+          </div>
+          <div class="papers-workspace__preview-right">
+            <label class="papers-workspace__auto"><input type="checkbox" v-model="autoCompile" :disabled="!compileEnabled" /> 自动编译</label>
+            <PButton type="button" size="sm" :disabled="!compileEnabled || compiling || saving || switchingFile || navigating || !project || hasActiveCompile" @click="compileNow">{{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}</PButton>
+          </div>
         </div>
         <p v-if="syncMessage" class="papers-workspace__sync-message" role="status">{{ syncMessage }}</p>
         <p v-if="compileError" class="papers-workspace__error" role="alert">{{ compileError }}</p>
+        <section v-if="showDiagnostics && compileJob?.failure_code" class="papers-workspace__diagnostics" aria-label="编译错误详情">
+          <div class="papers-workspace__diagnostics-header">
+            <strong>{{ failureMessage(compileJob.failure_code) }}</strong>
+            <button type="button" class="papers-workspace__sync" @click="showDiagnostics=false">收起</button>
+          </div>
+          <p v-if="diagnostics.length && diagnosticStale" class="papers-workspace__stale">源码已发生变化。以下行号对应编译版本 {{ compileJob.source_revision }}，重新编译后可准确定位。</p>
+          <div v-for="(item,index) in diagnostics" :key="index" class="papers-workspace__diagnostic">
+            <button v-if="item.file && item.line" type="button" class="papers-workspace__diagnostic-location" :disabled="diagnosticStale" @click="jumpDiagnostic(item)">{{ item.file }}:{{ item.line }}</button>
+            <span v-else>{{ item.tool==='bibtex' ? 'BibTeX' : 'LaTeX' }}</span>
+            <code>{{ item.message }}</code>
+          </div>
+          <p v-if="!diagnostics.length">本次任务没有可用的源码错误详情。旧版编译结果需要重新编译，系统环境错误不会提供宿主机日志。</p>
+          <small>错误代码：{{ compileJob.failure_code }} · 源码版本 {{ compileJob.source_revision }}</small>
+        </section>
         <div v-if="!compileEnabled" class="papers-workspace__preview-empty">
           <strong>编译尚未开放</strong>
           <p>源码编辑与保存可用。可信编译服务尚未完成生产安全验收，编译按钮保持禁用。</p>
         </div>
-        <div v-else-if="compileJob" class="papers-workspace__compile-status" role="status">
-          <span><strong>{{ compileStateLabel }}</strong> · 版本 {{ compileJob.source_revision }}</span>
-          <span v-if="previewStale" class="papers-workspace__stale">预览为上次成功版本</span>
-          <p v-if="compileJob.failure_code">错误代码：{{ compileJob.failure_code }}</p>
-          <p v-if="compileJob.cancel_requested && hasActiveCompile">取消请求已提交，等待沙箱安全回收。</p>
-          <PButton v-if="canCancelCompile" type="button" size="sm" variant="secondary" :disabled="canceling" @click="cancelCompile">
-            {{ canceling ? '取消中...' : '取消任务' }}
-          </PButton>
-          <p v-if="compileJob.status === 'succeeded' && (!pdfEnabled || !compileJob.pdf_available)">
-            编译已完成，暂无可验证的 PDF 产物。
-          </p>
+        <div v-else-if="!compileJob" class="papers-workspace__preview-empty">
+          <p>点击编译生成 PDF。</p>
         </div>
-        <div v-else class="papers-workspace__preview-empty">
-          <strong>准备编译</strong><p>点击编译生成 PDF。</p>
-        </div>
+        <p v-else-if="compileJob.status === 'succeeded' && (!pdfEnabled || !compileJob.pdf_available)" class="papers-workspace__message">编译已完成，暂无可验证的 PDF 产物。</p>
         <PaperPDFPreview
           v-if="compileEnabled && pdfEnabled && previewJob"
           ref="pdfRef"
@@ -89,7 +107,8 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
-import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute } from 'vue-router'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
+import { ApiErrorResponseError } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import LatexEditor from '@/components/papers/LatexEditor.vue'
 import PaperPDFPreview from '@/components/papers/PaperPDFPreview.vue'
@@ -97,14 +116,18 @@ import { decodeSourceMap, sourceToPDF, pdfToSource, type PaperSourceMap } from '
 import {
   createPaperFile, getPaperFile, getPaperProject, listPaperFiles, savePaperFile, getPaperProjectZIP, downloadPaperZIP,
   getPaperCompileCapability, getPaperCompileJob, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, getPaperCompileSourceMap,
-  type PaperFile, type PaperProject, type PaperCompileJob,
+  type PaperFile, type PaperProject, type PaperCompileJob, type PaperCompileDiagnostic,
 } from '@/api/papers'
 
+defineOptions({name:'PaperWorkspaceView'})
 const route = useRoute()
+const router=useRouter()
 const projectId = computed(() => String(route.params.projectId || ''))
 const loading = ref(true)
 const error = ref('')
 const fileError = ref('')
+const switchingFile=ref(false)
+const navigating=ref(false)
 const saveError = ref('')
 const saving = ref(false)
 const exporting = ref(false)
@@ -120,6 +143,39 @@ const compileEnabled = ref(false)
 const pdfEnabled = ref(false)
 const compileJob = ref<PaperCompileJob | null>(null)
 const previewJob = ref<PaperCompileJob | null>(null)
+const showDiagnostics=ref(false)
+const diagnostics=computed(()=>(compileJob.value?.diagnostics||[]).slice(0,12))
+const diagnosticStale=computed(()=>compileJob.value?.source_revision!==project.value?.head_revision || (activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content))
+watch(()=>[compileJob.value?.id,compileJob.value?.status],()=>{showDiagnostics.value=compileJob.value?.status==='failed'})
+function failureMessage(code:string){
+ const labels:Record<string,string>={
+  compile_failed:'LaTeX 源码编译错误',
+  runtime_failed:'编译运行失败',
+  isolation_failed:'编译环境初始化失败',
+  artifact_missing:'未生成有效 PDF',
+  timed_out:'编译超时',
+  resource_exhausted_pids:'编译进程超过限制',
+  resource_exhausted_memory:'编译内存超过限制',
+  resource_exhausted_ambiguous:'编译资源超过限制',
+  verified_pdf_not_persisted:'PDF 保存失败',
+  cleanup_failed:'编译环境回收异常',
+  owner_canceled:'任务已取消',
+  cancel_requested:'任务已取消',
+  access_revoked:'项目访问权限已撤销'
+ }
+ return labels[code]||'编译未成功'
+}
+async function jumpDiagnostic(item:PaperCompileDiagnostic){
+ if(!item.file||!item.line||diagnosticStale.value)return
+ const target=files.value.find(f=>f.path===item.file&&f.kind==='text')
+ if(!target){syncMessage.value='当前项目中找不到对应源文件。';return}
+ const jobId=compileJob.value?.id
+ if(layoutMode.value==='pdf')layoutMode.value=compactLayout.value?'editor':'split'
+ await selectFile(target)
+ await nextTick()
+ if(jobId===compileJob.value?.id&&!diagnosticStale.value&&activeFile.value?.id===target.id)editorRef.value?.goToLine(item.line)
+}
+
 const previewStale = computed(() => !!previewJob.value && (previewJob.value.id !== compileJob.value?.id || previewJob.value.source_revision !== project.value?.head_revision || (activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)))
 const editorRef=ref<InstanceType<typeof LatexEditor>|null>(null)
 const pdfRef=ref<InstanceType<typeof PaperPDFPreview>|null>(null)
@@ -148,7 +204,7 @@ async function jumpToPDF(){
  if(!checkSync()||!sourceMap.value||!activeFile.value)return
  const p=sourceToPDF(sourceMap.value,activeFile.value.path,editorRef.value?.getLine?.()||1, pdfRef.value?.page||1)
  if(!p){syncMessage.value='当前源码行没有对应的 PDF 内容。';return}
- if(layoutMode.value==='editor')layoutMode.value='split'
+ if(layoutMode.value==='editor')layoutMode.value=compactLayout.value?'pdf':'split'
  await nextTick()
  if(!await pdfRef.value?.showPosition(p[2],p[3]/10,p[4]/10,mapJob.value)){syncMessage.value='PDF 正在更新，请稍后再定位。';return}
  syncMessage.value=''
@@ -159,17 +215,20 @@ async function jumpFromPDF(pos:{jobId:string;page:number;x:number;y:number}){
  if(!p){syncMessage.value='这个位置没有可定位的源码。';return}
  const target=files.value.find(f=>f.path===sourceMap.value?.files[p[0]]&&f.kind==='text')
  if(!target){syncMessage.value='没有找到对应的项目源文件。';return}
- if(layoutMode.value==='pdf')layoutMode.value='split'
+ if(layoutMode.value==='pdf')layoutMode.value=compactLayout.value?'editor':'split'
  await selectFile(target)
  await nextTick()
- if(activeFile.value?.id===target.id){editorRef.value?.goToLine?.(p[1]);syncMessage.value=''}
+ if(activeFile.value?.id===target.id&&syncReady.value&&pos.jobId===mapJob.value){editorRef.value?.goToLine?.(p[1]);syncMessage.value=''}
 }
 function jumpToCode(){const pos=pdfRef.value?.currentPosition();if(pos)void jumpFromPDF(pos)}
 
 const workspaceRoot=ref<HTMLElement|null>(null)
 const previewWidth=ref(49)
-const showFiles=ref(true)
-const layoutMode=ref<'split'|'editor'|'pdf'>('split')
+const isCompactViewport=()=>typeof window!=='undefined'&&(window.innerWidth<=760||document.documentElement.dataset.atomanApp==='mobile')
+const compactLayout=ref(isCompactViewport())
+const showFiles=ref(!compactLayout.value)
+const layoutMode=ref<'split'|'editor'|'pdf'>(compactLayout.value?'editor':'split')
+function onViewportChange(){const small=isCompactViewport();if(small===compactLayout.value)return;compactLayout.value=small;showFiles.value=!small}
 const autoCompile=ref(false)
 let dragging=false
 let autoTimer:ReturnType<typeof setTimeout>|null=null
@@ -186,9 +245,9 @@ function endResize(){dragging=false}
 function clearAuto(){if(autoTimer)clearTimeout(autoTimer);autoTimer=null}
 function scheduleAuto(){
  clearAuto()
- if(!autoCompile.value||!autoDirty||!compileEnabled.value||hasActiveCompile.value||compiling.value||disposed)return
+ if(!autoCompile.value||!autoDirty||!compileEnabled.value||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||addingFile.value||saveError.value||disposed)return
  autoTimer=setTimeout(()=>{
-  if(!autoCompile.value||!autoDirty||hasActiveCompile.value||compiling.value||disposed||document.visibilityState==='hidden')return
+  if(!autoCompile.value||!autoDirty||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||addingFile.value||saveError.value||disposed||document.visibilityState==='hidden')return
   autoDirty=false;lastAutoCompile=Date.now();void compileNow()
  },Math.max(15000,60000-(Date.now()-lastAutoCompile)))
 }
@@ -207,7 +266,7 @@ const compileStateLabel = computed(() => {
 })
 const hasActiveCompile = computed(() => !!compileJob.value &&
   ['queued', 'running', 'recovering'].includes(compileJob.value.status))
-watch([hasActiveCompile,compiling],()=>scheduleAuto())
+watch([hasActiveCompile,compiling,switchingFile,navigating,addingFile,saveError],()=>scheduleAuto())
 const canCancelCompile = computed(() => hasActiveCompile.value && !compileJob.value?.cancel_requested)
 let compilePollTimer: ReturnType<typeof setTimeout> | null = null
 let saveTimer: ReturnType<typeof setTimeout> | null = null
@@ -215,6 +274,9 @@ let savePromise: Promise<boolean> | null = null
 let loadSerial = 0
 let fileSerial = 0
 let disposed = false
+let pollSerial=0
+let historySerial=0
+let pendingSubmission:{projectId:string;revision:number;key:string}|null=null
 
 async function loadProject() {
   const serial = ++loadSerial
@@ -235,8 +297,9 @@ async function loadProject() {
     if (main) await selectFile(main)
     if (compileEnabled.value && !disposed && serial === loadSerial) {
       // Do not hold the editor's loading state hostage to queue history.
+      const historyRequest=++historySerial
       void listPaperCompileJobs(requestedProjectId).then((history) => {
-        if (!disposed && serial === loadSerial && requestedProjectId === projectId.value) {
+        if (!disposed && serial === loadSerial && historyRequest===historySerial && requestedProjectId === projectId.value) {
           compileJob.value = history[0] ?? null
           previewJob.value = history.find(job => job.status === 'succeeded' && job.pdf_available) ?? null
           scheduleCompilePoll()
@@ -262,85 +325,100 @@ watch(draft, (content) => {
   if (activeFile.value?.kind === 'text' && content !== activeFile.value.content) { scheduleSave();autoDirty=true;scheduleAuto() }
 })
 
-async function persist(): Promise<boolean> {
-  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
-  if (savePromise) {
-    await savePromise
-    if (saveError.value) return false
-  }
-  const file = activeFile.value
-  if (!file || file.kind !== 'text' || draft.value === file.content) return true
-  const content = draft.value
-  saving.value = true
-  saveStatus.value = '保存中...'
-  savePromise = (async () => {
-    try {
-      const saved = await savePaperFile(projectId.value, file.id, content, file.revision)
-      if (activeFile.value?.id === file.id) {
-        activeFile.value = saved
-        if (draft.value === content) saveStatus.value = '已保存'
-        else scheduleSave()
+// All consumers share one drain promise. In particular a debounce callback
+// and a file/route transition cannot issue concurrent optimistic-lock writes.
+function persist(): Promise<boolean> {
+  if(saveTimer){clearTimeout(saveTimer);saveTimer=null}
+  if(savePromise)return savePromise
+  const pid=project.value?.id
+  const initial=activeFile.value
+  if(!pid||pid!==projectId.value||!initial||initial.kind!=='text')return Promise.resolve(true)
+  if(draft.value===initial.content){saveError.value='';return Promise.resolve(true)}
+  saving.value=true;saveStatus.value='保存中...'
+  const work=(async()=>{
+    while(!disposed&&project.value?.id===pid&&projectId.value===pid&&activeFile.value?.id===initial.id){
+      const file=activeFile.value,content=draft.value
+      if(content===file.content){saveStatus.value='已保存';saveError.value='';return true}
+      try{
+        const saved=await savePaperFile(pid,file.id,content,file.revision)
+        if(disposed||project.value?.id!==pid||projectId.value!==pid||activeFile.value?.id!==initial.id)return false
+        if(saved.id!==file.id||saved.content!==content||saved.revision<file.revision)throw new Error('Invalid saved file')
+        activeFile.value=saved
+        files.value=files.value.map(item=>item.id===saved.id?{...item,revision:saved.revision}:item)
+        project.value.head_revision=saved.project_head_revision??(project.value.head_revision+(saved.revision>file.revision?1:0))
+        saveError.value=''
+        if(saveTimer){clearTimeout(saveTimer);saveTimer=null}
+      }catch(cause){
+        if(!disposed&&project.value?.id===pid){
+          saveStatus.value='保存失败'
+          const code=cause instanceof ApiErrorResponseError?cause.code:''
+          saveError.value=code==='papers.revision_conflict'?'文件已在另一窗口修改。请复制当前源码，刷新后手动合并。':code==='papers.compile_source_limit'?'超过项目源码容量限制，请缩减内容后重试。':'保存失败，请检查网络后重试。'
+        }
+        return false
       }
-      files.value = files.value.map((item) => item.id === saved.id ? { ...item, revision: saved.revision } : item)
-      if (project.value) project.value.head_revision += 1
-      saveError.value = ''
-      return true
-    } catch {
-      saveStatus.value = '保存失败'
-      saveError.value = '保存失败或版本发生冲突。'
-      return false
-    } finally {
-      saving.value = false
     }
+    return false
   })()
-  const success = await savePromise
-  savePromise = null
-  return success
+  savePromise=work
+  void work.finally(()=>{if(savePromise===work){savePromise=null;saving.value=false}})
+  return work
 }
 
-async function selectFile(file: PaperFile) {
-  const serial = ++fileSerial
-  const requestedProjectId = projectId.value
-  if (activeFile.value?.id === file.id) return
-  if (activeFile.value && !await persist()) return
-  if (disposed || serial !== fileSerial || requestedProjectId !== projectId.value) return
-  fileError.value = ''
-  if (file.kind === 'binary') {
-    activeFile.value = { ...file, content: '' }
-    draft.value = ''
-    saveStatus.value = '资源文件'
-    saveError.value = ''
-    return
-  }
-  try {
-    const content = await getPaperFile(requestedProjectId, file.id)
-    if (disposed || serial !== fileSerial || requestedProjectId !== projectId.value) return
-    activeFile.value = content
-    draft.value = content.content
-    saveStatus.value = '已保存'
-    saveError.value = ''
-  } catch {
-    if (!disposed && serial === fileSerial) fileError.value = '无法读取该文件。'
-  }
+async function copyDraft(){
+  try{await navigator.clipboard.writeText(draft.value);saveStatus.value='当前源码已复制'}
+  catch{saveStatus.value='请在编辑器中手动复制源码'}
 }
 
-async function addFile() {
-  if (!newFilePath.value || addingFile.value) return
-  if (!await persist()) return
-  addingFile.value = true
-  fileError.value = ''
-  try {
-    const created = await createPaperFile(projectId.value, newFilePath.value)
-    files.value.push(created)
-    files.value.sort((a, b) => a.path.localeCompare(b.path))
-    if (project.value) project.value.head_revision += 1
-    newFilePath.value = ''
+async function selectFile(file:PaperFile){
+  if(navigating.value)return
+  const serial=++fileSerial
+  const pid=projectId.value
+  if(activeFile.value?.id===file.id){switchingFile.value=false;if(compactLayout.value){showFiles.value=false;if(layoutMode.value==='pdf')layoutMode.value='editor'}return}
+  switchingFile.value=true
+  try{
+    // Read-only is applied before saving or fetching another file. Keep
+    // the active draft intact until the requested file actually arrives.
+    await nextTick()
+    if(activeFile.value&&!await persist())return
+    if(disposed||serial!==fileSerial||pid!==projectId.value||navigating.value)return
+    fileError.value=''
+    const content=file.kind==='binary'?{...file,content:''}:await getPaperFile(pid,file.id)
+    if(disposed||serial!==fileSerial||pid!==projectId.value||navigating.value)return
+    // A change emitted just before CodeMirror became read-only must also
+    // be saved. Never overwrite a dirty draft with an incoming response.
+    if(!await persist())return
+    if(disposed||serial!==fileSerial||pid!==projectId.value||navigating.value)return
+    if(content.kind==='text'&&content.revision!==file.revision){
+      const latest=await getPaperProject(pid)
+      if(disposed||serial!==fileSerial||pid!==projectId.value||navigating.value)return
+      project.value=latest
+      files.value=files.value.map(item=>item.id===content.id?{...item,revision:content.revision}:item)
+    }
+    activeFile.value=content;draft.value=content.content
+    saveStatus.value=content.kind==='binary'?'资源文件':'已保存'
+    saveError.value=''
+    if(compactLayout.value){showFiles.value=false;if(layoutMode.value==='pdf')layoutMode.value='editor'}
+  }catch{if(!disposed&&serial===fileSerial&&pid===projectId.value)fileError.value='无法读取该文件，请重试。'}
+  finally{if(serial===fileSerial)switchingFile.value=false}
+}
+
+async function addFile(){
+  if(!newFilePath.value||addingFile.value||switchingFile.value||navigating.value)return
+  const pid=projectId.value
+  addingFile.value=true;fileError.value=''
+  try{
+    await nextTick()
+    if(!await persist()||disposed||pid!==projectId.value||navigating.value)return
+    const created=await createPaperFile(pid,newFilePath.value)
+    if(disposed||pid!==projectId.value||navigating.value)return
+    files.value=[...files.value,created].sort((a,b)=>a.path.localeCompare(b.path))
+    if(project.value)project.value.head_revision=created.project_head_revision??project.value.head_revision+1
+    newFilePath.value=''
+    autoDirty=true
     await selectFile(created)
-  } catch {
-    fileError.value = '无法创建文件。请检查路径、扩展名，或确认该文件尚不存在。'
-  } finally {
-    addingFile.value = false
-  }
+  }catch(cause){
+    if(!disposed&&pid===projectId.value)fileError.value=cause instanceof ApiErrorResponseError&&cause.code==='papers.file_exists'?'文件名与现有文件或文件夹冲突。':'无法创建文件，请检查路径、格式或项目容量。'
+  }finally{if(pid===projectId.value){addingFile.value=false;scheduleAuto()}}
 }
 
 function stopCompilePoll() {
@@ -358,45 +436,51 @@ function scheduleCompilePoll() {
 async function refreshCompileStatus() {
   const current = compileJob.value
   const requestedProjectId = projectId.value
-  if (!current || disposed || !compileEnabled.value) return
+  if (!current || disposed || !compileEnabled.value || canceling.value) return
+  const serial=++pollSerial
   if (document.visibilityState === 'hidden') { scheduleCompilePoll(); return }
   try {
     const latest = await getPaperCompileJob(requestedProjectId, current.id)
-    if (disposed || requestedProjectId !== projectId.value || compileJob.value?.id !== current.id) return
+    if (disposed || serial!==pollSerial || requestedProjectId !== projectId.value || compileJob.value?.id !== current.id) return
     compileJob.value = latest
     compileError.value = ''
   } catch {
-    if (!disposed && requestedProjectId === projectId.value) compileError.value = '暂时无法更新编译状态，请检查网络。'
+    if (!disposed && serial===pollSerial && requestedProjectId === projectId.value) compileError.value = '暂时无法更新编译状态，请检查网络。'
   } finally {
-    if (!disposed && requestedProjectId === projectId.value) scheduleCompilePoll()
+    if (!disposed && serial===pollSerial && requestedProjectId === projectId.value) scheduleCompilePoll()
   }
 }
 
 async function compileNow() {
-  if (!compileEnabled.value || compiling.value || hasActiveCompile.value || !project.value || disposed) return
+  if (!compileEnabled.value || compiling.value || hasActiveCompile.value || !project.value || switchingFile.value || navigating.value || addingFile.value || disposed) return
   const requestedProjectId = projectId.value
   compileError.value = ''
   clearAuto();autoDirty=false;lastAutoCompile=Date.now()
   compiling.value = true
+  historySerial++
   try {
     // Do not compile an unsaved draft, even if a debounce timer is pending.
     if (!await persist()) {
       compileError.value = '请先解决源码保存失败或版本冲突。'
       return
     }
-    const latestProject = await getPaperProject(requestedProjectId)
-    if (disposed || requestedProjectId !== projectId.value) return
-    project.value = latestProject
-    const key = globalThis.crypto?.randomUUID?.() ?? ('compile-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2))
-    const job = await submitPaperCompile(requestedProjectId, latestProject.head_revision, key)
-    if (disposed || requestedProjectId !== projectId.value) return
+    const revision=project.value?.head_revision
+    if(disposed||requestedProjectId!==projectId.value||!revision)return
+    if(!pendingSubmission||pendingSubmission.projectId!==requestedProjectId||pendingSubmission.revision!==revision){
+      pendingSubmission={projectId:requestedProjectId,revision,key:globalThis.crypto?.randomUUID?.()??('compile-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2))}
+    }
+    const job=await submitPaperCompile(requestedProjectId,revision,pendingSubmission.key)
+    if(disposed||requestedProjectId!==projectId.value)return
+    pendingSubmission=null
     compileJob.value = job
     scheduleCompilePoll()
-  } catch {
-    if (!disposed && requestedProjectId === projectId.value)
-      compileError.value = '无法提交编译任务。可能是环境未就绪、源码格式不支持或项目版本发生冲突。'
+  } catch(cause) {
+    if (!disposed && requestedProjectId === projectId.value){
+      const code=cause instanceof ApiErrorResponseError?cause.code:''
+      compileError.value=code==='papers.compile_revision_conflict'||code==='papers.revision_conflict'?'项目版本已在其他窗口发生变化，请复制未保存内容后刷新。':code==='papers.compile_quota_exceeded'?'已达到编译频率或存储限制，请稍后重试。':'无法提交编译任务，请检查网络或编译环境后重试。'
+    }
   } finally {
-    compiling.value = false
+    if(requestedProjectId===projectId.value)compiling.value = false
   }
 }
 
@@ -405,6 +489,7 @@ async function cancelCompile() {
   const requestedProjectId = projectId.value
   const jobId = compileJob.value.id
   canceling.value = true
+  pollSerial++;stopCompilePoll()
   try {
     const updated = await cancelPaperCompile(requestedProjectId, jobId)
     if (disposed || requestedProjectId !== projectId.value || compileJob.value?.id !== jobId) return
@@ -414,7 +499,7 @@ async function cancelCompile() {
     if (!disposed && requestedProjectId === projectId.value)
       compileError.value = '取消请求失败，请重新检查任务状态。'
   } finally {
-    canceling.value = false
+    if(requestedProjectId===projectId.value){canceling.value=false;scheduleCompilePoll()}
   }
 }
 
@@ -435,23 +520,34 @@ async function exportProject() {
     if (!disposed && id === projectId.value) downloadPaperZIP(blob, name)
   } catch {
     if (!disposed && id === projectId.value) exportError.value = '导出失败，请稍后重试。'
-  } finally { exporting.value = false }
+  } finally { if(id===projectId.value)exporting.value = false }
 }
 
 function saveNow() { void persist() }
 
 function beforeUnload(event: BeforeUnloadEvent) {
   if (savePromise || (activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)) {
-    event.preventDefault()
+    event.preventDefault();event.returnValue=''
   }
 }
 
-onBeforeRouteLeave(async () => persist())
-onBeforeRouteUpdate(async () => persist())
+async function beforeNavigate(){
+ navigating.value=true
+ fileSerial++;switchingFile.value=false
+ clearAuto()
+ await nextTick()
+ const saved=await persist()
+ if(!saved)navigating.value=false
+ return saved
+}
+onBeforeRouteLeave(beforeNavigate)
+onBeforeRouteUpdate(beforeNavigate)
+const removeNavigationHook=router.afterEach(()=>{navigating.value=false})
 
 watch(projectId, () => {
   loadSerial++
-  fileSerial++
+  fileSerial++;pollSerial++;historySerial++;pendingSubmission=null
+  switchingFile.value=false;addingFile.value=false;compiling.value=false;canceling.value=false;exporting.value=false;saveError.value='';fileError.value=''
   stopCompilePoll()
   compileJob.value = null
   previewJob.value = null
@@ -474,6 +570,7 @@ function onShortcut(e:KeyboardEvent){
 }
 onMounted(() => {
   window.addEventListener('keydown',onShortcut)
+  window.addEventListener('resize',onViewportChange)
   void loadProject()
   window.addEventListener('beforeunload', beforeUnload)
   document.addEventListener('visibilitychange', onCompileVisibilityChange)
@@ -488,14 +585,16 @@ onBeforeUnmount(() => {
   mapAbort?.abort();mapSerial++
   window.removeEventListener('beforeunload', beforeUnload)
   window.removeEventListener('keydown',onShortcut)
+  window.removeEventListener('resize',onViewportChange)
   document.removeEventListener('visibilitychange', onCompileVisibilityChange)
   stopCompilePoll()
-  if (activeFile.value && draft.value !== activeFile.value.content) void persist()
+  removeNavigationHook()
+  // Router guards drain before leaving; never start a save after disposal.
 })
 </script>
 
 <style scoped>
-.papers-workspace{height:calc(100dvh - 64px - var(--a-content-bottom-offset,0px));min-height:440px;display:flex;flex-direction:column;overflow:hidden;color:var(--a-color-text,#20242c)}
+.papers-workspace{height:calc(100dvh - var(--a-topbar-height,56px) - var(--a-content-bottom-offset,0px));min-height:440px;display:flex;flex-direction:column;overflow:hidden;color:var(--a-color-text,#20242c)}
 .papers-workspace__header{display:flex;gap:12px;align-items:center;padding:8px 14px;flex-shrink:0;border-bottom:1px solid var(--a-color-border-soft,#e0e4ea);min-height:44px}
 .papers-workspace__header a{color:inherit;text-decoration:none;white-space:nowrap;font-size:12px}
 .papers-workspace__header strong{flex:1;min-width:40px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
@@ -503,8 +602,8 @@ onBeforeUnmount(() => {
 .papers-workspace__layout-tools{display:flex;gap:3px;align-items:center}
 .papers-workspace__layout-tools button{border:1px solid var(--a-color-border-soft,#dce1e7);border-radius:4px;padding:4px 7px;background:transparent;color:inherit;font-size:12px;cursor:pointer;white-space:nowrap}
 .papers-workspace__layout-tools button[aria-pressed=true]{background:var(--a-color-bg-subtle,#e7edf3);font-weight:600}
-.papers-workspace__content{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}
-.papers-workspace__files{width:196px;flex-shrink:0;min-height:0;overflow:auto;padding:10px 8px;border-right:1px solid var(--a-color-border-soft,#e0e4ea)}
+.papers-workspace__content{position:relative;display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}
+.papers-workspace__files{box-sizing:border-box;width:196px;flex-shrink:0;min-height:0;overflow:auto;padding:10px 8px;border-right:1px solid var(--a-color-border-soft,#e0e4ea)}
 .papers-workspace__files-heading{display:flex;justify-content:space-between;align-items:center;margin:4px 6px 10px}
 .papers-workspace__files-heading h2{font-weight:650;font-size:13px;margin:0}
 .papers-workspace__files button:not(.p-button){display:block;width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:7px 6px;cursor:pointer;border-radius:4px;overflow-wrap:anywhere;font-size:12px;line-height:1.4}
@@ -512,24 +611,52 @@ onBeforeUnmount(() => {
 .papers-workspace__add{margin-top:18px;display:grid;gap:6px}
 .papers-workspace__add label{font-size:12px;font-weight:600}
 .papers-workspace__add input{min-width:0;padding:6px;border:1px solid var(--a-color-border-soft,#d6dde3);border-radius:5px;background:var(--a-color-bg,#fff);color:inherit;font-size:12px}
-.papers-workspace__editor{min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden;flex:1}
+.papers-workspace__editor{min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden;flex:var(--editor-grow,51) 1 0%}
 .papers-workspace__editor-header{min-height:42px;box-sizing:border-box;flex-shrink:0;padding:6px 10px;border-bottom:1px solid var(--a-color-border-soft,#e0e4ea);display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px}
 .papers-workspace__editor-header span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .papers-workspace__editor :deep(.papers-latex-editor){flex:1;min-height:0;height:auto}
 .papers-workspace__divider{width:8px;flex-shrink:0;background:var(--a-color-bg-subtle,#e5e9ee);border-left:1px solid var(--a-color-border-soft,#d0d6de);border-right:1px solid var(--a-color-border-soft,#d0d6de);cursor:col-resize;touch-action:none;position:relative}
 .papers-workspace__divider:after{content:'';position:absolute;left:2px;top:calc(50% - 18px);width:2px;height:36px;border-radius:3px;background:#9ba6b5}
-.papers-workspace__preview{flex:0 0 var(--preview-width);min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
-.papers-workspace__preview-heading{min-height:42px;flex-shrink:0;padding:5px 10px;display:flex;align-items:center;gap:9px;justify-content:space-between;font-size:13px;border-bottom:1px solid var(--a-color-border-soft,#e0e4ea)}
-.papers-workspace__auto{display:flex;align-items:center;gap:4px;font-weight:400;font-size:12px;margin-left:auto;white-space:nowrap}
+.papers-workspace__preview{flex:var(--preview-grow,49) 1 0%;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+/* Keep status and cancellation in the middle of the PDF toolbar, not a
+   separate banner. Narrow desktop panes scroll inside the toolbar. */
+.papers-workspace__preview-heading{min-height:42px;flex-shrink:0;padding:5px 8px;display:flex;align-items:center;gap:8px;font-size:12px;border-bottom:1px solid var(--a-color-border-soft,#e0e4ea);overflow-x:auto}
+.papers-workspace__preview-left,.papers-workspace__preview-right{display:flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap}
+.papers-workspace__preview-right{margin-left:auto}
+.papers-workspace__auto{display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap}
 .papers-workspace__preview-empty{padding:24px 12px;text-align:center;font-size:13px;color:var(--a-color-text-secondary,#64748b)}
-.papers-workspace__compile-status{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:5px 10px;font-size:12px;flex-shrink:0;border-bottom:1px solid var(--a-color-border-soft,#e0e4ea);color:var(--a-color-text-secondary,#64748b)}
-.papers-workspace__compile-status p{margin:0;overflow-wrap:anywhere}.papers-workspace__stale{color:#96620a}
+.papers-workspace__compile-status{display:flex;align-items:center;justify-content:center;flex:1 0 auto;gap:5px;font-size:11px;white-space:nowrap;color:var(--a-color-text-secondary,#64748b)}
+.papers-workspace__compile-label.status-failed,.papers-workspace__compile-label.status-blocked{color:var(--a-color-danger,#b91c1c)}
+.papers-workspace__stale{color:#96620a;font-size:10px}
+.papers-workspace__diagnostics{max-height:35%;overflow:auto;flex-shrink:0;display:grid;gap:7px;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--a-color-border-soft,#e0e4ea)}
+.papers-workspace__diagnostics-header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.papers-workspace__diagnostics p{margin:0;color:var(--a-color-text-secondary,#64748b)}
+.papers-workspace__diagnostics small{color:var(--a-color-text-secondary,#64748b)}
+.papers-workspace__diagnostic{display:grid;gap:4px;border-left:2px solid #b91c1c;padding:4px 8px;overflow-wrap:anywhere}
+.papers-workspace__diagnostic code{white-space:pre-wrap;word-break:break-word;font-family:monospace;font-size:12px}
+.papers-workspace__diagnostic-location{align-self:start;justify-self:start;background:none;border:0;text-align:left;padding:0;font:inherit;color:var(--a-color-primary,#26784b);text-decoration:underline;cursor:pointer;overflow-wrap:anywhere}
+.papers-workspace__diagnostic-location:disabled{opacity:.6;cursor:default}
 .papers-workspace__message{padding:12px;font-size:13px;color:var(--a-color-text-secondary,#64748b)}
 .papers-workspace__error{color:#b91c1c;padding:6px 10px;font-size:12px;margin:0}
 .papers-workspace__asset-label{font-size:10px;opacity:.65;margin-left:6px}
-.files-hidden .papers-workspace__files,.pdf-only .papers-workspace__files,.pdf-only .papers-workspace__editor,.editor-only .papers-workspace__preview{display:none}
+.files-hidden .papers-workspace__files,.pdf-only .papers-workspace__editor,.editor-only .papers-workspace__preview{display:none}
 .pdf-only .papers-workspace__preview{flex:1}
 @media(max-width:1000px){.papers-workspace__files{width:155px}.papers-workspace__header{gap:7px}.papers-workspace__header strong{min-width:60px}}
-@media(max-width:700px){.papers-workspace{height:calc(100dvh - 56px);min-height:320px}.papers-workspace__header{flex-wrap:wrap}.papers-workspace__header strong{min-width:80px}.papers-workspace__files{width:115px}.papers-workspace__auto{font-size:11px}.papers-workspace__preview-heading{flex-wrap:wrap}.papers-workspace__content:not(.editor-only):not(.pdf-only) .papers-workspace__files{display:none}.papers-workspace__content:not(.editor-only):not(.pdf-only) .papers-workspace__editor{min-width:0}.papers-workspace__preview{flex-basis:var(--preview-width)}}
+.papers-workspace__files-backdrop{display:none}
+.papers-workspace__files-heading small{color:var(--a-color-text-secondary,#64748b);font-weight:400}
+.papers-workspace__files-heading .papers-workspace__close-files{width:28px;text-align:center;font-size:18px}
+.papers-workspace--compact{min-height:300px}
+.papers-workspace--compact .papers-workspace__header{flex-wrap:wrap;padding:6px 8px;gap:6px}
+.papers-workspace--compact .papers-workspace__header strong{min-width:80px}
+.papers-workspace--compact .papers-workspace__content{flex-direction:column}
+.papers-workspace--compact .papers-workspace__files{position:absolute;z-index:5;top:0;left:0;bottom:0;width:min(280px,82vw);background:var(--a-color-bg,#fff);box-shadow:4px 0 14px #0003}
+.papers-workspace--compact .papers-workspace__files-backdrop{display:block;position:absolute;inset:0;border:0;background:#0004;z-index:4}
+.papers-workspace--compact .papers-workspace__divider{display:none}
+.papers-workspace--compact .papers-workspace__preview-heading{padding-inline:6px;gap:6px;flex-wrap:wrap;overflow-x:visible}
+.papers-workspace--compact .papers-workspace__compile-status{order:1;flex:1 0 100%;justify-content:center;flex-wrap:wrap;white-space:normal}
+.papers-workspace--compact .papers-workspace__preview-right{margin-left:auto}
+.papers-workspace--compact .papers-workspace__editor-header{gap:4px}
+.papers-workspace--compact .papers-workspace__editor-header .papers-workspace__sync{padding-inline:4px}
+
 .papers-workspace__sync{font-size:11px;white-space:nowrap;background:transparent;color:var(--a-color-primary,#26784b);border:1px solid var(--a-color-border-soft,#d7dde4);border-radius:4px;padding:4px 7px;cursor:pointer}.papers-workspace__sync:disabled{opacity:.4;cursor:default}.papers-workspace__sync-message{font-size:12px;padding:5px 10px;margin:0;color:var(--a-color-text-secondary,#64748b);flex-shrink:0}
 </style>

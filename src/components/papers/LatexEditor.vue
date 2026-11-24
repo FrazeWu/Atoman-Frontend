@@ -4,7 +4,7 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { EditorState } from '@codemirror/state'
+import { Compartment, EditorState } from '@codemirror/state'
 import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 
@@ -13,6 +13,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string]; 'show-pdf': [];
 const editorRoot = ref<HTMLElement | null>(null)
 let editor: EditorView | null = null
 let applyingExternalValue = false
+const readonlyCompartment=new Compartment()
 
 onMounted(() => {
   if (!editorRoot.value) return
@@ -27,7 +28,7 @@ onMounted(() => {
         history(),
         keymap.of([{key:'Mod-Shift-j',run:()=>{emit('show-pdf');return true}}, ...defaultKeymap, ...historyKeymap]),
         EditorView.lineWrapping,
-        EditorState.readOnly.of(Boolean(props.readonly)),
+        readonlyCompartment.of([EditorState.readOnly.of(Boolean(props.readonly)),EditorView.editable.of(!props.readonly)]),
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !applyingExternalValue) emit('update:modelValue', update.state.doc.toString())
           if(update.selectionSet||update.docChanged)emit('cursor-line',update.state.doc.lineAt(update.state.selection.main.head).number)
@@ -35,6 +36,10 @@ onMounted(() => {
       ],
     }),
   })
+})
+
+watch(()=>props.readonly,value=>{
+  editor?.dispatch({effects:readonlyCompartment.reconfigure([EditorState.readOnly.of(Boolean(value)),EditorView.editable.of(!value)])})
 })
 
 watch(() => props.modelValue, (next) => {
@@ -63,9 +68,11 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.papers-latex-editor { min-height: 0; height: 100%; overflow: hidden; background: var(--surface, #fff); }
+.papers-latex-editor { min-height: 0; height: 100%; overflow: hidden; background: var(--a-color-bg,#fff);color:var(--a-color-text,#20242c); }
 .papers-latex-editor :deep(.cm-editor) { height: 100%; min-height: 0; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 13px; line-height: 1.65; }
 .papers-latex-editor :deep(.cm-scroller) { overflow: auto; }
-.papers-latex-editor :deep(.cm-gutters) { border-right: 1px solid var(--border, #e5e7eb); }
+.papers-latex-editor :deep(.cm-gutters) { border-right:1px solid var(--a-color-border-soft,#e5e7eb);background:var(--a-color-bg-soft,#f1f3f5);color:var(--a-color-text-secondary,#64748b); }
 .papers-latex-editor :deep(.cm-focused) { outline: none; }
+.papers-latex-editor :deep(.cm-activeLine),.papers-latex-editor :deep(.cm-activeLineGutter){background:var(--a-color-bg-soft,#e8eff5)}
+.papers-latex-editor :deep(.cm-cursor){border-left-color:currentColor}
 </style>

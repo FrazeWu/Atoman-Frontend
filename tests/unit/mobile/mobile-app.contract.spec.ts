@@ -41,7 +41,7 @@ describe("mobile app route boundary", () => {
 		expect(homeRoute).toMatchObject({ path: "/" });
 		expect(homeRoute).not.toHaveProperty("redirect");
 		expect(homeRoute?.component).toBe(PortalView);
-		expect(MOBILE_MODULES).toEqual(["feed", "blog", "music", "books", "podcast", "video", "forum", "debate", "timeline"]);
+		expect(MOBILE_MODULES).toEqual(["feed", "blog", "music", "books", "podcast", "video", "forum", "debate", "timeline", "papers"]);
 	});
 
 	it("keeps the pilot module routes available for deep links", () => {
@@ -106,7 +106,16 @@ describe("mobile app route boundary", () => {
 		expect(mobileRoutes.some((route) => route.path === "/messages")).toBe(true);
 	});
 
-	it("marks mobile authentication entry routes as guest-only", () => {
+	it("registers authenticated mobile paper list and workspace without caching drafts",()=>{
+        const list=mobileRoutes.find(route=>route.path==="/papers");
+        const workspace=mobileRoutes.find(route=>route.path==="/papers/:projectId");
+        expect(list?.meta?.requiresAuth).toBe(true);
+        expect(workspace?.meta).toMatchObject({requiresAuth:true,papersWorkspace:true});
+        expect(String(workspace?.component)).toContain("PaperWorkspaceView.vue");
+        expect(mobileAppSource).toContain("'PaperWorkspaceView', 'PapersHomeView'");
+    });
+
+    it("marks mobile authentication entry routes as guest-only", () => {
 		const routes = mobileRoutes.filter((route) => ["/login", "/register", "/forgot-password"].includes(String(route.path)));
 		expect(routes).toHaveLength(3);
 		expect(routes.every((route) => route.meta?.guestOnly === true)).toBe(true);
@@ -120,7 +129,7 @@ describe("mobile app route boundary", () => {
 
 	it("registers module home, list and detail routes without desktop layouts", () => {
 		expect(routePaths()).toEqual(expect.arrayContaining([
-			"/books", "/books/search", "/books/library", "/books/work/:workId", "/books/read/:workId/:assetId/:revisionId",
+			"/papers", "/papers/:projectId", "/books", "/books/search", "/books/library", "/books/work/:workId", "/books/read/:workId/:assetId/:revisionId",
 			"/podcasts", "/podcasts/subscriptions", "/podcasts/show/:channelSlug", "/podcasts/episode/:id",
 			"/videos", "/videos/search", "/videos/subscriptions", "/videos/watch/:id",
 			"/forum", "/forum/categories", "/forum/new", "/forum/topic/:id",

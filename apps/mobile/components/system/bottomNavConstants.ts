@@ -66,6 +66,12 @@ export const SPACE_TABS: Record<string, NavTabItem[]> = {
     { key: 'subscriptions', label: '关注', icon: 'antenna', path: '/debate?tab=subscriptions' },
     { key: 'me', label: '我的', icon: 'person', path: '/debate?tab=mine' },
   ],
+  papers: [
+    { key: 'projects', label: '论文', icon: 'file-text', path: '/papers' },
+    { key: 'modules', label: '模块', icon: 'library', path: '/modules' },
+    { key: 'notifications', label: '通知', icon: 'bell', path: '/inbox/notifications' },
+    { key: 'me', label: '我的', icon: 'person', path: '/me' },
+  ],
   messages: [
     { key: 'inbox', label: '私信', icon: 'messages', path: '/inbox' },
     { key: 'notifications', label: '通知', icon: 'bell', path: '/inbox/notifications' },

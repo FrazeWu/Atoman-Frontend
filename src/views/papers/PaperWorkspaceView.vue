@@ -51,14 +51,21 @@
           <PButton v-if="canCancelCompile" type="button" size="sm" variant="secondary" :disabled="canceling" @click="cancelCompile">
             {{ canceling ? '取消中...' : '取消任务' }}
           </PButton>
-          <p v-if="compileJob.status === 'succeeded'">
-            编译已完成，但 PDF 持久化与私有下载接口尚未上线，暂不提供预览。
+          <p v-if="compileJob.status === 'succeeded' && (!pdfEnabled || !compileJob.pdf_available)">
+            编译已完成，暂无可验证的 PDF 产物。
           </p>
         </div>
         <div v-else class="papers-workspace__preview-empty">
           <strong>准备编译</strong>
           <p>先保存当前源码，再提交项目快照。编译任务将进入持久队列。</p>
         </div>
+        <PaperPDFPreview
+          v-if="compileEnabled && pdfEnabled && compileJob?.status === 'succeeded' && compileJob.pdf_available"
+          :key="projectId + ':' + compileJob.id"
+          :project-id="projectId"
+          :job-id="compileJob.id"
+          :revision="compileJob.source_revision"
+        />
       </aside>
     </div>
   </main>
@@ -69,6 +76,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute } from 'vue-router'
 import PButton from '@/components/ui/PButton.vue'
 import LatexEditor from '@/components/papers/LatexEditor.vue'
+import PaperPDFPreview from '@/components/papers/PaperPDFPreview.vue'
 import {
   createPaperFile, getPaperFile, getPaperProject, listPaperFiles, savePaperFile,
   getPaperCompileCapability, getPaperCompileJob, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile,
@@ -90,6 +98,7 @@ const draft = ref('')
 const newFilePath = ref('')
 const saveStatus = ref('尚未打开文件')
 const compileEnabled = ref(false)
+const pdfEnabled = ref(false)
 const compileJob = ref<PaperCompileJob | null>(null)
 const compileError = ref('')
 const compiling = ref(false)
@@ -125,6 +134,7 @@ async function loadProject() {
     project.value = currentProject
     files.value = currentFiles
     compileEnabled.value = capability?.enabled === true
+    pdfEnabled.value = compileEnabled.value && capability?.pdf_available === true
     const main = currentFiles.find((file) => file.id === currentProject.main_file_id) || currentFiles[0]
     if (main) await selectFile(main)
     if (compileEnabled.value && !disposed && serial === loadSerial) {
@@ -324,6 +334,7 @@ watch(projectId, () => {
   stopCompilePoll()
   compileJob.value = null
   compileEnabled.value = false
+  pdfEnabled.value = false
   compileError.value = ''
   activeFile.value = null
   draft.value = ''

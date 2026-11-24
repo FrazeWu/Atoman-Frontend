@@ -1,4 +1,4 @@
-import { apiRequestEnvelope } from '@/api/client'
+import { apiRequest, apiRequestEnvelope } from '@/api/client'
 import { useApiUrl } from '@/composables/useApiUrl'
 
 export interface PaperProject {
@@ -65,6 +65,7 @@ export interface PaperCompileJob {
   attempts: number
   max_attempts: number
   cancel_requested: boolean
+  pdf_available?: boolean
   failure_code?: string
   created_at: string
   started_at?: string
@@ -98,5 +99,30 @@ export const cancelPaperCompile = (projectId: string, jobId: string) =>
     `${compilePrefix(projectId)}/${encodeURIComponent(jobId)}`,
     'DELETE'
   )
-// Intentionally no PDF blob/preview helper until verified, private,
-// owner-bound artifacts have been persisted by a trusted Worker.
+// Fetch only the authorized result using the existing cookie-aware transport.
+export async function getPaperCompilePDF(projectId: string, jobId: string, signal?: AbortSignal): Promise<Blob> {
+  const response = await apiRequest(
+    `${useApiUrl()}/papers${compilePrefix(projectId)}/${encodeURIComponent(jobId)}/pdf`,
+    { cache: 'no-store', signal, credentials: 'include' },
+  )
+  if (!response.ok || response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() !== 'application/pdf') {
+    throw new Error('无法获取已验证的 PDF')
+  }
+  const limit = 50 * 1024 * 1024
+  if (Number(response.headers.get('content-length') || 0) > limit || !response.body) throw new Error('PDF 响应无效')
+  const reader = response.body.getReader()
+  let size = 0
+  const chunks: Uint8Array<ArrayBuffer>[] = []
+  try {
+    for (;;) {
+      const next = await reader.read()
+      if (next.done) break
+      size += next.value.byteLength
+      if (size > limit) { await reader.cancel(); throw new Error('PDF 超出大小限制') }
+      chunks.push(new Uint8Array(next.value))
+    }
+  } finally { reader.releaseLock() }
+  const blob = new Blob(chunks, { type: 'application/pdf' })
+  if (blob.size < 8 || await blob.slice(0, 5).text() !== '%PDF-') throw new Error('PDF 格式不正确')
+  return blob
+}

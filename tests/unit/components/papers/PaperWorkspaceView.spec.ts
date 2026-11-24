@@ -21,6 +21,10 @@ vi.mock('@/components/papers/LatexEditor.vue', () => ({
   default: { props: ['modelValue'], template: '<pre data-test="editor">{{ modelValue }}</pre>' },
 }))
 
+vi.mock('@/components/papers/PaperPDFPreview.vue', () => ({
+  default: { props: ['projectId', 'jobId', 'revision'], template: '<div data-test="paper-pdf-preview">{{ projectId }}:{{ jobId }}:{{ revision }}</div>' },
+}))
+
 const one = { id: 'one', name: 'Old project', main_file_id: 'f1', head_revision: 1 }
 const two = { id: 'two', name: 'Current project', main_file_id: 'f2', head_revision: 1 }
 const f1 = { id: 'f1', path: 'old.tex', kind: 'text', revision: 1, content: 'Old source', sha256: '' }
@@ -129,6 +133,41 @@ describe('Papers compile availability and task workflow', () => {
       expect(cancelPaperCompile).toHaveBeenCalledWith('two', 'job-1')
       expect(wrapper.text()).toContain('已取消')
       expect(wrapper.html()).not.toContain('main.pdf')
+    } finally {
+      wrapper.unmount()
+    }
+  })
+})
+
+describe('Verified PDF result preview', () => {
+  it.each([
+    { enabled: true, pdfAvailable: true, jobAvailable: true, status: 'succeeded', visible: true },
+    { enabled: true, pdfAvailable: false, jobAvailable: true, status: 'succeeded', visible: false },
+    { enabled: true, pdfAvailable: true, jobAvailable: false, status: 'succeeded', visible: false },
+    { enabled: true, pdfAvailable: true, jobAvailable: true, status: 'failed', visible: false },
+    { enabled: false, pdfAvailable: true, jobAvailable: true, status: 'succeeded', visible: false },
+  ])('requires server capability and a verified successful result ($status, $visible)', async ({ enabled, pdfAvailable, jobAvailable, status, visible }) => {
+    vi.mocked(getPaperProject).mockResolvedValue(two as never)
+    vi.mocked(listPaperFiles).mockResolvedValue([f2] as never)
+    vi.mocked(getPaperFile).mockResolvedValue(f2 as never)
+    vi.mocked(getPaperCompileCapability).mockResolvedValue({ enabled, pdf_available: pdfAvailable })
+    vi.mocked(listPaperCompileJobs).mockResolvedValue([{
+      id: 'verified-job', project_id: 'two', source_revision: 1, status,
+      attempts: 1, max_attempts: 2, cancel_requested: false, pdf_available: jobAvailable,
+      created_at: '2026-11-24T00:00:00Z',
+    }] as never)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/papers/:projectId', component: PaperWorkspaceView }, { path: '/papers', component: { template: '<div />' } }],
+    })
+    await router.push('/papers/two')
+    await router.isReady()
+    const wrapper = mount(defineComponent({ render: () => h(RouterView) }), { global: { plugins: [router] } })
+    try {
+      await flushPromises()
+      const preview = wrapper.find('[data-test="paper-pdf-preview"]')
+      expect(preview.exists()).toBe(visible)
+      if (visible) expect(preview.text()).toBe('two:verified-job:1')
     } finally {
       wrapper.unmount()
     }

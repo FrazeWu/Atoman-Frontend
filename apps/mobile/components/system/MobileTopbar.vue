@@ -49,6 +49,18 @@
           data-testid="notifications-badge"
         >{{ unreadBadge }}</span>
       </button>
+      <!-- The mobile runtime uses a separate topbar; OracleGraph goes last here too. -->
+      <a
+        class="mobile-topbar__action mobile-topbar__oraclegraph"
+        data-testid="oraclegraph-topbar-link"
+        href="https://oracle.fazong.eu.org/"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="甲骨文学习平台（在新标签页打开）"
+        title="甲骨文学习 · OracleGraph"
+      >
+        <MIcon name="books" size="md" :stroke-width="1.8" />
+      </a>
     </div>
   </header>
 </template>
@@ -191,6 +203,11 @@ const displayLabel = computed(() => {
   color: var(--a-color-fg, #0f172a);
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.mobile-topbar__oraclegraph {
+  flex: 0 0 44px;
+  text-decoration: none;
 }
 
 .mobile-topbar__badge {

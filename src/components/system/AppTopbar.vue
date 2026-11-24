@@ -45,17 +45,7 @@
 
       <nav v-if="!isAuthRoute" class="nav">
         <RouterLink
-          v-for="room in navRooms"
-          :key="room.key"
-          :to="moduleUrl(room.key)"
-          class="nav-link"
-          :class="{ active: isRoomActive(room.key) }"
-          @click="handleModuleNavigation"
-        >
-          <span class="nav-link-name">{{ room.name }}</span>
-        </RouterLink>
-        <RouterLink
-          v-for="room in secondaryNavRooms"
+          v-for="room in orderedNavRooms"
           :key="room.key"
           :to="moduleUrl(room.key)"
           class="nav-link"
@@ -81,6 +71,19 @@
         </button>
         <AppTopbarAuthControls v-if="showAuthControls" />
         <PButton v-else-if="!isAuthPage" to="/login" size="sm">登录</PButton>
+        <!-- Independent OracleGraph app: last action in the AToMAN topbar. -->
+        <a
+          v-if="!isAuthRoute"
+          class="nav-link oraclegraph-topbar-link"
+          href="https://oracle.fazong.eu.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="甲骨文学习平台（在新标签页打开）"
+          title="甲骨文学习 · OracleGraph"
+        >
+          <PIcon name="books" size="sm" aria-hidden="true" />
+          <span class="oraclegraph-topbar-title">甲骨文</span>
+        </a>
       </div>
     </div>
   </header>
@@ -147,6 +150,10 @@ const isAuthPage = computed(() => {
 
 const navRooms = computed(() => topbarNavOrder.filter((key) => siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key]))
 const secondaryNavRooms = computed(() => moduleNavOrder.filter((key) => !topbarNavOrder.includes(key) && siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key]))
+const orderedNavRooms = computed(() => {
+  const rooms = [...navRooms.value, ...secondaryNavRooms.value]
+  return [...rooms.filter((room) => room.key !== 'papers'), ...rooms.filter((room) => room.key === 'papers')]
+})
 const siteContext = computed(() => {
   const queryStart = route.fullPath.indexOf('?')
   const search = queryStart >= 0 ? route.fullPath.slice(queryStart) : ''
@@ -605,6 +612,38 @@ html.dark .topbar--auth {
   background: var(--a-color-surface-muted);
 }
 
+/* AToMAN-owned topbar entry to the independently deployed OracleGraph. */
+.oraclegraph-topbar-link {
+  flex: 0 0 auto;
+  gap: 0.35rem;
+  white-space: nowrap;
+  margin-left: 0.15rem;
+  padding: 0 0.6rem;
+  border: 1px solid var(--a-color-border);
+  background: var(--a-color-surface);
+  font-size: 0.8rem;
+}
+.oraclegraph-topbar-link:hover {
+  border-color: var(--a-color-fg);
+  background: var(--a-color-surface-muted);
+}
+.oraclegraph-topbar-title {
+  font-weight: 500;
+}
+@media (max-width: 720px) {
+  .oraclegraph-topbar-link {
+    min-width: 2.15rem;
+    width: 2.15rem;
+    height: 2.15rem;
+    min-height: 2.15rem;
+    justify-content: center;
+    padding: 0;
+    margin-left: 0;
+  }
+  .oraclegraph-topbar-title {
+    display: none;
+  }
+}
 @media (max-width: 420px) {
   .topbar-collapse-btn {
     margin-left: 0;

@@ -183,6 +183,7 @@ const noIndexPrefixes = [
 	"/inbox",
 	"/messages",
 	"/mail",
+	"/papers",
 	"/me",
 	"/dev",
 	"/__disabled__",

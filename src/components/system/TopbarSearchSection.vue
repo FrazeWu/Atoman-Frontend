@@ -61,6 +61,7 @@ const sectionIcons: Record<GlobalSearchSectionType, LucideIcon> = {
   podcast: Mic,
   video: Video,
   timeline: Calendar,
+  papers: FileText,
 }
 
 const sectionIcon = computed(() => sectionIcons[props.section.type] || Sparkles)

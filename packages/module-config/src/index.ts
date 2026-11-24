@@ -7,7 +7,8 @@ export type ModuleRoomKey =
 	| "debate"
 	| "timeline"
 	| "podcast"
-	| "video";
+	| "video"
+	| "papers";
 
 export type ModuleRoom = {
 	key: ModuleRoomKey;
@@ -91,6 +92,14 @@ export const moduleRooms: Record<ModuleRoomKey, ModuleRoom> = {
 		helper: "内容视图",
 		homepageSub: "",
 	},
+	papers: {
+		key: "papers",
+		homePath: "/",
+		publicPathSegment: "papers",
+		name: "论文",
+		helper: "私有 LaTeX 写作",
+		homepageSub: "在线管理与编辑个人论文项目。",
+	},
 };
 
 export const moduleNavOrder: ModuleRoomKey[] = [
@@ -103,6 +112,7 @@ export const moduleNavOrder: ModuleRoomKey[] = [
 	"timeline",
 	"podcast",
 	"video",
+	"papers",
 ];
 
 export const topbarNavOrder: ModuleRoomKey[] = [
@@ -112,6 +122,7 @@ export const topbarNavOrder: ModuleRoomKey[] = [
 	"video",
 	"podcast",
 	"books",
+	"papers",
 ];
 
 export const notificationRoom = {

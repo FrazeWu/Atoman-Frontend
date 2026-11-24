@@ -45,17 +45,7 @@
 
       <nav v-if="!isAuthRoute" class="nav">
         <RouterLink
-          v-for="room in navRooms"
-          :key="room.key"
-          :to="moduleUrl(room.key)"
-          class="nav-link"
-          :class="{ active: isRoomActive(room.key) }"
-          @click="handleModuleNavigation"
-        >
-          <span class="nav-link-name">{{ room.name }}</span>
-        </RouterLink>
-        <RouterLink
-          v-for="room in secondaryNavRooms"
+          v-for="room in orderedNavRooms"
           :key="room.key"
           :to="moduleUrl(room.key)"
           class="nav-link"
@@ -147,6 +137,10 @@ const isAuthPage = computed(() => {
 
 const navRooms = computed(() => topbarNavOrder.filter((key) => siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key]))
 const secondaryNavRooms = computed(() => moduleNavOrder.filter((key) => !topbarNavOrder.includes(key) && siteAccessStore.isModuleVisible(key)).map((key) => moduleRooms[key]))
+const orderedNavRooms = computed(() => {
+  const rooms = [...navRooms.value, ...secondaryNavRooms.value]
+  return [...rooms.filter((room) => room.key !== 'papers'), ...rooms.filter((room) => room.key === 'papers')]
+})
 const siteContext = computed(() => {
   const queryStart = route.fullPath.indexOf('?')
   const search = queryStart >= 0 ? route.fullPath.slice(queryStart) : ''

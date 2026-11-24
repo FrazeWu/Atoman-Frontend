@@ -4,6 +4,7 @@
       <RouterLink to="/papers">← 我的论文</RouterLink>
       <strong>{{ project?.name || '论文工作台' }}</strong>
       <span class="papers-workspace__status" role="status">{{ saveStatus }}</span>
+      <PButton v-if="project" type="button" size="sm" variant="secondary" :disabled="exporting || saving" @click="exportProject">{{ exporting ? '正在导出…' : '导出 ZIP' }}</PButton>
     </header>
     <p v-if="loading" class="papers-workspace__message">正在打开项目...</p>
     <p v-else-if="error" role="alert" class="papers-workspace__error">{{ error }}</p>
@@ -11,7 +12,7 @@
       <aside class="papers-workspace__files" aria-label="论文文件">
         <div class="papers-workspace__files-heading"><h2>文件</h2><span>{{ files.length }}</span></div>
         <button v-for="file in files" :key="file.id" type="button" :class="{ active: activeFile?.id === file.id }" @click="selectFile(file)">
-          {{ file.path }}
+          {{ file.path }}<span v-if="file.kind === 'binary'" class="papers-workspace__asset-label">资源</span>
         </button>
         <form class="papers-workspace__add" @submit.prevent="addFile">
           <label for="papers-new-file">新建文本文件</label>
@@ -23,10 +24,12 @@
       <section class="papers-workspace__editor" aria-label="源码编辑">
         <div class="papers-workspace__editor-header">
           <span>{{ activeFile?.path || '请选择文件' }}</span>
-          <PButton type="button" size="sm" variant="secondary" :disabled="!activeFile || saving" @click="saveNow">保存</PButton>
+          <PButton type="button" size="sm" variant="secondary" :disabled="!activeFile || activeFile.kind !== 'text' || saving" @click="saveNow">保存</PButton>
         </div>
-        <LatexEditor v-if="activeFile" v-model="draft" />
+        <LatexEditor v-if="activeFile?.kind === 'text'" v-model="draft" />
+        <p v-else-if="activeFile?.kind === 'binary'" class="papers-workspace__message">此资源文件随项目编译与导出保留，不支持文本编辑。</p>
         <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
+        <p v-if="exportError" class="papers-workspace__error" role="alert">{{ exportError }}</p>
         <p v-if="saveError" class="papers-workspace__error" role="alert">
           {{ saveError }} 当前输入已保留在编辑器中，请先处理冲突，避免离开页面。
         </p>
@@ -78,7 +81,7 @@ import PButton from '@/components/ui/PButton.vue'
 import LatexEditor from '@/components/papers/LatexEditor.vue'
 import PaperPDFPreview from '@/components/papers/PaperPDFPreview.vue'
 import {
-  createPaperFile, getPaperFile, getPaperProject, listPaperFiles, savePaperFile,
+  createPaperFile, getPaperFile, getPaperProject, listPaperFiles, savePaperFile, getPaperProjectZIP, downloadPaperZIP,
   getPaperCompileCapability, getPaperCompileJob, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile,
   type PaperFile, type PaperProject, type PaperCompileJob,
 } from '@/api/papers'
@@ -90,6 +93,8 @@ const error = ref('')
 const fileError = ref('')
 const saveError = ref('')
 const saving = ref(false)
+const exporting = ref(false)
+const exportError = ref('')
 const addingFile = ref(false)
 const project = ref<PaperProject | null>(null)
 const files = ref<PaperFile[]>([])
@@ -162,7 +167,7 @@ function scheduleSave() {
 }
 
 watch(draft, (content) => {
-  if (activeFile.value && content !== activeFile.value.content) scheduleSave()
+  if (activeFile.value?.kind === 'text' && content !== activeFile.value.content) scheduleSave()
 })
 
 async function persist(): Promise<boolean> {
@@ -172,7 +177,7 @@ async function persist(): Promise<boolean> {
     if (saveError.value) return false
   }
   const file = activeFile.value
-  if (!file || draft.value === file.content) return true
+  if (!file || file.kind !== 'text' || draft.value === file.content) return true
   const content = draft.value
   saving.value = true
   saveStatus.value = '保存中...'
@@ -208,6 +213,13 @@ async function selectFile(file: PaperFile) {
   if (activeFile.value && !await persist()) return
   if (disposed || serial !== fileSerial || requestedProjectId !== projectId.value) return
   fileError.value = ''
+  if (file.kind === 'binary') {
+    activeFile.value = { ...file, content: '' }
+    draft.value = ''
+    saveStatus.value = '资源文件'
+    saveError.value = ''
+    return
+  }
   try {
     const content = await getPaperFile(requestedProjectId, file.id)
     if (disposed || serial !== fileSerial || requestedProjectId !== projectId.value) return
@@ -317,10 +329,26 @@ function onCompileVisibilityChange() {
   if (document.visibilityState === 'visible') void refreshCompileStatus()
 }
 
+async function exportProject() {
+  if (exporting.value || !project.value) return
+  exporting.value = true
+  exportError.value = ''
+  const id = projectId.value
+  const name = project.value.name
+  try {
+    if (!await persist()) { exportError.value = '请先解决保存失败或版本冲突再导出。'; return }
+    if (disposed || id !== projectId.value) return
+    const blob = await getPaperProjectZIP(id)
+    if (!disposed && id === projectId.value) downloadPaperZIP(blob, name)
+  } catch {
+    if (!disposed && id === projectId.value) exportError.value = '导出失败，请稍后重试。'
+  } finally { exporting.value = false }
+}
+
 function saveNow() { void persist() }
 
 function beforeUnload(event: BeforeUnloadEvent) {
-  if (savePromise || (activeFile.value && draft.value !== activeFile.value.content)) {
+  if (savePromise || (activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)) {
     event.preventDefault()
   }
 }
@@ -336,6 +364,7 @@ watch(projectId, () => {
   compileEnabled.value = false
   pdfEnabled.value = false
   compileError.value = ''
+  exportError.value = ''
   activeFile.value = null
   draft.value = ''
   files.value = []
@@ -388,4 +417,5 @@ onBeforeUnmount(() => {
 .papers-workspace__error { color:#b91c1c; padding:12px; }
 @media (max-width: 960px) { .papers-workspace { height:auto; min-height:calc(100vh - 88px); } .papers-workspace__content { grid-template-columns:160px minmax(0,1fr); min-height:650px; } .papers-workspace__preview { grid-column:1/-1; border-left:0; border-top:1px solid var(--border,#e1e5ea); } }
 @media (max-width: 600px) { .papers-workspace__content { display:flex; flex-direction:column; } .papers-workspace__files { max-height:200px; border-right:0; border-bottom:1px solid var(--border,#e1e5ea); } .papers-workspace__editor { min-height:460px; } }
+.papers-workspace__asset-label {font-size:.7rem;opacity:.65;margin-left:6px}
 </style>

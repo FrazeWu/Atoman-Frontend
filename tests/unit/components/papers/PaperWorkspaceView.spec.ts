@@ -11,6 +11,8 @@ vi.mock('@/api/papers', () => ({
   getPaperFile: vi.fn(),
   savePaperFile: vi.fn(),
   createPaperFile: vi.fn(),
+  getPaperProjectZIP: vi.fn(),
+  downloadPaperZIP: vi.fn(),
   getPaperCompileCapability: vi.fn().mockResolvedValue({ enabled: false, pdf_available: false }),
   listPaperCompileJobs: vi.fn().mockResolvedValue([]),
   submitPaperCompile: vi.fn(),

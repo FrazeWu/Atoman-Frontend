@@ -115,7 +115,7 @@ export const siteAccessFeatures: Partial<Record<ModuleRoomKey, { key: ModuleFeat
 }
 
 /** Modules with a dedicated management panel in addition to the shared permission rows. */
-export const siteAccessDetailModules: ModuleRoomKey[] = ['feed', 'music', 'forum', 'debate']
+export const siteAccessDetailModules: ModuleRoomKey[] = ['feed', 'music', 'forum', 'debate', 'papers']
 
 const extraAllowedModuleFeatures: Partial<Record<ModuleRoomKey, ModuleFeatureKey[]>> = {
   books: ['books.submit', 'books.review', 'books.publish_asset'],

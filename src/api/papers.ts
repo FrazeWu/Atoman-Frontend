@@ -13,7 +13,7 @@ export interface PaperProject {
 export interface PaperFile {
   id: string
   path: string
-  kind: 'text'
+  kind: 'text' | 'binary'
   content: string
   sha256: string
   revision: number
@@ -147,3 +147,51 @@ export const listPaperApplications = (status: PaperApplication['status'], page =
   papersRequest<PaperApplication[]>(`/admin/applications?status=${encodeURIComponent(status)}&page=${page}`)
 export const reviewPaperApplication = (id: string, decision: 'approved' | 'rejected', note = '') =>
   papersRequest<PaperApplication>(`/admin/applications/${encodeURIComponent(id)}/review`, 'POST', { decision, note })
+
+export const paperImportZIPLimit = 5 * 1024 * 1024
+export const paperImportSourceLimit = 4 * 1024 * 1024
+
+export async function importPaperProject(name: string, archive: Blob, mainFile = ''): Promise<PaperProject> {
+  if (archive.size === 0 || archive.size > paperImportZIPLimit) throw new Error('ZIP 文件不能超过 5 MiB。')
+  const query = new URLSearchParams({ name })
+  if (mainFile.trim()) query.set('main_file', mainFile.trim())
+  const result = await apiRequestEnvelope<PaperProject>(`${useApiUrl()}/papers/projects/import?${query}`, {
+    method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/zip' }, body: archive,
+  })
+  return result.data
+}
+
+export async function getPaperProjectZIP(projectId: string): Promise<Blob> {
+  const response = await apiRequest(`${useApiUrl()}/papers/projects/${encodeURIComponent(projectId)}/export`, { cache: 'no-store' })
+  const limit = 110 * 1024 * 1024
+  if (!response.ok || response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() !== 'application/zip'
+    || Number(response.headers.get('content-length') || 0) > limit || !response.body) throw new Error('无法导出项目。请检查访问权限或网络连接。')
+  const reader = response.body.getReader()
+  const chunks: Uint8Array<ArrayBuffer>[] = []
+  let size = 0
+  try {
+    for (;;) {
+      const next = await reader.read()
+      if (next.done) break
+      size += next.value.byteLength
+      if (size > limit) { await reader.cancel(); throw new Error('项目导出超过大小限制。') }
+      chunks.push(new Uint8Array(next.value))
+    }
+  } finally { reader.releaseLock() }
+  if (size < 22) throw new Error('项目压缩包无效。')
+  return new Blob(chunks, { type: 'application/zip' })
+}
+
+export function downloadPaperZIP(blob: Blob, projectName: string) {
+  const safeName = projectName.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').trim() || 'paper-project'
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = safeName + '.zip'
+  document.body.appendChild(a)
+  try { a.click() } finally {
+    a.remove()
+    // Let the browser take ownership of the download first.
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+}

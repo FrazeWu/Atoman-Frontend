@@ -5,7 +5,8 @@ workers_dev = false
 
 [[vpc_services]]
 binding = "PRIVATE_ORIGIN"
-service_id = "01a20b34-a449-7b81-bf50-c2b14b8b21ac"
+# Previous pve-cluster service (rollback): 01a20b34-a449-7b81-bf50-c2b14b8b21ac
+service_id = "01a20b71-edd8-7d22-9564-af908b6b9ad7"
 
 
 # This private bucket is not connected to any public domain or r2.dev URL.

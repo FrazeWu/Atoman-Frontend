@@ -1,5 +1,7 @@
 import { buildStaticPageHtml, isKnownPagePath } from "./_lib/pageSeo";
 import { createSeoApiFetcher, type SeoOriginBinding } from "./_lib/seoOriginFetcher";
+import { cachedPublicSeoHtml, canStorePublicSeoHtml, publicSeoHtmlKey,
+  queuePublicSeoHtml, runtimeSeoHtmlCache } from "./_lib/publicSeoHtmlEdgeCache";
 import { injectPublicSectionListing, loadPublicSectionListingResult } from "./_lib/sectionContentSeo";
 import {
 	buildAggregatedContentHtml,
@@ -26,6 +28,7 @@ type MiddlewareContext = {
 		};
 	};
 	next: () => Promise<Response>;
+	waitUntil?: (promise: Promise<unknown>) => void;
 };
 
 // Match the Vue Router's legacy URL redirects at the HTTP layer. Crawlers must
@@ -121,6 +124,12 @@ export async function onRequest(context: MiddlewareContext) {
 	const redirect = redirectLegacyRoute(context.request);
 	if (redirect) return redirect;
 
+	const htmlCacheKey = publicSeoHtmlKey(context.request);
+	const htmlCache = htmlCacheKey ? runtimeSeoHtmlCache() : undefined;
+	if (htmlCacheKey) {
+		const cached = await cachedPublicSeoHtml(htmlCacheKey, htmlCache);
+		if (cached) return cached;
+	}
 	const assetKey = archivedAssetKey(context.request);
 	const response = await context.next();
 	const contentType = response.headers.get("content-type") || "";
@@ -146,6 +155,7 @@ export async function onRequest(context: MiddlewareContext) {
 			requestUrl.origin,
 			seoFetcher,
 		);
+		let completePublicData = !lookup.retryable && (!lookup.matched || Boolean(lookup.content));
 		let missingSeoPage =
 			(lookup.matched && !lookup.content && !lookup.retryable) ||
 			(!lookup.matched && !isKnownPagePath(requestUrl.pathname));
@@ -166,6 +176,13 @@ export async function onRequest(context: MiddlewareContext) {
 				seoFetcher,
 				requestUrl.searchParams,
 			);
+			if (!listing.html && new Set([
+				"/posts", "/posts/articles", "/books", "/books/lists", "/music",
+				"/music/albums", "/music/artists", "/music/songs",
+				"/forum", "/debate", "/podcasts", "/videos",
+			]).has(requestUrl.pathname)) {
+				completePublicData = false;
+			}
 			if (listing.outOfRange) {
 				missingSeoPage = true;
 				transformedHtml = buildMissingPublicContentHtml(staticHtml);
@@ -180,11 +197,19 @@ export async function onRequest(context: MiddlewareContext) {
 			headers.set("cache-control", "no-store");
 			headers.set("x-robots-tag", "noindex, nofollow");
 		}
-		return new Response(transformedHtml, {
+		const finished = new Response(transformedHtml, {
 			status: missingSeoPage ? 404 : response.status,
 			statusText: missingSeoPage ? "Not Found" : response.statusText,
 			headers,
 		});
+		if (htmlCacheKey && canStorePublicSeoHtml(
+			finished,
+			requestUrl.hostname.endsWith(".pages.dev"),
+			completePublicData && !missingSeoPage,
+		)) {
+			queuePublicSeoHtml(htmlCacheKey, finished, htmlCache, context.waitUntil ? (promise) => context.waitUntil!(promise) : undefined);
+		}
+		return finished;
 	} catch {
 		const headers = new Headers(response.headers);
 		ensureNoTransform(headers);

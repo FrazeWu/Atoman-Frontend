@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 
 import { resolveActiveSectionByScroll, resolveInitialSettingSection } from '@/views/setting/settingAccessSections'
 import SettingAccessView from '@/views/setting/SettingAccessView.vue'
 import SettingManagementOverview from '@/components/setting/SettingManagementOverview.vue'
+import { moduleNavOrder } from '@/config/moduleRooms'
 
 const routerMocks = vi.hoisted(() => ({
   route: { path: '/site/setting', hash: '', query: {} },
@@ -37,6 +38,7 @@ const siteAccessState = {
       },
     },
   },
+  load: async () => undefined,
   save: async () => undefined,
 }
 
@@ -62,6 +64,7 @@ const stubs = {
   SettingAnnouncementsView: defineComponent({ template: '<div data-test="announcements-management">公告管理</div>' }),
   SettingFeedSourcePanel: defineComponent({ template: '<div>订阅源面板</div>' }),
   SettingForumModeratorPanel: defineComponent({ template: '<div>版主管理面板</div>' }),
+  PaperApplicationReview: defineComponent({ template: '<div data-test="papers-review-panel">论文申请审核</div>' }),
   SettingMusicReviewPanel: defineComponent({ template: '<div data-test="music-review-panel">音乐审核面板</div>' }),
   PSheet: defineComponent({
     props: ['show'],
@@ -99,12 +102,32 @@ describe('SettingAccessView section sync', () => {
       },
     })
 
-    expect(wrapper.findAll('.setting-access__module-card')).toHaveLength(9)
+    expect(wrapper.findAll('.setting-access__module-card')).toHaveLength(moduleNavOrder.length)
     expect(wrapper.findAll('.setting-access__module-body')).toHaveLength(0)
     await wrapper.get('[data-test="module-manage-music"]').trigger('click')
     await wrapper.vm.$nextTick()
     expect(wrapper.get('[data-test="detail-sheet"]').text()).toContain('音乐审核面板')
     expect(routerMocks.replace).toHaveBeenCalled()
+  })
+
+  it('shows Papers review only inside its admin module detail sheet', async () => {
+    routerMocks.route.hash = ''
+    const wrapper = mount(SettingAccessView, { global: { stubs } })
+    expect(wrapper.find('[data-test="papers-review-panel"]').exists()).toBe(false)
+    await wrapper.get('[data-test="module-manage-papers"]').trigger('click')
+    expect(wrapper.get('[data-test="detail-sheet"]').find('[data-test="papers-review-panel"]').exists()).toBe(true)
+    expect(routerMocks.replace).toHaveBeenCalledWith({ path: '/site/setting', query: {}, hash: '#detail-papers' })
+    await wrapper.get('[aria-label="关闭详情"]').trigger('click')
+    expect(wrapper.find('[data-test="papers-review-panel"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('opens the Papers admin review deep link', async () => {
+    routerMocks.route.hash = '#detail-papers'
+    const wrapper = mount(SettingAccessView, { global: { stubs } })
+    expect(wrapper.get('[data-test="detail-sheet"]').find('[data-test="papers-review-panel"]').exists()).toBe(true)
+    wrapper.unmount()
+    routerMocks.route.hash = ''
   })
 
   it('keeps the top section limited to module switches', () => {
@@ -124,7 +147,7 @@ describe('SettingAccessView section sync', () => {
       'announcements',
       'module-management',
     ])
-    expect(wrapper.findAll('.setting-access__module-card').map((section) => section.attributes('id'))).toHaveLength(9)
+    expect(wrapper.findAll('.setting-access__module-card').map((section) => section.attributes('id'))).toHaveLength(moduleNavOrder.length)
   })
 
   it('keeps a unified switch for podcast and saves its visibility', async () => {
@@ -132,6 +155,7 @@ describe('SettingAccessView section sync', () => {
     siteAccessState.save = save
     const wrapper = mount(SettingAccessView, { global: { stubs } })
 
+    await flushPromises()
     const podcastToggle = wrapper.get('[data-test="module-enabled-podcast"]')
     await podcastToggle.setValue(false)
     const saveButton = wrapper.findAll('.setting-access__actions button').find((b) => b.text().includes('保存设置'))

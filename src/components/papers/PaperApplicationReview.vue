@@ -1,9 +1,10 @@
 <template>
   <section class="papers-review" aria-label="Papers 申请审核">
     <div class="papers-review__heading">
-      <h2>申请审核</h2>
+      <h2>使用申请审核</h2>
       <PButton variant="secondary" size="sm" @click="refresh" :disabled="loading">刷新</PButton>
     </div>
+    <p class="papers-review__intro">审核论文模块的使用申请。通过后系统自动开通权限，并向申请人发送邮件通知。</p>
     <div class="papers-review__filters">
       <PButton v-for="tab in tabs" :key="tab.value" size="sm" :variant="status === tab.value ? 'primary' : 'secondary'" @click="changeStatus(tab.value)">{{ tab.label }}</PButton>
     </div>
@@ -77,12 +78,13 @@ onMounted(refresh)
 onBeforeUnmount(()=>{version++})
 </script>
 <style scoped>
-.papers-review { margin-top:24px; display:grid; gap:14px; border:1px solid var(--border,#d9dce2); border-radius:12px; padding:20px; }
+.papers-review { display:grid; gap:1rem; border:1px solid var(--a-color-border-soft); border-radius:var(--a-radius-card); padding:1.25rem; background:var(--a-color-bg); }
 .papers-review__heading {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.papers-review__heading h2 {font-size:1.1rem;font-weight:650}
-.papers-review__row {display:grid;gap:10px;padding:14px 0;border-top:1px solid var(--border,#d9dce2)}
+.papers-review__heading h2 {font-size:1rem;font-weight:600;margin:0}
+.papers-review__intro {margin:0;font-size:.82rem;color:var(--a-color-text-secondary)}
+.papers-review__row {display:grid;gap:10px;padding:14px 0;border-top:1px solid var(--a-color-border-soft)}
 .papers-review__reason {white-space:pre-wrap;overflow-wrap:anywhere}
-.papers-review__row textarea {width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--border,#d9dce2);border-radius:8px;background:var(--surface,#fff);color:inherit}
+.papers-review__row textarea {width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--a-color-border-soft);border-radius:8px;background:var(--a-color-bg);color:inherit}
 .papers-review__filters {display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.papers-review time,.papers-review label {font-size:.84rem;color:var(--text-secondary,#697281)}
+.papers-review time,.papers-review label {font-size:.84rem;color:var(--a-color-text-secondary)}
 </style>

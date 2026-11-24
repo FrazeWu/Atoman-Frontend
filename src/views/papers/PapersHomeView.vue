@@ -21,24 +21,43 @@
     </section>
     <section v-else class="papers-home__body">
       <form class="papers-home__create" @submit.prevent="create">
-        <label for="paper-project-name">新建论文项目</label>
+        <h2>新建论文项目</h2>
+        <div class="papers-home__import-actions">
+          <PButton type="button" size="sm" :variant="!importSource ? 'primary' : 'secondary'" :disabled="creating" @click="clearImport">空白项目</PButton>
+          <PButton type="button" size="sm" variant="secondary" :disabled="creating" @click="folderInput?.click()">上传文件夹</PButton>
+          <PButton type="button" size="sm" variant="secondary" :disabled="creating" @click="zipInput?.click()">上传 ZIP</PButton>
+          <input ref="folderInput" type="file" webkitdirectory multiple hidden :disabled="creating" @change="chooseImport($event, 'folder')" />
+          <input ref="zipInput" type="file" accept=".zip,application/zip" hidden :disabled="creating" @change="chooseImport($event, 'zip')" />
+        </div>
+        <div v-if="importSource" class="papers-home__selected">
+          <span>{{ importSource.label }} · {{ importSource.kind === 'folder' ? importSource.files.length + ' 个文件' : (importSource.files[0].size / 1048576).toFixed(2) + ' MiB' }}</span>
+          <PButton size="sm" variant="ghost" :disabled="creating" @click="clearImport">取消选择</PButton>
+        </div>
+        <label for="paper-project-name">项目名称</label>
         <div class="papers-home__actions">
           <input id="paper-project-name" v-model.trim="projectName" maxlength="100" placeholder="例如：Jailbreak Defense" required :disabled="creating" />
-          <PButton type="submit" :disabled="creating || !projectName">创建</PButton>
+          <PButton type="submit" :disabled="creating || !projectName">{{ creating ? '处理中…' : importSource ? '创建并导入' : '创建' }}</PButton>
+        </div>
+        <div v-if="importSource" class="papers-home__main-file">
+          <label for="paper-main-file">主 TeX 文件（可选）</label>
+          <input id="paper-main-file" v-model.trim="mainFile" maxlength="255" :disabled="creating" placeholder="自动识别，例如 paper.tex" />
+          <p>支持 TeX、BibTeX、样式及 PNG/JPG/PDF 资源。ZIP 最大 5 MiB，编译源文件最多 64 个、编码后总计 4 MiB。忽略常见系统和 Git 元数据。</p>
         </div>
       </form>
       <p v-if="error" role="alert" class="papers-home__error">{{ error }}</p>
       <h2>我的论文</h2>
       <p v-if="!projects.length" class="papers-home__empty">还没有论文项目。创建项目后会自动生成 main.tex。</p>
       <div v-else class="papers-home__grid">
-        <RouterLink v-for="project in projects" :key="project.id" :to="'/papers/' + project.id" class="papers-home__card">
-          <strong>{{ project.name }}</strong>
-          <span>项目版本 {{ project.head_revision }}</span>
-          <time :datetime="project.updated_at">{{ new Date(project.updated_at).toLocaleString() }}</time>
-        </RouterLink>
+        <article v-for="project in projects" :key="project.id" class="papers-home__card">
+          <RouterLink :to="'/papers/' + project.id" class="papers-home__project-link">
+            <strong>{{ project.name }}</strong>
+            <span>项目版本 {{ project.head_revision }}</span>
+            <time :datetime="project.updated_at">{{ new Date(project.updated_at).toLocaleString() }}</time>
+          </RouterLink>
+          <PButton type="button" size="sm" variant="secondary" :disabled="!!exporting" @click="exportProject(project)">{{ exporting === project.id ? '正在导出…' : '导出 ZIP' }}</PButton>
+        </article>
       </div>
     </section>
-    <PaperApplicationReview v-if="canReview" />
   </main>
 </template>
 
@@ -47,9 +66,8 @@ import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
-import { paperAccess, listPaperProjects, createPaperProject, getPaperApplication, submitPaperApplication, type PaperProject, type PaperApplication } from '@/api/papers'
-import { useAuthStore } from '@/stores/auth'
-import PaperApplicationReview from '@/components/papers/PaperApplicationReview.vue'
+import { paperAccess, listPaperProjects, createPaperProject, getPaperApplication, submitPaperApplication, importPaperProject, getPaperProjectZIP, downloadPaperZIP, paperImportZIPLimit, type PaperProject, type PaperApplication } from '@/api/papers'
+import { packPaperFolder, suggestPaperProjectName } from '@/components/papers/projectArchive'
 
 const router = useRouter()
 const loading = ref(true)
@@ -58,8 +76,40 @@ const creating = ref(false)
 const projectName = ref('')
 const projects = ref<PaperProject[]>([])
 const error = ref('')
-const auth = useAuthStore()
-const canReview = computed(() => auth.user?.role === 'admin' || auth.user?.role === 'owner')
+const folderInput = ref<HTMLInputElement | null>(null)
+const zipInput = ref<HTMLInputElement | null>(null)
+const importSource = ref<{kind:'folder'|'zip'; files:File[]; label:string} | null>(null)
+const mainFile = ref('')
+const exporting = ref('')
+function clearImport() {
+  importSource.value = null
+  mainFile.value = ''
+  error.value = ''
+}
+function chooseImport(event: Event, kind: 'folder'|'zip') {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  input.value = ''
+  if (!files.length) return
+  if (kind === 'zip' && (!/\.zip$/i.test(files[0].name) || files[0].size > paperImportZIPLimit || !files[0].size)) {
+    error.value = '请选择不超过 5 MiB 的有效 ZIP 压缩包。'
+    return
+  }
+  const name = suggestPaperProjectName(files[0], kind === 'folder')
+  if (!name) { error.value = '无法识别项目名称，请改用 ZIP 导入。'; return }
+  importSource.value = { kind, files, label: kind === 'folder' ? name : files[0].name }
+  projectName.value = name
+  mainFile.value = ''
+  error.value = ''
+}
+async function exportProject(project: PaperProject) {
+  if (exporting.value) return
+  exporting.value = project.id
+  error.value = ''
+  try { downloadPaperZIP(await getPaperProjectZIP(project.id), project.name) }
+  catch { error.value = '导出失败，请检查项目权限或网络后重试。' }
+  finally { exporting.value = '' }
+}
 const application = ref<PaperApplication | null>(null)
 const reason = ref('')
 const applying = ref(false)
@@ -95,10 +145,13 @@ async function create() {
   creating.value = true
   error.value = ''
   try {
-    const project = await createPaperProject(projectName.value)
+    const source = importSource.value
+    const project = source
+      ? await importPaperProject(projectName.value, source.kind === 'folder' ? await packPaperFolder(source.files) : source.files[0], mainFile.value)
+      : await createPaperProject(projectName.value)
     await router.push('/papers/' + project.id)
-  } catch {
-    error.value = '创建失败。请检查项目名称、访问权限或当前项目数量。'
+  } catch (cause) {
+    error.value = importSource.value ? (cause instanceof Error && cause.message ? '导入失败：' + cause.message : '导入失败，请检查 ZIP 内容。') : '创建失败。请检查项目名称、访问权限或当前项目数量。'
   } finally {
     creating.value = false
   }
@@ -123,4 +176,13 @@ onMounted(load)
 @media (max-width: 600px) { .papers-home { padding: 20px 16px 48px; } .papers-home__actions { flex-direction: column; } }
 .papers-home__apply {display:grid;gap:10px;margin-top:16px;max-width:620px}
 .papers-home__apply textarea {padding:12px;border:1px solid var(--border,#d9dce2);border-radius:8px;background:var(--surface,#fff);color:inherit;width:100%;box-sizing:border-box;resize:vertical}
+.papers-home__create h2 {margin:0 0 14px}
+.papers-home__import-actions {display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.papers-home__selected {display:flex;gap:12px;align-items:center;justify-content:space-between;overflow-wrap:anywhere;margin-bottom:12px;font-size:.85rem}
+.papers-home__main-file {display:grid;gap:8px;margin-top:14px}
+.papers-home__main-file label {margin:0}
+.papers-home__main-file input {padding:10px 12px;border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-control);background:var(--a-color-bg);color:inherit}
+.papers-home__main-file p {font-size:.8rem;color:var(--a-color-text-secondary);margin:0}
+.papers-home__project-link {display:flex;flex-direction:column;gap:8px;color:inherit;text-decoration:none;overflow-wrap:anywhere}
+.papers-home__project-link:hover strong {text-decoration:underline}
 </style>

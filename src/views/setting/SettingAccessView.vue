@@ -200,6 +200,8 @@
               <p v-else class="setting-access__detail-disabled" role="status">论坛模块已关闭，请先开启论坛模块。</p>
             </template>
 
+            <PaperApplicationReview v-else-if="selectedModule === 'papers'" />
+
             <template v-else-if="selectedModule === 'debate'">
               <div class="setting-access__detail-settings setting-access__detail-settings--stack">
                 <label>
@@ -271,6 +273,7 @@ import SettingFeedSourcePanel from '@/components/setting/SettingFeedSourcePanel.
 import SettingForumModeratorPanel from '@/components/setting/SettingForumModeratorPanel.vue'
 import SettingManagementOverview from '@/components/setting/SettingManagementOverview.vue'
 import SettingMusicReviewPanel from '@/components/setting/SettingMusicReviewPanel.vue'
+import PaperApplicationReview from '@/components/papers/PaperApplicationReview.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PSectionHeader from '@/components/ui/PSectionHeader.vue'
 import PActionFeedback from '@/components/ui/PActionFeedback.vue'
@@ -306,7 +309,7 @@ const moduleDescriptions: Record<ModuleRoomKey, string> = {
   timeline: '人物与事件时间线',
   podcast: '音频节目与单集',
   video: '视频发布与播放',
-  papers: '私人 LaTeX 论文项目',
+  papers: 'LaTeX 论文项目与使用申请审核',
 }
 const moduleIcons: Record<ModuleRoomKey, Component> = {
   feed: Rss,

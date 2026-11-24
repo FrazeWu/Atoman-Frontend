@@ -155,6 +155,10 @@ export async function onRequest(context: MiddlewareContext) {
 			requestUrl.origin,
 			seoFetcher,
 		);
+		// A failed SEO lookup is not a successful, indexable detail page.
+		// Keep the client application shell, but tell crawlers to retry rather
+		// than returning duplicate generic HTML with status 200.
+		const retryableSeoPage = lookup.matched && Boolean(lookup.retryable);
 		let completePublicData = !lookup.retryable && (!lookup.matched || Boolean(lookup.content));
 		let missingSeoPage =
 			(lookup.matched && !lookup.content && !lookup.retryable) ||
@@ -196,10 +200,13 @@ export async function onRequest(context: MiddlewareContext) {
 		if (missingSeoPage) {
 			headers.set("cache-control", "no-store");
 			headers.set("x-robots-tag", "noindex, nofollow");
+		} else if (retryableSeoPage) {
+			headers.set("cache-control", "no-store");
+			headers.set("retry-after", "60");
 		}
 		const finished = new Response(transformedHtml, {
-			status: missingSeoPage ? 404 : response.status,
-			statusText: missingSeoPage ? "Not Found" : response.statusText,
+			status: missingSeoPage ? 404 : retryableSeoPage ? 503 : response.status,
+			statusText: missingSeoPage ? "Not Found" : retryableSeoPage ? "Service Unavailable" : response.statusText,
 			headers,
 		});
 		if (htmlCacheKey && canStorePublicSeoHtml(

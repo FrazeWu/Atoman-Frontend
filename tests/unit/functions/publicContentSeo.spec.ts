@@ -428,6 +428,46 @@ describe("public content SEO", () => {
 		expect(html).not.toContain('rel="canonical"');
 	});
 
+	it("returns retryable 503 for a failed public detail lookup, never a generic indexable 200", async () => {
+		const ids = [
+			"01a10b46-ceed-7373-8614-31aeae023292",
+			"01a10b46-c677-7ba4-a5c2-c31806588ab5",
+			"01a10b43-3418-7339-89de-c18c288943a9",
+		];
+		for (const id of ids) {
+			const request = new Request("https://www.atoman.org/music/song/" + id);
+			const next = async () => new Response(shell, {
+				headers: { "content-type": "text/html", "cache-control": "public, max-age=60" },
+			});
+			for (const fail of [
+				async () => json({ error: "temporarily unavailable" }, 503),
+				async () => { throw new Error("upstream timeout"); },
+			]) {
+				const response = await pageMiddleware({
+					request,
+					env: { SEO_ORIGIN: { fetch: fail } },
+					next,
+				});
+				expect(response.status).toBe(503);
+				expect(response.headers.get("cache-control")).toBe("no-store");
+				expect(response.headers.get("retry-after")).toBe("60");
+				expect(response.headers.get("x-robots-tag")).toBeNull();
+				expect(await response.text()).not.toContain('rel="canonical"');
+			}
+			const recovered = await pageMiddleware({
+				request,
+				env: { SEO_ORIGIN: { fetch: async () => json({ data: {
+					song: { id, title: "Recovered song", lifecycle_status: "active" },
+					artists: [{ name: "Artist" }],
+				} }) } },
+				next,
+			});
+			expect(recovered.status).toBe(200);
+			expect(recovered.headers.get("retry-after")).toBeNull();
+			expect(await recovered.text()).toContain('rel="canonical" href="https://www.atoman.org/music/song/' + id + '"');
+		}
+	});
+
 	it("marks feed item pages as aggregate content through the Pages middleware", async () => {
 		const response = await pageMiddleware({
 			request: new Request(

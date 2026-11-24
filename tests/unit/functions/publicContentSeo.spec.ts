@@ -21,6 +21,34 @@ function json(data: unknown, status = 200) {
 }
 
 describe("public content SEO", () => {
+	it("does not publish unavailable Discogs covers as song or album artwork", async () => {
+		const id = "01a10b46-acd6-7096-acc3-2918aa322eef";
+		const blocked = "https://i.discogs.com/restricted.jpeg";
+		const owned = "https://assets.atoman.org/music/verified-cover.jpg";
+		for (const path of ["/music/song/" + id, "/music/album/" + id, "/music/artist/" + id]) {
+			const makeFetcher = (direct: string, albumCover: string) => vi.fn(async () => json({ data:
+				path.includes("/song/") ? {
+					song: { id, title: "Verified song", lifecycle_status: "active", cover_url: direct,
+						album: { id, title: "Album", cover_url: albumCover } },
+				} : { id, title: "Verified album", name: "Verified artist",
+					cover_url: direct, image_url: direct, lifecycle_status: "active" },
+			})) as unknown as typeof fetch;
+			const lookup = await resolvePublicContentSeo(path, undefined, "https://www.atoman.org", makeFetcher(blocked, blocked));
+			expect(lookup.content).toBeDefined();
+			expect(lookup.content?.imageUrl).toBeUndefined();
+			expect(lookup.content?.structuredData.image).toBeUndefined();
+			const html = buildPublicContentHtml(shell, lookup.content!);
+			expect(html).not.toContain("i.discogs.com");
+			expect(html).not.toContain("<img ");
+			expect(html).toContain('property="og:image" content="https://www.atoman.org/atoman-share.png"');
+			const recovered = await resolvePublicContentSeo(path, undefined, "https://www.atoman.org",
+				makeFetcher(path.includes("/song/") ? blocked : owned, owned));
+			expect(recovered.content?.imageUrl).toBe(owned);
+			expect(recovered.content?.structuredData.image).toBe(owned);
+			expect(buildPublicContentHtml(shell, recovered.content!)).toContain('<img src="' + owned + '"');
+		}
+	});
+
 	it("replaces placeholder artist biographies with verified public album facts", async () => {
 		const artistId = "01a06793-193c-796e-8b97-b1ee8de3a825";
 		const albumId = "01a07774-5cb4-7c6f-b5df-841db6db86a2";
@@ -367,6 +395,27 @@ describe("public content SEO", () => {
 		expect(unknownPrecision.structuredData.datePublished).toBeUndefined();
 	});
 
+	it("links video members to their public collections and collections back to their members", async () => {
+		const id = "01a02565-0cc8-7ba7-93e0-c4b698b30974";
+		const other = { id: "other-collection", name: "另一个合集" };
+		const collection = { id, name: "公开合集" };
+		const video = { id: "01a02565-0cc9-7ba7-93e0-c4b698b30974", title: "视频作品", visibility: "public", status: "published",
+			collection: other, collections: [collection, { id: "private-collection", name: "私密", visibility: "private" }] };
+		const fetcher = vi.fn(async (url: string) =>
+			url.includes("collection_id=") ? json({ data: [video] }) : json({ data: video })) as unknown as typeof fetch;
+		const detail = await resolvePublicContentSeo("/videos/watch/01a02565-0cc9-7ba7-93e0-c4b698b30974", undefined, "https://www.atoman.org", fetcher);
+		const detailHtml = buildPublicContentHtml(shell, detail.content!);
+		expect(detailHtml).toContain('href="/videos/collections/' + id + '"');
+		expect(detailHtml).toContain("所属合集");
+		expect(detailHtml).not.toContain("private-collection");
+		const collectionPage = await resolvePublicContentSeo("/videos/collections/" + id, undefined, "https://www.atoman.org", fetcher);
+		expect(collectionPage.content?.title).toContain("公开合集");
+		expect(collectionPage.content?.title).not.toContain("另一个合集");
+		const collectionHtml = buildPublicContentHtml(shell, collectionPage.content!);
+		expect(collectionHtml).toContain('href="/videos/watch/01a02565-0cc9-7ba7-93e0-c4b698b30974"');
+		expect(collectionHtml).toContain("合集视频");
+	});
+
 	it("marks aggregated feed item pages as noindex without a homepage canonical", () => {
 		const html = buildAggregatedContentHtml(shell);
 
@@ -426,6 +475,46 @@ describe("public content SEO", () => {
 		const html = buildUnresolvedPublicContentHtml(shell);
 		expect(html).not.toContain('name="robots"');
 		expect(html).not.toContain('rel="canonical"');
+	});
+
+	it("returns retryable 503 for a failed public detail lookup, never a generic indexable 200", async () => {
+		const ids = [
+			"01a10b46-ceed-7373-8614-31aeae023292",
+			"01a10b46-c677-7ba4-a5c2-c31806588ab5",
+			"01a10b43-3418-7339-89de-c18c288943a9",
+		];
+		for (const id of ids) {
+			const request = new Request("https://www.atoman.org/music/song/" + id);
+			const next = async () => new Response(shell, {
+				headers: { "content-type": "text/html", "cache-control": "public, max-age=60" },
+			});
+			for (const fail of [
+				async () => json({ error: "temporarily unavailable" }, 503),
+				async () => { throw new Error("upstream timeout"); },
+			]) {
+				const response = await pageMiddleware({
+					request,
+					env: { SEO_ORIGIN: { fetch: fail } },
+					next,
+				});
+				expect(response.status).toBe(503);
+				expect(response.headers.get("cache-control")).toBe("no-store");
+				expect(response.headers.get("retry-after")).toBe("60");
+				expect(response.headers.get("x-robots-tag")).toBeNull();
+				expect(await response.text()).not.toContain('rel="canonical"');
+			}
+			const recovered = await pageMiddleware({
+				request,
+				env: { SEO_ORIGIN: { fetch: async () => json({ data: {
+					song: { id, title: "Recovered song", lifecycle_status: "active" },
+					artists: [{ name: "Artist" }],
+				} }) } },
+				next,
+			});
+			expect(recovered.status).toBe(200);
+			expect(recovered.headers.get("retry-after")).toBeNull();
+			expect(await recovered.text()).toContain('rel="canonical" href="https://www.atoman.org/music/song/' + id + '"');
+		}
 	});
 
 	it("marks feed item pages as aggregate content through the Pages middleware", async () => {

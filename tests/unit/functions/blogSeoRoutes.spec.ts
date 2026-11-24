@@ -28,18 +28,25 @@ describe('blog SEO Pages Functions', () => {
     expect(await response.text()).toContain('<title data-page-meta="article">文章标题 | Atoman</title>')
   })
 
-  it('returns the untouched SPA shell when the SEO API fails', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('unavailable', { status: 503 })))
-
+  it.each([
+    () => Promise.resolve(new Response('unavailable', { status: 503 })),
+    () => Promise.reject(new Error('upstream timeout')),
+    () => Promise.resolve(new Response('{bad-json')),
+  ])('returns a retryable non-cacheable response rather than an indexable generic article', async (failure) => {
+    vi.stubGlobal('fetch', vi.fn(failure))
+    const defaultShell = shell.replace('</head>', '<link data-default-meta rel="canonical" href="https://www.atoman.org/"></head>')
     const response = await articleHandler({
-      request: new Request('https://atoman.org/posts/post/post-1'), env: {}, params: { id: 'post-1' },
-      next: async () => new Response(shell, { headers: { 'content-type': 'text/html' } }),
+      request: new Request('https://www.atoman.org/posts/post/post-1'), env: {}, params: { id: 'post-1' },
+      next: async () => new Response(defaultShell, { headers: { 'content-type': 'text/html' } }),
     })
 
-    expect(await response.text()).toBe(shell)
+    expect(response.status).toBe(503)
+    expect(response.headers.get('retry-after')).toBe('60')
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    expect(await response.text()).not.toContain('rel="canonical"')
   })
 
-  it.each([403, 404])('returns a noindex 404 when the SEO API returns %i', async (status) => {
+  it.each([403, 404, 410])('returns a noindex 404 when the SEO API returns %i', async (status) => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('not found', { status })))
 
     const response = await articleHandler({

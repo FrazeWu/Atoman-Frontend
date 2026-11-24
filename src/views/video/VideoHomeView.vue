@@ -15,8 +15,10 @@ import PUnifiedSearchBar from '@/components/search/PUnifiedSearchBar.vue'
 import PDropdown from '@/components/ui/PDropdown.vue'
 import { MoreHorizontal as More } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
+import { publicVideoCollections } from '@/utils/publicVideoCollections'
 
 const videos = ref<Video[]>([])
+const publicCollections = computed(() => publicVideoCollections(videos.value))
 const router = useRouter()
 const authStore = useAuthStore()
 const videoSearchTypes = ['video'] as const
@@ -245,6 +247,12 @@ watch(sort, () => {
       <div v-else class="vh-grid">
         <PVideoCard v-for="video in videos" :key="video.id" :video="video" />
       </div>
+      <nav v-if="publicCollections.length" class="vh-public-collections" aria-label="公开视频合集">
+        <h2>视频合集</h2>
+        <div>
+          <RouterLink v-for="collection in publicCollections" :key="collection.id" :to="'/videos/collections/' + collection.id">{{ collection.name }}</RouterLink>
+        </div>
+      </nav>
       <PaginationBar
         v-if="videoMeta.total > videoMeta.page_size"
         :meta="videoMeta"
@@ -261,6 +269,11 @@ watch(sort, () => {
   margin: 0 auto;
   padding: 0 1.5rem 6rem;
 }
+
+.vh-public-collections { margin: 1.5rem 0; }
+.vh-public-collections h2 { font-size: 1rem; font-weight: 500; margin: 0 0 0.75rem; }
+.vh-public-collections > div { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.vh-public-collections a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 
 .vh-search {
   width: min(22rem, 38vw);

@@ -1,9 +1,19 @@
 import { resolveApiBase } from "./blogSeo";
+import { publicArchivePageNumbers } from "../../src/utils/publicArchivePages";
+import { publicVideoCollections } from "../../src/utils/publicVideoCollections";
 
 type PublicItem = Record<string, unknown>;
 type PublicFetcher = typeof fetch;
-type SeoGroupResult = { html: string; outOfRange: boolean };
-const emptyGroup: SeoGroupResult = { html: "", outOfRange: false };
+type PublicItemList = {
+  "@context": "https://schema.org";
+  "@type": "ItemList";
+  name: string;
+  numberOfItems: number;
+  itemListElement: Array<{ "@type": "ListItem"; position: number; name: string; url: string }>;
+};
+type SeoGroupResult = { html: string; outOfRange: boolean; itemLists: PublicItemList[] };
+const emptyGroup: SeoGroupResult = { html: "", outOfRange: false, itemLists: [] };
+const canonicalSiteOrigin = "https://www.atoman.org";
 
 type PublicListSource = {
   heading: string;
@@ -110,35 +120,68 @@ async function getGroup(apiBase: string, source: PublicListSource, fetcher: Publ
     if (archivePath && page > 1 && items.length === 0 &&
         typeof metadata?.total === "number" && Number.isFinite(metadata.total) &&
         metadata.total >= 0 && page > Math.ceil(metadata.total / pageSize)) {
-      return { html: "", outOfRange: true };
+      return { ...emptyGroup, outOfRange: true };
     }
     const valid = items.filter(publicRecord)
-      .map((item) => {
+      .flatMap((item) => {
         const id = typeof item.id === "string" ? item.id : "";
         const title = cleanText(item[source.labelField], 125, false);
-        if (!/^[a-zA-Z0-9_-]{1,100}$/.test(id) || !title) return "";
-        const url = source.routePrefix + encodeURIComponent(id);
-        const summary = cleanText(item.summary || item.description, 170);
-        return '<li><a href="' + escapeHtml(url) + '">' + escapeHtml(title) + '</a>'
-          + (summary && summary !== title ? '<p>' + escapeHtml(summary) + '</p>' : '') + '</li>';
+        if (!/^[a-zA-Z0-9_-]{1,100}$/.test(id) || !title) return [];
+        return [{
+          url: source.routePrefix + encodeURIComponent(id),
+          title,
+          summary: cleanText(item.summary || item.description, 170),
+        }];
       })
-      .filter(Boolean)
       .slice(0, source.maxItems ?? 8);
     if (!valid.length) return emptyGroup;
+    // Build the structured list and the visible fallback from exactly the
+    // same filtered, ordered records. Never invent products or offers.
+    const listHtml = valid.map(({ url, title, summary }) =>
+      '<li><a href="' + escapeHtml(url) + '">' + escapeHtml(title) + '</a>'
+      + (summary && summary !== title ? '<p>' + escapeHtml(summary) + '</p>' : '') + '</li>'
+    ).join("");
+    const itemList: PublicItemList = {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      name: source.heading,
+      numberOfItems: valid.length,
+      itemListElement: valid.map(({ url, title }, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        name: title,
+        url: canonicalSiteOrigin + url,
+      })),
+    };
     const hasMore = metadata?.has_more === true || (
       metadata?.has_more === undefined
       && typeof metadata?.total === "number"
       && metadata.total > page * pageSize
     );
     const pageUrl = (n: number) => archivePath + (n > 1 ? "?page=" + String(n) : "");
+    const numbers = archivePath === "/music/songs" && typeof metadata?.total === "number"
+      ? publicArchivePageNumbers(page, metadata.total, pageSize) : [];
+    const numberedPager = numbers.length
+      ? '<details><summary>跳转页码</summary><ul>' + numbers.map((n) =>
+        '<li>' + (n === page ? '<span aria-current="page">' + n + '</span>'
+          : '<a href="' + escapeHtml(pageUrl(n)) + '" aria-label="第 ' + n + ' 页">' + n + '</a>') + '</li>'
+        ).join("") + '</ul></details>' : "";
     const pager = archivePath
       ? '<nav aria-label="目录分页">'
         + (page > 1 ? '<a rel="prev" href="' + escapeHtml(pageUrl(page - 1)) + '">上一页</a>' : '')
         + (hasMore ? '<a rel="next" href="' + escapeHtml(pageUrl(page + 1)) + '">下一页</a>' : '')
-        + '</nav>'
+        + numberedPager + '</nav>'
       : "";
+    const collections = source.routePrefix === "/videos/watch/"
+      ? publicVideoCollections(items.filter(publicRecord)).slice(0, 100) : [];
+    const collectionLinks = collections.length
+      ? '<section class="seo-public-listing-group"><h3>公开视频合集</h3><ul>' +
+        collections.map((collection) => '<li><a href="/videos/collections/' +
+          encodeURIComponent(collection.id) + '">' + escapeHtml(collection.name) + '</a></li>').join("") +
+        '</ul></section>' : "";
     return { html: '<section class="seo-public-listing-group"><h3>' + escapeHtml(source.heading)
-      + '</h3><ul>' + valid.join("") + '</ul>' + pager + '</section>', outOfRange: false };
+      + '</h3><ul>' + listHtml + '</ul>' + pager + '</section>' + collectionLinks,
+      outOfRange: false, itemLists: [itemList] };
   } catch {
     // A temporary API failure should never hide the section or change indexing.
     return emptyGroup;
@@ -167,6 +210,7 @@ export async function loadPublicSectionListingResult(
         + content + '</section>'
       : "",
     outOfRange: groups.some((group) => group.outOfRange),
+    itemLists: groups.flatMap((group) => group.itemLists),
   };
 }
 
@@ -182,10 +226,20 @@ export async function loadPublicSectionListing(
   return result.html;
 }
 
-export function injectPublicSectionListing(html: string, listing: string) {
+export function injectPublicSectionListing(
+  html: string, listing: string, itemLists: readonly PublicItemList[] = [],
+) {
   if (!listing) return html;
   const start = html.indexOf('<main class="seo-static-fallback"');
   if (start === -1) return html;
   const end = html.indexOf("</main>", start);
-  return end === -1 ? html : `${html.slice(0, end)}${listing}${html.slice(end)}`;
+  if (end === -1) return html;
+  const withListing = html.slice(0, end) + listing + html.slice(end);
+  if (!itemLists.length) return withListing;
+  const scripts = itemLists.map((itemList) =>
+    '<script data-page-meta="section-list" type="application/ld+json">' +
+      JSON.stringify(itemList).replace(/</g, "\\u003c") +
+      '</script>'
+  ).join("\n");
+  return withListing.replace(/<\/head>/i, () => scripts + "\n</head>");
 }

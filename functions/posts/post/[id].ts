@@ -35,6 +35,21 @@ function unavailableArticleResponse() {
   )
 }
 
+async function retryableArticleResponse(shell: Response) {
+  const html = (await shell.text()).replace(
+    /\s*<link(?=[^>]*data-default-meta)(?=[^>]*rel=["']canonical["'])[^>]*>/gi,
+    '',
+  )
+  const headers = new Headers(shell.headers)
+  headers.set('content-type', 'text/html; charset=UTF-8')
+  headers.set('cache-control', 'no-store')
+  headers.set('retry-after', '60')
+  headers.delete('content-length')
+  headers.delete('content-encoding')
+  headers.delete('etag')
+  return new Response(html, { status: 503, statusText: 'Service Unavailable', headers })
+}
+
 export async function onRequest(context: ArticleContext) {
   const shell = await context.next()
   const fallback = shell.clone()
@@ -53,8 +68,8 @@ export async function onRequest(context: ArticleContext) {
       signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(7000) : undefined,
     })
     if (!response.ok) {
-      if (response.status === 403 || response.status === 404) return unavailableArticleResponse()
-      return shell
+      if ([403, 404, 410].includes(response.status)) return unavailableArticleResponse()
+      return retryableArticleResponse(fallback)
     }
 
     const payload = await response.json() as { data?: BlogSeoPost }
@@ -67,6 +82,6 @@ export async function onRequest(context: ArticleContext) {
     headers.delete('content-encoding')
     return new Response(html, { status: 200, statusText: 'OK', headers })
   } catch {
-    return fallback
+    return retryableArticleResponse(fallback)
   }
 }

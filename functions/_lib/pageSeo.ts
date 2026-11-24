@@ -9,6 +9,36 @@ type StaticPageMeta = {
 const canonicalOrigin = "https://www.atoman.org";
 const defaultImage = `${canonicalOrigin}/atoman-share.png`;
 
+// Atoman is the existing open-source content community, not a merchant.
+// Only publish identity and contact details already stated on its site.
+function homeIdentityJsonLd() {
+  const homepage = canonicalOrigin + "/";
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": homepage + "#website",
+        name: "Atoman",
+        alternateName: "凹凸庵",
+        url: homepage,
+        description: pageMeta["/"].description,
+        publisher: { "@id": homepage + "#organization" },
+      },
+      {
+        "@type": "Organization",
+        "@id": homepage + "#organization",
+        name: "Atoman",
+        alternateName: "凹凸庵",
+        url: homepage,
+        logo: canonicalOrigin + "/atoman-house.svg",
+        description: "凹凸庵是一个开源、可自托管的内容社区。",
+        email: "support@atoman.org",
+      },
+    ],
+  };
+}
+
 const pageMeta: Record<string, StaticPageMeta> = {
 	"/": {
 		title: "Atoman | 订阅与内容｜求真与开放",
@@ -90,9 +120,9 @@ const pageMeta: Record<string, StaticPageMeta> = {
 const publicSectionLinks: Record<string, string[]> = {
   "/": ["/feed", "/posts", "/books", "/music", "/forum", "/podcasts", "/videos"],
   "/feed": ["/posts", "/podcasts", "/videos", "/music"],
-  "/posts": ["/posts/articles", "/feed", "/forum", "/debate"],
+  "/posts": ["/posts/articles", "/feed", "/forum", "/debate", "/timeline"],
   "/posts/articles": ["/posts", "/feed", "/forum"],
-  "/books": ["/books/lists", "/posts", "/forum"],
+  "/books": ["/books/lists", "/posts", "/forum", "/timeline"],
   "/books/lists": ["/books", "/posts"],
   "/music": ["/music/albums", "/music/artists", "/music/songs", "/podcasts", "/videos", "/posts"],
   "/music/albums": ["/music", "/music/artists", "/music/songs"],
@@ -330,9 +360,13 @@ export function buildStaticPageHtml(
 			`<meta data-default-meta name="twitter:image" content="${defaultImage}">`,
 		);
 	}
+	if (path === "/" && meta) {
+		tags.push('<script data-default-meta type="application/ld+json">' +
+			JSON.stringify(homeIdentityJsonLd()).replace(/</g, "\\u003c") + '</script>');
+	}
 	if (noIndex) tags.push('<meta name="robots" content="noindex, nofollow">');
 
-	const cleanHtml = meta
+	let cleanHtml = meta
 		? html
 				.replace(/<title[^>]*>[\s\S]*?<\/title>/i, "")
 				.replace(/\s*<(?:meta|link)[^>]*data-default-meta[^>]*>/gi, "")
@@ -340,6 +374,10 @@ export function buildStaticPageHtml(
 				/\s*<(?:meta|link)(?=[^>]*data-default-meta)(?=[^>]*(?:rel=["']canonical["']|property=["']og:url["']))[^>]*>/gi,
 				"",
 			);
+	if (path === "/" && meta) {
+		// Replace the shell's WebSite node instead of publishing a duplicate.
+		cleanHtml = cleanHtml.replace(/\s*<script(?=[^>]*\bdata-default-meta\b)(?=[^>]*type=["']application\/ld\+json["'])[^>]*>[\s\S]*?<\/script>/gi, "");
+	}
 	if (!tags.length) return cleanHtml;
 	const pageHtml = cleanHtml.replace(
 		/<\/head>/i,

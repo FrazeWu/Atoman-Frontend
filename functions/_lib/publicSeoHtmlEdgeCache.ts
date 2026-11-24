@@ -10,7 +10,7 @@ const publicSections = new Set([
 ]);
 const details = /^\/(?:music\/(?:artist|album|song)|books\/(?:work|edition)|posts\/post|forum\/topic)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const archivePaths = new Set(["/posts/articles", "/music/songs"]);
-const cacheVersion = "atoman-public-seo-html-v1";
+const cacheVersion = "atoman-public-seo-html-v3";
 const edgeTtlSeconds = 75;
 
 export type SeoHtmlCache = {

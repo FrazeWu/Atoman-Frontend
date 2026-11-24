@@ -17,6 +17,7 @@ function cacheStore() {
     put: vi.fn(async (key: string, value: ArrayBuffer, opts: { customMetadata: { cachedAt: string } }) => {
       map.set(key, { bytes: new Uint8Array(value.slice(0)), cachedAt: opts.customMetadata.cachedAt });
     }),
+    delete: vi.fn(async (key: string) => map.delete(key)),
   };
 }
 
@@ -74,6 +75,9 @@ describe("Private SEO R2 resilience", () => {
     const response = await worker.fetch(new Request(url), env);
     expect(response.status).toBe(404);
     expect((await response.text()).includes("Not found")).toBe(true);
+    expect(SEO_CACHE.map.size).toBe(0);
+    PRIVATE_ORIGIN.fetch.mockImplementation(async () => { throw new Error("origin offline"); });
+    expect((await worker.fetch(new Request(url), env)).status).toBe(503);
   });
 
   it("rejects non-JSON origin replies and never forwards a private API request", async () => {

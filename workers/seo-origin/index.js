@@ -104,7 +104,12 @@ async function requestPublicJson(url, method, env, forceRefresh = false) {
     });
     if (upstream.status >= 500) throw new Error("Upstream unavailable");
     if (upstream.status !== 200) {
-      // 403/404/410 are authoritative: never resurrect removed/private content.
+      // On known permanent or private changes, invalidate any previously
+      // cached body so a later origin outage cannot resurrect removed content.
+      if ([403, 404, 410].includes(upstream.status) &&
+          env.SEO_CACHE && typeof env.SEO_CACHE.delete === "function") {
+        try { await env.SEO_CACHE.delete(key); } catch { /* cache only */ }
+      }
       return new Response(method === "HEAD" ? null : upstream.body, {
         status: upstream.status,
         headers: responseHeaders,

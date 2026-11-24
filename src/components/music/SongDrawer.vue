@@ -74,6 +74,9 @@ const { navigation, loading: navigationLoading, direction: navigationDirection, 
 const closeCurrentSong = () => closeSong(props.layer?.key)
 const returnCurrentSong = () => props.layer && returnToLayer(props.layer.key)
 const detail = ref<MusicSongDetail | null>(null)
+const displayedCover = computed(() => detail.value?.song.cover_url || detail.value?.song.album?.cover_url || "")
+const coverFailed = ref(false)
+watch(displayedCover, () => { coverFailed.value = false })
 const editorialNote = computed(() => {
   const song = detail.value?.song
   if (!song || !canShowSongEditorialNote(song)) return undefined
@@ -621,7 +624,8 @@ watch(
       <p v-else-if="error" class="song-detail__state song-detail__state--error">{{ error }}</p>
       <section v-else-if="detail" class="song-detail__content">
         <div class="song-detail__primary">
-          <img v-if="detail.song.cover_url || detail.song.album?.cover_url" :src="detail.song.cover_url || detail.song.album?.cover_url" :alt="`${detail.song.title} 封面`" class="song-detail__cover">
+          <img v-if="displayedCover && !coverFailed" :src="displayedCover" @error="coverFailed = true" :alt="`${detail.song.title} 封面`" class="song-detail__cover">
+          <div v-else class="song-detail__cover song-detail__cover-placeholder" role="img" aria-label="暂无封面">暂无封面</div>
           <div class="song-detail__main">
           <button v-if="detail.song.album?.id" type="button" class="song-detail__album song-detail__entity-link" @click="openAlbum(String(detail.song.album.id))">{{ detail.song.album.title }}</button>
           <p v-else class="song-detail__album">{{ standaloneReleaseLabel }}</p>
@@ -822,6 +826,7 @@ watch(
 .song-detail__primary { display: grid; grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr); gap: 1.5rem; min-width: 0; }
 .song-detail__tags { min-width: 0; align-self: start; border-left: 0; padding-left: 0; }
 .song-detail__cover { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; background: var(--a-color-bg-subtle); }
+.song-detail__cover-placeholder { display: grid; place-items: center; font-size: 0.875rem; color: var(--a-color-muted); }
 .song-detail__main { display: grid; align-content: center; justify-items: start; gap: 0.75rem; }
 .song-detail__main h1, .song-detail__album, .song-detail__release-date { margin: 0; }
 .song-detail__match-badge { color: var(--a-text-muted); font-size: 0.6875rem; font-weight: 600; }

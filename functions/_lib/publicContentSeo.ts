@@ -1,3 +1,4 @@
+import { selectPublicMusicSeoArtwork } from "../../src/utils/musicArtwork";
 import { publicVideoCollections } from "../../src/utils/publicVideoCollections";
 import {
 	injectSeoFallbackHtml,
@@ -361,9 +362,9 @@ async function loadArtist(apiBase: string, id: string, fetcher: Fetcher) {
 			"@type": artist.artist_form === "person" ? "Person" : "MusicGroup",
 			name,
 			description,
-			image: text(artist.image_url) || undefined,
+			image: selectPublicMusicSeoArtwork(artist.image_url),
 		},
-		text(artist.image_url) || undefined,
+		selectPublicMusicSeoArtwork(artist.image_url),
 		date(artist.updated_at),
 		relatedLinks,
 		fullBodyText(artist.bio, factualFallback),
@@ -406,7 +407,7 @@ async function loadAlbum(apiBase: string, id: string, fetcher: Fetcher) {
 			"@type": "MusicAlbum",
 			name: title,
 			description,
-			image: text(album.cover_url) || undefined,
+			image: selectPublicMusicSeoArtwork(album.cover_url),
 			byArtist: array(album.artists).map(record).filter(Boolean).map((artist) => ({
 				"@type": "MusicGroup",
 				name: text(artist?.name),
@@ -415,7 +416,7 @@ async function loadAlbum(apiBase: string, id: string, fetcher: Fetcher) {
 			datePublished: released.published,
 			numTracks: tracks.length || undefined,
 		},
-		text(album.cover_url) || undefined,
+		selectPublicMusicSeoArtwork(album.cover_url),
 		date(album.updated_at),
 		relatedLinks,
 		fullBodyText(album.description, factualFallback),
@@ -481,7 +482,7 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 			"@type": "MusicRecording",
 			name: title,
 			description,
-			image: text(song.cover_url) || text(album?.cover_url) || undefined,
+			image: selectPublicMusicSeoArtwork(song.cover_url, album?.cover_url),
 			byArtist: array(detail?.artists).map(record).filter(Boolean).map((artist) => ({
 				"@type": "MusicGroup",
 				name: text(artist?.name),
@@ -493,7 +494,7 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 				? { "@type": "MusicAlbum", name: albumName, url: musicEntityUrl("album", album?.id) }
 				: undefined,
 		},
-		text(song.cover_url) || text(album?.cover_url) || undefined,
+		selectPublicMusicSeoArtwork(song.cover_url, album?.cover_url),
 		date(song.updated_at),
 		relatedLinks,
 		fullBodyText(song.description, factualFallback),
@@ -910,7 +911,8 @@ export function buildPublicContentHtml(html: string, item: PublicContentSeo) {
 		title: structuredTitle,
 		description: item.bodyText || item.description,
 		canonical,
-		imageUrl: image,
+		// A default share image is not a genuine music cover.
+		imageUrl: item.path.startsWith("/music/") ? item.imageUrl : image,
 		mediaUrl:
 			item.structuredData["@type"] === "VideoObject"
 				? directVideoSource(item.structuredData.contentUrl)

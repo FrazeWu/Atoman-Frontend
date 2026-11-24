@@ -21,6 +21,34 @@ function json(data: unknown, status = 200) {
 }
 
 describe("public content SEO", () => {
+	it("does not publish unavailable Discogs covers as song or album artwork", async () => {
+		const id = "01a10b46-acd6-7096-acc3-2918aa322eef";
+		const blocked = "https://i.discogs.com/restricted.jpeg";
+		const owned = "https://assets.atoman.org/music/verified-cover.jpg";
+		for (const path of ["/music/song/" + id, "/music/album/" + id, "/music/artist/" + id]) {
+			const makeFetcher = (direct: string, albumCover: string) => vi.fn(async () => json({ data:
+				path.includes("/song/") ? {
+					song: { id, title: "Verified song", lifecycle_status: "active", cover_url: direct,
+						album: { id, title: "Album", cover_url: albumCover } },
+				} : { id, title: "Verified album", name: "Verified artist",
+					cover_url: direct, image_url: direct, lifecycle_status: "active" },
+			})) as unknown as typeof fetch;
+			const lookup = await resolvePublicContentSeo(path, undefined, "https://www.atoman.org", makeFetcher(blocked, blocked));
+			expect(lookup.content).toBeDefined();
+			expect(lookup.content?.imageUrl).toBeUndefined();
+			expect(lookup.content?.structuredData.image).toBeUndefined();
+			const html = buildPublicContentHtml(shell, lookup.content!);
+			expect(html).not.toContain("i.discogs.com");
+			expect(html).not.toContain("<img ");
+			expect(html).toContain('property="og:image" content="https://www.atoman.org/atoman-share.png"');
+			const recovered = await resolvePublicContentSeo(path, undefined, "https://www.atoman.org",
+				makeFetcher(path.includes("/song/") ? blocked : owned, owned));
+			expect(recovered.content?.imageUrl).toBe(owned);
+			expect(recovered.content?.structuredData.image).toBe(owned);
+			expect(buildPublicContentHtml(shell, recovered.content!)).toContain('<img src="' + owned + '"');
+		}
+	});
+
 	it("replaces placeholder artist biographies with verified public album facts", async () => {
 		const artistId = "01a06793-193c-796e-8b97-b1ee8de3a825";
 		const albumId = "01a07774-5cb4-7c6f-b5df-841db6db86a2";

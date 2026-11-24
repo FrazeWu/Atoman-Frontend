@@ -171,4 +171,37 @@ describe("public section SEO link previews", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
+
+  it("returns a real noindex 404 for successful empty archive pages beyond the last page", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      data: [],
+      meta: { page: 2, page_size: 20, total: 14, has_more: false },
+    }), { headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetcher);
+    for (const path of ["/posts/articles?page=2", "/music/songs?page=500"]) {
+      const response = await pageMiddleware({
+        request: new Request("https://www.atoman.org" + path),
+        env: { VITE_API_URL: "https://api.atoman.org/api" },
+        next: async () => new Response(shell, { headers: { "content-type": "text/html" } }),
+      });
+      expect(response.status).toBe(404);
+      expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      const body = await response.text();
+      expect(body).toContain("noindex");
+      expect(body).not.toContain('rel="canonical"');
+      expect(body).not.toContain('data-seo-public-listing="true"');
+    }
+  });
+
+  it("does not treat an unavailable listing API as a missing archive page", async () => {
+    const fetcher = vi.fn(async () => new Response("unavailable", { status: 503 }));
+    vi.stubGlobal("fetch", fetcher);
+    const response = await pageMiddleware({
+      request: new Request("https://www.atoman.org/posts/articles?page=2"),
+      env: { VITE_API_URL: "https://api.atoman.org/api" },
+      next: async () => new Response(shell, { headers: { "content-type": "text/html" } }),
+    });
+    expect(response.status).toBe(200);
+  });
 });

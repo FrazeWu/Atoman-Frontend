@@ -1,6 +1,6 @@
 import { buildStaticPageHtml, isKnownPagePath } from "./_lib/pageSeo";
 import { createSeoApiFetcher, type SeoOriginBinding } from "./_lib/seoOriginFetcher";
-import { injectPublicSectionListing, loadPublicSectionListing } from "./_lib/sectionContentSeo";
+import { injectPublicSectionListing, loadPublicSectionListingResult } from "./_lib/sectionContentSeo";
 import {
 	buildAggregatedContentHtml,
 	buildMissingPublicContentHtml,
@@ -146,7 +146,7 @@ export async function onRequest(context: MiddlewareContext) {
 			requestUrl.origin,
 			seoFetcher,
 		);
-		const missingSeoPage =
+		let missingSeoPage =
 			(lookup.matched && !lookup.content && !lookup.retryable) ||
 			(!lookup.matched && !isKnownPagePath(requestUrl.pathname));
 		let transformedHtml = isAggregatedFeedItemPath(requestUrl.pathname)
@@ -159,14 +159,19 @@ export async function onRequest(context: MiddlewareContext) {
 					? buildMissingPublicContentHtml(staticHtml)
 					: staticHtml;
 		if (!missingSeoPage && !lookup.matched) {
-			const listing = await loadPublicSectionListing(
+			const listing = await loadPublicSectionListingResult(
 				requestUrl.pathname,
 				context.env?.VITE_API_URL,
 				requestUrl.origin,
 				seoFetcher,
 				requestUrl.searchParams,
 			);
-			transformedHtml = injectPublicSectionListing(transformedHtml, listing);
+			if (listing.outOfRange) {
+				missingSeoPage = true;
+				transformedHtml = buildMissingPublicContentHtml(staticHtml);
+			} else {
+				transformedHtml = injectPublicSectionListing(transformedHtml, listing.html);
+			}
 		}
 		const headers = new Headers(response.headers);
 		headers.delete("content-length");

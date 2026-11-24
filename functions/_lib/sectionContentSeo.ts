@@ -2,6 +2,9 @@ import { resolveApiBase } from "./blogSeo";
 
 type PublicItem = Record<string, unknown>;
 type PublicFetcher = typeof fetch;
+type SeoGroupResult = { html: string; outOfRange: boolean };
+const emptyGroup: SeoGroupResult = { html: "", outOfRange: false };
+
 type PublicListSource = {
   heading: string;
   endpoint: string;
@@ -95,9 +98,20 @@ async function getGroup(apiBase: string, source: PublicListSource, fetcher: Publ
       headers: { accept: "application/json" },
       signal: typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(2500) : undefined,
     });
-    if (!response.ok) return "";
+    if (!response.ok) return emptyGroup;
     const payload: unknown = await response.json();
     const items = listItems(payload);
+    const metadata = payload && typeof payload === "object" && "meta" in payload
+      ? (payload as { meta?: { has_more?: boolean; total?: number } }).meta
+      : undefined;
+    const pageSize = source.maxItems ?? 8;
+    // Only a successful API response with explicit pagination metadata proves
+    // that an empty archive URL is out of range. Network failures do not.
+    if (archivePath && page > 1 && items.length === 0 &&
+        typeof metadata?.total === "number" && Number.isFinite(metadata.total) &&
+        metadata.total >= 0 && page > Math.ceil(metadata.total / pageSize)) {
+      return { html: "", outOfRange: true };
+    }
     const valid = items.filter(publicRecord)
       .map((item) => {
         const id = typeof item.id === "string" ? item.id : "";
@@ -110,11 +124,7 @@ async function getGroup(apiBase: string, source: PublicListSource, fetcher: Publ
       })
       .filter(Boolean)
       .slice(0, source.maxItems ?? 8);
-    if (!valid.length) return "";
-    const metadata = payload && typeof payload === "object" && "meta" in payload
-      ? (payload as { meta?: { has_more?: boolean; total?: number } }).meta
-      : undefined;
-    const pageSize = source.maxItems ?? 8;
+    if (!valid.length) return emptyGroup;
     const hasMore = metadata?.has_more === true || (
       metadata?.has_more === undefined
       && typeof metadata?.total === "number"
@@ -127,15 +137,15 @@ async function getGroup(apiBase: string, source: PublicListSource, fetcher: Publ
         + (hasMore ? '<a rel="next" href="' + escapeHtml(pageUrl(page + 1)) + '">下一页</a>' : '')
         + '</nav>'
       : "";
-    return '<section class="seo-public-listing-group"><h3>' + escapeHtml(source.heading)
-      + '</h3><ul>' + valid.join("") + '</ul>' + pager + '</section>';
+    return { html: '<section class="seo-public-listing-group"><h3>' + escapeHtml(source.heading)
+      + '</h3><ul>' + valid.join("") + '</ul>' + pager + '</section>', outOfRange: false };
   } catch {
     // A temporary API failure should never hide the section or change indexing.
-    return "";
+    return emptyGroup;
   }
 }
 
-export async function loadPublicSectionListing(
+export async function loadPublicSectionListingResult(
   pathname: string,
   configuredApiUrl: string | undefined,
   origin: string,
@@ -144,14 +154,32 @@ export async function loadPublicSectionListing(
 ) {
   const path = pathname.replace(/\/+$/, "") || "/";
   const config = sources[path];
-  if (!config) return "";
+  if (!config) return emptyGroup;
   const archivePage = getPublicArchivePage(path, searchParams);
-  if (publicArchives.has(path) && archivePage === null) return "";
+  if (publicArchives.has(path) && archivePage === null) return emptyGroup;
   const base = resolveApiBase(configuredApiUrl, origin);
   const groups = await Promise.all(config.map((item) =>
     getGroup(base, item, fetcher, archivePage ?? 1, item.paginated ? path : undefined)));
-  const content = groups.filter(Boolean).join("");
-  return content ? `<section data-seo-public-listing="true" aria-label="当前公开内容"><h2>浏览公开内容</h2>${content}</section>` : "";
+  const content = groups.map((group) => group.html).filter(Boolean).join("");
+  return {
+    html: content
+      ? '<section data-seo-public-listing="true" aria-label="当前公开内容"><h2>浏览公开内容</h2>'
+        + content + '</section>'
+      : "",
+    outOfRange: groups.some((group) => group.outOfRange),
+  };
+}
+
+// Keep the HTML-only API for existing callers and tests.
+export async function loadPublicSectionListing(
+  pathname: string,
+  configuredApiUrl: string | undefined,
+  origin: string,
+  fetcher: PublicFetcher = fetch,
+  searchParams: URLSearchParams = new URLSearchParams(),
+) {
+  const result = await loadPublicSectionListingResult(pathname, configuredApiUrl, origin, fetcher, searchParams);
+  return result.html;
 }
 
 export function injectPublicSectionListing(html: string, listing: string) {

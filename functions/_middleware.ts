@@ -1,3 +1,4 @@
+import { recoverPreviousReleaseAsset, type RecoveryBucket } from "./_lib/releaseAssetRecovery";
 import { buildStaticPageHtml, isKnownPagePath } from "./_lib/pageSeo";
 import { createSeoApiFetcher, type SeoOriginBinding } from "./_lib/seoOriginFetcher";
 import { cachedPublicSeoHtml, canStorePublicSeoHtml, publicSeoHtmlKeyForShell,
@@ -12,20 +13,12 @@ import {
 	resolvePublicContentSeo,
 } from "./_lib/publicContentSeo";
 
-type ArchivedAsset = {
-	body: ReadableStream;
-	httpEtag: string;
-	httpMetadata?: { contentType?: string };
-};
-
 type MiddlewareContext = {
 	request: Request;
 	env?: {
 		VITE_API_URL?: string;
 		SEO_ORIGIN?: SeoOriginBinding;
-		FRONTEND_RELEASE_ASSETS?: {
-			get: (key: string) => Promise<ArchivedAsset | null>;
-		};
+		FRONTEND_RELEASE_ASSETS?: RecoveryBucket;
 	};
 	next: () => Promise<Response>;
 	waitUntil?: (promise: Promise<unknown>) => void;
@@ -131,6 +124,11 @@ export async function onRequest(context: MiddlewareContext) {
 	if (assetKey && (response.status === 404 || (response.status === 200 && contentType.includes("text/html")))) {
 		const archivedAsset = await serveArchivedAsset(context, assetKey);
 		if (archivedAsset) return archivedAsset;
+		const recovered = await recoverPreviousReleaseAsset(
+			assetKey, context.request.method, context.env?.FRONTEND_RELEASE_ASSETS,
+			context.waitUntil ? (work) => context.waitUntil!(work) : undefined,
+		);
+		if (recovered) return recovered;
 		// Missing assets are not SPA documents. Never cache a fallback HTML
 		// body for a hashed JS/CSS filename or an asset restored later.
 		return new Response(context.request.method === "HEAD" ? null : "Asset not found", {

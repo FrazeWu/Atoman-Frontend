@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   buildArticleHtml,
+  injectSeoFallbackHtml,
   buildRobotsText,
   buildSitemapXml,
   resolveApiBase,
@@ -42,6 +43,31 @@ describe('blog SEO helpers', () => {
     expect(html).toContain('<main data-seo-fallback="article">')
     expect(html).toContain('<h1>安全 &lt;标题&gt; &amp; &quot;引号&quot;</h1>')
     expect(html).not.toContain('portal-prerender')
+  })
+
+  it.each([
+    ["/posts/post/post-1", ["/posts", "/posts/articles"]],
+    ["/music/song/song-1", ["/music", "/music/songs", "/music/albums"]],
+    ["/music/artist/artist-1", ["/music", "/music/songs"]],
+    ["/music/album/album-1", ["/music", "/music/albums"]],
+    ["/books/work/work-1", ["/books", "/books/lists"]],
+    ["/books/edition/edition-1", ["/books", "/books/lists"]],
+    ["/books/lists/list-1", ["/books", "/books/lists"]],
+    ["/forum/topic/topic-1", ["/forum"]],
+    ["/debate/topic-1", ["/debate", "/forum"]],
+    ["/podcasts/show/show-1", ["/podcasts"]],
+    ["/podcasts/episode/episode-1", ["/podcasts"]],
+    ["/videos/watch/video-1", ["/videos"]],
+    ["/videos/collections/collection-1", ["/videos"]],
+  ])("provides real outgoing navigation for %s", (path, links) => {
+    const html = injectSeoFallbackHtml('<html><head></head><body><div id="app"></div></body></html>', {
+      kind: "content", title: "公开内容", description: "简介",
+      canonical: "https://www.atoman.org" + path,
+    })
+    for (const link of links) expect(html).toContain('href="' + link + '"')
+    expect(html).not.toContain('<a href="https://www.atoman.org' + path + '"')
+    expect(html).not.toContain('<a href="' + path + '"')
+    expect(html).toContain('aria-label="浏览更多公开内容"')
   })
 
   it('uses the site share image when an article has no cover', () => {

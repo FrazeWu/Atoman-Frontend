@@ -58,6 +58,36 @@ const escapeHtml = (value: string) => value
 
 const escapeXml = escapeHtml
 
+// Real public navigation targets, independent of the entity ID or API data.
+const publicDetailNavigation: ReadonlyArray<[RegExp, ReadonlyArray<{ href: string; label: string }>]> = [
+  [/^\/posts\/post\//, [
+    { href: "/posts", label: "博客首页" }, { href: "/posts/articles", label: "浏览全部公开博文" },
+  ]],
+  [/^\/music\/(?:artist|album|song)\//, [
+    { href: "/music", label: "音乐档案" }, { href: "/music/songs", label: "歌曲目录" },
+    { href: "/music/albums", label: "专辑目录" },
+  ]],
+  [/^\/books\/(?:work|edition|lists)\//, [
+    { href: "/books", label: "图书馆" }, { href: "/books/lists", label: "公开书单" },
+  ]],
+  [/^\/forum\/topic\//, [{ href: "/forum", label: "论坛首页" }]],
+  [/^\/debate\//, [
+    { href: "/debate", label: "辩题目录" }, { href: "/forum", label: "公开讨论" },
+  ]],
+  [/^\/podcasts\/(?:show|episode)\//, [{ href: "/podcasts", label: "播客首页" }]],
+  [/^\/videos\/(?:watch|collections)\//, [{ href: "/videos", label: "视频首页" }]],
+]
+
+function detailNavigationHtml(canonical: string) {
+  let path: string
+  try { path = new URL(canonical).pathname.replace(/\/+$/, '') } catch { return '' }
+  const links = publicDetailNavigation.find(([pattern]) => pattern.test(path))?.[1] || []
+  const items = links.filter(link => link.href !== path)
+    .map(link => '<li><a href="' + escapeHtml(link.href) + '">' + escapeHtml(link.label) + '</a></li>')
+    .join('')
+  return items ? '<nav aria-label="浏览更多公开内容"><h2>浏览更多公开内容</h2><ul>' + items + '</ul></nav>' : ''
+}
+
 export function injectSeoFallbackHtml(html: string, options: SeoFallbackOptions) {
   const media = options.mediaUrl
     ? `<video controls preload="metadata"${options.imageUrl ? ` poster="${escapeHtml(options.imageUrl)}"` : ""}><source src="${escapeHtml(options.mediaUrl)}"></video>`
@@ -71,7 +101,7 @@ export function injectSeoFallbackHtml(html: string, options: SeoFallbackOptions)
     `<p>${escapeHtml(options.description)}</p>`,
     image,
     media,
-    `<a href="${escapeHtml(options.canonical)}">查看完整内容</a>`,
+    detailNavigationHtml(options.canonical),
     "</main>",
   ].join("")
   const cleanHtml = html.replace(

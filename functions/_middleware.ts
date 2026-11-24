@@ -127,6 +127,7 @@ export async function onRequest(context: MiddlewareContext) {
 		const recovered = await recoverPreviousReleaseAsset(
 			assetKey, context.request.method, context.env?.FRONTEND_RELEASE_ASSETS,
 			context.waitUntil ? (work) => context.waitUntil!(work) : undefined,
+			undefined, new URL(context.request.url).hostname.endsWith(".pages.dev"),
 		);
 		if (recovered) return recovered;
 		// Missing assets are not SPA documents. Never cache a fallback HTML

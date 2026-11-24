@@ -51,9 +51,9 @@ async function hash(bytes: ArrayBuffer): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
 }
-function temporaryFailure(method: string): Response {
+function temporaryFailure(method: string, stage: string, diagnostic: boolean): Response {
   return new Response(method === "HEAD" ? null : "Release asset temporarily unavailable", {
-    status: 503, headers: {"content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "retry-after": "60"},
+    status: 503, headers: {"content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "retry-after": "60", ...(diagnostic ? {"x-atoman-recovery-stage": stage} : {})},
   });
 }
 export async function recoverPreviousReleaseAsset(
@@ -61,16 +61,19 @@ export async function recoverPreviousReleaseAsset(
   method: string,
   bucket?: RecoveryBucket,
   waitUntil?: (promise: Promise<unknown>) => void,
-  fetcher: typeof fetch = fetch,
+  fetcher: typeof fetch = (input, init) => fetch(input, init),
+  diagnostic = false,
 ): Promise<Response | undefined> {
   const match = hashedAsset.exec(key);
   if (!match || !bucket || (method !== "GET" && method !== "HEAD")) return undefined;
   const name = match[1];
   const shard = name.charCodeAt(0) % 8;
   const expectedManifest = manifestDigests[shard];
+  let stage = "manifest-read";
   try {
     const object = await bucket.get(manifestRoot + shard + "-" + expectedManifest + ".json");
     if (!object) return undefined;
+    stage = "manifest-verify";
     const bytes = await boundedBytes(object.body, maxManifestBytes);
     if (await hash(bytes) !== expectedManifest) throw new Error("Invalid release manifest");
     const manifest: unknown = JSON.parse(new TextDecoder().decode(bytes));
@@ -78,24 +81,29 @@ export async function recoverPreviousReleaseAsset(
     const entry = (manifest as Record<string, unknown>)[name];
     if (!Array.isArray(entry) || entry.length !== 2 || !Number.isInteger(entry[0]) || entry[0] <= 0 || entry[0] > maxAssetBytes || typeof entry[1] !== "string" || !/^[a-f0-9]{64}$/.test(entry[1])) throw new Error("Invalid release entry");
     const [size, digest] = entry as [number, string];
+    stage = "source-fetch";
     const source = await fetcher(previousDeployment + "/" + key, {
       method: "GET", redirect: "error", signal: AbortSignal.timeout(8000),
       headers: {"accept-encoding": "identity"},
     });
+    stage = "source-http-" + source.status;
     if (!source.ok || source.redirected || (source.headers.get("content-type") || "").toLowerCase().includes("text/html")) throw new Error("Invalid release source");
+    stage = "asset-verify";
     const asset = await boundedBytes(source.body, size);
     if (asset.byteLength !== size || await hash(asset) !== digest) throw new Error("Release bytes do not match manifest");
     const contentType = types[name.split(".").pop()!];
     // Never overwrite an existing immutable object, including a concurrent
     // recovery of the same asset. A verified read works even if archival fails.
     if (bucket.put && waitUntil) {
-      waitUntil(bucket.put(key, asset, {
-        onlyIf: new Headers({"if-none-match": "*"}), httpMetadata: {contentType}, sha256: digest,
-      }).catch(() => undefined));
+      try {
+        waitUntil(Promise.resolve().then(() => bucket.put!(key, asset, {
+          onlyIf: new Headers({"if-none-match": "*"}), httpMetadata: {contentType}, sha256: digest,
+        })).catch(() => undefined));
+      } catch { /* Archiving is optional once exact bytes are verified. */ }
     }
     return new Response(method === "HEAD" ? null : asset, {
       headers: {"content-type": contentType, "cache-control": "public, max-age=31536000, immutable",
         "x-content-type-options": "nosniff", "etag": '"' + digest + '"', "x-atoman-release-recovered": "0b0632d9"},
     });
-  } catch { return temporaryFailure(method); }
+  } catch { return temporaryFailure(method, stage, diagnostic); }
 }

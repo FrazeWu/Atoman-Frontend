@@ -7,6 +7,23 @@ const shell =
 	'<!doctype html><html><head><title>Atoman</title><meta data-default-meta name="description" content="old"><link data-default-meta rel="canonical" href="https://www.atoman.org/"></head><body></body></html>';
 
 describe("static page SEO", () => {
+	it("provides distinct, substantive descriptions for important public hubs", () => {
+		const paths = [
+			"/", "/feed", "/posts", "/posts/articles", "/books", "/books/lists",
+			"/music", "/music/albums", "/music/artists", "/music/songs",
+			"/forum", "/debate", "/timeline", "/podcasts", "/videos", "/about",
+		];
+		const descriptions = paths.map((path) => {
+			const html = buildStaticPageHtml(shell, path, "www.atoman.org");
+			const value = html.match(/name="description" content="([^"]+)"/)?.[1] || "";
+			expect(value.length, path).toBeGreaterThanOrEqual(70);
+			return value;
+		});
+		expect(new Set(descriptions).size).toBe(descriptions.length);
+		expect(buildStaticPageHtml(shell, "/about", "www.atoman.org"))
+			.toContain("<title data-default-meta>关于 Atoman | 平台与社区介绍</title>");
+	});
+
 	it("renders the home page title and description", () => {
 		const html = buildStaticPageHtml(shell, "/", "www.atoman.org");
 
@@ -14,7 +31,7 @@ describe("static page SEO", () => {
 			"<title data-default-meta>Atoman | 订阅与内容｜求真与开放</title>",
 		);
 		expect(html).toContain(
-			'name="description" content="聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。"',
+			'name="description" content="Atoman 汇集可订阅的 RSS 内容与独立文章，并整理图书、音乐人、专辑、歌曲、播客和视频。通过公开目录发现感兴趣的作品，也可以参与论坛与辩论，围绕内容和证据继续讨论。"',
 		);
 		expect(html).toContain(
 			'property="og:title" content="Atoman | 订阅与内容｜求真与开放"',

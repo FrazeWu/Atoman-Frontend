@@ -11,15 +11,15 @@ export type PageMeta = {
 }
 
 const defaultMeta = [
-  ['name', 'description', '聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。'],
+  ['name', 'description', 'Atoman 汇集可订阅的 RSS 内容与独立文章，并整理图书、音乐人、专辑、歌曲、播客和视频。通过公开目录发现感兴趣的作品，也可以参与论坛与辩论，围绕内容和证据继续讨论。'],
   ['property', 'og:type', 'website'],
   ['property', 'og:title', 'Atoman | 订阅与内容｜求真与开放'],
-  ['property', 'og:description', '聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。'],
+  ['property', 'og:description', 'Atoman 汇集可订阅的 RSS 内容与独立文章，并整理图书、音乐人、专辑、歌曲、播客和视频。通过公开目录发现感兴趣的作品，也可以参与论坛与辩论，围绕内容和证据继续讨论。'],
   ['property', 'og:url', 'https://www.atoman.org/'],
   ['property', 'og:image', 'https://www.atoman.org/atoman-share.png'],
   ['name', 'twitter:card', 'summary_large_image'],
   ['name', 'twitter:title', 'Atoman | 订阅与内容｜求真与开放'],
-  ['name', 'twitter:description', '聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。'],
+  ['name', 'twitter:description', 'Atoman 汇集可订阅的 RSS 内容与独立文章，并整理图书、音乐人、专辑、歌曲、播客和视频。通过公开目录发现感兴趣的作品，也可以参与论坛与辩论，围绕内容和证据继续讨论。'],
   ['name', 'twitter:image', 'https://www.atoman.org/atoman-share.png'],
 ] as const
 

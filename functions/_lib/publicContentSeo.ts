@@ -63,7 +63,7 @@ function normalizedPlainText(value: unknown): string {
 
 function plainText(value: unknown, fallback: string): string {
 	const normalized = normalizedPlainText(value);
-	if (!normalized) return fallback;
+	if (!normalized || /^(?:暂无|暂无内容|暂无资料|暂无信息|暂无介绍|暂无数据|未填写|待补充|无|n\/a|none|null|not available|--?)$/i.test(normalized)) return fallback;
 	return normalized.length > 160 ? `${normalized.slice(0, 157)}...` : normalized;
 }
 
@@ -71,7 +71,7 @@ function fullBodyText(value: unknown, fallback: string): string {
 	const normalized = normalizedPlainText(value);
 	// The full authored summary is useful to crawlers; do not truncate it to
 	// the 160-character meta-snippet limit. Bound very large content separately.
-	return normalized ? normalized.slice(0, 4000) : fallback;
+	return normalized && !/^(?:暂无|暂无内容|暂无资料|暂无信息|暂无介绍|暂无数据|未填写|待补充|无|n\/a|none|null|not available|--?)$/i.test(normalized) ? normalized.slice(0, 4000) : fallback;
 }
 
 function safeReleaseDate(value: unknown, precision: unknown): { raw?: string; label?: string; published?: string } {
@@ -197,10 +197,14 @@ async function loadBookWork(apiBase: string, id: string, fetcher: Fetcher) {
 	const title = text(work.title);
 	const authors = names(work.authors);
 	const editions = array(work.editions).map(record).filter(Boolean);
-	const description = plainText(
-		work.description || work.subtitle,
-		`在 Atoman 浏览《${title}》${authors.length ? `（${authors.join("、")}）` : ""}的作品资料、出版版本和读者讨论。`,
+	const publicEditions = editions.filter((edition) =>
+		!text(edition?.lifecycle_status) || text(edition?.lifecycle_status) === "active",
 	);
+	const factualFallback = "在 Atoman 查看《" + title + "》的作品资料" +
+		(authors.length ? "，作者 " + authors.join("、") : "") +
+		(publicEditions.length ? "，当前关联 " + publicEditions.length + " 个公开出版版本" : "") +
+		"。可以进入具体版本查看已收录的出版社、版本说明、ISBN 等书目信息，并浏览相关公开书单。";
+	const description = plainText(work.description || work.subtitle, factualFallback);
 	const image = bookCoverUrl(work.cover_url || editions[0]?.cover_url, apiBase);
 	return content(
 		`/books/work/${encodeURIComponent(text(work.id))}`,
@@ -250,8 +254,12 @@ async function loadBookEdition(apiBase: string, id: string, fetcher: Fetcher) {
 	const authors = names(work.authors);
 	const publisher = text(edition.publisher) || text(record(edition.publisher_info)?.name);
 	const isbn = text(edition.isbn13) || text(edition.isbn10);
-	const description = [`《${title}》`, authors.join("、"), publisher, text(edition.edition_statement), isbn ? `ISBN ${isbn}` : ""]
-		.filter(Boolean).join(" · ");
+	const editionFacts = ["《" + title + "》", authors.length ? "作者 " + authors.join("、") : "",
+		publisher ? "出版社 " + publisher : "",
+		text(edition.edition_statement) ? "版本 " + text(edition.edition_statement) : "",
+		isbn ? "ISBN " + isbn : ""].filter(Boolean).join("；");
+	const description = editionFacts +
+		"。在 Atoman 查看该出版版本的书目资料，并通过所属作品了解已公开收录的其他版本及相关内容。";
 	const image = bookCoverUrl(edition.cover_url, apiBase);
 	return content(
 		`/books/edition/${encodeURIComponent(editionId)}`,
@@ -337,8 +345,12 @@ async function loadArtist(apiBase: string, id: string, fetcher: Fetcher) {
 		return [{ href, label }];
 	});
 	const relatedLinks = albumLinks.slice(0, 60);
-	const factualFallback = `在 Atoman 查看 ${name} 的音乐资料` +
-		(albumLinks.length ? `，包含 ${albumLinks.length} 张公开专辑` : "") + "。";
+	const albumExamples = albumLinks.slice(0, 3).map((album) => "《" + album.label + "》").join("、");
+	const factualFallback = albumLinks.length
+		? "在 Atoman 查看 " + name + " 的音乐人档案与作品关联。当前公开收录 " + albumLinks.length +
+		  " 张专辑" + (albumExamples ? "，包括 " + albumExamples : "") +
+		  "；可以进入专辑页面浏览已收录的曲目与作品资料。"
+		: "在 Atoman 查看 " + name + " 的音乐人档案。当前没有可公开展示的关联专辑，可以通过音乐人和歌曲目录继续浏览其他已收录作品。";
 	const description = plainText(artist.bio, factualFallback);
 	return content(
 		`/music/artist/${encodeURIComponent(id)}`,

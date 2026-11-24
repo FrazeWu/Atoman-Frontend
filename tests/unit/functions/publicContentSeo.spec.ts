@@ -21,6 +21,21 @@ function json(data: unknown, status = 200) {
 }
 
 describe("public content SEO", () => {
+	it("replaces placeholder artist biographies with verified public album facts", async () => {
+		const artistId = "01a06793-193c-796e-8b97-b1ee8de3a825";
+		const albumId = "01a07774-5cb4-7c6f-b5df-841db6db86a2";
+		const fetcher = vi.fn(async () => json({ data: {
+			id: artistId, name: "九维", bio: "<p>暂无</p>",
+			albums: [{ id: albumId, title: "公开作品", lifecycle_status: "active", status: "open" }],
+		} })) as unknown as typeof fetch;
+		const found = await resolvePublicContentSeo("/music/artist/" + artistId,
+			"https://api.atoman.org/api", "https://www.atoman.org", fetcher);
+		expect(found.content?.description).toContain("公开作品");
+		expect(found.content?.description).not.toBe("暂无");
+		expect(found.content?.bodyText).toContain("公开作品");
+		expect(found.content?.description.length).toBeGreaterThan(65);
+	});
+
 	it("builds canonical metadata and structured data for a public music artist", async () => {
 		const fetcher = vi.fn(async () =>
 			json({

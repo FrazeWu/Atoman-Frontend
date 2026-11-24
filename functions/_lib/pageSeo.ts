@@ -13,67 +13,67 @@ const pageMeta: Record<string, StaticPageMeta> = {
 	"/": {
 		title: "Atoman | 订阅与内容｜求真与开放",
 		description:
-			"聚合值得订阅的博客、播客、音乐与讨论，在开放交流中接近事实。",
+			"Atoman 汇集可订阅的 RSS 内容与独立文章，并整理图书、音乐人、专辑、歌曲、播客和视频。通过公开目录发现感兴趣的作品，也可以参与论坛与辩论，围绕内容和证据继续讨论。",
 	},
 	"/feed": {
 		title: "订阅流 | Atoman",
-		description: "聚合你感兴趣的 RSS 订阅源与内容更新。",
+		description: "Atoman 订阅流将 RSS 信息源与文章更新集中呈现，方便按主题发现值得阅读的内容、打开原文并追踪后续发布。你还可以从公开目录进入博客、播客、视频及音乐内容。",
 	},
 	"/posts": {
 		title: "博客 | Atoman",
-		description: "发现并阅读 Atoman 上的独立文章与专题内容。",
+		description: "在 Atoman 浏览公开文章与专题，阅读内容摘要、进入独立文章页面，并从相关目录发现更多公开的作者内容。也可以继续探索 RSS 订阅流、论坛讨论与不同主题的观点。",
 	},
 	"/posts/articles": {
 		title: "博文目录 | Atoman",
-		description: "浏览 Atoman 社区公开发布的文章与专题。",
+		description: "Atoman 的公开文章目录按页面展示已发布的博文，提供文章标题、摘要与可直接访问的详情链接。通过分页浏览历史文章，也可以返回博客首页或进入其他公开栏目继续发现内容。",
 	},
 	"/books": {
 		title: "图书馆 | Atoman",
-		description: "探索作品、出版版本与书单，参与开放的图书资料维护和讨论。",
+		description: "Atoman 图书馆整理公开作品与具体出版版本，展示作者、出版社、ISBN 等可获得的书目资料，并将同一作品的不同版本关联起来。你可以浏览作品详情、公开书单及相关讨论。",
 	},
 	"/books/lists": {
 		title: "公开书单 | Atoman",
-		description: "发现社区公开书单和阅读推荐。",
+		description: "在 Atoman 查看社区公开书单与作品条目，按书单主题发现阅读线索、进入相关图书作品页并查看出版版本资料。书单连接图书目录，方便在不同作品之间继续探索。",
 	},
 	"/music": {
 		title: "音乐档案 | Atoman",
-		description: "浏览和整理专辑、歌曲与艺人资料。",
+		description: "Atoman 音乐档案将音乐人、专辑与歌曲信息关联整理，方便从艺人档案进入已收录专辑，再查看曲目和作品介绍。你也可以独立浏览公开音乐目录，并与播客、文章等内容相互发现。",
 	},
 	"/music/albums": {
 		title: "音乐专辑列表 | Atoman",
-		description: "浏览 Atoman 公开收录的音乐专辑，查看专辑介绍、音乐人和曲目资料。",
+		description: "Atoman 音乐专辑目录汇集公开收录的唱片与作品资料，可以按目录浏览专辑标题、进入专辑详情查看发行信息和关联音乐人。相关曲目页面与音乐人档案相互链接，便于追踪作品脉络。",
 	},
 	"/music/artists": {
 		title: "音乐人目录 | Atoman",
-		description: "浏览 Atoman 公开收录的音乐人与组合，探索音乐人资料和关联专辑。",
+		description: "Atoman 音乐人目录集中呈现已公开收录的歌手、组合与音乐人档案。选择音乐人可以查看已有简介和关联专辑，再沿着专辑进入歌曲详情，探索不同艺人与作品之间的联系。",
 	},
 	"/music/songs": {
 		title: "歌曲目录 | Atoman",
-		description: "浏览 Atoman 公开收录的歌曲，查看歌曲详情、音乐人及关联专辑。",
+		description: "Atoman 歌曲目录按页面整理已公开收录的曲目，提供歌曲标题与可直接访问的详情链接。打开歌曲页面可以查看关联音乐人、专辑和已有的作品资料，并沿着分页继续发现其他音乐。",
 	},
 	"/forum": {
 		title: "论坛 | Atoman",
-		description: "参与主题讨论，发布观点并与社区交流。",
+		description: "Atoman 论坛围绕公开主题组织交流，你可以浏览已经发布的讨论及其内容，从主题进入具体对话，也可以继续阅读相关博文和辩论。不同观点和资料可以在社区中相互补充与讨论。",
 	},
 	"/debate": {
 		title: "辩论 | Atoman",
-		description: "围绕具体辩题查看论点、证据与讨论。",
+		description: "Atoman 辩论栏目围绕具体辩题整理不同立场、论点和证据，帮助读者沿着问题理解讨论中的分歧。你可以进入公开辩题查看相关内容，也能从论坛和文章目录继续阅读背景资料。",
 	},
 	"/timeline": {
 		title: "人物时间线 | Atoman",
-		description: "按时间与地点查看人物和事件脉络。",
+		description: "Atoman 人物时间线按时间脉络呈现公开记录的相关人物与事件，便于沿着时间顺序阅读条目并理解前后关系。你可以结合站内图书、文章和讨论中的内容，继续查阅相关公开资料。",
 	},
 	"/podcasts": {
 		title: "播客 | Atoman",
-		description: "发现播客节目、单集与相关讨论。",
+		description: "Atoman 播客栏目汇集公开节目与单集，方便从播客目录进入节目页面，再阅读或收听具体单集内容。结合 RSS 订阅流和站内文章，可以在不同形式的音频与文字内容之间继续探索。",
 	},
 	"/videos": {
 		title: "视频 | Atoman",
-		description: "发现视频内容并参与相关讨论。",
+		description: "Atoman 视频栏目汇集公开发布的影像内容，通过视频目录可以进入具体视频页面，查看已有标题、简介和关联信息。你也可以结合文章、音乐与讨论栏目，探索相同主题的其他资料。",
 	},
 	"/about": {
-		title: "关于 Atoman",
-		description: "了解 Atoman 的定位、内容与社区。",
+		title: "关于 Atoman | 平台与社区介绍",
+		description: "了解 Atoman 的定位与主要栏目：通过 RSS 订阅流发现公开文章，浏览图书、音乐、播客与视频资料，并在论坛和辩论中交流观点。这里介绍平台提供的公开内容类型与参与方式。",
 	},
 	"/terms": {
 		title: "服务条款 | Atoman",

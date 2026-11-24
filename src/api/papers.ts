@@ -151,10 +151,11 @@ export const reviewPaperApplication = (id: string, decision: 'approved' | 'rejec
 export const paperImportZIPLimit = 5 * 1024 * 1024
 export const paperImportSourceLimit = 4 * 1024 * 1024
 
-export async function importPaperProject(name: string, archive: Blob, mainFile = ''): Promise<PaperProject> {
+export async function importPaperProject(name: string, archive: Blob, mainFile = '', exclusionConfirmation = ''): Promise<PaperProject> {
   if (archive.size === 0 || archive.size > paperImportZIPLimit) throw new Error('ZIP 文件不能超过 5 MiB。')
   const query = new URLSearchParams({ name })
   if (mainFile.trim()) query.set('main_file', mainFile.trim())
+  if (exclusionConfirmation) query.set('exclude_confirmation', exclusionConfirmation)
   const result = await apiRequestEnvelope<PaperProject>(`${useApiUrl()}/papers/projects/import?${query}`, {
     method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/zip' }, body: archive,
   })

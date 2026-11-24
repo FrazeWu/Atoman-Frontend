@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import JSZip from 'jszip'
-import { packPaperFolder, suggestPaperProjectName } from '@/components/papers/projectArchive'
+import { packPaperFolder, suggestPaperProjectName, unsupportedPaperFolderFiles } from '@/components/papers/projectArchive'
 
 function folderFile(path: string, content: Uint8Array | string) {
   const data = typeof content === 'string' ? new TextEncoder().encode(content) : content
@@ -25,5 +25,14 @@ describe('Papers folder archive', () => {
     await expect(packPaperFolder([folderFile('One/../main.tex','a')])).rejects.toThrow()
     await expect(packPaperFolder([folderFile('One/main.tex','a'),folderFile('One/MAIN.TEX','b')])).rejects.toThrow()
     await expect(packPaperFolder([folderFile('One/figures/big.png',new Uint8Array(4*1024*1024))])).rejects.toThrow()
+  })
+  it('lists unsupported files and excludes only after explicit approval', async () => {
+    const files=[folderFile('Paper/main.tex','source'),folderFile('Paper/pic/plot.py','script'),folderFile('Paper/main.log','log'),folderFile('Paper/refs.bib','refs')]
+    expect(unsupportedPaperFolderFiles(files)).toEqual(['main.log','pic/plot.py'])
+    await expect(packPaperFolder(files)).rejects.toThrow()
+    const packed=await packPaperFolder(files,true)
+    const zip=await JSZip.loadAsync(await packed.arrayBuffer())
+    expect(Object.keys(zip.files).sort()).toEqual(['main.tex','refs.bib'])
+    await expect(packPaperFolder([folderFile('Paper/main.tex','a'),folderFile('Paper/../bad.py','x')],true)).rejects.toThrow()
   })
 })

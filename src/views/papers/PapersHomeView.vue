@@ -20,7 +20,7 @@
       <p v-if="error" role="alert" class="papers-home__error">{{ error }}</p>
     </section>
     <section v-else class="papers-home__body">
-      <form class="papers-home__create" @submit.prevent="create">
+      <form class="papers-home__create" @submit.prevent="create()">
         <h2>新建论文项目</h2>
         <div class="papers-home__import-actions">
           <PButton type="button" size="sm" :variant="!importSource ? 'primary' : 'secondary'" :disabled="creating" @click="clearImport">空白项目</PButton>
@@ -36,13 +36,25 @@
         <label for="paper-project-name">项目名称</label>
         <div class="papers-home__actions">
           <input id="paper-project-name" v-model.trim="projectName" maxlength="100" placeholder="例如：Jailbreak Defense" required :disabled="creating" />
-          <PButton type="submit" :disabled="creating || !projectName">{{ creating ? '处理中…' : importSource ? '创建并导入' : '创建' }}</PButton>
+          <PButton type="submit" :disabled="creating || !projectName || !!exclusion">{{ creating ? '处理中…' : importSource ? '创建并导入' : '创建' }}</PButton>
         </div>
         <div v-if="importSource" class="papers-home__main-file">
           <label for="paper-main-file">主 TeX 文件（可选）</label>
           <input id="paper-main-file" v-model.trim="mainFile" maxlength="255" :disabled="creating" placeholder="自动识别，例如 paper.tex" />
           <p>支持 TeX、BibTeX、样式及 PNG/JPG/PDF 资源。ZIP 最大 5 MiB，编译源文件最多 64 个、编码后总计 4 MiB。忽略常见系统和 Git 元数据。</p>
         </div>
+        <section v-if="exclusion" class="papers-home__exclusion" aria-label="不支持的项目文件">
+          <h3>发现 {{ exclusion.files.length }} 个不支持的文件</h3>
+          <p>以下文件类型或路径暂不支持。是否将它们从本次导入中排除？原始文件夹和 ZIP 压缩包不会被修改。</p>
+          <ul class="papers-home__exclusion-list">
+            <li v-for="file in exclusion.files" :key="file">{{ file }}</li>
+          </ul>
+          <p>其余论文源码、图片和参考文献仍将正常导入。排除的文件不会出现在项目或导出的 ZIP 中。</p>
+          <div class="papers-home__exclusion-actions">
+            <PButton type="button" variant="secondary" :disabled="creating" @click="cancelExclusion">取消导入</PButton>
+            <PButton type="button" :disabled="creating || !projectName" @click="create(true)">排除这些文件并继续导入</PButton>
+          </div>
+        </section>
       </form>
       <p v-if="error" role="alert" class="papers-home__error">{{ error }}</p>
       <h2>我的论文</h2>
@@ -67,7 +79,7 @@ import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import { paperAccess, listPaperProjects, createPaperProject, getPaperApplication, submitPaperApplication, importPaperProject, getPaperProjectZIP, downloadPaperZIP, paperImportZIPLimit, type PaperProject, type PaperApplication } from '@/api/papers'
-import { packPaperFolder, suggestPaperProjectName } from '@/components/papers/projectArchive'
+import { packPaperFolder, suggestPaperProjectName, unsupportedPaperFolderFiles, paperArchiveExclusion } from '@/components/papers/projectArchive'
 
 const router = useRouter()
 const loading = ref(true)
@@ -80,8 +92,15 @@ const folderInput = ref<HTMLInputElement | null>(null)
 const zipInput = ref<HTMLInputElement | null>(null)
 const importSource = ref<{kind:'folder'|'zip'; files:File[]; label:string} | null>(null)
 const mainFile = ref('')
+type Exclusion = {kind:'folder'; files:string[]} | {kind:'zip'; files:string[]; confirmation:string; archive:Blob}
+const exclusion = ref<Exclusion | null>(null)
+function cancelExclusion() {
+  exclusion.value = null
+  error.value = ''
+}
 const exporting = ref('')
 function clearImport() {
+  cancelExclusion()
   importSource.value = null
   mainFile.value = ''
   error.value = ''
@@ -97,6 +116,7 @@ function chooseImport(event: Event, kind: 'folder'|'zip') {
   }
   const name = suggestPaperProjectName(files[0], kind === 'folder')
   if (!name) { error.value = '无法识别项目名称，请改用 ZIP 导入。'; return }
+  cancelExclusion()
   importSource.value = { kind, files, label: kind === 'folder' ? name : files[0].name }
   projectName.value = name
   mainFile.value = ''
@@ -140,18 +160,39 @@ async function load() {
   }
 }
 
-async function create() {
-  if (creating.value || !projectName.value) return
+async function create(confirmed = false) {
+  if (creating.value || !projectName.value || (confirmed ? !exclusion.value : !!exclusion.value)) return
+  const acknowledged = confirmed ? exclusion.value : null
+  exclusion.value = null
   creating.value = true
   error.value = ''
+  let archive: Blob | undefined
   try {
     const source = importSource.value
-    const project = source
-      ? await importPaperProject(projectName.value, source.kind === 'folder' ? await packPaperFolder(source.files) : source.files[0], mainFile.value)
-      : await createPaperProject(projectName.value)
+    let project: PaperProject
+    if (!source) project = await createPaperProject(projectName.value)
+    else {
+      if (source.kind === 'folder' && !acknowledged) {
+        const files = unsupportedPaperFolderFiles(source.files)
+        if (files.length) {
+          exclusion.value = {kind:'folder',files}
+          return
+        }
+      }
+      archive = acknowledged?.kind === 'zip' ? acknowledged.archive :
+        source.kind === 'folder' ? await packPaperFolder(source.files, acknowledged?.kind === 'folder') : source.files[0]
+      project = acknowledged?.kind === 'zip'
+        ? await importPaperProject(projectName.value, archive, mainFile.value, acknowledged.confirmation)
+        : await importPaperProject(projectName.value, archive, mainFile.value)
+    }
     await router.push('/papers/' + project.id)
   } catch (cause) {
-    error.value = importSource.value ? (cause instanceof Error && cause.message ? '导入失败：' + cause.message : '导入失败，请检查 ZIP 内容。') : '创建失败。请检查项目名称、访问权限或当前项目数量。'
+    const challenge = archive && paperArchiveExclusion(cause)
+    if (challenge && archive) {
+      exclusion.value = {kind:'zip',...challenge,archive}
+    } else {
+      error.value = importSource.value ? (cause instanceof Error && cause.message ? '导入失败：' + cause.message : '导入失败，请检查 ZIP 内容。') : '创建失败。请检查项目名称、访问权限或当前项目数量。'
+    }
   } finally {
     creating.value = false
   }
@@ -185,4 +226,9 @@ onMounted(load)
 .papers-home__main-file p {font-size:.8rem;color:var(--a-color-text-secondary);margin:0}
 .papers-home__project-link {display:flex;flex-direction:column;gap:8px;color:inherit;text-decoration:none;overflow-wrap:anywhere}
 .papers-home__project-link:hover strong {text-decoration:underline}
+.papers-home__exclusion {display:grid;gap:10px;margin-top:18px;padding:16px;border:1px solid var(--a-color-border-soft,#d9dce2);border-radius:10px;background:var(--a-color-bg-soft,transparent)}
+.papers-home__exclusion h3 {font-size:.95rem;font-weight:650;margin:0}
+.papers-home__exclusion p {font-size:.84rem;line-height:1.6;margin:0;color:var(--a-color-text-secondary,#697281)}
+.papers-home__exclusion-list {max-height:220px;overflow:auto;margin:0;padding-left:22px;font-size:.83rem;line-height:1.7;overflow-wrap:anywhere}
+.papers-home__exclusion-actions {display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 </style>

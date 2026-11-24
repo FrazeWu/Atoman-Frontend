@@ -8,10 +8,12 @@ type PublicListSource = {
   routePrefix: string;
   labelField: "title" | "name";
   maxItems?: number;
+  paginated?: boolean;
 };
 
 const sources: Record<string, PublicListSource[]> = {
   "/posts": [{ heading: "公开文章", endpoint: "/blog/posts?page=1&page_size=8", routePrefix: "/posts/post/", labelField: "title" }],
+  "/posts/articles": [{ heading: "公开博文", endpoint: "/blog/posts?page=1&page_size=20&view=summary", routePrefix: "/posts/post/", labelField: "title", maxItems: 20, paginated: true }],
   "/books": [{ heading: "公开图书作品", endpoint: "/books/works", routePrefix: "/books/work/", labelField: "title" }],
   "/books/lists": [{ heading: "公开书单", endpoint: "/books/booklists", routePrefix: "/books/lists/", labelField: "title" }],
   "/music": [
@@ -25,13 +27,26 @@ const sources: Record<string, PublicListSource[]> = {
     { heading: "公开音乐人", endpoint: "/music/artists?page=1&page_size=12", routePrefix: "/music/artist/", labelField: "name", maxItems: 12 },
   ],
   "/music/songs": [
-    { heading: "公开歌曲", endpoint: "/music/songs?page=1&page_size=12", routePrefix: "/music/song/", labelField: "title", maxItems: 12 },
+    { heading: "公开歌曲", endpoint: "/music/songs?page=1&page_size=20&view=summary", routePrefix: "/music/song/", labelField: "title", maxItems: 20, paginated: true },
   ],
   "/forum": [{ heading: "公开讨论", endpoint: "/forum/topics?page=1&page_size=8", routePrefix: "/forum/topic/", labelField: "title" }],
   "/debate": [{ heading: "公开辩题", endpoint: "/debate/topics?page=1&page_size=8", routePrefix: "/debate/", labelField: "title" }],
   "/podcasts": [{ heading: "播客单集", endpoint: "/podcast/episodes", routePrefix: "/podcasts/episode/", labelField: "title" }],
   "/videos": [{ heading: "公开视频", endpoint: "/videos?sort=latest&page=1&page_size=8", routePrefix: "/videos/watch/", labelField: "title" }],
 };
+
+// Only clean, public archive pages get an indexable pagination chain.
+const publicArchives = new Set(["/posts/articles", "/music/songs"]);
+export function getPublicArchivePage(pathname: string, query: URLSearchParams) {
+  const path = pathname.replace(/\/+$/, "") || "/";
+  if (!publicArchives.has(path)) return null;
+  if ([...query.keys()].some((key) => key !== "page")) return null;
+  const raw = query.get("page");
+  if (raw === null) return 1;
+  if (!/^[1-9][0-9]{0,3}$/.test(raw)) return null;
+  const page = Number(raw);
+  return page <= 5000 ? page : null;
+}
 
 function cleanText(value: unknown, limit = 125, stripMarkup = true) {
   if (typeof value !== "string") return "";
@@ -71,28 +86,49 @@ function listItems(payload: unknown): PublicItem[] {
     : [];
 }
 
-async function getGroup(apiBase: string, source: PublicListSource, fetcher: PublicFetcher) {
+async function getGroup(apiBase: string, source: PublicListSource, fetcher: PublicFetcher, page = 1, archivePath?: string) {
   try {
-    const response = await fetcher(`${apiBase}${source.endpoint}`, {
+    const endpoint = source.paginated
+      ? source.endpoint.replace("page=1", "page=" + String(page))
+      : source.endpoint;
+    const response = await fetcher(apiBase + endpoint, {
       headers: { accept: "application/json" },
       signal: typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(2500) : undefined,
     });
     if (!response.ok) return "";
-    const items = listItems(await response.json());
+    const payload: unknown = await response.json();
+    const items = listItems(payload);
     const valid = items.filter(publicRecord)
       .map((item) => {
         const id = typeof item.id === "string" ? item.id : "";
         const title = cleanText(item[source.labelField], 125, false);
         if (!/^[a-zA-Z0-9_-]{1,100}$/.test(id) || !title) return "";
-        const url = `${source.routePrefix}${encodeURIComponent(id)}`;
+        const url = source.routePrefix + encodeURIComponent(id);
         const summary = cleanText(item.summary || item.description, 170);
-        return `<li><a href="${escapeHtml(url)}">${escapeHtml(title)}</a>${summary && summary !== title ? `<p>${escapeHtml(summary)}</p>` : ""}</li>`;
+        return '<li><a href="' + escapeHtml(url) + '">' + escapeHtml(title) + '</a>'
+          + (summary && summary !== title ? '<p>' + escapeHtml(summary) + '</p>' : '') + '</li>';
       })
       .filter(Boolean)
       .slice(0, source.maxItems ?? 8);
-    return valid.length
-      ? `<section class="seo-public-listing-group"><h3>${escapeHtml(source.heading)}</h3><ul>${valid.join("")}</ul></section>`
+    if (!valid.length) return "";
+    const metadata = payload && typeof payload === "object" && "meta" in payload
+      ? (payload as { meta?: { has_more?: boolean; total?: number } }).meta
+      : undefined;
+    const pageSize = source.maxItems ?? 8;
+    const hasMore = metadata?.has_more === true || (
+      metadata?.has_more === undefined
+      && typeof metadata?.total === "number"
+      && metadata.total > page * pageSize
+    );
+    const pageUrl = (n: number) => archivePath + (n > 1 ? "?page=" + String(n) : "");
+    const pager = archivePath
+      ? '<nav aria-label="目录分页">'
+        + (page > 1 ? '<a rel="prev" href="' + escapeHtml(pageUrl(page - 1)) + '">上一页</a>' : '')
+        + (hasMore ? '<a rel="next" href="' + escapeHtml(pageUrl(page + 1)) + '">下一页</a>' : '')
+        + '</nav>'
       : "";
+    return '<section class="seo-public-listing-group"><h3>' + escapeHtml(source.heading)
+      + '</h3><ul>' + valid.join("") + '</ul>' + pager + '</section>';
   } catch {
     // A temporary API failure should never hide the section or change indexing.
     return "";
@@ -104,12 +140,16 @@ export async function loadPublicSectionListing(
   configuredApiUrl: string | undefined,
   origin: string,
   fetcher: PublicFetcher = fetch,
+  searchParams: URLSearchParams = new URLSearchParams(),
 ) {
   const path = pathname.replace(/\/+$/, "") || "/";
   const config = sources[path];
   if (!config) return "";
+  const archivePage = getPublicArchivePage(path, searchParams);
+  if (publicArchives.has(path) && archivePage === null) return "";
   const base = resolveApiBase(configuredApiUrl, origin);
-  const groups = await Promise.all(config.map((item) => getGroup(base, item, fetcher)));
+  const groups = await Promise.all(config.map((item) =>
+    getGroup(base, item, fetcher, archivePage ?? 1, item.paginated ? path : undefined)));
   const content = groups.filter(Boolean).join("");
   return content ? `<section data-seo-public-listing="true" aria-label="当前公开内容"><h2>浏览公开内容</h2>${content}</section>` : "";
 }

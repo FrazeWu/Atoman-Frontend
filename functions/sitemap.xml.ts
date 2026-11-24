@@ -16,6 +16,7 @@ const staticPages: SitemapItem[] = [
 	{ path: "/" },
 	{ path: "/feed" },
 	{ path: "/posts" },
+	{ path: "/posts/articles" },
 	{ path: "/books" },
 	{ path: "/books/lists" },
 	{ path: "/music" },

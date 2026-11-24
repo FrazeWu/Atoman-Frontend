@@ -1,4 +1,5 @@
 import { isCanonicalSitemapPath } from "./blogSeo";
+import { getPublicArchivePage } from "./sectionContentSeo";
 
 type StaticPageMeta = {
 	title: string;
@@ -21,6 +22,10 @@ const pageMeta: Record<string, StaticPageMeta> = {
 	"/posts": {
 		title: "博客 | Atoman",
 		description: "发现并阅读 Atoman 上的独立文章与专题内容。",
+	},
+	"/posts/articles": {
+		title: "博文目录 | Atoman",
+		description: "浏览 Atoman 社区公开发布的文章与专题。",
 	},
 	"/books": {
 		title: "图书馆 | Atoman",
@@ -85,7 +90,8 @@ const pageMeta: Record<string, StaticPageMeta> = {
 const publicSectionLinks: Record<string, string[]> = {
   "/": ["/feed", "/posts", "/books", "/music", "/forum", "/podcasts", "/videos"],
   "/feed": ["/posts", "/podcasts", "/videos", "/music"],
-  "/posts": ["/feed", "/forum", "/debate"],
+  "/posts": ["/posts/articles", "/feed", "/forum", "/debate"],
+  "/posts/articles": ["/posts", "/feed", "/forum"],
   "/books": ["/books/lists", "/posts", "/forum"],
   "/books/lists": ["/books", "/posts"],
   "/music": ["/music/albums", "/music/artists", "/music/songs", "/podcasts", "/videos", "/posts"],
@@ -291,9 +297,13 @@ export function buildStaticPageHtml(
 	html: string,
 	pathname: string,
 	hostname: string,
+	searchParams: URLSearchParams = new URLSearchParams(),
 ) {
 	const path = normalizePath(pathname);
 	const meta = pageMeta[path];
+	const archivePage = getPublicArchivePage(path, searchParams);
+	const pageSuffix = archivePage && archivePage > 1 ? "?page=" + String(archivePage) : "";
+	const pageTitle = meta && pageSuffix ? meta.title.replace(" | Atoman", " · 第 " + archivePage + " 页 | Atoman") : meta?.title;
 	const noIndex =
 		hostname.endsWith(".pages.dev") ||
 		noIndexPrefixes.some(
@@ -303,18 +313,18 @@ export function buildStaticPageHtml(
 
 	const tags: string[] = [];
 	if (meta) {
-		const canonical = `${canonicalOrigin}${path === "/" ? "/" : path}`;
+		const canonical = `${canonicalOrigin}${path === "/" ? "/" : path}${pageSuffix}`;
 		tags.push(
-			`<title data-default-meta>${escapeHtml(meta.title)}</title>`,
+			`<title data-default-meta>${escapeHtml(pageTitle || meta.title)}</title>`,
 			`<meta data-default-meta name="description" content="${escapeHtml(meta.description)}">`,
 			`<link data-default-meta rel="canonical" href="${escapeHtml(canonical)}">`,
 			'<meta data-default-meta property="og:type" content="website">',
-			`<meta data-default-meta property="og:title" content="${escapeHtml(meta.title)}">`,
+			`<meta data-default-meta property="og:title" content="${escapeHtml(pageTitle || meta.title)}">`,
 			`<meta data-default-meta property="og:description" content="${escapeHtml(meta.description)}">`,
 			`<meta data-default-meta property="og:url" content="${escapeHtml(canonical)}">`,
 			`<meta data-default-meta property="og:image" content="${defaultImage}">`,
 			'<meta data-default-meta name="twitter:card" content="summary_large_image">',
-			`<meta data-default-meta name="twitter:title" content="${escapeHtml(meta.title)}">`,
+			`<meta data-default-meta name="twitter:title" content="${escapeHtml(pageTitle || meta.title)}">`,
 			`<meta data-default-meta name="twitter:description" content="${escapeHtml(meta.description)}">`,
 			`<meta data-default-meta name="twitter:image" content="${defaultImage}">`,
 		);

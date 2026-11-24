@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from "vue";
-import { CirclePlus, ExternalLink, Info, ListPlus, Play, Search } from 'lucide-vue-next';
+import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { CirclePlus, ExternalLink, Info, ListPlus, Play } from 'lucide-vue-next';
 import { useRoute, useRouter } from 'vue-router';
 import { recordMusicSearchInteraction, searchMusic, listMusicAlbums, listMusicPlaylistSongs, listMusicSongs, getMusicArtist, type MusicSearchKind, type MusicSongListItem } from "@/api/musicV1";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
@@ -51,6 +51,40 @@ let requestID = 0;
 let controller: AbortController | undefined;
 const page = ref(1);
 const searchMeta = ref({ page: 1, page_size: 20, total: 0, has_more: false });
+const browseSongs = ref<MusicSongListItem[]>([]);
+const browseLoading = ref(false);
+const browseError = ref("");
+const browseHasMore = ref(false);
+let browseRequestID = 0;
+const browsePage = computed(() => {
+  const raw = queryValue(route.query.page);
+  if (!/^[1-9][0-9]{0,3}$/.test(raw)) return 1;
+  const next = Number(raw);
+  return next <= 5000 ? next : 1;
+});
+const browsePageUrl = (targetPage: number) =>
+  targetPage > 1 ? "/music/songs?page=" + String(targetPage) : "/music/songs";
+
+async function loadBrowseSongs() {
+  if (query.value.trim() || tagID.value) return;
+  const request = ++browseRequestID;
+  browseLoading.value = true;
+  browseError.value = "";
+  try {
+    const result = await listMusicSongs({ page: browsePage.value, page_size: 20 });
+    if (request !== browseRequestID) return;
+    browseSongs.value = result.data;
+    browseHasMore.value = result.meta.has_more;
+  } catch {
+    if (request !== browseRequestID) return;
+    browseSongs.value = [];
+    browseHasMore.value = false;
+    browseError.value = "歌曲目录加载失败";
+  } finally {
+    if (request === browseRequestID) browseLoading.value = false;
+  }
+}
+
 
 function applyTagResults(
   nextSongs: MusicSongListItem[],
@@ -220,6 +254,12 @@ async function playArtistResult(artist: Awaited<ReturnType<typeof searchMusic>>[
 }
 
 watch(
+  () => [route.query.page, route.query.q, route.query.tag_id],
+  () => { void loadBrowseSongs(); },
+  { immediate: true },
+);
+
+watch(
 	() => [route.query.q, route.query.tag_id, route.query.tag_entity, route.query.tag_name],
 	([routeQuery, routeTagID, routeTagEntity, routeTagName]) => {
 		query.value = queryValue(routeQuery);
@@ -260,12 +300,13 @@ watch(() => [route.query.q, route.query.tag_id], () => {
 onBeforeUnmount(() => {
   window.clearTimeout(timer);
   controller?.abort();
+  browseRequestID += 1;
 });
 </script>
 
 <template>
   <section class="songs-view">
-    <PPageHeader :title="tagName ? `标签：${tagName}` : '歌曲检索'" mb="1.25rem">
+    <PPageHeader :title="tagName ? ('标签：' + tagName) : (!query.trim() && !tagID ? '歌曲目录' : '歌曲检索')" mb="1.25rem">
       <template #action>
         <PButton v-if="tagID" size="sm" variant="secondary" @click="clearTagFilter">清除标签筛选</PButton>
         <PSegmentedControl v-model="selectedType" :options="searchTypeOptions" />
@@ -289,14 +330,24 @@ onBeforeUnmount(() => {
       />
     </div>
 
-    <!-- Default empty guidance state -->
-    <div v-if="!query.trim() && !tagID && !loading" class="songs-view__default-empty">
-      <PEmpty title="搜索音乐" description="输入歌曲名、专辑名、艺术家或歌单检索。">
-        <template #icon>
-          <Search :size="32" style="color: var(--a-color-muted);" />
-        </template>
-      </PEmpty>
-    </div>
+    <!-- Public, paginated song directory; matches the server-rendered SEO list. -->
+    <section v-if="!query.trim() && !tagID && !loading" class="songs-view__browse" aria-label="公开歌曲目录">
+      <h2>公开歌曲</h2>
+      <p v-if="browseLoading" class="state">加载歌曲中...</p>
+      <p v-else-if="browseError" class="state error" role="alert">{{ browseError }}</p>
+      <PEmpty v-else-if="!browseSongs.length" title="暂无歌曲" />
+      <div v-else class="songs-view__browse-list">
+        <div v-for="song in browseSongs" :key="song.id" class="songs-view__browse-item">
+          <RouterLink class="song-title" :to="'/music/song/' + song.id">{{ song.title }}</RouterLink>
+          <span>{{ song.artists?.map(artist => artist.name).join(' / ') || '未知艺术家' }}</span>
+        </div>
+      </div>
+      <nav v-if="!browseLoading && !browseError && (browsePage > 1 || browseHasMore)" class="songs-view__pagination" aria-label="歌曲目录分页">
+        <RouterLink v-if="browsePage > 1" :to="browsePageUrl(browsePage - 1)" rel="prev">上一页</RouterLink>
+        <span>第 {{ browsePage }} 页</span>
+        <RouterLink v-if="browseHasMore" :to="browsePageUrl(browsePage + 1)" rel="next">下一页</RouterLink>
+      </nav>
+    </section>
 
     <p v-else-if="loading" class="state">搜索中...</p>
     <p v-else-if="error" class="state error">{{ error }}</p>
@@ -446,8 +497,50 @@ onBeforeUnmount(() => {
   margin-bottom: 0.5rem;
 }
 
-.songs-view__default-empty {
-  padding: 3rem 0;
+.songs-view__browse {
+  display: grid;
+  gap: 0.875rem;
+}
+
+.songs-view__browse h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.songs-view__browse-list {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.songs-view__browse-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+.songs-view__browse-item span {
+  color: var(--a-color-muted);
+  font-size: 0.8125rem;
+}
+
+.songs-view__pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: var(--a-color-text-secondary);
+}
+
+.songs-view__pagination a {
+  color: var(--a-color-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .songs-view__results {

@@ -72,8 +72,13 @@
             description="换个关键词或频道试试"
           />
           <p v-if="error && posts.length" class="a-error" role="alert">博文加载失败，请稍后重试</p>
+          <nav v-if="archiveMode && (page > 1 || hasMore)" class="blog-articles__pagination" aria-label="公开文章分页">
+            <RouterLink v-if="page > 1" :to="archivePageUrl(page - 1)" rel="prev">上一页</RouterLink>
+            <span>第 {{ page }} 页</span>
+            <RouterLink v-if="hasMore" :to="archivePageUrl(page + 1)" rel="next">下一页</RouterLink>
+          </nav>
           <PButton
-            v-if="hasMore"
+            v-if="hasMore && !archiveMode"
             block
             variant="secondary"
             :loading="loading"
@@ -192,6 +197,18 @@ const currentAuthorID = computed(() => typeof queryValue(route.query.author_id) 
 const currentChannelId = computed(() => typeof queryValue(route.query.channel_id) === 'string' ? queryValue(route.query.channel_id) as string : '')
 const currentCollectionID = computed(() => typeof queryValue(route.query.collection_id) === 'string' ? queryValue(route.query.collection_id) as string : '')
 const currentSort = computed<'relevance' | 'recent'>(() => queryValue(route.query.sort) === 'recent' ? 'recent' : 'relevance')
+const archiveMode = computed(() => !(
+  currentQuery.value.trim() || currentTag.value.trim() || currentAuthorID.value
+  || currentChannelId.value || currentCollectionID.value || currentSort.value !== 'relevance'
+))
+const archivePage = computed(() => {
+  const raw = queryValue(route.query.page)
+  if (typeof raw !== 'string' || !/^[1-9][0-9]{0,3}$/.test(raw)) return 1
+  const parsed = Number(raw)
+  return parsed <= 5000 ? parsed : 1
+})
+const archivePageUrl = (value: number) => value > 1 ? '/posts/articles?page=' + String(value) : '/posts/articles'
+
 const sortOptions: { label: string; value: 'relevance' | 'recent' }[] = [
   { label: '相关性', value: 'relevance' },
   { label: '最新', value: 'recent' },
@@ -239,6 +256,7 @@ const updateQuery = (next: {
   sort?: 'relevance' | 'recent'
 }) => {
   const query = { ...route.query }
+  delete query.page
   for (const [key, value] of Object.entries(next)) {
     if (value) query[key] = value
     else delete query[key]
@@ -311,7 +329,7 @@ const toSearchPost = (item: BlogSearchResult): Post => {
 }
 
 const fetchPosts = async (append = false) => {
-  const targetPage = append ? page.value + 1 : 1
+  const targetPage = append ? page.value + 1 : (archiveMode.value ? archivePage.value : 1)
   const currentRequestId = ++requestId
   loading.value = true
   error.value = false
@@ -358,6 +376,10 @@ const loadMore = () => {
   if (!loading.value && hasMore.value) void fetchPosts(true)
 }
 
+watch(() => route.query.page, () => {
+  if (archiveMode.value) void fetchPosts()
+})
+
 watch([currentQuery, currentTag, currentChannelId, currentSort], () => {
   searchInput.value = currentQuery.value
   authorId.value = currentAuthorID.value
@@ -389,6 +411,26 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.blog-articles__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: var(--a-color-text-secondary);
+}
+
+.blog-articles__pagination a {
+  color: var(--a-color-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.blog-articles__pagination a:hover {
+  color: var(--a-color-primary);
+}
+
 .blog-articles__filters {
   display: grid;
   grid-template-columns: minmax(12rem, 1fr) repeat(4, minmax(8rem, 12rem)) auto;

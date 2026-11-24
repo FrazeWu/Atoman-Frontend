@@ -100,6 +100,20 @@ describe("SongsView", () => {
 
 	afterEach(() => vi.useRealTimers());
 
+	it("provides real URL pagination for the public song catalog", async () => {
+		mocks.listMusicSongs.mockResolvedValue({
+			data: [{ id: "song-21", title: "Older Track", artists: [{ id: "artist-1", name: "Artist 1" }] }],
+			meta: { page: 2, page_size: 20, total: 60, has_more: true },
+		});
+		const wrapper = await mountView({ page: "2" });
+		await flushPromises();
+		expect(mocks.listMusicSongs).toHaveBeenCalledWith({ page: 2, page_size: 20 });
+		expect(wrapper.text()).toContain("Older Track");
+		expect(wrapper.find('a[href="/music/song/song-21"]').exists()).toBe(true);
+		expect(wrapper.find('a[href="/music/songs"]').exists()).toBe(true);
+		expect(wrapper.find('a[href="/music/songs?page=3"]').exists()).toBe(true);
+	});
+
 	it("links the song and opens its artist and album details", async () => {
 		const wrapper = await mountView();
 		await wrapper.get('input[type="search"]').setValue("Song");

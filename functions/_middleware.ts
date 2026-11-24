@@ -135,6 +135,7 @@ export async function onRequest(context: MiddlewareContext) {
 			html,
 			requestUrl.pathname,
 			requestUrl.hostname,
+			requestUrl.searchParams,
 		);
 		const lookup = await resolvePublicContentSeo(
 			requestUrl.pathname,
@@ -158,6 +159,8 @@ export async function onRequest(context: MiddlewareContext) {
 				requestUrl.pathname,
 				context.env?.VITE_API_URL,
 				requestUrl.origin,
+				fetch,
+				requestUrl.searchParams,
 			);
 			transformedHtml = injectPublicSectionListing(transformedHtml, listing);
 		}

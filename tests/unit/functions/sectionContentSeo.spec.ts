@@ -47,7 +47,6 @@ describe("public section SEO link previews", () => {
   it.each([
     ["/music/albums", "albums", "/music/album/", "title"],
     ["/music/artists", "artists", "/music/artist/", "name"],
-    ["/music/songs", "songs", "/music/song/", "title"],
   ])("exposes up to 12 public detail links on %s", async (page, apiName, prefix, labelField) => {
     const fetcher = vi.fn(async () => new Response(JSON.stringify({data: Array.from({length: 14}, (_, i) => ({
       id: `record-${i}`, [labelField]: `公开内容 ${i}`, lifecycle_status: i === 2 ? "retired" : "active", status: "open",
@@ -116,4 +115,60 @@ describe("public section SEO link previews", () => {
     }
     expect(mock).not.toHaveBeenCalled();
   });
+  it("paginates public article archives with crawlable links and self-canonical HTML", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      data: [{ id: "post-page-2", title: "旧文章", status: "published", visibility: "public" }],
+      meta: { page: 2, page_size: 20, total: 55, has_more: true },
+    }), { headers: { "content-type": "application/json" } })) as unknown as typeof fetch;
+    const listing = await loadPublicSectionListing(
+      "/posts/articles", undefined, "https://www.atoman.org", fetcher,
+      new URLSearchParams("page=2"),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      expect.stringContaining("/blog/posts?page=2&page_size=20&view=summary"),
+      expect.any(Object),
+    );
+    expect(listing).toContain('href="/posts/post/post-page-2"');
+    expect(listing).toContain('rel="prev" href="/posts/articles"');
+    expect(listing).toContain('rel="next" href="/posts/articles?page=3"');
+
+    vi.stubGlobal("fetch", fetcher);
+    const response = await pageMiddleware({
+      request: new Request("https://www.atoman.org/posts/articles?page=2"),
+      next: async () => new Response(shell, { headers: { "content-type": "text/html" } }),
+    });
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain('rel="canonical" href="https://www.atoman.org/posts/articles?page=2"');
+    expect(html).toContain('href="/posts/post/post-page-2"');
+    expect(html).not.toContain('name="robots" content="noindex');
+  });
+
+  it("paginates the real song archive and refuses filter or invalid page combinations", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      data: [{ id: "song-page-3", title: "未曾发现的歌", lifecycle_status: "active" }],
+      meta: { page: 3, page_size: 20, total: 41, has_more: false },
+    }), { headers: { "content-type": "application/json" } })) as unknown as typeof fetch;
+    const listing = await loadPublicSectionListing(
+      "/music/songs", undefined, "https://www.atoman.org", fetcher,
+      new URLSearchParams("page=3"),
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      expect.stringContaining("/music/songs?page=3&page_size=20&view=summary"),
+      expect.any(Object),
+    );
+    expect(listing).toContain('href="/music/song/song-page-3"');
+    expect(listing).toContain('rel="prev" href="/music/songs?page=2"');
+    expect(listing).not.toContain('rel="next"');
+    expect(await loadPublicSectionListing(
+      "/music/songs", undefined, "https://www.atoman.org", fetcher,
+      new URLSearchParams("q=private&page=3"),
+    )).toBe("");
+    expect(await loadPublicSectionListing(
+      "/music/songs", undefined, "https://www.atoman.org", fetcher,
+      new URLSearchParams("page=-1"),
+    )).toBe("");
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
 });

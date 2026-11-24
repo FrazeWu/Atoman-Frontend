@@ -134,4 +134,44 @@ describe('BlogArticlesView', () => {
     expect(searchRequest).toContain('collection_id=collection-1')
     expect(searchRequest).toContain('sort=recent')
   })
+
+  it('以真实 URL 展示第 2 页和可抓取的上下页链接', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/blog/channels')) return response({ data: [] })
+      if (url.includes('/blog/posts')) return response({
+        data: [{
+          id: 'older-post', title: '历史博文', content: '正文', status: 'published',
+          visibility: 'public', created_at: '2026-09-01T00:00:00Z',
+          updated_at: '2026-09-01T00:00:00Z', tags: [],
+        }],
+        meta: { page: 2, page_size: 20, total: 55, has_more: true },
+      })
+      throw new Error('Unexpected request: ' + url)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/posts/articles', component: BlogArticlesView }],
+    })
+    await router.push('/posts/articles?page=2')
+    await router.isReady()
+    const wrapper = mount(BlogArticlesView, {
+      global: {
+        plugins: [router],
+        stubs: {
+          PPageHeader: true, PInput: true, PSegmentedControl: true,
+          PSelect: true, PButton: true, PEmpty: true,
+          BlogItemCard: { props: ['item'], template: '<article>{{ item.title }}</article>' },
+          RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
+        },
+      },
+    })
+    await flushPromises()
+    const calls = fetchMock.mock.calls.map(([input]) => String(input))
+    expect(calls.some(url => url.includes('/blog/posts?') && url.includes('page=2'))).toBe(true)
+    expect(wrapper.text()).toContain('历史博文')
+    expect(wrapper.find('a[href="/posts/articles"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="/posts/articles?page=3"]').exists()).toBe(true)
+  })
 })

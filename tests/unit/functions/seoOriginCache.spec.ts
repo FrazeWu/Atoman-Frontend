@@ -24,6 +24,19 @@ function cacheStore() {
 afterEach(() => vi.restoreAllMocks());
 
 describe("Private SEO R2 resilience", () => {
+  it("keeps cron refresh within the Workers Free 50-subrequest budget", async () => {
+    const SEO_CACHE = cacheStore();
+    const PRIVATE_ORIGIN = { fetch: vi.fn(async () => new Response('{"data":[]}', {
+      headers: { "content-type": "application/json" },
+    })) };
+    await worker.scheduled({}, { SEO_CACHE, PRIVATE_ORIGIN });
+    const subrequests = SEO_CACHE.get.mock.calls.length +
+      SEO_CACHE.put.mock.calls.length + PRIVATE_ORIGIN.fetch.mock.calls.length;
+    expect(PRIVATE_ORIGIN.fetch.mock.calls.length).toBe(12);
+    expect(subrequests).toBeLessThanOrEqual(50);
+    expect(SEO_CACHE.map.size).toBe(12);
+  });
+
   it("serves repeated public JSON from a private cache without another VPC request", async () => {
     vi.spyOn(Date, "now").mockReturnValue(now);
     const SEO_CACHE = cacheStore();

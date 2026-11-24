@@ -25,7 +25,7 @@ are authoritative, invalidate any cache entry, and never use stale cache. The bu
 domain or r2.dev access, and no user authentication is forwarded.
 
 The scheduled Worker refreshes common directory and sitemap API responses every
-15 minutes (32 anonymous URLs), limiting concurrency to four. Single detail URLs are
+15 minutes (12 selected anonymous URLs), limiting concurrency to four. Single detail URLs are
 cached on first access. As a result, a temporary failure of the existing
 pve-cluster Tunnel does not immediately break cached SEO content. Uncached
 detail URLs and publication of new content still depend on live origin access:
@@ -36,3 +36,7 @@ For preview deployments, Pages uses atoman-seo-origin-canary. Production uses
 atoman-seo-origin. Promote the tested Worker source and R2 binding to the
 production Worker before publishing the Pages production project. Both scripts
 must have workers.dev and public preview URLs disabled.
+
+Workers Free cron jobs have a 50-subrequest limit and 10 ms CPU budget. The
+12-entry warm list is deliberately bounded; other public SEO pages cache on
+demand. Check Cron Trigger runtime logs after deployment.

@@ -143,6 +143,9 @@ async function requestPublicJson(url, method, env, forceRefresh = false) {
 }
 
 // Warm only documented anonymous public read endpoints; no user-specific data.
+// On Workers Free, each cron execution has a 50-subrequest limit.
+// Keep this to 12 URLs: R2 get + VPC fetch + R2 put <= 36 subrequests.
+// Other pages still populate the same private cache on the first public read.
 const warmPaths = [
   "/api/v1/blog/seo/sitemap",
   "/api/v1/blog/posts?page=1&page_size=8",
@@ -150,22 +153,12 @@ const warmPaths = [
   "/api/v1/music/songs?page=1&page_size=1",
   "/api/v1/music/songs?page=1&page_size=20&view=summary",
   "/api/v1/music/songs?page=2&page_size=20&view=summary",
-  "/api/v1/music/artists?page=1&page_size=8",
+  "/api/v1/music/songs?page=1&page_size=100",
   "/api/v1/music/artists?page=1&page_size=12",
-  "/api/v1/music/artists?page=1&page_size=1000",
-  "/api/v1/music/albums?page=1&page_size=8",
   "/api/v1/music/albums?page=1&page_size=12",
-  "/api/v1/music/albums?page=1&page_size=1000",
-  "/api/v1/forum/topics?page=1&page_size=8",
-  "/api/v1/forum/topics?page=1&page_size=1000",
-  "/api/v1/debate/topics?page=1&page_size=8",
-  "/api/v1/debate/topics?page=1&page_size=1000",
-  "/api/v1/podcast/episodes",
-  "/api/v1/videos?sort=latest&page=1&page_size=8",
-  "/api/v1/videos?sort=latest&page=1&page_size=1000",
   "/api/v1/books/works?limit=100&offset=0",
-  "/api/v1/books/booklists?limit=100&offset=0",
-  ...Array.from({ length: 11 }, (_, i) => "/api/v1/music/songs?page=" + (i + 1) + "&page_size=100"),
+  "/api/v1/forum/topics?page=1&page_size=8",
+  "/api/v1/podcast/episodes",
 ];
 
 export default {

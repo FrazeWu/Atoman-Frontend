@@ -43,29 +43,44 @@
         @navigate="requestLyricsClose"
       />
 
-      <nav v-if="!isAuthRoute" class="nav">
-        <RouterLink
-          v-for="room in orderedNavRooms"
-          :key="room.key"
-          :to="moduleUrl(room.key)"
-          class="nav-link"
-          :class="{ active: isRoomActive(room.key) }"
-          @click="handleModuleNavigation"
-        >
-          <span class="nav-link-name">{{ room.name }}</span>
-        </RouterLink>
-        <!-- External OracleGraph link follows Papers as the FINAL navigation item. -->
-        <a
-          class="nav-link oraclegraph-nav-link"
-          href="https://oracle.fazong.eu.org/"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="甲骨文学习平台（在新标签页打开）"
-          title="甲骨文学习 · OracleGraph"
-          data-testid="oraclegraph-nav-link"
-        >
-          <span class="nav-link-name">甲骨文</span>
-        </a>
+      <nav v-if="!isAuthRoute" class="nav" aria-label="主导航">
+        <div class="nav-scroll">
+          <RouterLink
+            v-for="room in orderedNavRooms.filter(room => room.key !== 'papers')"
+            :key="room.key"
+            :to="moduleUrl(room.key)"
+            class="nav-link"
+            :class="{ active: isRoomActive(room.key) }"
+            @click="handleModuleNavigation"
+          >
+            <span class="nav-link-name">{{ room.name }}</span>
+          </RouterLink>
+        </div>
+        <!-- Keep the final two ordinary module tabs visible when account controls
+             occupy extra space. Only the preceding modules scroll if needed. -->
+        <div class="nav-tail">
+          <RouterLink
+            v-for="room in orderedNavRooms.filter(room => room.key === 'papers')"
+            :key="room.key"
+            :to="moduleUrl(room.key)"
+            class="nav-link"
+            :class="{ active: isRoomActive(room.key) }"
+            @click="handleModuleNavigation"
+          >
+            <span class="nav-link-name">{{ room.name }}</span>
+          </RouterLink>
+          <a
+            class="nav-link oraclegraph-nav-link"
+            href="https://oracle.fazong.eu.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="甲骨文学习平台（在新标签页打开）"
+            title="甲骨文学习 · OracleGraph"
+            data-testid="oraclegraph-nav-link"
+          >
+            <span class="nav-link-name">甲骨文</span>
+          </a>
+        </div>
       </nav>
 
       <div class="nav-right">
@@ -391,15 +406,28 @@ html.dark .topbar--auth {
   gap: 0.5rem;
   flex: 1;
   min-width: 0;
+}
+.nav-scroll,
+.nav-tail {
+  display: flex;
+  align-items: center;
+  gap: inherit;
+}
+.nav-scroll {
+  min-width: 0;
+  flex: 0 1 auto;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
 }
-
-.nav::-webkit-scrollbar {
+.nav-scroll::-webkit-scrollbar {
   display: none;
 }
+.nav-tail {
+  flex: 0 0 auto;
+}
 .nav-link {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   min-height: 2.25rem;
@@ -617,9 +645,29 @@ html.dark .topbar--auth {
   white-space: nowrap;
   font-weight: 500;
 }
+/* Signed-in users have a wider account action group. Compact the module row
+   first, then allow only the leading tabs to scroll, never the final pair. */
+@media (min-width: 721px) and (max-width: 1600px) {
+  .topbar:has(.user-btn) .nav { gap: 0.2rem; }
+  .topbar:has(.user-btn) .nav-link { padding-inline: 0.35rem; font-size: 0.8125rem; }
+}
 @media (min-width: 721px) and (max-width: 1130px) {
   .nav { gap: 0.2rem; }
   .nav-link { padding-inline: 0.35rem; font-size: 0.8rem; }
+}
+@media (min-width: 721px) and (max-width: 1280px) {
+  .topbar:has(.user-btn) .topbar-search-slot { flex: 0 0 2.25rem; }
+  .topbar:has(.user-btn) .topbar-search-slot :deep(.search-pill) {
+    width: 2.25rem;
+    min-width: 2.25rem;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+  }
+  .topbar:has(.user-btn) .topbar-search-slot :deep(.search-pill-text),
+  .topbar:has(.user-btn) .topbar-search-slot :deep(.search-pill-kbd) {
+    display: none;
+  }
 }
 @media (max-width: 420px) {
   .topbar-collapse-btn {

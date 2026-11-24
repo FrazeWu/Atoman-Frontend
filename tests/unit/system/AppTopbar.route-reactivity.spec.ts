@@ -37,6 +37,19 @@ describe("AppTopbar route reactivity", () => {
 		vi.unstubAllGlobals();
 	});
 
+	it("keeps OracleGraph at the end of the main navigation rather than the account actions", async () => {
+		const router = await makeRouter();
+		const wrapper = mount(AppTopbar, { global: { plugins: [router] } });
+		const tabs = wrapper.findAll(".nav .nav-link");
+		const last = tabs[tabs.length - 1]!;
+		expect(last.text()).toBe("甲骨文");
+		expect(last.attributes("href")).toBe("https://oracle.fazong.eu.org/");
+		expect(last.attributes("target")).toBe("_blank");
+		expect(wrapper.find(".nav-right .oraclegraph-nav-link").exists()).toBe(false);
+		expect(wrapper.find(".nav-tail .oraclegraph-nav-link").exists()).toBe(true);
+		wrapper.unmount();
+	});
+
 	it("updates the active room after SPA navigation changes route path", async () => {
 		const router = await makeRouter();
 		const wrapper = mount(AppTopbar, {

@@ -587,6 +587,11 @@ function initCodeMirror() {
         const firstLine = tr.newDoc.line(1).text
         if (firstLine.startsWith('# ')) return tr
 
+        const startText = tr.startState.doc.toString()
+        if (startText === '# \n' || startText === '# ') {
+          return tr
+        }
+
         if (tr.newDoc.length === 0) {
           return [
             {
@@ -597,6 +602,9 @@ function initCodeMirror() {
         }
 
         if (tr.startState.selection.main.empty && tr.startState.selection.main.head <= 2) {
+          if (startText === '# \n' || startText === '# ') {
+            return tr
+          }
           return []
         }
 

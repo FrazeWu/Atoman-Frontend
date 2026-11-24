@@ -91,15 +91,6 @@ export function buildBaseAppRoutes(extraRoutes: RouteRecordRaw[] = []): RouteRec
     { path: '/messages', component: () => import('@/views/messages/MessagesWorkspaceView.vue'), meta: { requiresAuth: true } },
     { path: '/mail', component: () => import('@/views/mail/MailWorkspaceView.vue'), meta: { requiresAuth: true } },
     {
-      path: '/books/read/:assetId',
-      component: () => import('@/views/books/BookReaderView.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/books/public-read/:assetId',
-      component: () => import('@/components/books/BookPublicReaderView.vue'),
-    },
-    {
       path: '/books/annotations',
       component: () => import('@/views/books/BookNotesView.vue'),
       meta: { requiresAuth: true },

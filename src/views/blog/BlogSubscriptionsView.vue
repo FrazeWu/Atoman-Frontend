@@ -1,15 +1,29 @@
 <template>
   <div class="a-page-xl blog-subscriptions-page">
     <ModuleSubscriptionSourcesPicker subscription-type="blog" subscription-path="/posts/subscriptions" />
-    <PPageHeader title="订阅" accent>
+
+    <!-- Page Header (Borderless Cupertino Header) -->
+    <PPageHeader
+      title="订阅"
+      accent
+      sub="已订阅的频道、专栏合集与创作者动态"
+      mb="1rem"
+    >
       <template #action>
-        <PButton v-if="!authStore.isAuthenticated" to="/login" variant="secondary">登录</PButton>
+        <PButton v-if="!authStore.isAuthenticated" to="/login" variant="secondary" size="sm">
+          登录
+        </PButton>
       </template>
     </PPageHeader>
 
-    <PEmpty v-if="!authStore.isAuthenticated" title="请先登录" description="登录后查看订阅内容" />
+    <PEmpty v-if="!authStore.isAuthenticated" title="请先登录" description="登录后即可查看已关注频道的最新动态">
+      <template #action>
+        <PButton variant="primary" size="sm" to="/login">立即登录</PButton>
+      </template>
+    </PEmpty>
 
     <section v-else class="subscription-posts">
+      <!-- Toolbar: Filter & Actions -->
       <SubscriptionInboxToolbar
         :unread-only="unreadOnly"
         :marking-all-read="markingAllRead"
@@ -19,46 +33,66 @@
         @refresh="refresh"
         @mark-all-read="markAllRead"
       />
-      <div v-if="loading && !subscriptionItems.length" class="a-grid-2">
-        <div v-for="index in 6" :key="index" class="a-skeleton" style="height:12rem" />
+
+      <!-- Loading Skeleton (Single-column stream skeleton, zero layout shift) -->
+      <div v-if="loading && !subscriptionItems.length" class="subscription-skeleton-list">
+        <div v-for="index in 4" :key="index" class="a-skeleton subscription-skeleton-card" />
       </div>
 
-      <PEmpty v-else-if="loadError && !subscriptionItems.length" title="订阅内容加载失败">
+      <!-- Error State -->
+      <PEmpty v-else-if="loadError && !subscriptionItems.length" title="订阅内容加载失败" :description="loadError">
         <template #action>
           <PButton variant="secondary" size="sm" @click="retry">重试</PButton>
         </template>
       </PEmpty>
 
-      <PEmpty v-else-if="!subscriptionItems.length" title="暂无更新" />
+      <!-- Empty State with Guided Primary CTA -->
+      <PEmpty
+        v-else-if="!subscriptionItems.length"
+        title="暂无订阅动态"
+        description="关注创作者或订阅专栏合集后，最新博文与短笺将呈现在这里"
+      >
+        <template #action>
+          <PButton variant="primary" size="sm" to="/posts/explore">
+            发现更多精彩
+          </PButton>
+        </template>
+      </PEmpty>
 
-      <div v-else>
+      <!-- Subscriptions Feed Stream -->
+      <div v-else class="subscription-feed-stream">
         <p v-if="loadError" class="a-error" role="alert">{{ loadError }}</p>
         <template v-for="(item, index) in subscriptionItems" :key="item.post?.id || item.short_note?.id">
-          <BlogItemCard
-            v-if="item.type === 'post' && item.post"
-            :item="item.post"
-            type="post"
-            :is-read="item.is_read"
-            :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
-            :bookmarked="starredIds.has(item.post.id)"
-            :in-reading-list="readingListIds.has(item.post.id)"
-            @click="blogSheets.openPost(item.post.id, item.post.title)"
-            @toggle-bookmark="toggleStar(item.post.id)"
-            @toggle-reading-list="toggleReadingList(item.post.id)"
-          />
-          <ShortNoteCard
-            v-else-if="item.type === 'short_note' && item.short_note"
-            :note="item.short_note"
-            :is-read="item.is_read"
-            @mark-read="markShortNoteRead(item)"
-          />
+          <div class="subscription-feed-entry">
+            <BlogItemCard
+              v-if="item.type === 'post' && item.post"
+              :item="item.post"
+              type="post"
+              :is-read="item.is_read"
+              :is-focused="uiStore.focusedSection === 'content' && focusedIndex === index"
+              :bookmarked="starredIds.has(item.post.id)"
+              :in-reading-list="readingListIds.has(item.post.id)"
+              @click="blogSheets.openPost(item.post.id, item.post.title)"
+              @toggle-bookmark="toggleStar(item.post.id)"
+              @toggle-reading-list="toggleReadingList(item.post.id)"
+            />
+            <ShortNoteCard
+              v-else-if="item.type === 'short_note' && item.short_note"
+              :note="item.short_note"
+              :is-read="item.is_read"
+              @mark-read="markShortNoteRead(item)"
+            />
+          </div>
         </template>
       </div>
 
+      <!-- Load More Action -->
       <div v-if="hasMore && !loading" class="subscription-load-more">
-        <PButton variant="secondary" @click="loadMore">加载更多</PButton>
+        <PButton variant="secondary" size="sm" @click="loadMore">加载更多内容</PButton>
       </div>
-      <p v-else-if="loading && posts.length" class="subscription-loading a-muted">加载中...</p>
+      <p v-else-if="loading && posts.length" class="subscription-loading a-muted">
+        正在获取更多更新...
+      </p>
     </section>
   </div>
 </template>
@@ -150,8 +184,37 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.blog-subscriptions-page {
+  padding-bottom: 3rem;
+}
+
 .subscription-posts {
   min-width: 0;
+}
+
+/* 单线流式列表：与频道主页、专栏合集页完全一致的极简质感分割，条目之间严格只有一条线 */
+.subscription-feed-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
+.subscription-feed-entry {
+  width: 100%;
+  border-bottom: 1px solid var(--a-color-border-soft);
+}
+
+/* 消除子卡片内部默认边框与外边距，确保条目之间严格只有一条单线 */
+.subscription-feed-entry :deep(.sticky-memo-card),
+.subscription-feed-entry :deep(.content-stream-entry),
+.subscription-feed-entry :deep(.p-entry),
+.subscription-feed-entry :deep(.p-interaction-card) {
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 .subscription-load-more {
@@ -161,7 +224,21 @@ onMounted(() => {
 }
 
 .subscription-loading {
-  margin: 2rem 0 0;
+  margin: 1.5rem 0 0;
   text-align: center;
+  font-size: 0.875rem;
+}
+
+/* 单列平滑骨架卡片：杜绝原有 a-grid-2 造成的剧烈横向布局抖动 */
+.subscription-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.subscription-skeleton-card {
+  height: 6.5rem;
+  border-radius: var(--a-radius-card, 4px);
 }
 </style>

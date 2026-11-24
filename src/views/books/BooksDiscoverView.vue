@@ -1,6 +1,11 @@
 <template>
   <section class="book-catalog">
-    <PPageHeader title="发现图书" sub="收录经典著作与学术文献，探索人类思想谱系。" />
+    <PPageHeader
+      title="发现图书"
+      sub="收录经典著作与学术文献，探索人类思想谱系。"
+      accent
+      mb="1rem"
+    />
 
     <!-- 统一工具栏：分类过滤与搜索排布 -->
     <div class="book-discover__controls">
@@ -10,9 +15,9 @@
           <RouterLink
             :to="{ path: '/books' }"
             class="p-segmented-item"
-            :class="{ active: !ranked }"
+            :class="{ active: !ranked && !route.query.type }"
             role="tab"
-            :aria-selected="!ranked"
+            :aria-selected="!ranked && !route.query.type"
           >
             全部图书
           </RouterLink>
@@ -28,7 +33,7 @@
         </div>
 
         <button
-          v-if="!ranked && route.query.type !== 'people'"
+          v-if="!ranked && !route.query.type"
           type="button"
           class="book-discover__filter-toggle"
           :class="{ 'is-active': activeFilterCount > 0, 'is-expanded': facetsExpanded }"
@@ -42,7 +47,7 @@
         </button>
       </div>
 
-      <!-- 右侧：统一搜索栏 (Option 1A) 与添加操作 -->
+      <!-- 右侧：统一搜索栏与添加操作 (遵循单蓝色主按钮法则) -->
       <div class="book-discover__search-area">
         <PUnifiedSearchBar
           v-model="query"
@@ -54,6 +59,7 @@
           :scopes="searchScopes"
           placeholder="输入书名、作者或关键词..."
           action-button-text="搜索"
+          action-button-variant="secondary"
           class="book-discover__search-bar"
           @search="search"
         />
@@ -201,14 +207,62 @@
 
       <!-- 作者检索视图 -->
       <template v-else-if="route.query.type === 'people'">
-        <p class="book-discover__meta-note">{{ total }} 位作者</p>
+        <div class="book-discover__count-row">
+          <span class="book-discover__total-count">{{ total }} 位作者</span>
+        </div>
         <PEmpty v-if="!people.length" title="未找到作者" description="试试输入其他姓名或关键词" />
-        <ul v-else class="book-catalog__list">
-          <li v-for="person in people" :key="person.id" class="book-catalog__row">
-            <strong>{{ person.name }}</strong>
-            <p>{{ person.description || '作者简介待补充' }}</p>
-            <PButton variant="ghost" :to="{ path: '/books', query: { q: person.name } }">查看相关作品</PButton>
-            <BookWikiPanel kind="person" :entity-id="person.id" :authenticated="auth.isAuthenticated" />
+        <ul v-else class="book-discover__author-grid">
+          <li v-for="person in people" :key="person.id" class="book-discover__author-card">
+            <div class="book-discover__author-avatar" aria-hidden="true">
+              {{ person.name.slice(0, 1) }}
+            </div>
+            <div class="book-discover__author-info">
+              <h3 class="book-discover__author-name">
+                <RouterLink :to="`/books/author/${person.id}?from=${encodeURIComponent(route.fullPath)}`" class="book-discover__author-link">
+                  {{ person.name }}
+                </RouterLink>
+              </h3>
+              <p class="book-discover__author-bio">{{ person.description || '暂无作者简介' }}</p>
+            </div>
+            <PButton
+              variant="secondary"
+              size="sm"
+              class="book-discover__author-btn"
+              :to="`/books/author/${person.id}?from=${encodeURIComponent(route.fullPath)}`"
+            >
+              作者主页
+            </PButton>
+          </li>
+        </ul>
+      </template>
+
+      <!-- 书单检索视图 -->
+      <template v-else-if="route.query.type === 'lists'">
+        <div class="book-discover__count-row">
+          <span class="book-discover__total-count">{{ total }} 份书单</span>
+        </div>
+        <PEmpty
+          v-if="!bookLists.length"
+          title="未找到相关书单"
+          description="试试输入其他关键词，或前往书单专区创建一份"
+        />
+        <ul v-else class="book-discover__booklist-grid">
+          <li v-for="list in bookLists" :key="list.id" class="book-discover__booklist-card">
+            <div class="book-discover__booklist-badge">
+              <BookOpen :size="12" aria-hidden="true" />
+              <span>{{ list.item_count }} 本图书</span>
+            </div>
+            <h3 class="book-discover__booklist-title">
+              <RouterLink :to="`/books/lists/${list.id}`" class="book-discover__booklist-link">
+                {{ list.title }}
+              </RouterLink>
+            </h3>
+            <p class="book-discover__booklist-desc">{{ list.description || '暂无书单简介' }}</p>
+            <div class="book-discover__booklist-footer">
+              <RouterLink :to="`/books/lists/${list.id}`" class="book-discover__booklist-action">
+                浏览书单 <ChevronRight :size="13" aria-hidden="true" />
+              </RouterLink>
+            </div>
           </li>
         </ul>
       </template>
@@ -251,9 +305,8 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { searchLocation, unifiedSearchEnabled } from '@/utils/searchUrl'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { BookOpen, RotateCcw, SlidersHorizontal } from 'lucide-vue-next'
+import { BookOpen, RotateCcw, SlidersHorizontal, ChevronRight } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import {
   catalogRevision,
@@ -264,6 +317,7 @@ import {
 } from '@/api/bookCatalog'
 import { highRatedWorks, type WorkRating } from '@/api/bookCommunity'
 import { searchWikiPeople } from '@/api/bookWiki'
+import { searchBookLists, type BookListCard } from '@/api/book/lists'
 import BookWikiPanel from '@/components/books/BookWikiPanel.vue'
 import BookCard from '@/components/books/BookCard.vue'
 import type { BookPublicWork } from '@/api/books'
@@ -279,8 +333,8 @@ import './bookCatalog.css'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
-const query = ref('')
-const searchType = ref('works')
+const query = ref(String(route.query.q || ''))
+const searchType = ref(route.query.type === 'people' ? 'people' : route.query.type === 'lists' ? 'lists' : 'works')
 const selectedTypes = computed(() => {
   if (searchType.value === 'people') return ['author']
   if (searchType.value === 'lists') return ['book_list']
@@ -292,10 +346,11 @@ const searchScopes: SearchScopeOption[] = [
   { label: '书单', value: 'lists' },
 ]
 const people = ref<{ id: string; name: string; description?: string }[]>([])
+const bookLists = ref<BookListCard[]>([])
 const page = computed(() => Math.max(1, Math.floor(Number(route.query.page) || 1)))
 const works = ref<BookPublicWork[]>([])
 const rankings = ref<(WorkRating & { work_id: string; title: string })[]>([])
-const ranked = computed(() => route.query.sort === 'high-rated' && route.query.type !== 'people')
+const ranked = computed(() => route.query.sort === 'high-rated' && !route.query.type)
 const total = ref(0)
 const loading = ref(false)
 const error = ref('')
@@ -401,6 +456,13 @@ async function load() {
       total.value = result.total
       return
     }
+    if (route.query.type === 'lists') {
+      const result = await searchBookLists(String(route.query.q || ''), (page.value - 1) * 24)
+      if (current !== generation) return
+      bookLists.value = result.items
+      total.value = result.total
+      return
+    }
     if (ranked.value) {
       const result = await highRatedWorks((page.value - 1) * 24)
       if (current !== generation) return
@@ -451,15 +513,13 @@ async function load() {
   }
 }
 function search() {
-  if (unifiedSearchEnabled) {
-    void router.push(searchLocation(query.value, 'books', [searchType.value === 'people' ? 'author' : searchType.value === 'lists' ? 'book_list' : 'work']))
-    return
-  }
   void router.push({
-    path: searchType.value === 'lists' ? '/books/lists' : '/books',
+    path: '/books',
     query: {
-      ...(query.value.trim() ? { q: query.value.trim() } : {}),
-      ...(searchType.value === 'people' ? { type: 'people' } : {}),
+      ...route.query,
+      q: query.value.trim() || undefined,
+      type: searchType.value === 'works' ? undefined : searchType.value,
+      page: undefined,
     },
   })
 }
@@ -482,7 +542,7 @@ watch(
   ],
   () => {
     query.value = String(route.query.q || '')
-    searchType.value = route.query.type === 'people' ? 'people' : 'works'
+    searchType.value = route.query.type === 'people' ? 'people' : route.query.type === 'lists' ? 'lists' : 'works'
     if (route.query.lang || route.query.era || route.query.rating) {
       facetsExpanded.value = true
     }
@@ -721,7 +781,7 @@ onBeforeUnmount(() => {
   align-items: center;
   background: rgba(0, 0, 0, 0.04);
   padding: 2px;
-  border-radius: 6px;
+  border-radius: var(--a-radius-card, 4px);
   gap: 2px;
   box-sizing: border-box;
 }
@@ -731,12 +791,12 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   padding: 0.35rem 0.85rem;
-  border-radius: 5px;
+  border-radius: var(--a-radius-control, 4px);
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--a-color-text-secondary, #64748b);
   text-decoration: none;
-  transition: color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
   user-select: none;
   line-height: 1.2;
 }
@@ -748,7 +808,25 @@ onBeforeUnmount(() => {
 .p-segmented-item.active {
   background: var(--a-color-bg, #ffffff);
   color: var(--a-color-text, #0f172a);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 1px rgba(0, 0, 0, 0.04);
+  box-shadow: none !important;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+}
+
+.book-discover__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--a-color-border-soft, #e2e8f0);
+}
+
+.book-discover__controls-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .book-discover__search-area {
@@ -771,7 +849,173 @@ onBeforeUnmount(() => {
 .book-discover__add-btn {
   height: var(--a-control-height-sm, 2.25rem);
   flex-shrink: 0;
-  border-radius: 6px;
+  border-radius: var(--a-radius-control, 4px);
+}
+
+/* 作者网格视图 (Cupertino 极简名片) */
+.book-discover__author-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  padding: 0;
+  margin: 0 0 2rem;
+  list-style: none;
+}
+
+.book-discover__author-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1rem;
+  background: var(--a-color-bg, #ffffff);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  transition: border-color 0.15s ease;
+}
+
+.book-discover__author-card:hover {
+  border-color: var(--a-color-border, #cbd5e1);
+}
+
+.book-discover__author-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--a-color-bg-subtle, #f8fafc);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--a-color-text-secondary, #64748b);
+  flex-shrink: 0;
+}
+
+.book-discover__author-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.book-discover__author-name {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--a-color-text, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-discover__author-link {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.book-discover__author-link:hover {
+  color: var(--a-color-primary, #007aff);
+}
+
+.book-discover__author-bio {
+  margin: 0;
+  font-size: 12px;
+  color: var(--a-color-text-secondary, #64748b);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.book-discover__author-btn {
+  flex-shrink: 0;
+}
+
+/* 书单网格视图 (Cupertino 画报微卡片) */
+.book-discover__booklist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+  padding: 0;
+  margin: 0 0 2rem;
+  list-style: none;
+}
+
+.book-discover__booklist-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+  background: var(--a-color-bg, #ffffff);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  border-radius: var(--a-radius-card, 4px);
+  transition: border-color 0.15s ease;
+}
+
+.book-discover__booklist-card:hover {
+  border-color: var(--a-color-border, #cbd5e1);
+}
+
+.book-discover__booklist-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--a-color-text-secondary, #64748b);
+  margin-bottom: 0.5rem;
+}
+
+.book-discover__booklist-title {
+  margin: 0 0 0.5rem;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.book-discover__booklist-link {
+  color: var(--a-color-text, #0f172a);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.book-discover__booklist-link:hover {
+  color: var(--a-color-primary, #007aff);
+}
+
+.book-discover__booklist-desc {
+  margin: 0 0 1rem;
+  font-size: 13px;
+  color: var(--a-color-text-secondary, #64748b);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.book-discover__booklist-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--a-color-border-soft, #f1f5f9);
+}
+
+.book-discover__booklist-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--a-color-text-secondary, #64748b);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.book-discover__booklist-action:hover {
+  color: var(--a-color-primary, #007aff);
 }
 
 .book-discover__count-row {

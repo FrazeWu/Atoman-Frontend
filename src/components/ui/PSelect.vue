@@ -8,6 +8,7 @@
         type="button"
         class="p-select-trigger"
         :class="[
+          `p-select-trigger--${size}`,
           open ? 'p-select-trigger--open' : '',
           error ? 'p-select-trigger--error' : '',
         ]"
@@ -74,6 +75,7 @@ const props = withDefaults(defineProps<{
   hint?: string
   error?: string
   disabled?: boolean
+  size?: 'sm' | 'md' | 'lg'
 }>(), {
   modelValue: null,
   options: () => [],
@@ -82,6 +84,7 @@ const props = withDefaults(defineProps<{
   hint: '',
   error: '',
   disabled: false,
+  size: 'md',
 })
 
 const emit = defineEmits<{
@@ -220,10 +223,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  height: 44px;
-  min-height: 44px;
   box-sizing: border-box;
-  padding: 0.7rem 0.85rem;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
@@ -233,6 +233,27 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   cursor: pointer;
   box-shadow: none !important;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.p-select-trigger--sm {
+  height: var(--a-control-height-sm, 2.25rem);
+  min-height: var(--a-control-height-sm, 2.25rem);
+  padding: 0 0.65rem;
+  font-size: 12px;
+  gap: 0.4rem;
+}
+
+.p-select-trigger--md {
+  height: 44px;
+  min-height: 44px;
+  padding: 0.7rem 0.85rem;
+}
+
+.p-select-trigger--lg {
+  height: var(--a-control-height-lg, 2.75rem);
+  min-height: var(--a-control-height-lg, 2.75rem);
+  padding: 0 1rem;
+  font-size: 1rem;
 }
 
 .p-select-trigger:focus-visible,

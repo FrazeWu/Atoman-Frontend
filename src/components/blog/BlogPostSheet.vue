@@ -44,6 +44,7 @@ const { navigation, loading: navigationLoading, direction: navigationDirection, 
     side="right"
     mode="full"
     reading-mode
+    content-max-width="100%"
     close-type="both"
     :navigation="navigation"
     :navigation-key="postId"

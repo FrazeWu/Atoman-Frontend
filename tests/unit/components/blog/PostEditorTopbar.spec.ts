@@ -36,7 +36,7 @@ describe('PostEditorTopbar', () => {
     expect(wrapper.findAll('.editor-topbar__menu-item').length).toBe(2)
   })
 
-  it('打开发布 sheet 后将顶部操作切换为确认', () => {
+  it('打开发布 sheet 后将顶部操作切换为确认发布', () => {
     const wrapper = mount(PostEditorTopbar, {
       props: {
         ...baseProps,
@@ -48,11 +48,11 @@ describe('PostEditorTopbar', () => {
 
     const publishButton = wrapper.find('[data-testid="editor-publish-action"]')
     expect(publishButton.exists()).toBe(true)
-    expect(publishButton.text()).toBe('确认')
+    expect(publishButton.text()).toBe('确认发布')
     expect(publishButton.attributes('disabled')).toBeUndefined()
   })
 
-  it('使用英文 Visual 模式和明显的实时预览入口', () => {
+  it('使用英文 Visual 模式和明显的实时预览入口，Visual 模式下隐藏实时预览', async () => {
     const wrapper = mount(PostEditorTopbar, {
       props: baseProps,
       global: { stubs },
@@ -61,5 +61,8 @@ describe('PostEditorTopbar', () => {
     expect(wrapper.text()).toContain('实时预览')
     expect(wrapper.text()).toContain('Visual')
     expect(wrapper.find('[title="实时预览"]').exists()).toBe(true)
+
+    await wrapper.setProps({ contentMode: 'visual' })
+    expect(wrapper.find('[title="实时预览"]').exists()).toBe(false)
   })
 })

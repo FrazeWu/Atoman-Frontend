@@ -15,18 +15,20 @@
       <span v-else>{{ tool.text }}</span>
     </button>
 
-    <span class="post-format-toolbar__separator" aria-hidden="true" />
-    <button
-      type="button"
-      class="post-format-toolbar__button"
-      :class="{ 'is-active': lineNumbers }"
-      :aria-pressed="lineNumbers"
-      aria-label="显示行号"
-      title="显示行号"
-      @click="$emit('update:line-numbers', !lineNumbers)"
-    >
-      <Hash :size="15" aria-hidden="true" />
-    </button>
+    <template v-if="!hideLineNumbers">
+      <span class="post-format-toolbar__separator" aria-hidden="true" />
+      <button
+        type="button"
+        class="post-format-toolbar__button"
+        :class="{ 'is-active': lineNumbers }"
+        :aria-pressed="lineNumbers"
+        aria-label="显示行号"
+        title="显示行号"
+        @click="$emit('update:line-numbers', !lineNumbers)"
+      >
+        <Hash :size="15" aria-hidden="true" />
+      </button>
+    </template>
     <button
       type="button"
       class="post-format-toolbar__button"
@@ -49,11 +51,13 @@ import type { PostEditorCommand } from './postEditorCommands'
 withDefaults(defineProps<{
   activeCommands?: PostEditorCommand[]
   lineNumbers: boolean
+  hideLineNumbers?: boolean
   outlineOpen?: boolean
   outlineCount?: number
   readonly?: boolean
 }>(), {
   activeCommands: () => [],
+  hideLineNumbers: false,
   outlineOpen: false,
   outlineCount: 0,
   readonly: false,

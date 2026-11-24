@@ -58,13 +58,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s ease, opacity 0.15s ease;
+  border-radius: 9999px;
+  transition: color 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
   opacity: 0.6;
   z-index: 10;
 }
 .p-modal-close-floating:hover {
   opacity: 1;
   color: var(--a-color-fg);
+  background-color: var(--a-color-bg-hover, rgba(0, 0, 0, 0.05));
 }
 .p-modal-title-inline {
   font-size: 1.25rem;

@@ -29,6 +29,7 @@
           type="button"
           class="p-directory-item"
           :class="{ 'is-active': item.id === activeId }"
+          :style="item.level && item.level > 2 ? { paddingLeft: `${(item.level - 2) * 0.75 + 0.875}rem` } : undefined"
           :aria-current="item.id === activeId ? 'location' : undefined"
           :title="item.label"
           @click="selectItem(item.id, false)"
@@ -58,6 +59,7 @@
           type="button"
           class="p-directory-item"
           :class="{ 'is-active': item.id === activeId }"
+          :style="item.level && item.level > 2 ? { paddingLeft: `${(item.level - 2) * 0.75 + 0.875}rem` } : undefined"
           :aria-current="item.id === activeId ? 'location' : undefined"
           @click="selectItem(item.id, true)"
         >
@@ -71,7 +73,7 @@
 import { PanelRightClose, PanelRightOpen } from 'lucide-vue-next';
 import PSheet from "@/components/ui/PSheet.vue";
 
-type DirectoryItem = { id: string; label: string };
+type DirectoryItem = { id: string; label: string; level?: number };
 
 withDefaults(
   defineProps<{

@@ -861,8 +861,8 @@ function handleTextClick(e: MouseEvent) {
   if (!ann) return
   const rect = target.getBoundingClientRect()
   selectionToolbar.value = {
-    x: rect.left + rect.width / 2,
-    y: rect.top,
+    x: Math.max(120, Math.min(window.innerWidth - 120, rect.left + rect.width / 2)),
+    y: Math.max(64, rect.top),
     text: ann.text,
     txtStart: ann.txt_offset_start,
     txtEnd: ann.txt_offset_end,
@@ -911,8 +911,8 @@ function handleTextMouseUp() {
   }
 
   selectionToolbar.value = {
-    x: rect.left + rect.width / 2,
-    y: rect.top,
+    x: Math.max(120, Math.min(window.innerWidth - 120, rect.left + rect.width / 2)),
+    y: Math.max(64, rect.top),
     text,
     txtStart: absStart,
     txtEnd: absEnd,
@@ -1210,4 +1210,31 @@ onBeforeUnmount(() => {
 
 <style scoped>
 @import "./bookReaderView.css";
+
+.books-reader {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  padding-top: 0 !important;
+  gap: 0 !important;
+}
+
+:deep(.book-reader-shell),
+:deep(.book-reader-shell__workspace),
+:deep(.book-reader-shell__reading-column),
+:deep(.book-reader-shell__content),
+:deep(.books-reader__pdf),
+:deep(.book-pdf-continuous) {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+  overflow: hidden !important;
+}
 </style>

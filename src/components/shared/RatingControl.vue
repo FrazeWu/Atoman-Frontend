@@ -426,7 +426,7 @@ function handleKeydown(event: KeyboardEvent, score: number) {
     min-height: 44px;
     padding: 0 4px;
     border: 1px solid var(--a-color-border, #d1d5db);
-    border-radius: 7px;
+    border-radius: var(--a-radius-control, 4px);
     background: var(--a-color-bg, #fff);
     color: var(--a-color-text, #111827);
     font: inherit;

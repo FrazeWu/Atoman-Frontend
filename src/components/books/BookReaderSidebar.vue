@@ -59,14 +59,38 @@
       <button
         v-for="page in totalPages"
         :key="page"
+        :ref="(el) => setThumbnailRef(page, el)"
         type="button"
         class="book-thumbnail-item"
         :class="{ 'is-active': page === currentPage }"
+        :data-page="page"
         :aria-current="page === currentPage ? 'page' : undefined"
         @click="$emit('select-page', page)"
       >
         <div class="book-thumbnail-item__page">
-          <span class="book-thumbnail-item__indicator">{{ page }}</span>
+          <canvas
+            v-if="pdfDocument"
+            :ref="(el) => setCanvasRef(page, el)"
+            class="book-thumbnail-item__canvas"
+            :class="{ 'is-loaded': loadedThumbnails[page] }"
+            aria-hidden="true"
+          />
+          <img
+            v-else-if="pageImages?.[page - 1]"
+            :src="pageImages[page - 1]"
+            class="book-thumbnail-item__img"
+            loading="lazy"
+            :alt="`第 ${page} 页缩略图`"
+          />
+          <div v-show="!loadedThumbnails[page] && !pageImages?.[page - 1]" class="book-thumbnail-item__placeholder">
+            <div class="book-thumbnail-item__skeleton" aria-hidden="true">
+              <span class="book-thumbnail-item__skeleton-bar is-title" />
+              <span class="book-thumbnail-item__skeleton-bar" />
+              <span class="book-thumbnail-item__skeleton-bar" />
+              <span class="book-thumbnail-item__skeleton-bar is-short" />
+            </div>
+            <span class="book-thumbnail-item__indicator">{{ page }}</span>
+          </div>
         </div>
         <span class="book-thumbnail-item__label">第 {{ page }} 页</span>
       </button>
@@ -85,10 +109,14 @@
             type="button"
             class="book-reader-sidebar__toc-item"
             :class="{ 'is-nested': (item.depth || 0) > 0 }"
-            :style="{ paddingLeft: `${Math.max(0.4, (item.depth || 0) * 0.9 + 0.4)}rem` }"
+            :style="{ paddingLeft: `${Math.max(0.65, (item.depth || 0) * 0.9 + 0.65)}rem` }"
+            :title="item.label"
             @click="$emit('toc-select', item.href)"
           >
-            {{ item.label }}
+            <span class="book-reader-sidebar__toc-title">{{ item.label }}</span>
+            <span v-if="item.href.startsWith('page:')" class="book-reader-sidebar__toc-page">
+              第 {{ item.href.slice(5) }} 页
+            </span>
           </button>
         </li>
       </ol>
@@ -241,7 +269,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   LayoutGrid,
   ListTree,
@@ -261,6 +289,8 @@ import type { BookAnnotation, BookHighlightColor } from '@/api/books'
 
 export type SidebarTab = 'thumbnails' | 'outline' | 'bookmarks' | 'annotations'
 
+const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
+
 const props = withDefaults(defineProps<{
   totalPages?: number
   currentPage?: number
@@ -270,6 +300,8 @@ const props = withDefaults(defineProps<{
   annotationEditable?: boolean
   defaultTab?: SidebarTab
   ariaLabel?: string
+  pdfDocument?: any
+  pageImages?: string[]
 }>(), {
   totalPages: 0,
   currentPage: 1,
@@ -278,6 +310,8 @@ const props = withDefaults(defineProps<{
   annotations: () => [],
   defaultTab: 'thumbnails',
   ariaLabel: '阅读器导览侧栏',
+  pdfDocument: null,
+  pageImages: () => [],
 })
 
 defineEmits<{
@@ -293,13 +327,158 @@ defineEmits<{
 }>()
 
 const activeTab = ref<SidebarTab>(
-  props.defaultTab === 'thumbnails' && props.totalPages === 0
-    ? (props.toc.length ? 'outline' : (props.bookmarks.length ? 'bookmarks' : (props.annotations.length ? 'annotations' : 'bookmarks')))
-    : props.defaultTab,
+  props.toc.length > 0
+    ? 'outline'
+    : (props.defaultTab === 'thumbnails' && props.totalPages === 0
+      ? (props.bookmarks.length ? 'bookmarks' : (props.annotations.length ? 'annotations' : 'bookmarks'))
+      : props.defaultTab),
 )
 
 const filterColors = ['yellow', 'green', 'blue', 'pink'] as const
 const selectedColorFilter = ref<'all' | BookHighlightColor>('all')
+
+const loadedThumbnails = ref<Record<number, boolean>>({})
+const thumbnailElements = new Map<number, HTMLElement>()
+const canvasElements = new Map<number, HTMLCanvasElement>()
+const renderingPages = new Set<number>()
+let observer: IntersectionObserver | null = null
+
+function setThumbnailRef(page: number, el: unknown) {
+  const domEl = el as HTMLElement | null
+  if (domEl) {
+    thumbnailElements.set(page, domEl)
+    if (observer && activeTab.value === 'thumbnails') {
+      observer.observe(domEl)
+    }
+  } else {
+    const prev = thumbnailElements.get(page)
+    if (prev && observer) observer.unobserve(prev)
+    thumbnailElements.delete(page)
+  }
+}
+
+function setCanvasRef(page: number, el: unknown) {
+  const canvas = el as HTMLCanvasElement | null
+  if (canvas) {
+    canvasElements.set(page, canvas)
+    if (activeTab.value === 'thumbnails' && props.pdfDocument && !loadedThumbnails.value[page] && !renderingPages.has(page)) {
+      if (page <= 5 || Math.abs(page - props.currentPage) <= 2) {
+        void renderPdfPageThumbnail(page)
+      }
+    }
+  } else {
+    canvasElements.delete(page)
+  }
+}
+
+async function renderPdfPageThumbnail(page: number) {
+  if (isTest || !props.pdfDocument || renderingPages.has(page) || loadedThumbnails.value[page]) return
+  const canvas = canvasElements.get(page)
+  if (!canvas) return
+
+  renderingPages.add(page)
+  try {
+    const pdfPage = await props.pdfDocument.getPage(page)
+    const baseViewport = pdfPage.getViewport({ scale: 1.0 })
+    const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1
+    const targetWidth = 140 * dpr
+    const scale = targetWidth / baseViewport.width
+    const viewport = pdfPage.getViewport({ scale })
+
+    canvas.width = viewport.width
+    canvas.height = viewport.height
+
+    const ctx = canvas.getContext('2d', { alpha: false })
+    if (ctx) {
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'medium'
+      await pdfPage.render({ canvasContext: ctx, viewport }).promise
+      loadedThumbnails.value = { ...loadedThumbnails.value, [page]: true }
+    }
+  } catch {
+    // If render failed or was cancelled, fail gracefully
+  } finally {
+    renderingPages.delete(page)
+  }
+}
+
+function setupObserver() {
+  if (typeof IntersectionObserver === 'undefined') return
+  observer?.disconnect()
+  observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const pageStr = (entry.target as HTMLElement).dataset.page
+          if (pageStr) {
+            const pageNum = parseInt(pageStr, 10)
+            if (pageNum && !loadedThumbnails.value[pageNum] && !renderingPages.has(pageNum)) {
+              void renderPdfPageThumbnail(pageNum)
+            }
+          }
+        }
+      }
+    },
+    {
+      root: null,
+      rootMargin: '300px 0px',
+      threshold: 0.01,
+    },
+  )
+
+  thumbnailElements.forEach((el) => {
+    observer?.observe(el)
+  })
+}
+
+watch(activeTab, (tab) => {
+  if (tab === 'thumbnails') {
+    void nextTick(() => {
+      setupObserver()
+      const start = Math.max(1, props.currentPage - 2)
+      const end = Math.min(props.totalPages, props.currentPage + 5)
+      for (let p = start; p <= end; p++) {
+        if (!loadedThumbnails.value[p]) void renderPdfPageThumbnail(p)
+      }
+    })
+  }
+})
+
+watch(() => props.pdfDocument, (doc) => {
+  if (doc) {
+    loadedThumbnails.value = {}
+    if (activeTab.value === 'thumbnails') {
+      void nextTick(() => {
+        setupObserver()
+        const end = Math.min(props.totalPages, 6)
+        for (let p = 1; p <= end; p++) {
+          void renderPdfPageThumbnail(p)
+        }
+      })
+    }
+  }
+}, { immediate: true })
+
+watch(() => props.currentPage, (page) => {
+  if (activeTab.value === 'thumbnails') {
+    const el = thumbnailElements.get(page)
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    if (!loadedThumbnails.value[page]) {
+      void renderPdfPageThumbnail(page)
+    }
+  }
+})
+
+onMounted(() => {
+  if (activeTab.value === 'thumbnails') {
+    setupObserver()
+  }
+})
+
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  observer = null
+})
 
 function formatRelativeTime(dateStr?: string | null): string {
   if (!dateStr) return ''
@@ -322,9 +501,18 @@ const filteredAnnotations = computed(() => {
 })
 
 watch(
+  () => props.toc.length,
+  (len) => {
+    if (len > 0 && activeTab.value === 'thumbnails') {
+      activeTab.value = 'outline'
+    }
+  },
+)
+
+watch(
   () => props.totalPages,
   (val) => {
-    if (val > 0 && activeTab.value === 'bookmarks' && !props.bookmarks.length && !props.annotations.length) {
+    if (val > 0 && !props.toc.length && activeTab.value === 'bookmarks' && !props.bookmarks.length && !props.annotations.length) {
       activeTab.value = 'thumbnails'
     }
   },
@@ -338,7 +526,7 @@ watch(
   width: 14.5rem;
   height: 100%;
   border: 0;
-  border-right: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.08));
+  border-right: 0;
   background: var(--book-reader-surface, #f7f8fa);
   overflow: hidden;
 }
@@ -347,7 +535,7 @@ watch(
   display: flex;
   align-items: center;
   border: 0;
-  border-bottom: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.06));
+  border-bottom: 0;
   background: var(--book-reader-surface, #f7f8fa);
   padding: 0.35rem 0.4rem;
   gap: 0.25rem;
@@ -362,7 +550,7 @@ watch(
   min-height: 2rem;
   padding: 0.25rem 0.3rem;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--a-radius-control, 4px);
   background: transparent;
   color: var(--a-color-muted);
   font-size: 0.74rem;
@@ -379,15 +567,15 @@ watch(
 
 .book-reader-sidebar__tab.is-active {
   border: 0;
-  background: rgba(0, 0, 0, 0.08);
-  color: var(--a-color-primary, #0066cc);
+  background: color-mix(in srgb, var(--a-color-primary, #007aff) 10%, transparent);
+  color: var(--a-color-primary, #007aff);
   font-weight: 600;
 }
 
 .book-reader-sidebar__pane {
   flex: 1;
   overflow-y: auto;
-  padding: 0.65rem;
+  padding: 0.65rem 0.75rem;
 }
 
 .book-reader-sidebar__pane--thumbnails {
@@ -403,7 +591,7 @@ watch(
   gap: 0.35rem;
   padding: 0.5rem 0.6rem;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--a-radius-control, 4px);
   background: transparent;
   cursor: pointer;
   transition: background-color 0.15s ease;
@@ -415,38 +603,92 @@ watch(
 
 .book-thumbnail-item.is-active {
   border: 0;
-  background: rgba(0, 102, 204, 0.06);
+  background: color-mix(in srgb, var(--a-color-primary, #007aff) 8%, transparent);
 }
 
 .book-thumbnail-item__page {
+  position: relative;
   width: 100%;
   aspect-ratio: 1 / 1.414;
-  border: 0;
-  border-radius: 4px;
+  border-radius: var(--a-radius-control, 4px);
   background: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
 .book-thumbnail-item:hover .book-thumbnail-item__page {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .book-thumbnail-item.is-active .book-thumbnail-item__page {
-  border: 0;
-  outline: 3px solid #007aff;
+  border-color: var(--a-color-primary, #007aff);
+  outline: 2px solid var(--a-color-primary, #007aff);
   outline-offset: 1px;
-  box-shadow: 0 4px 14px rgba(0, 122, 255, 0.25);
+}
+
+.book-thumbnail-item__canvas,
+.book-thumbnail-item__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.book-thumbnail-item__canvas {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.book-thumbnail-item__canvas.is-loaded {
+  opacity: 1;
+}
+
+.book-thumbnail-item__placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #fbfbfb;
+}
+
+.book-thumbnail-item__skeleton {
+  width: 75%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.book-thumbnail-item__skeleton-bar {
+  height: 3px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 2px;
+  width: 100%;
+}
+
+.book-thumbnail-item__skeleton-bar.is-title {
+  width: 45%;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.12);
+  margin-bottom: 2px;
+}
+
+.book-thumbnail-item__skeleton-bar.is-short {
+  width: 60%;
 }
 
 .book-thumbnail-item__indicator {
   font-size: 0.75rem;
   color: var(--a-color-muted);
   font-variant-numeric: tabular-nums;
+  font-weight: 500;
 }
 
 .book-thumbnail-item__label {
@@ -466,9 +708,12 @@ watch(
 
 .book-reader-sidebar__toc-item {
   width: 100%;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   min-height: 2rem;
-  padding: 0.3rem 0.45rem;
+  padding: 0.35rem 0.65rem;
   border: 1px solid transparent;
   border-radius: var(--a-radius-control);
   background: transparent;
@@ -478,6 +723,22 @@ watch(
   line-height: 1.4;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.book-reader-sidebar__toc-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-reader-sidebar__toc-page {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--a-color-muted);
 }
 
 .book-reader-sidebar__toc-item:hover {
@@ -513,9 +774,9 @@ watch(
   gap: 0.4rem;
   padding: 0.45rem 0.65rem;
   border: 0;
-  border-radius: 6px;
-  background: var(--book-reader-canvas, #ffffff);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border-radius: var(--a-radius-control, 4px);
+  background: color-mix(in srgb, var(--a-color-fg, #000) 4%, transparent);
+  box-shadow: none;
 }
 
 .book-reader-sidebar__bookmark-jump {

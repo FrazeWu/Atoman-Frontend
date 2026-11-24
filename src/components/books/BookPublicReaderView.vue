@@ -14,7 +14,7 @@
       :format="formatLabel"
       :progress="readingPercent"
       :page-label="pageLabel"
-      :toolbar-label="source ? '固定文件版本' : '公共正文'"
+      :toolbar-label="''"
       :back-to="source?.backTo || '/books'"
       back-label="返回书籍"
       :can-prev="canPrev"
@@ -36,9 +36,17 @@
       <template #actions>
         <PButton v-if="source?.annotations !== undefined && ['txt', 'epub', 'pdf'].includes(asset?.format || '')" type="button" variant="ghost" :disabled="!selectionCandidate || isLoading" @pointerdown.prevent @click="annotateCandidate">标注选中文字</PButton>
         <PButton v-if="source?.supportsChapterNotes" type="button" variant="ghost" :disabled="isLoading" aria-label="记录当前位置笔记" @click="createChapterNote">章节笔记</PButton>
-        <PButton type="button" variant="ghost" :disabled="!asset || isLoading || bookmarkBusy" aria-label="添加书签" title="添加书签" @click="addBookmark">
-          <Bookmark :size="16" aria-hidden="true" />
-          <span>书签</span>
+        <PButton
+          type="button"
+          :variant="isCurrentBookmarked ? 'secondary' : 'ghost'"
+          :class="{ 'is-bookmarked': isCurrentBookmarked }"
+          :disabled="!asset || isLoading || bookmarkBusy"
+          :aria-label="isCurrentBookmarked ? '移除书签' : '添加书签'"
+          :title="isCurrentBookmarked ? '移除书签' : '添加书签'"
+          @click="toggleBookmark"
+        >
+          <Bookmark :size="16" :class="{ 'fill-current text-primary': isCurrentBookmarked }" aria-hidden="true" />
+          <span>{{ isCurrentBookmarked ? '已加书签' : '书签' }}</span>
         </PButton>
         <PButton type="button" variant="ghost" :disabled="!asset || isLoading" aria-label="举报这本公共电子书" title="举报" @click="openPublicationReport">
           <Flag :size="16" aria-hidden="true" />
@@ -58,6 +66,8 @@
           :bookmarks="bookmarks"
           :annotations="sidebarAnnotations"
           :annotation-editable="source?.annotations !== undefined"
+          :pdf-document="pdfDocumentRef"
+          :page-images="comicPages.map((p) => p.url)"
           @select-page="(page: number) => handleSelectPage(page)"
           @toc-select="jumpToEpubTOC"
           @bookmark-jump="jumpToBookmark"
@@ -91,8 +101,8 @@
       <template #settings>
         <BookReaderDisplayControls v-model="displayPreferences" @update:model-value="updateDisplayPreferences" />
       </template>
-      <template #tools>
-        <form v-if="asset?.format === 'txt'" class="public-reader__search" @submit.prevent="searchText">
+      <template v-if="asset?.format === 'txt'" #tools>
+        <form class="public-reader__search" @submit.prevent="searchText">
           <label for="public-book-search">搜索正文</label>
           <div class="public-reader__search-row">
             <input id="public-book-search" v-model="textSearchQuery" type="search" placeholder="输入关键词" autocomplete="off" />
@@ -155,6 +165,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Bookmark, Flag, Search } from 'lucide-vue-next'
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { loadPdfEngine, loadEpubEngine } from '@/utils/bookReaderEngines'
+import { extractPdfOutlineTree, scanPdfPrintedTOC } from '@/utils/pdfTocExtractor'
 import BookReaderSkeleton from '@/components/books/BookReaderSkeleton.vue'
 import BookPdfContinuousView from '@/components/books/BookPdfContinuousView.vue'
 import PButton from '@/components/ui/PButton.vue'
@@ -583,6 +594,20 @@ async function loadPDF() {
     if (disposed) return
     pdfDocumentRef.value = pdfDocument
     pdfPageCount.value = pdfDocument.numPages
+
+    try {
+      const outline = await pdfDocument.getOutline()
+      if (outline && outline.length > 0) {
+        epubTOC.value = await extractPdfOutlineTree(outline, pdfDocument)
+      } else {
+        const scanned = await scanPdfPrintedTOC(pdfDocument)
+        if (scanned && scanned.length > 0) {
+          epubTOC.value = scanned
+        }
+      }
+    } catch (e) {
+      console.warn('获取 PDF 大纲异常:', e)
+    }
     if (localProgress) {
       pdfPage.value = Math.min(pdfPageCount.value, Math.max(1, localProgress.pdf_page || Math.round(localProgress.reading_percent * pdfPageCount.value)))
       pdfOffset.value = localProgress.pdf_offset || 0
@@ -958,6 +983,46 @@ function createBookmarkID() {
   return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `bookmark-${Date.now()}`
 }
 
+const currentBookmark = computed(() => {
+  if (!asset.value) return undefined
+  if (asset.value.format === 'pdf') {
+    return bookmarks.value.find((b) => b.pdf_page === pdfPage.value)
+  }
+  if (asset.value.format === 'cbz' || asset.value.format === 'cbr') {
+    return bookmarks.value.find((b) => b.comic_page === comicPage.value)
+  }
+  if (asset.value.format === 'txt') {
+    const offset = textOffset()
+    return bookmarks.value.find((b) => b.txt_offset !== undefined && Math.abs(b.txt_offset - offset) < 200)
+  }
+  if (asset.value.format === 'epub' && localProgress?.epub_cfi) {
+    return bookmarks.value.find((b) => b.epub_cfi === localProgress?.epub_cfi)
+  }
+  return bookmarks.value.find((b) => Math.abs(b.reading_percent - readingPercent.value) < 0.02)
+})
+
+const isCurrentBookmarked = computed(() => !!currentBookmark.value)
+
+let bookmarkFeedbackTimer: ReturnType<typeof setTimeout> | undefined
+
+async function toggleBookmark() {
+  if (!asset.value || bookmarkBusy.value) return
+  if (currentBookmark.value) {
+    const targetId = currentBookmark.value.id
+    await removeBookmark(targetId)
+    annotationMessage.value = '已移除书签'
+  } else {
+    await addBookmark()
+    annotationMessage.value = '已添加书签'
+  }
+  if (bookmarkFeedbackTimer) clearTimeout(bookmarkFeedbackTimer)
+  bookmarkFeedbackTimer = setTimeout(() => {
+    if (annotationMessage.value.includes('书签')) {
+      annotationMessage.value = ''
+    }
+  }, 2500)
+}
+
 async function addBookmark() {
   if (!asset.value) return
   const bookmark: BookReaderBookmark = {
@@ -1073,7 +1138,13 @@ function moveEpubPage(direction: 'prev' | 'next') {
 }
 
 function jumpToEpubTOC(href: string) {
-  if (href.startsWith('txt:')) {
+  if (href.startsWith('page:')) {
+    const pageNum = parseInt(href.slice(5), 10)
+    if (Number.isFinite(pageNum) && pageNum >= 1) {
+      handleSelectPage(pageNum)
+      return
+    }
+  } else if (href.startsWith('txt:')) {
     const offset = Number(href.slice(4))
     if (!isNaN(offset)) {
       scrollToTextOffset(offset)
@@ -1141,4 +1212,31 @@ onBeforeUnmount(() => {
 
 <style scoped>
 @import "./bookPublicReaderView.css";
+
+.public-reader {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  padding-top: 0 !important;
+  gap: 0 !important;
+}
+
+:deep(.book-reader-shell),
+:deep(.book-reader-shell__workspace),
+:deep(.book-reader-shell__reading-column),
+:deep(.book-reader-shell__content),
+:deep(.public-reader__pdf),
+:deep(.book-pdf-continuous) {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+  overflow: hidden !important;
+}
 </style>

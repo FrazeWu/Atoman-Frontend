@@ -1,6 +1,6 @@
 <template>
-  <div @pointerdown.capture="reading.activity" @keydown.capture="reading.activity" @wheel.capture.passive="reading.activity" @touchstart.capture.passive="reading.activity">
-    <div class="cloud-reader__status">
+  <div class="cloud-reader" @pointerdown.capture="reading.activity" @keydown.capture="reading.activity" @wheel.capture.passive="reading.activity" @touchstart.capture.passive="reading.activity">
+    <div v-if="!opened" class="cloud-reader__status">
       <span role="status" aria-live="polite">{{ message }}</span>
       <PButton v-if="reading.status.value === 'offline'" variant="secondary" @click="retry">重试同步</PButton>
       <PButton v-if="!opened && reading.status.value === 'offline'" variant="ghost" @click="localOnly = true">仅本机阅读</PButton>
@@ -19,6 +19,7 @@
     </div>
     <BookPublicReaderView
       v-if="opened"
+      class="cloud-reader__content"
       :key="readerKey"
       :source="cloudSource"
       @annotate="openHighlight"
@@ -28,7 +29,7 @@
       @annotation-delete="deleteHighlight"
       @chapter-note="openChapterNote"
     />
-    <div v-if="opened" class="cloud-reader__note-actions">
+    <div v-if="opened && chapterListOpen" class="cloud-reader__note-actions">
       <PButton size="sm" variant="ghost" @click="toggleChapterNotes">{{ chapterListOpen ? '收起本书笔记' : '查看本书章节笔记' }}</PButton>
       <RouterLink :to="`/books/work/${source.asset.work_id}/notes?revision_id=${revisionId}`">本作品全部笔记</RouterLink>
     </div>
@@ -40,7 +41,7 @@
       <ul v-else><li v-for="item in chapterNotes" :key="item.id"><strong>{{ item.title || item.chapter_anchor?.chapter_title || '阅读笔记' }}</strong><PButton variant="ghost" size="sm" :disabled="chapterBusy" @click="editChapterNote(item.id)">编辑</PButton></li></ul>
       <p v-if="chapterNotes.length < chapterTotal" class="cloud-reader__chapter-more">还有其他笔记，请通过作品笔记页面查看。</p>
     </section>
-    <BookPublicReaderView v-else-if="localOnly" :source="localSource" />
+    <BookPublicReaderView v-else-if="localOnly" class="cloud-reader__content" :source="localSource" />
     <BookChapterNoteEditor v-if="chapterDraft" :key="`${chapterDraft.id}:${chapterDraft.version}`" ref="chapterEditor" :draft="chapterDraft" :busy="chapterBusy" :frozen="Boolean(chapterPending)" :conflict="chapterConflict" :error="chapterError" @save="saveChapterNote" @close="closeChapterNote" />
     <PButton v-if="chapterPending && !chapterConflict" variant="secondary" :disabled="chapterBusy" @click="performChapterNote">重试保存章节笔记</PButton>
     <BookHighlightEditor v-if="draft" :key="`${draft.id}:${draft.version}`" ref="editor" :draft="draft" :busy="markBusy" :frozen="Boolean(pendingMark)" :conflict="markConflict" :error="markError" allow-discussion @discuss="passages?.discuss(draft.anchor)" @save="saveHighlight" @delete="deleteHighlight(draft)" @resolve-conflict="resolveMarkConflictKeepLocal" @close="draft = undefined" />
@@ -58,7 +59,7 @@
         </div>
       </div>
     </PSheet>
-    <BookPassageDiscussions ref="passages" :revision-id="revisionId" />
+    <BookPassageDiscussions ref="passages" class="cloud-reader__discussions" :revision-id="revisionId" />
   </div>
 </template>
 
@@ -416,16 +417,52 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.cloud-reader__status { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; color: var(--a-color-muted-soft); }
+.cloud-reader {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.cloud-reader__content {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cloud-reader :deep(.public-reader) {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cloud-reader__status { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; color: var(--a-color-muted-soft); padding: 0.5rem 1rem; }
+.cloud-reader__discussions { display: none; }
 .cloud-reader__conflict { padding: 1rem; border: 1px solid var(--a-color-border-soft); }
- .cloud-reader__note-actions { display:flex; gap:.8rem; align-items:center; flex-wrap:wrap; margin:.5rem 0; font-size:.85rem; }
- .cloud-reader__note-actions a { color:var(--a-color-primary,#3764a6); }
- .cloud-reader__chapter-list { border:1px solid var(--a-color-border-soft); padding:.85rem; border-radius:.6rem; margin:1rem 0; }
- .cloud-reader__chapter-list ul { list-style:none; padding:0; display:grid; gap:.6rem; }
- .cloud-reader__chapter-list li { display:flex; justify-content:space-between; align-items:center; gap:.6rem; }
- .cloud-reader__chapter-more { font-size:.83rem; color:var(--a-color-text-secondary); }
- .cloud-reader__share-warning { display:grid; gap:1rem; padding:1rem; }
- .cloud-reader__share-warning p { line-height:1.6; }
- .cloud-reader__share-warning label { display:flex; align-items:flex-start; gap:.6rem; }
- .cloud-reader__share-actions { display:flex; gap:.8rem; flex-wrap:wrap; }
+.cloud-reader__note-actions { display:flex; gap:.8rem; align-items:center; flex-wrap:wrap; margin:.5rem 0; font-size:.85rem; }
+.cloud-reader__note-actions a { color:var(--a-color-primary,#3764a6); }
+.cloud-reader__chapter-list { border:1px solid var(--a-color-border-soft); padding:.85rem; border-radius:.6rem; margin:1rem 0; }
+.cloud-reader__chapter-list ul { list-style:none; padding:0; display:grid; gap:.6rem; }
+.cloud-reader__chapter-list li { display:flex; justify-content:space-between; align-items:center; gap:.6rem; }
+.cloud-reader__chapter-more { font-size:.83rem; color:var(--a-color-text-secondary); }
+.cloud-reader__share-warning { display:grid; gap:1rem; padding:1rem; }
+.cloud-reader__share-warning p { line-height:1.6; }
+.cloud-reader__share-warning label { display:flex; align-items:flex-start; gap:.6rem; }
+.cloud-reader__share-actions { display:flex; gap:.8rem; flex-wrap:wrap; }
 </style>

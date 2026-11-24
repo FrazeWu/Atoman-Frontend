@@ -41,16 +41,22 @@ onBeforeUnmount(() => {
 <style scoped>
 :global(.studio-route-sheet.p-sheet-layer) {
   min-height: calc(100dvh - var(--a-topbar-height, 3.5rem));
-  border: 0;
-  box-shadow: none;
+  border-left: 1px solid var(--a-color-border-soft);
+  border-top: 1px solid var(--a-color-border-soft);
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.04);
 }
 
-:global(.studio-route-sheet .sheet-content) {
-  padding: 1.25rem clamp(1rem, 3vw, 2rem) 2rem;
+:global(.studio-route-sheet .sheet-content),
+:global(.studio-route-sheet.is-right .sheet-content--has-bookmark-close),
+:global(.studio-route-sheet.p-sheet-panel .sheet-content) {
+  padding: 0 !important;
+  padding-left: 36px !important;
+  height: 100% !important;
 }
 
 :global(.studio-route-sheet .sheet-content-inner) {
-  width: 100%;
-  max-width: none;
+  width: 100% !important;
+  max-width: none !important;
+  height: 100% !important;
 }
 </style>

@@ -271,11 +271,17 @@ function togglePanel(panel: 'tools' | 'settings') {
 .book-reader-shell {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - var(--a-topbar-height, 3.5rem) - 2rem);
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  width: 100%;
+  max-width: 100%;
+  flex: 1;
   background: var(--book-reader-canvas, #ebeef2);
-  border-radius: 12px;
+  border: 0 !important;
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: none !important;
   color: var(--book-reader-text, var(--a-color-fg));
 }
 
@@ -287,7 +293,7 @@ function togglePanel(panel: 'tools' | 'settings') {
   min-height: 3.25rem;
   padding: 0.35rem 0.85rem;
   border: 0;
-  border-bottom: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.08));
+  border-bottom: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.04));
   background: var(--book-reader-surface, #ffffff);
 }
 
@@ -299,7 +305,7 @@ function togglePanel(panel: 'tools' | 'settings') {
   height: 2.25rem;
   padding: 0;
   border: 0;
-  border-radius: 9999px;
+  border-radius: var(--a-radius-control, 4px);
   background: transparent;
   color: var(--book-reader-muted, var(--a-color-muted));
   transition: color 0.15s ease, background-color 0.15s ease;
@@ -368,53 +374,64 @@ function togglePanel(panel: 'tools' | 'settings') {
   align-items: stretch;
   gap: 0;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
   flex: 1;
+  overflow: hidden;
 }
 
 .book-reader-shell__reading-column {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
   flex: 1;
+  overflow: hidden;
   background: var(--book-reader-canvas, #ebeef2);
 }
 
 .book-reader-shell__toolbar {
-  position: sticky;
-  top: var(--a-topbar-height, 3.5rem);
+  position: relative;
+  top: 0;
   z-index: 10;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-  min-height: 2.85rem;
-  padding: 0.35rem 0.85rem;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.25rem 0.75rem;
   border: 0;
-  border-bottom: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.08));
+  border-bottom: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.04));
   border-radius: 0;
   background: var(--book-reader-surface, #f8f9fa);
   color: var(--book-reader-muted, var(--a-color-muted));
   font-size: 0.85rem;
+  overflow-x: auto;
 }
 
 .book-reader-shell__sidebar-wrapper {
   flex-shrink: 0;
   display: flex;
   background: var(--book-reader-surface, #f7f8fa);
-  border-right: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.08));
+  border-right: 0;
 }
 
 .book-reader-shell__toolbar-left {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .book-reader-shell__toolbar-right {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .book-reader-shell__tool-btn {
@@ -425,7 +442,7 @@ function togglePanel(panel: 'tools' | 'settings') {
   height: 2.25rem;
   padding: 0;
   border: 0;
-  border-radius: 9999px;
+  border-radius: var(--a-radius-control, 4px);
   background: transparent;
   color: var(--book-reader-muted, var(--a-color-muted));
   cursor: pointer;
@@ -438,8 +455,8 @@ function togglePanel(panel: 'tools' | 'settings') {
 }
 
 .book-reader-shell__tool-btn.is-active {
-  background: rgba(0, 102, 204, 0.12);
-  color: var(--a-color-primary, #0066cc);
+  background: color-mix(in srgb, var(--a-color-primary, #007aff) 12%, transparent);
+  color: var(--a-color-primary, #007aff);
 }
 
 .book-reader-shell__zoom-controls {
@@ -448,7 +465,7 @@ function togglePanel(panel: 'tools' | 'settings') {
   gap: 0.25rem;
   padding: 0.15rem 0.35rem;
   border: 0;
-  border-radius: 9999px;
+  border-radius: var(--a-radius-control, 4px);
   background: rgba(0, 0, 0, 0.05);
 }
 
@@ -460,7 +477,7 @@ function togglePanel(panel: 'tools' | 'settings') {
   height: 1.85rem;
   padding: 0;
   border: 0;
-  border-radius: var(--a-radius-control);
+  border-radius: var(--a-radius-control, 4px);
   background: transparent;
   color: var(--book-reader-muted, var(--a-color-muted));
   cursor: pointer;
@@ -507,7 +524,7 @@ function togglePanel(panel: 'tools' | 'settings') {
   height: 2.25rem;
   padding: 0;
   border: 0;
-  border-radius: 9999px;
+  border-radius: var(--a-radius-control, 4px);
   background: transparent;
   color: var(--book-reader-text, var(--a-color-fg));
   cursor: pointer;
@@ -534,7 +551,7 @@ function togglePanel(panel: 'tools' | 'settings') {
   min-height: 2rem;
   padding: 0.35rem 0.85rem;
   border: 0;
-  border-radius: 9999px;
+  border-radius: var(--a-radius-control, 4px);
   background: transparent;
   color: var(--book-reader-muted, var(--a-color-muted));
   cursor: pointer;
@@ -551,10 +568,13 @@ function togglePanel(panel: 'tools' | 'settings') {
 }
 
 .book-reader-shell__content {
-  display: grid;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
-  min-height: min(72vh, 800px);
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  flex: 1;
   overflow: hidden;
   border: 0;
   background: var(--book-reader-canvas, #ebeef2);
@@ -566,7 +586,6 @@ function togglePanel(panel: 'tools' | 'settings') {
   gap: 0.35rem;
   padding: 0.45rem 1rem 0.65rem;
   border: 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: 0;
   background: var(--book-reader-canvas, #ebeef2);
   color: var(--book-reader-muted, var(--a-color-muted));
@@ -576,15 +595,15 @@ function togglePanel(panel: 'tools' | 'settings') {
 .book-reader-shell__progress-track {
   height: 3px;
   overflow: hidden;
-  border-radius: 9999px;
-  background: rgba(0, 0, 0, 0.06);
+  border-radius: var(--a-radius-control, 4px);
+  background: color-mix(in srgb, var(--book-reader-text, #1c1c1e) 10%, transparent);
 }
 
 .book-reader-shell__progress-track span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--a-color-primary);
+  background: var(--a-color-primary, #007aff);
   transition: width 0.2s ease;
 }
 
@@ -600,19 +619,22 @@ function togglePanel(panel: 'tools' | 'settings') {
 }
 
 .book-reader-shell__panel {
-  position: sticky;
-  top: calc(var(--a-topbar-height, 3.5rem) + 1rem);
+  flex-shrink: 0;
+  width: 18rem;
+  max-width: 320px;
+  height: 100%;
+  max-height: 100%;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 0.85rem;
-  min-width: 0;
-  max-height: min(78vh, 56rem);
   overflow: auto;
-  padding: 1.25rem;
+  padding: 1rem 1.25rem;
   border: 0;
-  border-radius: 12px;
+  border-left: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.08));
   background: var(--book-reader-surface, var(--a-color-bg));
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
   color: var(--book-reader-text, var(--a-color-fg));
+  box-sizing: border-box;
 }
 
 .book-reader-shell__panel-heading {
@@ -702,21 +724,6 @@ function togglePanel(panel: 'tools' | 'settings') {
   color: var(--a-color-muted);
 }
 
-/* At narrow desktop widths tools are a dismissible popover, not a third
-   permanent column that leaves no room for the actual document. */
-@media (min-width: 641px) and (max-width: 1119px) {
-  .book-reader-shell__workspace { position: relative; }
-  .book-reader-shell__panel {
-    position: absolute;
-    top: 3.5rem;
-    right: 0;
-    z-index: 4;
-    width: min(18rem, 48%);
-    max-height: min(75vh, 44rem);
-    box-shadow: 0 10px 32px rgb(0 0 0 / 10%);
-  }
-}
-
 @media (max-width: 640px) {
   .book-reader-shell__workspace {
     display: grid;
@@ -738,9 +745,19 @@ function togglePanel(panel: 'tools' | 'settings') {
   }
 
   .book-reader-shell__panel {
-    position: static;
-    max-height: min(48vh, 28rem);
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: min(50vh, 28rem);
     padding: 0.85rem;
+    z-index: 50;
+    border-top: 1px solid var(--a-color-border-soft, rgba(0, 0, 0, 0.12));
+    border-left: 0;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
   }
 
   .book-reader-shell__toolbar-right {

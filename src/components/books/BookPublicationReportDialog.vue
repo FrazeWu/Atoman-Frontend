@@ -1,21 +1,32 @@
 <template>
-  <PModal :model-value="modelValue" title="举报公共电子书" size="sm" :above-player="abovePlayer" @update:model-value="$emit('update:modelValue', $event)">
+  <PModal :model-value="modelValue" title="举报公共电子书" size="md" :above-player="abovePlayer" @update:model-value="$emit('update:modelValue', $event)">
     <form class="book-report" @submit.prevent>
-      <label>
-        <span>原因</span>
-        <select v-model="reason" data-testid="book-report-reason" required>
-          <option value="spam">垃圾信息</option>
-          <option value="harassment">骚扰或攻击</option>
-          <option value="hate">仇恨内容</option>
-          <option value="sexual">色情内容</option>
-          <option value="violence">暴力内容</option>
-          <option value="misinformation">内容不实</option>
-          <option value="copyright">版权或权利问题</option>
-          <option value="illegal">违法内容</option>
-          <option value="other">其他</option>
-        </select>
-      </label>
-      <PTextarea v-model="note" label="补充说明" :rows="3" placeholder="选择其他时请填写说明" />
+      <div class="book-report__field">
+        <label for="book-report-reason" class="book-report__label">举报原因</label>
+        <div class="book-report__select-wrapper">
+          <select
+            id="book-report-reason"
+            v-model="reason"
+            class="book-report__select"
+            data-testid="book-report-reason"
+            required
+          >
+            <option value="copyright">版权或权利问题</option>
+            <option value="spam">垃圾信息</option>
+            <option value="harassment">骚扰或攻击</option>
+            <option value="hate">仇恨内容</option>
+            <option value="sexual">色情内容</option>
+            <option value="violence">暴力内容</option>
+            <option value="misinformation">内容不实</option>
+            <option value="illegal">违法内容</option>
+            <option value="other">其他</option>
+          </select>
+          <ChevronDown class="book-report__select-arrow" :size="16" aria-hidden="true" />
+        </div>
+      </div>
+      <div class="book-report__field">
+        <PTextarea v-model="note" label="补充说明" :rows="3" placeholder="选择其他时请填写详细说明" />
+      </div>
       <p v-if="error" class="book-report__error" role="alert">{{ error }}</p>
     </form>
     <template #footer>
@@ -37,6 +48,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { ChevronDown } from 'lucide-vue-next'
 
 import { ApiErrorResponseError } from '@/api/client'
 import type { ReportPublishedBookInput } from '@/api/books'
@@ -107,11 +119,69 @@ async function submit() {
 </script>
 
 <style scoped>
-.book-report { display: grid; gap: 1rem; }
-.book-report label { display: grid; gap: 0.45rem; color: var(--a-color-muted); font-size: var(--a-text-sm); font-weight: 500; }
-.book-report select { min-height: 42px; padding: 0 0.65rem; border: 1px solid var(--a-color-border); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: var(--a-color-text); font: inherit; }
-.book-report__actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
-.book-report__submit { min-height: 32px; padding: 0 14px; border: 1px solid var(--a-color-text); border-radius: var(--a-radius-control); background: var(--a-color-text); color: var(--a-color-bg); font: inherit; font-size: 0.72rem; font-weight: 600; cursor: pointer; }
-.book-report__submit:disabled { cursor: default; opacity: 0.6; }
-.book-report__error { margin: 0; color: var(--a-color-danger); font-size: var(--a-text-sm); }
+.book-report {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.25rem 0;
+}
+
+.book-report__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.book-report__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--a-color-text-secondary, #64748b);
+}
+
+.book-report__select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.book-report__select {
+  width: 100%;
+  height: 40px;
+  padding: 0 2.25rem 0 0.75rem;
+  border: 1px solid var(--a-color-border-soft, #cbd5e1);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-bg, #ffffff);
+  color: var(--a-color-text, #0f172a);
+  font-size: 14px;
+  line-height: 1.4;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.book-report__select:hover {
+  border-color: var(--a-color-border, #94a3b8);
+}
+
+.book-report__select:focus {
+  border-color: var(--a-color-primary, #007aff);
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
+}
+
+.book-report__select-arrow {
+  position: absolute;
+  right: 0.75rem;
+  pointer-events: none;
+  color: var(--a-color-text-tertiary, #94a3b8);
+}
+
+.book-report__error {
+  margin: 0;
+  color: var(--a-color-danger, #ef4444);
+  font-size: 13px;
+  line-height: 1.4;
+}
 </style>

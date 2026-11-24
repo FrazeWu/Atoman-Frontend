@@ -110,6 +110,7 @@ export function useApi() {
 				`${apiUrl}/blog/imports/markdown/${id}/confirm`,
 
 			shortNotes: `${apiUrl}/short-notes`,
+			shortNoteTrendingTopics: `${apiUrl}/short-notes/topics/trending`,
 			shortNote: (id: number | string) => `${apiUrl}/short-notes/${id}`,
 			shortNoteLike: (id: number | string) => `${apiUrl}/short-notes/${id}/like`,
 			shortNoteVote: (id: number | string) => `${apiUrl}/short-notes/${id}/vote`,

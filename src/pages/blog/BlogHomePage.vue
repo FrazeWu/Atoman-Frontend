@@ -1,13 +1,18 @@
 <template>
   <div class="blog-home">
-    <PPageHeader title="发现" accent>
+    <PPageHeader
+      title="发现"
+      accent
+      sub="探索精选博文、深度专栏与创作者动态"
+      mb="1.25rem"
+    >
       <template #action>
-        <PButton v-if="!authStore.isAuthenticated" to="/login" variant="secondary">登录</PButton>
+        <PButton v-if="!authStore.isAuthenticated" to="/login" variant="secondary" size="sm">登录</PButton>
         <div v-else class="blog-home__preference-actions">
           <PButton size="sm" variant="secondary" :loading="recommendationPreferenceLoading" @click="toggleRecommendationPreference">
-            {{ personalizedRecommendations ? '个性化推荐：开' : '个性化推荐：关' }}
+            {{ personalizedRecommendations ? '个性化推荐' : '按时间线' }}
           </PButton>
-          <PButton size="sm" variant="secondary" :loading="recommendationPreferenceLoading" @click="clearRecommendationData">清除推荐数据</PButton>
+          <PButton size="sm" variant="ghost" :loading="recommendationPreferenceLoading" title="重置推荐偏好" @click="clearRecommendationData">重置偏好</PButton>
         </div>
       </template>
     </PPageHeader>
@@ -41,6 +46,7 @@
           size="sm"
           placeholder="搜索公开文章、短笺或频道"
           action-button-text="搜索"
+          action-button-variant="secondary"
           input-test-id="blog-module-search-input"
           dropdown-test-id="blog-module-search-dropdown"
           :auto-navigate-on-select="false"

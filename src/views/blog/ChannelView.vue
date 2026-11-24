@@ -1,111 +1,129 @@
 <template>
-  <div class="a-page-xl">
+  <div class="a-page-xl channel-view-page">
     <PToast v-model="toastVisible" :message="toastMessage" />
-    <div v-if="loading" class="a-grid-2" style="margin-top:1rem">
-      <div v-for="i in 4" :key="i" class="a-skeleton" style="height:10rem" />
+
+    <!-- Loading Skeleton -->
+    <div v-if="loading" class="channel-skeleton-wrap">
+      <div class="a-skeleton channel-skeleton-header" />
+      <div class="channel-divider" />
+      <div class="channel-skeleton-list">
+        <div v-for="i in 3" :key="i" class="a-skeleton channel-skeleton-item" />
+      </div>
     </div>
 
+    <!-- Error State -->
     <PEmpty v-else-if="loadError" title="加载失败" :description="loadError">
-      <template #action><PButton variant="secondary" size="sm" @click="loadChannel">重试</PButton></template>
+      <template #action>
+        <PButton variant="secondary" size="sm" @click="loadChannel">重试</PButton>
+      </template>
     </PEmpty>
+
+    <!-- Missing State -->
     <PEmpty v-else-if="!channel" title="频道不存在" description="该频道已被删除或链接无效" />
 
+    <!-- Content State -->
     <template v-else>
       <CreatorThemeScope :creator-id="channel.user?.uuid || channel.user_id" :preset-config="activeTheme?.preset_config">
-        <section class="channel-identity-card" aria-labelledby="channel-title">
-        <div class="channel-identity-card__cover" aria-hidden="true">
-          <img
-            v-if="channel.cover_url && !coverFailed"
-            :src="resolveMediaURL(channel.cover_url)"
-            :alt="channel.name"
-            @error="coverFailed = true"
-          />
-          <span v-else>{{ channel.name.slice(0, 1).toUpperCase() }}</span>
-        </div>
+        <!-- Top Area: Name, Description, Author, Actions (No enclosed box, pure typography) -->
+        <header class="channel-header">
+          <div class="channel-header-top">
+            <div class="channel-title-wrap">
+              <h1 class="channel-title">{{ channel.name }}</h1>
+              <p v-if="channel.description" class="channel-description">
+                {{ channel.description }}
+              </p>
+            </div>
 
-        <div class="channel-identity-card__content">
-          <p class="channel-identity-card__eyebrow">博客频道</p>
-          <h1 id="channel-title" class="channel-identity-card__title">{{ channel.name }}</h1>
-          <p v-if="channel.description" class="channel-identity-card__description">{{ channel.description }}</p>
-          <div class="channel-identity-card__author">
-            <PAvatar
-              :src="channel.user?.avatar_url"
-              :name="channel.user?.display_name || channel.user?.username || '未知作者'"
-              :alt="`${channel.user?.display_name || channel.user?.username || '未知作者'} 的头像`"
-              size="xs"
-            />
-            <a
-              v-if="channel.user?.username"
-              :href="userUrl(channel.user.username)"
-              class="channel-identity-card__author-link"
-            >
-              {{ channel.user.display_name || channel.user.username }}
-              <span>@{{ channel.user.username }}</span>
-            </a>
-            <span v-else class="channel-identity-card__author-link">未知作者</span>
+            <div class="channel-actions">
+              <!-- Primary Action: Subscribe (Single Blue Button Rule with Fixed Width to prevent jumping) -->
+              <PButton
+                v-if="authStore.isAuthenticated && !isOwner && !channelSubscribed"
+                variant="primary"
+                size="sm"
+                class="subscribe-btn-fixed"
+                :disabled="channelSubscribeLoading"
+                :loading="channelSubscribeLoading"
+                loading-text="订阅中..."
+                @click="toggleChannelSubscribe"
+              >
+                <Plus :size="14" class="button-icon" />
+                <span>订阅频道</span>
+              </PButton>
+
+              <PButton
+                v-else-if="authStore.isAuthenticated && !isOwner && channelSubscribed"
+                variant="secondary"
+                size="sm"
+                class="subscribe-btn-fixed"
+                :disabled="channelSubscribeLoading"
+                :loading="channelSubscribeLoading"
+                loading-text="取消中..."
+                @click="toggleChannelSubscribe"
+              >
+                <Check :size="14" class="button-icon" />
+                <span>已订阅</span>
+              </PButton>
+
+              <!-- Message Channel -->
+              <PButton
+                v-if="authStore.isAuthenticated && !isOwner"
+                data-testid="message-channel"
+                :to="{ path: '/inbox', query: { tab: 'dm', target_type: 'channel', target_id: channel.id } }"
+                size="sm"
+                variant="secondary"
+              >
+                <MessageSquare :size="14" class="button-icon" />
+                <span>私信</span>
+              </PButton>
+
+              <!-- RSS Button -->
+              <PButton
+                v-if="channelRssUrl"
+                data-testid="channel-rss"
+                variant="secondary"
+                size="sm"
+                title="复制 RSS 订阅地址"
+                @click="copyRssLink"
+              >
+                <Rss :size="14" class="button-icon" />
+                <span>RSS</span>
+              </PButton>
+            </div>
           </div>
-          <div class="channel-identity-card__stats" aria-label="频道统计">
-            <span><FileText :size="14" aria-hidden="true" />{{ postsTotal }} 篇文章</span>
-            <span><FolderKanban :size="14" aria-hidden="true" />{{ collections.length }} 个合集</span>
-            <span><CalendarDays :size="14" aria-hidden="true" />{{ formatDate(channel.updated_at) }} 更新</span>
+
+          <!-- Author and Meta line: pure typography, no box border -->
+          <div class="channel-meta-line">
+            <div class="channel-author-info">
+              <PAvatar
+                :src="channel.user?.avatar_url"
+                :name="channel.user?.display_name || channel.user?.username || '未知作者'"
+                :alt="`${channel.user?.display_name || channel.user?.username || '未知作者'} 的头像`"
+                size="xs"
+              />
+              <a
+                v-if="channel.user?.username"
+                :href="userUrl(channel.user.username)"
+                class="channel-author-link"
+              >
+                {{ channel.user.display_name || channel.user.username }}
+                <span class="author-handle">@{{ channel.user.username }}</span>
+              </a>
+              <span v-else class="channel-author-link">未知作者</span>
+            </div>
+            <span class="meta-dot">·</span>
+            <span class="meta-item">{{ postsTotal }} 篇文章</span>
+            <span class="meta-dot">·</span>
+            <span class="meta-item">{{ formatDate(channel.updated_at) }} 更新</span>
           </div>
-        </div>
+        </header>
 
-        <div class="channel-identity-card__actions">
-          <PButton
-            v-if="authStore.isAuthenticated && !isOwner"
-            variant="primary"
-            :disabled="channelSubscribeLoading"
-            :loading="channelSubscribeLoading"
-            :label="channelSubscribed ? '已订阅' : '订阅频道'"
-            @click="toggleChannelSubscribe"
-          />
-          <PButton
-            v-if="authStore.isAuthenticated && !isOwner"
-            data-testid="message-channel"
-            :to="{ path: '/inbox', query: { tab: 'dm', target_type: 'channel', target_id: channel.id } }"
-            size="sm"
-            variant="secondary"
-            label="私信"
-          />
-          <PClip v-if="channelRssUrl" label="RSS" @click="copyRssLink" />
-        </div>
-      </section>
+        <!-- Horizontal Divider Line -->
+        <div class="channel-divider" />
 
-      <!-- Two-column layout: left collections, right posts -->
-      <div class="channel-body">
-        <!-- Left: collection list -->
-        <aside class="collection-sidebar">
-          <div class="section-headline">
-            <h2 class="a-subtitle" style="margin:0;font-size:.875rem">合集</h2>
-          </div>
-
-          <div class="collection-list">
-            <PTab
-              :active="activeCollectionId === null"
-              @click="activeCollectionId = null"
-            >
-              全部内容 <span class="collection-count">{{ postsTotal }}</span>
-            </PTab>
-            <BlogEntityCard
-              v-for="col in collections"
-              :key="col.id"
-              kind="collection"
-              :title="col.name"
-              :cover-url="col.cover_url"
-              :description="col.description"
-              compact
-              :active="activeCollectionId === col.id"
-              :show-subscribe="false"
-              @select="openCollectionSheet(col)"
-            />
-          </div>
-        </aside>
-
-        <!-- Right: posts -->
-        <main class="post-main">
-          <PEmpty v-if="!postsLoading && !filteredPosts.length" title="暂无内容" description="该合集还没有文章" />
-          <div v-else class="post-list feed-timeline-box">
+        <!-- Bottom Area: ONLY Posts List -->
+        <section class="channel-posts-section">
+          <PEmpty v-if="!postsLoading && !filteredPosts.length" title="暂无内容" description="当前频道还没有发表文章" />
+          <div v-else class="channel-posts-list">
             <BlogItemCard
               v-for="post in filteredPosts"
               :key="post.id"
@@ -118,11 +136,12 @@
               @toggle-reading-list="toggleReadingList(post.id)"
             />
           </div>
-          <div v-if="postsHasMore" class="post-load-more">
-            <PButton variant="secondary" :loading="postsLoading" @click="loadMorePosts">加载更多</PButton>
+          <div v-if="postsHasMore" class="channel-load-more">
+            <PButton variant="secondary" size="sm" :loading="postsLoading" @click="loadMorePosts">
+              加载更多文章
+            </PButton>
           </div>
-        </main>
-      </div>
+        </section>
       </CreatorThemeScope>
     </template>
 
@@ -134,9 +153,9 @@
         <PTextarea v-model="collectionForm.description" placeholder="合集描述（可选）" :rows="3" />
       </div>
       <div class="modal-actions">
-        <PButton label="取消" variant="secondary" @click="collectionModalOpen = false" />
+        <PButton label="取消" variant="secondary" size="sm" @click="collectionModalOpen = false" />
         <div class="collection-action">
-          <PButton :disabled="!collectionForm.name.trim() || collectionSaving" :loading="collectionSaving" loading-text="保存中..." @click="saveCollection">
+          <PButton :disabled="!collectionForm.name.trim() || collectionSaving" :loading="collectionSaving" loading-text="保存中..." size="sm" @click="saveCollection">
             {{ editingCollection ? '更新' : '创建' }}
           </PButton>
           <PActionFeedback :message="collectionActionError" />
@@ -172,9 +191,9 @@
 <script setup lang="ts">
 import { errorMessage, reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { FileText, FolderKanban, CalendarDays } from 'lucide-vue-next'
+import { Check, MessageSquare, Plus, Rss } from 'lucide-vue-next'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -188,17 +207,13 @@ import ThemeCustomizerDrawer from '@/components/theme/ThemeCustomizerDrawer.vue'
 import CreatorThemeScope from '@/components/theme/CreatorThemeScope.vue'
 import ThemeEscapeHatch from '@/components/theme/ThemeEscapeHatch.vue'
 import PToast from '@/components/ui/PToast.vue'
-import BlogEntityCard from '@/components/blog/BlogEntityCard.vue'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
-import PClip from '@/components/ui/PClip.vue'
 import PButton from '@/components/ui/PButton.vue'
 import PActionFeedback from '@/components/ui/PActionFeedback.vue'
-import PTab from '@/components/ui/PTab.vue'
 import { resolveSiteContext } from '@/router/siteContext'
 import { userUrl } from '@/composables/useSubdomainNav'
 import { useBlogSheets } from '@/composables/useBlogSheets'
-import { resolveMediaURL } from '@/utils/mediaUrl'
 
 const props = defineProps<{ entityHandle?: string }>()
 const route = useRoute()
@@ -207,14 +222,12 @@ const authStore = useAuthStore()
 const feedStore = useFeedStore()
 const blogSheets = useBlogSheets()
 
-const { activeTheme, loadCreatorTheme, clearTheme } = useCreatorTheme()
+const { activeTheme, loadCreatorTheme } = useCreatorTheme()
 const isThemeDrawerOpen = ref(false)
 
 const loading = ref(true)
 const loadError = ref('')
 const channel = ref<Channel | null>(null)
-const coverFailed = ref(false)
-watch(() => channel.value?.cover_url, () => { coverFailed.value = false })
 const collections = ref<Collection[]>([])
 const channelPosts = ref<Post[]>([])
 const activeCollectionId = ref<string | null>(null)
@@ -264,9 +277,12 @@ const channelRssUrl = computed(() => {
 
 const filteredPosts = computed(() => channelPosts.value)
 
-const formatDate = (date: string) => new Date(date).toLocaleDateString('zh-CN')
-const summarize = (content: string) =>
-  content.replace(/```[\s\S]*?```/g, ' ').replace(/[>#*_`\x5b\x5d()!-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || '暂无摘要'
+const formatDate = (date: string) => {
+  if (!date) return '-'
+  const d = new Date(date)
+  if (Number.isNaN(d.getTime())) return '-'
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`
+}
 
 function responseData<T>(payload: unknown): T {
   if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'data' in payload) {
@@ -394,16 +410,6 @@ const loadMorePosts = () => {
   void fetchPosts(channel.value, loadGeneration, postsPage.value + 1, true)
 }
 
-const openCollectionSheet = (collection: Collection) => {
-  if (!channel.value) return
-  blogSheets.openCollection(collection.id, collection.name, channel.value.id)
-}
-
-const openCollectionModal = (collection?: Collection) => {
-  collectionForm.value = { name: collection?.name || '', description: collection?.description || '' }
-  collectionModalOpen.value = true
-}
-
 const saveCollection = async () => {
   if (!collectionForm.value.name.trim() || !channel.value) return
   collectionSaving.value = true
@@ -478,226 +484,185 @@ const loadChannel = async () => {
   postsPage.value = 1
   postsTotal.value = 0
   postsHasMore.value = false
-  activeCollectionId.value = null
-  channelSubscribed.value = false
-  channelSubscribeLoading.value = false
-  try {
-    if (!param) return
-    const loadedChannel = await fetchChannel(param, slug, generation)
-    if (!loadedChannel || generation !== loadGeneration) return
-    if (loadedChannel.user?.username) {
-      void loadCreatorTheme(loadedChannel.user.username).catch(() => {})
-    }
-    void Promise.all([
-      fetchCollections(loadedChannel, param, slug, generation),
-      fetchPosts(loadedChannel, generation),
-    ]).catch(() => {})
-    if (authStore.isAuthenticated) {
-      void feedStore.fetchBookmarkedPostIds()
-      void feedStore.fetchReadingListIds()
-    }
-  } catch {
+
+  if (!param) {
+    loading.value = false
+    loadError.value = '未指定频道'
     return
-  } finally {
-    if (generation === loadGeneration) loading.value = false
   }
+
+  const loadedChannel = await fetchChannel(param, slug, generation)
+  if (generation !== loadGeneration) return
+  if (!loadedChannel) {
+    loading.value = false
+    return
+  }
+
+  void loadCreatorTheme(loadedChannel.user?.uuid || loadedChannel.user_id)
+  await Promise.all([
+    fetchCollections(loadedChannel, param, slug, generation),
+    fetchPosts(loadedChannel, generation),
+  ])
+  if (generation === loadGeneration) loading.value = false
 }
 
-watch(activeCollectionId, () => {
-  if (!channel.value) return
-  channelPosts.value = []
-  postsPage.value = 1
-  postsTotal.value = 0
-  postsHasMore.value = false
-  void fetchPosts(channel.value, loadGeneration)
+watch(routeParam, () => {
+  void loadChannel()
 })
 
-watch(routeParam, () => { void loadChannel() }, { immediate: true })
-onUnmounted(() => { clearTheme() })
+onMounted(() => {
+  void loadChannel()
+  if (authStore.isAuthenticated) {
+    void feedStore.fetchBookmarkedPostIds()
+    void feedStore.fetchReadingListIds()
+  }
+})
 </script>
 
 <style scoped>
-.channel-identity-card {
-  display: grid;
-  grid-template-columns: minmax(9rem, 13rem) minmax(0, 1fr) auto;
-  gap: 1.25rem;
-  align-items: stretch;
-  padding: 1rem;
-  margin-top: 1rem;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-card);
-  background: var(--a-color-bg);
+.channel-header {
+  padding-bottom: 1.125rem;
 }
 
-.channel-identity-card__cover {
-  aspect-ratio: 4 / 3;
-  min-height: 7rem;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
-  font-size: 2rem;
-  font-weight: 500;
-}
-
-.channel-identity-card__cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.channel-identity-card__content {
-  min-width: 0;
+.channel-header-top {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: flex-start;
+  gap: 1.5rem;
+  margin-bottom: 0.75rem;
 }
 
-.channel-identity-card__eyebrow {
-  margin: 0 0 0.25rem;
-  color: var(--a-color-muted);
-  font-size: 0.72rem;
+.channel-title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.channel-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.625rem;
   font-weight: 600;
+  color: var(--a-text-primary);
+  line-height: 1.25;
+  letter-spacing: -0.015em;
 }
 
-.channel-identity-card__title {
+.channel-description {
   margin: 0;
-  color: var(--a-color-fg);
-  font-size: 1.35rem;
-  font-weight: 500;
-  line-height: 1.3;
+  font-size: 0.9375rem;
+  color: var(--a-text-secondary);
+  line-height: 1.6;
 }
 
-.channel-identity-card__description {
-  margin: 0.45rem 0 0;
-  color: var(--a-color-muted);
-  line-height: 1.55;
+.channel-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
-.channel-identity-card__author,
-.channel-identity-card__stats,
-.channel-identity-card__actions {
+/* 核心防跳动：固定订阅按钮宽度，确保订阅前/后/加载中文案切换时绝对不跳动 */
+.subscribe-btn-fixed {
+  min-width: 5.75rem;
+  justify-content: center;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.button-icon {
+  flex-shrink: 0;
+}
+
+.channel-meta-line {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  gap: 0.625rem;
+  font-size: 0.8125rem;
+  color: var(--a-text-muted);
+}
+
+.channel-author-info {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
-.channel-identity-card__author { margin-top: 0.7rem; }
-
-.channel-identity-card__author-link {
-  color: var(--a-color-fg);
-  font-size: 0.82rem;
-  font-weight: 600;
+.channel-author-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 500;
+  color: var(--a-text-primary);
   text-decoration: none;
+  transition: color 0.15s ease;
 }
 
-.channel-identity-card__author-link span {
-  color: var(--a-color-muted);
+.channel-author-link:hover {
+  color: var(--a-primary);
+}
+
+.author-handle {
+  color: var(--a-text-muted);
   font-weight: 400;
 }
 
-.channel-identity-card__stats {
-  margin-top: auto;
-  padding-top: 0.75rem;
-  color: var(--a-color-muted);
-  font-size: 0.76rem;
+.meta-dot {
+  color: var(--a-text-muted);
+  opacity: 0.6;
 }
 
-.channel-identity-card__stats span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
+/* 核心：去掉边框，下方加一条横线 */
+.channel-divider {
+  width: 100%;
+  height: 1px;
+  background-color: var(--a-color-border-soft, #f0f0f0);
+  margin-bottom: 1.75rem;
 }
 
-.channel-identity-card__actions {
-  align-content: flex-start;
-  justify-content: flex-end;
-}
-
-.channel-body {
-  display: flex;
-  gap: 2rem;
-  margin-top: 2rem;
-  align-items: flex-start;
-}
-
-.collection-sidebar {
-  width: 13rem;
-  flex-shrink: 0;
-  position: sticky;
-  top: 5rem;
-}
-
-.post-main { flex: 1; min-width: 0; }
-.post-load-more { display: flex; justify-content: center; margin-top: 1.5rem; }
-
-.post-list.feed-timeline-box {
-  border: 0;
-  border-radius: 0;
-  overflow: visible;
-  background: transparent;
-}
-
-.collection-list {
+.channel-posts-section {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 0.45rem;
 }
 
-.collection-count {
-  margin-left: 0.35rem;
-  opacity: 0.58;
-}
-
-.channel-meta-card {
-  padding: 1rem 1.25rem;
+.channel-posts-list {
   display: flex;
-  gap: 1.5rem;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  margin-bottom: 1.5rem;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.section-headline {
+.channel-load-more {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: .75rem;
-}
-
-.ui-actions-row,
-.modal-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: .75rem;
-}
-
-.modal-actions {
-  justify-content: flex-end;
+  justify-content: center;
   margin-top: 1.5rem;
 }
 
-@media (max-width: 768px) {
-  .channel-identity-card {
-    grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr);
-    gap: 0.85rem;
-  }
-  .channel-identity-card__title { font-size: 1.15rem; }
-  .channel-identity-card__description { font-size: 0.88rem; }
-  .channel-identity-card__actions {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-  }
-  .channel-body { flex-direction: column; align-items: stretch; }
-  .collection-sidebar, .post-main { width: 100%; }
-  .collection-list { flex-direction: row; overflow-x: auto; padding-bottom: .5rem; }
+.channel-skeleton-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.channel-skeleton-header {
+  height: 4.5rem;
+  border-radius: var(--a-radius-card, 4px);
+}
+
+.channel-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.channel-skeleton-item {
+  height: 6rem;
+  border-radius: var(--a-radius-card, 4px);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
 }
 
 .theme-customize-launcher {
@@ -730,5 +695,21 @@ onUnmounted(() => { clearTheme() })
 .theme-customize-launcher:focus-visible {
   outline: 2px solid var(--a-color-primary);
   outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .channel-header-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .channel-actions {
+    justify-content: flex-start;
+  }
+
+  .channel-title {
+    font-size: 1.375rem;
+  }
 }
 </style>

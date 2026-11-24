@@ -146,7 +146,7 @@ function openPanel(panel: FootbarPanel, label: string) {
 
 .site-footer-related-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0 var(--a-space-4);
 }
 
@@ -157,7 +157,7 @@ function openPanel(panel: FootbarPanel, label: string) {
   font-size: var(--a-text-xs);
   font-weight: var(--a-font-weight-strong);
   line-height: 28px;
-  text-align: center;
+  text-align: left;
 }
 
 .site-footer-brand {
@@ -257,16 +257,17 @@ function openPanel(panel: FootbarPanel, label: string) {
 
   .site-footer-center,
   .site-footer-secondary {
-    padding-left: calc(152px + var(--a-space-3));
+    justify-items: start;
+    text-align: left;
   }
 
   .site-footer-links,
   .site-footer-meta {
-    gap: var(--a-space-3);
+    justify-content: flex-start;
   }
 
   .site-footer-related-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0 var(--a-space-3);
   }
 

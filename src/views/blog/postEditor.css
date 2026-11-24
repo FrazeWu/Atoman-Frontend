@@ -65,11 +65,14 @@
 
 .col-center {
   min-height: 0;
+  flex: 1;
+  display: flex;
   flex-direction: column;
   overflow: hidden;
   border: 0;
   border-radius: 0;
   background: var(--a-color-bg);
+  padding: 0;
 }
 
 .editor-loading {
@@ -81,8 +84,10 @@
 .editor-workspace {
   display: flex;
   min-height: 0;
+  flex: 1;
   flex-direction: column;
   overflow: hidden;
+  border-bottom: 1px solid var(--a-color-border, #cbd5e1);
 }
 
 .editor-top-info {
@@ -142,6 +147,7 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--a-color-bg);
+  border-bottom: 1px solid var(--a-color-border, #cbd5e1);
 }
 
 .editor-body {
@@ -165,12 +171,33 @@
 
 .editor-body :deep(.cm-scroller) {
   height: 100%;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: max(1.5rem, var(--a-keyboard-inset, 0px)) !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--a-color-border-soft) transparent;
+  padding-bottom: max(3rem, var(--a-keyboard-inset, 0px)) !important;
   font-family: var(--a-font-sans, ui-sans-serif, system-ui, sans-serif) !important;
   font-size: 1.0625rem;
   line-height: 1.45 !important;
+}
+
+.editor-body :deep(.cm-scroller)::-webkit-scrollbar {
+  width: 7px;
+}
+
+.editor-body :deep(.cm-scroller)::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor-body :deep(.cm-scroller)::-webkit-scrollbar-thumb {
+  background-color: var(--a-color-border-soft);
+  border-radius: var(--a-radius-pill, 9999px);
+}
+
+.editor-body :deep(.cm-scroller)::-webkit-scrollbar-thumb:hover {
+  background-color: var(--a-color-muted);
 }
 
 .editor-body :deep(.p-editor[data-live-preview="false"] .cm-scroller) {
@@ -209,7 +236,26 @@
 }
 
 .editor-body :deep(.cm-content) {
-  padding-inline: 0.75rem !important;
+  padding-inline: 1.25rem !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  white-space: pre-wrap !important;
+}
+
+.editor-body :deep(.cm-line) {
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  white-space: pre-wrap !important;
+}
+
+.editor-body :deep(.cm-markdown-widget),
+.editor-body :deep(.sv-preview) {
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
 }
 
 .editor-body :deep(.cm-activeLine) {

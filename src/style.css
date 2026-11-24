@@ -837,7 +837,9 @@ body:has(.studio-layout) {
 	overflow-y: auto;
 	overflow-x: hidden;
 	overscroll-behavior: contain;
-	background: rgba(15, 23, 42, 0.12);
+	background: rgba(15, 23, 42, 0.45);
+	backdrop-filter: blur(4px);
+	-webkit-backdrop-filter: blur(4px);
 }
 .a-modal,
 .p-modal {
@@ -1402,6 +1404,19 @@ html:not([data-atoman-app="mobile"]) .mobile-bottom-nav {
 	.a-module-layout {
 		gap: 0;
 		padding: 0;
+	}
+	.p-sidebar,
+	.a-sidebar {
+		width: 4.5rem !important;
+	}
+	.p-sidebar-item,
+	.a-sidebar-item {
+		padding: 0.75rem 0.5rem !important;
+		justify-content: center !important;
+	}
+	.p-sidebar-item span:not(.p-sidebar-item-icon),
+	.a-sidebar-item span:not(.a-sidebar-item-icon) {
+		display: none !important;
 	}
 }
 

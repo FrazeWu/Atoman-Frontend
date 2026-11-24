@@ -1275,15 +1275,16 @@ describe("PostEditorView", () => {
 		expect(editor.attributes("data-mode")).toBe("normal");
 		expect(editor.attributes("data-live-preview")).toBe("false");
 
+		await wrapper.get('[title="实时预览"]').trigger("click");
+		expect(editor.attributes("data-mode")).toBe("split");
+
 		const visualMode = wrapper
 			.findAll("button")
 			.find((button) => button.text().includes("Visual"));
 		expect(visualMode).toBeDefined();
 		await visualMode!.trigger("click");
 		expect(editor.attributes("data-live-preview")).toBe("true");
-
-		await wrapper.get('[title="实时预览"]').trigger("click");
-		expect(editor.attributes("data-mode")).toBe("split");
+		expect(wrapper.find('[title="实时预览"]').exists()).toBe(false);
 	});
 
 	it("编辑已有文章且真实启用协作连接时，不暴露普通模式入口", async () => {

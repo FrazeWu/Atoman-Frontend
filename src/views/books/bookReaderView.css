@@ -1,7 +1,13 @@
 .books-reader {
-  display: grid;
-  gap: 1.25rem;
-  padding-top: var(--a-page-start-space);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  gap: 0;
+  padding-top: 0;
   --book-reader-canvas: #ebeef2;
   --book-reader-surface: #ffffff;
   --book-reader-text: #1c1c1e;
@@ -41,7 +47,9 @@
 .books-reader__text,
 .books-reader__epub,
 .books-reader__pdf {
-  min-height: min(72vh, 800px);
+  min-height: 0;
+  height: 100%;
+  flex: 1;
   border: 0;
   background: var(--book-reader-canvas, #ebeef2);
   overflow: hidden;
@@ -76,8 +84,8 @@
   padding: clamp(2rem, 5vw, 4.75rem) clamp(1.75rem, 7vw, 6.5rem) 3.25rem;
   background: var(--book-reader-surface, #ffffff);
   border: 0 !important;
-  border-radius: 3px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: var(--a-radius-card, 4px);
+  box-shadow: none !important;
 }
 
 .books-reader__text-page-content {
@@ -141,8 +149,8 @@
   max-width: min(100%, 64rem);
   height: auto;
   border: 0 !important;
-  border-radius: 3px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: var(--a-radius-card, 4px);
+  box-shadow: none !important;
 }
 
 .books-reader__comic-page figcaption {
@@ -171,8 +179,8 @@
   margin: 0 auto;
   background: #ffffff;
   border: 0 !important;
-  border-radius: 3px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: var(--a-radius-card, 4px);
+  box-shadow: none !important;
 }
 
 .books-reader__public-status {

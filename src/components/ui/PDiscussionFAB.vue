@@ -19,10 +19,9 @@ defineEmits(['click'])
 .discussion-fab {
   position: fixed;
   right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  bottom: calc(2.5rem + var(--a-content-bottom-offset, 0px));
   width: 36px;
-  padding: 1.5rem 0;
+  padding: 1.125rem 0;
   background: var(--a-color-text);
   border: 1px solid var(--a-color-text);
   border-right: none;
@@ -36,7 +35,7 @@ defineEmits(['click'])
   transition: background-color 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
 }
 .discussion-fab:hover {
-  transform: translate(-2px, -50%);
+  transform: translateX(-3px);
   background: var(--a-color-text-secondary);
   border-color: var(--a-color-text-secondary);
 }

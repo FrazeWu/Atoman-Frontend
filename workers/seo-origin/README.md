@@ -5,11 +5,20 @@ It has neither a workers.dev route nor public preview URLs.
 
 It restricts its upstream to JSON-producing public GET APIs and a pinned
 Workers VPC service. Requests never forward user authentication, cookies, or
-arbitrary headers. The VPC service currently uses the existing pve-cluster
-Tunnel as an egress to the production VPS HTTPS origin, with full TLS
-verification, and a single pinned host and port. This is a transitional
-network path: moving the VPC service to a VPS-local Tunnel removes the
-dependency on the home cluster, without requiring any Pages code changes.
+arbitrary headers. The VPC service uses the dedicated VPS-local atoman-seo-vps-private
+Tunnel, with full TLS verification and a single pinned HTTPS host and port.
+This removes the home-network hop from the live SEO origin path.
+
+Production and canary PRIVATE_ORIGIN service ID:
+01a20b71-edd8-7d22-9564-af908b6b9ad7.
+The existing pve-cluster VPC service remains available for manual rollback:
+01a20b34-a449-7b81-bf50-c2b14b8b21ac.
+To roll back, change only PRIVATE_ORIGIN in the Worker binding and restore
+the service ID in wrangler.toml. Retest public listing, detail, and sitemap
+responses with caching bypassed in canary first. Do not expose the Worker or
+modify the public API's security rules. The VPS connector runs as the enabled
+atoman-seo-vps-tunnel.service; its protected token must remain on the VPS.
+The retained home Tunnel is a rollback option, not automatic failover.
 
 When changing index.js, deploy this Worker before deploying Pages, because
 the Pages binding relies on its API allowlist. wrangler.toml documents the
@@ -27,7 +36,7 @@ domain or r2.dev access, and no user authentication is forwarded.
 The scheduled Worker refreshes common directory and sitemap API responses every
 15 minutes (12 selected anonymous URLs), limiting concurrency to four. Single detail URLs are
 cached on first access. As a result, a temporary failure of the existing
-pve-cluster Tunnel does not immediately break cached SEO content. Uncached
+VPS-local Tunnel does not immediately break cached SEO content. Uncached
 detail URLs and publication of new content still depend on live origin access:
 this is a bounded failover cache, not a full standalone replacement for the
 Tunnel.

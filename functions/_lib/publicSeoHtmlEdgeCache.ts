@@ -10,7 +10,7 @@ const publicSections = new Set([
 ]);
 const details = /^\/(?:music\/(?:artist|album|song)|books\/(?:work|edition)|posts\/post|forum\/topic)\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const archivePaths = new Set(["/posts/articles", "/music/songs"]);
-const cacheVersion = "atoman-public-seo-html-v3";
+const cacheVersion = "atoman-public-seo-html-v4";
 const edgeTtlSeconds = 75;
 
 export type SeoHtmlCache = {
@@ -18,7 +18,10 @@ export type SeoHtmlCache = {
   put(key: Request, response: Response): Promise<void>;
 };
 
-export function publicSeoHtmlKey(request: Request): Request | undefined {
+export function publicSeoHtmlKey(request: Request, shellDigest: string): Request | undefined {
+  // A fixed namespace alone is unsafe across two Pages deployments.
+  // Require the exact HTML shell digest, never a client-supplied version.
+  if (!/^[a-f0-9]{64}$/.test(shellDigest)) return undefined;
   if (request.method !== "GET") return undefined;
   if (["cookie", "authorization", "range", "if-none-match", "if-modified-since"].some((h) => request.headers.has(h)))
     return undefined;
@@ -42,9 +45,22 @@ export function publicSeoHtmlKey(request: Request): Request | undefined {
     if (!/^[1-9][0-9]{0,3}$/.test(p) || Number(p) > 5000) return undefined;
   }
   // A synthetic namespaced key prevents collisions with public asset caching.
-  const key = new URL("/__atoman_cache/" + cacheVersion + path, url.origin);
+  const key = new URL("/__atoman_cache/" + cacheVersion + "/" + shellDigest + path, url.origin);
   if (keys.length) key.search = "?page=" + url.searchParams.get("page");
   return new Request(key.href, { method: "GET" });
+}
+
+export async function publicSeoHtmlKeyForShell(request: Request, shell: string): Promise<Request | undefined> {
+  // Avoid hashing private, authenticated or otherwise ineligible requests.
+  if (!publicSeoHtmlKey(request, "0".repeat(64))) return undefined;
+  try {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(shell));
+    const hex = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
+    return publicSeoHtmlKey(request, hex);
+  } catch {
+    // If a digest cannot be computed, bypass the optional cache.
+    return undefined;
+  }
 }
 
 export function canStorePublicSeoHtml(

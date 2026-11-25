@@ -5,11 +5,14 @@ import {
 	resolveApiBase,
 	type SitemapItem,
 } from "./_lib/blogSeo";
-import { collectPublicSitemapItems } from "./_lib/publicContentSeo";
+import { collectPublicSitemapResult } from "./_lib/publicContentSeo";
+import { publicSitemapCacheKey, queuePublicSitemapCache, readPublicSitemapCache,
+	runtimeSitemapCache, sitemapCacheControl } from "./_lib/publicSitemapEdgeCache";
 
 type SitemapContext = {
 	request: Request;
 	env: { VITE_API_URL?: string; SEO_ORIGIN?: SeoOriginBinding };
+	waitUntil?: (job: Promise<unknown>) => void;
 };
 
 const canonicalOrigin = "https://www.atoman.org";
@@ -60,7 +63,8 @@ function fallbackSitemap() {
 			status: 200,
 			headers: {
 				"content-type": "application/xml; charset=UTF-8",
-				"cache-control": "public, max-age=60, s-maxage=300",
+				"cache-control": "no-store",
+				"x-atoman-sitemap-status": "partial",
 			},
 		},
 	);
@@ -69,6 +73,12 @@ function fallbackSitemap() {
 export async function onRequest(context: SitemapContext) {
 	try {
 		const requestUrl = new URL(context.request.url);
+		const key = publicSitemapCacheKey(context.request);
+		const cache = key ? runtimeSitemapCache() : undefined;
+		if (key && cache) {
+			const hit = await readPublicSitemapCache(key, cache);
+			if (hit) return hit;
+		}
 		const defaultApi = requestUrl.origin.includes("atoman.org")
 			? "https://api.atoman.org/api"
 			: undefined;
@@ -88,9 +98,11 @@ export async function onRequest(context: SitemapContext) {
 		payload.data
 			.filter((item) => isAllowedSitemapPath(item.path))
 			.forEach((item) => itemsByPath.set(item.path, item));
+		let complete = false;
 		try {
-			const publicItems = await collectPublicSitemapItems(apiBase, seoFetcher);
-			publicItems.forEach((item) => {
+			const publicItems = await collectPublicSitemapResult(apiBase, seoFetcher);
+			complete = publicItems.complete;
+			publicItems.items.filter((item) => isAllowedSitemapPath(item.path)).forEach((item) => {
 				const existing = itemsByPath.get(item.path);
 				if (!existing?.last_modified || item.last_modified)
 					itemsByPath.set(item.path, item);
@@ -98,15 +110,20 @@ export async function onRequest(context: SitemapContext) {
 		} catch (publicError) {
 			console.warn("Public sitemap items partial failure:", publicError);
 		}
-		return new Response(
+		const sitemap = new Response(
 			buildSitemapXml([...itemsByPath.values()], canonicalOrigin),
 			{
 				headers: {
-					"cache-control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
+					"cache-control": complete ? sitemapCacheControl : "no-store",
 					"content-type": "application/xml; charset=UTF-8",
+					"x-atoman-sitemap-status": complete ? "complete" : "partial",
 				},
 			},
 		);
+		if (complete && key && cache && context.waitUntil) {
+			queuePublicSitemapCache(key, sitemap, cache, (job) => context.waitUntil!(job));
+		}
+		return sitemap;
 	} catch (error) {
 		console.error("Sitemap generation error, falling back to static pages:", error);
 		return fallbackSitemap();

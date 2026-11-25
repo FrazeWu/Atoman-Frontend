@@ -77,14 +77,20 @@ describe('blog SEO Pages Functions', () => {
   })
 
   it('serves sitemap XML from backend data', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
-      data: [{ path: '/posts/post/post-1', last_modified: '2026-07-14T09:30:00Z' }],
-    }))))
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const path = new URL(String(input)).pathname
+      const data = path.endsWith('/blog/seo/sitemap')
+        ? [{ path: '/posts/post/post-1', last_modified: '2026-07-14T09:30:00Z' }]
+        : path.endsWith('/books/works') || path.endsWith('/books/booklists')
+          ? { items: [], total: 0 } : []
+      return new Response(JSON.stringify({ data }))
+    }))
 
     const response = await sitemapHandler({ request: new Request('https://atoman.org/sitemap.xml'), env: {} })
 
     expect(response.headers.get('content-type')).toContain('application/xml')
-    expect(response.headers.get('cache-control')).toContain('s-maxage=3600')
+    expect(response.headers.get('cache-control')).toContain('s-maxage=120')
+    expect(response.headers.get('x-atoman-sitemap-status')).toBe('complete')
     const xml = await response.text()
     expect(xml).toContain('<loc>https://www.atoman.org/</loc>')
     expect(xml).toContain('<loc>https://www.atoman.org/feed</loc>')

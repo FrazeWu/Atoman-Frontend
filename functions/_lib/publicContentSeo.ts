@@ -989,6 +989,13 @@ export function buildMissingPublicContentHtml(html: string) {
 type ListPage = {
 	items: Record<string, unknown>[];
 	hasMore: boolean;
+	complete: boolean;
+	total?: number;
+};
+
+type SitemapSourceResult = {
+	items: Record<string, unknown>[];
+	complete: boolean;
 };
 
 function list(payload: JsonValue): Record<string, unknown>[] {
@@ -1000,9 +1007,15 @@ function list(payload: JsonValue): Record<string, unknown>[] {
 function listPage(payload: JsonValue): ListPage {
 	const envelope = record(payload);
 	const meta = record(envelope?.meta);
+	const raw = unwrap(payload);
+	const items = list(payload);
 	return {
-		items: list(payload),
+		items,
 		hasMore: meta?.has_more === true,
+		complete: Array.isArray(raw) && raw.length === items.length &&
+			(meta?.has_more === undefined || typeof meta.has_more === "boolean"),
+		total: typeof meta?.total === "number" && Number.isSafeInteger(meta.total) && meta.total >= 0
+			? meta.total : undefined,
 	};
 }
 
@@ -1033,21 +1046,29 @@ async function fetchList(apiBase: string, path: string, fetcher: Fetcher) {
 	const pathUrl = new URL(path, "https://seo.atoman.invalid");
 	const firstPage = await fetchListPage(apiBase, path, fetcher);
 	const items = [...firstPage.items];
-	if (!firstPage.hasMore || !pathUrl.searchParams.has("page")) return items;
+	let complete = firstPage.complete;
+	const total = firstPage.total;
+	const isComplete = () => complete && (total === undefined || items.length === total);
+	if (!firstPage.hasMore) return { items, complete: isComplete() };
+	if (!pathUrl.searchParams.has("page")) return { items, complete: false };
 
 	let page = Number(pathUrl.searchParams.get("page")) || 1;
 	for (let requestCount = 0; requestCount < 100; requestCount += 1) {
 		page += 1;
 		const nextPage = await fetchListPage(apiBase, pagePath(path, page), fetcher);
 		items.push(...nextPage.items);
-		if (!nextPage.hasMore) break;
+		complete = complete && nextPage.complete &&
+			(total === undefined || nextPage.total === undefined || nextPage.total === total);
+		if (!nextPage.hasMore) return { items, complete: isComplete() };
 	}
-	return items;
+	// Preserve discovered URLs, but never cache a pagination-truncated map.
+	return { items, complete: false };
 }
 
 async function fetchBookCollection(apiBase: string, path: string, fetcher: Fetcher) {
 	const limit = 50;
 	const items: Record<string, unknown>[] = [];
+	let complete = true;
 	for (let page = 0; page < 100; page += 1) {
 		const response = await fetcher(`${apiBase}${path}?limit=${limit}&offset=${page * limit}`, {
 			headers: {
@@ -1061,15 +1082,19 @@ async function fetchBookCollection(apiBase: string, path: string, fetcher: Fetch
 		if (!payload || !Array.isArray(payload.items)) throw new Error("Malformed book sitemap source");
 		const pageItems = array(payload.items).map(record).filter((item): item is Record<string, unknown> => Boolean(item));
 		items.push(...pageItems);
-		if (pageItems.length < limit || (typeof payload.total === "number" && items.length >= payload.total)) break;
+		complete = complete && pageItems.length === payload.items.length;
+		const total = typeof payload.total === "number" && Number.isFinite(payload.total) && payload.total >= 0
+			? payload.total : undefined;
+		if (total !== undefined && items.length >= total) return { items, complete: complete && items.length === total };
+		if (pageItems.length < limit) return { items, complete: complete && total === undefined };
 	}
-	return items;
+	return { items, complete: false };
 }
 
-export async function collectPublicSitemapItems(
+export async function collectPublicSitemapResult(
 	apiBase: string,
 	fetcher: Fetcher = fetch,
-): Promise<SitemapItem[]> {
+): Promise<{ items: SitemapItem[]; complete: boolean }> {
 	const sources = await Promise.allSettled([
 		fetchList(apiBase, "/music/artists?page=1&page_size=1000", fetcher),
 		fetchList(apiBase, "/music/albums?page=1&page_size=1000", fetcher),
@@ -1082,7 +1107,7 @@ export async function collectPublicSitemapItems(
 	]);
 	const fulfilled = (index: number) =>
 		sources[index].status === "fulfilled"
-			? (sources[index] as PromiseFulfilledResult<Record<string, unknown>[]>).value
+			? (sources[index] as PromiseFulfilledResult<SitemapSourceResult>).value.items
 			: [];
 	const artists = fulfilled(0);
 	const albums = fulfilled(1);
@@ -1184,5 +1209,12 @@ export async function collectPublicSitemapItems(
 			});
 		}
 	});
-	return items;
+	return { items, complete: sources.every((source) => source.status === "fulfilled" && source.value.complete) };
+}
+
+export async function collectPublicSitemapItems(
+	apiBase: string,
+	fetcher: Fetcher = fetch,
+): Promise<SitemapItem[]> {
+	return (await collectPublicSitemapResult(apiBase, fetcher)).items;
 }

@@ -13,6 +13,8 @@
    <summary>本机协作草稿{{ otherDrafts.length?'（'+otherDrafts.length+'）':'' }}</summary>
    <p>仅备份未确认的修改，明文保存在当前浏览器，不上传云端。请勿在公共设备开启；关闭保护不会删除已有草稿。</p>
    <label><input type="checkbox" :checked="draftEnabled" :disabled="props.role==='viewer'" @change="toggleDraftProtection(($event.target as HTMLInputElement).checked)" /> 启用本机协作草稿保护</label>
+   <label v-if="view?.epoch&&props.role!=='viewer'"><input type="checkbox" :checked="view.offlineEnabled" :disabled="!draftEnabled||view.status==='stopped'" @change="toggleOffline(($event.target as HTMLInputElement).checked)" /> 允许重连期间离线编辑（需本机草稿保护）</label>
+   <p v-if="view?.offlineEditable">离线修改尚未提交；仅在原协作版本和权限验证通过后同步。重连失败、存储失败或超限时暂停编辑。</p>
    <p v-if="draftNotice" role="status">{{ draftNotice }}</p>
    <p v-if="!otherDrafts.length">当前文件没有其他会话留下的协作草稿。</p>
    <div v-for="row in otherDrafts" :key="collabDraftKey(row)" class="papers-collab__draft">
@@ -34,8 +36,8 @@
     <span class="papers-collab__dot" :style="{backgroundColor:peerColor(peer.connection_id)}" />{{ peer.name }}{{peer.connection_id===view.connectionId?'（我）':''}}
    </span>
   </div>
-  <p v-if="view?.text" class="papers-collab__hint">仅同步当前文件。协作期间暂停普通保存、编译和项目结构修改；断线时暂停编辑并尝试恢复原协作会话；开启本机协作草稿保护后可恢复未确认的修改；协作撤销尚未开放。</p>
-  <LatexEditor v-if="view?.text" :key="view.epoch" :model-value="view.source" :collaborative-text="view.text" :citations="citations" :readonly="!editable" :remote-peers="remotePeers" @presence-selection="selectionChanged" />
+  <p v-if="view?.text" class="papers-collab__hint">仅同步当前文件。协作期间暂停普通保存、编译和项目结构修改；断线默认暂停编辑并尝试恢复原协作会话；可选择离线编辑和本机草稿保护。撤销仅影响当前编辑器中的本地操作。</p>
+  <LatexEditor v-if="view?.text" :key="view.epoch" :model-value="view.source" :collaborative-text="view.text" :citations="citations" :readonly="!editable" :can-edit-collaboration="canEditNow" :remote-peers="remotePeers" @presence-selection="selectionChanged" />
   <p v-else class="papers-collab__empty">{{ message?'请退出协作，继续普通编辑。':'正在验证项目权限并读取服务端文档…' }}</p>
   <textarea v-if="copyFallback" readonly :value="view?.source||''" aria-label="可手动复制的协作源码" />
  </section>
@@ -61,10 +63,28 @@ const writerId=globalThis.crypto.randomUUID()
 const capabilityChecked=ref(false),draftEnabled=ref(false),draftSaved=ref(false),draftNotice=ref('')
 const draftRows=shallowRef<PaperCollaborationDraft[]>([]),selectedDraftKey=ref('')
 let ownBackup:PaperCollaborationDraft|null=null,recoveringBackup:PaperCollaborationDraft|null=null
+let suppressDraftSync=false
 const otherDrafts=computed(()=>draftRows.value.filter(row=>row.writerId!==writerId))
 const selectedDraft=computed(()=>otherDrafts.value.find(row=>collabDraftKey(row)===selectedDraftKey.value)||otherDrafts.value[0]||null)
 const scope=()=>!disposed&&auth.isAuthenticated&&auth.user?.uuid===props.accountId
-const editable=computed(()=>scope()&&view.value?.role!=='viewer'&&(view.value?.status==='ready'||view.value?.status==='saving'))
+const editable=computed(()=>scope()&&view.value?.role!=='viewer'&&
+ (view.value?.status==='ready'||view.value?.status==='saving'||(view.value?.offlineEditable&&draftEnabled.value)))
+const canEditNow=()=>scope()&&!!session?.canEdit()&&(!session.view.offlineEditable||draftEnabled.value)
+function toggleOffline(enabled:boolean){
+ if(!scope()||!session)return
+ if(enabled&&(!draftEnabled.value||!view.value?.epoch))return
+ if(enabled){
+  try{
+   // Probe write access without writing manuscript content.
+   const key='atoman.papers.collab-draft-probe:'+writerId
+   localStorage.setItem(key,'1');localStorage.removeItem(key)
+   if(view.value?.pending&&!draftSaved.value){
+    draftNotice.value='当前修改尚未完整备份，不能开启离线编辑。';return
+   }
+  }catch{draftNotice.value='本机存储不可用，不能开启离线编辑。';return}
+ }
+ session.setOfflineEditing(enabled)
+}
 const remotePeers=computed(()=>view.value?.peers.filter(p=>p.connection_id!==view.value?.connectionId)||[])
 const onlineCount=computed(()=>new Set(view.value?.peers.map(p=>p.user_id)||[]).size)
 function selectionChanged(selection:LocalSelection|null){if(scope())session?.setSelection(selection)}
@@ -72,7 +92,7 @@ const statusLabel=computed(()=>{
  const state=view.value
  if(message.value&&!state)return '不可用'
  if(!state||state.status==='connecting')return '连接中'
- if(state.status==='reconnecting')return '正在重连 · 暂停编辑'
+ if(state.status==='reconnecting')return state.offlineEditable?'正在重连 · 离线编辑（未提交）':'正在重连 · 暂停编辑'
  if(state.status==='stopped')return state.pending?'已断开 · 未确认修改':'已断开'
  if(state.role==='viewer')return '在线 · 只读'
  return state.pending?'正在同步…':'服务器已保存 · 版本 '+state.fileRevision
@@ -92,7 +112,7 @@ function compatible(row:PaperCollaborationDraft){
   view.value.status==='ready'&&!!session?.canRecoverDraft(row.payload)
 }
 function syncCollaborationDraft(next:CollaborationView){
- if(!scope()||!capabilityChecked.value)return
+ if(!scope()||!capabilityChecked.value||suppressDraftSync)return
  try{
   if(!next.pending){
    draftSaved.value=false
@@ -109,9 +129,9 @@ function syncCollaborationDraft(next:CollaborationView){
    return
   }
   draftEnabled.value=collaborationDraftEnabled(localStorage,props.accountId)
-  if(!draftEnabled.value){draftSaved.value=false;return}
+  if(!draftEnabled.value){draftSaved.value=false;session?.setOfflineEditing(false);return}
   const payload=session?.captureDraft()
-  if(!payload){draftSaved.value=false;return}
+  if(!payload){draftSaved.value=false;session?.setOfflineEditing(false);return}
   if(ownBackup&&JSON.stringify(ownBackup.payload)===JSON.stringify(payload)&&sameCollaborationDraft(localStorage,ownBackup)){
    draftSaved.value=true;return
   }
@@ -121,7 +141,8 @@ function syncCollaborationDraft(next:CollaborationView){
   ownBackup=row;draftSaved.value=true;draftNotice.value=''
  }catch{
   draftSaved.value=false
-  draftNotice.value='本机协作草稿备份失败（容量或浏览器限制）。请复制当前源码；已有备份不会自动删除。'
+  draftNotice.value='本机协作草稿备份失败（容量或浏览器限制）。离线编辑已暂停，请复制当前源码；已有备份不会自动删除。'
+  session?.setOfflineEditing(false)
  }
 }
 function toggleDraftProtection(enabled:boolean){
@@ -129,7 +150,7 @@ function toggleDraftProtection(enabled:boolean){
  try{
   setCollaborationDraftEnabled(localStorage,props.accountId,enabled)
   draftEnabled.value=enabled
-  if(!enabled)draftSaved.value=false
+  if(!enabled){draftSaved.value=false;session?.setOfflineEditing(false)}
   if(view.value)syncCollaborationDraft(view.value)
   if(!enabled||!view.value?.pending||draftSaved.value)draftNotice.value=enabled?'本机协作草稿保护已开启。':'保护已关闭，既有草稿保留。'
  }catch{draftNotice.value='无法更新本机保护设置。'}
@@ -158,9 +179,13 @@ function storageChanged(event:StorageEvent){
  if(event.key===null||event.key.startsWith('atoman.papers.collab-draft')){
   refreshDrafts()
   if(view.value?.pending){
-   // Do not recreate a draft that another tab explicitly deleted until
-   // another local edit occurs. Warn rather than overstate protection.
+   // Do not recreate a draft that another tab explicitly deleted as a
+   // side effect of publishing the new offline-edit permission.
    try{draftSaved.value=!!ownBackup&&draftEnabled.value&&sameCollaborationDraft(localStorage,ownBackup)}catch{draftSaved.value=false}
+  }
+  if(!draftEnabled.value||(view.value?.pending&&!draftSaved.value)){
+   suppressDraftSync=true
+   try{session?.setOfflineEditing(false)}finally{suppressDraftSync=false}
   }
  }
 }

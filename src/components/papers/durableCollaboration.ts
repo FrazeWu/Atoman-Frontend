@@ -20,6 +20,8 @@ export interface CollaborationView {
  message: string
  peers: readonly CollaborationPeer[]
  connectionId: string
+ offlineEditable: boolean
+ offlineEnabled: boolean
 }
 const PROTOCOL='papers-crdt-v1'
 const MAX_UPDATE=256*1024
@@ -127,13 +129,30 @@ export class DurablePaperCollaboration {
  private destroyed=false
  private unconfirmed=false
  private draftReplayable=true
+ private offlineEnabled=false
  private state:CollaborationView={
-  status:'connecting',text:null,source:'',role:null,pending:false,epoch:'',sequence:0,fileRevision:0,projectRevision:0,message:'',peers:[],connectionId:''
+  status:'connecting',text:null,source:'',role:null,pending:false,epoch:'',sequence:0,fileRevision:0,projectRevision:0,message:'',peers:[],connectionId:'',offlineEditable:false,offlineEnabled:false
  }
  constructor(private readonly options:Options){
   this.doc.on('update',this.localUpdate)
  }
- get view():CollaborationView {return {...this.state}}
+ get view():CollaborationView {return {...this.state,offlineEnabled:this.offlineEnabled,offlineEditable:this.canEditOffline()}}
+ private canEditOffline():boolean{
+  return !this.destroyed&&this.offlineEnabled&&!!this.state.epoch&&
+   this.awaitingCheckpoint&&this.state.status==='reconnecting'&&
+   (this.state.role==='owner'||this.state.role==='editor')
+ }
+ canEdit():boolean{
+  return !this.destroyed&&(this.state.role==='owner'||this.state.role==='editor')&&
+   ((!this.awaitingCheckpoint&&(this.state.status==='ready'||this.state.status==='saving'))||this.canEditOffline())
+ }
+ setOfflineEditing(enabled:boolean){
+  const next=!!enabled&&!!this.options.reconnect&&!!this.state.epoch&&
+   (this.state.role==='owner'||this.state.role==='editor')&&this.state.status!=='stopped'
+  if(this.offlineEnabled===next)return
+  this.offlineEnabled=next
+  this.publish()
+ }
  private publish(){
   if(this.destroyed)return
   this.state.source=this.text.toString()
@@ -214,6 +233,7 @@ export class DurablePaperCollaboration {
   this.clearTimers()
   this.detachSocket()
   this.awaitingCheckpoint=false
+  this.offlineEnabled=false
   this.state.peers=[];this.state.connectionId=''
   this.state.status='stopped'
   this.state.message=message
@@ -224,7 +244,8 @@ export class DurablePaperCollaboration {
   this.unconfirmed=true
   // Protect edits that slip in during a reactive read-only transition.
   // Never send them after a stop or role downgrade.
-  if(!this.state.epoch||this.awaitingCheckpoint||this.state.status==='connecting'||this.state.status==='reconnecting'||this.state.status==='stopped'||this.state.role==='viewer'){
+  const offline=this.canEditOffline()
+  if(!this.canEdit()){
    this.draftReplayable=false
    this.stop('当前协作会话不可写，未发送本地修改。')
    this.publish()
@@ -235,9 +256,9 @@ export class DurablePaperCollaboration {
    const merged=this.queued?Y.mergeUpdates([this.queued,update]):update.slice()
    if(merged.length>MAX_UPDATE)throw Error('update too large')
    this.queued=merged
-   this.state.status='saving'
+   if(!offline)this.state.status='saving'
    this.publish()
-   this.scheduleSend()
+   if(!offline)this.scheduleSend()
   }catch{this.draftReplayable=false;this.stop('本次协作修改超过容量限制。请复制当前源码后处理。')}
  }
  setSelection(selection:LocalSelection|null){

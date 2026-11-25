@@ -2,6 +2,8 @@
   <div class="papers-latex-editor">
     <div class="latex-editor-tools">
       <button type="button" title="Ctrl/Cmd + F" @click="find">查找替换</button>
+      <button v-if="collaborativeText" type="button" title="Ctrl/Cmd + Z" :disabled="readonly||!canUndo" @click="runUndo(false)">撤销</button>
+      <button v-if="collaborativeText" type="button" title="Ctrl/Cmd + Shift + Z" :disabled="readonly||!canRedo" @click="runUndo(true)">重做</button>
       <button type="button" title="Ctrl + Space" :disabled="readonly" @click="complete">命令补全</button>
       <span>{{ position }}</span>
     </div>
@@ -11,21 +13,48 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Compartment, EditorState, StateEffect, StateField } from '@codemirror/state'
+import { Compartment, EditorState, Prec, StateEffect, StateField } from '@codemirror/state'
 import { EditorView, Decoration, type DecorationSet, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import {openSearchPanel} from '@codemirror/search'
 import {startCompletion} from '@codemirror/autocomplete'
 import {latexExtensionsFor} from './latexLanguage'
-import type {Text as YText} from 'yjs'
-import {yCollab} from 'y-codemirror.next'
+import {UndoManager,type Text as YText} from 'yjs'
+import {yCollab,ySyncFacet,ySyncAnnotation} from 'y-codemirror.next'
 import {remoteCursorDecorations,type CollaborationPeer,type LocalSelection} from './paperPresence'
 
-const props = defineProps<{ modelValue: string; readonly?: boolean; citations?: readonly string[]; collaborativeText?: YText; remotePeers?: readonly CollaborationPeer[] }>()
+const props = defineProps<{ modelValue: string; readonly?: boolean; citations?: readonly string[]; collaborativeText?: YText; remotePeers?: readonly CollaborationPeer[]; canEditCollaboration?:()=>boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string]; 'show-pdf': []; 'cursor-line': [line:number]; 'presence-selection':[selection:LocalSelection|null] }>()
 const editorRoot = ref<HTMLElement | null>(null)
 let editor: EditorView | null = null
 let applyingExternalValue = false
+let undoManager:UndoManager|null=null
+const canUndo=ref(false),canRedo=ref(false)
+function refreshUndo(){
+ // Keep the number of retained undo groups bounded. Clearing releases
+ // retained deleted structs; it never changes the document.
+ if(undoManager&&undoManager.undoStack.length+undoManager.redoStack.length>100){
+  undoManager.clear()
+ }
+ canUndo.value=!!undoManager?.undoStack.length
+ canRedo.value=!!undoManager?.redoStack.length
+}
+function runUndo(redo:boolean):boolean{
+ if(!editor||!undoManager||props.readonly||editor.state.readOnly||props.canEditCollaboration?.()===false)return false
+ undoManager.stopCapturing()
+ if(redo)undoManager.redo()
+ else undoManager.undo()
+ undoManager.stopCapturing()
+ refreshUndo()
+ editor.focus()
+ return true
+}
+function undoCommand(redo:boolean):boolean{
+ runUndo(redo)
+ // Consume browser history commands even when read-only, never fall
+ // through to an unguarded native or ordinary full-text undo.
+ return true
+}
 const position=ref("行 1，列 1")
 function find(){if(editor)openSearchPanel(editor)}
 function complete(){if(editor&&!props.readonly){editor.focus();startCompletion(editor)}}
@@ -61,7 +90,28 @@ onMounted(() => {
         lineNumbers(),
         highlightActiveLine(),
         drawSelection(),
-        ...(props.collaborativeText?[EditorState.lineSeparator.of('\n'), yCollab(props.collaborativeText,null,{undoManager:false}),remoteCursors]:[history()]),
+        ...(props.collaborativeText?[EditorState.lineSeparator.of('\n'), yCollab(props.collaborativeText,null,{undoManager:false}),remoteCursors,
+          EditorState.transactionFilter.of(transaction=>{
+           // The reactive readonly prop can lag a socket policy close by
+           // one render. Refuse local changes immediately, but continue
+           // applying authoritative Yjs updates to a read-only editor.
+           if(transaction.docChanged&&transaction.annotation(ySyncAnnotation)!==transaction.startState.facet(ySyncFacet)&&
+              (transaction.startState.readOnly||props.canEditCollaboration?.()===false))return []
+           return transaction
+          }),
+          Prec.highest(keymap.of([
+           {key:'Mod-z',run:()=>undoCommand(false),preventDefault:true},
+           {key:'Mod-y',mac:'Mod-Shift-z',run:()=>undoCommand(true),preventDefault:true},
+           {key:'Mod-Shift-z',run:()=>undoCommand(true),preventDefault:true},
+          ])),
+          EditorView.domEventHandlers({beforeinput:event=>{
+           if(event.inputType==='historyUndo'||event.inputType==='historyRedo'){
+            event.preventDefault()
+            return undoCommand(event.inputType==='historyRedo')
+           }
+           return false
+          }})
+        ]:[history()]),
         keymap.of([{key:'Mod-Shift-j',run:()=>{emit('show-pdf');return true}}, ...defaultKeymap, ...(props.collaborativeText?[]:historyKeymap), indentWithTab]),
         ...latexExtensionsFor(()=>props.citations||[]),
         EditorView.lineWrapping,
@@ -74,6 +124,18 @@ onMounted(() => {
       ],
     }),
   })
+  if(props.collaborativeText){
+   // Only this editor's sync origin enters undo history. Server updates,
+   // restored drafts and other editors' changes never enter the stack.
+   undoManager=new UndoManager(props.collaborativeText,{
+    trackedOrigins:new Set([editor.state.facet(ySyncFacet)]),
+    captureTimeout:500,
+   })
+   for(const event of ['stack-item-added','stack-item-popped','stack-item-cleared','stack-item-updated'] as const){
+    undoManager.on(event,refreshUndo)
+   }
+   refreshUndo()
+  }
   updateRemoteCursors()
 })
 
@@ -109,13 +171,13 @@ function goToMatch(number:number,column:number,length:number){
  editor.focus()
 }
 function insertCitation(key:string){
- if(!editor||props.readonly||!key||/[\\{}%,\s]/.test(key))return
+ if(!editor||props.readonly||props.canEditCollaboration?.()===false||!key||/[\\{}%,\s]/.test(key))return
  editor.dispatch(editor.state.replaceSelection('\\cite{'+key+'}'))
  editor.focus()
 }
 // Insert at the active end of the selection, preserving all selected text.
 function insertBlock(block:string):boolean{
- if(!editor||props.readonly||!block.trim())return false
+ if(!editor||props.readonly||props.canEditCollaboration?.()===false||!block.trim())return false
  const pos=editor.state.selection.main.head,doc=editor.state.doc
  const before=pos>0&&doc.sliceString(pos-1,pos)!=='\n'?'\n':''
  const after=pos<doc.length&&doc.sliceString(pos,pos+1)==='\n'?'':'\n'
@@ -124,9 +186,11 @@ function insertBlock(block:string):boolean{
  editor.focus()
  return true
 }
-defineExpose({getLine,goToLine,goToMatch,insertCitation,insertBlock})
+defineExpose({getLine,goToLine,goToMatch,insertCitation,insertBlock,runUndo})
 
 onBeforeUnmount(() => {
+  undoManager?.destroy()
+  undoManager=null
   editor?.destroy()
   editor = null
 })

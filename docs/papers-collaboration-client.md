@@ -133,3 +133,30 @@ does not delete its backup. The browser's own local-data policy
 Offline typing, server-to-client differential downloads and collaborative
 undo remain out of scope. The prototype keeps editing paused during
 transport loss, and production collaboration stays disabled.
+
+## Stage 8.4C: local-only undo and bounded offline editing
+
+The collaborative CodeMirror instance has its own Yjs UndoManager,
+tracking only that instance's synchronization origin. Server checkpoints,
+other members' edits and restored drafts are never undo-history entries.
+Undo and redo are available via toolbar, keyboard and native history
+events; the same immediate session/role/read-only guard covers all
+entry points. Undo itself emits an ordinary Yjs delta and receives
+the same authoritative acknowledgement as any other edit. History is
+not persisted across panels, is grouped within 500 ms, and is cleared
+rather than retaining an unbounded number of groups (100-group cap).
+Ordinary non-collaborative editor history is unchanged.
+
+Offline typing is explicitly opted in per open panel, requires enabled
+and writable local collaboration-draft protection, and is allowed
+only inside the bounded same-epoch reconnect window. It never sends
+updates, cursor messages or ordinary full-file saves before a fresh
+authorized checkpoint. Pending edits use the existing bounded queue,
+draft vault and request IDs. The UI distinguishes offline editing
+from server acknowledgement. Storage failure, backup deletion/opt-out,
+an epoch or role mismatch, policy closure, capacity overflow or exhausted
+reconnect attempts freezes further editing; copy/recovery remains
+available subject to the existing local-data constraints. A disconnected
+client cannot know about a server-side permission change until reconnect,
+so local edits are not authorization to publish. Unlimited disconnected
+editing and cross-epoch replay are intentionally not supported.

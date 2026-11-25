@@ -378,3 +378,105 @@ it('publishes the original request ID to the backup callback before sending byte
   expect(socket.sent).toHaveLength(1)
  }finally{session.destroy();server.destroy()}
 })
+
+describe('Explicitly opted-in offline editing',()=>{
+ function setup(role:'owner'|'editor'|'viewer'='editor'){
+  vi.useFakeTimers()
+  const server=new Y.Doc(),source=server.getText('source')
+  source.insert(0,'abcdef')
+  const sockets:Socket[]=[]
+  const session=new DurablePaperCollaboration({
+   url:'ws://localhost/fixture',expectedRole:role,reconnect:true,
+   createSocket:()=>{const socket=new Socket();sockets.push(socket);return socket},onChange:vi.fn(),
+  })
+  const frame=(sequence:number,request_id?:string):CollaborationStateFrame=>({
+   type:'state',protocol:'papers-crdt-v1',epoch,sequence,file_revision:sequence,project_revision:sequence,role,
+   state:encode(Y.encodeStateAsUpdate(server)),vector:encode(Y.encodeStateVector(server)),...(request_id?{request_id}:{})
+  })
+  session.start();sockets[0]!.push(frame(1))
+  return {session,server,source,sockets,frame,cleanup:()=>{session.destroy();server.destroy()}}
+ }
+ it('queues offline edits without sending until a fresh same-epoch checkpoint, then merges both authors',()=>{
+  const f=setup()
+  try{
+   expect(f.session.view.offlineEnabled).toBe(false)
+   f.session.setOfflineEditing(true)
+   const first=f.sockets[0]!
+   f.session.view.text!.insert(0,'online ')
+   vi.advanceTimersByTime(200)
+   const sent=first.sent[0]!,m=JSON.parse(sent)
+   first.disconnect()
+   expect(f.session.view.offlineEditable).toBe(true)
+   expect(f.session.canEdit()).toBe(true)
+   f.session.view.text!.insert(f.session.view.text!.length,' offline')
+   expect(f.session.view.status).toBe('reconnecting')
+   expect(f.session.view.pending).toBe(true)
+   expect(f.session.captureDraft()?.queued).toBeTruthy()
+   vi.advanceTimersByTime(750)
+   const second=f.sockets[1]!
+   expect(second.sent).toHaveLength(0)
+   f.session.view.text!.insert(f.session.view.text!.length,' edits')
+   vi.advanceTimersByTime(200)
+   expect(second.sent).toHaveLength(0)
+   f.source.insert(f.source.length,' remote')
+   second.push(f.frame(2))
+   vi.advanceTimersByTime(200)
+   expect(second.sent[0]).toBe(sent)
+   Y.applyUpdate(f.server,decode(m.update));second.push(f.frame(3,m.request_id))
+   vi.advanceTimersByTime(200)
+   const queued=JSON.parse(second.sent[1]!)
+   Y.applyUpdate(f.server,decode(queued.update));second.push(f.frame(4,queued.request_id))
+   expect(f.session.view.source).toBe(f.source.toString())
+   expect(f.source.toString()).toContain('offline edits')
+   expect(f.source.toString()).toContain(' remote')
+   expect(f.session.view.pending).toBe(false)
+  }finally{f.cleanup()}
+ })
+ it('disables editing after explicit policy rejection, wrong epoch or exhausted reconnect attempts',()=>{
+  const f=setup()
+  try{
+   f.session.setOfflineEditing(true);f.sockets[0]!.disconnect()
+   f.session.view.text!.insert(0,'offline ')
+   vi.advanceTimersByTime(750)
+   f.sockets[1]!.push({...f.frame(2),epoch:another})
+   expect(f.session.canEdit()).toBe(false)
+   expect(f.session.view.offlineEditable).toBe(false)
+   expect(f.session.captureDraft()?.source).toBe('offline abcdef')
+   vi.advanceTimersByTime(2000)
+   expect(f.sockets[1]!.sent).toHaveLength(0)
+  }finally{f.cleanup()}
+  const p=setup()
+  try{
+   p.session.setOfflineEditing(true);p.sockets[0]!.disconnect(1008)
+   expect(p.session.canEdit()).toBe(false)
+   vi.advanceTimersByTime(60000);expect(p.sockets).toHaveLength(1)
+  }finally{p.cleanup()}
+  const g=setup()
+  try{
+   g.session.setOfflineEditing(true)
+   for(let i=0;i<5;i++){
+    g.sockets.at(-1)!.disconnect()
+    vi.advanceTimersByTime(Math.min(750*2**i,6000))
+   }
+   g.sockets.at(-1)!.disconnect()
+   expect(g.session.view.status).toBe('stopped')
+   expect(g.session.canEdit()).toBe(false)
+  }finally{g.cleanup()}
+ })
+ it('stays read-only by default, rejects viewer opt-in and honors disabling while disconnected',()=>{
+  const f=setup()
+  try{
+   f.sockets[0]!.disconnect()
+   expect(f.session.canEdit()).toBe(false)
+   f.session.setOfflineEditing(true);expect(f.session.canEdit()).toBe(true)
+   f.session.setOfflineEditing(false);expect(f.session.canEdit()).toBe(false)
+  }finally{f.cleanup()}
+  const v=setup('viewer')
+  try{
+   v.session.setOfflineEditing(true)
+   v.sockets[0]!.disconnect()
+   expect(v.session.view.offlineEnabled).toBe(false)
+   expect(v.session.canEdit()).toBe(false)
+  }finally{v.cleanup()}
+ })
+})

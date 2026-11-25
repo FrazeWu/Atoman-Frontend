@@ -82,3 +82,52 @@ describe('Papers remote cursor rendering',()=>{
   }finally{wrapper.unmount();doc.destroy()}
  })
 })
+
+describe('Local-only collaborative undo',()=>{
+ it('undoes and redoes only this editor changes while preserving remote insertions and deletions',async()=>{
+  const doc=new Y.Doc(),peer=new Y.Doc(),text=markRaw(doc.getText('source'))
+  text.insert(0,'server text')
+  const wrapper=mount(LatexEditor,{props:{modelValue:text.toString(),collaborativeText:text,readonly:false}})
+  try{
+   const editor=wrapper.vm as unknown as {goToMatch:(line:number,col:number,len:number)=>void;insertBlock:(value:string)=>boolean;runUndo:(redo:boolean)=>boolean}
+   Y.applyUpdate(peer,Y.encodeStateAsUpdate(doc))
+   editor.goToMatch(1,1,0)
+   expect(editor.insertBlock('local')).toBe(true)
+   const other=peer.getText('source')
+   other.insert(other.length,' remote')
+   other.delete(0,1)
+   Y.applyUpdate(doc,Y.encodeStateAsUpdate(peer),'server')
+   await nextTick()
+   expect(text.toString()).toBe('local\nerver text remote')
+   expect(editor.runUndo(false)).toBe(true)
+   expect(text.toString()).toBe('erver text remote')
+   expect(editor.runUndo(true)).toBe(true)
+   expect(text.toString()).toBe('local\nerver text remote')
+   expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+   await wrapper.setProps({readonly:true})
+   expect(editor.runUndo(false)).toBe(false)
+   expect(text.toString()).toBe('local\nerver text remote')
+  }finally{wrapper.unmount();doc.destroy();peer.destroy()}
+ })
+ it('never tracks restored or remote transactions and blocks undo immediately on a session fence',async()=>{
+  const doc=new Y.Doc(),text=markRaw(doc.getText('source'))
+  text.insert(0,'initial')
+  let authorized=true
+  const wrapper=mount(LatexEditor,{props:{modelValue:text.toString(),collaborativeText:text,readonly:false,canEditCollaboration:()=>authorized}})
+  try{
+   const editor=wrapper.vm as unknown as {goToMatch:(line:number,col:number,len:number)=>void;insertBlock:(value:string)=>boolean;runUndo:(redo:boolean)=>boolean}
+   text.insert(0,'recovered ')
+   await nextTick()
+   expect(wrapper.findAll('button').find(b=>b.text()==='撤销')?.attributes('disabled')).toBeDefined()
+   editor.goToMatch(1,1,0);expect(editor.insertBlock('local')).toBe(true)
+   const edited=text.toString()
+   authorized=false
+   expect(editor.runUndo(false)).toBe(false)
+   expect(editor.insertBlock('forbidden')).toBe(false)
+   expect(text.toString()).toBe(edited)
+   authorized=true
+   expect(editor.runUndo(false)).toBe(true)
+   expect(text.toString()).toBe('recovered initial')
+  }finally{wrapper.unmount();doc.destroy()}
+ })
+})

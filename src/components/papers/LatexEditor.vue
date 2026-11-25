@@ -131,7 +131,7 @@ onMounted(() => {
     trackedOrigins:new Set([editor.state.facet(ySyncFacet)]),
     captureTimeout:500,
    })
-   for(const event of ['stack-item-added','stack-item-popped','stack-item-cleared','stack-item-updated'] as const){
+   for(const event of ['stack-item-added','stack-item-popped','stack-cleared','stack-item-updated'] as const){
     undoManager.on(event,refreshUndo)
    }
    refreshUndo()

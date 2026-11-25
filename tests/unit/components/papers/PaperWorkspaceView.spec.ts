@@ -4,7 +4,7 @@ import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
 import { defineComponent, h, nextTick } from 'vue'
 import LatexEditor from "@/components/papers/LatexEditor.vue"
 import PaperWorkspaceView from '@/views/papers/PaperWorkspaceView.vue'
-import { managePaperFiles, savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile } from '@/api/papers'
+import { managePaperFiles, savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, listPaperFileVersions, getPaperFileVersion } from '@/api/papers'
 
 vi.mock('@/api/papers', () => ({
   getPaperProject: vi.fn(),
@@ -13,6 +13,8 @@ vi.mock('@/api/papers', () => ({
   savePaperFile: vi.fn(),
   createPaperFile: vi.fn(),
   managePaperFiles: vi.fn(),
+  listPaperFileVersions: vi.fn(),
+  getPaperFileVersion: vi.fn(),
   getPaperProjectZIP: vi.fn(),
   downloadPaperZIP: vi.fn(),
   getPaperCompileCapability: vi.fn().mockResolvedValue({ enabled: false, pdf_available: false }),
@@ -23,8 +25,9 @@ vi.mock('@/api/papers', () => ({
   cancelPaperCompile: vi.fn(),
 }))
 const jumpLine=vi.hoisted(()=>vi.fn())
+const jumpMatch=vi.hoisted(()=>vi.fn())
 vi.mock('@/components/papers/LatexEditor.vue', () => ({
-  default: { props: ['modelValue','readonly'], emits:['update:modelValue','show-pdf'], methods:{goToLine:jumpLine,getLine:()=>1}, template: '<pre data-test="editor" :data-readonly="String(readonly)">{{ modelValue }}</pre>' },
+  default: { props: ['modelValue','readonly'], emits:['update:modelValue','show-pdf'], methods:{goToLine:jumpLine,goToMatch:jumpMatch,getLine:()=>1}, template: '<pre data-test="editor" :data-readonly="String(readonly)">{{ modelValue }}</pre>' },
 }))
 
 vi.mock('@/components/papers/PaperPDFPreview.vue', () => ({
@@ -302,4 +305,88 @@ describe('Papers file management actions',()=>{
    expect(w.find('[data-test="editor"]').text()).toBe('Current source')
   }finally{vi.unstubAllGlobals();w.unmount()}
  })
+})
+
+describe('Papers phase two workspace tools', () => {
+  async function workspace(){
+    vi.mocked(getPaperProject).mockResolvedValue({...two} as never)
+    vi.mocked(listPaperFiles).mockResolvedValue([{...f2}] as never)
+    vi.mocked(getPaperFile).mockResolvedValue({...f2} as never)
+    const router=createRouter({history:createMemoryHistory(),routes:[{path:'/papers/:projectId',component:PaperWorkspaceView},{path:'/papers',component:{template:'<div />'}}]})
+    await router.push('/papers/two');await router.isReady()
+    const wrapper=mount(defineComponent({render:()=>h(RouterView)}),{global:{plugins:[router]}})
+    await flushPromises()
+    return wrapper
+  }
+  it('finds project text and jumps to the saved line', async()=>{
+    const wrapper=await workspace()
+    try{
+      await wrapper.findAll('button').find(b=>b.text()==='全项目搜索')!.trigger('click')
+      await flushPromises()
+      await wrapper.find('input[placeholder="输入源码或关键字"]').setValue('source')
+      expect(wrapper.text()).toContain('1 处匹配')
+      const hit=wrapper.findAll('button').find(b=>b.text().includes('main.tex:1:9'))!
+      await hit.trigger('click');await flushPromises()
+      expect(jumpMatch).toHaveBeenCalledWith(1,9,6)
+    }finally{wrapper.unmount()}
+  })
+  it('previews saved history with original source and compares against the current file', async()=>{
+    vi.mocked(listPaperFileVersions).mockResolvedValue([{revision:1,path:'main.tex',sha256:'',created_at:'2026-11-24T00:00:00Z'}])
+    vi.mocked(getPaperFileVersion).mockResolvedValue({file_id:'f2',revision:1,path:'main.tex',sha256:'',content:'Old text',created_at:'2026-11-24T00:00:00Z'})
+    const wrapper=await workspace()
+    try{
+      await wrapper.findAll('button').find(b=>b.text()==='版本历史')!.trigger('click');await flushPromises()
+      expect(listPaperFileVersions).toHaveBeenCalledWith('two','f2',undefined)
+      await wrapper.findAll('button').find(b=>b.text().includes('版本 1 · 当前'))!.trigger('click');await flushPromises()
+      expect(wrapper.findAll('textarea').map(t=>(t.element as HTMLTextAreaElement).value)).toEqual(['Old text','Current source'])
+      expect(wrapper.text()).toContain('差异范围')
+    }finally{wrapper.unmount()}
+  })
+
+  it('applies confirmed project replacements as one revision-bound operation', async()=>{
+    const wrapper=await workspace()
+    vi.stubGlobal('confirm',vi.fn(()=>true))
+    const updated={...f2,revision:2,content:'Current text'}
+    vi.mocked(managePaperFiles).mockImplementation(async()=>{
+      vi.mocked(getPaperFile).mockResolvedValue(updated as never)
+      return {project:{...two,head_revision:2},files:[updated]} as never
+    })
+    try{
+      await wrapper.findAll('button').find(b=>b.text()==='全项目搜索')!.trigger('click');await flushPromises()
+      await wrapper.get('input[placeholder="输入源码或关键字"]').setValue('source')
+      await wrapper.get('input[placeholder="留空表示删除匹配文字"]').setValue('text')
+      await wrapper.findAll('button').find(b=>b.text()==='全部替换')!.trigger('click');await flushPromises()
+      expect(managePaperFiles).toHaveBeenCalledWith('two',{action:'replace_text',base_revision:1,replacements:[{file_id:'f2',base_revision:1,content:'Current text'}]})
+      expect(wrapper.find('[data-test="editor"]').text()).toBe('Current text')
+    }finally{vi.unstubAllGlobals();wrapper.unmount()}
+  })
+  it('restores a historical source by writing a new revision',async()=>{
+    const wrapper=await workspace()
+    vi.stubGlobal('confirm',vi.fn(()=>true))
+    vi.mocked(listPaperFileVersions).mockResolvedValue([{revision:1,path:'main.tex',sha256:'',created_at:'2026-11-24T00:00:00Z'}])
+    vi.mocked(getPaperFileVersion).mockResolvedValue({file_id:'f2',revision:1,path:'main.tex',sha256:'',content:'Old text',created_at:'2026-11-24T00:00:00Z'})
+    vi.mocked(savePaperFile).mockResolvedValue({...f2,revision:2,project_head_revision:2,content:'Old text'} as never)
+    try{
+      await wrapper.findAll('button').find(b=>b.text()==='版本历史')!.trigger('click');await flushPromises()
+      await wrapper.findAll('button').find(b=>b.text().includes('版本 1 · 当前'))!.trigger('click');await flushPromises()
+      await wrapper.findAll('button').find(b=>b.text()==='恢复源码为此版本')!.trigger('click');await flushPromises()
+      expect(savePaperFile).toHaveBeenCalledWith('two','f2','Old text',1)
+      expect(wrapper.find('[data-test="editor"]').text()).toBe('Old text')
+    }finally{vi.unstubAllGlobals();wrapper.unmount()}
+  })
+  it('retains a transiently unsaved draft and retries when connectivity returns',async()=>{
+    const wrapper=await workspace()
+    vi.mocked(savePaperFile).mockRejectedValueOnce(new Error('network unavailable')).mockResolvedValueOnce({...f2,revision:2,project_head_revision:2,content:'Offline draft'} as never)
+    try{
+      wrapper.findComponent(LatexEditor).vm.$emit('update:modelValue','Offline draft')
+      await nextTick()
+      await wrapper.findAll('button').find(b=>b.text()==='保存')!.trigger('click');await flushPromises()
+      expect(wrapper.text()).toContain('恢复连接后将尝试保存')
+      expect(wrapper.find('[data-test="editor"]').text()).toBe('Offline draft')
+      window.dispatchEvent(new Event('online'));await flushPromises()
+      expect(savePaperFile).toHaveBeenCalledTimes(2)
+      expect(wrapper.text()).not.toContain('恢复连接后将尝试保存')
+      expect(wrapper.text()).toContain('已保存')
+    }finally{wrapper.unmount()}
+  })
 })

@@ -16,9 +16,9 @@ import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } f
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import {openSearchPanel} from '@codemirror/search'
 import {startCompletion} from '@codemirror/autocomplete'
-import {latexExtensions} from './latexLanguage'
+import {latexExtensionsFor} from './latexLanguage'
 
-const props = defineProps<{ modelValue: string; readonly?: boolean }>()
+const props = defineProps<{ modelValue: string; readonly?: boolean; citations?: readonly string[] }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string]; 'show-pdf': []; 'cursor-line': [line:number] }>()
 const editorRoot = ref<HTMLElement | null>(null)
 let editor: EditorView | null = null
@@ -40,7 +40,7 @@ onMounted(() => {
         drawSelection(),
         history(),
         keymap.of([{key:'Mod-Shift-j',run:()=>{emit('show-pdf');return true}}, ...defaultKeymap, ...historyKeymap, indentWithTab]),
-        ...latexExtensions,
+        ...latexExtensionsFor(()=>props.citations||[]),
         EditorView.lineWrapping,
         readonlyCompartment.of([EditorState.readOnly.of(Boolean(props.readonly)),EditorView.editable.of(!props.readonly)]),
         EditorView.updateListener.of((update) => {
@@ -73,7 +73,20 @@ function goToLine(number:number){
  editor.dispatch({selection:{anchor:line.from,head:line.to},effects:EditorView.scrollIntoView(line.from,{y:'center'})})
  editor.focus()
 }
-defineExpose({getLine,goToLine})
+function goToMatch(number:number,column:number,length:number){
+ if(!editor)return
+ const line=editor.state.doc.line(Math.max(1,Math.min(editor.state.doc.lines,Math.trunc(number)||1)))
+ const from=Math.max(line.from,Math.min(line.to,line.from+Math.max(0,column-1)))
+ const to=Math.max(from,Math.min(line.to,from+Math.max(0,length)))
+ editor.dispatch({selection:{anchor:from,head:to},effects:EditorView.scrollIntoView(from,{y:'center'})})
+ editor.focus()
+}
+function insertCitation(key:string){
+ if(!editor||props.readonly||!key||/[\\{}%,\s]/.test(key))return
+ editor.dispatch(editor.state.replaceSelection('\\cite{'+key+'}'))
+ editor.focus()
+}
+defineExpose({getLine,goToLine,goToMatch,insertCitation})
 
 onBeforeUnmount(() => {
   editor?.destroy()

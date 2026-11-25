@@ -25,18 +25,21 @@ const highlights=HighlightStyle.define([
 ])
 const commands=['documentclass','usepackage','begin','end','title','author','date','maketitle','abstract','section','subsection','subsubsection','paragraph','chapter','appendix','label','ref','eqref','autoref','cref','Cref','cite','citep','citet','bibliography','bibliographystyle','input','include','includegraphics','graphicspath','caption','textbf','textit','emph','texttt','footnote','url','href','frac','sqrt','sum','prod','int','mathbb','mathbf','mathcal','left','right','alpha','beta','gamma','delta','lambda','theta','sigma','toprule','midrule','bottomrule','multicolumn','multirow','hline','item','newcommand','renewcommand','newtheorem','textcolor']
 const environments=['document','abstract','figure','figure*','table','table*','tabular','tabularx','equation','equation*','align','align*','gather','multline','itemize','enumerate','description','algorithm','algorithmic','proof','theorem','lemma','definition','minipage','center','quote','verbatim']
-function complete(context:CompletionContext){
+function complete(context:CompletionContext, citations:readonly string[]=[]){
+ const cite=context.matchBefore(/\\(?:cite[a-zA-Z]*|parencite|textcite|autocite|nocite)\*?\{[^{}\n]*$/)
+ if(cite){const tail=cite.text.slice(Math.max(cite.text.lastIndexOf('{'),cite.text.lastIndexOf(','))+1);const key=tail.trimStart();return {from:context.pos-key.length,options:citations.map(label=>({label,type:'constant'})),validFor:/^[^\s,{}%]*$/}}
  const env=context.matchBefore(/\\(?:begin|end)\{[A-Za-z*]*$/)
  if(env){const from=env.from+env.text.indexOf('{')+1;return {from,options:environments.map(label=>({label,type:'type'})),validFor:/^[A-Za-z*]*$/}}
  const cmd=context.matchBefore(/\\[A-Za-z@]*$/)
  if(!cmd)return null
  return {from:cmd.from+1,options:commands.map(label=>({label,type:'keyword'})),validFor:/^[A-Za-z@]*$/}
 }
-export const latexExtensions=[
+export function latexExtensionsFor(citations:()=>readonly string[]=()=>[]){return [
  language,syntaxHighlighting(highlights),bracketMatching(),closeBrackets(),indentOnInput(),
- autocompletion({override:[complete],activateOnTyping:true}),search({top:true}),
+ autocompletion({override:[context=>complete(context,citations())],activateOnTyping:true}),search({top:true}),
  keymap.of([...closeBracketsKeymap,...searchKeymap])
-]
+]}
+export const latexExtensions=latexExtensionsFor()
 
 export type LatexHeading={title:string;level:number;line:number}
 export function latexHeadings(source:string):LatexHeading[]{

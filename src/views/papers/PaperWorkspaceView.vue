@@ -52,13 +52,57 @@
           <button type="button" class="papers-workspace__sync" title="定位当前源码行对应的 PDF 内容 (Ctrl/Cmd+Shift+J)" :disabled="!syncReady || activeFile?.kind !== 'text'" @click="jumpToPDF">定位 PDF →</button>
           <PButton type="button" size="sm" variant="secondary" :disabled="!activeFile || activeFile.kind !== 'text' || saving" @click="saveNow">保存</PButton>
         </div>
+        <nav class="papers-workspace__toolnav" aria-label="项目工具">
+          <button type="button" :aria-pressed="toolMode==='search'" @click="toggleTool('search')">全项目搜索</button>
+          <button type="button" :aria-pressed="toolMode==='references'" @click="toggleTool('references')">参考文献</button>
+          <button type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='history'" @click="toggleTool('history')">版本历史</button>
+        </nav>
+        <section v-if="toolMode" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':'文件历史'">
+          <div class="papers-workspace__outline-heading">
+            <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':'当前文件版本历史' }}</strong>
+            <button type="button" class="papers-workspace__sync" :disabled="toolBusy" @click="refreshTool">刷新</button>
+            <button type="button" class="papers-workspace__sync" @click="closeTool">关闭</button>
+          </div>
+          <p v-if="toolError" role="alert" class="papers-workspace__error">{{ toolError }}</p>
+          <p v-if="toolBusy" role="status">正在读取…</p>
+          <template v-if="toolMode==='search'">
+            <label>查找（区分大小写）<input v-model="searchQuery" maxlength="250" placeholder="输入源码或关键字" /></label>
+            <label>替换为<input v-model="replaceQuery" maxlength="1000" placeholder="留空表示删除匹配文字" /></label>
+            <p v-if="searchStale">项目或未保存源码已有变化，请刷新搜索后操作。</p>
+            <p v-else>{{ searchResult.total }} 处匹配<span v-if="searchResult.total>200">（显示前 200 处）</span></p>
+            <PButton size="sm" variant="secondary" :disabled="toolBusy||addingFile||switchingFile||navigating||searchStale||!searchResult.total||searchQuery===replaceQuery" @click="replaceProject">全部替换</PButton>
+            <button v-for="(hit,index) in searchResult.matches" :key="hit.fileId+':'+hit.line+':'+hit.column+':'+index" type="button" class="papers-workspace__toolrow" :disabled="searchStale" @click="jumpSearch(hit)"><strong>{{ hit.path }}:{{ hit.line }}:{{ hit.column }}</strong><code>{{ hit.preview }}</code></button>
+          </template>
+          <template v-else-if="toolMode==='references'">
+            <label>查找引用键或标题<input v-model="referenceQuery" placeholder="例如 smith2026" maxlength="200" /></label>
+            <p v-if="bibError" role="alert">{{ bibError }}</p>
+            <p>{{ referenceRows.length }} 条参考文献<span v-if="filteredReferences.length>200">（显示前 200 条）</span>。</p>
+            <p v-if="!referenceRows.length">在项目中新建或导入 .bib 文件后即可使用文献检索和引用补全。</p>
+            <div v-for="(entry,index) in filteredReferences.slice(0,200)" :key="entry.fileId+':'+entry.key+':'+index" class="papers-workspace__refrow">
+              <button type="button" class="papers-workspace__toolrow" @click="jumpReference(entry)"><strong>{{ entry.key }}</strong><span>{{ entry.title || entry.path }}</span></button>
+              <button type="button" class="papers-workspace__sync" :disabled="activeFile?.kind!=='text'||!/\.tex$/i.test(activeFile?.path||'')||switchingFile||addingFile||navigating" @click="editorRef?.insertCitation(entry.key)">插入引用</button>
+            </div>
+          </template>
+          <template v-else-if="toolMode==='history'">
+            <p v-if="activeFile?.kind!=='text'">请选择文本文件。</p>
+            <button v-for="version in fileVersions" :key="version.revision" type="button" class="papers-workspace__toolrow" :disabled="toolBusy" @click="previewVersion(version)"><strong>版本 {{ version.revision }}{{ activeFile?.revision===version.revision?' · 当前':'' }}</strong><span>{{ formatVersionDate(version.created_at) }} · {{ version.path }}</span></button>
+            <button v-if="moreVersions" type="button" class="papers-workspace__sync" :disabled="toolBusy" @click="loadVersions(true)">加载更早版本</button>
+            <div v-if="selectedVersion" class="papers-workspace__version-preview">
+              <strong>版本 {{ selectedVersion.revision }} 与当前编辑内容对比</strong>
+              <p v-if="versionDifference">差异范围：旧版第 {{ versionDifference.from }}–{{ Math.max(versionDifference.from,versionDifference.oldTo) }} 行；当前第 {{ versionDifference.from }}–{{ Math.max(versionDifference.from,versionDifference.newTo) }} 行。</p>
+              <p v-else>源码一致。</p>
+              <div class="papers-workspace__compare"><label>历史源码<textarea readonly :value="selectedVersion.content" /></label><label>当前源码<textarea readonly :value="draft" /></label></div>
+              <PButton size="sm" variant="secondary" :disabled="toolBusy||addingFile||switchingFile||!versionDifference" @click="restoreVersion">恢复源码为此版本</PButton>
+            </div>
+          </template>
+        </section>
         <section v-if="outlineOpen" class="papers-workspace__outline" aria-label="论文结构大纲">
           <div class="papers-workspace__outline-heading"><strong>项目大纲</strong><button type="button" class="papers-workspace__sync" :disabled="outlineLoading" @click="loadOutline">刷新</button></div>
           <p v-if="outlineLoading">正在读取各 TeX 文件…</p>
           <p v-else-if="!outlineRows.length">未找到章节标题。</p>
           <button v-for="item in outlineRows" :key="item.fileId+':'+item.line+':'+item.title" type="button" :style="{paddingLeft:Math.max(0,item.level-1)*12+'px'}" :title="item.path+':'+item.line" @click="jumpOutline(item)">{{ item.title }} <small>{{ item.path }}:{{ item.line }}</small></button>
         </section>
-        <LatexEditor v-if="activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef" v-model="draft" :readonly="switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
+        <LatexEditor v-if="activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef" v-model="draft" :citations="citationKeys" :readonly="switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
         <PaperAssetPreview v-else-if="activeFile?.kind === 'binary'" :key="activeFile.id+':'+activeFile.revision" :file="activeFile" />
         <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
         <p v-if="exportError" class="papers-workspace__error" role="alert">{{ exportError }}</p>
@@ -137,13 +181,15 @@ import PButton from '@/components/ui/PButton.vue'
 import LatexEditor from '@/components/papers/LatexEditor.vue'
 import PaperAssetPreview from '@/components/papers/PaperAssetPreview.vue'
 import {paperFileTree,preparePaperUploads} from '@/components/papers/fileTools'
+import {searchProject,planProjectReplacement,bibtexReferences,changedLineRange,type ProjectMatch,type PaperReference} from '@/components/papers/projectTools'
 import {latexHeadings,type LatexHeading} from '@/components/papers/latexLanguage'
 import PaperPDFPreview from '@/components/papers/PaperPDFPreview.vue'
 import { decodeSourceMap, sourceToPDF, pdfToSource, type PaperSourceMap } from '@/components/papers/sourceMap'
 import {
   createPaperFile, managePaperFiles, getPaperFile, getPaperProject, listPaperFiles, savePaperFile, getPaperProjectZIP, downloadPaperZIP,
   getPaperCompileCapability, getPaperCompileJob, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, getPaperCompileSourceMap,
-  type PaperFile, type PaperProject, type PaperCompileJob, type PaperCompileDiagnostic, type PaperUpload,
+  listPaperFileVersions, getPaperFileVersion,
+  type PaperFileVersion, type PaperVersionSummary, type PaperFile, type PaperProject, type PaperCompileJob, type PaperCompileDiagnostic, type PaperUpload,
 } from '@/api/papers'
 
 defineOptions({name:'PaperWorkspaceView'})
@@ -223,6 +269,139 @@ async function uploadFiles(event:Event){
 
 const activeFile = ref<PaperFile | null>(null)
 const draft = ref('')
+type ToolMode='search'|'references'|'history'
+const toolMode=ref<ToolMode|''>(''),toolBusy=ref(false),toolError=ref('')
+const searchQuery=ref(''),replaceQuery=ref(''),referenceQuery=ref('')
+const searchSources=shallowRef<PaperFile[]>([]),searchBase=ref(0)
+const searchStale=computed(()=>!searchBase.value||searchBase.value!==project.value?.head_revision||(activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content))
+const searchResult=computed(()=>searchProject(searchSources.value,searchQuery.value))
+const bibSources=shallowRef<PaperFile[]>([]),bibError=ref('')
+const referenceRows=computed(()=>bibtexReferences(bibSources.value.map(f=>f.id===activeFile.value?.id?{...f,content:draft.value}:f)))
+const citationKeys=computed(()=>[...new Set(referenceRows.value.map(r=>r.key))])
+const filteredReferences=computed(()=>{const q=referenceQuery.value.trim().toLowerCase();return referenceRows.value.filter(r=>(r.key+' '+r.title).toLowerCase().includes(q))})
+const fileVersions=shallowRef<PaperVersionSummary[]>([]),selectedVersion=shallowRef<PaperFileVersion|null>(null),moreVersions=ref(false)
+const versionDifference=computed(()=>selectedVersion.value?changedLineRange(selectedVersion.value.content,draft.value):null)
+let toolSerial=0,bibSerial=0
+function formatVersionDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString()}
+function closeTool(){toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null}
+function toggleTool(mode:ToolMode){if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;refreshTool()}
+function refreshTool(){if(toolMode.value==='search')void loadSearchSources();else if(toolMode.value==='references')void refreshBib();else if(toolMode.value==='history')void loadVersions()}
+async function readToolFiles(targets:PaperFile[],pid:string,valid:()=>boolean){
+ const output:PaperFile[]=[]
+ const encoder=new TextEncoder();let bytes=0
+ for(let i=0;i<targets.length;i+=4){
+  const group=await Promise.all(targets.slice(i,i+4).map(f=>getPaperFile(pid,f.id)))
+  if(!valid())return null
+  for(const [index,file] of group.entries()){
+   const expected=targets[i+index]
+   if(!expected||file.id!==expected.id||file.kind!=='text'||file.revision!==expected.revision)throw new Error('项目已有变化，请刷新页面后重试。')
+   bytes+=encoder.encode(file.content).byteLength
+   if(bytes>4*1024*1024)throw new Error('源码超过项目工具读取容量限制。')
+   output.push(file)
+  }
+ }
+ return output
+}
+async function refreshBib(){
+ const serial=++bibSerial,pid=projectId.value
+ const targets=files.value.filter(f=>f.kind==='text'&&/\.bib$/i.test(f.path))
+ bibError.value='';bibSources.value=bibSources.value.filter(f=>targets.some(t=>t.id===f.id&&t.revision===f.revision))
+ try{
+  const rows=await readToolFiles(targets,pid,()=>!disposed&&serial===bibSerial&&pid===projectId.value)
+  if(rows&&!disposed&&serial===bibSerial&&pid===projectId.value)bibSources.value=rows
+ }catch{if(!disposed&&serial===bibSerial&&pid===projectId.value){bibSources.value=[];bibError.value='参考文献读取失败，请刷新。'}}
+}
+watch(()=>files.value.filter(f=>f.kind==='text'&&/\.bib$/i.test(f.path)).map(f=>f.id+':'+f.revision).join('|'),()=>void refreshBib())
+async function loadSearchSources(){
+ if(toolMode.value!=='search')return
+ const serial=++toolSerial,pid=projectId.value
+ const valid=()=>!disposed&&serial===toolSerial&&pid===projectId.value&&toolMode.value==='search'
+ toolBusy.value=true;toolError.value='';searchBase.value=0;searchSources.value=[]
+ try{
+  if(!await persist())throw new Error('请先解决源码保存问题。')
+  if(!valid()||!project.value)return
+  const base=project.value.head_revision
+  const rows=await readToolFiles(files.value.filter(f=>f.kind==='text'),pid,valid)
+  if(!rows||!valid())return
+  if(base!==project.value.head_revision)throw new Error('项目已有变化，请刷新搜索。')
+  searchSources.value=rows;searchBase.value=base
+ }catch(cause){if(valid())toolError.value=cause instanceof Error?cause.message:'项目搜索失败，请重试。'}
+ finally{if(valid())toolBusy.value=false}
+}
+async function jumpSearch(hit:ProjectMatch){
+ if(searchStale.value)return
+ const file=files.value.find(f=>f.id===hit.fileId&&f.revision===hit.revision)
+ if(!file)return
+ await selectFile(file);await nextTick()
+ if(activeFile.value?.id===hit.fileId&&activeFile.value.revision===hit.revision)editorRef.value?.goToMatch(hit.line,hit.column,searchQuery.value.length)
+}
+async function jumpReference(entry:PaperReference){
+ const file=files.value.find(f=>f.id===entry.fileId)
+ if(!file)return
+ await selectFile(file);await nextTick()
+ if(activeFile.value?.id===entry.fileId)editorRef.value?.goToLine(entry.line)
+}
+async function replaceProject(){
+ if(toolBusy.value||addingFile.value||switchingFile.value||navigating.value||searchStale.value||!project.value)return
+ const pid=projectId.value,base=searchBase.value
+ let replacements
+ try{replacements=planProjectReplacement(searchSources.value,searchQuery.value,replaceQuery.value)}
+ catch(cause){toolError.value=cause instanceof Error?cause.message:'替换内容无效。';return}
+ if(!replacements.length)return
+ if(!window.confirm('将替换 '+replacements.length+' 个文件中的 '+searchResult.value.total+' 处文字？原版本将保留在历史中。'))return
+ addingFile.value=true;toolError.value=''
+ try{
+  await nextTick()
+  if(disposed||pid!==projectId.value||searchStale.value||navigating.value)return
+  const result=await managePaperFiles(pid,{action:'replace_text',base_revision:base,replacements})
+  if(disposed||pid!==projectId.value)return
+  project.value=result.project;files.value=result.files
+  const prior=activeFile.value
+  if(prior){
+   const updated=result.files.find(f=>f.id===prior.id)
+   const change=replacements.find(f=>f.file_id===prior.id)
+   if(updated){const content=change?.content??prior.content;activeFile.value={...updated,content};draft.value=content;saveStatus.value='已保存'}
+  }
+  autoDirty=true
+  if(outlineOpen.value)void loadOutline()
+ }catch(cause){if(!disposed&&pid===projectId.value){toolError.value=managementError(cause);searchBase.value=0}}
+ finally{if(pid===projectId.value){addingFile.value=false;scheduleAuto();if(searchBase.value&&toolMode.value==='search')void loadSearchSources()}}
+}
+async function loadVersions(append=false){
+ const file=activeFile.value,pid=projectId.value,serial=++toolSerial
+ if(toolMode.value!=='history'||file?.kind!=='text'){fileVersions.value=[];selectedVersion.value=null;moreVersions.value=false;toolBusy.value=false;return}
+ const valid=()=>!disposed&&serial===toolSerial&&pid===projectId.value&&activeFile.value?.id===file.id&&toolMode.value==='history'
+ toolBusy.value=true;toolError.value=''
+ if(!append){fileVersions.value=[];selectedVersion.value=null;moreVersions.value=false}
+ try{
+  const rows=await listPaperFileVersions(pid,file.id,append?fileVersions.value.at(-1)?.revision:undefined)
+  if(valid()){fileVersions.value=append?[...fileVersions.value,...rows]:rows;moreVersions.value=rows.length===50}
+ }catch{if(valid())toolError.value='无法读取文件历史，请重试。'}
+ finally{if(valid())toolBusy.value=false}
+}
+async function previewVersion(version:PaperVersionSummary){
+ const file=activeFile.value,pid=projectId.value,serial=++toolSerial
+ if(!file||toolMode.value!=='history')return
+ const valid=()=>!disposed&&serial===toolSerial&&pid===projectId.value&&activeFile.value?.id===file.id&&toolMode.value==='history'
+ toolBusy.value=true;toolError.value='';selectedVersion.value=null
+ try{const row=await getPaperFileVersion(pid,file.id,version.revision);if(valid()&&row.file_id===file.id&&row.revision===version.revision)selectedVersion.value=row}
+ catch{if(valid())toolError.value='无法读取历史源码。'}
+ finally{if(valid())toolBusy.value=false}
+}
+watch(()=>activeFile.value?.id,()=>{if(toolMode.value==='history')void loadVersions()})
+async function restoreVersion(){
+ const version=selectedVersion.value,file=activeFile.value,pid=projectId.value
+ if(!version||!file||version.file_id!==file.id||addingFile.value||toolBusy.value||switchingFile.value||navigating.value)return
+ if(!window.confirm('恢复历史源码？当前已保存版本会继续保留，恢复将创建一个新版本，不修改文件路径。'))return
+ addingFile.value=true;toolError.value=''
+ try{
+  await nextTick()
+  if(!await persist()||disposed||pid!==projectId.value||activeFile.value?.id!==file.id||navigating.value)return
+  draft.value=version.content
+  if(await persist()&&toolMode.value==='history')await loadVersions()
+ }finally{if(pid===projectId.value){addingFile.value=false;scheduleAuto()}}
+}
+
 type OutlineRow=LatexHeading&{fileId:string;path:string;revision:number}
 const outlineOpen=ref(false),outlineLoading=ref(false)
 const outlineCache=shallowRef<OutlineRow[]>([])
@@ -251,7 +430,7 @@ async function loadOutline(){
   if(serial===outlineSerial)outlineCache.value=collected
  }finally{if(serial===outlineSerial)outlineLoading.value=false}
 }
-function toggleOutline(){outlineOpen.value=!outlineOpen.value;if(outlineOpen.value)void loadOutline()}
+function toggleOutline(){if(!outlineOpen.value)closeTool();outlineOpen.value=!outlineOpen.value;if(outlineOpen.value)void loadOutline()}
 async function jumpOutline(item:OutlineRow){
  const target=files.value.find(f=>f.id===item.fileId)
  if(!target)return
@@ -394,6 +573,9 @@ watch([hasActiveCompile,compiling,switchingFile,navigating,addingFile,saveError]
 const canCancelCompile = computed(() => hasActiveCompile.value && !compileJob.value?.cancel_requested)
 let compilePollTimer: ReturnType<typeof setTimeout> | null = null
 let saveTimer: ReturnType<typeof setTimeout> | null = null
+let saveRetryTimer: ReturnType<typeof setTimeout> | null = null
+let saveRetryAttempt=0
+let retryableSave=false
 let savePromise: Promise<boolean> | null = null
 let loadSerial = 0
 let fileSerial = 0
@@ -439,9 +621,18 @@ async function loadProject() {
   }
 }
 
+function clearSaveRetry(){if(saveRetryTimer)clearTimeout(saveRetryTimer);saveRetryTimer=null}
+function scheduleSaveRetry(){
+ clearSaveRetry()
+ if(!retryableSave||saveRetryAttempt>=3||navigator.onLine===false||disposed)return
+ const delay=2000*2**saveRetryAttempt++
+ saveRetryTimer=setTimeout(()=>{saveRetryTimer=null;if(retryableSave&&!disposed&&!navigating.value)void persist()},delay)
+}
+function reconnectSave(){if(!disposed&&activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content&&retryableSave){saveRetryAttempt=0;clearSaveRetry();void persist()}}
 function scheduleSave() {
   if (saveTimer) clearTimeout(saveTimer)
-  saveStatus.value = '尚未保存'
+  clearSaveRetry();saveRetryAttempt=0
+  saveStatus.value = navigator.onLine===false?'离线 · 尚未保存':'尚未保存'
   saveTimer = setTimeout(() => { void persist() }, 800)
 }
 
@@ -453,16 +644,18 @@ watch(draft, (content) => {
 // and a file/route transition cannot issue concurrent optimistic-lock writes.
 function persist(): Promise<boolean> {
   if(saveTimer){clearTimeout(saveTimer);saveTimer=null}
+  clearSaveRetry()
   if(savePromise)return savePromise
   const pid=project.value?.id
   const initial=activeFile.value
   if(!pid||pid!==projectId.value||!initial||initial.kind!=='text')return Promise.resolve(true)
-  if(draft.value===initial.content){saveError.value='';return Promise.resolve(true)}
+  if(draft.value===initial.content){saveError.value='';retryableSave=false;saveRetryAttempt=0;saveStatus.value='已保存';return Promise.resolve(true)}
+  if(navigator.onLine===false){retryableSave=true;saveStatus.value='离线 · 尚未保存';saveError.value='当前网络已断开，恢复连接后将自动保存。';return Promise.resolve(false)}
   saving.value=true;saveStatus.value='保存中...'
   const work=(async()=>{
     while(!disposed&&project.value?.id===pid&&projectId.value===pid&&activeFile.value?.id===initial.id){
       const file=activeFile.value,content=draft.value
-      if(content===file.content){saveStatus.value='已保存';saveError.value='';return true}
+      if(content===file.content){saveStatus.value='已保存';saveError.value='';retryableSave=false;saveRetryAttempt=0;return true}
       try{
         const saved=await savePaperFile(pid,file.id,content,file.revision)
         if(disposed||project.value?.id!==pid||projectId.value!==pid||activeFile.value?.id!==initial.id)return false
@@ -470,13 +663,17 @@ function persist(): Promise<boolean> {
         activeFile.value=saved
         files.value=files.value.map(item=>item.id===saved.id?{...item,revision:saved.revision}:item)
         project.value.head_revision=saved.project_head_revision??(project.value.head_revision+(saved.revision>file.revision?1:0))
-        saveError.value=''
+        saveError.value='';retryableSave=false;saveRetryAttempt=0
         if(saveTimer){clearTimeout(saveTimer);saveTimer=null}
       }catch(cause){
         if(!disposed&&project.value?.id===pid){
           saveStatus.value='保存失败'
           const code=cause instanceof ApiErrorResponseError?cause.code:''
-          saveError.value=code==='papers.revision_conflict'?'文件已在另一窗口修改。请复制当前源码，刷新后手动合并。':code==='papers.compile_source_limit'?'超过项目源码容量限制，请缩减内容后重试。':'保存失败，请检查网络后重试。'
+          retryableSave=!(cause instanceof ApiErrorResponseError)||cause.status>=500||cause.status===429
+          if(code==='papers.revision_conflict')retryableSave=false
+          if(retryableSave)scheduleSaveRetry()
+
+          saveError.value=code==='papers.revision_conflict'?'文件已在另一窗口修改。请复制当前源码，刷新后手动合并。':code==='papers.compile_source_limit'?'超过项目源码容量限制，请缩减内容后重试。':retryableSave?'网络或服务暂时不可用，恢复连接后将尝试保存。':'保存失败，请检查网络后重试。'
         }
         return false
       }
@@ -601,6 +798,7 @@ async function compileNow() {
   } catch(cause) {
     if (!disposed && requestedProjectId === projectId.value){
       const code=cause instanceof ApiErrorResponseError?cause.code:''
+
       compileError.value=code==='papers.compile_revision_conflict'||code==='papers.revision_conflict'?'项目版本已在其他窗口发生变化，请复制未保存内容后刷新。':code==='papers.compile_quota_exceeded'?'已达到编译频率或存储限制，请稍后重试。':'无法提交编译任务，请检查网络或编译环境后重试。'
     }
   } finally {
@@ -647,7 +845,7 @@ async function exportProject() {
   } finally { if(id===projectId.value)exporting.value = false }
 }
 
-function saveNow() { void persist() }
+function saveNow() { saveRetryAttempt=0;void persist() }
 
 function beforeUnload(event: BeforeUnloadEvent) {
   if (savePromise || (activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)) {
@@ -670,6 +868,7 @@ const removeNavigationHook=router.afterEach(()=>{navigating.value=false})
 
 watch(projectId, () => {
   loadSerial++
+  closeTool();bibSerial++;bibSources.value=[];bibError.value='';searchBase.value=0;searchSources.value=[];fileVersions.value=[];clearSaveRetry();retryableSave=false;saveRetryAttempt=0
   fileSerial++;pollSerial++;historySerial++;pendingSubmission=null
   switchingFile.value=false;addingFile.value=false;compiling.value=false;canceling.value=false;exporting.value=false;saveError.value='';fileError.value=''
   stopCompilePoll()
@@ -698,17 +897,20 @@ onMounted(() => {
   window.addEventListener('resize',onViewportChange)
   void loadProject()
   window.addEventListener('beforeunload', beforeUnload)
+  window.addEventListener('online', reconnectSave)
   document.addEventListener('visibilitychange', onCompileVisibilityChange)
 })
 
 onBeforeUnmount(() => {
   disposed = true
+  closeTool();bibSerial++;clearSaveRetry()
   loadSerial++
   fileSerial++
   if (saveTimer) clearTimeout(saveTimer)
   clearAuto()
   mapAbort?.abort();mapSerial++
   window.removeEventListener('beforeunload', beforeUnload)
+  window.removeEventListener('online', reconnectSave)
   window.removeEventListener('keydown',onShortcut)
   window.removeEventListener('resize',onViewportChange)
   document.removeEventListener('visibilitychange', onCompileVisibilityChange)
@@ -795,4 +997,21 @@ onBeforeUnmount(() => {
 .papers-workspace__outline-heading{display:flex;align-items:center;justify-content:space-between}
 .papers-workspace__outline>button{display:block;text-align:left;border:0;background:transparent;color:inherit;cursor:pointer;font-size:12px;overflow-wrap:anywhere;padding-block:4px}
 .papers-workspace__outline small{color:var(--a-color-text-secondary,#64748b);font-weight:400;font-size:10px}
+
+.papers-workspace__toolnav{display:flex;flex-shrink:0;gap:5px;overflow:auto;padding:4px 10px;border-bottom:1px solid var(--a-color-border-soft,#ddd)}
+.papers-workspace__toolnav button,.papers-workspace__toolrow{background:transparent;color:inherit;border:1px solid var(--a-color-border-soft,#ddd);border-radius:4px;padding:5px 7px;font-size:12px;cursor:pointer}
+.papers-workspace__toolnav button{white-space:nowrap}
+.papers-workspace__toolnav button[aria-pressed=true]{background:var(--a-color-bg-subtle,#e7edf3);font-weight:600}
+.papers-workspace__toolnav button:disabled,.papers-workspace__toolrow:disabled{opacity:.5;cursor:default}
+.papers-workspace__toolpanel{display:flex;flex-direction:column;gap:6px;max-height:43%;overflow:auto;flex-shrink:0;padding:8px 10px;border-bottom:1px solid var(--a-color-border-soft,#ddd);font-size:12px}
+.papers-workspace__toolpanel label{display:grid;gap:4px;min-width:0}
+.papers-workspace__toolpanel input,.papers-workspace__toolpanel textarea{min-width:0;border:1px solid var(--a-color-border-soft,#ddd);background:var(--a-color-bg,#fff);color:inherit;border-radius:4px;padding:5px;font:inherit}
+.papers-workspace__toolpanel p{margin:0;overflow-wrap:anywhere}
+.papers-workspace__toolrow{display:grid;text-align:left;gap:3px;overflow-wrap:anywhere;min-width:0;width:100%}
+.papers-workspace__toolrow code{white-space:pre-wrap;overflow-wrap:anywhere}
+.papers-workspace__refrow{display:flex;align-items:center;gap:6px}
+.papers-workspace__version-preview{display:grid;gap:6px}
+.papers-workspace__compare{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.papers-workspace__compare textarea{height:105px;font-family:monospace;resize:vertical;white-space:pre;overflow:auto}
+@media(max-width:760px){.papers-workspace__compare{grid-template-columns:1fr}}
 </style>

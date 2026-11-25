@@ -40,6 +40,7 @@
   <LatexEditor v-if="view?.text" :key="view.epoch" :model-value="view.source" :collaborative-text="view.text" :citations="citations" :readonly="!editable" :can-edit-collaboration="canEditNow" :remote-peers="remotePeers" @presence-selection="selectionChanged" />
   <p v-else class="papers-collab__empty">{{ message?'请退出协作，继续普通编辑。':'正在验证项目权限并读取服务端文档…' }}</p>
   <textarea v-if="copyFallback" readonly :value="view?.source||''" aria-label="可手动复制的协作源码" />
+  <PConfirm :show="!!confirmationMessage" title="请确认操作" :message="confirmationMessage" danger @confirm="resolveConfirmation(true)" @cancel="resolveConfirmation(false)" />
  </section>
 </template>
 <script setup lang="ts">
@@ -47,6 +48,8 @@ import {computed,onBeforeUnmount,onMounted,onUnmounted,ref,shallowRef} from 'vue
 import {getPaperCollaborationCapability,type PaperFile,type PaperProjectRole} from '@/api/papers'
 import {useApiWebSocketUrl} from '@/composables/useApiUrl'
 import {useAuthStore} from '@/stores/auth'
+import PConfirm from '@/components/ui/PConfirm.vue'
+import {usePaperConfirmation} from '@/components/papers/usePaperConfirmation'
 import LatexEditor from './LatexEditor.vue'
 import {DurablePaperCollaboration,type CollaborationView} from './durableCollaboration'
 import {peerColor,type LocalSelection} from './paperPresence'
@@ -67,6 +70,12 @@ let suppressDraftSync=false
 const otherDrafts=computed(()=>draftRows.value.filter(row=>row.writerId!==writerId))
 const selectedDraft=computed(()=>otherDrafts.value.find(row=>collabDraftKey(row)===selectedDraftKey.value)||otherDrafts.value[0]||null)
 const scope=()=>!disposed&&auth.isAuthenticated&&auth.user?.uuid===props.accountId
+const {confirmationMessage,ask,resolveConfirmation}=usePaperConfirmation()
+const confirmPaper=(message:string)=>ask(message,()=>[
+ scope(),props.projectId,props.accountId,props.file.id,props.file.path,props.role,session,
+ props.operationBusy,view.value?.epoch,view.value?.status,view.value?.fileRevision,view.value?.pending,
+ view.value?.source,draftSaved.value,selectedDraft.value,
+])
 const editable=computed(()=>scope()&&view.value?.role!=='viewer'&&
  (view.value?.status==='ready'||view.value?.status==='saving'||(view.value?.offlineEditable&&draftEnabled.value)))
 const canEditNow=()=>scope()&&!!session?.canEdit()&&(!session.view.offlineEditable||draftEnabled.value)
@@ -155,8 +164,8 @@ function toggleDraftProtection(enabled:boolean){
   if(!enabled||!view.value?.pending||draftSaved.value)draftNotice.value=enabled?'本机协作草稿保护已开启。':'保护已关闭，既有草稿保留。'
  }catch{draftNotice.value='无法更新本机保护设置。'}
 }
-function restoreDraft(row:PaperCollaborationDraft){
- if(!compatible(row)||!session||!window.confirm('将这份本机协作草稿合并到原协作会话？只有服务器确认后才会清除备份。'))return
+async function restoreDraft(row:PaperCollaborationDraft){
+ if(!compatible(row)||!session||!await confirmPaper('将这份本机协作草稿合并到原协作会话？只有服务器确认后才会清除备份。')||!compatible(row)||!session)return
  try{
   if(!sameCollaborationDraft(localStorage,row)){refreshDrafts();draftNotice.value='草稿已经变化，请重新选择。';return}
   recoveringBackup=row
@@ -164,8 +173,8 @@ function restoreDraft(row:PaperCollaborationDraft){
   draftNotice.value='草稿已合并至编辑器，等待服务器确认。'
  }catch{recoveringBackup=null;draftNotice.value='恢复失败，原备份仍保留。'}
 }
-function discardDraft(row:PaperCollaborationDraft){
- if(!sameScope(row)||view.value?.pending||!window.confirm('删除该本机协作草稿？不会修改服务器文件。'))return
+async function discardDraft(row:PaperCollaborationDraft){
+ if(!sameScope(row)||view.value?.pending||!await confirmPaper('删除该本机协作草稿？不会修改服务器文件。')||!sameScope(row)||view.value?.pending)return
  try{if(!removeCollaborationDraft(localStorage,row))draftNotice.value='草稿已变化，请重新选择。';else draftNotice.value='本机草稿已删除。';refreshDrafts()}
  catch{draftNotice.value='无法删除本机草稿。'}
 }
@@ -195,9 +204,10 @@ function confirmedRevision():number|null{
   !!current.epoch&&Number.isSafeInteger(current.projectRevision)&&current.projectRevision>0?current.projectRevision:null
 }
 function hasUnconfirmed(){return !!session?.view.pending}
-function requestExit(){
- if(props.operationBusy)return
- if(hasUnconfirmed()&&!window.confirm(draftSaved.value?'仍有未确认的修改，本机备份已保留。确定退出协作？':'仍有未确认且未完整备份的修改。请先复制源码，确定退出？'))return
+async function requestExit(){
+ if(props.operationBusy||!scope())return
+ if(hasUnconfirmed()&&!await confirmPaper(draftSaved.value?'仍有未确认的修改，本机备份已保留。确定退出协作？':'仍有未确认且未完整备份的修改。请先复制源码，确定退出？'))return
+ if(!scope()||props.operationBusy)return
  emit('exit')
 }
 async function copySource(){

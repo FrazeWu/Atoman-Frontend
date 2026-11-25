@@ -101,6 +101,7 @@
       </div>
       </template>
     </section>
+  <PConfirm :show="!!confirmationMessage" title="请确认操作" :message="confirmationMessage" danger @confirm="resolveConfirmation(true)" @cancel="resolveConfirmation(false)" />
   </main>
 </template>
 
@@ -108,6 +109,9 @@
 import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
+import {usePaperConfirmation} from '@/components/papers/usePaperConfirmation'
+import {useAuthStore} from '@/stores/auth'
 import PButton from '@/components/ui/PButton.vue'
 import { paperAccess, listPaperProjects, createPaperProject, getPaperApplication, submitPaperApplication, importPaperProject, getPaperProjectZIP, downloadPaperZIP, paperImportZIPLimit, renamePaperProject, trashPaperProject, listTrashedPaperProjects, restorePaperProject, type TrashedPaperProject, type PaperProject, type PaperApplication } from '@/api/papers'
 import { packPaperFolder, packPaperTemplate, suggestPaperProjectName, unsupportedPaperFolderFiles, paperArchiveExclusion } from '@/components/papers/projectArchive'
@@ -116,6 +120,8 @@ import { getPaperTemplate } from '@/components/papers/templateCatalog'
 
 defineOptions({name:'PapersHomeView'})
 const router = useRouter()
+const auth=useAuthStore()
+const {confirmationMessage,ask,resolveConfirmation}=usePaperConfirmation()
 const loading = ref(true)
 const allowed = ref(false)
 const creating = ref(false)
@@ -143,7 +149,9 @@ async function rename(p:PaperProject){
 }
 async function deleteProject(p:PaperProject){
  if(!isOwner(p))return
- if(managing.value||!window.confirm('将「'+p.name+'」移入回收站？可以恢复，源码不会立即删除。'))return
+ if(managing.value||!await ask('将「'+p.name+'」移入回收站？可以恢复，源码不会立即删除。',()=>[
+  auth.isAuthenticated,auth.user?.uuid,allowed.value,managing.value,projects.value.find(x=>x.id===p.id),
+ ])||managing.value||!allowed.value||!projects.value.some(x=>x.id===p.id&&isOwner(x)&&x.head_revision===p.head_revision))return
  managing.value=p.id;error.value=''
  try{await trashPaperProject(p.id);projects.value=projects.value.filter(x=>x.id!==p.id);renaming.value=''}
  catch{error.value='删除失败，请刷新后重试。'}finally{managing.value=''}

@@ -19,7 +19,7 @@ describe("books module foundation", () => {
       homePath: "/",
     });
     expect(moduleNavOrder).toContain("books");
-    expect(topbarNavOrder).toEqual(["feed", "blog", "music", "video", "podcast", "books"]);
+    expect(topbarNavOrder).toEqual(["feed", "blog", "music", "video", "podcast", "books", "papers"]);
   });
 
   it("keeps the books feature definitions and enables the module by default", () => {

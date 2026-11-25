@@ -98,6 +98,7 @@ test('opt-in collaboration draft survives closing a tab and is restored only aft
   await expect(reopened.getByLabel('本机协作草稿源码')).toHaveValue('Original manuscript draft retained')
   await expect(reopened.getByRole('button',{name:'恢复协作草稿',exact:true})).toBeEnabled()
   await reopened.getByRole('button',{name:'恢复协作草稿',exact:true}).click()
+  await reopened.getByRole('alertdialog').getByRole('button',{name:'确认',exact:true}).click()
   await expect.poll(()=>replayed).toBe(true)
   await expect(reopened.locator('.papers-collab__bar [role=status]')).toContainText('服务器已保存')
   await expect(reopened.locator('.papers-collab .cm-content')).toHaveText('Original manuscript draft retained')

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { buildStaticPageHtml, isKnownPagePath } from "../../../functions/_lib/pageSeo";
 import { onRequest as pageMiddleware } from "../../../functions/_middleware";
+import { sitePolicyDocuments, sitePolicyUpdated } from "../../../src/components/system/footer/sitePolicyDocuments";
 
 const shell =
 	'<!doctype html><html><head><title>Atoman</title><meta data-default-meta name="description" content="old"><link data-default-meta rel="canonical" href="https://www.atoman.org/"></head><body></body></html>';
@@ -23,6 +24,24 @@ describe("static page SEO", () => {
 		expect(buildStaticPageHtml(shell, "/about", "www.atoman.org"))
 			.toContain("<title data-default-meta>关于 Atoman | 平台与社区介绍</title>");
 	});
+
+  it.each(["terms", "privacy"] as const)("renders the actual %s document in initial HTML", (kind) => {
+    const pageShell = '<html><head><title>Home</title></head><body><div id="app"><!-- seo-prerender-start --><p>HOME ONLY</p><!-- seo-prerender-end --></div></body></html>';
+    const result = buildStaticPageHtml(pageShell, `/${kind}`, "www.atoman.org");
+    const document = sitePolicyDocuments[kind];
+    expect(result).toContain(`<h1>${document.title}</h1>`);
+    expect(result).toContain(`更新日期：${sitePolicyUpdated}`);
+    expect(result).toContain(document.intro);
+    for (const section of document.sections) {
+      expect(result).toContain(`<h2>${section.title}</h2>`);
+      for (const paragraph of section.paragraphs || []) expect(result).toContain(paragraph);
+      for (const bullet of section.bullets || []) expect(result).toContain(bullet.text);
+    }
+    expect(result.match(/name="description" content="([^"]+)"/)?.[1].length).toBeGreaterThan(50);
+    expect(result).toContain(`rel="canonical" href="https://www.atoman.org/${kind}"`);
+    expect(result).not.toContain("HOME ONLY");
+    expect(result).not.toContain('name="robots" content="noindex');
+  });
 
 	it("renders the home page title and description", () => {
 		const html = buildStaticPageHtml(shell, "/", "www.atoman.org");

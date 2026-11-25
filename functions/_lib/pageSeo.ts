@@ -1,5 +1,6 @@
 import { isCanonicalSitemapPath } from "./blogSeo";
 import { getPublicArchivePage } from "./sectionContentSeo";
+import { sitePolicyDocuments, sitePolicyUpdated, type PolicyKind } from "../../src/components/system/footer/sitePolicyDocuments";
 
 type StaticPageMeta = {
 	title: string;
@@ -107,11 +108,11 @@ const pageMeta: Record<string, StaticPageMeta> = {
 	},
 	"/terms": {
 		title: "服务条款 | Atoman",
-		description: "Atoman 服务条款。",
+		description: "阅读凹凸庵（Atoman）使用条款，了解账号使用规则、内容与行为规范、内容权利及 RSS 分发许可、内容与账号处置、服务说明、条款更新方式和联系渠道。",
 	},
 	"/privacy": {
 		title: "隐私政策 | Atoman",
-		description: "Atoman 隐私政策。",
+		description: "阅读凹凸庵（Atoman）隐私政策，了解平台处理的数据类型与用途、公开和非公开信息、浏览器本地数据、服务提供方、数据保存与账号注销、隐私设置及联系方式。",
 	},
 };
 
@@ -138,6 +139,20 @@ const publicSectionLinks: Record<string, string[]> = {
   "/privacy": ["/about", "/terms"],
 };
 
+// Render the very same policy document used by Vue. This is public content,
+// not a separate SEO-only copy; policy text and update dates stay in sync.
+function buildPolicyFallback(kind: PolicyKind) {
+  const document = sitePolicyDocuments[kind];
+  const sections = document.sections.map((section) => {
+    const paragraphs = (section.paragraphs || []).map((paragraph) =>
+      `<p>${escapeHtml(paragraph)}</p>`).join("");
+    const bullets = section.bullets?.map((bullet) =>
+      `<li>${bullet.label ? `<strong>${escapeHtml(bullet.label)}</strong>` : ""}${escapeHtml(bullet.text)}</li>`).join("") || "";
+    return `<section><h2>${escapeHtml(section.title)}</h2>${paragraphs}${bullets ? `<ul>${bullets}</ul>` : ""}</section>`;
+  }).join("");
+  return `<h1>${escapeHtml(document.title)}</h1><p>更新日期：${escapeHtml(sitePolicyUpdated)}</p><p>${escapeHtml(document.intro)}</p>${sections}`;
+}
+
 function buildSectionFallback(path: string, meta: StaticPageMeta) {
   const links = (publicSectionLinks[path] || [])
     .filter((destination) => pageMeta[destination])
@@ -146,8 +161,9 @@ function buildSectionFallback(path: string, meta: StaticPageMeta) {
     ).join("");
   const fallback = [
     '<main class="seo-static-fallback" data-seo-fallback="section">',
-    `<h1>${escapeHtml(meta.title.split(" | ")[0])}</h1>`,
-    `<p>${escapeHtml(meta.description)}</p>`,
+    path === "/terms" || path === "/privacy"
+      ? buildPolicyFallback(path === "/terms" ? "terms" : "privacy")
+      : `<h1>${escapeHtml(meta.title.split(" | ")[0])}</h1><p>${escapeHtml(meta.description)}</p>`,
     links ? `<nav aria-label="探索 Atoman 其他公开栏目"><h2>探索更多公开内容</h2><ul>${links}</ul></nav>` : "",
     "</main>",
   ].join("");

@@ -65,7 +65,7 @@ function normalizedPlainText(value: unknown): string {
 
 function plainText(value: unknown, fallback: string): string {
 	const normalized = normalizedPlainText(value);
-	if (!normalized || /^(?:暂无|暂无内容|暂无资料|暂无信息|暂无介绍|暂无数据|未填写|待补充|无|n\/a|none|null|not available|--?)$/i.test(normalized)) return fallback;
+	if (!normalized || /^(?:暂无|暂无内容|暂无资料|暂无信息|暂无介绍|暂无数据|暂略|略|待完善|未填写|待补充|无|n\/a|none|null|not available|--?)$/i.test(normalized)) return fallback;
 	return normalized.length > 160 ? `${normalized.slice(0, 157)}...` : normalized;
 }
 
@@ -73,7 +73,7 @@ function fullBodyText(value: unknown, fallback: string): string {
 	const normalized = normalizedPlainText(value);
 	// The full authored summary is useful to crawlers; do not truncate it to
 	// the 160-character meta-snippet limit. Bound very large content separately.
-	return normalized && !/^(?:暂无|暂无内容|暂无资料|暂无信息|暂无介绍|暂无数据|未填写|待补充|无|n\/a|none|null|not available|--?)$/i.test(normalized) ? normalized.slice(0, 4000) : fallback;
+	return normalized && !/^(?:暂无|暂无内容|暂无资料|暂无信息|暂无介绍|暂无数据|暂略|略|待完善|未填写|待补充|无|n\/a|none|null|not available|--?)$/i.test(normalized) ? normalized.slice(0, 4000) : fallback;
 }
 
 function safeReleaseDate(value: unknown, precision: unknown): { raw?: string; label?: string; published?: string } {
@@ -568,10 +568,16 @@ async function loadDebate(apiBase: string, id: string, fetcher: Fetcher) {
 	);
 	if (!debate || !text(debate.id) || !text(debate.title)) return undefined;
 	const title = text(debate.title);
-	const description = plainText(
-		debate.description || debate.content,
-		`查看辩题“${title}”的观点、论证与讨论。`,
-	);
+	const authored = fullBodyText(debate.description, "") || fullBodyText(debate.content, "");
+	const created = safeReleaseDate(debate.created_at, "day").label;
+	const stats = record(debate.stats);
+	const counts = [["论点", stats?.claim_count], ["证据", stats?.active_evidence_count], ["反驳", stats?.rebuttal_count]]
+		.flatMap(([label, value]) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? [`${label} ${value} 条`] : []);
+	const factual = [`Atoman 公开辩题“${title}”`, created ? `创建于 ${created}` : "",
+		counts.length ? `当前公开讨论：${counts.join("、")}` : "",
+		!authored ? "尚未提供辩题背景说明" : ""].filter(Boolean).join("；") + "。";
+	const body = [authored, factual].filter(Boolean).join(" ");
+	const description = plainText(authored.length >= 30 ? authored : body, factual);
 	const author = record(debate.user);
 	return content(
 		`/debate/${encodeURIComponent(id)}`,
@@ -593,6 +599,8 @@ async function loadDebate(apiBase: string, id: string, fetcher: Fetcher) {
 		},
 		undefined,
 		date(debate.updated_at),
+		undefined,
+		body,
 	);
 }
 
@@ -694,11 +702,21 @@ async function loadVideo(apiBase: string, id: string, fetcher: Fetcher) {
 	)
 		return undefined;
 	const title = text(video.title);
-	const description = plainText(
-		video.description,
-		`在 Atoman 观看视频《${title}》。`,
-	);
 	const channel = record(video.channel);
+	const collections = publicVideoCollections([video]);
+	const published = safeReleaseDate(video.created_at, "day").label;
+	const seconds = typeof video.duration_sec === "number" && Number.isFinite(video.duration_sec) && video.duration_sec > 0
+		? Math.floor(video.duration_sec) : 0;
+	const facts = [text(channel?.name) ? { name: "发布频道", value: text(channel?.name) } : undefined,
+		published ? { name: "发布时间", value: published } : undefined]
+		.filter((fact): fact is {name: string; value: string} => Boolean(fact));
+	const factual = [`Atoman 公开视频《${title}》`, ...facts.map(fact => `${fact.name}：${fact.value}`),
+		seconds ? `时长 ${Math.floor(seconds / 60)} 分 ${seconds % 60} 秒` : "",
+		collections.length ? `所属公开合集：${collections.map(entry => `《${entry.name}》`).join("、")}` : ""]
+		.filter(Boolean).join("；") + "。";
+	const authored = fullBodyText(video.description, "");
+	const body = [authored, factual].filter(Boolean).join(" ");
+	const description = plainText(authored.length >= 30 ? authored : body, factual);
 	return content(
 		`/videos/watch/${encodeURIComponent(id)}`,
 		`${title} | 视频 | Atoman`,
@@ -717,10 +735,12 @@ async function loadVideo(apiBase: string, id: string, fetcher: Fetcher) {
 		},
 		text(video.thumbnail_url) || undefined,
 		date(video.updated_at),
-		publicVideoCollections([video]).map((collection) => ({
+		collections.map((collection) => ({
 			href: canonicalOrigin + "/videos/collections/" + encodeURIComponent(collection.id),
 			label: collection.name,
 		})),
+		body,
+		facts,
 	);
 }
 
@@ -746,20 +766,24 @@ async function loadVideoCollection(
 	const collection = publicVideoCollections(videos).find((entry) => entry.id === id);
 	if (!collection) return undefined;
 	const name = text(collection.name);
-	const description = plainText(
-		collection.description,
-		`浏览视频合集“${name}”。`,
-	);
 	// A collection is a catalogue, not the primary watch page for its
 	// members. Describe the actual public links without inventing video
 	// thumbnails or upload dates required by Google's VideoObject feature.
 	const members = videos
-		.filter((video) => uuidPattern.test(text(video.id)) && text(video.title))
+		.filter((video) => uuidPattern.test(text(video.id)) && text(video.title) &&
+			publicVideoCollections([video]).some((entry) => entry.id === id))
 		.slice(0, 100)
 		.map((video) => ({
 			href: canonicalOrigin + "/videos/watch/" + encodeURIComponent(text(video.id)),
 			label: text(video.title),
 		}));
+	const uniqueMembers = [...new Map(members.map(member => [member.href, member])).values()];
+	const examples = uniqueMembers.slice(0, 3).map(member => `《${member.label}》`).join("、");
+	const factual = [`Atoman 公开视频合集“${name}”`, uniqueMembers.length ? `当前展示 ${uniqueMembers.length} 个公开视频` : "",
+		examples ? `包括 ${examples}` : ""].filter(Boolean).join("；") + "。";
+	const authored = fullBodyText(collection.description, "");
+	const body = [authored, factual].filter(Boolean).join(" ");
+	const description = plainText(authored.length >= 30 ? authored : body, factual);
 	return content(
 		`/videos/collections/${encodeURIComponent(id)}`,
 		`${name} | 视频合集 | Atoman`,
@@ -770,8 +794,8 @@ async function loadVideoCollection(
 			description,
 			mainEntity: {
 				"@type": "ItemList",
-				numberOfItems: members.length,
-				itemListElement: members.map(({ href, label }, index) => ({
+				numberOfItems: uniqueMembers.length,
+				itemListElement: uniqueMembers.map(({ href, label }, index) => ({
 					"@type": "ListItem",
 					position: index + 1,
 					name: label,
@@ -781,7 +805,8 @@ async function loadVideoCollection(
 		},
 		text(collection.cover_url) || text(videos[0].thumbnail_url) || undefined,
 		date(collection.updated_at),
-		members,
+		uniqueMembers,
+		body,
 	);
 }
 

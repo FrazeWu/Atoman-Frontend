@@ -102,6 +102,17 @@ describe("public section SEO link previews", () => {
     expect(listing).not.toContain('href="/music/songs?page=1"');
   });
 
+  it("shows the empty public booklist state only after an explicit successful response", async () => {
+    const empty = vi.fn(async () => json({ items: [], total: 0 })) as unknown as typeof fetch;
+    const listing = await loadPublicSectionListing("/books/lists", undefined, "https://www.atoman.org", empty);
+    expect(listing).toContain("目前还没有已发布的公开书单");
+    expect(listing).toContain('href="/books"');
+    const failed = vi.fn(async () => json({ items: [], total: 0 }, 503)) as unknown as typeof fetch;
+    const incomplete = vi.fn(async () => json({ items: [], total: 1 })) as unknown as typeof fetch;
+    expect(await loadPublicSectionListing("/books/lists", undefined, "https://www.atoman.org", failed)).toBe("");
+    expect(await loadPublicSectionListing("/books/lists", undefined, "https://www.atoman.org", incomplete)).toBe("");
+  });
+
   it("fails open for unavailable APIs and does not rewrite non-section pages", async () => {
     const failing = vi.fn(async () => { throw new Error("503"); }) as unknown as typeof fetch;
     const listing = await loadPublicSectionListing("/videos", undefined, "https://www.atoman.org", failing);

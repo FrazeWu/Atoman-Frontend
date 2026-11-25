@@ -134,7 +134,16 @@ async function getGroup(apiBase: string, source: PublicListSource, fetcher: Publ
         }];
       })
       .slice(0, source.maxItems ?? 8);
-    if (!valid.length) return emptyGroup;
+    if (!valid.length) {
+      // Distinguish a successful, explicitly empty public directory from a
+      // failing upstream or a response that merely had no eligible records.
+      const data = payload && typeof payload === "object" && "data" in payload
+        ? (payload as { data?: { total?: number; items?: unknown[] } }).data : undefined;
+      if (source.routePrefix === "/books/lists/" && data?.total === 0 && Array.isArray(data.items) && data.items.length === 0) {
+        return { ...emptyGroup, html: '<section class="seo-public-listing-group"><h3>公开书单</h3><p>目前还没有已发布的公开书单。可以先前往<a href="/books">图书馆</a>浏览公开作品及其出版版本。</p></section>' };
+      }
+      return emptyGroup;
+    }
     // Build the structured list and the visible fallback from exactly the
     // same filtered, ordered records. Never invent products or offers.
     const listHtml = valid.map(({ url, title, summary }) =>

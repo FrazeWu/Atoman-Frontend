@@ -437,6 +437,33 @@ describe("public content SEO", () => {
 		expect(unknownPrecision.structuredData.datePublished).toBeUndefined();
 	});
 
+	it("replaces placeholder debate summaries with verified counts without inventing arguments", async () => {
+		const fetcher = vi.fn(async () => json({ data: { id: "debate-1", title: "公开辩题", description: "暂略", content: "暂略", created_at: "2026-07-21T12:00:00Z", stats: { claim_count: 0, active_evidence_count: 0, rebuttal_count: 0 } } })) as unknown as typeof fetch;
+		const result = await resolvePublicContentSeo("/debate/debate-1", undefined, "https://www.atoman.org", fetcher);
+		expect(result.content?.description).toContain("尚未提供辩题背景说明");
+		expect(result.content?.bodyText).toContain("论点 0 条");
+		expect(result.content?.bodyText).not.toContain("暂略");
+	});
+
+	it("renders real video facts, retains authored descriptions and excludes unrelated or private collection entries", async () => {
+		const collection = { id: "01a02565-0cc8-7ba7-93e0-c4b698b30974", name: "真实合集" };
+		const video = { id: "01a02565-0cc9-7ba7-93e0-c4b698b30974", title: "公开视频", visibility: "public", status: "published", description: "实际简介", duration_sec: 214, created_at: "2026-08-12T10:00:00Z", channel: { name: "真实频道" }, collections: [collection, { id: "private-1", name: "私密合集", visibility: "private" }] };
+		const unrelated = { ...video, id: "01a02565-0cca-7ba7-93e0-c4b698b30974", title: "无关视频", collections: [] };
+		const hidden = { ...video, id: "01a02565-0ccb-7ba7-93e0-c4b698b30974", title: "私密视频", visibility: "private" };
+		const fetcher = vi.fn(async (url: string) => url.includes("collection_id=") ? json({ data: [video, video, unrelated, hidden] }) : json({ data: video })) as unknown as typeof fetch;
+		const result = await resolvePublicContentSeo("/videos/watch/" + video.id, undefined, "https://www.atoman.org", fetcher);
+		expect(result.content?.description).toContain("实际简介");
+		expect(result.content?.description).toContain("真实频道");
+		expect(result.content?.bodyText).toContain("时长 3 分 34 秒");
+		expect(result.content?.bodyText).toContain("2026 年 8 月 12 日");
+		expect(result.content?.bodyText).not.toContain("私密合集");
+		const group = await resolvePublicContentSeo("/videos/collections/" + collection.id, undefined, "https://www.atoman.org", fetcher);
+		expect(group.content?.description).toContain("当前展示 1 个公开视频");
+		expect(group.content?.bodyText).toContain("公开视频");
+		expect(group.content?.bodyText).not.toMatch(/无关视频|私密视频/);
+		expect(group.content?.relatedLinks).toHaveLength(1);
+	});
+
 	it("links video members to their public collections and collections back to their members", async () => {
 		const id = "01a02565-0cc8-7ba7-93e0-c4b698b30974";
 		const other = { id: "other-collection", name: "另一个合集" };

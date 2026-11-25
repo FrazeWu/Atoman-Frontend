@@ -361,7 +361,10 @@ async function loadArtist(apiBase: string, id: string, fetcher: Fetcher) {
 		  " 张专辑" + (albumExamples ? "，包括 " + albumExamples : "") +
 		  "；可以进入专辑页面浏览已收录的曲目与作品资料。"
 		: "在 Atoman 查看 " + name + " 的音乐人档案。当前没有可公开展示的关联专辑，可以通过音乐人和歌曲目录继续浏览其他已收录作品。";
-	const description = plainText(artist.bio, factualFallback);
+	const authoredBio = plainText(artist.bio, "");
+	const description = authoredBio
+		? plainText(`${name}｜音乐人档案：${authoredBio}`, factualFallback)
+		: plainText("", factualFallback);
 	return content(
 		`/music/artist/${encodeURIComponent(id)}`,
 		`${name} | 音乐档案 | Atoman`,
@@ -402,14 +405,22 @@ async function loadAlbum(apiBase: string, id: string, fetcher: Fetcher) {
 		released.label ? `发行时间：${released.label}` : "",
 		tracks.length ? `已收录 ${tracks.length} 首曲目` : "",
 	].filter(Boolean).join("；") + "。";
-	const description = plainText(album.description, factualFallback);
+	const authoredDescription = plainText(album.description, "");
+	const albumIdentity = `专辑《${title}》${artists.length ? `（${artists.join("、")}）` : ""}`;
+	const shortDescriptionFacts = [
+		released.label ? `发行时间：${released.label}` : "",
+		tracks.length ? `已收录 ${tracks.length} 首曲目` : "",
+	].filter(Boolean).join("；");
+	const description = authoredDescription
+		? plainText(`${albumIdentity}：${authoredDescription}${authoredDescription.length < 30 && shortDescriptionFacts ? ` ${shortDescriptionFacts}。` : ""}`, factualFallback)
+		: plainText("", factualFallback);
 	const facts = [
 		released.label ? { name: "发行时间", value: released.label } : undefined,
 		tracks.length ? { name: "已收录曲目", value: `${tracks.length} 首` } : undefined,
 	].filter((item): item is { name: string; value: string } => Boolean(item));
 	return content(
 		`/music/album/${encodeURIComponent(id)}`,
-		`《${title}》${artists.length ? ` - ${artists.join("、")}` : ""} | Atoman`,
+		`《${title}》${artists.length ? ` - ${artists.join("、")}` : ""} | 专辑 | Atoman`,
 		description,
 		{
 			"@type": "MusicAlbum",
@@ -484,7 +495,13 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 	});
 	return content(
 		`/music/song/${encodeURIComponent(id)}`,
-		`《${title}》${artists.length ? ` - ${artists.join("、")}` : ""} | Atoman`,
+		[
+			`《${title}》${artists.length ? ` - ${artists.join("、")}` : ""}`,
+			"歌曲",
+			albumName && albumName !== title ? `《${albumName}》` : "",
+			albumName ? trackPosition : "",
+			"Atoman",
+		].filter(Boolean).join(" | "),
 		description,
 		{
 			"@type": "MusicRecording",

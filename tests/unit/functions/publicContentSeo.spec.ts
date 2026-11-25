@@ -184,6 +184,48 @@ describe("public content SEO", () => {
 		expect(html).not.toContain("portal-prerender");
 	});
 
+	it("distinguishes same-name albums, recordings, and track versions using actual metadata", async () => {
+		const common = { title: "Intro", lifecycle_status: "active" };
+		const artists = [{ name: "示例音乐人" }];
+		const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+			const path = new URL(String(input)).pathname;
+			if (path.includes("/albums/")) return json({ data: { ...common, id: "album-1", artists } });
+			const id = path.split("/").pop();
+			const secondAlbum = id === "song-3";
+			return json({ data: { song: { ...common, id, album: { title: secondAlbum ? "其他专辑" : "Intro" },
+				track_number: id === "song-2" ? 18 : 1, disc_number: id === "song-2" ? 2 : 1 }, artists } });
+		}) as unknown as typeof fetch;
+		const paths = ["/music/album/album-1", "/music/song/song-1", "/music/song/song-2", "/music/song/song-3"];
+		const results = await Promise.all(paths.map(path => resolvePublicContentSeo(path, undefined, "https://www.atoman.org", fetcher)));
+		const titles = results.map(result => result.content?.title);
+		expect(new Set(titles).size).toBe(4);
+		expect(titles[0]).toContain("| 专辑 | Atoman");
+		expect(titles[1]).toContain("| 歌曲 |");
+		expect(titles[2]).toContain("第 2 碟，第 18 首");
+		expect(titles[3]).toContain("《其他专辑》");
+		for (const [index, result] of results.entries()) {
+			expect(result.content?.path).toBe(paths[index]);
+			expect(result.content?.structuredData.name).toBe("Intro");
+			expect(buildPublicContentHtml(shell, result.content!)).toContain(`https://www.atoman.org${paths[index]}`);
+		}
+	});
+
+	it("distinguishes reused artist and album descriptions while preserving authored copy", async () => {
+		const description = "真实的作品资料。";
+		const fetcher = vi.fn(async (input: RequestInfo | URL) => String(input).includes("/artists/")
+			? json({ data: { id: "artist-1", name: "示例音乐人", bio: description } })
+			: json({ data: { id: "album-1", title: "示例专辑", description, artists: [{ name: "示例音乐人" }],
+				release_date: "2020-01-01", release_date_precision: "day", songs: [{ id: "song-1", title: "歌曲" }] } })) as unknown as typeof fetch;
+		const artist = await resolvePublicContentSeo("/music/artist/artist-1", undefined, "https://www.atoman.org", fetcher);
+		const album = await resolvePublicContentSeo("/music/album/album-1", undefined, "https://www.atoman.org", fetcher);
+		expect(artist.content?.description).not.toBe(album.content?.description);
+		expect(artist.content?.description).toContain("示例音乐人｜音乐人档案");
+		expect(album.content?.description).toContain("专辑《示例专辑》");
+		expect(album.content?.description).toContain("已收录 1 首曲目");
+		expect(artist.content?.bodyText).toBe(description);
+		expect(album.content?.bodyText).toBe(description);
+	});
+
 	it("adds verified recording facts but rejects impossible release years", async () => {
 		const fetcher = vi.fn(async () => json({ data: {
 			song: { id: "song-1", title: "样本歌曲", lifecycle_status: "active", duration_sec: 206, release_date: "2202-01-01T00:00:00Z" },

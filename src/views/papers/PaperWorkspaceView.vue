@@ -1217,7 +1217,7 @@ async function exitCollaboration(){
  await loadProject()
  if(disposed||pid!==projectId.value||owner!==accountId.value||error.value)return
  const previous=files.value.find(file=>file.id===fid)
- if(previous&&previous.id!==activeFile.value?.id)await selectFile(previous)
+ if(previous)await selectFile(previous)
 }
 watch(accountId,(next,previous)=>{
  if(next===previous||!collaborationOpen.value)return

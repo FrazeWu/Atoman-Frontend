@@ -221,7 +221,7 @@ export class DurablePaperCollaboration {
     const source=verified.getText('source')
     Y.applyUpdate(verified,full)
     if(verified.share.size!==1||verified.store.pendingStructs!=null||verified.store.pendingDs!=null||
-       source.toDelta().some(part=>typeof part.insert!=='string'||part.attributes!=null)||!validSource(source.toString())||
+       source.toDelta().some((part:{insert?:unknown;attributes?:unknown})=>typeof part.insert!=='string'||part.attributes!=null)||!validSource(source.toString())||
        encode64(Y.encodeStateVector(verified))!==frame.vector)throw Error('invalid committed document')
    }finally{verified.destroy()}
    Y.applyUpdate(this.doc,full,remoteOrigin)

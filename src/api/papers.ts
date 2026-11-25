@@ -70,7 +70,7 @@ export const savePaperFile = (projectId: string, fileId: string, content: string
   })
 
 
-export type PaperCompiler = 'pdflatex' | 'lualatex'
+export type PaperCompiler = 'pdflatex' | 'lualatex' | 'xelatex'
 
 export interface PaperCompileCapability {
   enabled: boolean

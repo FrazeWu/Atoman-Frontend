@@ -392,7 +392,7 @@ describe('Papers phase two workspace tools', () => {
 })
 
 describe('Papers compiler capability',()=>{
- async function openCompilerWorkspace(compilers?:('pdflatex'|'lualatex')[]){
+ async function openCompilerWorkspace(compilers?:('pdflatex'|'lualatex'|'xelatex')[]){
   vi.mocked(getPaperProject).mockResolvedValue({...two} as never)
   vi.mocked(listPaperFiles).mockResolvedValue([f2] as never)
   vi.mocked(getPaperFile).mockResolvedValue(f2 as never)
@@ -419,6 +419,20 @@ describe('Papers compiler capability',()=>{
    await wrapper.findAll('button').find(b=>b.text()==='编译')!.trigger('click');await flushPromises()
    expect(submitPaperCompile).toHaveBeenCalledWith('two',1,expect.any(String),'lualatex')
    expect(wrapper.find('.papers-workspace__compile-status').text()).toContain('LuaLaTeX')
+   expect(select.attributes('disabled')).toBeDefined()
+  }finally{wrapper.unmount()}
+ })
+
+ it('only exposes XeLaTeX when the backend advertises it and binds the submitted engine',async()=>{
+  const wrapper=await openCompilerWorkspace(['pdflatex','xelatex'])
+  vi.mocked(submitPaperCompile).mockResolvedValue({id:'xe-1',project_id:'two',source_revision:1,compiler:'xelatex',status:'queued',attempts:0,max_attempts:2,cancel_requested:false,created_at:'2026-11-25T00:00:00Z'} as never)
+  try{
+   const select=wrapper.get('select[aria-label="TeX 编译器"]')
+   expect(select.findAll('option').map(o=>o.text())).toEqual(['pdfLaTeX','XeLaTeX'])
+   await select.setValue('xelatex')
+   await wrapper.findAll('button').find(b=>b.text()==='编译')!.trigger('click');await flushPromises()
+   expect(submitPaperCompile).toHaveBeenCalledWith('two',1,expect.any(String),'xelatex')
+   expect(wrapper.find('.papers-workspace__compile-status').text()).toContain('XeLaTeX')
    expect(select.attributes('disabled')).toBeDefined()
   }finally{wrapper.unmount()}
  })

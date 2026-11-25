@@ -447,7 +447,7 @@ const compileEnabled = ref(false)
 const compilerOptions=ref<PaperCompiler[]>(['pdflatex'])
 const selectedCompiler=ref<PaperCompiler>('pdflatex')
 let compilerChangedByUser=false
-function compilerLabel(engine?:PaperCompiler){return engine==='lualatex'?'LuaLaTeX':'pdfLaTeX'}
+function compilerLabel(engine?:PaperCompiler){return engine==='xelatex'?'XeLaTeX':engine==='lualatex'?'LuaLaTeX':'pdfLaTeX'}
 function compilerChanged(){compilerChangedByUser=true;autoDirty=true;scheduleAuto()}
 
 const pdfEnabled = ref(false)
@@ -606,7 +606,9 @@ async function loadProject() {
     files.value = currentFiles
     compileEnabled.value = capability?.enabled === true
     pdfEnabled.value = compileEnabled.value && capability?.pdf_available === true
-    compilerOptions.value=compileEnabled.value&&capability.compilers?.includes('lualatex')?['pdflatex','lualatex']:['pdflatex']
+    compilerOptions.value=['pdflatex']
+    if(compileEnabled.value&&capability.compilers?.includes('xelatex'))compilerOptions.value.push('xelatex')
+    if(compileEnabled.value&&capability.compilers?.includes('lualatex'))compilerOptions.value.push('lualatex')
     if(!compilerOptions.value.includes(selectedCompiler.value))selectedCompiler.value='pdflatex'
 
     const main = currentFiles.find((file) => file.id === currentProject.main_file_id) || currentFiles[0]

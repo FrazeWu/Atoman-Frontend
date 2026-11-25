@@ -282,6 +282,7 @@ export const setPaperMember=(pid:string,uid:string,role:PaperMemberRole)=>papers
 export const removePaperMember=(pid:string,uid:string)=>papersRequest<{deleted:boolean}>(membersPath(pid)+'/'+encodeURIComponent(uid),'DELETE')
 
 export interface PaperCollaborationCapability {
+ presence?: boolean
  enabled: boolean
  protocol?: string
  role?: PaperProjectRole

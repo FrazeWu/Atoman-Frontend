@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import LatexEditor from '@/components/papers/LatexEditor.vue'
 import * as Y from 'yjs'
-import {markRaw} from 'vue'
+import {markRaw,nextTick} from 'vue'
+import {encodeSelection} from '@/components/papers/paperPresence'
 
 describe('Papers LaTeX editor', () => {
   it('updates actual editability while a file transition is in progress',async()=>{
@@ -59,6 +60,25 @@ describe('Papers authoritative Y.Text binding',()=>{
    await wrapper.setProps({readonly:true})
    expect(wrapper.find('.cm-content').attributes('contenteditable')).toBe('false')
    expect(editor.insertBlock('no')).toBe(false)
+  }finally{wrapper.unmount();doc.destroy()}
+ })
+})
+
+describe('Papers remote cursor rendering',()=>{
+ it('renders a scoped remote cursor and removes it when its member leaves',async()=>{
+  const doc=new Y.Doc(),text=markRaw(doc.getText('source'))
+  text.insert(0,'server text')
+  const peer={connection_id:'550e8400-e29b-41d4-a716-446655440001',user_id:'550e8400-e29b-41d4-a716-446655440002',name:'Peer',role:'editor' as const,selection:encodeSelection(text,{anchor:1,head:4})!}
+  const wrapper=mount(LatexEditor,{props:{modelValue:text.toString(),collaborativeText:text,readonly:false,remotePeers:[peer]}})
+  try{
+   expect(wrapper.find('.papers-remote-cursor-label').text()).toBe('Peer')
+   expect(wrapper.find('.papers-remote-selection').exists()).toBe(true)
+   text.insert(0,'new ')
+   await wrapper.setProps({modelValue:text.toString()})
+   await nextTick()
+   expect(wrapper.find('.papers-remote-cursor-label').text()).toBe('Peer')
+   await wrapper.setProps({remotePeers:[]})
+   expect(wrapper.find('.papers-remote-cursor-label').exists()).toBe(false)
   }finally{wrapper.unmount();doc.destroy()}
  })
 })

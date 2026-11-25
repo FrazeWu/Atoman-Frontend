@@ -2,6 +2,7 @@
 // The authoritative seed always comes from the server; local updates
 // are kept in Y.Doc until explicitly acknowledged after commit.
 import * as Y from 'yjs'
+import {encodeSelection,parsePresencePeers,type CollaborationPeer,type LocalSelection,type RelativeSelection} from './paperPresence'
 
 export type CollaborationRole = 'owner'|'editor'|'viewer'
 export type CollaborationStatus = 'connecting'|'ready'|'saving'|'stopped'
@@ -16,6 +17,8 @@ export interface CollaborationView {
  fileRevision: number
  projectRevision: number
  message: string
+ peers: readonly CollaborationPeer[]
+ connectionId: string
 }
 const PROTOCOL='papers-crdt-v1'
 const MAX_UPDATE=256*1024
@@ -59,11 +62,18 @@ export type CollaborationStateFrame={
  state:string
  vector:string
 }
+type PresenceFrame={type:'presence';protocol:string;epoch:string;connection_id:string;presence_version:number;peers:CollaborationPeer[]}
 type ErrorFrame={type:'error';epoch:string;request_id:string;code:string;retryable?:boolean}
-export function parseCollaborationFrame(raw:unknown):CollaborationStateFrame|ErrorFrame {
+export function parseCollaborationFrame(raw:unknown):CollaborationStateFrame|ErrorFrame|PresenceFrame {
  if(typeof raw!=='string'||raw.length>MAX_FRAME)throw Error('invalid frame')
  const frame=JSON.parse(raw)
  if(!frame||typeof frame!=='object'||!validUUID(frame.epoch))throw Error('invalid epoch')
+ if(frame.type==='presence'){
+  if(raw.length>8192||frame.protocol!==PROTOCOL||!validUUID(frame.connection_id)||!counter(frame.presence_version))throw Error('invalid presence')
+  const peers=parsePresencePeers(frame.peers)
+  if(!peers.some(p=>p.connection_id===frame.connection_id))throw Error('missing self')
+  return {...frame,peers}
+ }
  if(frame.type==='error'){
   if(!validUUID(frame.request_id)||typeof frame.code!=='string'||frame.code.length>100||
     (frame.retryable!==undefined&&typeof frame.retryable!=='boolean'))throw Error('invalid error frame')
@@ -90,6 +100,7 @@ interface PendingUpdate {id:string;update:Uint8Array;retries:number}
 interface Options {
  url:string
  expectedRole:CollaborationRole
+ presence?:boolean
  onChange:(view:CollaborationView)=>void
  createSocket:(url:string)=>SocketLike
 }
@@ -101,10 +112,15 @@ export class DurablePaperCollaboration {
  private inFlight:PendingUpdate|null=null
  private timer:ReturnType<typeof setTimeout>|null=null
  private deadline:ReturnType<typeof setTimeout>|null=null
+ private presenceTimer:ReturnType<typeof setTimeout>|null=null
+ private presenceVersion=0
+ private lastPresenceAt=0
+ private selection:RelativeSelection|null=null
+ private sentSelection:string|undefined='null'
  private destroyed=false
  private unconfirmed=false
  private state:CollaborationView={
-  status:'connecting',text:null,source:'',role:null,pending:false,epoch:'',sequence:0,fileRevision:0,projectRevision:0,message:''
+  status:'connecting',text:null,source:'',role:null,pending:false,epoch:'',sequence:0,fileRevision:0,projectRevision:0,message:'',peers:[],connectionId:''
  }
  constructor(private readonly options:Options){
   this.doc.on('update',this.localUpdate)
@@ -131,7 +147,8 @@ export class DurablePaperCollaboration {
  private clearTimers(){
   if(this.timer!==null)clearTimeout(this.timer)
   if(this.deadline!==null)clearTimeout(this.deadline)
-  this.timer=null;this.deadline=null
+  if(this.presenceTimer!==null)clearTimeout(this.presenceTimer)
+  this.timer=null;this.deadline=null;this.presenceTimer=null
  }
  private armDeadline(){
   if(this.deadline!==null)clearTimeout(this.deadline)
@@ -144,6 +161,7 @@ export class DurablePaperCollaboration {
   this.clearTimers()
   const s=this.socket;this.socket=null
   if(s){s.onopen=null;s.onmessage=null;s.onerror=null;s.onclose=null;try{s.close()}catch{}}
+  this.state.peers=[];this.state.connectionId=''
   this.state.status='stopped'
   this.state.message=message
   this.publish()
@@ -167,6 +185,28 @@ export class DurablePaperCollaboration {
    this.publish()
    this.scheduleSend()
   }catch{this.stop('本次协作修改超过容量限制。请复制当前源码后处理。')}
+ }
+ setSelection(selection:LocalSelection|null){
+  if(!this.options.presence||!this.state.epoch||this.state.status==='stopped'||this.destroyed)return
+  try{this.selection=encodeSelection(this.text,selection)}catch{this.selection=null}
+  this.schedulePresence()
+ }
+ private schedulePresence(){
+  if(!this.options.presence||!this.state.connectionId||this.destroyed||this.state.status!=='ready'||this.inFlight||this.queued||this.unconfirmed||this.presenceTimer!==null)return
+  const encoded=JSON.stringify(this.selection)
+  if(encoded===this.sentSelection)return
+  this.presenceTimer=setTimeout(()=>{
+   this.presenceTimer=null
+   const socket=this.socket
+   if(this.destroyed||this.state.status!=='ready'||this.inFlight||this.queued||this.unconfirmed||!socket||socket.readyState!==1)return
+   const selected=JSON.stringify(this.selection)
+   if(selected===this.sentSelection)return
+   try{
+    socket.send(JSON.stringify({type:'presence',epoch:this.state.epoch,request_id:globalThis.crypto.randomUUID(),...(this.selection?{selection:this.selection}:{})}))
+    this.sentSelection=selected
+    this.lastPresenceAt=Date.now()
+   }catch{this.stop('协作连接不可用。')}
+  },Math.max(180,450-(Date.now()-this.lastPresenceAt)))
  }
  private scheduleSend(delay=200){
   if(this.timer!==null||this.destroyed||this.state.status==='stopped'||this.inFlight||!this.queued)return
@@ -193,6 +233,18 @@ export class DurablePaperCollaboration {
   if(this.destroyed||this.state.status==='stopped')return
   try{
    const frame=parseCollaborationFrame(raw)
+   if(frame.type==='presence'){
+    if(!this.options.presence||!this.state.epoch||frame.epoch!==this.state.epoch||
+       (this.state.connectionId&&this.state.connectionId!==frame.connection_id)||frame.presence_version<this.presenceVersion)throw Error('presence scope changed')
+    const self=frame.peers.find(p=>p.connection_id===frame.connection_id)
+    if(self?.role!==this.options.expectedRole)throw Error('presence role changed')
+    this.state.connectionId=frame.connection_id
+    this.presenceVersion=frame.presence_version
+    this.state.peers=frame.peers
+    this.publish()
+    this.schedulePresence()
+    return
+   }
    if(frame.type==='error'){
     if(frame.epoch!==this.state.epoch||!this.inFlight||frame.request_id!==this.inFlight.id)throw Error('unmatched error')
     this.clearDeadline()
@@ -245,6 +297,7 @@ export class DurablePaperCollaboration {
    this.state.message=''
    this.publish()
    this.scheduleSend()
+   this.schedulePresence()
   }catch{this.stop('协作状态无效或会话已变化。不会自动覆盖或重新初始化本地修改。')}
  }
  destroy(){

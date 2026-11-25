@@ -49,3 +49,28 @@ Regression tests:
 - tests/unit/components/papers/durableCollaboration.spec.ts
 - tests/unit/components/papers/LatexEditor.spec.ts
 - tests/e2e/specs/papers-collaboration.spec.ts
+
+## Stage 8.3B3: negotiated live member and cursor presence
+
+A capability with presence=true opts into the existing protocol extension
+using the query presence=1. The server emits bounded identity snapshots with
+a connection ID, authenticated user ID, name and project role; the client
+never supplies a claimed identity or arbitrary color. Distinct account IDs
+determine the online member count. Multiple sessions of the same account
+are displayed individually with connection-specific deterministic colors.
+
+Selection messages contain at most two Yjs relative positions (128 decoded
+bytes each); no selected text is sent. The client sends only when the
+document has no unacknowledged local updates and coalesces motion to at
+most approximately one message per 450 ms. Presence messages are not file
+writes and have no durable acknowledgement. The editor validates relative
+positions against its own source Y.Text, ignores unresolvable or malformed
+positions, and renders text-only peer labels and selection decorations.
+A blur clears the local cursor; disconnect clears all remote decorations.
+
+Presence is ephemeral, process-local and negotiated. The earlier protocol
+client remains compatible, and a disabled capability creates no socket.
+Automatic reconnect, offline durable drafts, collaborative undo and
+compile/snapshot coordination remain disabled. Tests use an isolated
+browser protocol fixture; a production multi-process load/rollout is
+still a separate gate.

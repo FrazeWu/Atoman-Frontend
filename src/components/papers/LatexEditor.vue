@@ -11,17 +11,18 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Compartment, EditorState } from '@codemirror/state'
-import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view'
+import { Compartment, EditorState, StateEffect, StateField } from '@codemirror/state'
+import { EditorView, Decoration, type DecorationSet, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import {openSearchPanel} from '@codemirror/search'
 import {startCompletion} from '@codemirror/autocomplete'
 import {latexExtensionsFor} from './latexLanguage'
 import type {Text as YText} from 'yjs'
 import {yCollab} from 'y-codemirror.next'
+import {remoteCursorDecorations,type CollaborationPeer,type LocalSelection} from './paperPresence'
 
-const props = defineProps<{ modelValue: string; readonly?: boolean; citations?: readonly string[]; collaborativeText?: YText }>()
-const emit = defineEmits<{ 'update:modelValue': [value: string]; 'show-pdf': []; 'cursor-line': [line:number] }>()
+const props = defineProps<{ modelValue: string; readonly?: boolean; citations?: readonly string[]; collaborativeText?: YText; remotePeers?: readonly CollaborationPeer[] }>()
+const emit = defineEmits<{ 'update:modelValue': [value: string]; 'show-pdf': []; 'cursor-line': [line:number]; 'presence-selection':[selection:LocalSelection|null] }>()
 const editorRoot = ref<HTMLElement | null>(null)
 let editor: EditorView | null = null
 let applyingExternalValue = false
@@ -29,6 +30,26 @@ const position=ref("行 1，列 1")
 function find(){if(editor)openSearchPanel(editor)}
 function complete(){if(editor&&!props.readonly){editor.focus();startCompletion(editor)}}
 const readonlyCompartment=new Compartment()
+const refreshCursors=StateEffect.define<DecorationSet>()
+const remoteCursors=StateField.define<DecorationSet>({
+ create:()=>Decoration.none,
+ update(value,transaction){
+  let next=value.map(transaction.changes)
+  for(const effect of transaction.effects)if(effect.is(refreshCursors))next=effect.value
+  return next
+ },
+ provide:field=>EditorView.decorations.from(field),
+})
+function updateRemoteCursors(){
+ if(!editor||!props.collaborativeText)return
+ const decorations=remoteCursorDecorations(props.collaborativeText,props.remotePeers||[],editor.state.doc.length)
+ editor.dispatch({effects:refreshCursors.of(decorations)})
+}
+function reportSelection(view:EditorView){
+ if(!props.collaborativeText)return
+ const main=view.state.selection.main
+ emit('presence-selection',view.hasFocus?{anchor:main.anchor,head:main.head}:null)
+}
 
 onMounted(() => {
   if (!editorRoot.value) return
@@ -40,19 +61,23 @@ onMounted(() => {
         lineNumbers(),
         highlightActiveLine(),
         drawSelection(),
-        ...(props.collaborativeText?[EditorState.lineSeparator.of('\n'), yCollab(props.collaborativeText,null,{undoManager:false})]:[history()]),
+        ...(props.collaborativeText?[EditorState.lineSeparator.of('\n'), yCollab(props.collaborativeText,null,{undoManager:false}),remoteCursors]:[history()]),
         keymap.of([{key:'Mod-Shift-j',run:()=>{emit('show-pdf');return true}}, ...defaultKeymap, ...(props.collaborativeText?[]:historyKeymap), indentWithTab]),
         ...latexExtensionsFor(()=>props.citations||[]),
         EditorView.lineWrapping,
         readonlyCompartment.of([EditorState.readOnly.of(Boolean(props.readonly)),EditorView.editable.of(!props.readonly)]),
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !applyingExternalValue && !props.collaborativeText) emit('update:modelValue', update.state.doc.toString())
+          if(props.collaborativeText&&(update.selectionSet||update.docChanged||update.focusChanged))reportSelection(update.view)
           if(update.selectionSet||update.docChanged){const line=update.state.doc.lineAt(update.state.selection.main.head);position.value='行 '+line.number+'，列 '+(update.state.selection.main.head-line.from+1);emit('cursor-line',line.number)}
         }),
       ],
     }),
   })
+  updateRemoteCursors()
 })
+
+watch([()=>props.remotePeers,()=>props.modelValue],updateRemoteCursors,{flush:'post'})
 
 watch(()=>props.readonly,value=>{
   editor?.dispatch({effects:readonlyCompartment.reconfigure([EditorState.readOnly.of(Boolean(value)),EditorView.editable.of(!value)])})
@@ -115,6 +140,8 @@ onBeforeUnmount(() => {
 .papers-latex-editor :deep(.cm-focused) { outline: none; }
 .papers-latex-editor :deep(.cm-activeLine),.papers-latex-editor :deep(.cm-activeLineGutter){background:var(--a-color-bg-soft,#e8eff5)}
 .papers-latex-editor :deep(.cm-cursor){border-left-color:currentColor}
+.papers-latex-editor :deep(.papers-remote-cursor){position:relative;display:inline-block;width:0;height:1.15em;border-left:2px solid;vertical-align:text-bottom;pointer-events:none;z-index:3}
+.papers-latex-editor :deep(.papers-remote-cursor-label){position:absolute;left:-2px;bottom:100%;font:10px/1.3 sans-serif;color:white;border-radius:3px 3px 3px 0;padding:2px 4px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
 .latex-editor-host{flex:1;min-height:0;overflow:hidden}
 .latex-editor-tools{display:flex;align-items:center;gap:6px;padding:4px 8px;border-bottom:1px solid var(--a-color-border-soft,#ddd);font-size:11px}
 .latex-editor-tools button{background:transparent;color:inherit;font:inherit;border:1px solid var(--a-color-border-soft,#ddd);border-radius:4px;padding:4px 6px}

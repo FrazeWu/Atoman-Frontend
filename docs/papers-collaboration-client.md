@@ -160,3 +160,32 @@ available subject to the existing local-data constraints. A disconnected
 client cannot know about a server-side permission change until reconnect,
 so local edits are not authorization to publish. Unlimited disconnected
 editing and cross-epoch replay are intentionally not supported.
+
+## Stage 8.5: confirmed-revision compilation and project snapshots
+
+Only the existing owner role may submit compilation or manage project
+snapshots. When the collaboration panel has an authorized ready state
+with no pending edits, it publishes the acknowledged project revision
+to the workspace. Actions recheck the live session directly at
+submission, and use that revision rather than the pre-collaboration
+file/project metadata. While syncing, reconnecting, offline, stopped
+or unauthorized, submission controls are disabled. Compilation never
+calls ordinary full-text persistence while collaboration is open.
+
+Manual compilation and named checkpoint creation use the existing
+version-checked APIs, whose server transactions capture canonical files.
+A concurrent author may advance the project before submission is
+accepted; report the conflict and wait for the next acknowledged
+revision rather than silently retrying against a newer version.
+Existing accepted compile jobs remain immutable. The workspace labels
+the confirmed source revision and marks older PDF results stale.
+Automatic compilation and source/PDF navigation remain disabled in
+collaboration mode pending separate performance and mapping acceptance.
+
+The owner can open project snapshots, create and delete them while
+the current session is confirmed, but must explicitly exit collaboration
+before restoring an entire project. This ensures the local panel's
+pending edits receive its normal copy/backup/exit protection. The
+server's existing atomic restore and revision fences invalidate old
+epochs in other connected clients. All previous snapshot access and
+automatic rollback-backup behavior remains unchanged.

@@ -56,6 +56,7 @@
           <button v-if="!collaborationOpen" type="button" class="papers-workspace__sync" :aria-expanded="outlineOpen" @click="toggleOutline">大纲</button>
           <button type="button" class="papers-workspace__sync" title="定位当前源码行对应的 PDF 内容 (Ctrl/Cmd+Shift+J)" :disabled="!syncReady || activeFile?.kind !== 'text'" @click="jumpToPDF">定位 PDF →</button>
           <PButton v-if="writeAccess&&!collaborationOpen" type="button" size="sm" variant="secondary" :disabled="!activeFile || activeFile.kind !== 'text' || saving" @click="saveNow">保存</PButton>
+          <PButton v-if="collaborationOpen&&ownerAccess" type="button" size="sm" variant="secondary" :disabled="snapshotMutating||compiling" @click="toggleTool('snapshots')">项目快照</PButton>
           <PButton v-if="!collaborationOpen&&activeFile?.kind==='text'&&accountId" type="button" size="sm" variant="secondary" :disabled="!canStartCollaboration" @click="startCollaboration">实时协作</PButton>
         </div>
         <nav v-if="!collaborationOpen" class="papers-workspace__toolnav" aria-label="项目工具">
@@ -70,7 +71,7 @@
         </nav>
         <p v-if="!ownerAccess&&!collaborationOpen" class="papers-workspace__stale" role="status">{{ writeAccess?'共享编辑：保存时检查文件版本，暂不支持实时共同编辑。':'共享阅读：当前账号无编辑权限。' }}</p>
         <p v-if="refreshMessage" class="papers-workspace__stale" role="status">{{ refreshMessage }}</p>
-        <section v-if="toolMode&&!collaborationOpen" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'文件历史'">
+        <section v-if="toolMode&&(!collaborationOpen||toolMode==='snapshots')" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'文件历史'">
           <div class="papers-workspace__outline-heading">
             <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'当前文件版本历史' }}</strong>
             <button v-if="toolMode!=='figures'" type="button" class="papers-workspace__sync"  :disabled="toolBusy||snapshotMutating||memberMutating" @click="refreshTool">刷新</button>
@@ -100,7 +101,7 @@
           <p v-if="fileError" role="alert" class="papers-workspace__error">{{ fileError }}</p>
           <PaperFigureTools :key="projectId" :project-id="projectId" :files="files" :disabled="uploadBusy||switchingFile||navigating" :can-insert="activeFile?.kind==='text'&&/\.tex$/i.test(activeFile.path)" @upload="uploadFigureFiles" @insert="insertFigure" />
           </template>
-          <PaperSnapshotTools v-else-if="toolMode==='snapshots'" :key="projectId" :rows="snapshots" :detail="snapshotDetail" :busy="toolBusy||snapshotMutating" :disabled="uploadBusy||switchingFile||navigating||saving||hasActiveCompile||compiling" :message="snapshotMessage" @create="createSnapshot" @preview="previewSnapshot" @remove="deleteSnapshot" @restore="restoreSnapshot" />
+          <PaperSnapshotTools v-else-if="toolMode==='snapshots'" :key="projectId" :rows="snapshots" :detail="snapshotDetail" :busy="toolBusy||snapshotMutating" :disabled="uploadBusy||switchingFile||navigating||saving||hasActiveCompile||compiling||(collaborationOpen&&collaborationRevision===null)" :restore-disabled="collaborationOpen" :message="snapshotMessage" @create="createSnapshot" @preview="previewSnapshot" @remove="deleteSnapshot" @restore="restoreSnapshot" />
           <PaperDraftTools v-else-if="toolMode==='drafts'" :key="projectId+':'+accountId" :available="draftAvailable" :enabled="draftEnabled" :rows="draftRows" :files="files" :disabled="uploadBusy||switchingFile||navigating||saving" :can-recover="canRecoverDraft" :message="draftMessage" @toggle="toggleDraftProtection" @recover="recoverDraft" @remove="discardDraft" />
           <template v-else-if="toolMode==='members'">
             <PaperMemberTools v-if="ownerAccess" :key="projectId+':'+accountId" :rows="members" :account-id="accountId" :busy="toolBusy||memberMutating" :disabled="navigating||uploadBusy||snapshotMutating" :message="memberMessage" @set="changeMember" @remove="deleteMember" />
@@ -125,7 +126,7 @@
           <p v-else-if="!outlineRows.length">未找到章节标题。</p>
           <button v-for="item in outlineRows" :key="item.fileId+':'+item.line+':'+item.title" type="button" :style="{paddingLeft:Math.max(0,item.level-1)*12+'px'}" :title="item.path+':'+item.line" @click="jumpOutline(item)">{{ item.title }} <small>{{ item.path }}:{{ item.line }}</small></button>
         </section>
-        <PaperCollaborationPanel v-if="collaborationOpen&&activeFile?.kind==='text'&&collaborationAccount===accountId" :key="projectId+':'+activeFile.id+':'+accountId" ref="collaborationRef" :project-id="projectId" :file="activeFile" :role="ownerAccess?'owner':writeAccess?'editor':'viewer'" :account-id="accountId" :citations="citationKeys" @exit="exitCollaboration" />
+        <PaperCollaborationPanel v-if="collaborationOpen&&activeFile?.kind==='text'&&collaborationAccount===accountId" :key="projectId+':'+activeFile.id+':'+accountId" ref="collaborationRef" :project-id="projectId" :file="activeFile" :role="ownerAccess?'owner':writeAccess?'editor':'viewer'" :account-id="accountId" :citations="citationKeys" :operation-busy="snapshotMutating||compiling" @confirmed="onCollaborationConfirmed" @exit="exitCollaboration" />
         <LatexEditor v-else-if="!collaborationOpen&&activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef"  :model-value="draft" @update:model-value="updateDraft" :citations="citationKeys" :readonly="!writeAccess || switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
         <PaperAssetPreview v-else-if="activeFile?.kind === 'binary'" :key="activeFile.id+':'+activeFile.revision" :file="activeFile" />
         <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
@@ -157,11 +158,12 @@
           <div class="papers-workspace__preview-right">
             <label class="papers-workspace__compiler" title="选择此任务的 TeX 编译器"><span>编译器</span><select v-model="selectedCompiler" aria-label="TeX 编译器" :disabled="!compileEnabled||compiling||hasActiveCompile||saving||uploadBusy||navigating" @change="compilerChanged"><option v-for="engine in compilerOptions" :key="engine" :value="engine">{{ compilerLabel(engine) }}</option></select></label>
             <label class="papers-workspace__auto"><input type="checkbox" v-model="autoCompile" :disabled="collaborationOpen||!compileEnabled||recommendedUnavailable" /> 自动编译</label>
-            <PButton type="button" size="sm" :disabled="collaborationOpen || !compileEnabled || compiling || saving || switchingFile || navigating || uploadBusy || !project || hasActiveCompile" @click="compileNow">{{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}</PButton>
+            <PButton type="button" size="sm" :disabled="(collaborationOpen&&collaborationRevision===null) || !compileEnabled || compiling || saving || switchingFile || navigating || uploadBusy || snapshotMutating || !project || hasActiveCompile" @click="compileNow">{{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}</PButton>
           </div>
         </div>
+        <p v-if="collaborationOpen&&compileEnabled" class="papers-workspace__stale" role="status">{{collaborationRevision!==null?'编译已确认的项目版本 '+collaborationRevision+'，不会包含尚未提交的修改。':'等待当前协作修改确认后可编译。'}} 协作期间暂不开放自动编译及源码定位。</p>
         <p v-if="syncMessage" class="papers-workspace__sync-message" role="status">{{ syncMessage }}</p>
-        <p v-if="recommendedUnavailable" class="papers-workspace__stale" role="status">源码建议使用 {{ compilerLabel(recommendedCompiler) }}，当前编译环境尚未开放此编译器；可继续编辑源码。</p>
+        <p v-if="recommendedUnavailable&&!collaborationOpen" class="papers-workspace__stale" role="status">源码建议使用 {{ compilerLabel(recommendedCompiler) }}，当前编译环境尚未开放此编译器；可继续编辑源码。</p>
         <p v-if="compileError" class="papers-workspace__error" role="alert">{{ compileError }}</p>
         <section v-if="showDiagnostics && compileJob?.failure_code" class="papers-workspace__diagnostics" aria-label="编译错误详情">
           <div class="papers-workspace__diagnostics-header">
@@ -356,6 +358,14 @@ function insertFigure(figure:FigureInsertion){
 }
 
 const collaborationOpen=ref(false)
+const collaborationRevision=ref<number|null>(null)
+function onCollaborationConfirmed(revision:number|null){
+ if(collaborationOpen.value&&collaborationAccount.value===accountId.value)collaborationRevision.value=revision
+}
+function currentCollaborationRevision():number|null{
+ if(!collaborationOpen.value||!ownerAccess.value||collaborationAccount.value!==accountId.value)return null
+ return collaborationRef.value?.confirmedRevision()??null
+}
 const collaborationRef=ref<InstanceType<typeof PaperCollaborationPanel>|null>(null)
 const collaborationAccount=ref('')
 const activeFile = ref<PaperFile | null>(null)
@@ -477,7 +487,7 @@ function onDraftStorage(event:StorageEvent){
 let toolSerial=0,bibSerial=0
 function formatVersionDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString()}
 function closeTool(){toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null;snapshotDetail.value=null}
-function toggleTool(mode:ToolMode){if(collaborationOpen.value||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;refreshTool()}
+function toggleTool(mode:ToolMode){if((collaborationOpen.value&&mode!=='snapshots')||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;refreshTool()}
 function refreshTool(){if(toolMode.value==='search')void loadSearchSources();else if(toolMode.value==='references')void refreshBib();else if(toolMode.value==='history')void loadVersions();else if(toolMode.value==='snapshots')void loadSnapshots();else if(toolMode.value==='drafts')refreshLocalDrafts();else if(toolMode.value==='members'&&ownerAccess.value)void loadMembers()}
 function memberError(cause:unknown){
  const code=cause instanceof ApiErrorResponseError?cause.code:''
@@ -514,13 +524,13 @@ async function deleteMember(uid:string){
 function snapshotError(cause:unknown){
  const code=cause instanceof ApiErrorResponseError?cause.code:''
  if(code==='papers.snapshot_limit')return '快照已达 30 个上限，请先删除不需要的快照。'
- if(code==='papers.revision_conflict')return '项目版本已变化，请刷新项目后重试。'
+ if(code==='papers.revision_conflict')return collaborationOpen.value?'项目版本已变化，请等待协作同步完成后重试。':'项目版本已变化，请刷新项目后重试。'
  if(code==='papers.snapshot_unavailable')return '快照引用的历史版本缺失或损坏，操作已停止。'
  return '快照操作失败，请检查权限、网络或服务版本。'
 }
 async function loadSnapshots(){
- const pid=projectId.value,serial=++toolSerial
- const valid=()=>!disposed&&pid===projectId.value&&serial===toolSerial&&toolMode.value==='snapshots'
+ const pid=projectId.value,owner=accountId.value,serial=++toolSerial
+ const valid=()=>!disposed&&pid===projectId.value&&owner===accountId.value&&ownerAccess.value&&serial===toolSerial&&toolMode.value==='snapshots'
  toolBusy.value=true;toolError.value='';snapshotDetail.value=null
  try{const rows=await listPaperProjectSnapshots(pid);if(valid())snapshots.value=Array.isArray(rows)?rows:[]}
  catch(cause){if(valid())toolError.value=snapshotError(cause)}
@@ -528,47 +538,51 @@ async function loadSnapshots(){
 }
 async function previewSnapshot(id:string){
  if(snapshotMutating.value)return
- const pid=projectId.value,serial=++toolSerial
- const valid=()=>!disposed&&pid===projectId.value&&serial===toolSerial&&toolMode.value==='snapshots'
+ const pid=projectId.value,owner=accountId.value,serial=++toolSerial
+ const valid=()=>!disposed&&pid===projectId.value&&owner===accountId.value&&ownerAccess.value&&serial===toolSerial&&toolMode.value==='snapshots'
  toolBusy.value=true;toolError.value='';snapshotDetail.value=null
  try{const row=await getPaperProjectSnapshot(pid,id);if(valid()&&row.id===id)snapshotDetail.value=row}
  catch(cause){if(valid())toolError.value=snapshotError(cause)}
  finally{if(valid())toolBusy.value=false}
 }
 function snapshotBlocked(){
- return !ownerAccess.value||snapshotMutating.value||uploadBusy.value||toolBusy.value||switchingFile.value||navigating.value||saving.value||hasActiveCompile.value||compiling.value||!project.value||disposed
+ return !ownerAccess.value||(collaborationOpen.value&&currentCollaborationRevision()===null)||snapshotMutating.value||uploadBusy.value||toolBusy.value||switchingFile.value||navigating.value||saving.value||hasActiveCompile.value||compiling.value||!project.value||disposed
 }
-async function runSnapshotMutation(action:(pid:string)=>Promise<void>,flush=true){
+async function runSnapshotMutation(action:(pid:string,revision:number)=>Promise<void>,flush=true){
  if(snapshotBlocked())return
- const pid=projectId.value
+ const pid=projectId.value,owner=accountId.value,collaborating=collaborationOpen.value
  snapshotMutating.value=true;addingFile.value=true;toolError.value='';snapshotMessage.value=''
  try{
   await nextTick()
-  if(flush&&!await persist()){toolError.value='请先解决未保存源码或版本冲突，未执行快照操作。';return}
-  if(disposed||pid!==projectId.value||navigating.value||!project.value)return
-  await action(pid)
- }catch(cause){if(!disposed&&pid===projectId.value)toolError.value=snapshotError(cause)}
- finally{if(pid===projectId.value){snapshotMutating.value=false;addingFile.value=false;scheduleAuto()}}
+  if(!collaborating&&flush&&!await persist()){toolError.value='请先解决未保存源码或版本冲突，未执行快照操作。';return}
+  if(disposed||pid!==projectId.value||owner!==accountId.value||collaborating!==collaborationOpen.value||navigating.value||!project.value||!ownerAccess.value)return
+  const revision=collaborating?currentCollaborationRevision():project.value.head_revision
+  if(!revision){toolError.value='请等待协作修改得到服务器确认后重试。';return}
+  await action(pid,revision)
+ }catch(cause){if(!disposed&&pid===projectId.value&&owner===accountId.value)toolError.value=snapshotError(cause)}
+ finally{if(pid===projectId.value&&owner===accountId.value){snapshotMutating.value=false;addingFile.value=false;scheduleAuto()}}
 }
 async function createSnapshot(name:string){
- await runSnapshotMutation(async pid=>{
-  await createPaperProjectSnapshot(pid,name,project.value!.head_revision)
-  if(disposed||pid!==projectId.value)return
-  snapshotMessage.value='项目快照已创建。'
+ const owner=accountId.value
+ await runSnapshotMutation(async (pid,revision)=>{
+  await createPaperProjectSnapshot(pid,name,revision)
+  if(disposed||pid!==projectId.value||owner!==accountId.value)return
+  snapshotMessage.value=collaborationOpen.value?'项目快照已创建 · 版本 '+revision+'。':'项目快照已创建。'
   await loadSnapshots()
  })
 }
 async function deleteSnapshot(row:PaperProjectSnapshot){
  if(snapshotBlocked()||!window.confirm('删除快照「'+row.name+'」？不会删除文件历史或当前源码。'))return
+ const owner=accountId.value
  await runSnapshotMutation(async pid=>{
   await deletePaperProjectSnapshot(pid,row.id)
-  if(disposed||pid!==projectId.value)return
+  if(disposed||pid!==projectId.value||owner!==accountId.value)return
   snapshotMessage.value='快照已删除。'
   await loadSnapshots()
  },false)
 }
 async function restoreSnapshot(row:PaperSnapshotDetail){
- if(snapshotBlocked()||!window.confirm('恢复整个项目至「'+row.name+'」？将恢复文件、资源、路径和主文件设置。当前服务器状态会先保存为自动备份，其他窗口的本机草稿不会被覆盖。'))return
+ if(collaborationOpen.value||snapshotBlocked()||!window.confirm('恢复整个项目至「'+row.name+'」？将恢复文件、资源、路径和主文件设置。当前服务器状态会先保存为自动备份，其他窗口的本机草稿不会被覆盖。'))return
  await runSnapshotMutation(async pid=>{
   const result=await restorePaperProjectSnapshot(pid,row.id,project.value!.head_revision)
   if(disposed||pid!==projectId.value)return
@@ -763,7 +777,7 @@ const compileJob = ref<PaperCompileJob | null>(null)
 const previewJob = ref<PaperCompileJob | null>(null)
 const showDiagnostics=ref(false)
 const diagnostics=computed(()=>(compileJob.value?.diagnostics||[]).slice(0,12))
-const diagnosticStale=computed(()=>compileJob.value?.source_revision!==project.value?.head_revision || (activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content))
+const diagnosticStale=computed(()=>collaborationOpen.value||compileJob.value?.source_revision!==project.value?.head_revision || (activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content))
 watch(()=>[compileJob.value?.id,compileJob.value?.status],()=>{showDiagnostics.value=compileJob.value?.status==='failed'})
 function failureMessage(code:string){
  const labels:Record<string,string>={
@@ -794,7 +808,10 @@ async function jumpDiagnostic(item:PaperCompileDiagnostic){
  if(jobId===compileJob.value?.id&&!diagnosticStale.value&&activeFile.value?.id===target.id)editorRef.value?.goToLine(item.line)
 }
 
-const previewStale = computed(() => !!previewJob.value && (collaborationOpen.value || previewJob.value.id !== compileJob.value?.id || previewJob.value.source_revision !== project.value?.head_revision || (previewJob.value.compiler||'pdflatex')!==selectedCompiler.value || (activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)))
+const previewStale = computed(() => !!previewJob.value && (previewJob.value.id !== compileJob.value?.id ||
+ previewJob.value.source_revision !== (collaborationOpen.value?collaborationRevision.value:project.value?.head_revision) ||
+ (previewJob.value.compiler||'pdflatex')!==selectedCompiler.value ||
+ (!collaborationOpen.value&&activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)))
 const editorRef=ref<InstanceType<typeof LatexEditor>|null>(null)
 const pdfRef=ref<InstanceType<typeof PaperPDFPreview>|null>(null)
 const sourceMap=shallowRef<PaperSourceMap|null>(null)
@@ -1112,36 +1129,38 @@ async function refreshCompileStatus() {
 }
 
 async function compileNow() {
-  if (collaborationOpen.value || !compileEnabled.value || compiling.value || hasActiveCompile.value || !project.value || switchingFile.value || navigating.value || uploadBusy.value || disposed) return
-  const requestedProjectId = projectId.value
+  if (!compileEnabled.value || !ownerAccess.value || compiling.value || snapshotMutating.value || hasActiveCompile.value || !project.value || switchingFile.value || navigating.value || uploadBusy.value || disposed) return
+  const collaborating=collaborationOpen.value
+  if(collaborating&&currentCollaborationRevision()===null)return
+  const requestedProjectId = projectId.value,owner=accountId.value
   compileError.value = ''
   clearAuto();autoDirty=false;lastAutoCompile=Date.now()
   compiling.value = true
   historySerial++
   try {
     // Do not compile an unsaved draft, even if a debounce timer is pending.
-    if (!await persist()) {
+    if (!collaborating&&!await persist()) {
       compileError.value = '请先解决源码保存失败或版本冲突。'
       return
     }
-    const revision=project.value?.head_revision
-    if(disposed||requestedProjectId!==projectId.value||!revision)return
+    const revision=collaborating?currentCollaborationRevision():project.value?.head_revision
+    if(disposed||requestedProjectId!==projectId.value||owner!==accountId.value||collaborating!==collaborationOpen.value||!revision)return
     if(!pendingSubmission||pendingSubmission.projectId!==requestedProjectId||pendingSubmission.revision!==revision||pendingSubmission.compiler!==selectedCompiler.value){
       pendingSubmission={projectId:requestedProjectId,revision,compiler:selectedCompiler.value,key:globalThis.crypto?.randomUUID?.()??('compile-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2))}
     }
     const job=await (pendingSubmission.compiler==='pdflatex'?submitPaperCompile(requestedProjectId,revision,pendingSubmission.key):submitPaperCompile(requestedProjectId,revision,pendingSubmission.key,pendingSubmission.compiler))
-    if(disposed||requestedProjectId!==projectId.value)return
+    if(disposed||requestedProjectId!==projectId.value||owner!==accountId.value)return
     pendingSubmission=null
     compileJob.value = job
     scheduleCompilePoll()
   } catch(cause) {
-    if (!disposed && requestedProjectId === projectId.value){
+    if (!disposed && requestedProjectId === projectId.value&&owner===accountId.value){
       const code=cause instanceof ApiErrorResponseError?cause.code:''
 
-      compileError.value=code==='papers.compile_revision_conflict'||code==='papers.revision_conflict'?'项目版本已在其他窗口发生变化，请复制未保存内容后刷新。':code==='papers.compile_quota_exceeded'?'已达到编译频率或存储限制，请稍后重试。':code==='papers.compiler_unavailable'?'当前编译环境尚未开放此编译器，请刷新项目或切换编译器。':'无法提交编译任务，请检查网络或编译环境后重试。'
+      compileError.value=code==='papers.compile_revision_conflict'||code==='papers.revision_conflict'?(collaborating?'项目版本已变化，请等待协作同步完成后重新编译。':'项目版本已在其他窗口发生变化，请复制未保存内容后刷新。'):code==='papers.compile_quota_exceeded'?'已达到编译频率或存储限制，请稍后重试。':code==='papers.compiler_unavailable'?'当前编译环境尚未开放此编译器，请刷新项目或切换编译器。':'无法提交编译任务，请检查网络或编译环境后重试。'
     }
   } finally {
-    if(requestedProjectId===projectId.value)compiling.value = false
+    if(requestedProjectId===projectId.value&&owner===accountId.value)compiling.value = false
   }
 }
 
@@ -1198,18 +1217,18 @@ function startCollaboration(){
  if(saveTimer){clearTimeout(saveTimer);saveTimer=null}
  clearSaveRetry();retryableSave=false
  closeTool();outlineOpen.value=false;managedFile.value=null;clearAuto();autoCompile.value=false;historySerial++
- collaborationAccount.value=accountId.value
+ collaborationAccount.value=accountId.value;collaborationRevision.value=null
  collaborationOpen.value=true;saveStatus.value='实时协作模式'
  if(layoutMode.value==='pdf')layoutMode.value='editor'
 }
 async function exitCollaboration(){
- if(!collaborationOpen.value)return
+ if(!collaborationOpen.value||snapshotMutating.value||compiling.value)return
  const pid=projectId.value,owner=accountId.value,fid=activeFile.value?.id
  // Do not reveal the pre-collaboration source even if a compile-history
  // response raced the exit or the canonical reload fails.
  loading.value=true
  activeFile.value=null;draft.value=''
- collaborationOpen.value=false;collaborationAccount.value=''
+ collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null
  closeTool();clearAuto();stopCompilePoll();pollSerial++;historySerial++;fileSerial++
  compileJob.value=null;previewJob.value=null;compileEnabled.value=false;pdfEnabled.value=false
  searchSources.value=[];searchBase.value=0;bibSources.value=[];outlineCache.value=[];members.value=[];managedFile.value=null
@@ -1223,8 +1242,9 @@ watch(accountId,(next,previous)=>{
  if(next===previous||!collaborationOpen.value)return
  // A different account must never inherit the preceding account's live
  // Y.Doc or a stale canonical source. The keyed panel is unmounted.
- collaborationOpen.value=false;collaborationAccount.value=''
+ collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null
  loadSerial++;fileSerial++;pollSerial++;historySerial++;mapSerial++
+ pendingSubmission=null;compiling.value=false;canceling.value=false;snapshotMutating.value=false;addingFile.value=false
  clearAuto();stopCompilePoll();mapAbort?.abort()
  activeFile.value=null;draft.value='';files.value=[];project.value=null
  previewJob.value=null;compileJob.value=null;sourceMap.value=null
@@ -1279,7 +1299,7 @@ onBeforeRouteUpdate(beforeNavigate)
 const removeNavigationHook=router.afterEach(()=>{navigating.value=false})
 
 watch(projectId, () => {
-  collaborationOpen.value=false;collaborationAccount.value=''
+  collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null
   loadSerial++
   uploadSerial++;preparingUpload.value=false;draggingFiles.value=false
   memberSerial++;members.value=[];memberMessage.value='';memberMutating.value=false;refreshMessage.value=''

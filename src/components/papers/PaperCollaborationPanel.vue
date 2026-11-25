@@ -4,7 +4,7 @@
    <strong>实时协作 · {{ file.path }}</strong>
    <span role="status">{{ statusLabel }}</span>
    <button v-if="view?.text" type="button" @click="copySource">复制协作源码</button>
-   <button type="button" @click="requestExit">退出协作</button>
+   <button type="button" :disabled="operationBusy" @click="requestExit">退出协作</button>
   </div>
   <p v-if="message" role="alert">{{ message }}</p>
   <p v-if="view?.message" role="alert">{{ view.message }}</p>
@@ -36,7 +36,7 @@
     <span class="papers-collab__dot" :style="{backgroundColor:peerColor(peer.connection_id)}" />{{ peer.name }}{{peer.connection_id===view.connectionId?'（我）':''}}
    </span>
   </div>
-  <p v-if="view?.text" class="papers-collab__hint">仅同步当前文件。协作期间暂停普通保存、编译和项目结构修改；断线默认暂停编辑并尝试恢复原协作会话；可选择离线编辑和本机草稿保护。撤销仅影响当前编辑器中的本地操作。</p>
+  <p v-if="view?.text" class="papers-collab__hint">仅同步当前文件。协作期间暂停普通保存和项目结构修改；所有者可编译或创建已确认版本的项目快照；断线默认暂停编辑并尝试恢复原协作会话；可选择离线编辑和本机草稿保护。撤销仅影响当前编辑器中的本地操作。</p>
   <LatexEditor v-if="view?.text" :key="view.epoch" :model-value="view.source" :collaborative-text="view.text" :citations="citations" :readonly="!editable" :can-edit-collaboration="canEditNow" :remote-peers="remotePeers" @presence-selection="selectionChanged" />
   <p v-else class="papers-collab__empty">{{ message?'请退出协作，继续普通编辑。':'正在验证项目权限并读取服务端文档…' }}</p>
   <textarea v-if="copyFallback" readonly :value="view?.source||''" aria-label="可手动复制的协作源码" />
@@ -52,8 +52,8 @@ import {DurablePaperCollaboration,type CollaborationView} from './durableCollabo
 import {peerColor,type LocalSelection} from './paperPresence'
 import {collabDraftKey,collaborationDraftEnabled,setCollaborationDraftEnabled,listCollaborationDrafts,writeCollaborationDraft,sameCollaborationDraft,removeCollaborationDraft,type PaperCollaborationDraft} from './collaborationDrafts'
 
-const props=defineProps<{projectId:string;file:PaperFile;role:PaperProjectRole;accountId:string;citations?:readonly string[]}>()
-const emit=defineEmits<{exit:[]}>()
+const props=defineProps<{projectId:string;file:PaperFile;role:PaperProjectRole;accountId:string;citations?:readonly string[];operationBusy?:boolean}>()
+const emit=defineEmits<{exit:[];confirmed:[revision:number|null]}>()
 const auth=useAuthStore()
 const view=shallowRef<CollaborationView|null>(null)
 const message=ref(''),copyFallback=ref(false)
@@ -189,8 +189,14 @@ function storageChanged(event:StorageEvent){
   }
  }
 }
+function confirmedRevision():number|null{
+ const current=session?.view
+ return scope()&&props.role==='owner'&&current?.role==='owner'&&current.status==='ready'&&!current.pending&&
+  !!current.epoch&&Number.isSafeInteger(current.projectRevision)&&current.projectRevision>0?current.projectRevision:null
+}
 function hasUnconfirmed(){return !!session?.view.pending}
 function requestExit(){
+ if(props.operationBusy)return
  if(hasUnconfirmed()&&!window.confirm(draftSaved.value?'仍有未确认的修改，本机备份已保留。确定退出协作？':'仍有未确认且未完整备份的修改。请先复制源码，确定退出？'))return
  emit('exit')
 }
@@ -217,14 +223,14 @@ onMounted(async()=>{
     if(!scope())throw Error('collaboration account changed')
     return auth.token?new WebSocket(url,[`atoman.api.${auth.token}`]):new WebSocket(url)
    },
-   onChange:next=>{if(scope()){view.value=next;syncCollaborationDraft(next)}},
+   onChange:next=>{if(scope()){view.value=next;syncCollaborationDraft(next);emit('confirmed',confirmedRevision())}},
   })
   session.start()
  }catch{if(scope())message.value='无法读取协作能力，请检查网络或访问资格。'}
 })
 onBeforeUnmount(()=>{disposed=true;window.removeEventListener('storage',storageChanged);draftRows.value=[]})
 onUnmounted(()=>{session?.destroy();session=null;view.value=null})
-defineExpose({hasUnconfirmed,requestExit})
+defineExpose({hasUnconfirmed,requestExit,confirmedRevision})
 </script>
 <style scoped>
 .papers-collab{display:flex;flex:1;flex-direction:column;min-height:0;overflow:hidden}

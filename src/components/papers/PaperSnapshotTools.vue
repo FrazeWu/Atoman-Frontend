@@ -5,6 +5,7 @@
    <label>快照名称<input v-model.trim="name" maxlength="100" placeholder="例如：投稿前版本" aria-label="快照名称" :disabled="disabled||busy" /></label>
    <PButton type="submit" size="sm" :disabled="disabled||busy||!name||rows.length>=30">创建快照</PButton>
   </form>
+  <p v-if="restoreDisabled">协作中仅可创建或管理已确认版本的快照。恢复整个项目之前请先退出协作，保留本机未确认的修改。</p>
   <p v-if="message" role="status">{{ message }}</p>
   <p v-if="rows.length>=30" role="status">快照已达上限，请先删除不需要的快照，给自动安全备份预留空间。</p>
   <p v-if="!rows.length&&!busy">暂无项目快照。</p>
@@ -19,7 +20,7 @@
    <strong>{{ detail.name }} · 文件清单</strong>
    <p>恢复将替换当前项目文件集合、路径和主文件设置。快照创建后的新增文件将移出当前项目，但仍可通过自动备份恢复。</p>
    <ul><li v-for="file in detail.files" :key="file.file_id">{{ file.path }} · v{{ file.revision }}{{ file.file_id===detail.main_file_id?'（主文件）':'' }}</li></ul>
-   <PButton size="sm" type="button" :disabled="disabled||busy||rows.length>=30" @click="$emit('restore',detail)">恢复整个项目</PButton>
+   <PButton size="sm" type="button" :disabled="disabled||busy||rows.length>=30||restoreDisabled" @click="$emit('restore',detail)">恢复整个项目</PButton>
   </div>
  </div>
 </template>
@@ -27,7 +28,7 @@
 import {ref} from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import type {PaperProjectSnapshot,PaperSnapshotDetail} from '@/api/papers'
-defineProps<{rows:PaperProjectSnapshot[];detail:PaperSnapshotDetail|null;busy:boolean;disabled:boolean;message:string}>()
+defineProps<{rows:PaperProjectSnapshot[];detail:PaperSnapshotDetail|null;busy:boolean;disabled:boolean;message:string;restoreDisabled?:boolean}>()
 const emit=defineEmits<{create:[name:string];preview:[id:string];remove:[snapshot:PaperProjectSnapshot];restore:[snapshot:PaperSnapshotDetail]}>()
 const name=ref('')
 function submit(){if(name.value)emit('create',name.value)}

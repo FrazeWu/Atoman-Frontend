@@ -140,11 +140,12 @@
           </div>
           <div class="papers-workspace__preview-right">
             <label class="papers-workspace__compiler" title="选择此任务的 TeX 编译器"><span>编译器</span><select v-model="selectedCompiler" aria-label="TeX 编译器" :disabled="!compileEnabled||compiling||hasActiveCompile||saving||uploadBusy||navigating" @change="compilerChanged"><option v-for="engine in compilerOptions" :key="engine" :value="engine">{{ compilerLabel(engine) }}</option></select></label>
-            <label class="papers-workspace__auto"><input type="checkbox" v-model="autoCompile" :disabled="!compileEnabled" /> 自动编译</label>
+            <label class="papers-workspace__auto"><input type="checkbox" v-model="autoCompile" :disabled="!compileEnabled||recommendedUnavailable" /> 自动编译</label>
             <PButton type="button" size="sm" :disabled="!compileEnabled || compiling || saving || switchingFile || navigating || uploadBusy || !project || hasActiveCompile" @click="compileNow">{{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}</PButton>
           </div>
         </div>
         <p v-if="syncMessage" class="papers-workspace__sync-message" role="status">{{ syncMessage }}</p>
+        <p v-if="recommendedUnavailable" class="papers-workspace__stale" role="status">源码建议使用 {{ compilerLabel(recommendedCompiler) }}，当前编译环境尚未开放此编译器；可继续编辑源码。</p>
         <p v-if="compileError" class="papers-workspace__error" role="alert">{{ compileError }}</p>
         <section v-if="showDiagnostics && compileJob?.failure_code" class="papers-workspace__diagnostics" aria-label="编译错误详情">
           <div class="papers-workspace__diagnostics-header">
@@ -194,7 +195,7 @@ import PaperFigureTools from '@/components/papers/PaperFigureTools.vue'
 import {prepareFigureUploads,type FigureInsertion} from '@/components/papers/figureTools'
 import {paperFileTree,preparePaperUploads} from '@/components/papers/fileTools'
 import {searchProject,planProjectReplacement,bibtexReferences,changedLineRange,type ProjectMatch,type PaperReference} from '@/components/papers/projectTools'
-import {latexHeadings,type LatexHeading} from '@/components/papers/latexLanguage'
+import {latexHeadings,recommendedTexCompiler,type LatexHeading} from '@/components/papers/latexLanguage'
 import PaperPDFPreview from '@/components/papers/PaperPDFPreview.vue'
 import { decodeSourceMap, sourceToPDF, pdfToSource, type PaperSourceMap } from '@/components/papers/sourceMap'
 import {
@@ -496,6 +497,8 @@ const saveStatus = ref('尚未打开文件')
 const compileEnabled = ref(false)
 const compilerOptions=ref<PaperCompiler[]>(['pdflatex'])
 const selectedCompiler=ref<PaperCompiler>('pdflatex')
+const recommendedCompiler=ref<PaperCompiler|undefined>(undefined)
+const recommendedUnavailable=computed(()=>!!recommendedCompiler.value&&(!compileEnabled.value||!compilerOptions.value.includes(recommendedCompiler.value)))
 let compilerChangedByUser=false
 function compilerLabel(engine?:PaperCompiler){return engine==='xelatex'?'XeLaTeX':engine==='lualatex'?'LuaLaTeX':'pdfLaTeX'}
 function compilerChanged(){compilerChangedByUser=true;autoDirty=true;scheduleAuto()}
@@ -605,9 +608,9 @@ function endResize(){dragging=false}
 function clearAuto(){if(autoTimer)clearTimeout(autoTimer);autoTimer=null}
 function scheduleAuto(){
  clearAuto()
- if(!autoCompile.value||!autoDirty||!compileEnabled.value||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||uploadBusy.value||saveError.value||disposed)return
+ if(!autoCompile.value||!autoDirty||!compileEnabled.value||recommendedUnavailable.value||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||uploadBusy.value||saveError.value||disposed)return
  autoTimer=setTimeout(()=>{
-  if(!autoCompile.value||!autoDirty||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||uploadBusy.value||saveError.value||disposed||document.visibilityState==='hidden')return
+  if(!autoCompile.value||!autoDirty||recommendedUnavailable.value||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||uploadBusy.value||saveError.value||disposed||document.visibilityState==='hidden')return
   autoDirty=false;lastAutoCompile=Date.now();void compileNow()
  },Math.max(15000,60000-(Date.now()-lastAutoCompile)))
 }
@@ -663,13 +666,19 @@ async function loadProject() {
 
     const main = currentFiles.find((file) => file.id === currentProject.main_file_id) || currentFiles[0]
     if (main) await selectFile(main)
+    if(disposed||serial!==loadSerial||requestedProjectId!==projectId.value)return
+    if(main&&activeFile.value?.id===main.id&&activeFile.value.kind==='text'){
+      recommendedCompiler.value=recommendedTexCompiler(activeFile.value.content)
+      if(compileEnabled.value&&recommendedCompiler.value&&compilerOptions.value.includes(recommendedCompiler.value))selectedCompiler.value=recommendedCompiler.value
+    }
+
     if (compileEnabled.value && !disposed && serial === loadSerial) {
       // Do not hold the editor's loading state hostage to queue history.
       const historyRequest=++historySerial
       void listPaperCompileJobs(requestedProjectId).then((history) => {
         if (!disposed && serial === loadSerial && historyRequest===historySerial && requestedProjectId === projectId.value) {
           compileJob.value = history[0] ?? null
-          const priorCompiler=compileJob.value?.compiler||'pdflatex'
+          const priorCompiler=compileJob.value?.compiler||recommendedCompiler.value||'pdflatex'
           if(!compilerChangedByUser&&compilerOptions.value.includes(priorCompiler))selectedCompiler.value=priorCompiler
 
           previewJob.value = history.find(job => job.status === 'succeeded' && job.pdf_available) ?? null
@@ -943,7 +952,7 @@ watch(projectId, () => {
   displayedPDFJob.value='';sourceMap.value=null;mapJob.value='';mapAbort?.abort();mapSerial++;syncMessage.value=''
   clearAuto();autoDirty=false
   compileEnabled.value = false
-  selectedCompiler.value='pdflatex';compilerOptions.value=['pdflatex'];compilerChangedByUser=false
+  selectedCompiler.value='pdflatex';compilerOptions.value=['pdflatex'];compilerChangedByUser=false;recommendedCompiler.value=undefined
   pdfEnabled.value = false
   compileError.value = ''
   exportError.value = ''

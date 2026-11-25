@@ -72,3 +72,10 @@ export function latexHeadings(source:string):LatexHeading[]{
  }
  return rows
 }
+
+// Recognize only the conventional, allowlisted TeX editor directive. This
+// is a UI recommendation, never a command or a backend capability override.
+export function recommendedTexCompiler(source:string):'pdflatex'|'xelatex'|'lualatex'|undefined{
+ const match=source.slice(0,2048).match(/^\s*%\s*!\s*TEX\s+(?:program|TS-program)\s*=\s*(pdflatex|xelatex|lualatex)\s*$/im)
+ return match?.[1]?.toLowerCase() as 'pdflatex'|'xelatex'|'lualatex'|undefined
+}

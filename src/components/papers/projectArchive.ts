@@ -77,3 +77,18 @@ export async function packPaperFolder(files: File[], excludeUnsupported = false)
 export function suggestPaperProjectName(file: File, folder = false) {
   return (folder ? file.webkitRelativePath.split('/')[0] : file.name.replace(/\.zip$/i, '')).trim().slice(0, 100)
 }
+
+// Built-in original templates are packaged locally and use the same atomic
+// import endpoint as a user-uploaded ZIP. The server still validates entries.
+export async function packPaperTemplate(id:string):Promise<Blob>{
+  const {paperTemplateFiles}=await import('./templateCatalog')
+  const files=Object.entries(paperTemplateFiles(id))
+  if(!files.length||files.length>64||files.some(([path])=>!portablePath(path)||!supportedExtensions.test(path)))throw new Error('内置模板文件不符合项目规范。')
+  if(!files.some(([path])=>path==='main.tex')||files.reduce((size,[,text])=>size+bytes(text),0)>paperImportSourceLimit)throw new Error('内置模板超过项目容量限制。')
+  const {default:JSZip}=await import('jszip')
+  const zip=new JSZip()
+  for(const [path,text] of files)zip.file(path,text,{createFolders:false})
+  const archive=await zip.generateAsync({type:'blob',compression:'DEFLATE'})
+  if(!archive.size||archive.size>paperImportZIPLimit)throw new Error('模板 ZIP 超过容量限制。')
+  return archive
+}

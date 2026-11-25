@@ -170,3 +170,58 @@ it('renames, trashes and restores an owned project through the project list',asy
   expect(w.get('.papers-home__card').text()).toContain('New')
  }finally{vi.unstubAllGlobals();w.unmount()}
 })
+
+describe('Papers template library',()=>{
+  async function open(){
+    mocks.access.mockResolvedValue({allowed:true})
+    mocks.projects.mockResolvedValue([])
+    mocks.importProject.mockReset()
+    mocks.push.mockClear()
+    const w=mount(PapersHomeView,{global:{stubs:{PPageHeader:true}}})
+    await flushPromises()
+    await w.findAll('button').find(b=>b.text()==='模板库')!.trigger('click')
+    return w
+  }
+  it('filters templates, creates an original Chinese thesis by atomic ZIP import, and retains a custom project name',async()=>{
+    const w=await open()
+    try{
+      await w.get('#paper-project-name').setValue('My dissertation')
+      await w.findAll('button').find(b=>b.text()==='中文论文')!.trigger('click')
+      expect(w.findAll('.paper-templates__card')).toHaveLength(2)
+      const card=w.findAll('.paper-templates__card').find(c=>c.text().includes('中文学位论文通用稿'))!
+      await card.get('button').trigger('click')
+      expect((w.get('#paper-project-name').element as HTMLInputElement).value).toBe('My dissertation')
+      expect(w.text()).toContain('需 XeLaTeX 中文环境')
+      mocks.importProject.mockResolvedValue({id:'template-p'})
+      await w.get('form.papers-home__create').trigger('submit')
+      await vi.waitFor(()=>expect(mocks.importProject).toHaveBeenCalledTimes(1),{timeout:5000})
+      const [name,archive,main]=mocks.importProject.mock.calls[0]!
+      expect(name).toBe('My dissertation')
+      expect(main).toBe('main.tex')
+      const {default:JSZip}=await import('jszip')
+      const zip=await JSZip.loadAsync(await (archive as Blob).arrayBuffer())
+      expect(await zip.file('main.tex')!.async('string')).toContain('ctexbook')
+      expect(w.text()).toContain('中文学位论文通用稿')
+      expect(mocks.push).toHaveBeenCalledWith('/papers/template-p')
+    }finally{w.unmount()}
+  })
+  it('labels conference drafts as non-official and exposes publisher sources; does not silently retry failed template imports',async()=>{
+    const w=await open()
+    try{
+      await w.get('[aria-label="搜索论文模板"]').setValue('NeurIPS')
+      expect(w.findAll('.paper-templates__card')).toHaveLength(1)
+      const card=w.get('.paper-templates__card')
+      expect(card.text()).toContain('非官方投稿格式')
+      expect(card.get('a').attributes('href')).toContain('neurips.cc/Conferences/2026/')
+      expect(card.get('a').attributes('rel')).toBe('noopener noreferrer')
+      await card.get('button').trigger('click')
+      mocks.importProject.mockRejectedValueOnce(new Error('quota'))
+      await w.get('form.papers-home__create').trigger('submit')
+      await vi.waitFor(()=>expect(w.text()).toContain('模板创建失败'),{timeout:5000})
+      expect(mocks.importProject).toHaveBeenCalledTimes(1)
+      expect(mocks.push).not.toHaveBeenCalled()
+      expect(w.find('.papers-home__exclusion').exists()).toBe(false)
+      expect(w.text()).toContain('NeurIPS 2026 写作稿')
+    }finally{w.unmount()}
+  })
+})

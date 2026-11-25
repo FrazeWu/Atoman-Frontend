@@ -23,11 +23,17 @@
       <form class="papers-home__create" @submit.prevent="create()">
         <h2>新建论文项目</h2>
         <div class="papers-home__import-actions">
-          <PButton type="button" size="sm" :variant="!importSource ? 'primary' : 'secondary'" :disabled="creating" @click="clearImport">空白项目</PButton>
+          <PButton type="button" size="sm" :variant="!importSource && !selectedTemplate && !showTemplates ? 'primary' : 'secondary'" :disabled="creating" @click="clearImport">空白项目</PButton>
+          <PButton type="button" size="sm" :variant="showTemplates||selectedTemplate?'primary':'secondary'" :disabled="creating" :aria-expanded="showTemplates" @click="showTemplates=!showTemplates">模板库</PButton>
           <PButton type="button" size="sm" variant="secondary" :disabled="creating" @click="folderInput?.click()">上传文件夹</PButton>
           <PButton type="button" size="sm" variant="secondary" :disabled="creating" @click="zipInput?.click()">上传 ZIP</PButton>
           <input ref="folderInput" type="file" webkitdirectory multiple hidden :disabled="creating" @change="chooseImport($event, 'folder')" />
           <input ref="zipInput" type="file" accept=".zip,application/zip" hidden :disabled="creating" @change="chooseImport($event, 'zip')" />
+        </div>
+        <PaperTemplateLibrary v-if="showTemplates" :selected-id="templateId" :disabled="creating" @select="chooseTemplate" />
+        <div v-if="selectedTemplate" class="papers-home__template-selection" role="status">
+          <div><strong>{{ selectedTemplate.name }}</strong><p>{{ selectedTemplate.compiler==='xelatex'?'需 XeLaTeX 中文环境 · ':'' }}{{ selectedTemplate.official?'写作稿，非正式投稿格式。':'包含章节源码与 BibTeX 文献库。' }}</p></div>
+          <PButton type="button" size="sm" variant="ghost" :disabled="creating" @click="clearImport">取消选择</PButton>
         </div>
         <div v-if="importSource" class="papers-home__selected">
           <span>{{ importSource.label }} · {{ importSource.kind === 'folder' ? importSource.files.length + ' 个文件' : (importSource.files[0].size / 1048576).toFixed(2) + ' MiB' }}</span>
@@ -36,7 +42,7 @@
         <label for="paper-project-name">项目名称</label>
         <div class="papers-home__actions">
           <input id="paper-project-name" v-model.trim="projectName" maxlength="100" placeholder="例如：Jailbreak Defense" required :disabled="creating" />
-          <PButton type="submit" :disabled="creating || !projectName || !!exclusion">{{ creating ? '处理中…' : importSource ? '创建并导入' : '创建' }}</PButton>
+          <PButton type="submit" :disabled="creating || !projectName || !!exclusion">{{ creating ? '处理中…' : selectedTemplate ? '从模板创建' : importSource ? '创建并导入' : '创建' }}</PButton>
         </div>
         <div v-if="importSource" class="papers-home__main-file">
           <label for="paper-main-file">主 TeX 文件（可选）</label>
@@ -104,7 +110,9 @@ import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PButton from '@/components/ui/PButton.vue'
 import { paperAccess, listPaperProjects, createPaperProject, getPaperApplication, submitPaperApplication, importPaperProject, getPaperProjectZIP, downloadPaperZIP, paperImportZIPLimit, renamePaperProject, trashPaperProject, listTrashedPaperProjects, restorePaperProject, type TrashedPaperProject, type PaperProject, type PaperApplication } from '@/api/papers'
-import { packPaperFolder, suggestPaperProjectName, unsupportedPaperFolderFiles, paperArchiveExclusion } from '@/components/papers/projectArchive'
+import { packPaperFolder, packPaperTemplate, suggestPaperProjectName, unsupportedPaperFolderFiles, paperArchiveExclusion } from '@/components/papers/projectArchive'
+import PaperTemplateLibrary from '@/components/papers/PaperTemplateLibrary.vue'
+import { getPaperTemplate } from '@/components/papers/templateCatalog'
 
 defineOptions({name:'PapersHomeView'})
 const router = useRouter()
@@ -148,6 +156,15 @@ const folderInput = ref<HTMLInputElement | null>(null)
 const zipInput = ref<HTMLInputElement | null>(null)
 const importSource = ref<{kind:'folder'|'zip'; files:File[]; label:string} | null>(null)
 const mainFile = ref('')
+const showTemplates=ref(false),templateId=ref('')
+const selectedTemplate=computed(()=>getPaperTemplate(templateId.value))
+function chooseTemplate(id:string){
+  if(creating.value)return
+  const template=getPaperTemplate(id)
+  if(!template)return
+  if(!projectName.value||projectName.value===selectedTemplate.value?.name||projectName.value===importSource.value?.label)projectName.value=template.name
+  cancelExclusion();importSource.value=null;mainFile.value='';templateId.value=id;error.value=''
+}
 type Exclusion = {kind:'folder'; files:string[]} | {kind:'zip'; files:string[]; confirmation:string; archive:Blob}
 const exclusion = ref<Exclusion | null>(null)
 function cancelExclusion() {
@@ -158,6 +175,8 @@ const exporting = ref('')
 function clearImport() {
   cancelExclusion()
   importSource.value = null
+  templateId.value=''
+  showTemplates.value=false
   mainFile.value = ''
   error.value = ''
 }
@@ -173,6 +192,8 @@ function chooseImport(event: Event, kind: 'folder'|'zip') {
   const name = suggestPaperProjectName(files[0], kind === 'folder')
   if (!name) { error.value = '无法识别项目名称，请改用 ZIP 导入。'; return }
   cancelExclusion()
+  templateId.value=''
+  showTemplates.value=false
   importSource.value = { kind, files, label: kind === 'folder' ? name : files[0].name }
   projectName.value = name
   mainFile.value = ''
@@ -226,7 +247,10 @@ async function create(confirmed = false) {
   try {
     const source = importSource.value
     let project: PaperProject
-    if (!source) project = await createPaperProject(projectName.value)
+    if (selectedTemplate.value) {
+      archive=await packPaperTemplate(selectedTemplate.value.id)
+      project=await importPaperProject(projectName.value,archive,'main.tex')
+    } else if (!source) project = await createPaperProject(projectName.value)
     else {
       if (source.kind === 'folder' && !acknowledged) {
         const files = unsupportedPaperFolderFiles(source.files)
@@ -243,11 +267,11 @@ async function create(confirmed = false) {
     }
     await router.push('/papers/' + project.id)
   } catch (cause) {
-    const challenge = archive && paperArchiveExclusion(cause)
+    const challenge = archive && !selectedTemplate.value && paperArchiveExclusion(cause)
     if (challenge && archive) {
       exclusion.value = {kind:'zip',...challenge,archive}
     } else {
-      error.value = importSource.value ? (cause instanceof Error && cause.message ? '导入失败：' + cause.message : '导入失败，请检查 ZIP 内容。') : '创建失败。请检查项目名称、访问权限或当前项目数量。'
+      error.value = selectedTemplate.value ? '模板创建失败，请检查网络、访问权限和项目数量后重试。' : importSource.value ? (cause instanceof Error && cause.message ? '导入失败：' + cause.message : '导入失败，请检查 ZIP 内容。') : '创建失败。请检查项目名称、访问权限或当前项目数量。'
     }
   } finally {
     creating.value = false
@@ -292,4 +316,6 @@ onMounted(load)
 .papers-home__list-heading input,.papers-home__rename input{min-width:0;max-width:100%;padding:8px;border:1px solid var(--a-color-border-soft,#ddd);background:var(--a-color-bg,#fff);color:inherit;border-radius:6px}
 .papers-home__rename input{flex:1}
 .papers-home__trash-row{justify-content:space-between;padding:8px 0;border-top:1px solid var(--a-color-border-soft,#ddd)}
+.papers-home__template-selection{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;margin-bottom:14px;border:1px solid var(--a-color-border-soft,#ddd);border-radius:8px;background:var(--a-color-bg-subtle,transparent)}
+.papers-home__template-selection p{font-size:.8rem;color:var(--a-color-text-secondary,#697281);margin:4px 0 0}
 </style>

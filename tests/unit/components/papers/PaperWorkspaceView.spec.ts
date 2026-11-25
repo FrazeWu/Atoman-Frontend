@@ -493,3 +493,32 @@ describe('Papers image upload and insertion workflow',()=>{
   }finally{wrapper.unmount()}
  })
 })
+
+describe('Papers template compiler recommendation',()=>{
+ async function openRecommended(compilers:('pdflatex'|'xelatex')[]){
+  const main={...f2,content:'% !TEX program = xelatex\nChinese manuscript'}
+  vi.mocked(getPaperProject).mockResolvedValue({...two} as never)
+  vi.mocked(listPaperFiles).mockResolvedValue([main] as never)
+  vi.mocked(getPaperFile).mockResolvedValue(main as never)
+  vi.mocked(getPaperCompileCapability).mockResolvedValue({enabled:true,pdf_available:true,compilers})
+  vi.mocked(listPaperCompileJobs).mockResolvedValue([])
+  const router=createRouter({history:createMemoryHistory(),routes:[{path:'/papers/:projectId',component:PaperWorkspaceView}]})
+  await router.push('/papers/two');await router.isReady()
+  const w=mount(defineComponent({render:()=>h(RouterView)}),{global:{plugins:[router]}})
+  await flushPromises()
+  return w
+ }
+ it('selects the recommended XeLaTeX compiler only if the server allows it',async()=>{
+  const w=await openRecommended(['pdflatex','xelatex'])
+  try{expect((w.get('select[aria-label="TeX 编译器"]').element as HTMLSelectElement).value).toBe('xelatex')}
+  finally{w.unmount()}
+ })
+ it('shows an explicit recommendation when the compiler is not available and blocks automatic compilation',async()=>{
+  const w=await openRecommended(['pdflatex'])
+  try{
+   expect(w.text()).toContain('源码建议使用 XeLaTeX，当前编译环境尚未开放此编译器')
+   expect((w.get('select[aria-label="TeX 编译器"]').element as HTMLSelectElement).value).toBe('pdflatex')
+   expect(w.get('.papers-workspace__auto input').attributes('disabled')).toBeDefined()
+  }finally{w.unmount()}
+ })
+})

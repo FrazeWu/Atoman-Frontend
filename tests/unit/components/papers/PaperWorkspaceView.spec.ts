@@ -2,11 +2,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
 import { defineComponent, h, nextTick } from 'vue'
+import {listLocalDrafts,writeLocalDraft,setLocalDraftEnabled,type PaperLocalDraft} from '@/components/papers/localDrafts'
 import LatexEditor from "@/components/papers/LatexEditor.vue"
 import PaperWorkspaceView from '@/views/papers/PaperWorkspaceView.vue'
-import { managePaperFiles, savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, listPaperFileVersions, getPaperFileVersion } from '@/api/papers'
+import {listPaperProjectSnapshots,getPaperProjectSnapshot,createPaperProjectSnapshot,restorePaperProjectSnapshot,deletePaperProjectSnapshot, managePaperFiles, savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, listPaperFileVersions, getPaperFileVersion } from '@/api/papers'
 
+vi.mock('@/stores/auth',()=>({useAuthStore:()=>({isAuthenticated:true,user:{uuid:'owner-a'}})}))
 vi.mock('@/api/papers', () => ({
+  listPaperProjectSnapshots:vi.fn(),
+  getPaperProjectSnapshot:vi.fn(),
+  createPaperProjectSnapshot:vi.fn(),
+  restorePaperProjectSnapshot:vi.fn(),
+  deletePaperProjectSnapshot:vi.fn(),
   getPaperProject: vi.fn(),
   listPaperFiles: vi.fn(),
   getPaperFile: vi.fn(),
@@ -520,5 +527,91 @@ describe('Papers template compiler recommendation',()=>{
    expect((w.get('select[aria-label="TeX 编译器"]').element as HTMLSelectElement).value).toBe('pdflatex')
    expect(w.get('.papers-workspace__auto input').attributes('disabled')).toBeDefined()
   }finally{w.unmount()}
+ })
+})
+
+describe('Papers project recovery workflow',()=>{
+ const checkpoint={id:'checkpoint-1',name:'Before submission',source_revision:1,main_file_id:'f2',file_count:1,source_bytes:14,automatic:false,created_at:'2026-11-25T00:00:00Z'}
+ const details={...checkpoint,files:[{file_id:'f2',revision:1,path:'main.tex',kind:'text' as const,sha256:''}]}
+ function storageFixture(){
+  const rows=new Map<string,string>()
+  const storage:Storage={get length(){return rows.size},key:i=>Array.from(rows.keys())[i]??null,getItem:key=>rows.get(key)??null,setItem:(key,value)=>{rows.set(key,String(value))},removeItem:key=>{rows.delete(key)},clear:()=>rows.clear()}
+  vi.stubGlobal('localStorage',storage)
+  return storage
+ }
+ async function open(){
+  vi.mocked(getPaperProject).mockResolvedValue({...two} as never)
+  vi.mocked(listPaperFiles).mockResolvedValue([{...f2}] as never)
+  vi.mocked(getPaperFile).mockResolvedValue({...f2} as never)
+  vi.mocked(listPaperProjectSnapshots).mockResolvedValue([checkpoint])
+  vi.mocked(getPaperProjectSnapshot).mockResolvedValue(details)
+  const router=createRouter({history:createMemoryHistory(),routes:[{path:'/papers/:projectId',component:PaperWorkspaceView}]})
+  await router.push('/papers/two');await router.isReady()
+  const w=mount(defineComponent({render:()=>h(RouterView)}),{global:{plugins:[router]}})
+  await flushPromises()
+  return w
+ }
+ it('creates a named project checkpoint and reloads restored content rather than retaining stale source',async()=>{
+  const storage=storageFixture()
+  vi.stubGlobal('confirm',vi.fn(()=>true))
+  const w=await open()
+  try{
+   await w.findAll('button').find(b=>b.text()==='项目快照')!.trigger('click')
+   await flushPromises()
+   await w.get('[aria-label="快照名称"]').setValue('Before camera-ready')
+   vi.mocked(createPaperProjectSnapshot).mockResolvedValue({...checkpoint,name:'Before camera-ready'})
+   await w.get('.paper-recovery__create').trigger('submit')
+   await flushPromises()
+   expect(createPaperProjectSnapshot).toHaveBeenCalledWith('two','Before camera-ready',1)
+   await w.get('.paper-recovery__select').trigger('click');await flushPromises()
+   expect(w.text()).toContain('main.tex')
+   const restored={...f2,revision:2,content:'Restored source'}
+   vi.mocked(restorePaperProjectSnapshot).mockResolvedValue({project:{...two,head_revision:2},files:[restored],backup:{...checkpoint,id:'backup',automatic:true}} as never)
+   vi.mocked(getPaperFile).mockResolvedValue(restored as never)
+   await w.findAll('button').find(b=>b.text()==='恢复整个项目')!.trigger('click');await flushPromises()
+   expect(restorePaperProjectSnapshot).toHaveBeenCalledWith('two','checkpoint-1',1)
+   expect(w.get('[data-test="editor"]').text()).toBe('Restored source')
+   expect(w.text()).toContain('回滚前状态已自动保存')
+   expect(savePaperFile).not.toHaveBeenCalled()
+   expect(listLocalDrafts(storage,'owner-a','two')).toHaveLength(0)
+  }finally{w.unmount();vi.unstubAllGlobals()}
+ })
+ it('keeps unsaved edits across reloads and clears only acknowledged compatible drafts',async()=>{
+  const storage=storageFixture()
+  let w=await open()
+  vi.stubGlobal('confirm',vi.fn(()=>true))
+  try{
+   await w.findAll('button').find(b=>b.text()==='草稿恢复')!.trigger('click')
+   await w.get('.paper-drafts__check input').setValue(true)
+   w.findComponent(LatexEditor).vm.$emit('update:modelValue','Unsaved recovered source')
+   await nextTick()
+   expect(listLocalDrafts(storage,'owner-a','two')).toHaveLength(1)
+   expect(listLocalDrafts(storage,'owner-b','two')).toHaveLength(0)
+   w.unmount()
+   w=await open()
+   expect(w.get('[data-test="editor"]').text()).toBe('Current source')
+   await w.findAll('button').find(b=>b.text().startsWith('草稿恢复'))!.trigger('click')
+   expect(w.get('[aria-label="本机草稿源码"]').element).toHaveProperty('value','Unsaved recovered source')
+   vi.mocked(savePaperFile).mockResolvedValue({...f2,content:'Unsaved recovered source',revision:2,project_head_revision:2} as never)
+   await w.findAll('button').find(b=>b.text()==='恢复到编辑器')!.trigger('click')
+   await flushPromises()
+   expect(w.get('[data-test="editor"]').text()).toBe('Unsaved recovered source')
+   await w.findAll('button').find(b=>b.text()==='保存')!.trigger('click');await flushPromises()
+   expect(savePaperFile).toHaveBeenCalledWith('two','f2','Unsaved recovered source',1)
+   expect(listLocalDrafts(storage,'owner-a','two')).toHaveLength(0)
+  }finally{w.unmount();vi.unstubAllGlobals()}
+ })
+ it('does not let a stale or deleted-file draft overwrite a newer server source',async()=>{
+  const storage=storageFixture()
+  const row:PaperLocalDraft={version:1,owner:'owner-a',projectId:'two',fileId:'f2',writerId:'other-window',path:'main.tex',baseRevision:9,baseSHA:'',content:'Older local source',updatedAt:Date.now()}
+  writeLocalDraft(storage,row)
+  const w=await open()
+  try{
+   await w.findAll('button').find(b=>b.text().startsWith('草稿恢复'))!.trigger('click')
+   expect(w.text()).toContain('需手动合并')
+   expect(w.findAll('button').find(b=>b.text()==='恢复到编辑器')!.attributes('disabled')).toBeDefined()
+   expect(w.get('[data-test="editor"]').text()).toBe('Current source')
+   expect(savePaperFile).not.toHaveBeenCalled()
+  }finally{w.unmount();vi.unstubAllGlobals()}
  })
 })

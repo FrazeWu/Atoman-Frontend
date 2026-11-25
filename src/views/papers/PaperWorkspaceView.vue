@@ -61,12 +61,14 @@
           <button type="button" :aria-pressed="toolMode==='references'" @click="toggleTool('references')">参考文献</button>
           <button type="button" :aria-pressed="toolMode==='figures'" @click="toggleTool('figures')">插图</button>
           <button type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='history'" @click="toggleTool('history')">版本历史</button>
+          <button type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='snapshots'" @click="toggleTool('snapshots')">项目快照</button>
+          <button type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='drafts'" @click="toggleTool('drafts')">草稿恢复{{ draftRows.length?' ('+draftRows.length+')':'' }}</button>
         </nav>
-        <section v-if="toolMode" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':'文件历史'">
+        <section v-if="toolMode" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':'文件历史'">
           <div class="papers-workspace__outline-heading">
-            <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':toolMode==='figures'?'插图管理':'当前文件版本历史' }}</strong>
-            <button v-if="toolMode!=='figures'" type="button" class="papers-workspace__sync" :disabled="toolBusy" @click="refreshTool">刷新</button>
-            <button type="button" class="papers-workspace__sync" @click="closeTool">关闭</button>
+            <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':'当前文件版本历史' }}</strong>
+            <button v-if="toolMode!=='figures'" type="button" class="papers-workspace__sync"  :disabled="toolBusy||snapshotMutating" @click="refreshTool">刷新</button>
+            <button type="button" class="papers-workspace__sync" :disabled="snapshotMutating" @click="closeTool">关闭</button>
           </div>
           <p v-if="toolError" role="alert" class="papers-workspace__error">{{ toolError }}</p>
           <p v-if="toolBusy" role="status">正在读取…</p>
@@ -92,6 +94,8 @@
           <p v-if="fileError" role="alert" class="papers-workspace__error">{{ fileError }}</p>
           <PaperFigureTools :key="projectId" :project-id="projectId" :files="files" :disabled="uploadBusy||switchingFile||navigating" :can-insert="activeFile?.kind==='text'&&/\.tex$/i.test(activeFile.path)" @upload="uploadFigureFiles" @insert="insertFigure" />
           </template>
+          <PaperSnapshotTools v-else-if="toolMode==='snapshots'" :key="projectId" :rows="snapshots" :detail="snapshotDetail" :busy="toolBusy||snapshotMutating" :disabled="uploadBusy||switchingFile||navigating||saving||hasActiveCompile||compiling" :message="snapshotMessage" @create="createSnapshot" @preview="previewSnapshot" @remove="deleteSnapshot" @restore="restoreSnapshot" />
+          <PaperDraftTools v-else-if="toolMode==='drafts'" :key="projectId+':'+accountId" :available="draftAvailable" :enabled="draftEnabled" :rows="draftRows" :files="files" :disabled="uploadBusy||switchingFile||navigating||saving" :can-recover="canRecoverDraft" :message="draftMessage" @toggle="toggleDraftProtection" @recover="recoverDraft" @remove="discardDraft" />
           <template v-else-if="toolMode==='history'">
             <p v-if="activeFile?.kind!=='text'">请选择文本文件。</p>
             <button v-for="version in fileVersions" :key="version.revision" type="button" class="papers-workspace__toolrow" :disabled="toolBusy" @click="previewVersion(version)"><strong>版本 {{ version.revision }}{{ activeFile?.revision===version.revision?' · 当前':'' }}</strong><span>{{ formatVersionDate(version.created_at) }} · {{ version.path }}</span></button>
@@ -114,6 +118,7 @@
         <LatexEditor v-if="activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef" v-model="draft" :citations="citationKeys" :readonly="switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
         <PaperAssetPreview v-else-if="activeFile?.kind === 'binary'" :key="activeFile.id+':'+activeFile.revision" :file="activeFile" />
         <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
+        <p v-if="draftWarning" class="papers-workspace__error" role="alert">{{ draftWarning }} <button type="button" class="papers-workspace__sync" @click="toggleTool('drafts')">草稿管理</button></p>
         <p v-if="exportError" class="papers-workspace__error" role="alert">{{ exportError }}</p>
         <p v-if="saveError" class="papers-workspace__error" role="alert">
           {{ saveError }} 当前输入已保留。
@@ -188,6 +193,10 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
+import {useAuthStore} from '@/stores/auth'
+import PaperSnapshotTools from '@/components/papers/PaperSnapshotTools.vue'
+import PaperDraftTools from '@/components/papers/PaperDraftTools.vue'
+import {draftKey,listLocalDrafts,localDraftEnabled,setLocalDraftEnabled,writeLocalDraft,readLocalDraft,removeLocalDraft,sameLocalDraft,matchesLocalDraftBase,type PaperLocalDraft} from '@/components/papers/localDrafts'
 import PButton from '@/components/ui/PButton.vue'
 import LatexEditor from '@/components/papers/LatexEditor.vue'
 import PaperAssetPreview from '@/components/papers/PaperAssetPreview.vue'
@@ -202,12 +211,16 @@ import {
   createPaperFile, managePaperFiles, getPaperFile, getPaperProject, listPaperFiles, savePaperFile, getPaperProjectZIP, downloadPaperZIP,
   getPaperCompileCapability, getPaperCompileJob, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, getPaperCompileSourceMap,
   listPaperFileVersions, getPaperFileVersion,
+  listPaperProjectSnapshots,getPaperProjectSnapshot,createPaperProjectSnapshot,restorePaperProjectSnapshot,deletePaperProjectSnapshot,
+  type PaperProjectSnapshot,type PaperSnapshotDetail,
   type PaperCompiler, type PaperCompileCapability, type PaperFileVersion, type PaperVersionSummary, type PaperFile, type PaperProject, type PaperCompileJob, type PaperCompileDiagnostic, type PaperUpload,
 } from '@/api/papers'
 
 defineOptions({name:'PaperWorkspaceView'})
 const route = useRoute()
 const router=useRouter()
+const auth=useAuthStore()
+const accountId=computed(()=>auth.isAuthenticated?auth.user?.uuid||'':'')
 const projectId = computed(() => String(route.params.projectId || ''))
 const loading = ref(true)
 const error = ref('')
@@ -219,6 +232,7 @@ const saving = ref(false)
 const exporting = ref(false)
 const exportError = ref('')
 const addingFile = ref(false)
+const snapshotMutating=ref(false)
 const project = ref<PaperProject | null>(null)
 const files = ref<PaperFile[]>([])
 const closedFolders=ref(new Set<string>())
@@ -321,7 +335,7 @@ function insertFigure(figure:FigureInsertion){
 
 const activeFile = ref<PaperFile | null>(null)
 const draft = ref('')
-type ToolMode='search'|'references'|'history'|'figures'
+type ToolMode='search'|'references'|'history'|'figures'|'snapshots'|'drafts'
 const toolMode=ref<ToolMode|''>(''),toolBusy=ref(false),toolError=ref('')
 const searchQuery=ref(''),replaceQuery=ref(''),referenceQuery=ref('')
 const searchSources=shallowRef<PaperFile[]>([]),searchBase=ref(0)
@@ -333,11 +347,192 @@ const citationKeys=computed(()=>[...new Set(referenceRows.value.map(r=>r.key))])
 const filteredReferences=computed(()=>{const q=referenceQuery.value.trim().toLowerCase();return referenceRows.value.filter(r=>(r.key+' '+r.title).toLowerCase().includes(q))})
 const fileVersions=shallowRef<PaperVersionSummary[]>([]),selectedVersion=shallowRef<PaperFileVersion|null>(null),moreVersions=ref(false)
 const versionDifference=computed(()=>selectedVersion.value?changedLineRange(selectedVersion.value.content,draft.value):null)
+const snapshots=shallowRef<PaperProjectSnapshot[]>([])
+const snapshotDetail=shallowRef<PaperSnapshotDetail|null>(null)
+const snapshotMessage=ref('')
+const draftScopeOwner=ref('')
+const draftRows=shallowRef<PaperLocalDraft[]>([])
+const draftEnabled=ref(false),draftMessage=ref(''),draftWarning=ref('')
+const draftAvailable=computed(()=>!!draftScopeOwner.value&&draftScopeOwner.value===accountId.value&&project.value?.id===projectId.value)
+const canRecoverDraft=computed(()=>draftAvailable.value&&!saving.value&&(!activeFile.value||activeFile.value.kind!=='text'||draft.value===activeFile.value.content))
+const writerId=globalThis.crypto?.randomUUID?.()||('writer-'+Date.now()+'-'+Math.random().toString(36).slice(2))
+const ownBackups=new Map<string,PaperLocalDraft>()
+const recoveredBackups=new Map<string,PaperLocalDraft>()
+function resetLocalDraftScope(){
+ draftScopeOwner.value='';draftEnabled.value=false;draftRows.value=[];draftMessage.value='';draftWarning.value=''
+ ownBackups.clear();recoveredBackups.clear()
+}
+watch(accountId,resetLocalDraftScope)
+function refreshLocalDrafts(){
+ if(!draftAvailable.value){draftRows.value=[];return}
+ try{draftEnabled.value=localDraftEnabled(localStorage,draftScopeOwner.value);draftRows.value=listLocalDrafts(localStorage,draftScopeOwner.value,projectId.value)}
+ catch{draftWarning.value='无法读取本机草稿存储，请复制未保存的源码。'}
+}
+function initializeLocalDrafts(owner:string){
+ resetLocalDraftScope()
+ if(!owner||owner!==accountId.value)return
+ draftScopeOwner.value=owner
+ refreshLocalDrafts()
+}
+function recordLocalDraft(row:PaperLocalDraft){
+ draftRows.value=[row,...draftRows.value.filter(item=>draftKey(item)!==draftKey(row))]
+}
+function deleteUnchangedLocalDraft(row:PaperLocalDraft){
+ if(removeLocalDraft(localStorage,row))draftRows.value=draftRows.value.filter(item=>draftKey(item)!==draftKey(row))
+}
+function syncLocalDraft(){
+ if(!draftAvailable.value)return
+ const file=activeFile.value
+ if(!file||file.kind!=='text')return
+ try{
+  const previous=ownBackups.get(file.id)
+  if(draft.value===file.content){
+   if(previous){deleteUnchangedLocalDraft(previous);ownBackups.delete(file.id)}
+   return
+  }
+  if(!draftEnabled.value)return
+  const row:PaperLocalDraft={version:1,owner:draftScopeOwner.value,projectId:projectId.value,fileId:file.id,writerId,path:file.path,baseRevision:file.revision,baseSHA:file.sha256||'',content:draft.value,updatedAt:Date.now()}
+  writeLocalDraft(localStorage,row)
+  ownBackups.set(file.id,row);recordLocalDraft(row);draftWarning.value=''
+ }catch{draftWarning.value='本机草稿备份失败：存储空间不足或浏览器限制。请复制当前源码后继续。'}
+}
+function acknowledgeLocalDraft(saved:PaperFile){
+ if(!draftAvailable.value)return
+ try{
+  const own=ownBackups.get(saved.id)
+  if(own&&own.content===saved.content){deleteUnchangedLocalDraft(own);ownBackups.delete(saved.id)}
+  const recovered=recoveredBackups.get(saved.id)
+  if(recovered&&recovered.content===saved.content){deleteUnchangedLocalDraft(recovered);recoveredBackups.delete(saved.id)}
+ }catch{draftWarning.value='无法清理已提交的本机草稿，请手动检查。'}
+ syncLocalDraft()
+}
+function toggleDraftProtection(enabled:boolean){
+ if(!draftAvailable.value)return
+ try{
+  setLocalDraftEnabled(localStorage,draftScopeOwner.value,enabled);draftEnabled.value=enabled
+  draftMessage.value=enabled?'本机保护已开启，仅备份未保存源码。':'本机保护已关闭，已有草稿仍可查看和删除。'
+  if(enabled)syncLocalDraft()
+ }catch{draftWarning.value='无法更新本机草稿设置。'}
+}
+function discardDraft(row:PaperLocalDraft){
+ if(!draftAvailable.value||row.owner!==draftScopeOwner.value||row.projectId!==projectId.value)return
+ if(!window.confirm('删除这份本机草稿？此操作不会修改服务器文件。'))return
+ try{
+  if(!removeLocalDraft(localStorage,row)){refreshLocalDrafts();draftMessage.value='草稿已变化，请重新选择。';return}
+  if(draftKey(ownBackups.get(row.fileId)||row)===draftKey(row))ownBackups.delete(row.fileId)
+  if(draftKey(recoveredBackups.get(row.fileId)||row)===draftKey(row))recoveredBackups.delete(row.fileId)
+  refreshLocalDrafts();draftMessage.value='本机草稿已删除。'
+ }catch{draftWarning.value='无法删除本机草稿，请检查浏览器设置。'}
+}
+async function recoverDraft(row:PaperLocalDraft){
+ if(!canRecoverDraft.value||uploadBusy.value||switchingFile.value||navigating.value||row.owner!==draftScopeOwner.value||row.projectId!==projectId.value)return
+ const target=files.value.find(f=>matchesLocalDraftBase(row,f))
+ if(!target){draftMessage.value='服务器版本已变化，请复制草稿并手动合并。';return}
+ if(!window.confirm('将本机草稿恢复至编辑器？基础版本一致时才可恢复，恢复后将按正常流程保存。'))return
+ try{
+  await selectFile(target)
+  const file=activeFile.value
+  if(!draftAvailable.value||disposed||row.owner!==draftScopeOwner.value||row.projectId!==projectId.value||!file||!matchesLocalDraftBase(row,file)||draft.value!==file.content||!sameLocalDraft(readLocalDraft(localStorage,row),row)){
+   refreshLocalDrafts();draftMessage.value='文件或草稿已变化，请重新选择并手动合并。';return
+  }
+  recoveredBackups.set(file.id,row)
+  if(row.content===file.content){acknowledgeLocalDraft(file);refreshLocalDrafts();draftMessage.value='草稿内容已存在于服务器。';return}
+  draft.value=row.content
+  draftMessage.value='草稿已恢复到编辑器，等待保存确认。'
+  closeTool()
+ }catch{draftWarning.value='无法恢复草稿，请复制草稿并手动合并。'}
+}
+function onDraftStorage(event:StorageEvent){
+ if(draftAvailable.value&&(event.key===null||event.key.startsWith('atoman.papers.local-draft')))refreshLocalDrafts()
+}
+
 let toolSerial=0,bibSerial=0
 function formatVersionDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString()}
-function closeTool(){toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null}
-function toggleTool(mode:ToolMode){if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;refreshTool()}
-function refreshTool(){if(toolMode.value==='search')void loadSearchSources();else if(toolMode.value==='references')void refreshBib();else if(toolMode.value==='history')void loadVersions()}
+function closeTool(){toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null;snapshotDetail.value=null}
+function toggleTool(mode:ToolMode){if(snapshotMutating.value)return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;refreshTool()}
+function refreshTool(){if(toolMode.value==='search')void loadSearchSources();else if(toolMode.value==='references')void refreshBib();else if(toolMode.value==='history')void loadVersions();else if(toolMode.value==='snapshots')void loadSnapshots();else if(toolMode.value==='drafts')refreshLocalDrafts()}
+function snapshotError(cause:unknown){
+ const code=cause instanceof ApiErrorResponseError?cause.code:''
+ if(code==='papers.snapshot_limit')return '快照已达 30 个上限，请先删除不需要的快照。'
+ if(code==='papers.revision_conflict')return '项目版本已变化，请刷新项目后重试。'
+ if(code==='papers.snapshot_unavailable')return '快照引用的历史版本缺失或损坏，操作已停止。'
+ return '快照操作失败，请检查权限、网络或服务版本。'
+}
+async function loadSnapshots(){
+ const pid=projectId.value,serial=++toolSerial
+ const valid=()=>!disposed&&pid===projectId.value&&serial===toolSerial&&toolMode.value==='snapshots'
+ toolBusy.value=true;toolError.value='';snapshotDetail.value=null
+ try{const rows=await listPaperProjectSnapshots(pid);if(valid())snapshots.value=Array.isArray(rows)?rows:[]}
+ catch(cause){if(valid())toolError.value=snapshotError(cause)}
+ finally{if(valid())toolBusy.value=false}
+}
+async function previewSnapshot(id:string){
+ if(snapshotMutating.value)return
+ const pid=projectId.value,serial=++toolSerial
+ const valid=()=>!disposed&&pid===projectId.value&&serial===toolSerial&&toolMode.value==='snapshots'
+ toolBusy.value=true;toolError.value='';snapshotDetail.value=null
+ try{const row=await getPaperProjectSnapshot(pid,id);if(valid()&&row.id===id)snapshotDetail.value=row}
+ catch(cause){if(valid())toolError.value=snapshotError(cause)}
+ finally{if(valid())toolBusy.value=false}
+}
+function snapshotBlocked(){
+ return snapshotMutating.value||uploadBusy.value||toolBusy.value||switchingFile.value||navigating.value||saving.value||hasActiveCompile.value||compiling.value||!project.value||disposed
+}
+async function runSnapshotMutation(action:(pid:string)=>Promise<void>,flush=true){
+ if(snapshotBlocked())return
+ const pid=projectId.value
+ snapshotMutating.value=true;addingFile.value=true;toolError.value='';snapshotMessage.value=''
+ try{
+  await nextTick()
+  if(flush&&!await persist()){toolError.value='请先解决未保存源码或版本冲突，未执行快照操作。';return}
+  if(disposed||pid!==projectId.value||navigating.value||!project.value)return
+  await action(pid)
+ }catch(cause){if(!disposed&&pid===projectId.value)toolError.value=snapshotError(cause)}
+ finally{if(pid===projectId.value){snapshotMutating.value=false;addingFile.value=false;scheduleAuto()}}
+}
+async function createSnapshot(name:string){
+ await runSnapshotMutation(async pid=>{
+  await createPaperProjectSnapshot(pid,name,project.value!.head_revision)
+  if(disposed||pid!==projectId.value)return
+  snapshotMessage.value='项目快照已创建。'
+  await loadSnapshots()
+ })
+}
+async function deleteSnapshot(row:PaperProjectSnapshot){
+ if(snapshotBlocked()||!window.confirm('删除快照「'+row.name+'」？不会删除文件历史或当前源码。'))return
+ await runSnapshotMutation(async pid=>{
+  await deletePaperProjectSnapshot(pid,row.id)
+  if(disposed||pid!==projectId.value)return
+  snapshotMessage.value='快照已删除。'
+  await loadSnapshots()
+ },false)
+}
+async function restoreSnapshot(row:PaperSnapshotDetail){
+ if(snapshotBlocked()||!window.confirm('恢复整个项目至「'+row.name+'」？将恢复文件、资源、路径和主文件设置。当前服务器状态会先保存为自动备份，其他窗口的本机草稿不会被覆盖。'))return
+ await runSnapshotMutation(async pid=>{
+  const result=await restorePaperProjectSnapshot(pid,row.id,project.value!.head_revision)
+  if(disposed||pid!==projectId.value)return
+  // The transaction has committed. Clear the old editor immediately so no
+  // stale local content can be written against the new server revisions.
+  fileSerial++;searchBase.value=0;searchSources.value=[];outlineCache.value=[];managedFile.value=null
+  pendingSubmission=null;clearAuto();autoDirty=false;autoCompile.value=false
+  project.value=result.project;files.value=result.files;activeFile.value=null;draft.value=''
+  saveStatus.value='已恢复项目';saveError.value='';recommendedCompiler.value=undefined
+  snapshotMessage.value='项目已恢复，回滚前状态已自动保存为快照。'
+  refreshLocalDrafts()
+  const main=result.files.find(f=>f.id===result.project.main_file_id)
+  try{
+   if(main){
+    const content=await getPaperFile(pid,main.id)
+    if(disposed||pid!==projectId.value)return
+    if(content.id!==main.id||content.revision!==main.revision)throw new Error('Restored file changed')
+    activeFile.value=content;draft.value=content.kind==='text'?content.content:'';revealFile(content.path)
+    if(content.kind==='text'){recommendedCompiler.value=recommendedTexCompiler(content.content);if(recommendedCompiler.value&&compilerOptions.value.includes(recommendedCompiler.value))selectedCompiler.value=recommendedCompiler.value}
+   }
+  }catch{if(!disposed&&pid===projectId.value)fileError.value='项目已恢复，但重新读取主文件失败。请从文件栏重新打开文件。'}
+  if(!disposed&&pid===projectId.value)await loadSnapshots()
+ })
+}
 async function readToolFiles(targets:PaperFile[],pid:string,valid:()=>boolean){
  const output:PaperFile[]=[]
  const encoder=new TextEncoder();let bytes=0
@@ -647,6 +842,7 @@ let pendingSubmission:{projectId:string;revision:number;compiler:PaperCompiler;k
 async function loadProject() {
   const serial = ++loadSerial
   const requestedProjectId = projectId.value
+  const ownerAtStart=accountId.value
   loading.value = true
   error.value = ''
   try {
@@ -657,6 +853,7 @@ async function loadProject() {
     if (disposed || serial !== loadSerial || requestedProjectId !== projectId.value) return
     project.value = currentProject
     files.value = currentFiles
+    initializeLocalDrafts(ownerAtStart)
     compileEnabled.value = capability?.enabled === true
     pdfEnabled.value = compileEnabled.value && capability?.pdf_available === true
     compilerOptions.value=['pdflatex']
@@ -710,6 +907,7 @@ function scheduleSave() {
   saveTimer = setTimeout(() => { void persist() }, 800)
 }
 
+watch(draft,()=>syncLocalDraft(),{flush:'sync'})
 watch(draft, (content) => {
   if (activeFile.value?.kind === 'text' && content !== activeFile.value.content) { scheduleSave();autoDirty=true;scheduleAuto() }
 })
@@ -735,6 +933,7 @@ function persist(): Promise<boolean> {
         if(disposed||project.value?.id!==pid||projectId.value!==pid||activeFile.value?.id!==initial.id)return false
         if(saved.id!==file.id||saved.content!==content||saved.revision<file.revision)throw new Error('Invalid saved file')
         activeFile.value=saved
+        acknowledgeLocalDraft(saved)
         files.value=files.value.map(item=>item.id===saved.id?{...item,revision:saved.revision}:item)
         project.value.head_revision=saved.project_head_revision??(project.value.head_revision+(saved.revision>file.revision?1:0))
         saveError.value='';retryableSave=false;saveRetryAttempt=0
@@ -765,7 +964,7 @@ async function copyDraft(){
 }
 
 async function selectFile(file:PaperFile){
-  if(navigating.value||preparingUpload.value)return
+  if(navigating.value||preparingUpload.value||snapshotMutating.value)return
   const serial=++fileSerial
   const pid=projectId.value
   if(activeFile.value?.id===file.id){switchingFile.value=false;if(compactLayout.value){showFiles.value=false;if(layoutMode.value==='pdf')layoutMode.value='editor'}return}
@@ -922,12 +1121,14 @@ async function exportProject() {
 function saveNow() { saveRetryAttempt=0;void persist() }
 
 function beforeUnload(event: BeforeUnloadEvent) {
+  syncLocalDraft()
   if (savePromise || (activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)) {
     event.preventDefault();event.returnValue=''
   }
 }
 
 async function beforeNavigate(){
+ if(snapshotMutating.value)return false
  navigating.value=true
  fileSerial++;switchingFile.value=false
  clearAuto()
@@ -943,6 +1144,7 @@ const removeNavigationHook=router.afterEach(()=>{navigating.value=false})
 watch(projectId, () => {
   loadSerial++
   uploadSerial++;preparingUpload.value=false;draggingFiles.value=false
+  resetLocalDraftScope();snapshots.value=[];snapshotDetail.value=null;snapshotMessage.value='';snapshotMutating.value=false
   closeTool();bibSerial++;bibSources.value=[];bibError.value='';searchBase.value=0;searchSources.value=[];fileVersions.value=[];clearSaveRetry();retryableSave=false;saveRetryAttempt=0
   fileSerial++;pollSerial++;historySerial++;pendingSubmission=null
   switchingFile.value=false;addingFile.value=false;compiling.value=false;canceling.value=false;exporting.value=false;saveError.value='';fileError.value=''
@@ -974,6 +1176,7 @@ onMounted(() => {
   void loadProject()
   window.addEventListener('beforeunload', beforeUnload)
   window.addEventListener('online', reconnectSave)
+  window.addEventListener('storage',onDraftStorage)
   document.addEventListener('visibilitychange', onCompileVisibilityChange)
 })
 
@@ -988,6 +1191,7 @@ onBeforeUnmount(() => {
   mapAbort?.abort();mapSerial++
   window.removeEventListener('beforeunload', beforeUnload)
   window.removeEventListener('online', reconnectSave)
+  window.removeEventListener('storage',onDraftStorage)
   window.removeEventListener('keydown',onShortcut)
   window.removeEventListener('resize',onViewportChange)
   document.removeEventListener('visibilitychange', onCompileVisibilityChange)

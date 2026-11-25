@@ -250,3 +250,19 @@ export function downloadPaperZIP(blob: Blob, projectName: string) {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 }
+
+export interface PaperProjectSnapshot {
+ id:string;name:string;source_revision:number;main_file_id:string;file_count:number;source_bytes:number;automatic:boolean;created_at:string
+}
+export interface PaperSnapshotEntry {
+ file_id:string;revision:number;path:string;kind:'text'|'binary';sha256:string
+}
+export interface PaperSnapshotDetail extends PaperProjectSnapshot {files:PaperSnapshotEntry[]}
+export interface PaperSnapshotRestore extends PaperManagedProject {backup:PaperProjectSnapshot}
+const snapshotPrefix=(pid:string)=>'/projects/'+encodeURIComponent(pid)+'/snapshots'
+const snapshotPath=(pid:string,id:string)=>snapshotPrefix(pid)+'/'+encodeURIComponent(id)
+export const listPaperProjectSnapshots=(pid:string)=>papersRequest<PaperProjectSnapshot[]>(snapshotPrefix(pid))
+export const getPaperProjectSnapshot=(pid:string,id:string)=>papersRequest<PaperSnapshotDetail>(snapshotPath(pid,id))
+export const createPaperProjectSnapshot=(pid:string,name:string,baseRevision:number)=>papersRequest<PaperProjectSnapshot>(snapshotPrefix(pid),'POST',{name,base_revision:baseRevision})
+export const restorePaperProjectSnapshot=(pid:string,id:string,baseRevision:number)=>papersRequest<PaperSnapshotRestore>(snapshotPath(pid,id)+'/restore','POST',{base_revision:baseRevision})
+export const deletePaperProjectSnapshot=(pid:string,id:string)=>papersRequest<{deleted:boolean}>(snapshotPath(pid,id),'DELETE')

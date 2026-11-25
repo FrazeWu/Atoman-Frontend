@@ -280,3 +280,11 @@ const membersPath = (pid:string)=>'/projects/'+encodeURIComponent(pid)+'/members
 export const listPaperMembers=(pid:string)=>papersRequest<PaperProjectMember[]>(membersPath(pid))
 export const setPaperMember=(pid:string,uid:string,role:PaperMemberRole)=>papersRequest<PaperProjectMember>(membersPath(pid)+'/'+encodeURIComponent(uid),'PUT',{role})
 export const removePaperMember=(pid:string,uid:string)=>papersRequest<{deleted:boolean}>(membersPath(pid)+'/'+encodeURIComponent(uid),'DELETE')
+
+export interface PaperCollaborationCapability {
+ enabled: boolean
+ protocol?: string
+ role?: PaperProjectRole
+}
+export const getPaperCollaborationCapability=(pid:string,fid:string)=>
+ papersRequest<PaperCollaborationCapability>('/projects/'+encodeURIComponent(pid)+'/files/'+encodeURIComponent(fid)+'/collaboration')

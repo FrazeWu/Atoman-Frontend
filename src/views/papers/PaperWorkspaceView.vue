@@ -11,22 +11,22 @@
       </div>
       <span v-if="project" class="papers-workspace__status">{{ roleLabel }}</span>
       <span class="papers-workspace__status" role="status">{{ saveStatus }}</span>
-      <PButton v-if="ownerAccess" type="button" size="sm" variant="secondary" :disabled="exporting || saving" @click="exportProject">{{ exporting ? '正在导出…' : '导出 ZIP' }}</PButton>
+      <PButton v-if="ownerAccess" type="button" size="sm" variant="secondary" :disabled="collaborationOpen || exporting || saving" @click="exportProject">{{ exporting ? '正在导出…' : '导出 ZIP' }}</PButton>
     </header>
     <p v-if="loading" class="papers-workspace__message">正在打开项目...</p>
     <p v-else-if="error" role="alert" class="papers-workspace__error">{{ error }}</p>
     <div v-else ref="workspaceRoot" class="papers-workspace__content" :class="{ 'files-hidden': !showFiles, 'editor-only': layoutMode === 'editor', 'pdf-only': layoutMode === 'pdf' }" :style="{ '--preview-grow': previewWidth, '--editor-grow': 100-previewWidth }">
       <button v-if="compactLayout && showFiles" type="button" class="papers-workspace__files-backdrop" aria-label="关闭文件栏" @click="showFiles=false" />
-      <aside class="papers-workspace__files" :class="{'papers-workspace__files--dropping':draggingFiles}" aria-label="论文文件" @dragenter="onFigureDragOver" @dragover="onFigureDragOver" @dragleave="onFigureDragLeave" @drop="onFigureDrop">
+      <aside class="papers-workspace__files" :class="{'papers-workspace__files--dropping':draggingFiles}" aria-label="论文文件" :inert="collaborationOpen" @dragenter="onFigureDragOver" @dragover="onFigureDragOver" @dragleave="onFigureDragLeave" @drop="onFigureDrop">
         <div class="papers-workspace__files-heading"><h2>文件 <small>{{ files.length }}</small></h2><button v-if="compactLayout" type="button" class="papers-workspace__close-files" aria-label="关闭文件面板" @click="showFiles=false">×</button></div>
         <div v-for="entry in treeRows" :key="entry.key" class="papers-workspace__file-row" :style="{paddingLeft:Math.min(entry.depth,8)*10+'px'}">
           <button v-if="entry.kind==='folder'" type="button" class="papers-workspace__folder" :aria-expanded="!closedFolders.has(entry.path)" @click="toggleFolder(entry.path)">{{ closedFolders.has(entry.path)?'▸':'▾' }} {{ entry.name }}</button>
           <template v-else>
-            <button type="button" :title="entry.path" :class="{active:activeFile?.id===entry.file.id}" :disabled="uploadBusy||navigating" @click="selectFile(entry.file)">{{ entry.name }}<span v-if="entry.file.id===project?.main_file_id" class="papers-workspace__asset-label">主文件</span><span v-else-if="entry.file.kind==='binary'" class="papers-workspace__asset-label">资源</span></button>
-            <button v-if="ownerAccess" type="button" class="papers-workspace__file-menu" :aria-label="'管理 '+entry.path" :disabled="uploadBusy||navigating||switchingFile" @click="openFileMenu(entry.file)">⋯</button>
+            <button type="button" :title="entry.path" :class="{active:activeFile?.id===entry.file.id}" :disabled="collaborationOpen||uploadBusy||navigating" @click="selectFile(entry.file)">{{ entry.name }}<span v-if="entry.file.id===project?.main_file_id" class="papers-workspace__asset-label">主文件</span><span v-else-if="entry.file.kind==='binary'" class="papers-workspace__asset-label">资源</span></button>
+            <button v-if="ownerAccess&&!collaborationOpen" type="button" class="papers-workspace__file-menu" :aria-label="'管理 '+entry.path" :disabled="uploadBusy||navigating||switchingFile" @click="openFileMenu(entry.file)">⋯</button>
           </template>
         </div>
-        <div v-if="ownerAccess&&managedFile" class="papers-workspace__manage">
+        <div v-if="ownerAccess&&!collaborationOpen&&managedFile" class="papers-workspace__manage">
           <strong>{{ managedFile.path }}</strong>
           <label>新路径<input v-model.trim="managedPath" maxlength="512" aria-label="文件新路径" /></label>
           <PButton size="sm" variant="secondary" :disabled="uploadBusy||!managedPath||managedPath===managedFile.path" @click="changeFile('rename')">重命名 / 移动</PButton>
@@ -34,7 +34,7 @@
           <PButton v-if="managedFile.id!==project?.main_file_id" size="sm" variant="secondary" :disabled="uploadBusy" @click="changeFile('delete')">删除文件</PButton>
           <PButton size="sm" variant="ghost" :disabled="addingFile" @click="managedFile=null">关闭</PButton>
         </div>
-        <div v-if="ownerAccess" class="papers-workspace__manage">
+        <div v-if="ownerAccess&&!collaborationOpen" class="papers-workspace__manage">
           <label>上传到目录（可选）<input v-model.trim="uploadDir" placeholder="figures" maxlength="255" /></label>
           <input ref="uploadInput" type="file" multiple hidden :disabled="uploadBusy" @change="uploadFiles" />
           <PButton size="sm" variant="secondary" :disabled="uploadBusy||switchingFile||navigating" @click="uploadInput?.click()">{{ uploadBusy?'处理中…':'上传文件' }}</PButton>
@@ -43,7 +43,7 @@
             <small>PNG、JPEG、PDF · {{ uploadDir.trim()||'figures' }}/</small>
           </div>
         </div>
-        <form v-if="ownerAccess" class="papers-workspace__add" @submit.prevent="addFile">
+        <form v-if="ownerAccess&&!collaborationOpen" class="papers-workspace__add" @submit.prevent="addFile">
           <label for="papers-new-file">新建文本文件</label>
           <input id="papers-new-file" v-model.trim="newFilePath" placeholder="chapters/intro.tex" maxlength="512" required />
           <PButton type="submit" size="sm" :disabled="!newFilePath || uploadBusy || switchingFile || navigating">添加文件</PButton>
@@ -53,11 +53,12 @@
       <section class="papers-workspace__editor" aria-label="源码编辑">
         <div class="papers-workspace__editor-header">
           <span :title="activeFile?.path">{{ activeFile?.path || '请选择文件' }}</span>
-          <button type="button" class="papers-workspace__sync" :aria-expanded="outlineOpen" @click="toggleOutline">大纲</button>
+          <button v-if="!collaborationOpen" type="button" class="papers-workspace__sync" :aria-expanded="outlineOpen" @click="toggleOutline">大纲</button>
           <button type="button" class="papers-workspace__sync" title="定位当前源码行对应的 PDF 内容 (Ctrl/Cmd+Shift+J)" :disabled="!syncReady || activeFile?.kind !== 'text'" @click="jumpToPDF">定位 PDF →</button>
-          <PButton v-if="writeAccess" type="button" size="sm" variant="secondary" :disabled="!activeFile || activeFile.kind !== 'text' || saving" @click="saveNow">保存</PButton>
+          <PButton v-if="writeAccess&&!collaborationOpen" type="button" size="sm" variant="secondary" :disabled="!activeFile || activeFile.kind !== 'text' || saving" @click="saveNow">保存</PButton>
+          <PButton v-if="!collaborationOpen&&activeFile?.kind==='text'&&accountId" type="button" size="sm" variant="secondary" :disabled="!canStartCollaboration" @click="startCollaboration">实时协作</PButton>
         </div>
-        <nav class="papers-workspace__toolnav" aria-label="项目工具">
+        <nav v-if="!collaborationOpen" class="papers-workspace__toolnav" aria-label="项目工具">
           <button type="button" :aria-pressed="toolMode==='search'" @click="toggleTool('search')">全项目搜索</button>
           <button type="button" :aria-pressed="toolMode==='references'" @click="toggleTool('references')">参考文献</button>
           <button v-if="ownerAccess" type="button" :aria-pressed="toolMode==='figures'" @click="toggleTool('figures')">插图</button>
@@ -67,9 +68,9 @@
           <button type="button" :aria-pressed="toolMode==='members'" :disabled="memberMutating||snapshotMutating" @click="toggleTool('members')">项目成员</button>
           <button type="button" :disabled="switchingFile||navigating||saving||uploadBusy||snapshotMutating||memberMutating||compiling||hasActiveCompile" @click="refreshServerProject">刷新项目</button>
         </nav>
-        <p v-if="!ownerAccess" class="papers-workspace__stale" role="status">{{ writeAccess?'共享编辑：保存时检查文件版本，暂不支持实时共同编辑。':'共享阅读：当前账号无编辑权限。' }}</p>
+        <p v-if="!ownerAccess&&!collaborationOpen" class="papers-workspace__stale" role="status">{{ writeAccess?'共享编辑：保存时检查文件版本，暂不支持实时共同编辑。':'共享阅读：当前账号无编辑权限。' }}</p>
         <p v-if="refreshMessage" class="papers-workspace__stale" role="status">{{ refreshMessage }}</p>
-        <section v-if="toolMode" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'文件历史'">
+        <section v-if="toolMode&&!collaborationOpen" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'文件历史'">
           <div class="papers-workspace__outline-heading">
             <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'当前文件版本历史' }}</strong>
             <button v-if="toolMode!=='figures'" type="button" class="papers-workspace__sync"  :disabled="toolBusy||snapshotMutating||memberMutating" @click="refreshTool">刷新</button>
@@ -118,13 +119,14 @@
             </div>
           </template>
         </section>
-        <section v-if="outlineOpen" class="papers-workspace__outline" aria-label="论文结构大纲">
+        <section v-if="outlineOpen&&!collaborationOpen" class="papers-workspace__outline" aria-label="论文结构大纲">
           <div class="papers-workspace__outline-heading"><strong>项目大纲</strong><button type="button" class="papers-workspace__sync" :disabled="outlineLoading" @click="loadOutline">刷新</button></div>
           <p v-if="outlineLoading">正在读取各 TeX 文件…</p>
           <p v-else-if="!outlineRows.length">未找到章节标题。</p>
           <button v-for="item in outlineRows" :key="item.fileId+':'+item.line+':'+item.title" type="button" :style="{paddingLeft:Math.max(0,item.level-1)*12+'px'}" :title="item.path+':'+item.line" @click="jumpOutline(item)">{{ item.title }} <small>{{ item.path }}:{{ item.line }}</small></button>
         </section>
-        <LatexEditor v-if="activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef"  :model-value="draft" @update:model-value="updateDraft" :citations="citationKeys" :readonly="!writeAccess || switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
+        <PaperCollaborationPanel v-if="collaborationOpen&&activeFile?.kind==='text'&&collaborationAccount===accountId" :key="projectId+':'+activeFile.id+':'+accountId" ref="collaborationRef" :project-id="projectId" :file="activeFile" :role="ownerAccess?'owner':writeAccess?'editor':'viewer'" :account-id="accountId" :citations="citationKeys" @exit="exitCollaboration" />
+        <LatexEditor v-else-if="!collaborationOpen&&activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef"  :model-value="draft" @update:model-value="updateDraft" :citations="citationKeys" :readonly="!writeAccess || switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
         <PaperAssetPreview v-else-if="activeFile?.kind === 'binary'" :key="activeFile.id+':'+activeFile.revision" :file="activeFile" />
         <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
         <p v-if="draftWarning" class="papers-workspace__error" role="alert">{{ draftWarning }} <button type="button" class="papers-workspace__sync" @click="toggleTool('drafts')">草稿管理</button></p>
@@ -154,8 +156,8 @@
           </div>
           <div class="papers-workspace__preview-right">
             <label class="papers-workspace__compiler" title="选择此任务的 TeX 编译器"><span>编译器</span><select v-model="selectedCompiler" aria-label="TeX 编译器" :disabled="!compileEnabled||compiling||hasActiveCompile||saving||uploadBusy||navigating" @change="compilerChanged"><option v-for="engine in compilerOptions" :key="engine" :value="engine">{{ compilerLabel(engine) }}</option></select></label>
-            <label class="papers-workspace__auto"><input type="checkbox" v-model="autoCompile" :disabled="!compileEnabled||recommendedUnavailable" /> 自动编译</label>
-            <PButton type="button" size="sm" :disabled="!compileEnabled || compiling || saving || switchingFile || navigating || uploadBusy || !project || hasActiveCompile" @click="compileNow">{{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}</PButton>
+            <label class="papers-workspace__auto"><input type="checkbox" v-model="autoCompile" :disabled="collaborationOpen||!compileEnabled||recommendedUnavailable" /> 自动编译</label>
+            <PButton type="button" size="sm" :disabled="collaborationOpen || !compileEnabled || compiling || saving || switchingFile || navigating || uploadBusy || !project || hasActiveCompile" @click="compileNow">{{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}</PButton>
           </div>
         </div>
         <p v-if="syncMessage" class="papers-workspace__sync-message" role="status">{{ syncMessage }}</p>
@@ -206,6 +208,7 @@ import {useAuthStore} from '@/stores/auth'
 import PaperSnapshotTools from '@/components/papers/PaperSnapshotTools.vue'
 import PaperDraftTools from '@/components/papers/PaperDraftTools.vue'
 import PaperMemberTools from '@/components/papers/PaperMemberTools.vue'
+import PaperCollaborationPanel from '@/components/papers/PaperCollaborationPanel.vue'
 import {draftKey,listLocalDrafts,localDraftEnabled,setLocalDraftEnabled,writeLocalDraft,readLocalDraft,removeLocalDraft,sameLocalDraft,matchesLocalDraftBase,type PaperLocalDraft} from '@/components/papers/localDrafts'
 import PButton from '@/components/ui/PButton.vue'
 import LatexEditor from '@/components/papers/LatexEditor.vue'
@@ -262,7 +265,7 @@ const uploadDir=ref(''),uploadInput=ref<HTMLInputElement|null>(null)
 const preparingUpload=ref(false),draggingFiles=ref(false)
 const uploadBusy=computed(()=>addingFile.value||preparingUpload.value)
 let uploadSerial=0
-function openFileMenu(file:PaperFile){if(!ownerAccess.value)return;managedFile.value=file;managedPath.value=file.path}
+function openFileMenu(file:PaperFile){if(collaborationOpen.value||!ownerAccess.value)return;managedFile.value=file;managedPath.value=file.path}
 function revealFile(path:string){const next=new Set(closedFolders.value);const parts=path.split('/');for(let i=1;i<parts.length;i++)next.delete(parts.slice(0,i).join('/'));closedFolders.value=next}
 function managementError(cause:unknown){
  if(cause instanceof ApiErrorResponseError){
@@ -352,9 +355,12 @@ function insertFigure(figure:FigureInsertion){
  if(editorRef.value?.insertBlock(figure.code))closeTool()
 }
 
+const collaborationOpen=ref(false)
+const collaborationRef=ref<InstanceType<typeof PaperCollaborationPanel>|null>(null)
+const collaborationAccount=ref('')
 const activeFile = ref<PaperFile | null>(null)
 const draft = ref('')
-function updateDraft(value:string){if(writeAccess.value)draft.value=value}
+function updateDraft(value:string){if(writeAccess.value&&!collaborationOpen.value)draft.value=value}
 const refreshMessage=ref('')
 
 type ToolMode='search'|'references'|'history'|'figures'|'snapshots'|'drafts'|'members'
@@ -471,7 +477,7 @@ function onDraftStorage(event:StorageEvent){
 let toolSerial=0,bibSerial=0
 function formatVersionDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString()}
 function closeTool(){toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null;snapshotDetail.value=null}
-function toggleTool(mode:ToolMode){if(snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;refreshTool()}
+function toggleTool(mode:ToolMode){if(collaborationOpen.value||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;refreshTool()}
 function refreshTool(){if(toolMode.value==='search')void loadSearchSources();else if(toolMode.value==='references')void refreshBib();else if(toolMode.value==='history')void loadVersions();else if(toolMode.value==='snapshots')void loadSnapshots();else if(toolMode.value==='drafts')refreshLocalDrafts();else if(toolMode.value==='members'&&ownerAccess.value)void loadMembers()}
 function memberError(cause:unknown){
  const code=cause instanceof ApiErrorResponseError?cause.code:''
@@ -788,7 +794,7 @@ async function jumpDiagnostic(item:PaperCompileDiagnostic){
  if(jobId===compileJob.value?.id&&!diagnosticStale.value&&activeFile.value?.id===target.id)editorRef.value?.goToLine(item.line)
 }
 
-const previewStale = computed(() => !!previewJob.value && (previewJob.value.id !== compileJob.value?.id || previewJob.value.source_revision !== project.value?.head_revision || (previewJob.value.compiler||'pdflatex')!==selectedCompiler.value || (activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)))
+const previewStale = computed(() => !!previewJob.value && (collaborationOpen.value || previewJob.value.id !== compileJob.value?.id || previewJob.value.source_revision !== project.value?.head_revision || (previewJob.value.compiler||'pdflatex')!==selectedCompiler.value || (activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)))
 const editorRef=ref<InstanceType<typeof LatexEditor>|null>(null)
 const pdfRef=ref<InstanceType<typeof PaperPDFPreview>|null>(null)
 const sourceMap=shallowRef<PaperSourceMap|null>(null)
@@ -797,7 +803,7 @@ const displayedPDFJob=ref('')
 const syncMessage=ref('')
 let mapAbort:AbortController|undefined
 let mapSerial=0
-const syncReady=computed(()=>!!sourceMap.value&&!!previewJob.value&&mapJob.value===previewJob.value.id&&displayedPDFJob.value===mapJob.value&&previewJob.value.source_revision===project.value?.head_revision&&draft.value===activeFile.value?.content)
+const syncReady=computed(()=>!collaborationOpen.value&&!!sourceMap.value&&!!previewJob.value&&mapJob.value===previewJob.value.id&&displayedPDFJob.value===mapJob.value&&previewJob.value.source_revision===project.value?.head_revision&&draft.value===activeFile.value?.content)
 watch(()=>[projectId.value,previewJob.value?.id] as const,async ([pid,jid])=>{
  const serial=++mapSerial;mapAbort?.abort();mapAbort=new AbortController()
  sourceMap.value=null;mapJob.value='';syncMessage.value=''
@@ -857,6 +863,7 @@ function endResize(){dragging=false}
 function clearAuto(){if(autoTimer)clearTimeout(autoTimer);autoTimer=null}
 function scheduleAuto(){
  clearAuto()
+ if(collaborationOpen.value)return
  if(!autoCompile.value||!autoDirty||!compileEnabled.value||recommendedUnavailable.value||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||uploadBusy.value||saveError.value||disposed)return
  autoTimer=setTimeout(()=>{
   if(!autoCompile.value||!autoDirty||recommendedUnavailable.value||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||uploadBusy.value||saveError.value||disposed||document.visibilityState==='hidden')return
@@ -963,12 +970,14 @@ function scheduleSave() {
 
 watch(draft,()=>syncLocalDraft(),{flush:'sync'})
 watch(draft, (content) => {
-  if (writeAccess.value && activeFile.value?.kind === 'text' && content !== activeFile.value.content) { scheduleSave();autoDirty=true;scheduleAuto() }
+  if (!collaborationOpen.value && writeAccess.value && activeFile.value?.kind === 'text' && content !== activeFile.value.content) { scheduleSave();autoDirty=true;scheduleAuto() }
 })
 
 // All consumers share one drain promise. In particular a debounce callback
 // and a file/route transition cannot issue concurrent optimistic-lock writes.
 function persist(): Promise<boolean> {
+  // The live Y.Doc owns text updates while this file is collaborative.
+  if(collaborationOpen.value)return Promise.resolve(false)
   if(saveTimer){clearTimeout(saveTimer);saveTimer=null}
   clearSaveRetry()
   if(savePromise)return savePromise
@@ -1020,6 +1029,7 @@ async function copyDraft(){
 }
 
 async function selectFile(file:PaperFile){
+  if(collaborationOpen.value)return
   if(navigating.value||preparingUpload.value||snapshotMutating.value)return
   const serial=++fileSerial
   const pid=projectId.value
@@ -1102,7 +1112,7 @@ async function refreshCompileStatus() {
 }
 
 async function compileNow() {
-  if (!compileEnabled.value || compiling.value || hasActiveCompile.value || !project.value || switchingFile.value || navigating.value || uploadBusy.value || disposed) return
+  if (collaborationOpen.value || !compileEnabled.value || compiling.value || hasActiveCompile.value || !project.value || switchingFile.value || navigating.value || uploadBusy.value || disposed) return
   const requestedProjectId = projectId.value
   compileError.value = ''
   clearAuto();autoDirty=false;lastAutoCompile=Date.now()
@@ -1159,7 +1169,7 @@ function onCompileVisibilityChange() {
 }
 
 async function exportProject() {
-  if (!ownerAccess.value || exporting.value || !project.value) return
+  if (collaborationOpen.value || !ownerAccess.value || exporting.value || !project.value) return
   exporting.value = true
   exportError.value = ''
   const id = projectId.value
@@ -1174,11 +1184,59 @@ async function exportProject() {
   } finally { if(id===projectId.value)exporting.value = false }
 }
 
-function saveNow() { if(writeAccess.value){saveRetryAttempt=0;void persist()} }
+function saveNow() { if(!collaborationOpen.value&&writeAccess.value){saveRetryAttempt=0;void persist()} }
+
+// A separate editor session owns the collaborative document. Never promote
+// its local text into the ordinary full-text PUT/autosave path. On exit,
+ // reload the accepted canonical source and revision from the server.
+const canStartCollaboration=computed(()=>!collaborationOpen.value&&!disposed&&!!accountId.value&&
+ activeFile.value?.kind==='text'&&draft.value===activeFile.value.content&&
+ !loading.value&&!saving.value&&!switchingFile.value&&!navigating.value&&!uploadBusy.value&&
+ !snapshotMutating.value&&!memberMutating.value&&!toolBusy.value&&!compiling.value&&!hasActiveCompile.value&&!exporting.value&&!saveError.value)
+function startCollaboration(){
+ if(!canStartCollaboration.value||savePromise||!activeFile.value)return
+ if(saveTimer){clearTimeout(saveTimer);saveTimer=null}
+ clearSaveRetry();retryableSave=false
+ closeTool();outlineOpen.value=false;managedFile.value=null;clearAuto();autoCompile.value=false;historySerial++
+ collaborationAccount.value=accountId.value
+ collaborationOpen.value=true;saveStatus.value='实时协作模式'
+ if(layoutMode.value==='pdf')layoutMode.value='editor'
+}
+async function exitCollaboration(){
+ if(!collaborationOpen.value)return
+ const pid=projectId.value,owner=accountId.value,fid=activeFile.value?.id
+ // Do not reveal the pre-collaboration source even if a compile-history
+ // response raced the exit or the canonical reload fails.
+ loading.value=true
+ activeFile.value=null;draft.value=''
+ collaborationOpen.value=false;collaborationAccount.value=''
+ closeTool();clearAuto();stopCompilePoll();pollSerial++;historySerial++;fileSerial++
+ compileJob.value=null;previewJob.value=null;compileEnabled.value=false;pdfEnabled.value=false
+ searchSources.value=[];searchBase.value=0;bibSources.value=[];outlineCache.value=[];members.value=[];managedFile.value=null
+ saveStatus.value='正在重新读取服务器版本'
+ await loadProject()
+ if(disposed||pid!==projectId.value||owner!==accountId.value||error.value)return
+ const previous=files.value.find(file=>file.id===fid)
+ if(previous&&previous.id!==activeFile.value?.id)await selectFile(previous)
+}
+watch(accountId,(next,previous)=>{
+ if(next===previous||!collaborationOpen.value)return
+ // A different account must never inherit the preceding account's live
+ // Y.Doc or a stale canonical source. The keyed panel is unmounted.
+ collaborationOpen.value=false;collaborationAccount.value=''
+ loadSerial++;fileSerial++;pollSerial++;historySerial++;mapSerial++
+ clearAuto();stopCompilePoll();mapAbort?.abort()
+ activeFile.value=null;draft.value='';files.value=[];project.value=null
+ previewJob.value=null;compileJob.value=null;sourceMap.value=null
+ compileEnabled.value=false;pdfEnabled.value=false
+ closeTool();resetLocalDraftScope()
+ error.value='登录账号已变化，请重新打开论文项目。';loading.value=false
+},{flush:'sync'})
 
 // A manual refresh is deliberately clean-only. Never silently discard a
 // conflicting local draft or change its base revision to force a save.
 async function refreshServerProject(){
+ if(collaborationOpen.value)return
  if(disposed||loading.value||switchingFile.value||navigating.value||saving.value||uploadBusy.value||snapshotMutating.value||memberMutating.value||compiling.value||hasActiveCompile.value)return
  if(activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content){refreshMessage.value='当前源码尚未保存，请先复制并处理冲突；未刷新项目。';return}
  switchingFile.value=true
@@ -1198,6 +1256,7 @@ async function refreshServerProject(){
 
 
 function beforeUnload(event: BeforeUnloadEvent) {
+  if(collaborationOpen.value){if(collaborationRef.value?.hasUnconfirmed()){event.preventDefault();event.returnValue=''};return}
   syncLocalDraft()
   if (savePromise || (activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)) {
     event.preventDefault();event.returnValue=''
@@ -1205,6 +1264,7 @@ function beforeUnload(event: BeforeUnloadEvent) {
 }
 
 async function beforeNavigate(){
+ if(collaborationOpen.value){refreshMessage.value='请先退出实时协作，再离开项目。';return false}
  if(snapshotMutating.value||memberMutating.value)return false
  navigating.value=true
  fileSerial++;switchingFile.value=false
@@ -1219,6 +1279,7 @@ onBeforeRouteUpdate(beforeNavigate)
 const removeNavigationHook=router.afterEach(()=>{navigating.value=false})
 
 watch(projectId, () => {
+  collaborationOpen.value=false;collaborationAccount.value=''
   loadSerial++
   uploadSerial++;preparingUpload.value=false;draggingFiles.value=false
   memberSerial++;members.value=[];memberMessage.value='';memberMutating.value=false;refreshMessage.value=''

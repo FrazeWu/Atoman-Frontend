@@ -5,10 +5,11 @@ import { defineComponent, h, nextTick } from 'vue'
 import {listLocalDrafts,writeLocalDraft,setLocalDraftEnabled,type PaperLocalDraft} from '@/components/papers/localDrafts'
 import LatexEditor from "@/components/papers/LatexEditor.vue"
 import PaperWorkspaceView from '@/views/papers/PaperWorkspaceView.vue'
-import {listPaperMembers,setPaperMember,removePaperMember,listPaperProjectSnapshots,getPaperProjectSnapshot,createPaperProjectSnapshot,restorePaperProjectSnapshot,deletePaperProjectSnapshot, managePaperFiles, savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, listPaperFileVersions, getPaperFileVersion } from '@/api/papers'
+import {getPaperCollaborationCapability,listPaperMembers,setPaperMember,removePaperMember,listPaperProjectSnapshots,getPaperProjectSnapshot,createPaperProjectSnapshot,restorePaperProjectSnapshot,deletePaperProjectSnapshot, managePaperFiles, savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, listPaperFileVersions, getPaperFileVersion } from '@/api/papers'
 
 vi.mock('@/stores/auth',()=>({useAuthStore:()=>({isAuthenticated:true,user:{uuid:'owner-a'}})}))
 vi.mock('@/api/papers', () => ({
+  getPaperCollaborationCapability:vi.fn().mockResolvedValue({enabled:false}),
   listPaperMembers:vi.fn(),setPaperMember:vi.fn(),removePaperMember:vi.fn(),
   listPaperProjectSnapshots:vi.fn(),
   getPaperProjectSnapshot:vi.fn(),
@@ -699,5 +700,36 @@ describe('Papers shared project access',()=>{
    expect(w.get('[data-test="editor"]').text()).toBe('Newest server source')
    expect(w.get('[data-test="editor"]').attributes('data-readonly')).toBe('true')
   }finally{w.unmount()}
+ })
+})
+
+describe('Papers realtime collaboration gate',()=>{
+ it('never opens a socket when capability is disabled and reloads canonical source on exit',async()=>{
+  vi.mocked(getPaperCollaborationCapability).mockResolvedValue({enabled:false})
+  vi.mocked(getPaperProject).mockResolvedValue({...two,access_role:'owner'} as never)
+  vi.mocked(listPaperFiles).mockResolvedValue([f2] as never)
+  vi.mocked(getPaperFile).mockResolvedValue(f2 as never)
+  const create=vi.fn()
+  vi.stubGlobal('WebSocket',create)
+  const router=createRouter({history:createMemoryHistory(),routes:[{path:'/papers/:projectId',component:PaperWorkspaceView},{path:'/papers',component:{template:'<div />'}}]})
+  await router.push('/papers/two');await router.isReady()
+  const w=mount(defineComponent({render:()=>h(RouterView)}),{global:{plugins:[router]}})
+  try{
+   await flushPromises()
+   await w.findAll('button').find(b=>b.text()==='实时协作')!.trigger('click');await flushPromises()
+   expect(getPaperCollaborationCapability).toHaveBeenCalledWith('two','f2')
+   expect(w.text()).toContain('实时协作尚未开放')
+   expect(create).not.toHaveBeenCalled()
+   expect(w.find('[data-test="editor"]').exists()).toBe(false)
+   expect(w.findAll('button').some(b=>b.text()==='保存')).toBe(false)
+   await router.push('/papers');await flushPromises()
+   expect(router.currentRoute.value.path).toBe('/papers/two')
+   vi.mocked(getPaperFile).mockResolvedValue({...f2,content:'Latest canonical source',revision:2} as never)
+   vi.mocked(listPaperFiles).mockResolvedValue([{...f2,revision:2}] as never)
+   vi.mocked(getPaperProject).mockResolvedValue({...two,head_revision:2,access_role:'owner'} as never)
+   await w.findAll('button').find(b=>b.text()==='退出协作')!.trigger('click');await flushPromises()
+   expect(w.get('[data-test="editor"]').text()).toBe('Latest canonical source')
+   expect(savePaperFile).not.toHaveBeenCalled()
+  }finally{w.unmount();vi.unstubAllGlobals()}
  })
 })

@@ -17,8 +17,10 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirro
 import {openSearchPanel} from '@codemirror/search'
 import {startCompletion} from '@codemirror/autocomplete'
 import {latexExtensionsFor} from './latexLanguage'
+import type {Text as YText} from 'yjs'
+import {yCollab} from 'y-codemirror.next'
 
-const props = defineProps<{ modelValue: string; readonly?: boolean; citations?: readonly string[] }>()
+const props = defineProps<{ modelValue: string; readonly?: boolean; citations?: readonly string[]; collaborativeText?: YText }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string]; 'show-pdf': []; 'cursor-line': [line:number] }>()
 const editorRoot = ref<HTMLElement | null>(null)
 let editor: EditorView | null = null
@@ -33,18 +35,18 @@ onMounted(() => {
   editor = new EditorView({
     parent: editorRoot.value,
     state: EditorState.create({
-      doc: props.modelValue,
+      doc: props.collaborativeText?.toString() ?? props.modelValue,
       extensions: [
         lineNumbers(),
         highlightActiveLine(),
         drawSelection(),
-        history(),
-        keymap.of([{key:'Mod-Shift-j',run:()=>{emit('show-pdf');return true}}, ...defaultKeymap, ...historyKeymap, indentWithTab]),
+        ...(props.collaborativeText?[EditorState.lineSeparator.of('\n'), yCollab(props.collaborativeText,null,{undoManager:false})]:[history()]),
+        keymap.of([{key:'Mod-Shift-j',run:()=>{emit('show-pdf');return true}}, ...defaultKeymap, ...(props.collaborativeText?[]:historyKeymap), indentWithTab]),
         ...latexExtensionsFor(()=>props.citations||[]),
         EditorView.lineWrapping,
         readonlyCompartment.of([EditorState.readOnly.of(Boolean(props.readonly)),EditorView.editable.of(!props.readonly)]),
         EditorView.updateListener.of((update) => {
-          if (update.docChanged && !applyingExternalValue) emit('update:modelValue', update.state.doc.toString())
+          if (update.docChanged && !applyingExternalValue && !props.collaborativeText) emit('update:modelValue', update.state.doc.toString())
           if(update.selectionSet||update.docChanged){const line=update.state.doc.lineAt(update.state.selection.main.head);position.value='行 '+line.number+'，列 '+(update.state.selection.main.head-line.from+1);emit('cursor-line',line.number)}
         }),
       ],
@@ -57,7 +59,7 @@ watch(()=>props.readonly,value=>{
 })
 
 watch(() => props.modelValue, (next) => {
-  if (!editor || editor.state.doc.toString() === next) return
+  if (props.collaborativeText || !editor || editor.state.doc.toString() === next) return
   applyingExternalValue = true
   try {
     editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: next } })

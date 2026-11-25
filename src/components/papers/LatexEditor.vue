@@ -86,7 +86,18 @@ function insertCitation(key:string){
  editor.dispatch(editor.state.replaceSelection('\\cite{'+key+'}'))
  editor.focus()
 }
-defineExpose({getLine,goToLine,goToMatch,insertCitation})
+// Insert at the active end of the selection, preserving all selected text.
+function insertBlock(block:string):boolean{
+ if(!editor||props.readonly||!block.trim())return false
+ const pos=editor.state.selection.main.head,doc=editor.state.doc
+ const before=pos>0&&doc.sliceString(pos-1,pos)!=='\n'?'\n':''
+ const after=pos<doc.length&&doc.sliceString(pos,pos+1)==='\n'?'':'\n'
+ const insert=before+block.trim()+after
+ editor.dispatch({changes:{from:pos,insert},selection:{anchor:pos+insert.length},scrollIntoView:true,userEvent:'input'})
+ editor.focus()
+ return true
+}
+defineExpose({getLine,goToLine,goToMatch,insertCitation,insertBlock})
 
 onBeforeUnmount(() => {
   editor?.destroy()

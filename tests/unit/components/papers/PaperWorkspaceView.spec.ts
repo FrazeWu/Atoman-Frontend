@@ -26,8 +26,9 @@ vi.mock('@/api/papers', () => ({
 }))
 const jumpLine=vi.hoisted(()=>vi.fn())
 const jumpMatch=vi.hoisted(()=>vi.fn())
+const insertBlock=vi.hoisted(()=>vi.fn(()=>true))
 vi.mock('@/components/papers/LatexEditor.vue', () => ({
-  default: { props: ['modelValue','readonly'], emits:['update:modelValue','show-pdf'], methods:{goToLine:jumpLine,goToMatch:jumpMatch,getLine:()=>1}, template: '<pre data-test="editor" :data-readonly="String(readonly)">{{ modelValue }}</pre>' },
+  default: { props: ['modelValue','readonly'], emits:['update:modelValue','show-pdf'], methods:{goToLine:jumpLine,goToMatch:jumpMatch,getLine:()=>1,insertBlock}, template: '<pre data-test="editor" :data-readonly="String(readonly)">{{ modelValue }}</pre>' },
 }))
 
 vi.mock('@/components/papers/PaperPDFPreview.vue', () => ({
@@ -434,6 +435,61 @@ describe('Papers compiler capability',()=>{
    expect(submitPaperCompile).toHaveBeenCalledWith('two',1,expect.any(String),'xelatex')
    expect(wrapper.find('.papers-workspace__compile-status').text()).toContain('XeLaTeX')
    expect(select.attributes('disabled')).toBeDefined()
+  }finally{wrapper.unmount()}
+ })
+})
+
+describe('Papers image upload and insertion workflow',()=>{
+ const png=Uint8Array.from([137,80,78,71,13,10,26,10,0])
+ const img={id:'img',path:'figures/plot.png',kind:'binary' as const,revision:1,content:btoa(String.fromCharCode(...png)),sha256:'',created_at:'',updated_at:''}
+ async function open(files: Array<typeof f2|typeof img>=[f2]){
+  vi.mocked(getPaperProject).mockResolvedValue({...two} as never)
+  vi.mocked(listPaperFiles).mockResolvedValue(files as never)
+  vi.mocked(getPaperFile).mockImplementation(async(_pid,id)=>id===img.id?img:f2 as never)
+  const router=createRouter({history:createMemoryHistory(),routes:[{path:'/papers/:projectId',component:PaperWorkspaceView}]})
+  await router.push('/papers/two');await router.isReady()
+  const wrapper=mount(defineComponent({render:()=>h(RouterView)}),{global:{plugins:[router]}})
+  await flushPromises()
+  return wrapper
+ }
+ it('uploads dropped PNG files to the default figures directory without switching away from the source',async()=>{
+  const wrapper=await open()
+  const file={name:'plot.png',size:png.length,arrayBuffer:async()=>png.buffer} as File
+  vi.mocked(managePaperFiles).mockResolvedValue({project:{...two,head_revision:2},files:[f2,img]} as never)
+  try{
+   const sidebar=wrapper.get('aside[aria-label="论文文件"]')
+   await sidebar.trigger('dragover',{dataTransfer:{types:['Files'],files:[file],dropEffect:'none'}})
+   expect(wrapper.text()).toContain('松开鼠标上传插图')
+   await sidebar.trigger('drop',{dataTransfer:{types:['Files'],files:[file]}})
+   await flushPromises()
+   expect(managePaperFiles).toHaveBeenCalledWith('two',{action:'upload',base_revision:1,uploads:[{path:img.path,kind:'binary',content:img.content}]})
+   expect(wrapper.get('[data-test="editor"]').text()).toBe('Current source')
+   expect(wrapper.text()).toContain('plot.png')
+   expect(wrapper.text()).not.toContain('松开鼠标上传插图')
+  }finally{wrapper.unmount()}
+ })
+ it('blocks disguised graphic files before mutation',async()=>{
+  const wrapper=await open()
+  const raw=new TextEncoder().encode('<html>')
+  const file={name:'fake.png',size:raw.length,arrayBuffer:async()=>raw.buffer} as File
+  try{
+   await wrapper.get('aside[aria-label="论文文件"]').trigger('drop',{dataTransfer:{types:['Files'],files:[file]}})
+   await flushPromises()
+   expect(managePaperFiles).not.toHaveBeenCalled()
+   expect(wrapper.text()).toContain('无法识别')
+  }finally{wrapper.unmount()}
+ })
+ it('inserts a selected project figure through the active editor without loading a different source',async()=>{
+  const wrapper=await open([f2,img])
+  try{
+   await wrapper.findAll('button').find(b=>b.text()==='插图')!.trigger('click')
+   await flushPromises()
+   expect(wrapper.get('[aria-label="插图管理"]').text()).toContain(img.path)
+   await wrapper.get('[aria-label="图片图注"]').setValue('Ablation results')
+   await wrapper.findAll('button').find(b=>b.text()==='插入到光标处')!.trigger('click')
+   expect(insertBlock).toHaveBeenCalledWith(expect.stringContaining(String.raw`\includegraphics[width=0.8\linewidth]{figures/plot.png}`))
+   expect(wrapper.find('[aria-label="插图管理"]').exists()).toBe(false)
+   expect(wrapper.get('[data-test="editor"]').text()).toBe('Current source')
   }finally{wrapper.unmount()}
  })
 })

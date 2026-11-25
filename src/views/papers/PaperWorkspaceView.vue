@@ -16,32 +16,36 @@
     <p v-else-if="error" role="alert" class="papers-workspace__error">{{ error }}</p>
     <div v-else ref="workspaceRoot" class="papers-workspace__content" :class="{ 'files-hidden': !showFiles, 'editor-only': layoutMode === 'editor', 'pdf-only': layoutMode === 'pdf' }" :style="{ '--preview-grow': previewWidth, '--editor-grow': 100-previewWidth }">
       <button v-if="compactLayout && showFiles" type="button" class="papers-workspace__files-backdrop" aria-label="关闭文件栏" @click="showFiles=false" />
-      <aside class="papers-workspace__files" aria-label="论文文件">
+      <aside class="papers-workspace__files" :class="{'papers-workspace__files--dropping':draggingFiles}" aria-label="论文文件" @dragenter="onFigureDragOver" @dragover="onFigureDragOver" @dragleave="onFigureDragLeave" @drop="onFigureDrop">
         <div class="papers-workspace__files-heading"><h2>文件 <small>{{ files.length }}</small></h2><button v-if="compactLayout" type="button" class="papers-workspace__close-files" aria-label="关闭文件面板" @click="showFiles=false">×</button></div>
         <div v-for="entry in treeRows" :key="entry.key" class="papers-workspace__file-row" :style="{paddingLeft:Math.min(entry.depth,8)*10+'px'}">
           <button v-if="entry.kind==='folder'" type="button" class="papers-workspace__folder" :aria-expanded="!closedFolders.has(entry.path)" @click="toggleFolder(entry.path)">{{ closedFolders.has(entry.path)?'▸':'▾' }} {{ entry.name }}</button>
           <template v-else>
-            <button type="button" :title="entry.path" :class="{active:activeFile?.id===entry.file.id}" :disabled="addingFile||navigating" @click="selectFile(entry.file)">{{ entry.name }}<span v-if="entry.file.id===project?.main_file_id" class="papers-workspace__asset-label">主文件</span><span v-else-if="entry.file.kind==='binary'" class="papers-workspace__asset-label">资源</span></button>
-            <button type="button" class="papers-workspace__file-menu" :aria-label="'管理 '+entry.path" :disabled="addingFile||navigating||switchingFile" @click="openFileMenu(entry.file)">⋯</button>
+            <button type="button" :title="entry.path" :class="{active:activeFile?.id===entry.file.id}" :disabled="uploadBusy||navigating" @click="selectFile(entry.file)">{{ entry.name }}<span v-if="entry.file.id===project?.main_file_id" class="papers-workspace__asset-label">主文件</span><span v-else-if="entry.file.kind==='binary'" class="papers-workspace__asset-label">资源</span></button>
+            <button type="button" class="papers-workspace__file-menu" :aria-label="'管理 '+entry.path" :disabled="uploadBusy||navigating||switchingFile" @click="openFileMenu(entry.file)">⋯</button>
           </template>
         </div>
         <div v-if="managedFile" class="papers-workspace__manage">
           <strong>{{ managedFile.path }}</strong>
           <label>新路径<input v-model.trim="managedPath" maxlength="512" aria-label="文件新路径" /></label>
-          <PButton size="sm" variant="secondary" :disabled="addingFile||!managedPath||managedPath===managedFile.path" @click="changeFile('rename')">重命名 / 移动</PButton>
-          <PButton v-if="managedFile.kind==='text'&&/^[^/]+\.tex$/i.test(managedFile.path)&&managedFile.id!==project?.main_file_id" size="sm" variant="secondary" :disabled="addingFile" @click="changeFile('set_main')">设为主文件</PButton>
-          <PButton v-if="managedFile.id!==project?.main_file_id" size="sm" variant="secondary" :disabled="addingFile" @click="changeFile('delete')">删除文件</PButton>
+          <PButton size="sm" variant="secondary" :disabled="uploadBusy||!managedPath||managedPath===managedFile.path" @click="changeFile('rename')">重命名 / 移动</PButton>
+          <PButton v-if="managedFile.kind==='text'&&/^[^/]+\.tex$/i.test(managedFile.path)&&managedFile.id!==project?.main_file_id" size="sm" variant="secondary" :disabled="uploadBusy" @click="changeFile('set_main')">设为主文件</PButton>
+          <PButton v-if="managedFile.id!==project?.main_file_id" size="sm" variant="secondary" :disabled="uploadBusy" @click="changeFile('delete')">删除文件</PButton>
           <PButton size="sm" variant="ghost" :disabled="addingFile" @click="managedFile=null">关闭</PButton>
         </div>
         <div class="papers-workspace__manage">
           <label>上传到目录（可选）<input v-model.trim="uploadDir" placeholder="figures" maxlength="255" /></label>
-          <input ref="uploadInput" type="file" multiple hidden :disabled="addingFile" @change="uploadFiles" />
-          <PButton size="sm" variant="secondary" :disabled="addingFile||switchingFile||navigating" @click="uploadInput?.click()">{{ addingFile?'处理中…':'上传文件' }}</PButton>
+          <input ref="uploadInput" type="file" multiple hidden :disabled="uploadBusy" @change="uploadFiles" />
+          <PButton size="sm" variant="secondary" :disabled="uploadBusy||switchingFile||navigating" @click="uploadInput?.click()">{{ uploadBusy?'处理中…':'上传文件' }}</PButton>
+          <div class="papers-workspace__drop-zone" :class="{'active':draggingFiles}" aria-label="图片拖放上传区域">
+            <strong>{{ draggingFiles?'松开鼠标上传插图':'拖放图片至此' }}</strong>
+            <small>PNG、JPEG、PDF · {{ uploadDir.trim()||'figures' }}/</small>
+          </div>
         </div>
         <form class="papers-workspace__add" @submit.prevent="addFile">
           <label for="papers-new-file">新建文本文件</label>
           <input id="papers-new-file" v-model.trim="newFilePath" placeholder="chapters/intro.tex" maxlength="512" required />
-          <PButton type="submit" size="sm" :disabled="!newFilePath || addingFile || switchingFile || navigating">添加文件</PButton>
+          <PButton type="submit" size="sm" :disabled="!newFilePath || uploadBusy || switchingFile || navigating">添加文件</PButton>
         </form>
         <p v-if="fileError" class="papers-workspace__error" role="alert">{{ fileError }}</p>
       </aside>
@@ -55,12 +59,13 @@
         <nav class="papers-workspace__toolnav" aria-label="项目工具">
           <button type="button" :aria-pressed="toolMode==='search'" @click="toggleTool('search')">全项目搜索</button>
           <button type="button" :aria-pressed="toolMode==='references'" @click="toggleTool('references')">参考文献</button>
+          <button type="button" :aria-pressed="toolMode==='figures'" @click="toggleTool('figures')">插图</button>
           <button type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='history'" @click="toggleTool('history')">版本历史</button>
         </nav>
-        <section v-if="toolMode" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':'文件历史'">
+        <section v-if="toolMode" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':'文件历史'">
           <div class="papers-workspace__outline-heading">
-            <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':'当前文件版本历史' }}</strong>
-            <button type="button" class="papers-workspace__sync" :disabled="toolBusy" @click="refreshTool">刷新</button>
+            <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':toolMode==='figures'?'插图管理':'当前文件版本历史' }}</strong>
+            <button v-if="toolMode!=='figures'" type="button" class="papers-workspace__sync" :disabled="toolBusy" @click="refreshTool">刷新</button>
             <button type="button" class="papers-workspace__sync" @click="closeTool">关闭</button>
           </div>
           <p v-if="toolError" role="alert" class="papers-workspace__error">{{ toolError }}</p>
@@ -70,7 +75,7 @@
             <label>替换为<input v-model="replaceQuery" maxlength="1000" placeholder="留空表示删除匹配文字" /></label>
             <p v-if="searchStale">项目或未保存源码已有变化，请刷新搜索后操作。</p>
             <p v-else>{{ searchResult.total }} 处匹配<span v-if="searchResult.total>200">（显示前 200 处）</span></p>
-            <PButton size="sm" variant="secondary" :disabled="toolBusy||addingFile||switchingFile||navigating||searchStale||!searchResult.total||searchQuery===replaceQuery" @click="replaceProject">全部替换</PButton>
+            <PButton size="sm" variant="secondary" :disabled="toolBusy||addingFile||switchingFile||navigating||preparingUpload||searchStale||!searchResult.total||searchQuery===replaceQuery" @click="replaceProject">全部替换</PButton>
             <button v-for="(hit,index) in searchResult.matches" :key="hit.fileId+':'+hit.line+':'+hit.column+':'+index" type="button" class="papers-workspace__toolrow" :disabled="searchStale" @click="jumpSearch(hit)"><strong>{{ hit.path }}:{{ hit.line }}:{{ hit.column }}</strong><code>{{ hit.preview }}</code></button>
           </template>
           <template v-else-if="toolMode==='references'">
@@ -83,6 +88,10 @@
               <button type="button" class="papers-workspace__sync" :disabled="activeFile?.kind!=='text'||!/\.tex$/i.test(activeFile?.path||'')||switchingFile||addingFile||navigating" @click="editorRef?.insertCitation(entry.key)">插入引用</button>
             </div>
           </template>
+          <template v-else-if="toolMode==='figures'">
+          <p v-if="fileError" role="alert" class="papers-workspace__error">{{ fileError }}</p>
+          <PaperFigureTools :key="projectId" :project-id="projectId" :files="files" :disabled="uploadBusy||switchingFile||navigating" :can-insert="activeFile?.kind==='text'&&/\.tex$/i.test(activeFile.path)" @upload="uploadFigureFiles" @insert="insertFigure" />
+          </template>
           <template v-else-if="toolMode==='history'">
             <p v-if="activeFile?.kind!=='text'">请选择文本文件。</p>
             <button v-for="version in fileVersions" :key="version.revision" type="button" class="papers-workspace__toolrow" :disabled="toolBusy" @click="previewVersion(version)"><strong>版本 {{ version.revision }}{{ activeFile?.revision===version.revision?' · 当前':'' }}</strong><span>{{ formatVersionDate(version.created_at) }} · {{ version.path }}</span></button>
@@ -92,7 +101,7 @@
               <p v-if="versionDifference">差异范围：旧版第 {{ versionDifference.from }}–{{ Math.max(versionDifference.from,versionDifference.oldTo) }} 行；当前第 {{ versionDifference.from }}–{{ Math.max(versionDifference.from,versionDifference.newTo) }} 行。</p>
               <p v-else>源码一致。</p>
               <div class="papers-workspace__compare"><label>历史源码<textarea readonly :value="selectedVersion.content" /></label><label>当前源码<textarea readonly :value="draft" /></label></div>
-              <PButton size="sm" variant="secondary" :disabled="toolBusy||addingFile||switchingFile||!versionDifference" @click="restoreVersion">恢复源码为此版本</PButton>
+              <PButton size="sm" variant="secondary" :disabled="toolBusy||addingFile||switchingFile||preparingUpload||!versionDifference" @click="restoreVersion">恢复源码为此版本</PButton>
             </div>
           </template>
         </section>
@@ -130,9 +139,9 @@
             <span v-else-if="compileEnabled">准备编译</span>
           </div>
           <div class="papers-workspace__preview-right">
-            <label class="papers-workspace__compiler" title="选择此任务的 TeX 编译器"><span>编译器</span><select v-model="selectedCompiler" aria-label="TeX 编译器" :disabled="!compileEnabled||compiling||hasActiveCompile||saving||addingFile||navigating" @change="compilerChanged"><option v-for="engine in compilerOptions" :key="engine" :value="engine">{{ compilerLabel(engine) }}</option></select></label>
+            <label class="papers-workspace__compiler" title="选择此任务的 TeX 编译器"><span>编译器</span><select v-model="selectedCompiler" aria-label="TeX 编译器" :disabled="!compileEnabled||compiling||hasActiveCompile||saving||uploadBusy||navigating" @change="compilerChanged"><option v-for="engine in compilerOptions" :key="engine" :value="engine">{{ compilerLabel(engine) }}</option></select></label>
             <label class="papers-workspace__auto"><input type="checkbox" v-model="autoCompile" :disabled="!compileEnabled" /> 自动编译</label>
-            <PButton type="button" size="sm" :disabled="!compileEnabled || compiling || saving || switchingFile || navigating || !project || hasActiveCompile" @click="compileNow">{{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}</PButton>
+            <PButton type="button" size="sm" :disabled="!compileEnabled || compiling || saving || switchingFile || navigating || uploadBusy || !project || hasActiveCompile" @click="compileNow">{{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}</PButton>
           </div>
         </div>
         <p v-if="syncMessage" class="papers-workspace__sync-message" role="status">{{ syncMessage }}</p>
@@ -181,6 +190,8 @@ import { ApiErrorResponseError } from '@/api/client'
 import PButton from '@/components/ui/PButton.vue'
 import LatexEditor from '@/components/papers/LatexEditor.vue'
 import PaperAssetPreview from '@/components/papers/PaperAssetPreview.vue'
+import PaperFigureTools from '@/components/papers/PaperFigureTools.vue'
+import {prepareFigureUploads,type FigureInsertion} from '@/components/papers/figureTools'
 import {paperFileTree,preparePaperUploads} from '@/components/papers/fileTools'
 import {searchProject,planProjectReplacement,bibtexReferences,changedLineRange,type ProjectMatch,type PaperReference} from '@/components/papers/projectTools'
 import {latexHeadings,type LatexHeading} from '@/components/papers/latexLanguage'
@@ -214,6 +225,9 @@ const treeRows=computed(()=>paperFileTree(files.value,closedFolders.value))
 function toggleFolder(path:string){const next=new Set(closedFolders.value);if(next.has(path))next.delete(path);else next.add(path);closedFolders.value=next}
 const managedFile=ref<PaperFile|null>(null),managedPath=ref('')
 const uploadDir=ref(''),uploadInput=ref<HTMLInputElement|null>(null)
+const preparingUpload=ref(false),draggingFiles=ref(false)
+const uploadBusy=computed(()=>addingFile.value||preparingUpload.value)
+let uploadSerial=0
 function openFileMenu(file:PaperFile){managedFile.value=file;managedPath.value=file.path}
 function revealFile(path:string){const next=new Set(closedFolders.value);const parts=path.split('/');for(let i=1;i<parts.length;i++)next.delete(parts.slice(0,i).join('/'));closedFolders.value=next}
 function managementError(cause:unknown){
@@ -254,23 +268,59 @@ async function mutateFiles(change:{action:'upload'|'rename'|'delete'|'set_main';
  finally{if(pid===projectId.value){addingFile.value=false;scheduleAuto()}}
 }
 async function changeFile(action:'rename'|'delete'|'set_main'){
- const f=managedFile.value;if(!f)return
+ const f=managedFile.value;if(!f||uploadBusy.value)return
  if(action==='delete'&&!window.confirm('删除 '+f.path+'？请确认源码中没有仍依赖它的引用。'))return
  if(action==='rename'&&!window.confirm('修改文件路径？引用该文件的 LaTeX 命令需要手动更新。'))return
  await mutateFiles({action,file_id:f.id,path:action==='rename'?managedPath.value:undefined})
 }
-async function uploadFiles(event:Event){
+async function uploadPicked(picked:File[],directory:string,figuresOnly=false){
+ if(!picked.length||uploadBusy.value||switchingFile.value||navigating.value||!project.value||disposed)return
+ const pid=projectId.value,serial=++uploadSerial
+ const valid=()=>!disposed&&pid===projectId.value&&serial===uploadSerial&&!navigating.value
+ preparingUpload.value=true;fileError.value=''
+ try{
+  const uploads=await (figuresOnly?prepareFigureUploads(picked,directory):preparePaperUploads(picked,directory))
+  if(valid())await mutateFiles({action:'upload',uploads})
+ }catch(cause){if(valid())fileError.value=managementError(cause)}
+ finally{if(pid===projectId.value&&serial===uploadSerial){preparingUpload.value=false;scheduleAuto()}}
+}
+function uploadFiles(event:Event){
  const input=event.target as HTMLInputElement
  const picked=Array.from(input.files||[]);input.value=''
- if(!picked.length)return
- const pid=projectId.value
- try{const uploads=await preparePaperUploads(picked,uploadDir.value);if(!disposed&&pid===projectId.value)await mutateFiles({action:'upload',uploads})}
- catch(cause){if(!disposed&&pid===projectId.value)fileError.value=managementError(cause)}
+ void uploadPicked(picked,uploadDir.value)
+}
+function uploadFigureFiles(picked:File[]){
+ // File errors must remain visible even in compact mode when the sidebar is closed.
+ void uploadPicked(picked,uploadDir.value.trim()||'figures',true)
+}
+function onFigureDragOver(event:DragEvent){
+ if(!event.dataTransfer||!Array.from(event.dataTransfer.types||[]).includes('Files'))return
+ event.preventDefault()
+ const busy=uploadBusy.value||switchingFile.value||navigating.value
+ event.dataTransfer.dropEffect=busy?'none':'copy'
+ draggingFiles.value=!busy
+}
+function onFigureDragLeave(event:DragEvent){
+ const target=event.currentTarget,related=event.relatedTarget
+ if(target instanceof Element&&related instanceof Node&&target.contains(related))return
+ draggingFiles.value=false
+}
+function onFigureDrop(event:DragEvent){
+ const transfer=event.dataTransfer
+ draggingFiles.value=false
+ if(!transfer||(!transfer.files.length&&!Array.from(transfer.types||[]).includes('Files')))return
+ event.preventDefault()
+ uploadFigureFiles(Array.from(transfer.files))
+}
+function insertFigure(figure:FigureInsertion){
+ if(uploadBusy.value||switchingFile.value||navigating.value||!activeFile.value||activeFile.value.kind!=='text'||!/\.tex$/i.test(activeFile.value.path))return
+ if(!files.value.some(f=>f.kind==='binary'&&f.id===figure.id&&f.revision===figure.revision&&f.path===figure.path))return
+ if(editorRef.value?.insertBlock(figure.code))closeTool()
 }
 
 const activeFile = ref<PaperFile | null>(null)
 const draft = ref('')
-type ToolMode='search'|'references'|'history'
+type ToolMode='search'|'references'|'history'|'figures'
 const toolMode=ref<ToolMode|''>(''),toolBusy=ref(false),toolError=ref('')
 const searchQuery=ref(''),replaceQuery=ref(''),referenceQuery=ref('')
 const searchSources=shallowRef<PaperFile[]>([]),searchBase=ref(0)
@@ -343,7 +393,7 @@ async function jumpReference(entry:PaperReference){
  if(activeFile.value?.id===entry.fileId)editorRef.value?.goToLine(entry.line)
 }
 async function replaceProject(){
- if(toolBusy.value||addingFile.value||switchingFile.value||navigating.value||searchStale.value||!project.value)return
+ if(toolBusy.value||uploadBusy.value||switchingFile.value||navigating.value||searchStale.value||!project.value)return
  const pid=projectId.value,base=searchBase.value
  let replacements
  try{replacements=planProjectReplacement(searchSources.value,searchQuery.value,replaceQuery.value)}
@@ -392,7 +442,7 @@ async function previewVersion(version:PaperVersionSummary){
 watch(()=>activeFile.value?.id,()=>{if(toolMode.value==='history')void loadVersions()})
 async function restoreVersion(){
  const version=selectedVersion.value,file=activeFile.value,pid=projectId.value
- if(!version||!file||version.file_id!==file.id||addingFile.value||toolBusy.value||switchingFile.value||navigating.value)return
+ if(!version||!file||version.file_id!==file.id||uploadBusy.value||toolBusy.value||switchingFile.value||navigating.value)return
  if(!window.confirm('恢复历史源码？当前已保存版本会继续保留，恢复将创建一个新版本，不修改文件路径。'))return
  addingFile.value=true;toolError.value=''
  try{
@@ -555,9 +605,9 @@ function endResize(){dragging=false}
 function clearAuto(){if(autoTimer)clearTimeout(autoTimer);autoTimer=null}
 function scheduleAuto(){
  clearAuto()
- if(!autoCompile.value||!autoDirty||!compileEnabled.value||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||addingFile.value||saveError.value||disposed)return
+ if(!autoCompile.value||!autoDirty||!compileEnabled.value||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||uploadBusy.value||saveError.value||disposed)return
  autoTimer=setTimeout(()=>{
-  if(!autoCompile.value||!autoDirty||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||addingFile.value||saveError.value||disposed||document.visibilityState==='hidden')return
+  if(!autoCompile.value||!autoDirty||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||uploadBusy.value||saveError.value||disposed||document.visibilityState==='hidden')return
   autoDirty=false;lastAutoCompile=Date.now();void compileNow()
  },Math.max(15000,60000-(Date.now()-lastAutoCompile)))
 }
@@ -706,7 +756,7 @@ async function copyDraft(){
 }
 
 async function selectFile(file:PaperFile){
-  if(navigating.value)return
+  if(navigating.value||preparingUpload.value)return
   const serial=++fileSerial
   const pid=projectId.value
   if(activeFile.value?.id===file.id){switchingFile.value=false;if(compactLayout.value){showFiles.value=false;if(layoutMode.value==='pdf')layoutMode.value='editor'}return}
@@ -739,7 +789,7 @@ async function selectFile(file:PaperFile){
 }
 
 async function addFile(){
-  if(!newFilePath.value||addingFile.value||switchingFile.value||navigating.value)return
+  if(!newFilePath.value||uploadBusy.value||switchingFile.value||navigating.value)return
   const pid=projectId.value
   addingFile.value=true;fileError.value=''
   try{
@@ -788,7 +838,7 @@ async function refreshCompileStatus() {
 }
 
 async function compileNow() {
-  if (!compileEnabled.value || compiling.value || hasActiveCompile.value || !project.value || switchingFile.value || navigating.value || addingFile.value || disposed) return
+  if (!compileEnabled.value || compiling.value || hasActiveCompile.value || !project.value || switchingFile.value || navigating.value || uploadBusy.value || disposed) return
   const requestedProjectId = projectId.value
   compileError.value = ''
   clearAuto();autoDirty=false;lastAutoCompile=Date.now()
@@ -883,6 +933,7 @@ const removeNavigationHook=router.afterEach(()=>{navigating.value=false})
 
 watch(projectId, () => {
   loadSerial++
+  uploadSerial++;preparingUpload.value=false;draggingFiles.value=false
   closeTool();bibSerial++;bibSources.value=[];bibError.value='';searchBase.value=0;searchSources.value=[];fileVersions.value=[];clearSaveRetry();retryableSave=false;saveRetryAttempt=0
   fileSerial++;pollSerial++;historySerial++;pendingSubmission=null
   switchingFile.value=false;addingFile.value=false;compiling.value=false;canceling.value=false;exporting.value=false;saveError.value='';fileError.value=''
@@ -919,6 +970,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   disposed = true
+  uploadSerial++;draggingFiles.value=false
   closeTool();bibSerial++;clearSaveRetry()
   loadSerial++
   fileSerial++
@@ -1033,4 +1085,9 @@ onBeforeUnmount(() => {
  .papers-workspace__compiler{display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap}
 .papers-workspace__compiler select{color:inherit;background:var(--a-color-bg,#fff);border:1px solid var(--a-color-border-soft,#ddd);border-radius:4px;padding:4px 5px;font:inherit;max-width:104px}
 @media(max-width:1000px){.papers-workspace__compiler>span{display:none}}
+
+.papers-workspace__drop-zone{display:grid;gap:4px;padding:12px 6px;border:1px dashed var(--a-color-border-soft,#aab1ba);border-radius:5px;text-align:center;color:var(--a-color-text-secondary,#64748b);overflow-wrap:anywhere}
+.papers-workspace__drop-zone strong{font-weight:550;color:inherit;font-size:12px}
+.papers-workspace__drop-zone small{font-size:10px}
+.papers-workspace__drop-zone.active,.papers-workspace__files--dropping .papers-workspace__drop-zone{background:var(--a-color-bg-subtle,#e7edf3);border-color:var(--a-color-text-secondary,#64748b);color:var(--a-color-text,#20242c)}
 </style>

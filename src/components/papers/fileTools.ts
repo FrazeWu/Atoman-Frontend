@@ -45,7 +45,7 @@ export async function preparePaperUploads(files:File[],directory:string):Promise
  }
  return out
 }
-export function paperResourceBlob(file:PaperFile):Blob|null{
+export function paperResourceBlob(file:Pick<PaperFile,'kind'|'path'|'content'>):Blob|null{
  try{
   if(file.kind!=='binary'||file.content.length>4*1024*1024)return null
   const raw=Uint8Array.from(atob(file.content),c=>c.charCodeAt(0))

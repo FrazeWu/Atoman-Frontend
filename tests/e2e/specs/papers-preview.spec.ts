@@ -35,7 +35,7 @@ function fixturePDF(): Buffer {
 }
 
 test.describe('Papers isolated browser acceptance', () => {
-  test.setTimeout(120000)
+  test.setTimeout(180000)
   test('renders a genuine PDF, paginates, downloads identical bytes and stays private when disabled', async ({ page, baseURL }) => {
     const origin = new URL(baseURL!).origin
     expect(new URL(origin).hostname).toMatch(/^(localhost|127\.0\.0\.1)$/)
@@ -45,9 +45,10 @@ test.describe('Papers isolated browser acceptance', () => {
     const project = { id: 'project-a', name: 'Papers acceptance', main_file_id: 'file-a', head_revision: 1, created_at: time, updated_at: time }
     const file = { id: 'file-a', path: 'main.tex', kind: 'text', content: '\\documentclass{article}\n\\begin{document}\n\\section{Introduction}\nFixture\n\\end{document}', sha256: '', revision: 1, created_at: time, updated_at: time }
     const job = { id: 'job-a', project_id: 'project-a', source_revision: 1, status: 'succeeded', attempts: 1, max_attempts: 2, cancel_requested: false, pdf_available: true, created_at: time }
-    const image={...file,id:'image-a',kind:'binary',path:'figures/pixel.png',content:'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jR0cAAAAASUVORK5CYII='}
+    const image={...file,id:'image-a',kind:'binary',path:'figures/pixel.png',content:'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGOQq7gEAAIgAWmLr1EGAAAAAElFTkSuQmCC'}
     const resource={...file,id:'resource-a',kind:'binary',path:'figures/source.pdf',content:pdf.toString('base64')}
     let enabled = true, requests = 0
+    const uploaded: Array<typeof image> = []
     await page.routeWebSocket('**/*', socket => socket.close())
     await page.route('**/*', async route => {
       const url = new URL(route.request().url())
@@ -60,10 +61,29 @@ test.describe('Papers isolated browser acceptance', () => {
       if (path === '/auth/session') return route.fulfill({ headers: cors, json: { csrf_token: 'fixture-csrf', user: { uuid: 'fixture-user', username: 'fixture', email: 'fixture@example.test', role: 'user', onboarding_completed_at: time } } })
       if (path === '/site/access') return route.fulfill({ headers: cors, json: {} })
       if (path === prefix) return ok(project)
-      if (path === prefix + '/files') return ok([file,image,resource])
+      if (path === prefix + '/files') return ok([file,image,resource,...uploaded])
+      if (path === prefix + '/files/manage' && route.request().method() === 'POST') {
+        const change=route.request().postDataJSON()
+        expect(change.action).toBe('upload')
+        expect(change.base_revision).toBe(project.head_revision)
+        for(const [i,upload] of change.uploads.entries()) uploaded.push({...image,...upload,id:'uploaded-'+i})
+        project.head_revision++
+        return ok({project,files:[file,image,resource,...uploaded]})
+      }
+      if (path.startsWith(prefix + '/files/uploaded-')) return ok(uploaded.find(f=>path.endsWith('/'+f.id)))
       if (path === prefix + '/files/image-a') return ok(image)
       if (path === prefix + '/files/resource-a') return ok(resource)
-      if (path === prefix + '/files/file-a') return ok(file)
+      if (path === prefix + '/files/file-a') {
+        if(route.request().method()==='PUT'){
+          const change=route.request().postDataJSON()
+          expect(change.base_revision).toBe(file.revision)
+          file.content=change.content
+          file.revision++
+          project.head_revision++
+          return ok({...file,project_head_revision:project.head_revision})
+        }
+        return ok(file)
+      }
       if (path === prefix + '/compile-capability') return ok({ enabled, pdf_available: enabled })
       if (path === prefix + '/compiles') return ok([job])
       if (path === prefix + '/compiles/job-a/pdf') {
@@ -73,6 +93,7 @@ test.describe('Papers isolated browser acceptance', () => {
       return ok({ items: [], total: 0 })
     })
     await page.goto('/papers/project-a')
+    await expect(page.locator('.cm-content')).toContainText('Fixture',{timeout:90000})
     const canvas = page.locator('.paper-pdf canvas')
     const first = page.locator('.paper-pdf__sheet[data-page="1"]')
     const second = page.locator('.paper-pdf__sheet[data-page="2"]')
@@ -146,6 +167,37 @@ test.describe('Papers isolated browser acceptance', () => {
     await expect(page.locator('.paper-asset .paper-pdf__sheet[data-page="1"]')).toHaveAttribute('data-rendered','true',{timeout:30000})
     await page.locator('button[title="main.tex"]').click()
     await expect(page.locator('.cm-content')).toContainText('Introduction')
+    // Real browser File/DataTransfer objects; all writes target the fixture API.
+    const transfer=await page.evaluateHandle(base64=>{
+      const bytes=Uint8Array.from(atob(base64),ch=>ch.charCodeAt(0))
+      const dt=new DataTransfer()
+      dt.items.add(new File([bytes],'curve plot.png',{type:'image/png'}))
+      return dt
+    },image.content)
+    const sidebar=page.getByRole('complementary',{name:'论文文件'})
+    await sidebar.dispatchEvent('dragover',{dataTransfer:transfer})
+    await expect(sidebar).toContainText('松开鼠标上传插图')
+    await sidebar.dispatchEvent('drop',{dataTransfer:transfer})
+    await expect(page.locator('button[title="figures/curve plot.png"]')).toBeVisible()
+    await expect(page.locator('.cm-content')).toContainText('Fixture')
+    await transfer.dispose()
+    await page.locator('.cm-line').filter({hasText:/^Fixture$/}).click()
+    await page.keyboard.press('End')
+    await page.getByRole('button',{name:'插图',exact:true}).click()
+    const figures=page.getByRole('region',{name:'插图管理'})
+    await figures.getByLabel('插图文件').selectOption('uploaded-0')
+    await figures.getByRole('button',{name:'预览资源',exact:true}).click()
+    await expect.poll(()=>figures.locator('img').evaluate(el=>(el as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+    await figures.getByLabel('图片宽度百分比').fill('65')
+    await figures.getByLabel('图片图注').fill('Ablation & recall: 95%')
+    await figures.getByLabel('图片引用标签').fill('fig:ablation')
+    await expect(figures.getByLabel('生成的插图代码')).toHaveValue(/width=0\.65\\linewidth/)
+    await figures.getByRole('button',{name:'插入到光标处',exact:true}).click()
+    await expect(figures).toHaveCount(0)
+    await expect(page.locator('.cm-content')).toContainText('\\includegraphics[width=0.65\\linewidth]{figures/curve plot.png}')
+    await expect(page.locator('.cm-content')).toContainText('Fixture')
+    await page.getByRole('button',{name:'保存',exact:true}).click()
+    await expect.poll(()=>file.content).toContain('\\label{fig:ablation}')
     enabled = false
     await page.reload()
     await expect(page.getByText('编译尚未开放', { exact: true })).toBeVisible()

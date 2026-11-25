@@ -24,4 +24,16 @@ describe('Papers LaTeX editor', () => {
       wrapper.unmount()
     }
   })
+
+  it('inserts a block at the selection end without deleting selected source',async()=>{
+    const wrapper=mount(LatexEditor,{props:{modelValue:'before after',readonly:false}})
+    try{
+      const editor=wrapper.vm as unknown as {goToMatch:(line:number,col:number,len:number)=>void;insertBlock:(text:string)=>boolean}
+      editor.goToMatch(1,1,6)
+      expect(editor.insertBlock('FIGURE')).toBe(true)
+      expect(wrapper.emitted('update:modelValue')?.at(-1)?.[0]).toBe('before\nFIGURE\n after')
+      await wrapper.setProps({readonly:true})
+      expect(editor.insertBlock('NO')).toBe(false)
+    }finally{wrapper.unmount()}
+  })
 })

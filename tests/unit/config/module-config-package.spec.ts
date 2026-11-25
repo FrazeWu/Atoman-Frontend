@@ -20,6 +20,7 @@ describe("@atoman/module-config", () => {
 			"timeline",
 			"podcast",
 			"video",
+			"papers",
 		]);
 		expect(topbarNavOrder).toEqual([
 			"feed",
@@ -28,6 +29,7 @@ describe("@atoman/module-config", () => {
 			"video",
 			"podcast",
 			"books",
+			"papers",
 		]);
 	});
 });

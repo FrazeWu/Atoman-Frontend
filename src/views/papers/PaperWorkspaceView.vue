@@ -199,6 +199,7 @@
         />
       </aside>
     </div>
+  <PConfirm :show="!!confirmationMessage" title="请确认操作" :message="confirmationMessage" danger @confirm="resolveConfirmation(true)" @cancel="resolveConfirmation(false)" />
   </main>
 </template>
 
@@ -212,6 +213,8 @@ import PaperDraftTools from '@/components/papers/PaperDraftTools.vue'
 import PaperMemberTools from '@/components/papers/PaperMemberTools.vue'
 import PaperCollaborationPanel from '@/components/papers/PaperCollaborationPanel.vue'
 import {draftKey,listLocalDrafts,localDraftEnabled,setLocalDraftEnabled,writeLocalDraft,readLocalDraft,removeLocalDraft,sameLocalDraft,matchesLocalDraftBase,type PaperLocalDraft} from '@/components/papers/localDrafts'
+import PConfirm from '@/components/ui/PConfirm.vue'
+import {usePaperConfirmation} from '@/components/papers/usePaperConfirmation'
 import PButton from '@/components/ui/PButton.vue'
 import LatexEditor from '@/components/papers/LatexEditor.vue'
 import PaperAssetPreview from '@/components/papers/PaperAssetPreview.vue'
@@ -236,6 +239,7 @@ defineOptions({name:'PaperWorkspaceView'})
 const route = useRoute()
 const router=useRouter()
 const auth=useAuthStore()
+const {confirmationMessage,ask,resolveConfirmation}=usePaperConfirmation()
 const accountId=computed(()=>auth.isAuthenticated?auth.user?.uuid||'':'')
 const projectId = computed(() => String(route.params.projectId || ''))
 const loading = ref(true)
@@ -253,6 +257,12 @@ const project = ref<PaperProject | null>(null)
 const ownerAccess=computed(()=>!!project.value&&(project.value.access_role===undefined||project.value.access_role==='owner'))
 const writeAccess=computed(()=>ownerAccess.value||project.value?.access_role==='editor')
 const roleLabel=computed(()=>ownerAccess.value?'所有者':writeAccess.value?'编辑者':'阅读者')
+const confirmPaper=(message:string)=>ask(message,()=>[
+ !disposed&&!navigating.value,accountId.value,projectId.value,project.value?.id,project.value?.head_revision,
+ ownerAccess.value,writeAccess.value,activeFile.value?.id,activeFile.value?.revision,draft.value,
+ collaborationOpen.value,toolMode.value,managedFile.value?.id,managedPath.value,selectedVersion.value,
+ searchBase.value,searchQuery.value,replaceQuery.value,
+])
 const members=shallowRef<PaperProjectMember[]>([])
 const memberMessage=ref('')
 const memberMutating=ref(false)
@@ -308,9 +318,11 @@ async function mutateFiles(change:{action:'upload'|'rename'|'delete'|'set_main';
 }
 async function changeFile(action:'rename'|'delete'|'set_main'){
  const f=managedFile.value;if(!ownerAccess.value||!f||uploadBusy.value)return
- if(action==='delete'&&!window.confirm('删除 '+f.path+'？请确认源码中没有仍依赖它的引用。'))return
- if(action==='rename'&&!window.confirm('修改文件路径？引用该文件的 LaTeX 命令需要手动更新。'))return
- await mutateFiles({action,file_id:f.id,path:action==='rename'?managedPath.value:undefined})
+ const path=managedPath.value
+ if(action==='delete'&&!await confirmPaper('删除 '+f.path+'？请确认源码中没有仍依赖它的引用。'))return
+ if(action==='rename'&&!await confirmPaper('修改文件路径？引用该文件的 LaTeX 命令需要手动更新。'))return
+ if(disposed||navigating.value||collaborationOpen.value||!ownerAccess.value||managedFile.value?.id!==f.id||managedPath.value!==path||uploadBusy.value)return
+ await mutateFiles({action,file_id:f.id,path:action==='rename'?path:undefined})
 }
 async function uploadPicked(picked:File[],directory:string,figuresOnly=false){
  if(!ownerAccess.value||!picked.length||uploadBusy.value||switchingFile.value||navigating.value||!project.value||disposed)return
@@ -452,9 +464,9 @@ function toggleDraftProtection(enabled:boolean){
   if(enabled)syncLocalDraft()
  }catch{draftWarning.value='无法更新本机草稿设置。'}
 }
-function discardDraft(row:PaperLocalDraft){
+async function discardDraft(row:PaperLocalDraft){
  if(!draftAvailable.value||row.owner!==draftScopeOwner.value||row.projectId!==projectId.value)return
- if(!window.confirm('删除这份本机草稿？此操作不会修改服务器文件。'))return
+ if(!await confirmPaper('删除这份本机草稿？此操作不会修改服务器文件。'))return
  try{
   if(!removeLocalDraft(localStorage,row)){refreshLocalDrafts();draftMessage.value='草稿已变化，请重新选择。';return}
   if(draftKey(ownBackups.get(row.fileId)||row)===draftKey(row))ownBackups.delete(row.fileId)
@@ -466,7 +478,7 @@ async function recoverDraft(row:PaperLocalDraft){
  if(!canRecoverDraft.value||uploadBusy.value||switchingFile.value||navigating.value||row.owner!==draftScopeOwner.value||row.projectId!==projectId.value)return
  const target=files.value.find(f=>matchesLocalDraftBase(row,f))
  if(!target){draftMessage.value='服务器版本已变化，请复制草稿并手动合并。';return}
- if(!window.confirm('将本机草稿恢复至编辑器？基础版本一致时才可恢复，恢复后将按正常流程保存。'))return
+ if(!await confirmPaper('将本机草稿恢复至编辑器？基础版本一致时才可恢复，恢复后将按正常流程保存。'))return
  try{
   await selectFile(target)
   const file=activeFile.value
@@ -514,11 +526,11 @@ async function mutateMember(action:(pid:string)=>Promise<unknown>,success:string
  finally{if(valid())memberMutating.value=false}
 }
 async function changeMember(uid:string,role:PaperMemberRole){
- if(!ownerAccess.value||!window.confirm('将此账号设为'+(role==='editor'?'编辑者':'阅读者')+'？该成员将能够读取当前项目的全部源码和资源。'))return
+ if(!ownerAccess.value||!await confirmPaper('将此账号设为'+(role==='editor'?'编辑者':'阅读者')+'？该成员将能够读取当前项目的全部源码和资源。'))return
  await mutateMember(pid=>setPaperMember(pid,uid,role),'成员权限已更新。')
 }
 async function deleteMember(uid:string){
- if(!ownerAccess.value||!window.confirm('撤销该成员的项目访问权限？'))return
+ if(!ownerAccess.value||!await confirmPaper('撤销该成员的项目访问权限？'))return
  await mutateMember(pid=>removePaperMember(pid,uid),'成员访问权限已撤销。')
 }
 function snapshotError(cause:unknown){
@@ -572,7 +584,7 @@ async function createSnapshot(name:string){
  })
 }
 async function deleteSnapshot(row:PaperProjectSnapshot){
- if(snapshotBlocked()||!window.confirm('删除快照「'+row.name+'」？不会删除文件历史或当前源码。'))return
+ if(snapshotBlocked()||!await confirmPaper('删除快照「'+row.name+'」？不会删除文件历史或当前源码。'))return
  const owner=accountId.value
  await runSnapshotMutation(async pid=>{
   await deletePaperProjectSnapshot(pid,row.id)
@@ -582,7 +594,7 @@ async function deleteSnapshot(row:PaperProjectSnapshot){
  },false)
 }
 async function restoreSnapshot(row:PaperSnapshotDetail){
- if(collaborationOpen.value||snapshotBlocked()||!window.confirm('恢复整个项目至「'+row.name+'」？将恢复文件、资源、路径和主文件设置。当前服务器状态会先保存为自动备份，其他窗口的本机草稿不会被覆盖。'))return
+ if(collaborationOpen.value||snapshotBlocked()||!await confirmPaper('恢复整个项目至「'+row.name+'」？将恢复文件、资源、路径和主文件设置。当前服务器状态会先保存为自动备份，其他窗口的本机草稿不会被覆盖。'))return
  await runSnapshotMutation(async pid=>{
   const result=await restorePaperProjectSnapshot(pid,row.id,project.value!.head_revision)
   if(disposed||pid!==projectId.value)return
@@ -669,7 +681,7 @@ async function replaceProject(){
  try{replacements=planProjectReplacement(searchSources.value,searchQuery.value,replaceQuery.value)}
  catch(cause){toolError.value=cause instanceof Error?cause.message:'替换内容无效。';return}
  if(!replacements.length)return
- if(!window.confirm('将替换 '+replacements.length+' 个文件中的 '+searchResult.value.total+' 处文字？原版本将保留在历史中。'))return
+ if(!await confirmPaper('将替换 '+replacements.length+' 个文件中的 '+searchResult.value.total+' 处文字？原版本将保留在历史中。'))return
  addingFile.value=true;toolError.value=''
  try{
   await nextTick()
@@ -713,7 +725,7 @@ watch(()=>activeFile.value?.id,()=>{if(toolMode.value==='history')void loadVersi
 async function restoreVersion(){
  const version=selectedVersion.value,file=activeFile.value,pid=projectId.value
  if(!ownerAccess.value||!version||!file||version.file_id!==file.id||uploadBusy.value||toolBusy.value||switchingFile.value||navigating.value)return
- if(!window.confirm('恢复历史源码？当前已保存版本会继续保留，恢复将创建一个新版本，不修改文件路径。'))return
+ if(!await confirmPaper('恢复历史源码？当前已保存版本会继续保留，恢复将创建一个新版本，不修改文件路径。'))return
  addingFile.value=true;toolError.value=''
  try{
   await nextTick()
@@ -1239,6 +1251,7 @@ async function exitCollaboration(){
  if(previous)await selectFile(previous)
 }
 watch(accountId,(next,previous)=>{
+ if(next!==previous)resolveConfirmation(false)
  if(next===previous||!collaborationOpen.value)return
  // A different account must never inherit the preceding account's live
  // Y.Doc or a stale canonical source. The keyed panel is unmounted.
@@ -1284,6 +1297,7 @@ function beforeUnload(event: BeforeUnloadEvent) {
 }
 
 async function beforeNavigate(){
+ resolveConfirmation(false)
  if(collaborationOpen.value){refreshMessage.value='请先退出实时协作，再离开项目。';return false}
  if(snapshotMutating.value||memberMutating.value)return false
  navigating.value=true

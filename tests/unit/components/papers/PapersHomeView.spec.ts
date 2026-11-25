@@ -2,6 +2,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { describe, it, expect, vi } from 'vitest'
 import { defineComponent } from 'vue'
 import PapersHomeView from '@/views/papers/PapersHomeView.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 
 const mocks = vi.hoisted(() => ({
   access: vi.fn(),
@@ -152,7 +153,6 @@ it('renames, trashes and restores an owned project through the project list',asy
  mocks.access.mockResolvedValue({allowed:true});mocks.projects.mockResolvedValue([project])
  mocks.rename.mockResolvedValue(updated);mocks.trash.mockResolvedValue(undefined)
  mocks.listTrash.mockResolvedValue([{...updated,trashed_at:'2026-11-24T00:00:00Z'}]);mocks.restore.mockResolvedValue(updated)
- const confirm=vi.fn(()=>true);vi.stubGlobal('confirm',confirm)
  const w=mount(PapersHomeView,{global:{stubs:{PPageHeader:true}}})
  try{
   await flushPromises()
@@ -162,6 +162,9 @@ it('renames, trashes and restores an owned project through the project list',asy
   await flushPromises();expect(mocks.rename).toHaveBeenCalledWith('p1','New',1)
   expect(w.get('.papers-home__card').text()).toContain('New')
   await w.findAll('button').find(b=>b.text()==='删除')!.trigger('click')
+  expect(mocks.trash).not.toHaveBeenCalled()
+  expect(w.getComponent(PConfirm).props('show')).toBe(true)
+  w.getComponent(PConfirm).vm.$emit('confirm')
   await flushPromises();expect(mocks.trash).toHaveBeenCalledWith('p1');expect(w.find('.papers-home__card').exists()).toBe(false)
   await w.findAll('button').find(b=>b.text()==='回收站')!.trigger('click')
   await flushPromises();await w.findAll('button').find(b=>b.text()==='恢复')!.trigger('click')

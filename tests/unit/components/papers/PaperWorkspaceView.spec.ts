@@ -5,6 +5,7 @@ import { defineComponent, h, nextTick } from 'vue'
 import {listLocalDrafts,writeLocalDraft,setLocalDraftEnabled,type PaperLocalDraft} from '@/components/papers/localDrafts'
 import LatexEditor from "@/components/papers/LatexEditor.vue"
 import PaperWorkspaceView from '@/views/papers/PaperWorkspaceView.vue'
+import PConfirm from '@/components/ui/PConfirm.vue'
 import {getPaperCollaborationCapability,listPaperMembers,setPaperMember,removePaperMember,listPaperProjectSnapshots,getPaperProjectSnapshot,createPaperProjectSnapshot,restorePaperProjectSnapshot,deletePaperProjectSnapshot, managePaperFiles, savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, listPaperFileVersions, getPaperFileVersion } from '@/api/papers'
 
 vi.mock('@/stores/auth',()=>({useAuthStore:()=>({isAuthenticated:true,user:{uuid:'owner-a'}})}))
@@ -298,7 +299,7 @@ describe('Papers file management actions',()=>{
   const router=createRouter({history:createMemoryHistory(),routes:[{path:'/papers/:projectId',component:PaperWorkspaceView}]})
   await router.push('/papers/two');await router.isReady()
   const w=mount(defineComponent({render:()=>h(RouterView)}),{global:{plugins:[router]}})
-  const confirm=vi.fn(()=>true);vi.stubGlobal('confirm',confirm)
+
   try{
    await flushPromises()
    const folder=w.find('.papers-workspace__folder')
@@ -308,7 +309,7 @@ describe('Papers file management actions',()=>{
    await folder.trigger('click')
    await w.find('[aria-label="管理 chapters/intro.tex"]').trigger('click')
    await w.get('input[aria-label="文件新路径"]').setValue('chapters/method.tex')
-   await w.findAll('button').find(b=>b.text()==='重命名 / 移动')!.trigger('click')
+   await w.findAll('button').find(b=>b.text()==='重命名 / 移动')!.trigger('click'); await w.getComponent(PConfirm).vm.$emit('confirm')
    await flushPromises()
    expect(managePaperFiles).toHaveBeenCalledWith('two',{action:'rename',file_id:'chapter',path:'chapters/method.tex',base_revision:1})
    expect(w.find('[title="chapters/method.tex"]').exists()).toBe(true)
@@ -355,7 +356,7 @@ describe('Papers phase two workspace tools', () => {
 
   it('applies confirmed project replacements as one revision-bound operation', async()=>{
     const wrapper=await workspace()
-    vi.stubGlobal('confirm',vi.fn(()=>true))
+
     const updated={...f2,revision:2,content:'Current text'}
     vi.mocked(managePaperFiles).mockImplementation(async()=>{
       vi.mocked(getPaperFile).mockResolvedValue(updated as never)
@@ -365,21 +366,26 @@ describe('Papers phase two workspace tools', () => {
       await wrapper.findAll('button').find(b=>b.text()==='全项目搜索')!.trigger('click');await flushPromises()
       await wrapper.get('input[placeholder="输入源码或关键字"]').setValue('source')
       await wrapper.get('input[placeholder="留空表示删除匹配文字"]').setValue('text')
-      await wrapper.findAll('button').find(b=>b.text()==='全部替换')!.trigger('click');await flushPromises()
+      await wrapper.findAll('button').find(b=>b.text()==='全部替换')!.trigger('click')
+      expect(managePaperFiles).not.toHaveBeenCalled()
+      expect(wrapper.getComponent(PConfirm).props('show')).toBe(true)
+      wrapper.getComponent(PConfirm).vm.$emit('cancel');await flushPromises()
+      expect(managePaperFiles).not.toHaveBeenCalled()
+      await wrapper.findAll('button').find(b=>b.text()==='全部替换')!.trigger('click');wrapper.getComponent(PConfirm).vm.$emit('confirm');await flushPromises()
       expect(managePaperFiles).toHaveBeenCalledWith('two',{action:'replace_text',base_revision:1,replacements:[{file_id:'f2',base_revision:1,content:'Current text'}]})
       expect(wrapper.find('[data-test="editor"]').text()).toBe('Current text')
     }finally{vi.unstubAllGlobals();wrapper.unmount()}
   })
   it('restores a historical source by writing a new revision',async()=>{
     const wrapper=await workspace()
-    vi.stubGlobal('confirm',vi.fn(()=>true))
+
     vi.mocked(listPaperFileVersions).mockResolvedValue([{revision:1,path:'main.tex',sha256:'',created_at:'2026-11-24T00:00:00Z'}])
     vi.mocked(getPaperFileVersion).mockResolvedValue({file_id:'f2',revision:1,path:'main.tex',sha256:'',content:'Old text',created_at:'2026-11-24T00:00:00Z'})
     vi.mocked(savePaperFile).mockResolvedValue({...f2,revision:2,project_head_revision:2,content:'Old text'} as never)
     try{
       await wrapper.findAll('button').find(b=>b.text()==='版本历史')!.trigger('click');await flushPromises()
       await wrapper.findAll('button').find(b=>b.text().includes('版本 1 · 当前'))!.trigger('click');await flushPromises()
-      await wrapper.findAll('button').find(b=>b.text()==='恢复源码为此版本')!.trigger('click');await flushPromises()
+      await wrapper.findAll('button').find(b=>b.text()==='恢复源码为此版本')!.trigger('click'); await wrapper.getComponent(PConfirm).vm.$emit('confirm');await flushPromises()
       expect(savePaperFile).toHaveBeenCalledWith('two','f2','Old text',1)
       expect(wrapper.find('[data-test="editor"]').text()).toBe('Old text')
     }finally{vi.unstubAllGlobals();wrapper.unmount()}
@@ -555,7 +561,7 @@ describe('Papers project recovery workflow',()=>{
  }
  it('creates a named project checkpoint and reloads restored content rather than retaining stale source',async()=>{
   const storage=storageFixture()
-  vi.stubGlobal('confirm',vi.fn(()=>true))
+
   const w=await open()
   try{
    await w.findAll('button').find(b=>b.text()==='项目快照')!.trigger('click')
@@ -570,7 +576,7 @@ describe('Papers project recovery workflow',()=>{
    const restored={...f2,revision:2,content:'Restored source'}
    vi.mocked(restorePaperProjectSnapshot).mockResolvedValue({project:{...two,head_revision:2},files:[restored],backup:{...checkpoint,id:'backup',automatic:true}} as never)
    vi.mocked(getPaperFile).mockResolvedValue(restored as never)
-   await w.findAll('button').find(b=>b.text()==='恢复整个项目')!.trigger('click');await flushPromises()
+   await w.findAll('button').find(b=>b.text()==='恢复整个项目')!.trigger('click'); await w.getComponent(PConfirm).vm.$emit('confirm');await flushPromises()
    expect(restorePaperProjectSnapshot).toHaveBeenCalledWith('two','checkpoint-1',1)
    expect(w.get('[data-test="editor"]').text()).toBe('Restored source')
    expect(w.text()).toContain('回滚前状态已自动保存')
@@ -581,7 +587,7 @@ describe('Papers project recovery workflow',()=>{
  it('keeps unsaved edits across reloads and clears only acknowledged compatible drafts',async()=>{
   const storage=storageFixture()
   let w=await open()
-  vi.stubGlobal('confirm',vi.fn(()=>true))
+
   try{
    await w.findAll('button').find(b=>b.text()==='草稿恢复')!.trigger('click')
    await w.get('.paper-drafts__check input').setValue(true)
@@ -595,7 +601,7 @@ describe('Papers project recovery workflow',()=>{
    await w.findAll('button').find(b=>b.text().startsWith('草稿恢复'))!.trigger('click')
    expect(w.get('[aria-label="本机草稿源码"]').element).toHaveProperty('value','Unsaved recovered source')
    vi.mocked(savePaperFile).mockResolvedValue({...f2,content:'Unsaved recovered source',revision:2,project_head_revision:2} as never)
-   await w.findAll('button').find(b=>b.text()==='恢复到编辑器')!.trigger('click')
+   await w.findAll('button').find(b=>b.text()==='恢复到编辑器')!.trigger('click'); await w.getComponent(PConfirm).vm.$emit('confirm')
    await flushPromises()
    expect(w.get('[data-test="editor"]').text()).toBe('Unsaved recovered source')
    await w.findAll('button').find(b=>b.text()==='保存')!.trigger('click');await flushPromises()
@@ -636,7 +642,7 @@ describe('Papers shared project access',()=>{
  }
  it('lets only the owner grant, update and revoke a verified account membership',async()=>{
   const w=await open('owner')
-  vi.stubGlobal('confirm',vi.fn(()=>true))
+
   const member={user_id:uid,role:'editor' as const,created_at:'2026-11-25T00:00:00Z',updated_at:'2026-11-25T00:00:00Z'}
   try{
    await w.findAll('button').find(b=>b.text()==='项目成员')!.trigger('click');await flushPromises()
@@ -644,16 +650,16 @@ describe('Papers shared project access',()=>{
    await w.get('[aria-label="成员账号 UUID"]').setValue(uid)
    vi.mocked(setPaperMember).mockResolvedValue(member)
    vi.mocked(listPaperMembers).mockResolvedValue([member])
-   await w.get('.paper-members__form').trigger('submit');await flushPromises()
+   await w.get('.paper-members__form').trigger('submit'); await w.getComponent(PConfirm).vm.$emit('confirm');await flushPromises()
    expect(setPaperMember).toHaveBeenCalledWith('two',uid,'editor')
    expect(w.text()).toContain(uid)
    vi.mocked(setPaperMember).mockResolvedValue({...member,role:'viewer'})
    vi.mocked(listPaperMembers).mockResolvedValue([{...member,role:'viewer'}])
-   await w.findAll('button').find(b=>b.text()==='改为阅读者')!.trigger('click');await flushPromises()
+   await w.findAll('button').find(b=>b.text()==='改为阅读者')!.trigger('click'); await w.getComponent(PConfirm).vm.$emit('confirm');await flushPromises()
    expect(setPaperMember).toHaveBeenCalledWith('two',uid,'viewer')
    vi.mocked(removePaperMember).mockResolvedValue({deleted:true})
    vi.mocked(listPaperMembers).mockResolvedValue([])
-   await w.findAll('button').find(b=>b.text()==='移除')!.trigger('click');await flushPromises()
+   await w.findAll('button').find(b=>b.text()==='移除')!.trigger('click'); await w.getComponent(PConfirm).vm.$emit('confirm');await flushPromises()
    expect(removePaperMember).toHaveBeenCalledWith('two',uid)
    expect(w.text()).toContain('暂无共享成员')
   }finally{w.unmount();vi.unstubAllGlobals()}

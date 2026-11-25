@@ -6,6 +6,7 @@ export interface PaperProject {
   name: string
   main_file_id: string
   head_revision: number
+  access_role?: PaperProjectRole
   created_at: string
   updated_at: string
 }
@@ -266,3 +267,16 @@ export const getPaperProjectSnapshot=(pid:string,id:string)=>papersRequest<Paper
 export const createPaperProjectSnapshot=(pid:string,name:string,baseRevision:number)=>papersRequest<PaperProjectSnapshot>(snapshotPrefix(pid),'POST',{name,base_revision:baseRevision})
 export const restorePaperProjectSnapshot=(pid:string,id:string,baseRevision:number)=>papersRequest<PaperSnapshotRestore>(snapshotPath(pid,id)+'/restore','POST',{base_revision:baseRevision})
 export const deletePaperProjectSnapshot=(pid:string,id:string)=>papersRequest<{deleted:boolean}>(snapshotPath(pid,id),'DELETE')
+
+export type PaperProjectRole = 'owner' | 'editor' | 'viewer'
+export type PaperMemberRole = Exclude<PaperProjectRole, 'owner'>
+export interface PaperProjectMember {
+ user_id: string
+ role: PaperMemberRole
+ created_at: string
+ updated_at: string
+}
+const membersPath = (pid:string)=>'/projects/'+encodeURIComponent(pid)+'/members'
+export const listPaperMembers=(pid:string)=>papersRequest<PaperProjectMember[]>(membersPath(pid))
+export const setPaperMember=(pid:string,uid:string,role:PaperMemberRole)=>papersRequest<PaperProjectMember>(membersPath(pid)+'/'+encodeURIComponent(uid),'PUT',{role})
+export const removePaperMember=(pid:string,uid:string)=>papersRequest<{deleted:boolean}>(membersPath(pid)+'/'+encodeURIComponent(uid),'DELETE')

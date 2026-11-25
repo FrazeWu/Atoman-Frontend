@@ -5,10 +5,11 @@ import { defineComponent, h, nextTick } from 'vue'
 import {listLocalDrafts,writeLocalDraft,setLocalDraftEnabled,type PaperLocalDraft} from '@/components/papers/localDrafts'
 import LatexEditor from "@/components/papers/LatexEditor.vue"
 import PaperWorkspaceView from '@/views/papers/PaperWorkspaceView.vue'
-import {listPaperProjectSnapshots,getPaperProjectSnapshot,createPaperProjectSnapshot,restorePaperProjectSnapshot,deletePaperProjectSnapshot, managePaperFiles, savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, listPaperFileVersions, getPaperFileVersion } from '@/api/papers'
+import {listPaperMembers,setPaperMember,removePaperMember,listPaperProjectSnapshots,getPaperProjectSnapshot,createPaperProjectSnapshot,restorePaperProjectSnapshot,deletePaperProjectSnapshot, managePaperFiles, savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, listPaperFileVersions, getPaperFileVersion } from '@/api/papers'
 
 vi.mock('@/stores/auth',()=>({useAuthStore:()=>({isAuthenticated:true,user:{uuid:'owner-a'}})}))
 vi.mock('@/api/papers', () => ({
+  listPaperMembers:vi.fn(),setPaperMember:vi.fn(),removePaperMember:vi.fn(),
   listPaperProjectSnapshots:vi.fn(),
   getPaperProjectSnapshot:vi.fn(),
   createPaperProjectSnapshot:vi.fn(),
@@ -613,5 +614,90 @@ describe('Papers project recovery workflow',()=>{
    expect(w.get('[data-test="editor"]').text()).toBe('Current source')
    expect(savePaperFile).not.toHaveBeenCalled()
   }finally{w.unmount();vi.unstubAllGlobals()}
+ })
+})
+
+describe('Papers shared project access',()=>{
+ const uid='550e8400-e29b-41d4-a716-446655440000'
+ async function open(role:'owner'|'editor'|'viewer'){
+  vi.mocked(getPaperProject).mockResolvedValue({...two,access_role:role} as never)
+  vi.mocked(listPaperFiles).mockResolvedValue([{...f2}] as never)
+  vi.mocked(getPaperFile).mockResolvedValue({...f2} as never)
+  vi.mocked(getPaperCompileCapability).mockResolvedValue({enabled:true,pdf_available:true,compilers:['pdflatex']})
+  vi.mocked(listPaperMembers).mockResolvedValue([])
+  vi.mocked(listPaperCompileJobs).mockResolvedValue([])
+  const router=createRouter({history:createMemoryHistory(),routes:[{path:'/papers/:projectId',component:PaperWorkspaceView}]})
+  await router.push('/papers/two');await router.isReady()
+  const w=mount(defineComponent({render:()=>h(RouterView)}),{global:{plugins:[router]}})
+  await flushPromises()
+  expect(w.text()).toContain('项目成员')
+  return w
+ }
+ it('lets only the owner grant, update and revoke a verified account membership',async()=>{
+  const w=await open('owner')
+  vi.stubGlobal('confirm',vi.fn(()=>true))
+  const member={user_id:uid,role:'editor' as const,created_at:'2026-11-25T00:00:00Z',updated_at:'2026-11-25T00:00:00Z'}
+  try{
+   await w.findAll('button').find(b=>b.text()==='项目成员')!.trigger('click');await flushPromises()
+   expect(listPaperMembers).toHaveBeenCalledWith('two')
+   await w.get('[aria-label="成员账号 UUID"]').setValue(uid)
+   vi.mocked(setPaperMember).mockResolvedValue(member)
+   vi.mocked(listPaperMembers).mockResolvedValue([member])
+   await w.get('.paper-members__form').trigger('submit');await flushPromises()
+   expect(setPaperMember).toHaveBeenCalledWith('two',uid,'editor')
+   expect(w.text()).toContain(uid)
+   vi.mocked(setPaperMember).mockResolvedValue({...member,role:'viewer'})
+   vi.mocked(listPaperMembers).mockResolvedValue([{...member,role:'viewer'}])
+   await w.findAll('button').find(b=>b.text()==='改为阅读者')!.trigger('click');await flushPromises()
+   expect(setPaperMember).toHaveBeenCalledWith('two',uid,'viewer')
+   vi.mocked(removePaperMember).mockResolvedValue({deleted:true})
+   vi.mocked(listPaperMembers).mockResolvedValue([])
+   await w.findAll('button').find(b=>b.text()==='移除')!.trigger('click');await flushPromises()
+   expect(removePaperMember).toHaveBeenCalledWith('two',uid)
+   expect(w.text()).toContain('暂无共享成员')
+  }finally{w.unmount();vi.unstubAllGlobals()}
+ })
+ it('enforces reader read-only UI and prevents accidental model saves',async()=>{
+  const w=await open('viewer')
+  try{
+   expect(w.get('[data-test="editor"]').attributes('data-readonly')).toBe('true')
+   expect(w.text()).toContain('共享阅读')
+   expect(w.find('form.papers-workspace__add').exists()).toBe(false)
+   for(const title of ['保存','插图','版本历史','项目快照','导出 ZIP','全部替换']){
+    expect(w.findAll('button').some(b=>b.text()===title)).toBe(false)
+   }
+   expect(w.findAll('button').find(b=>b.text()==='编译')!.attributes('disabled')).toBeDefined()
+   w.findComponent(LatexEditor).vm.$emit('update:modelValue','Unauthorized edit')
+   await nextTick()
+   expect(w.get('[data-test="editor"]').text()).toBe('Current source')
+   expect(savePaperFile).not.toHaveBeenCalled()
+   await w.findAll('button').find(b=>b.text()==='项目成员')!.trigger('click');await flushPromises()
+   expect(w.find('.paper-members__form').exists()).toBe(false)
+   expect(listPaperMembers).not.toHaveBeenCalled()
+  }finally{w.unmount()}
+ })
+ it('allows an editor to save existing source but refuses structural edits or refresh of dirty source',async()=>{
+  const w=await open('editor')
+  try{
+   expect(w.get('[data-test="editor"]').attributes('data-readonly')).toBe('false')
+   expect(w.find('form.papers-workspace__add').exists()).toBe(false)
+   expect(w.text()).toContain('共享编辑')
+   w.findComponent(LatexEditor).vm.$emit('update:modelValue','Editor update')
+   await nextTick()
+   await w.findAll('button').find(b=>b.text()==='刷新项目')!.trigger('click');await flushPromises()
+   expect(w.text()).toContain('未刷新项目')
+   expect(w.get('[data-test="editor"]').text()).toBe('Editor update')
+   vi.mocked(savePaperFile).mockResolvedValue({...f2,content:'Editor update',revision:2,project_head_revision:2} as never)
+   await w.findAll('button').find(b=>b.text()==='保存')!.trigger('click');await flushPromises()
+   expect(savePaperFile).toHaveBeenCalledWith('two','f2','Editor update',1)
+   expect(managePaperFiles).not.toHaveBeenCalled()
+   const fresh={...f2,content:'Newest server source',revision:3}
+   vi.mocked(getPaperProject).mockResolvedValue({...two,access_role:'viewer',head_revision:3} as never)
+   vi.mocked(listPaperFiles).mockResolvedValue([fresh] as never)
+   vi.mocked(getPaperFile).mockResolvedValue(fresh as never)
+   await w.findAll('button').find(b=>b.text()==='刷新项目')!.trigger('click');await flushPromises()
+   expect(w.get('[data-test="editor"]').text()).toBe('Newest server source')
+   expect(w.get('[data-test="editor"]').attributes('data-readonly')).toBe('true')
+  }finally{w.unmount()}
  })
 })

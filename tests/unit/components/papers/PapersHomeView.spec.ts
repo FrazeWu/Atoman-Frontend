@@ -225,3 +225,25 @@ describe('Papers template library',()=>{
     }finally{w.unmount()}
   })
 })
+
+describe('Papers shared project list',()=>{
+ it('shows shared roles and never offers owner-only operations to collaborators',async()=>{
+  mocks.access.mockResolvedValue({allowed:true})
+  mocks.projects.mockResolvedValue([
+   {id:'owner',name:'Owned',access_role:'owner',head_revision:1,updated_at:'2026-11-25T00:00:00Z'},
+   {id:'editor',name:'Shared edit',access_role:'editor',head_revision:2,updated_at:'2026-11-25T00:00:00Z'},
+   {id:'viewer',name:'Shared view',access_role:'viewer',head_revision:3,updated_at:'2026-11-25T00:00:00Z'},
+  ])
+  const w=mount(PapersHomeView,{global:{stubs:{PPageHeader:true}}})
+  try{
+   await flushPromises()
+   const cards=w.findAll('.papers-home__card')
+   expect(cards).toHaveLength(3)
+   expect(cards[0]!.text()).toContain('所有者')
+   expect(cards[0]!.text()).toContain('删除')
+   expect(cards[1]!.text()).toContain('编辑者')
+   expect(cards[2]!.text()).toContain('阅读者')
+   for(const card of cards.slice(1))expect(card.find('.papers-home__project-actions').exists()).toBe(false)
+  }finally{w.unmount()}
+ })
+})

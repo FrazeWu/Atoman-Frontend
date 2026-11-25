@@ -84,15 +84,15 @@
         <article v-for="project in visibleProjects" :key="project.id" class="papers-home__card">
           <RouterLink :to="'/papers/' + project.id" class="papers-home__project-link">
             <strong>{{ project.name }}</strong>
-            <span>项目版本 {{ project.head_revision }}</span>
+            <span>项目版本 {{ project.head_revision }} · {{ projectRoleLabel(project) }}</span>
             <time :datetime="project.updated_at">{{ new Date(project.updated_at).toLocaleString() }}</time>
           </RouterLink>
-          <div v-if="renaming===project.id" class="papers-home__rename">
+          <div v-if="isOwner(project)&&renaming===project.id" class="papers-home__rename">
             <input v-model.trim="renameValue" maxlength="100" aria-label="新的项目名称" @keydown.enter.prevent="rename(project)" />
             <PButton size="sm" :disabled="!renameValue||!!managing" @click="rename(project)">确认</PButton>
             <PButton size="sm" variant="secondary" :disabled="!!managing" @click="renaming=''">取消</PButton>
           </div>
-          <div class="papers-home__project-actions">
+          <div v-if="isOwner(project)" class="papers-home__project-actions">
             <PButton type="button" size="sm" variant="secondary" :disabled="!!exporting" @click="exportProject(project)">{{ exporting === project.id ? '正在导出…' : '导出 ZIP' }}</PButton>
             <PButton size="sm" variant="secondary" :disabled="!!managing" @click="renaming=project.id;renameValue=project.name">重命名</PButton>
             <PButton size="sm" variant="secondary" :disabled="!!managing" @click="deleteProject(project)">删除</PButton>
@@ -121,6 +121,9 @@ const allowed = ref(false)
 const creating = ref(false)
 const projectName = ref('')
 const projects = ref<PaperProject[]>([])
+function isOwner(p:PaperProject){return p.access_role===undefined||p.access_role==='owner'}
+function projectRoleLabel(p:PaperProject){return isOwner(p)?'所有者':p.access_role==='editor'?'编辑者':'阅读者'}
+
 const query=ref('')
 const visibleProjects=computed(()=>projects.value.filter(p=>p.name.toLocaleLowerCase().includes(query.value.toLocaleLowerCase())))
 const showTrash=ref(false),trashLoading=ref(false)
@@ -133,12 +136,13 @@ async function toggleTrash(){
  try{trashed.value=await listTrashedPaperProjects()}catch{error.value='无法加载回收站，请重试。'}finally{trashLoading.value=false}
 }
 async function rename(p:PaperProject){
- if(managing.value||!renameValue.value)return
+ if(!isOwner(p)||managing.value||!renameValue.value)return
  managing.value=p.id;error.value=''
  try{const updated=await renamePaperProject(p.id,renameValue.value,p.head_revision);projects.value=projects.value.map(x=>x.id===p.id?updated:x);renaming.value=''}
  catch{error.value='重命名失败，请刷新项目列表后重试。'}finally{managing.value=''}
 }
 async function deleteProject(p:PaperProject){
+ if(!isOwner(p))return
  if(managing.value||!window.confirm('将「'+p.name+'」移入回收站？可以恢复，源码不会立即删除。'))return
  managing.value=p.id;error.value=''
  try{await trashPaperProject(p.id);projects.value=projects.value.filter(x=>x.id!==p.id);renaming.value=''}
@@ -200,7 +204,7 @@ function chooseImport(event: Event, kind: 'folder'|'zip') {
   error.value = ''
 }
 async function exportProject(project: PaperProject) {
-  if (exporting.value) return
+  if (!isOwner(project)||exporting.value) return
   exporting.value = project.id
   error.value = ''
   try { downloadPaperZIP(await getPaperProjectZIP(project.id), project.name) }

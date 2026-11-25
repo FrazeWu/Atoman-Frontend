@@ -9,8 +9,9 @@
         <button type="button" :aria-pressed="layoutMode === 'editor'" @click="layoutMode = 'editor'">源码</button>
         <button type="button" :aria-pressed="layoutMode === 'pdf'" @click="layoutMode = 'pdf'">预览</button>
       </div>
+      <span v-if="project" class="papers-workspace__status">{{ roleLabel }}</span>
       <span class="papers-workspace__status" role="status">{{ saveStatus }}</span>
-      <PButton v-if="project" type="button" size="sm" variant="secondary" :disabled="exporting || saving" @click="exportProject">{{ exporting ? '正在导出…' : '导出 ZIP' }}</PButton>
+      <PButton v-if="ownerAccess" type="button" size="sm" variant="secondary" :disabled="exporting || saving" @click="exportProject">{{ exporting ? '正在导出…' : '导出 ZIP' }}</PButton>
     </header>
     <p v-if="loading" class="papers-workspace__message">正在打开项目...</p>
     <p v-else-if="error" role="alert" class="papers-workspace__error">{{ error }}</p>
@@ -22,10 +23,10 @@
           <button v-if="entry.kind==='folder'" type="button" class="papers-workspace__folder" :aria-expanded="!closedFolders.has(entry.path)" @click="toggleFolder(entry.path)">{{ closedFolders.has(entry.path)?'▸':'▾' }} {{ entry.name }}</button>
           <template v-else>
             <button type="button" :title="entry.path" :class="{active:activeFile?.id===entry.file.id}" :disabled="uploadBusy||navigating" @click="selectFile(entry.file)">{{ entry.name }}<span v-if="entry.file.id===project?.main_file_id" class="papers-workspace__asset-label">主文件</span><span v-else-if="entry.file.kind==='binary'" class="papers-workspace__asset-label">资源</span></button>
-            <button type="button" class="papers-workspace__file-menu" :aria-label="'管理 '+entry.path" :disabled="uploadBusy||navigating||switchingFile" @click="openFileMenu(entry.file)">⋯</button>
+            <button v-if="ownerAccess" type="button" class="papers-workspace__file-menu" :aria-label="'管理 '+entry.path" :disabled="uploadBusy||navigating||switchingFile" @click="openFileMenu(entry.file)">⋯</button>
           </template>
         </div>
-        <div v-if="managedFile" class="papers-workspace__manage">
+        <div v-if="ownerAccess&&managedFile" class="papers-workspace__manage">
           <strong>{{ managedFile.path }}</strong>
           <label>新路径<input v-model.trim="managedPath" maxlength="512" aria-label="文件新路径" /></label>
           <PButton size="sm" variant="secondary" :disabled="uploadBusy||!managedPath||managedPath===managedFile.path" @click="changeFile('rename')">重命名 / 移动</PButton>
@@ -33,7 +34,7 @@
           <PButton v-if="managedFile.id!==project?.main_file_id" size="sm" variant="secondary" :disabled="uploadBusy" @click="changeFile('delete')">删除文件</PButton>
           <PButton size="sm" variant="ghost" :disabled="addingFile" @click="managedFile=null">关闭</PButton>
         </div>
-        <div class="papers-workspace__manage">
+        <div v-if="ownerAccess" class="papers-workspace__manage">
           <label>上传到目录（可选）<input v-model.trim="uploadDir" placeholder="figures" maxlength="255" /></label>
           <input ref="uploadInput" type="file" multiple hidden :disabled="uploadBusy" @change="uploadFiles" />
           <PButton size="sm" variant="secondary" :disabled="uploadBusy||switchingFile||navigating" @click="uploadInput?.click()">{{ uploadBusy?'处理中…':'上传文件' }}</PButton>
@@ -42,7 +43,7 @@
             <small>PNG、JPEG、PDF · {{ uploadDir.trim()||'figures' }}/</small>
           </div>
         </div>
-        <form class="papers-workspace__add" @submit.prevent="addFile">
+        <form v-if="ownerAccess" class="papers-workspace__add" @submit.prevent="addFile">
           <label for="papers-new-file">新建文本文件</label>
           <input id="papers-new-file" v-model.trim="newFilePath" placeholder="chapters/intro.tex" maxlength="512" required />
           <PButton type="submit" size="sm" :disabled="!newFilePath || uploadBusy || switchingFile || navigating">添加文件</PButton>
@@ -54,30 +55,34 @@
           <span :title="activeFile?.path">{{ activeFile?.path || '请选择文件' }}</span>
           <button type="button" class="papers-workspace__sync" :aria-expanded="outlineOpen" @click="toggleOutline">大纲</button>
           <button type="button" class="papers-workspace__sync" title="定位当前源码行对应的 PDF 内容 (Ctrl/Cmd+Shift+J)" :disabled="!syncReady || activeFile?.kind !== 'text'" @click="jumpToPDF">定位 PDF →</button>
-          <PButton type="button" size="sm" variant="secondary" :disabled="!activeFile || activeFile.kind !== 'text' || saving" @click="saveNow">保存</PButton>
+          <PButton v-if="writeAccess" type="button" size="sm" variant="secondary" :disabled="!activeFile || activeFile.kind !== 'text' || saving" @click="saveNow">保存</PButton>
         </div>
         <nav class="papers-workspace__toolnav" aria-label="项目工具">
           <button type="button" :aria-pressed="toolMode==='search'" @click="toggleTool('search')">全项目搜索</button>
           <button type="button" :aria-pressed="toolMode==='references'" @click="toggleTool('references')">参考文献</button>
-          <button type="button" :aria-pressed="toolMode==='figures'" @click="toggleTool('figures')">插图</button>
-          <button type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='history'" @click="toggleTool('history')">版本历史</button>
-          <button type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='snapshots'" @click="toggleTool('snapshots')">项目快照</button>
+          <button v-if="ownerAccess" type="button" :aria-pressed="toolMode==='figures'" @click="toggleTool('figures')">插图</button>
+          <button v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='history'" @click="toggleTool('history')">版本历史</button>
+          <button v-if="ownerAccess" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='snapshots'" @click="toggleTool('snapshots')">项目快照</button>
           <button type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='drafts'" @click="toggleTool('drafts')">草稿恢复{{ draftRows.length?' ('+draftRows.length+')':'' }}</button>
+          <button type="button" :aria-pressed="toolMode==='members'" :disabled="memberMutating||snapshotMutating" @click="toggleTool('members')">项目成员</button>
+          <button type="button" :disabled="switchingFile||navigating||saving||uploadBusy||snapshotMutating||memberMutating||compiling||hasActiveCompile" @click="refreshServerProject">刷新项目</button>
         </nav>
-        <section v-if="toolMode" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':'文件历史'">
+        <p v-if="!ownerAccess" class="papers-workspace__stale" role="status">{{ writeAccess?'共享编辑：保存时检查文件版本，暂不支持实时共同编辑。':'共享阅读：当前账号无编辑权限。' }}</p>
+        <p v-if="refreshMessage" class="papers-workspace__stale" role="status">{{ refreshMessage }}</p>
+        <section v-if="toolMode" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'文件历史'">
           <div class="papers-workspace__outline-heading">
-            <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':'当前文件版本历史' }}</strong>
-            <button v-if="toolMode!=='figures'" type="button" class="papers-workspace__sync"  :disabled="toolBusy||snapshotMutating" @click="refreshTool">刷新</button>
-            <button type="button" class="papers-workspace__sync" :disabled="snapshotMutating" @click="closeTool">关闭</button>
+            <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'当前文件版本历史' }}</strong>
+            <button v-if="toolMode!=='figures'" type="button" class="papers-workspace__sync"  :disabled="toolBusy||snapshotMutating||memberMutating" @click="refreshTool">刷新</button>
+            <button type="button" class="papers-workspace__sync" :disabled="snapshotMutating||memberMutating" @click="closeTool">关闭</button>
           </div>
           <p v-if="toolError" role="alert" class="papers-workspace__error">{{ toolError }}</p>
           <p v-if="toolBusy" role="status">正在读取…</p>
           <template v-if="toolMode==='search'">
             <label>查找（区分大小写）<input v-model="searchQuery" maxlength="250" placeholder="输入源码或关键字" /></label>
-            <label>替换为<input v-model="replaceQuery" maxlength="1000" placeholder="留空表示删除匹配文字" /></label>
+            <label v-if="ownerAccess">替换为<input v-model="replaceQuery" maxlength="1000" placeholder="留空表示删除匹配文字" /></label>
             <p v-if="searchStale">项目或未保存源码已有变化，请刷新搜索后操作。</p>
             <p v-else>{{ searchResult.total }} 处匹配<span v-if="searchResult.total>200">（显示前 200 处）</span></p>
-            <PButton size="sm" variant="secondary" :disabled="toolBusy||addingFile||switchingFile||navigating||preparingUpload||searchStale||!searchResult.total||searchQuery===replaceQuery" @click="replaceProject">全部替换</PButton>
+            <PButton v-if="ownerAccess" size="sm" variant="secondary" :disabled="toolBusy||addingFile||switchingFile||navigating||preparingUpload||searchStale||!searchResult.total||searchQuery===replaceQuery" @click="replaceProject">全部替换</PButton>
             <button v-for="(hit,index) in searchResult.matches" :key="hit.fileId+':'+hit.line+':'+hit.column+':'+index" type="button" class="papers-workspace__toolrow" :disabled="searchStale" @click="jumpSearch(hit)"><strong>{{ hit.path }}:{{ hit.line }}:{{ hit.column }}</strong><code>{{ hit.preview }}</code></button>
           </template>
           <template v-else-if="toolMode==='references'">
@@ -87,7 +92,7 @@
             <p v-if="!referenceRows.length">在项目中新建或导入 .bib 文件后即可使用文献检索和引用补全。</p>
             <div v-for="(entry,index) in filteredReferences.slice(0,200)" :key="entry.fileId+':'+entry.key+':'+index" class="papers-workspace__refrow">
               <button type="button" class="papers-workspace__toolrow" @click="jumpReference(entry)"><strong>{{ entry.key }}</strong><span>{{ entry.title || entry.path }}</span></button>
-              <button type="button" class="papers-workspace__sync" :disabled="activeFile?.kind!=='text'||!/\.tex$/i.test(activeFile?.path||'')||switchingFile||addingFile||navigating" @click="editorRef?.insertCitation(entry.key)">插入引用</button>
+              <button type="button" class="papers-workspace__sync" :disabled="!writeAccess||activeFile?.kind!=='text'||!/\.tex$/i.test(activeFile?.path||'')||switchingFile||addingFile||navigating" @click="editorRef?.insertCitation(entry.key)">插入引用</button>
             </div>
           </template>
           <template v-else-if="toolMode==='figures'">
@@ -96,6 +101,10 @@
           </template>
           <PaperSnapshotTools v-else-if="toolMode==='snapshots'" :key="projectId" :rows="snapshots" :detail="snapshotDetail" :busy="toolBusy||snapshotMutating" :disabled="uploadBusy||switchingFile||navigating||saving||hasActiveCompile||compiling" :message="snapshotMessage" @create="createSnapshot" @preview="previewSnapshot" @remove="deleteSnapshot" @restore="restoreSnapshot" />
           <PaperDraftTools v-else-if="toolMode==='drafts'" :key="projectId+':'+accountId" :available="draftAvailable" :enabled="draftEnabled" :rows="draftRows" :files="files" :disabled="uploadBusy||switchingFile||navigating||saving" :can-recover="canRecoverDraft" :message="draftMessage" @toggle="toggleDraftProtection" @recover="recoverDraft" @remove="discardDraft" />
+          <template v-else-if="toolMode==='members'">
+            <PaperMemberTools v-if="ownerAccess" :key="projectId+':'+accountId" :rows="members" :account-id="accountId" :busy="toolBusy||memberMutating" :disabled="navigating||uploadBusy||snapshotMutating" :message="memberMessage" @set="changeMember" @remove="deleteMember" />
+            <div v-else><p>项目权限：{{ roleLabel }}。仅所有者可以管理共享成员。</p><p v-if="accountId">我的账号 UUID：<code>{{ accountId }}</code></p></div>
+          </template>
           <template v-else-if="toolMode==='history'">
             <p v-if="activeFile?.kind!=='text'">请选择文本文件。</p>
             <button v-for="version in fileVersions" :key="version.revision" type="button" class="papers-workspace__toolrow" :disabled="toolBusy" @click="previewVersion(version)"><strong>版本 {{ version.revision }}{{ activeFile?.revision===version.revision?' · 当前':'' }}</strong><span>{{ formatVersionDate(version.created_at) }} · {{ version.path }}</span></button>
@@ -115,7 +124,7 @@
           <p v-else-if="!outlineRows.length">未找到章节标题。</p>
           <button v-for="item in outlineRows" :key="item.fileId+':'+item.line+':'+item.title" type="button" :style="{paddingLeft:Math.max(0,item.level-1)*12+'px'}" :title="item.path+':'+item.line" @click="jumpOutline(item)">{{ item.title }} <small>{{ item.path }}:{{ item.line }}</small></button>
         </section>
-        <LatexEditor v-if="activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef" v-model="draft" :citations="citationKeys" :readonly="switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
+        <LatexEditor v-if="activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef"  :model-value="draft" @update:model-value="updateDraft" :citations="citationKeys" :readonly="!writeAccess || switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
         <PaperAssetPreview v-else-if="activeFile?.kind === 'binary'" :key="activeFile.id+':'+activeFile.revision" :file="activeFile" />
         <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
         <p v-if="draftWarning" class="papers-workspace__error" role="alert">{{ draftWarning }} <button type="button" class="papers-workspace__sync" @click="toggleTool('drafts')">草稿管理</button></p>
@@ -196,6 +205,7 @@ import { ApiErrorResponseError } from '@/api/client'
 import {useAuthStore} from '@/stores/auth'
 import PaperSnapshotTools from '@/components/papers/PaperSnapshotTools.vue'
 import PaperDraftTools from '@/components/papers/PaperDraftTools.vue'
+import PaperMemberTools from '@/components/papers/PaperMemberTools.vue'
 import {draftKey,listLocalDrafts,localDraftEnabled,setLocalDraftEnabled,writeLocalDraft,readLocalDraft,removeLocalDraft,sameLocalDraft,matchesLocalDraftBase,type PaperLocalDraft} from '@/components/papers/localDrafts'
 import PButton from '@/components/ui/PButton.vue'
 import LatexEditor from '@/components/papers/LatexEditor.vue'
@@ -212,6 +222,7 @@ import {
   getPaperCompileCapability, getPaperCompileJob, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, getPaperCompileSourceMap,
   listPaperFileVersions, getPaperFileVersion,
   listPaperProjectSnapshots,getPaperProjectSnapshot,createPaperProjectSnapshot,restorePaperProjectSnapshot,deletePaperProjectSnapshot,
+  listPaperMembers,setPaperMember,removePaperMember,type PaperProjectMember,type PaperMemberRole,
   type PaperProjectSnapshot,type PaperSnapshotDetail,
   type PaperCompiler, type PaperCompileCapability, type PaperFileVersion, type PaperVersionSummary, type PaperFile, type PaperProject, type PaperCompileJob, type PaperCompileDiagnostic, type PaperUpload,
 } from '@/api/papers'
@@ -234,6 +245,14 @@ const exportError = ref('')
 const addingFile = ref(false)
 const snapshotMutating=ref(false)
 const project = ref<PaperProject | null>(null)
+const ownerAccess=computed(()=>!!project.value&&(project.value.access_role===undefined||project.value.access_role==='owner'))
+const writeAccess=computed(()=>ownerAccess.value||project.value?.access_role==='editor')
+const roleLabel=computed(()=>ownerAccess.value?'所有者':writeAccess.value?'编辑者':'阅读者')
+const members=shallowRef<PaperProjectMember[]>([])
+const memberMessage=ref('')
+const memberMutating=ref(false)
+let memberSerial=0
+
 const files = ref<PaperFile[]>([])
 const closedFolders=ref(new Set<string>())
 const treeRows=computed(()=>paperFileTree(files.value,closedFolders.value))
@@ -243,7 +262,7 @@ const uploadDir=ref(''),uploadInput=ref<HTMLInputElement|null>(null)
 const preparingUpload=ref(false),draggingFiles=ref(false)
 const uploadBusy=computed(()=>addingFile.value||preparingUpload.value)
 let uploadSerial=0
-function openFileMenu(file:PaperFile){managedFile.value=file;managedPath.value=file.path}
+function openFileMenu(file:PaperFile){if(!ownerAccess.value)return;managedFile.value=file;managedPath.value=file.path}
 function revealFile(path:string){const next=new Set(closedFolders.value);const parts=path.split('/');for(let i=1;i<parts.length;i++)next.delete(parts.slice(0,i).join('/'));closedFolders.value=next}
 function managementError(cause:unknown){
  if(cause instanceof ApiErrorResponseError){
@@ -260,7 +279,7 @@ function managementError(cause:unknown){
  return cause instanceof Error?cause.message:'文件操作失败，请重试。'
 }
 async function mutateFiles(change:{action:'upload'|'rename'|'delete'|'set_main';file_id?:string;path?:string;uploads?:PaperUpload[]}){
- if(addingFile.value||switchingFile.value||navigating.value||!project.value)return
+ if(!ownerAccess.value||addingFile.value||switchingFile.value||navigating.value||!project.value)return
  const pid=projectId.value
  addingFile.value=true;fileError.value=''
  try{
@@ -283,13 +302,13 @@ async function mutateFiles(change:{action:'upload'|'rename'|'delete'|'set_main';
  finally{if(pid===projectId.value){addingFile.value=false;scheduleAuto()}}
 }
 async function changeFile(action:'rename'|'delete'|'set_main'){
- const f=managedFile.value;if(!f||uploadBusy.value)return
+ const f=managedFile.value;if(!ownerAccess.value||!f||uploadBusy.value)return
  if(action==='delete'&&!window.confirm('删除 '+f.path+'？请确认源码中没有仍依赖它的引用。'))return
  if(action==='rename'&&!window.confirm('修改文件路径？引用该文件的 LaTeX 命令需要手动更新。'))return
  await mutateFiles({action,file_id:f.id,path:action==='rename'?managedPath.value:undefined})
 }
 async function uploadPicked(picked:File[],directory:string,figuresOnly=false){
- if(!picked.length||uploadBusy.value||switchingFile.value||navigating.value||!project.value||disposed)return
+ if(!ownerAccess.value||!picked.length||uploadBusy.value||switchingFile.value||navigating.value||!project.value||disposed)return
  const pid=projectId.value,serial=++uploadSerial
  const valid=()=>!disposed&&pid===projectId.value&&serial===uploadSerial&&!navigating.value
  preparingUpload.value=true;fileError.value=''
@@ -311,7 +330,7 @@ function uploadFigureFiles(picked:File[]){
 function onFigureDragOver(event:DragEvent){
  if(!event.dataTransfer||!Array.from(event.dataTransfer.types||[]).includes('Files'))return
  event.preventDefault()
- const busy=uploadBusy.value||switchingFile.value||navigating.value
+ const busy=!ownerAccess.value||uploadBusy.value||switchingFile.value||navigating.value
  event.dataTransfer.dropEffect=busy?'none':'copy'
  draggingFiles.value=!busy
 }
@@ -328,14 +347,17 @@ function onFigureDrop(event:DragEvent){
  uploadFigureFiles(Array.from(transfer.files))
 }
 function insertFigure(figure:FigureInsertion){
- if(uploadBusy.value||switchingFile.value||navigating.value||!activeFile.value||activeFile.value.kind!=='text'||!/\.tex$/i.test(activeFile.value.path))return
+ if(!ownerAccess.value||uploadBusy.value||switchingFile.value||navigating.value||!activeFile.value||activeFile.value.kind!=='text'||!/\.tex$/i.test(activeFile.value.path))return
  if(!files.value.some(f=>f.kind==='binary'&&f.id===figure.id&&f.revision===figure.revision&&f.path===figure.path))return
  if(editorRef.value?.insertBlock(figure.code))closeTool()
 }
 
 const activeFile = ref<PaperFile | null>(null)
 const draft = ref('')
-type ToolMode='search'|'references'|'history'|'figures'|'snapshots'|'drafts'
+function updateDraft(value:string){if(writeAccess.value)draft.value=value}
+const refreshMessage=ref('')
+
+type ToolMode='search'|'references'|'history'|'figures'|'snapshots'|'drafts'|'members'
 const toolMode=ref<ToolMode|''>(''),toolBusy=ref(false),toolError=ref('')
 const searchQuery=ref(''),replaceQuery=ref(''),referenceQuery=ref('')
 const searchSources=shallowRef<PaperFile[]>([]),searchBase=ref(0)
@@ -354,7 +376,7 @@ const draftScopeOwner=ref('')
 const draftRows=shallowRef<PaperLocalDraft[]>([])
 const draftEnabled=ref(false),draftMessage=ref(''),draftWarning=ref('')
 const draftAvailable=computed(()=>!!draftScopeOwner.value&&draftScopeOwner.value===accountId.value&&project.value?.id===projectId.value)
-const canRecoverDraft=computed(()=>draftAvailable.value&&!saving.value&&(!activeFile.value||activeFile.value.kind!=='text'||draft.value===activeFile.value.content))
+const canRecoverDraft=computed(()=>writeAccess.value&&draftAvailable.value&&!saving.value&&(!activeFile.value||activeFile.value.kind!=='text'||draft.value===activeFile.value.content))
 const writerId=globalThis.crypto?.randomUUID?.()||('writer-'+Date.now()+'-'+Math.random().toString(36).slice(2))
 const ownBackups=new Map<string,PaperLocalDraft>()
 const recoveredBackups=new Map<string,PaperLocalDraft>()
@@ -449,8 +471,40 @@ function onDraftStorage(event:StorageEvent){
 let toolSerial=0,bibSerial=0
 function formatVersionDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString()}
 function closeTool(){toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null;snapshotDetail.value=null}
-function toggleTool(mode:ToolMode){if(snapshotMutating.value)return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;refreshTool()}
-function refreshTool(){if(toolMode.value==='search')void loadSearchSources();else if(toolMode.value==='references')void refreshBib();else if(toolMode.value==='history')void loadVersions();else if(toolMode.value==='snapshots')void loadSnapshots();else if(toolMode.value==='drafts')refreshLocalDrafts()}
+function toggleTool(mode:ToolMode){if(snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;refreshTool()}
+function refreshTool(){if(toolMode.value==='search')void loadSearchSources();else if(toolMode.value==='references')void refreshBib();else if(toolMode.value==='history')void loadVersions();else if(toolMode.value==='snapshots')void loadSnapshots();else if(toolMode.value==='drafts')refreshLocalDrafts();else if(toolMode.value==='members'&&ownerAccess.value)void loadMembers()}
+function memberError(cause:unknown){
+ const code=cause instanceof ApiErrorResponseError?cause.code:''
+ return code==='papers.member_ineligible'?'该账号未获得 Papers 模块访问资格或授权已过期。':code==='papers.member_limit'?'项目成员已达 20 人上限。':'成员操作失败，请确认账号 UUID、权限和网络后重试。'
+}
+async function loadMembers(){
+ if(!ownerAccess.value)return
+ const pid=projectId.value,owner=accountId.value,serial=++toolSerial
+ const valid=()=>!disposed&&pid===projectId.value&&owner===accountId.value&&serial===toolSerial&&toolMode.value==='members'&&ownerAccess.value
+ toolBusy.value=true;toolError.value=''
+ try{const rows=await listPaperMembers(pid);if(valid())members.value=Array.isArray(rows)?rows:[]}
+ catch(cause){if(valid())toolError.value=memberError(cause)}
+ finally{if(valid())toolBusy.value=false}
+}
+async function mutateMember(action:(pid:string)=>Promise<unknown>,success:string){
+ if(!ownerAccess.value||memberMutating.value||toolBusy.value||navigating.value||disposed)return
+ const pid=projectId.value,owner=accountId.value,serial=++memberSerial
+ const valid=()=>!disposed&&pid===projectId.value&&owner===accountId.value&&serial===memberSerial&&ownerAccess.value
+ memberMutating.value=true;toolError.value='';memberMessage.value=''
+ try{
+  await action(pid)
+  if(valid()){memberMessage.value=success;await loadMembers()}
+ }catch(cause){if(valid())toolError.value=memberError(cause)}
+ finally{if(valid())memberMutating.value=false}
+}
+async function changeMember(uid:string,role:PaperMemberRole){
+ if(!ownerAccess.value||!window.confirm('将此账号设为'+(role==='editor'?'编辑者':'阅读者')+'？该成员将能够读取当前项目的全部源码和资源。'))return
+ await mutateMember(pid=>setPaperMember(pid,uid,role),'成员权限已更新。')
+}
+async function deleteMember(uid:string){
+ if(!ownerAccess.value||!window.confirm('撤销该成员的项目访问权限？'))return
+ await mutateMember(pid=>removePaperMember(pid,uid),'成员访问权限已撤销。')
+}
 function snapshotError(cause:unknown){
  const code=cause instanceof ApiErrorResponseError?cause.code:''
  if(code==='papers.snapshot_limit')return '快照已达 30 个上限，请先删除不需要的快照。'
@@ -476,7 +530,7 @@ async function previewSnapshot(id:string){
  finally{if(valid())toolBusy.value=false}
 }
 function snapshotBlocked(){
- return snapshotMutating.value||uploadBusy.value||toolBusy.value||switchingFile.value||navigating.value||saving.value||hasActiveCompile.value||compiling.value||!project.value||disposed
+ return !ownerAccess.value||snapshotMutating.value||uploadBusy.value||toolBusy.value||switchingFile.value||navigating.value||saving.value||hasActiveCompile.value||compiling.value||!project.value||disposed
 }
 async function runSnapshotMutation(action:(pid:string)=>Promise<void>,flush=true){
  if(snapshotBlocked())return
@@ -589,7 +643,7 @@ async function jumpReference(entry:PaperReference){
  if(activeFile.value?.id===entry.fileId)editorRef.value?.goToLine(entry.line)
 }
 async function replaceProject(){
- if(toolBusy.value||uploadBusy.value||switchingFile.value||navigating.value||searchStale.value||!project.value)return
+ if(!ownerAccess.value||toolBusy.value||uploadBusy.value||switchingFile.value||navigating.value||searchStale.value||!project.value)return
  const pid=projectId.value,base=searchBase.value
  let replacements
  try{replacements=planProjectReplacement(searchSources.value,searchQuery.value,replaceQuery.value)}
@@ -638,7 +692,7 @@ async function previewVersion(version:PaperVersionSummary){
 watch(()=>activeFile.value?.id,()=>{if(toolMode.value==='history')void loadVersions()})
 async function restoreVersion(){
  const version=selectedVersion.value,file=activeFile.value,pid=projectId.value
- if(!version||!file||version.file_id!==file.id||uploadBusy.value||toolBusy.value||switchingFile.value||navigating.value)return
+ if(!ownerAccess.value||!version||!file||version.file_id!==file.id||uploadBusy.value||toolBusy.value||switchingFile.value||navigating.value)return
  if(!window.confirm('恢复历史源码？当前已保存版本会继续保留，恢复将创建一个新版本，不修改文件路径。'))return
  addingFile.value=true;toolError.value=''
  try{
@@ -854,7 +908,7 @@ async function loadProject() {
     project.value = currentProject
     files.value = currentFiles
     initializeLocalDrafts(ownerAtStart)
-    compileEnabled.value = capability?.enabled === true
+    compileEnabled.value = ownerAccess.value && capability?.enabled === true
     pdfEnabled.value = compileEnabled.value && capability?.pdf_available === true
     compilerOptions.value=['pdflatex']
     if(compileEnabled.value&&capability.compilers?.includes('xelatex'))compilerOptions.value.push('xelatex')
@@ -909,7 +963,7 @@ function scheduleSave() {
 
 watch(draft,()=>syncLocalDraft(),{flush:'sync'})
 watch(draft, (content) => {
-  if (activeFile.value?.kind === 'text' && content !== activeFile.value.content) { scheduleSave();autoDirty=true;scheduleAuto() }
+  if (writeAccess.value && activeFile.value?.kind === 'text' && content !== activeFile.value.content) { scheduleSave();autoDirty=true;scheduleAuto() }
 })
 
 // All consumers share one drain promise. In particular a debounce callback
@@ -922,6 +976,7 @@ function persist(): Promise<boolean> {
   const initial=activeFile.value
   if(!pid||pid!==projectId.value||!initial||initial.kind!=='text')return Promise.resolve(true)
   if(draft.value===initial.content){saveError.value='';retryableSave=false;saveRetryAttempt=0;saveStatus.value='已保存';return Promise.resolve(true)}
+  if(!writeAccess.value){saveStatus.value='只读 · 尚未保存';saveError.value='当前账号已无编辑权限，请复制当前源码。';return Promise.resolve(false)}
   if(navigator.onLine===false){retryableSave=true;saveStatus.value='离线 · 尚未保存';saveError.value='当前网络已断开，恢复连接后将自动保存。';return Promise.resolve(false)}
   saving.value=true;saveStatus.value='保存中...'
   const work=(async()=>{
@@ -946,7 +1001,8 @@ function persist(): Promise<boolean> {
           if(code==='papers.revision_conflict')retryableSave=false
           if(retryableSave)scheduleSaveRetry()
 
-          saveError.value=code==='papers.revision_conflict'?'文件已在另一窗口修改。请复制当前源码，刷新后手动合并。':code==='papers.compile_source_limit'?'超过项目源码容量限制，请缩减内容后重试。':retryableSave?'网络或服务暂时不可用，恢复连接后将尝试保存。':'保存失败，请检查网络后重试。'
+          if(code==='papers.read_only'||code==='papers.project_not_found'||code==='papers.invite_required'){if(project.value)project.value.access_role='viewer';compileEnabled.value=false;pdfEnabled.value=false;stopCompilePoll();clearAuto();closeTool();retryableSave=false}
+          saveError.value=code==='papers.read_only'||code==='papers.project_not_found'||code==='papers.invite_required'?'项目编辑权限已变化，请复制当前源码。':code==='papers.revision_conflict'?'文件已被其他窗口或协作者修改。请复制当前源码，刷新后手动合并。':code==='papers.compile_source_limit'?'超过项目源码容量限制，请缩减内容后重试。':retryableSave?'网络或服务暂时不可用，恢复连接后将尝试保存。':'保存失败，请检查网络后重试。'
         }
         return false
       }
@@ -997,7 +1053,7 @@ async function selectFile(file:PaperFile){
 }
 
 async function addFile(){
-  if(!newFilePath.value||uploadBusy.value||switchingFile.value||navigating.value)return
+  if(!ownerAccess.value||!newFilePath.value||uploadBusy.value||switchingFile.value||navigating.value)return
   const pid=projectId.value
   addingFile.value=true;fileError.value=''
   try{
@@ -1103,7 +1159,7 @@ function onCompileVisibilityChange() {
 }
 
 async function exportProject() {
-  if (exporting.value || !project.value) return
+  if (!ownerAccess.value || exporting.value || !project.value) return
   exporting.value = true
   exportError.value = ''
   const id = projectId.value
@@ -1118,7 +1174,28 @@ async function exportProject() {
   } finally { if(id===projectId.value)exporting.value = false }
 }
 
-function saveNow() { saveRetryAttempt=0;void persist() }
+function saveNow() { if(writeAccess.value){saveRetryAttempt=0;void persist()} }
+
+// A manual refresh is deliberately clean-only. Never silently discard a
+// conflicting local draft or change its base revision to force a save.
+async function refreshServerProject(){
+ if(disposed||loading.value||switchingFile.value||navigating.value||saving.value||uploadBusy.value||snapshotMutating.value||memberMutating.value||compiling.value||hasActiveCompile.value)return
+ if(activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content){refreshMessage.value='当前源码尚未保存，请先复制并处理冲突；未刷新项目。';return}
+ switchingFile.value=true
+ const pid=projectId.value,serial=++fileSerial
+ try{
+  await nextTick()
+  if(activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content){refreshMessage.value='存在未保存源码，未刷新项目。';return}
+  if(disposed||pid!==projectId.value||serial!==fileSerial)return
+  closeTool();clearAuto();stopCompilePoll();pollSerial++;historySerial++
+  compileJob.value=null;previewJob.value=null;compileEnabled.value=false;pdfEnabled.value=false
+  activeFile.value=null;draft.value='';searchSources.value=[];searchBase.value=0;bibSources.value=[];outlineCache.value=[];members.value=[];managedFile.value=null
+  switchingFile.value=false
+  await loadProject()
+  if(!disposed&&pid===projectId.value&&!error.value)refreshMessage.value='已刷新服务器版本。'
+ }finally{if(pid===projectId.value)switchingFile.value=false}
+}
+
 
 function beforeUnload(event: BeforeUnloadEvent) {
   syncLocalDraft()
@@ -1128,7 +1205,7 @@ function beforeUnload(event: BeforeUnloadEvent) {
 }
 
 async function beforeNavigate(){
- if(snapshotMutating.value)return false
+ if(snapshotMutating.value||memberMutating.value)return false
  navigating.value=true
  fileSerial++;switchingFile.value=false
  clearAuto()
@@ -1144,6 +1221,7 @@ const removeNavigationHook=router.afterEach(()=>{navigating.value=false})
 watch(projectId, () => {
   loadSerial++
   uploadSerial++;preparingUpload.value=false;draggingFiles.value=false
+  memberSerial++;members.value=[];memberMessage.value='';memberMutating.value=false;refreshMessage.value=''
   resetLocalDraftScope();snapshots.value=[];snapshotDetail.value=null;snapshotMessage.value='';snapshotMutating.value=false
   closeTool();bibSerial++;bibSources.value=[];bibError.value='';searchBase.value=0;searchSources.value=[];fileVersions.value=[];clearSaveRetry();retryableSave=false;saveRetryAttempt=0
   fileSerial++;pollSerial++;historySerial++;pendingSubmission=null
@@ -1182,7 +1260,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   disposed = true
-  uploadSerial++;draggingFiles.value=false
+  memberSerial++;uploadSerial++;draggingFiles.value=false
   closeTool();bibSerial++;clearSaveRetry()
   loadSerial++
   fileSerial++

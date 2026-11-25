@@ -295,3 +295,86 @@ describe('Same-epoch reconnect',()=>{
   }finally{f.cleanup()}
  })
 })
+
+describe('Persisted collaboration draft recovery',()=>{
+ it('restores only explicit, validated pending deltas and preserves an in-flight request across a reopened panel',()=>{
+  vi.useFakeTimers()
+  const server=new Y.Doc(),source=server.getText('source')
+  source.insert(0,'abc def')
+  const a=new Socket(),b=new Socket()
+  const make=(socket:Socket)=>new DurablePaperCollaboration({url:'ws://localhost/fixture',expectedRole:'editor',createSocket:()=>socket,onChange:vi.fn()})
+  const first=make(a),second=make(b)
+  const frame=(seq:number,request_id?:string):CollaborationStateFrame=>({type:'state',protocol:'papers-crdt-v1',epoch,sequence:seq,file_revision:seq,project_revision:seq,role:'editor',state:encode(Y.encodeStateAsUpdate(server)),vector:encode(Y.encodeStateVector(server)),...(request_id?{request_id}:{})})
+  try{
+   first.start();a.push(frame(1))
+   first.view.text!.delete(0,1);vi.advanceTimersByTime(200)
+   const raw=a.sent[0]!,m=JSON.parse(raw)
+   first.view.text!.insert(0,'local ')
+   const draft=first.captureDraft()!
+   expect(draft.source).toBe('local bc def')
+   expect(draft.inFlight?.id).toBe(m.request_id)
+   expect(draft.queued).toBeTruthy()
+   first.destroy()
+   Y.applyUpdate(server,decode(m.update)) // committed, ack was lost
+   source.insert(source.length,' remote')
+   second.start();b.push(frame(2))
+   expect(second.view.source).toBe('bc def remote')
+   expect(second.canRecoverDraft(draft)).toBe(true)
+   expect(b.sent).toHaveLength(0)
+   expect(second.recoverDraft(draft)).toBe(true)
+   expect(second.view.source).toBe('local bc def remote')
+   vi.advanceTimersByTime(200);expect(b.sent[0]).toBe(raw)
+   b.push(frame(2,m.request_id))
+   expect(second.view.pending).toBe(true)
+   vi.advanceTimersByTime(200)
+   const queued=JSON.parse(b.sent[1]!)
+   Y.applyUpdate(server,decode(queued.update))
+   b.push(frame(3,queued.request_id))
+   expect(second.view.source).toBe(source.toString())
+   expect(second.captureDraft()).toBeNull()
+   expect(second.view.pending).toBe(false)
+  }finally{first.destroy();second.destroy();server.destroy()}
+ })
+ it('rejects stale epoch, role, version and corrupt deltas before touching the live source',()=>{
+  const f=fixture()
+  try{
+   f.socket.push(f.frame())
+   const source=f.session.view.source
+   const foreign=new Y.Doc()
+   foreign.getText('other').insert(0,'invalid')
+   const update=encode(Y.encodeStateAsUpdate(foreign));foreign.destroy()
+   const draft={epoch,role:'owner' as const,sequence:1,fileRevision:1,projectRevision:1,source:'different',replayable:true,queued:update}
+   for(const row of [draft,{...draft,epoch:another},{...draft,role:'editor' as const},{...draft,sequence:2},{...draft,replayable:false}]){
+    expect(f.session.recoverDraft(row)).toBe(false)
+    expect(f.session.view.source).toBe(source)
+    expect(f.session.view.pending).toBe(false)
+   }
+   vi.advanceTimersByTime(1000)
+   expect(f.socket.sent).toHaveLength(0)
+  }finally{f.cleanup()}
+ })
+})
+
+it('publishes the original request ID to the backup callback before sending bytes',()=>{
+ vi.useFakeTimers()
+ const server=new Y.Doc(),source=server.getText('source')
+ source.insert(0,'abc')
+ const socket=new Socket()
+ const send=socket.send.bind(socket)
+ let persisted:ReturnType<DurablePaperCollaboration['captureDraft']>=null
+ const session=new DurablePaperCollaboration({url:'ws://localhost/fixture',expectedRole:'editor',createSocket:()=>socket,onChange:()=>{persisted=session.captureDraft()}})
+ try{
+  socket.send=raw=>{
+   const frame=JSON.parse(raw)
+   expect(persisted?.inFlight?.id).toBe(frame.request_id)
+   expect(persisted?.inFlight?.update).toBe(frame.update)
+   send(raw)
+  }
+  session.start()
+  socket.push({type:'state',protocol:'papers-crdt-v1',epoch,sequence:1,file_revision:1,project_revision:1,role:'editor',state:encode(Y.encodeStateAsUpdate(server)),vector:encode(Y.encodeStateVector(server))})
+  session.view.text!.insert(0,'local ')
+  expect(session.captureDraft()?.queued).toBeTruthy()
+  vi.advanceTimersByTime(200)
+  expect(socket.sent).toHaveLength(1)
+ }finally{session.destroy();server.destroy()}
+})

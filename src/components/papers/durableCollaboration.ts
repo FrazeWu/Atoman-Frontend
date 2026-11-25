@@ -2,6 +2,7 @@
 // The authoritative seed always comes from the server; local updates
 // are kept in Y.Doc until explicitly acknowledged after commit.
 import * as Y from 'yjs'
+import {decodeDraftUpdate,encodeDraftUpdate,validCollaborationDraftPayload,type CollaborationDraftPayload} from './collaborationDrafts'
 import {encodeSelection,parsePresencePeers,type CollaborationPeer,type LocalSelection,type RelativeSelection} from './paperPresence'
 
 export type CollaborationRole = 'owner'|'editor'|'viewer'
@@ -125,6 +126,7 @@ export class DurablePaperCollaboration {
  private awaitingCheckpoint=true
  private destroyed=false
  private unconfirmed=false
+ private draftReplayable=true
  private state:CollaborationView={
   status:'connecting',text:null,source:'',role:null,pending:false,epoch:'',sequence:0,fileRevision:0,projectRevision:0,message:'',peers:[],connectionId:''
  }
@@ -223,6 +225,7 @@ export class DurablePaperCollaboration {
   // Protect edits that slip in during a reactive read-only transition.
   // Never send them after a stop or role downgrade.
   if(!this.state.epoch||this.awaitingCheckpoint||this.state.status==='connecting'||this.state.status==='reconnecting'||this.state.status==='stopped'||this.state.role==='viewer'){
+   this.draftReplayable=false
    this.stop('当前协作会话不可写，未发送本地修改。')
    this.publish()
    return
@@ -235,7 +238,7 @@ export class DurablePaperCollaboration {
    this.state.status='saving'
    this.publish()
    this.scheduleSend()
-  }catch{this.stop('本次协作修改超过容量限制。请复制当前源码后处理。')}
+  }catch{this.draftReplayable=false;this.stop('本次协作修改超过容量限制。请复制当前源码后处理。')}
  }
  setSelection(selection:LocalSelection|null){
   if(!this.options.presence||!this.state.epoch||this.awaitingCheckpoint||this.state.status==='stopped'||this.destroyed)return
@@ -268,6 +271,9 @@ export class DurablePaperCollaboration {
     const id=globalThis.crypto.randomUUID()
     this.inFlight={id,update:this.queued,retries:0}
     this.queued=null
+    // A synchronous opt-in backup must capture the request ID before
+    // the bytes can reach the server, even if the tab crashes mid-send.
+    this.publish()
     this.sendCurrent()
    }catch{this.stop('无法发送协作更新。当前源码已保留。')}
   },delay)
@@ -359,6 +365,57 @@ export class DurablePaperCollaboration {
    }else this.scheduleSend()
    this.schedulePresence()
   }catch{this.stop('协作状态无效或会话已变化。不会自动覆盖或重新初始化本地修改。')}
+ }
+ /** Capture only unacknowledged work. A failed/untracked edit is copy-only. */
+ captureDraft():CollaborationDraftPayload|null{
+  if(this.destroyed||!this.state.pending||!this.state.epoch||this.state.role==='viewer'||!this.state.role)return null
+  const payload:CollaborationDraftPayload={
+   epoch:this.state.epoch,role:this.state.role,sequence:this.state.sequence,
+   fileRevision:this.state.fileRevision,projectRevision:this.state.projectRevision,
+   source:this.text.toString(),replayable:this.draftReplayable&&!!(this.inFlight||this.queued),
+  }
+  if(payload.replayable){
+   if(this.inFlight)payload.inFlight={id:this.inFlight.id,update:encodeDraftUpdate(this.inFlight.update)}
+   if(this.queued)payload.queued=encodeDraftUpdate(this.queued)
+  }
+  return payload
+ }
+ canRecoverDraft(payload:CollaborationDraftPayload):boolean{
+  return !this.destroyed&&!this.awaitingCheckpoint&&this.state.status==='ready'&&!this.state.pending&&
+   validCollaborationDraftPayload(payload)&&payload.replayable&&payload.epoch===this.state.epoch&&
+   payload.role===this.state.role&&payload.sequence<=this.state.sequence&&
+   payload.fileRevision<=this.state.fileRevision&&payload.projectRevision<=this.state.projectRevision
+ }
+ recoverDraft(payload:CollaborationDraftPayload):boolean{
+  if(!this.canRecoverDraft(payload))return false
+  // Validate all dependencies against the authorized server checkpoint in
+  // a throwaway document. Invalid or stale local bytes never enter the
+  // live editor, and no full-text replacement is generated.
+  const trial=new Y.Doc()
+  let inflight:PendingUpdate|null=null,queued:Uint8Array|null=null
+  try{
+   if(payload.inFlight)inflight={id:payload.inFlight.id,update:decodeDraftUpdate(payload.inFlight.update),retries:0}
+   if(payload.queued)queued=decodeDraftUpdate(payload.queued)
+   const text=trial.getText('source')
+   Y.applyUpdate(trial,Y.encodeStateAsUpdate(this.doc))
+   if(inflight)Y.applyUpdate(trial,inflight.update)
+   if(queued)Y.applyUpdate(trial,queued)
+   if(trial.share.size!==1||trial.store.pendingStructs!=null||trial.store.pendingDs!=null||
+      text.toDelta().some((part:{insert?:unknown;attributes?:unknown})=>typeof part.insert!=='string'||part.attributes!=null)||
+      !validSource(text.toString()))return false
+   if(payload.sequence===this.state.sequence&&text.toString()!==payload.source)return false
+  }catch{return false}
+  finally{trial.destroy()}
+  this.inFlight=inflight;this.queued=queued;this.unconfirmed=true;this.draftReplayable=true
+  this.doc.transact(()=>{
+   if(inflight)Y.applyUpdate(this.doc,inflight.update,remoteOrigin)
+   if(queued)Y.applyUpdate(this.doc,queued,remoteOrigin)
+  },remoteOrigin)
+  this.state.status='saving'
+  this.publish()
+  if(this.inFlight)this.timer=setTimeout(()=>{this.timer=null;this.sendCurrent()},200)
+  else this.scheduleSend()
+  return true
  }
  destroy(){
   if(this.destroyed)return

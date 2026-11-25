@@ -98,3 +98,38 @@ role or revision mismatch freezes the document for manual copy/recovery.
 Offline typing, persistent browser recovery, differential checkpoint
 downloads, and collaborative undo remain separate release gates. This
 stage deliberately keeps the editor read-only while disconnected.
+
+## Stage 8.4B: explicit browser recovery of collaboration drafts
+
+The collaboration panel has a separate opt-in plaintext localStorage
+vault. It is off by default, stores only while a document has unconfirmed
+local changes, and never stores an authentication token. It is not an
+encrypted backup or a cloud backup. Records are scoped by the verified
+account, project, file, and a random per-panel writer ID. At most ten
+records per account/project are admitted, with a 1 MiB UTF-8 source
+limit and at most two 256 KiB pending binary updates. Browser quota and
+validation failures are visible and never silently evict another draft.
+
+Each saved record includes the original editing epoch, role, monotonic
+server revisions, a copyable source, and the ordered pending deltas
+including any original in-flight request ID. Edits that cannot be
+safely tracked may only be stored as copy-only source. Disabling the
+setting preserves old records. No pending collaboration source enters
+the ordinary full-text draft or PUT path.
+
+Recovery requires a new, authorized, idle live session and explicit
+user confirmation, matching scope, file path, epoch and role, and
+non-regressing server revisions. A disposable Y.Doc validates the stored
+deltas and dependencies before the live document is changed. The
+original request ID and exact bytes are preserved. Newer canonical
+changes within the same epoch are merged by CRDT, not overwritten.
+Old epochs or invalid records remain available for manual copy. The
+recovered and current writer's backups are removed only after all
+pending updates have been durably acknowledged, using exact record
+comparison so another tab's newer backup is not erased. Closing a tab
+does not delete its backup. The browser's own local-data policy
+(including clearing storage) still controls persistence.
+
+Offline typing, server-to-client differential downloads and collaborative
+undo remain out of scope. The prototype keeps editing paused during
+transport loss, and production collaboration stays disabled.

@@ -390,3 +390,36 @@ describe('Papers phase two workspace tools', () => {
     }finally{wrapper.unmount()}
   })
 })
+
+describe('Papers compiler capability',()=>{
+ async function openCompilerWorkspace(compilers?:('pdflatex'|'lualatex')[]){
+  vi.mocked(getPaperProject).mockResolvedValue({...two} as never)
+  vi.mocked(listPaperFiles).mockResolvedValue([f2] as never)
+  vi.mocked(getPaperFile).mockResolvedValue(f2 as never)
+  vi.mocked(getPaperCompileCapability).mockResolvedValue({enabled:true,pdf_available:true,compilers})
+  vi.mocked(listPaperCompileJobs).mockResolvedValue([])
+  const router=createRouter({history:createMemoryHistory(),routes:[{path:'/papers/:projectId',component:PaperWorkspaceView}]})
+  await router.push('/papers/two');await router.isReady()
+  const wrapper=mount(defineComponent({render:()=>h(RouterView)}),{global:{plugins:[router]}})
+  await flushPromises()
+  return wrapper
+ }
+ it('does not advertise unsupported compilers for a legacy server',async()=>{
+  const wrapper=await openCompilerWorkspace()
+  try{expect(wrapper.get('select[aria-label="TeX 编译器"]').findAll('option').map(o=>o.text())).toEqual(['pdfLaTeX'])}
+  finally{wrapper.unmount()}
+ })
+ it('submits selected approved engine and prevents changes during an active job',async()=>{
+  const wrapper=await openCompilerWorkspace(['pdflatex','lualatex'])
+  vi.mocked(submitPaperCompile).mockResolvedValue({id:'lua-1',project_id:'two',source_revision:1,compiler:'lualatex',status:'queued',attempts:0,max_attempts:2,cancel_requested:false,created_at:'2026-11-25T00:00:00Z'} as never)
+  try{
+   const select=wrapper.get('select[aria-label="TeX 编译器"]')
+   expect(select.findAll('option').map(o=>o.text())).toEqual(['pdfLaTeX','LuaLaTeX'])
+   await select.setValue('lualatex')
+   await wrapper.findAll('button').find(b=>b.text()==='编译')!.trigger('click');await flushPromises()
+   expect(submitPaperCompile).toHaveBeenCalledWith('two',1,expect.any(String),'lualatex')
+   expect(wrapper.find('.papers-workspace__compile-status').text()).toContain('LuaLaTeX')
+   expect(select.attributes('disabled')).toBeDefined()
+  }finally{wrapper.unmount()}
+ })
+})

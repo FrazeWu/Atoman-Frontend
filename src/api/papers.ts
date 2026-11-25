@@ -70,9 +70,12 @@ export const savePaperFile = (projectId: string, fileId: string, content: string
   })
 
 
+export type PaperCompiler = 'pdflatex' | 'lualatex'
+
 export interface PaperCompileCapability {
   enabled: boolean
   pdf_available: boolean
+  compilers?: PaperCompiler[]
 }
 
 export type PaperCompileStatus =
@@ -89,6 +92,7 @@ export interface PaperCompileJob {
   id: string
   project_id: string
   source_revision: number
+  compiler?: PaperCompiler
   status: PaperCompileStatus
   attempts: number
   max_attempts: number
@@ -112,10 +116,11 @@ export const getPaperCompileCapability = (projectId: string) =>
 export const listPaperCompileJobs = (projectId: string) =>
   papersRequest<PaperCompileJob[]>(compilePrefix(projectId))
 
-export const submitPaperCompile = (projectId: string, baseRevision: number, idempotencyKey: string) =>
+export const submitPaperCompile = (projectId: string, baseRevision: number, idempotencyKey: string, compiler: PaperCompiler = 'pdflatex') =>
   papersRequest<PaperCompileJob>(compilePrefix(projectId), 'POST', {
     base_revision: baseRevision,
     idempotency_key: idempotencyKey,
+    compiler,
   })
 
 export const getPaperCompileJob = (projectId: string, jobId: string) =>

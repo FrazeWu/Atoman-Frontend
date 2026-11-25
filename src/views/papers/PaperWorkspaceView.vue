@@ -121,7 +121,7 @@
           </div>
           <div class="papers-workspace__compile-status" role="status" aria-live="polite">
             <template v-if="compileEnabled && compileJob">
-              <span class="papers-workspace__compile-label" :class="'status-'+compileJob.status"><strong>{{ compileStateLabel }}</strong> · 版本 {{ compileJob.source_revision }}</span>
+              <span class="papers-workspace__compile-label" :class="'status-'+compileJob.status"><strong>{{ compileStateLabel }}</strong> · {{ compilerLabel(compileJob.compiler) }} · 版本 {{ compileJob.source_revision }}</span>
               <span v-if="previewStale" class="papers-workspace__stale" title="当前 PDF 是上一次编译成功的版本">预览为上次成功版本</span>
               <PButton v-if="canCancelCompile" type="button" size="sm" variant="secondary" :disabled="canceling" @click="cancelCompile">{{ canceling ? '取消中…' : '取消任务' }}</PButton>
               <span v-else-if="compileJob.cancel_requested && hasActiveCompile">取消中…</span>
@@ -130,6 +130,7 @@
             <span v-else-if="compileEnabled">准备编译</span>
           </div>
           <div class="papers-workspace__preview-right">
+            <label class="papers-workspace__compiler" title="选择此任务的 TeX 编译器"><span>编译器</span><select v-model="selectedCompiler" aria-label="TeX 编译器" :disabled="!compileEnabled||compiling||hasActiveCompile||saving||addingFile||navigating" @change="compilerChanged"><option v-for="engine in compilerOptions" :key="engine" :value="engine">{{ compilerLabel(engine) }}</option></select></label>
             <label class="papers-workspace__auto"><input type="checkbox" v-model="autoCompile" :disabled="!compileEnabled" /> 自动编译</label>
             <PButton type="button" size="sm" :disabled="!compileEnabled || compiling || saving || switchingFile || navigating || !project || hasActiveCompile" @click="compileNow">{{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}</PButton>
           </div>
@@ -189,7 +190,7 @@ import {
   createPaperFile, managePaperFiles, getPaperFile, getPaperProject, listPaperFiles, savePaperFile, getPaperProjectZIP, downloadPaperZIP,
   getPaperCompileCapability, getPaperCompileJob, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, getPaperCompileSourceMap,
   listPaperFileVersions, getPaperFileVersion,
-  type PaperFileVersion, type PaperVersionSummary, type PaperFile, type PaperProject, type PaperCompileJob, type PaperCompileDiagnostic, type PaperUpload,
+  type PaperCompiler, type PaperCompileCapability, type PaperFileVersion, type PaperVersionSummary, type PaperFile, type PaperProject, type PaperCompileJob, type PaperCompileDiagnostic, type PaperUpload,
 } from '@/api/papers'
 
 defineOptions({name:'PaperWorkspaceView'})
@@ -443,6 +444,12 @@ async function jumpOutline(item:OutlineRow){
 const newFilePath = ref('')
 const saveStatus = ref('尚未打开文件')
 const compileEnabled = ref(false)
+const compilerOptions=ref<PaperCompiler[]>(['pdflatex'])
+const selectedCompiler=ref<PaperCompiler>('pdflatex')
+let compilerChangedByUser=false
+function compilerLabel(engine?:PaperCompiler){return engine==='lualatex'?'LuaLaTeX':'pdfLaTeX'}
+function compilerChanged(){compilerChangedByUser=true;autoDirty=true;scheduleAuto()}
+
 const pdfEnabled = ref(false)
 const compileJob = ref<PaperCompileJob | null>(null)
 const previewJob = ref<PaperCompileJob | null>(null)
@@ -479,7 +486,7 @@ async function jumpDiagnostic(item:PaperCompileDiagnostic){
  if(jobId===compileJob.value?.id&&!diagnosticStale.value&&activeFile.value?.id===target.id)editorRef.value?.goToLine(item.line)
 }
 
-const previewStale = computed(() => !!previewJob.value && (previewJob.value.id !== compileJob.value?.id || previewJob.value.source_revision !== project.value?.head_revision || (activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)))
+const previewStale = computed(() => !!previewJob.value && (previewJob.value.id !== compileJob.value?.id || previewJob.value.source_revision !== project.value?.head_revision || (previewJob.value.compiler||'pdflatex')!==selectedCompiler.value || (activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)))
 const editorRef=ref<InstanceType<typeof LatexEditor>|null>(null)
 const pdfRef=ref<InstanceType<typeof PaperPDFPreview>|null>(null)
 const sourceMap=shallowRef<PaperSourceMap|null>(null)
@@ -582,7 +589,7 @@ let fileSerial = 0
 let disposed = false
 let pollSerial=0
 let historySerial=0
-let pendingSubmission:{projectId:string;revision:number;key:string}|null=null
+let pendingSubmission:{projectId:string;revision:number;compiler:PaperCompiler;key:string}|null=null
 
 async function loadProject() {
   const serial = ++loadSerial
@@ -592,13 +599,16 @@ async function loadProject() {
   try {
     const [currentProject, currentFiles, capability] = await Promise.all([
       getPaperProject(requestedProjectId), listPaperFiles(requestedProjectId),
-      Promise.resolve().then(() => getPaperCompileCapability(requestedProjectId)).catch(() => ({ enabled: false, pdf_available: false })),
+      Promise.resolve().then(() => getPaperCompileCapability(requestedProjectId)).catch(():PaperCompileCapability => ({ enabled: false, pdf_available: false })),
     ])
     if (disposed || serial !== loadSerial || requestedProjectId !== projectId.value) return
     project.value = currentProject
     files.value = currentFiles
     compileEnabled.value = capability?.enabled === true
     pdfEnabled.value = compileEnabled.value && capability?.pdf_available === true
+    compilerOptions.value=compileEnabled.value&&capability.compilers?.includes('lualatex')?['pdflatex','lualatex']:['pdflatex']
+    if(!compilerOptions.value.includes(selectedCompiler.value))selectedCompiler.value='pdflatex'
+
     const main = currentFiles.find((file) => file.id === currentProject.main_file_id) || currentFiles[0]
     if (main) await selectFile(main)
     if (compileEnabled.value && !disposed && serial === loadSerial) {
@@ -607,6 +617,9 @@ async function loadProject() {
       void listPaperCompileJobs(requestedProjectId).then((history) => {
         if (!disposed && serial === loadSerial && historyRequest===historySerial && requestedProjectId === projectId.value) {
           compileJob.value = history[0] ?? null
+          const priorCompiler=compileJob.value?.compiler||'pdflatex'
+          if(!compilerChangedByUser&&compilerOptions.value.includes(priorCompiler))selectedCompiler.value=priorCompiler
+
           previewJob.value = history.find(job => job.status === 'succeeded' && job.pdf_available) ?? null
           scheduleCompilePoll()
         }
@@ -787,10 +800,10 @@ async function compileNow() {
     }
     const revision=project.value?.head_revision
     if(disposed||requestedProjectId!==projectId.value||!revision)return
-    if(!pendingSubmission||pendingSubmission.projectId!==requestedProjectId||pendingSubmission.revision!==revision){
-      pendingSubmission={projectId:requestedProjectId,revision,key:globalThis.crypto?.randomUUID?.()??('compile-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2))}
+    if(!pendingSubmission||pendingSubmission.projectId!==requestedProjectId||pendingSubmission.revision!==revision||pendingSubmission.compiler!==selectedCompiler.value){
+      pendingSubmission={projectId:requestedProjectId,revision,compiler:selectedCompiler.value,key:globalThis.crypto?.randomUUID?.()??('compile-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2))}
     }
-    const job=await submitPaperCompile(requestedProjectId,revision,pendingSubmission.key)
+    const job=await (pendingSubmission.compiler==='pdflatex'?submitPaperCompile(requestedProjectId,revision,pendingSubmission.key):submitPaperCompile(requestedProjectId,revision,pendingSubmission.key,pendingSubmission.compiler))
     if(disposed||requestedProjectId!==projectId.value)return
     pendingSubmission=null
     compileJob.value = job
@@ -799,7 +812,7 @@ async function compileNow() {
     if (!disposed && requestedProjectId === projectId.value){
       const code=cause instanceof ApiErrorResponseError?cause.code:''
 
-      compileError.value=code==='papers.compile_revision_conflict'||code==='papers.revision_conflict'?'项目版本已在其他窗口发生变化，请复制未保存内容后刷新。':code==='papers.compile_quota_exceeded'?'已达到编译频率或存储限制，请稍后重试。':'无法提交编译任务，请检查网络或编译环境后重试。'
+      compileError.value=code==='papers.compile_revision_conflict'||code==='papers.revision_conflict'?'项目版本已在其他窗口发生变化，请复制未保存内容后刷新。':code==='papers.compile_quota_exceeded'?'已达到编译频率或存储限制，请稍后重试。':code==='papers.compiler_unavailable'?'当前编译环境尚未开放此编译器，请刷新项目或切换编译器。':'无法提交编译任务，请检查网络或编译环境后重试。'
     }
   } finally {
     if(requestedProjectId===projectId.value)compiling.value = false
@@ -877,6 +890,7 @@ watch(projectId, () => {
   displayedPDFJob.value='';sourceMap.value=null;mapJob.value='';mapAbort?.abort();mapSerial++;syncMessage.value=''
   clearAuto();autoDirty=false
   compileEnabled.value = false
+  selectedCompiler.value='pdflatex';compilerOptions.value=['pdflatex'];compilerChangedByUser=false
   pdfEnabled.value = false
   compileError.value = ''
   exportError.value = ''
@@ -1014,4 +1028,7 @@ onBeforeUnmount(() => {
 .papers-workspace__compare{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .papers-workspace__compare textarea{height:105px;font-family:monospace;resize:vertical;white-space:pre;overflow:auto}
 @media(max-width:760px){.papers-workspace__compare{grid-template-columns:1fr}}
+ .papers-workspace__compiler{display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap}
+.papers-workspace__compiler select{color:inherit;background:var(--a-color-bg,#fff);border:1px solid var(--a-color-border-soft,#ddd);border-radius:4px;padding:4px 5px;font:inherit;max-width:104px}
+@media(max-width:1000px){.papers-workspace__compiler>span{display:none}}
 </style>

@@ -5,7 +5,7 @@ import * as Y from 'yjs'
 import {encodeSelection,parsePresencePeers,type CollaborationPeer,type LocalSelection,type RelativeSelection} from './paperPresence'
 
 export type CollaborationRole = 'owner'|'editor'|'viewer'
-export type CollaborationStatus = 'connecting'|'ready'|'saving'|'stopped'
+export type CollaborationStatus = 'connecting'|'reconnecting'|'ready'|'saving'|'stopped'
 export interface CollaborationView {
  status: CollaborationStatus
  text: Y.Text|null
@@ -26,6 +26,8 @@ const MAX_STATE=4*1024*1024
 const MAX_VECTOR=64*1024
 const MAX_TEXT=1024*1024
 const MAX_FRAME=6*1024*1024
+const MAX_RECONNECTS=5
+const retryableCloseCodes=new Set([1001,1005,1006,1012,1013])
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const remoteOrigin=Symbol('papers-server-committed')
 const roles=new Set(['owner','editor','viewer'])
@@ -101,6 +103,7 @@ interface Options {
  url:string
  expectedRole:CollaborationRole
  presence?:boolean
+ reconnect?:boolean
  onChange:(view:CollaborationView)=>void
  createSocket:(url:string)=>SocketLike
 }
@@ -117,6 +120,9 @@ export class DurablePaperCollaboration {
  private lastPresenceAt=0
  private selection:RelativeSelection|null=null
  private sentSelection:string|undefined='null'
+ private reconnectTimer:ReturnType<typeof setTimeout>|null=null
+ private reconnectAttempts=0
+ private awaitingCheckpoint=true
  private destroyed=false
  private unconfirmed=false
  private state:CollaborationView={
@@ -133,34 +139,79 @@ export class DurablePaperCollaboration {
   this.options.onChange(this.view)
  }
  start(){
+  if(this.destroyed||this.socket||this.reconnectTimer!==null||this.state.status!=='connecting')return
+  this.connect()
+ }
+ private connect(){
   if(this.destroyed||this.socket||this.state.status==='stopped')return
+  this.awaitingCheckpoint=true
   try{
-   const s=this.options.createSocket(this.options.url)
+   const url=new URL(this.options.url)
+   // Reconnect only to the epoch that the server previously established.
+   // Never open an unnamed replacement epoch with pending local changes.
+   if(this.state.epoch)url.searchParams.set('epoch',this.state.epoch)
+   const s=this.options.createSocket(url.toString())
    this.socket=s
    s.onmessage=e=>{if(this.socket===s&&!this.destroyed)this.receive(e.data)}
-   s.onerror=()=>{if(this.socket===s)this.stop('协作连接失败，当前源码不会通过普通保存覆盖服务器。')}
-   s.onclose=()=>{if(this.socket===s)this.stop('协作连接已断开。请复制未确认的源码，再退出协作模式。')}
+   s.onerror=()=>{
+    if(this.socket!==s)return
+    // Browsers normally dispatch close immediately after error. Do not
+    // mask a subsequent policy-violation close with an eager retry.
+    if(!this.options.reconnect||!this.state.epoch)this.stop('协作连接失败，当前源码不会通过普通保存覆盖服务器。')
+    else if(this.deadline===null)this.armDeadline()
+   }
+   s.onclose=e=>{
+    if(this.socket!==s)return
+    if(retryableCloseCodes.has(e.code))this.transportLost('协作连接已断开。')
+    else this.stop('协作连接已关闭或权限发生变化。请复制未确认的源码，再退出协作模式。')
+   }
    this.armDeadline()
    this.publish()
-  }catch{this.stop('无法建立协作连接。')}
+  }catch{this.transportLost('无法建立协作连接。')}
+ }
+ private detachSocket(){
+  const s=this.socket;this.socket=null
+  if(s){s.onopen=null;s.onmessage=null;s.onerror=null;s.onclose=null;try{s.close()}catch{}}
+ }
+ private transportLost(message:string){
+  if(this.destroyed||this.state.status==='stopped')return
+  if(!this.options.reconnect||!this.state.epoch||this.reconnectAttempts>=MAX_RECONNECTS){
+   this.stop(message+' 未确认源码已保留，请复制后处理。')
+   return
+  }
+  this.clearTimers()
+  this.detachSocket()
+  this.awaitingCheckpoint=true
+  this.state.peers=[];this.state.connectionId=''
+  // Presence IDs/versions are connection-local and may reset on restart.
+  this.presenceVersion=0;this.lastPresenceAt=0;this.selection=null;this.sentSelection='null'
+  this.state.status='reconnecting'
+  const attempt=++this.reconnectAttempts
+  this.state.message='连接暂时中断，正在恢复原协作会话（'+attempt+'/'+MAX_RECONNECTS+'）。'
+  this.reconnectTimer=setTimeout(()=>{
+   this.reconnectTimer=null
+   this.connect()
+  },Math.min(750*2**(attempt-1),6000))
+  this.publish()
  }
  private clearTimers(){
   if(this.timer!==null)clearTimeout(this.timer)
   if(this.deadline!==null)clearTimeout(this.deadline)
   if(this.presenceTimer!==null)clearTimeout(this.presenceTimer)
-  this.timer=null;this.deadline=null;this.presenceTimer=null
+  if(this.reconnectTimer!==null)clearTimeout(this.reconnectTimer)
+  this.timer=null;this.deadline=null;this.presenceTimer=null;this.reconnectTimer=null
  }
  private armDeadline(){
   if(this.deadline!==null)clearTimeout(this.deadline)
-  this.deadline=setTimeout(()=>this.stop('等待服务器确认超时。已保留当前协作源码。'),18000)
+  this.deadline=setTimeout(()=>this.transportLost('等待服务器确认超时。'),18000)
  }
  private clearDeadline(){if(this.deadline!==null)clearTimeout(this.deadline);this.deadline=null}
  private stop(message:string){
   if(this.destroyed||this.state.status==='stopped')return
   this.unconfirmed=this.unconfirmed||!!this.inFlight||!!this.queued
   this.clearTimers()
-  const s=this.socket;this.socket=null
-  if(s){s.onopen=null;s.onmessage=null;s.onerror=null;s.onclose=null;try{s.close()}catch{}}
+  this.detachSocket()
+  this.awaitingCheckpoint=false
   this.state.peers=[];this.state.connectionId=''
   this.state.status='stopped'
   this.state.message=message
@@ -171,7 +222,7 @@ export class DurablePaperCollaboration {
   this.unconfirmed=true
   // Protect edits that slip in during a reactive read-only transition.
   // Never send them after a stop or role downgrade.
-  if(!this.state.epoch||this.state.status==='connecting'||this.state.status==='stopped'||this.state.role==='viewer'){
+  if(!this.state.epoch||this.awaitingCheckpoint||this.state.status==='connecting'||this.state.status==='reconnecting'||this.state.status==='stopped'||this.state.role==='viewer'){
    this.stop('当前协作会话不可写，未发送本地修改。')
    this.publish()
    return
@@ -187,7 +238,7 @@ export class DurablePaperCollaboration {
   }catch{this.stop('本次协作修改超过容量限制。请复制当前源码后处理。')}
  }
  setSelection(selection:LocalSelection|null){
-  if(!this.options.presence||!this.state.epoch||this.state.status==='stopped'||this.destroyed)return
+  if(!this.options.presence||!this.state.epoch||this.awaitingCheckpoint||this.state.status==='stopped'||this.destroyed)return
   try{this.selection=encodeSelection(this.text,selection)}catch{this.selection=null}
   this.schedulePresence()
  }
@@ -205,14 +256,14 @@ export class DurablePaperCollaboration {
     socket.send(JSON.stringify({type:'presence',epoch:this.state.epoch,request_id:globalThis.crypto.randomUUID(),...(this.selection?{selection:this.selection}:{})}))
     this.sentSelection=selected
     this.lastPresenceAt=Date.now()
-   }catch{this.stop('协作连接不可用。')}
+   }catch{this.transportLost('协作连接不可用。')}
   },Math.max(180,450-(Date.now()-this.lastPresenceAt)))
  }
  private scheduleSend(delay=200){
-  if(this.timer!==null||this.destroyed||this.state.status==='stopped'||this.inFlight||!this.queued)return
+  if(this.timer!==null||this.destroyed||this.awaitingCheckpoint||this.state.status==='stopped'||this.inFlight||!this.queued)return
   this.timer=setTimeout(()=>{
    this.timer=null
-   if(this.destroyed||this.state.status==='stopped'||this.inFlight||!this.queued)return
+   if(this.destroyed||this.awaitingCheckpoint||this.state.status==='stopped'||this.inFlight||!this.queued)return
    try{
     const id=globalThis.crypto.randomUUID()
     this.inFlight={id,update:this.queued,retries:0}
@@ -223,16 +274,19 @@ export class DurablePaperCollaboration {
  }
  private sendCurrent(){
   const s=this.socket,item=this.inFlight
-  if(!s||s.readyState!==1||!item){this.stop('协作连接不可用。');return}
+  if(this.awaitingCheckpoint||this.destroyed||this.state.status==='stopped')return
+  if(!s||s.readyState!==1||!item){this.transportLost('协作连接不可用。');return}
   try{
    s.send(JSON.stringify({type:'update',request_id:item.id,epoch:this.state.epoch,update:encode64(item.update)}))
    this.armDeadline()
-  }catch{this.stop('发送协作更新失败。')}
+  }catch{this.transportLost('发送协作更新失败。')}
  }
  private receive(raw:unknown){
   if(this.destroyed||this.state.status==='stopped')return
   try{
    const frame=parseCollaborationFrame(raw)
+   const handshake=this.awaitingCheckpoint
+   if(handshake&&(frame.type!=='state'||frame.request_id!==undefined))throw Error('expected initial checkpoint')
    if(frame.type==='presence'){
     if(!this.options.presence||!this.state.epoch||frame.epoch!==this.state.epoch||
        (this.state.connectionId&&this.state.connectionId!==frame.connection_id)||frame.presence_version<this.presenceVersion)throw Error('presence scope changed')
@@ -284,7 +338,8 @@ export class DurablePaperCollaboration {
    this.state.projectRevision=frame.project_revision
    this.state.role=frame.role
    this.state.text=this.text
-   if(initial||frame.request_id!==undefined){
+   this.awaitingCheckpoint=false
+   if(handshake||frame.request_id!==undefined){
     this.clearDeadline()
     if(frame.request_id!==undefined){
      if(this.timer!==null)clearTimeout(this.timer)
@@ -296,7 +351,12 @@ export class DurablePaperCollaboration {
    this.state.status=this.inFlight||this.queued?'saving':'ready'
    this.state.message=''
    this.publish()
-   this.scheduleSend()
+   if(handshake&&this.inFlight){
+    // The previous socket may have died after commit but before its ack.
+    // Replay the exact bytes and request ID. Yjs and the store make
+    // duplicate updates idempotent, including delete-only updates.
+    this.timer=setTimeout(()=>{this.timer=null;this.sendCurrent()},200)
+   }else this.scheduleSend()
    this.schedulePresence()
   }catch{this.stop('协作状态无效或会话已变化。不会自动覆盖或重新初始化本地修改。')}
  }

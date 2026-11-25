@@ -14,7 +14,7 @@ class Socket {
  send(raw:string){this.sent.push(raw)}
  close(){this.readyState=3}
  push(value:unknown){this.onmessage?.({data:JSON.stringify(value)} as MessageEvent)}
- disconnect(){this.readyState=3;this.onclose?.({} as CloseEvent)}
+ disconnect(code=1006){this.readyState=3;this.onclose?.({code} as CloseEvent)}
 }
 function fixture(role:'owner'|'editor'|'viewer'='owner'){
  vi.useFakeTimers()
@@ -135,5 +135,163 @@ describe('Negotiated presence',()=>{
    socket.disconnect()
    expect(session.view.peers).toEqual([])
   }finally{session.destroy();server.destroy()}
+ })
+})
+
+describe('Same-epoch reconnect',()=>{
+ function reconnectFixture(){
+  vi.useFakeTimers()
+  const server=new Y.Doc(),source=server.getText('source')
+  source.insert(0,'abcdef')
+  const sockets:Socket[]=[],urls:string[]=[]
+  const session=new DurablePaperCollaboration({
+   url:'ws://localhost/fixture?presence=1',expectedRole:'editor',presence:true,reconnect:true,
+   createSocket:url=>{urls.push(url);const socket=new Socket();sockets.push(socket);return socket},onChange:vi.fn(),
+  })
+  const frame=(sequence:number,request_id?:string):CollaborationStateFrame=>({
+   type:'state',protocol:'papers-crdt-v1',epoch,sequence,file_revision:sequence,project_revision:sequence,
+   role:'editor',state:encode(Y.encodeStateAsUpdate(server)),vector:encode(Y.encodeStateVector(server)),...(request_id?{request_id}:{})
+  })
+  session.start()
+  sockets[0]!.push(frame(1))
+  return {server,source,sockets,urls,session,frame,cleanup:()=>{session.destroy();server.destroy()}}
+ }
+ it('replays a lost acknowledged deletion exactly once in the original epoch and preserves queued edits',()=>{
+  const f=reconnectFixture()
+  try{
+   const a=f.sockets[0]!
+   f.session.view.text!.delete(0,1)
+   vi.advanceTimersByTime(200)
+   const original=a.sent[0]!,m=JSON.parse(original)
+   f.session.view.text!.insert(0,'queued ')
+   Y.applyUpdate(f.server,decode(m.update)) // server committed; ack lost
+   const late=a.onmessage
+   a.disconnect(1006)
+   expect(f.session.view.status).toBe('reconnecting')
+   expect(f.session.view.pending).toBe(true)
+   expect(f.session.view.source).toBe('queued bcdef')
+   expect(f.session.view.peers).toEqual([])
+   vi.advanceTimersByTime(750)
+   const b=f.sockets[1]!
+   expect(new URL(f.urls[1]!).searchParams.get('epoch')).toBe(epoch)
+   expect(new URL(f.urls[1]!).searchParams.get('presence')).toBe('1')
+   expect(b.sent).toHaveLength(0)
+   // Old-connection callbacks must not process stale responses.
+   late?.({data:JSON.stringify(f.frame(2,m.request_id))} as MessageEvent)
+   expect(f.session.view.status).toBe('reconnecting')
+   expect(f.session.view.pending).toBe(true)
+   const committed=encode(Y.encodeStateAsUpdate(f.server))
+   b.push(f.frame(2))
+   vi.advanceTimersByTime(200)
+   expect(b.sent[0]).toBe(original)
+   Y.applyUpdate(f.server,decode(JSON.parse(b.sent[0]!).update))
+   expect(encode(Y.encodeStateAsUpdate(f.server))).toBe(committed)
+   b.push(f.frame(2,m.request_id))
+   expect(f.session.view.pending).toBe(true)
+   vi.advanceTimersByTime(200)
+   const queued=JSON.parse(b.sent[1]!)
+   Y.applyUpdate(f.server,decode(queued.update))
+   b.push(f.frame(3,queued.request_id))
+   expect(f.source.toString()).toBe('queued bcdef')
+   expect(f.session.view.source).toBe(f.source.toString())
+   expect(f.session.view.pending).toBe(false)
+   expect(f.session.view.status).toBe('ready')
+  }finally{f.cleanup()}
+ })
+ it('merges a newer authoritative state before resending a not-yet-accepted update',()=>{
+  const f=reconnectFixture()
+  try{
+   const a=f.sockets[0]!
+   f.session.view.text!.insert(0,'local ')
+   vi.advanceTimersByTime(200)
+   const first=a.sent[0]!,m=JSON.parse(first)
+   a.disconnect()
+   f.source.insert(f.source.length,' remote')
+   vi.advanceTimersByTime(750)
+   const b=f.sockets[1]!
+   b.push(f.frame(2))
+   expect(f.session.view.source).toBe('local abcdef remote')
+   vi.advanceTimersByTime(200)
+   expect(b.sent[0]).toBe(first)
+   Y.applyUpdate(f.server,decode(m.update))
+   b.push(f.frame(3,m.request_id))
+   expect(f.session.view.source).toBe(f.source.toString())
+   expect(f.session.view.pending).toBe(false)
+  }finally{f.cleanup()}
+ })
+ it('stops on stale epoch, role mismatch, revision regression, or policy close without sending any pending delta',()=>{
+  for(const change of [
+   (f:CollaborationStateFrame)=>({...f,epoch:another}),
+   (f:CollaborationStateFrame)=>({...f,role:'viewer'}),
+   (f:CollaborationStateFrame)=>({...f,sequence:1,file_revision:1,project_revision:1}),
+  ]){
+   const f=reconnectFixture()
+   try{
+    f.sockets[0]!.push(f.frame(2))
+    f.session.view.text!.insert(0,'pending ')
+    vi.advanceTimersByTime(200)
+    f.sockets[0]!.disconnect()
+    vi.advanceTimersByTime(750)
+    const b=f.sockets[1]!
+    b.push(change(f.frame(3)))
+    vi.advanceTimersByTime(50000)
+    expect(f.session.view.status).toBe('stopped')
+    expect(f.session.view.source).toBe('pending abcdef')
+    expect(f.session.view.pending).toBe(true)
+    expect(b.sent).toHaveLength(0)
+    expect(f.sockets).toHaveLength(2)
+   }finally{f.cleanup()}
+  }
+  const f=reconnectFixture()
+  try{
+   f.session.view.text!.insert(0,'pending ')
+   vi.advanceTimersByTime(200)
+   f.sockets[0]!.onerror?.({} as Event)
+   f.sockets[0]!.disconnect(1008)
+   vi.advanceTimersByTime(50000)
+   expect(f.session.view.status).toBe('stopped')
+   expect(f.session.view.pending).toBe(true)
+   expect(f.sockets).toHaveLength(1)
+  }finally{f.cleanup()}
+ })
+ it('bounds reconnect attempts and clears timers on destruction',()=>{
+  const f=reconnectFixture()
+  try{
+   f.session.view.text!.insert(0,'pending ')
+   vi.advanceTimersByTime(200)
+   for(let attempt=0;attempt<5;attempt++){
+    f.sockets.at(-1)!.disconnect()
+    expect(f.session.view.status).toBe('reconnecting')
+    vi.advanceTimersByTime(Math.min(750*2**attempt,6000))
+   }
+   f.sockets.at(-1)!.disconnect()
+   vi.advanceTimersByTime(60000)
+   expect(f.sockets).toHaveLength(6)
+   expect(f.session.view.status).toBe('stopped')
+   expect(f.session.view.pending).toBe(true)
+  }finally{f.cleanup()}
+  const g=reconnectFixture()
+  try{
+   g.sockets[0]!.disconnect()
+   g.session.destroy()
+   vi.advanceTimersByTime(60000)
+   expect(g.sockets).toHaveLength(1)
+  }finally{g.cleanup()}
+ })
+ it('resets connection-scoped presence after reconnect, including a restarted gateway sequence',()=>{
+  const f=reconnectFixture()
+  try{
+   const peer={connection_id:another,user_id:another,name:'self',role:'editor'}
+   f.sockets[0]!.push({type:'presence',protocol:'papers-crdt-v1',epoch,connection_id:another,presence_version:90,peers:[peer]})
+   expect(f.session.view.connectionId).toBe(another)
+   f.sockets[0]!.disconnect()
+   expect(f.session.view.connectionId).toBe('')
+   vi.advanceTimersByTime(750)
+   f.sockets[1]!.push(f.frame(1))
+   const id='550e8400-e29b-41d4-a716-446655440003'
+   f.sockets[1]!.push({type:'presence',protocol:'papers-crdt-v1',epoch,connection_id:id,presence_version:1,peers:[{...peer,connection_id:id}]})
+   expect(f.session.view.connectionId).toBe(id)
+   expect(f.session.view.status).toBe('ready')
+  }finally{f.cleanup()}
  })
 })

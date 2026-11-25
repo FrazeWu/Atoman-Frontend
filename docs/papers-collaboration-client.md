@@ -74,3 +74,27 @@ Automatic reconnect, offline durable drafts, collaborative undo and
 compile/snapshot coordination remain disabled. Tests use an isolated
 browser protocol fixture; a production multi-process load/rollout is
 still a separate gate.
+
+## Stage 8.4A: bounded same-epoch reconnect
+
+The workspace enables reconnect only once a server-issued epoch has been
+validated. Unexpected transport close, failed send, or acknowledgement
+timeout freezes editing, clears ephemeral peer state, and schedules a
+new authenticated socket naming exactly the original epoch. There are
+at most five reconnect attempts per opened panel, with 750 ms exponential
+backoff capped at 6 seconds and an 18-second per-attempt deadline.
+Explicit policy/permission closure does not retry. Initial handshake
+failure never opens an unidentified replacement room.
+
+The new socket must provide a valid, monotonic checkpoint for the same
+epoch and role before any pending delta is sent. The local Y.Doc is not
+reseeded. An in-flight update retains its exact bytes and request UUID,
+including delete-only updates and updates already committed before an
+acknowledgement was lost. Later queued updates remain pending until their
+own durable acknowledgement. Old socket callbacks are ignored. Peer
+identity and presence version are reset for each new connection. An epoch,
+role or revision mismatch freezes the document for manual copy/recovery.
+
+Offline typing, persistent browser recovery, differential checkpoint
+downloads, and collaborative undo remain separate release gates. This
+stage deliberately keeps the editor read-only while disconnected.

@@ -15,7 +15,7 @@
     <span class="papers-collab__dot" :style="{backgroundColor:peerColor(peer.connection_id)}" />{{ peer.name }}{{peer.connection_id===view.connectionId?'（我）':''}}
    </span>
   </div>
-  <p v-if="view?.text" class="papers-collab__hint">仅同步当前文件。协作期间暂停普通保存、编译和项目结构修改；协作撤销与断线恢复尚未开放。</p>
+  <p v-if="view?.text" class="papers-collab__hint">仅同步当前文件。协作期间暂停普通保存、编译和项目结构修改；断线时暂停编辑并尝试恢复原协作会话；关闭浏览器后的草稿恢复及协作撤销尚未开放。</p>
   <LatexEditor v-if="view?.text" :key="view.epoch" :model-value="view.source" :collaborative-text="view.text" :citations="citations" :readonly="!editable" :remote-peers="remotePeers" @presence-selection="selectionChanged" />
   <p v-else class="papers-collab__empty">{{ message?'请退出协作，继续普通编辑。':'正在验证项目权限并读取服务端文档…' }}</p>
   <textarea v-if="copyFallback" readonly :value="view?.source||''" aria-label="可手动复制的协作源码" />
@@ -46,6 +46,7 @@ const statusLabel=computed(()=>{
  const state=view.value
  if(message.value&&!state)return '不可用'
  if(!state||state.status==='connecting')return '连接中'
+ if(state.status==='reconnecting')return '正在重连 · 暂停编辑'
  if(state.status==='stopped')return state.pending?'已断开 · 未确认修改':'已断开'
  if(state.role==='viewer')return '在线 · 只读'
  return state.pending?'正在同步…':'服务器已保存 · 版本 '+state.fileRevision
@@ -71,8 +72,11 @@ onMounted(async()=>{
   }
   const path='papers/projects/'+encodeURIComponent(props.projectId)+'/files/'+encodeURIComponent(props.file.id)+'/collaboration/ws'
   session=new DurablePaperCollaboration({
-   url:useApiWebSocketUrl(path)+(capability.presence===true?'?presence=1':''),expectedRole:props.role,presence:capability.presence===true,
-   createSocket:url=>auth.token?new WebSocket(url,[`atoman.api.${auth.token}`]):new WebSocket(url),
+   url:useApiWebSocketUrl(path)+(capability.presence===true?'?presence=1':''),expectedRole:props.role,presence:capability.presence===true,reconnect:true,
+   createSocket:url=>{
+    if(!scope())throw Error('collaboration account changed')
+    return auth.token?new WebSocket(url,[`atoman.api.${auth.token}`]):new WebSocket(url)
+   },
    onChange:next=>{if(scope())view.value=next},
   })
   session.start()

@@ -2,6 +2,7 @@
  <div class="paper-recovery">
   <p>命名快照包含整个项目的文件、图片、参考文献和主文件设置。每个项目最多保留 30 个；恢复会创建新的版本，并自动保存回滚前的状态。</p>
   <form class="paper-recovery__create" @submit.prevent="submit">
+   <PSelect v-model="stage" label="投稿阶段（可选）" size="sm" :options="stages" :disabled="disabled||busy" @update:model-value="setStage" />
    <label>快照名称<PInput v-model.trim="name" maxlength="100" placeholder="例如：投稿前版本" aria-label="快照名称" :disabled="disabled||busy" /></label>
    <PButton type="submit" size="sm" :disabled="disabled||busy||!name||rows.length>=30">创建快照</PButton>
   </form>
@@ -22,16 +23,22 @@
    <ul><li v-for="file in detail.files" :key="file.file_id">{{ file.path }} · v{{ file.revision }}{{ file.file_id===detail.main_file_id?'（主文件）':'' }}</li></ul>
    <PButton size="sm" type="button" :disabled="disabled||busy||rows.length>=30||restoreDisabled" @click="$emit('restore',detail)">恢复整个项目</PButton>
   </div>
+  <PaperSnapshotCompare v-if="projectId&&accountId&&rows.length>=2" :project-id="projectId" :account-id="accountId" :rows="rows" :disabled="disabled||busy" />
  </div>
 </template>
 <script setup lang="ts">
 import PInput from '@/components/ui/PInput.vue'
 import {ref} from 'vue'
 import PButton from '@/components/ui/PButton.vue'
+import PSelect from '@/components/ui/PSelect.vue'
+import PaperSnapshotCompare from './PaperSnapshotCompare.vue'
 import type {PaperProjectSnapshot,PaperSnapshotDetail} from '@/api/papers'
-defineProps<{rows:PaperProjectSnapshot[];detail:PaperSnapshotDetail|null;busy:boolean;disabled:boolean;message:string;restoreDisabled?:boolean}>()
+defineProps<{projectId?:string;accountId?:string;rows:PaperProjectSnapshot[];detail:PaperSnapshotDetail|null;busy:boolean;disabled:boolean;message:string;restoreDisabled?:boolean}>()
 const emit=defineEmits<{create:[name:string];preview:[id:string];remove:[snapshot:PaperProjectSnapshot];restore:[snapshot:PaperSnapshotDetail]}>()
 const name=ref('')
+const stage=ref('')
+const stages=[{value:'',label:'自定义名称'},{value:'初稿',label:'初稿'},{value:'匿名投稿',label:'匿名投稿'},{value:'Rebuttal',label:'Rebuttal'},{value:'Camera-ready',label:'Camera-ready'},{value:'最终归档',label:'最终归档'}]
+function setStage(value:string|number){stage.value=String(value);if(stage.value)name.value=stage.value+' · '+new Date().toISOString().slice(0,10)}
 function submit(){if(name.value)emit('create',name.value)}
 function formatDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString()}
 </script>

@@ -2,21 +2,37 @@
   <main class="papers-workspace" :class="{ 'papers-workspace--compact': compactLayout }">
     <header class="papers-workspace__header">
       <RouterLink to="/papers" title="返回我的论文">‹ 我的论文</RouterLink>
-      <strong>{{ project?.name || '论文工作台' }}</strong>
+      <div class="papers-workspace__project-title"><strong :title="project?.name">{{ project?.name || '论文工作台' }}</strong><span v-if="project" class="papers-workspace__project-meta">v{{project.head_revision}} · {{roleLabel}}</span></div>
       <div class="papers-workspace__layout-tools">
         <PButton size="sm" variant="secondary" type="button" title="显示或隐藏文件栏" :aria-pressed="showFiles" @click="showFiles = !showFiles">文件栏</PButton>
-        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'split'" @click="setWorkspaceLayout('split')">分栏</PButton>
-        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'editor'" @click="setWorkspaceLayout('editor')">源码</PButton>
-        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'pdf'" @click="setWorkspaceLayout('pdf')">预览</PButton>
+        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'split'&&!auxiliaryOpen" v-if="!compactLayout" @click="setWorkspaceLayout('split')">分栏</PButton>
+        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'editor'&&!auxiliaryOpen" @click="setWorkspaceLayout('editor')">源码</PButton>
+        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'pdf'&&!auxiliaryOpen" @click="setWorkspaceLayout('pdf')">预览</PButton>
+        <PButton v-if="ownerAccess&&!aiPanelOpen&&(auxiliaryOpen||layoutMode==='editor')" type="button" size="sm" :disabled="!compileEnabled||compiling||saving||switchingFile||navigating||uploadBusy||snapshotMutating||memberMutating||hasActiveCompile||!project||(collaborationOpen&&collaborationRevision===null)" @click="compileAndShowPDF">{{hasActiveCompile?'编译中':'编译'}}</PButton>
       </div>
-      <span v-if="project" class="papers-workspace__status">{{ roleLabel }}</span>
-      <span class="papers-workspace__status" role="status">{{ saveStatus }}</span>
-      <PButton v-if="ownerAccess" type="button" size="sm" :disabled="collaborationOpen||memberMutating||snapshotMutating" @click="toggleTool('members')">分享</PButton>
-      <PButton v-if="ownerAccess" type="button" size="sm" variant="secondary" :disabled="collaborationOpen || exporting || saving" @click="exportProject">{{ exporting ? '正在导出…' : '导出 ZIP' }}</PButton>
+
+      <span class="papers-workspace__status papers-workspace__save-state" role="status" :title="saveStatus"><span class="papers-workspace__save-dot" :class="{saved:saveStatus==='已保存'}" aria-hidden="true"></span>{{ saveStatus }}</span>
+      <div class="papers-workspace__header-actions"><PButton v-if="ownerAccess" type="button" size="sm" :disabled="collaborationOpen||memberMutating||snapshotMutating" @click="toggleTool('members')">分享</PButton>
+      <PButton v-if="ownerAccess" type="button" size="sm" variant="secondary" :disabled="collaborationOpen || exporting || saving" @click="exportProject">{{ exporting ? '正在导出…' : '导出 ZIP' }}</PButton></div>
     </header>
+        <nav v-if="project&&!loading&&!error&&!collaborationOpen" class="papers-workspace__toolnav" aria-label="项目工具"><div class="papers-workspace__toolgroup" aria-label="写作工具">
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='ai'" @click="toggleTool('ai')"><Sparkles :size="14" aria-hidden="true" /> AI 助手</PButton>
+          <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='search'" @click="toggleTool('search')"><Search :size="14" aria-hidden="true" /> 全项目搜索</PButton>
+          <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='references'" @click="toggleTool('references')"><BookOpen :size="14" aria-hidden="true" /> 参考文献</PButton>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='figures'" @click="toggleTool('figures')"><ImageIcon :size="14" aria-hidden="true" /> 插图</PButton>
+        </div><PButton v-if="compactLayout" size="sm" variant="ghost" type="button" class="papers-workspace__more-tools" :aria-expanded="moreToolsOpen" @click="moreToolsOpen=!moreToolsOpen">更多 <ChevronDown :size="14" aria-hidden="true" /></PButton><div v-show="!compactLayout||moreToolsOpen" class="papers-workspace__toolgroup papers-workspace__secondary-tools" aria-label="版本与投稿">
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='history'" @click="toggleTool('history')"><History :size="14" aria-hidden="true" /> 版本历史</PButton>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='snapshots'" @click="toggleTool('snapshots')"><Layers :size="14" aria-hidden="true" /> 项目快照</PButton>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='git'" @click="toggleTool('git')"><GitBranch :size="14" aria-hidden="true" /> GitHub</PButton>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='submission'" @click="toggleTool('submission')"><ClipboardCheck :size="14" aria-hidden="true" /> 投稿检查</PButton>
+          <PButton size="sm" variant="secondary" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='drafts'" @click="toggleTool('drafts')"><FileClock :size="14" aria-hidden="true" /> 草稿恢复{{ draftRows.length?' ('+draftRows.length+')':'' }}</PButton>
+        </div><div v-show="!compactLayout||moreToolsOpen" class="papers-workspace__toolgroup papers-workspace__secondary-tools" aria-label="项目管理">
+          <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='members'" :disabled="memberMutating||snapshotMutating" @click="toggleTool('members')"><Users :size="14" aria-hidden="true" /> 项目成员</PButton>
+          <PButton size="sm" variant="secondary" type="button" :disabled="switchingFile||navigating||saving||uploadBusy||snapshotMutating||memberMutating||compiling||hasActiveCompile" @click="refreshServerProject"><RefreshCw :size="14" aria-hidden="true" /> 刷新项目</PButton>
+        </div></nav>
     <p v-if="loading" class="papers-workspace__message">正在打开项目...</p>
     <p v-else-if="error" role="alert" class="papers-workspace__error">{{ error }}</p>
-    <div v-else ref="workspaceRoot" class="papers-workspace__content" :class="{ 'files-hidden': !showFiles, 'editor-only': layoutMode === 'editor', 'pdf-only': layoutMode === 'pdf', 'ai-expanded': aiPanelOpen&&aiExpanded }" :style="{ '--preview-grow': previewWidth, '--editor-grow': 100-previewWidth, '--files-width': filesWidth+'px' }">
+    <div v-else ref="workspaceRoot" class="papers-workspace__content" :class="{ 'files-hidden': !showFiles, 'editor-only': layoutMode === 'editor', 'pdf-only': layoutMode === 'pdf', 'ai-expanded': aiPanelOpen&&aiExpanded, 'tool-open': auxiliaryOpen }" :style="{ '--preview-grow': previewWidth, '--editor-grow': 100-previewWidth, '--files-width': filesWidth+'px' }">
       <button v-if="compactLayout && showFiles" type="button" class="papers-workspace__files-backdrop" aria-label="关闭文件栏" @click="showFiles=false" />
       <aside class="papers-workspace__files" :class="{'papers-workspace__files--dropping':draggingFiles}" aria-label="论文文件" @dragenter="onFigureDragOver" @dragover="onFigureDragOver" @dragleave="onFigureDragLeave" @drop="onFigureDrop">
         <div class="papers-workspace__files-heading"><h2>项目文件 <small>{{ files.length }}</small></h2><PButton size="sm" variant="secondary" type="button" class="papers-workspace__close-files" aria-label="关闭文件面板" @click="showFiles=false"><PanelLeftClose :size="15" aria-hidden="true" /></PButton></div>
@@ -33,7 +49,7 @@
         <div v-for="entry in visibleTreeRows" :key="entry.key" class="papers-workspace__file-row" :style="{paddingLeft:Math.min(entry.depth,8)*10+'px'}">
           <PButton size="sm" variant="ghost" v-if="entry.kind==='folder'" type="button" class="papers-workspace__folder" :aria-expanded="!!fileFilter||!closedFolders.has(entry.path)" :disabled="!!fileFilter" @click="toggleFolder(entry.path)"><ChevronRight v-if="!fileFilter&&closedFolders.has(entry.path)" :size="12" aria-hidden="true" /><ChevronDown v-else :size="12" aria-hidden="true" /><Folder v-if="!fileFilter&&closedFolders.has(entry.path)" :size="14" aria-hidden="true" /><FolderOpen v-else :size="14" aria-hidden="true" /><span class="papers-workspace__filename">{{ entry.name }}</span></PButton>
           <template v-else>
-            <PButton size="sm" variant="ghost" type="button" :title="entry.path" :class="{active:activeFile?.id===entry.file.id}" :disabled="collaborationOpen||uploadBusy||navigating" @click="selectFile(entry.file)"><ImageIcon v-if="entry.file.kind==='binary'" :size="14" aria-hidden="true" /><FileCode2 v-else-if="/\.(tex|bib|cls|sty|bst)$/i.test(entry.path)" :size="14" aria-hidden="true" /><FileText v-else :size="14" aria-hidden="true" /><span class="papers-workspace__filename">{{ entry.name }}</span><span v-if="entry.file.id===project?.main_file_id" class="papers-workspace__asset-label">主文件</span><span v-else-if="entry.file.kind==='binary'" class="papers-workspace__asset-label">资源</span></PButton>
+            <PButton size="sm" variant="ghost" type="button" :title="entry.path" :class="{active:activeFile?.id===entry.file.id}" :disabled="collaborationOpen||uploadBusy||navigating" @click="selectTreeFile(entry.file)"><ImageIcon v-if="entry.file.kind==='binary'" :size="14" aria-hidden="true" /><FileCode2 v-else-if="/\.(tex|bib|cls|sty|bst)$/i.test(entry.path)" :size="14" aria-hidden="true" /><FileText v-else :size="14" aria-hidden="true" /><span class="papers-workspace__filename">{{ entry.name }}</span><span v-if="entry.file.id===project?.main_file_id" class="papers-workspace__asset-label">主文件</span><span v-else-if="entry.file.kind==='binary'" class="papers-workspace__asset-label">资源</span></PButton>
             <PButton size="sm" variant="ghost" v-if="ownerAccess&&!collaborationOpen" type="button" class="papers-workspace__file-menu" :aria-label="'管理 '+entry.path" :disabled="uploadBusy||navigating||switchingFile" @click="openFileMenu(entry.file)">⋯</PButton>
           </template>
         </div>
@@ -62,7 +78,7 @@
         </form>
         <p v-if="fileError" class="papers-workspace__error" role="alert">{{ fileError }}</p>
       </aside>
-      <div v-if="showFiles&&!compactLayout" class="papers-workspace__files-divider" role="separator" aria-label="调整文件栏宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="filesWidth" @pointerdown="beginFilesResize" @pointermove="moveFilesResize" @pointerup="endFilesResize" @pointercancel="endFilesResize" @keydown.left.prevent="filesWidth=Math.max(180,filesWidth-16)" @keydown.right.prevent="filesWidth=Math.min(420,filesWidth+16)" />
+      <div v-if="showFiles&&!compactLayout" class="papers-workspace__files-divider" role="separator" aria-label="调整文件栏宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="filesWidth" title="拖动调整宽度，双击恢复默认" @dblclick="resetPanelWidths" @pointerdown="beginFilesResize" @pointermove="moveFilesResize" @pointerup="endFilesResize" @pointercancel="endFilesResize" @keydown.left.prevent="resizeFiles(filesWidth-16)" @keydown.right.prevent="resizeFiles(filesWidth+16)" />
       <section class="papers-workspace__editor" aria-label="源码编辑">
         <div class="papers-workspace__editor-header">
           <span :title="activeFile?.path">{{ activeFile?.path || '请选择文件' }}</span>
@@ -74,25 +90,38 @@
           <PButton v-if="!collaborationOpen&&activeFile?.kind==='text'&&accountId" type="button" size="sm" variant="secondary" :disabled="!canStartCollaboration" :title="collaborationGateMessage || undefined" @click="startCollaboration">实时协作</PButton>
         </div>
         <p v-if="!collaborationOpen&&collaborationScope&&collaborationGateMessage" class="papers-workspace__stale" role="status">{{ collaborationGateMessage }} <PButton size="sm" variant="ghost" v-if="collaborationGate.scope===collaborationScope&&collaborationGate.state==='unavailable'" type="button" class="papers-workspace__sync" :disabled="navigating||switchingFile" @click="checkCollaborationCapability">重新检查</PButton></p>
-        <nav v-if="!collaborationOpen" class="papers-workspace__toolnav" aria-label="项目工具">
-          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='ai'" @click="toggleTool('ai')">AI 助手</PButton>
-          <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='search'" @click="toggleTool('search')">全项目搜索</PButton>
-          <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='references'" @click="toggleTool('references')">参考文献</PButton>
-          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='figures'" @click="toggleTool('figures')">插图</PButton>
-          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='history'" @click="toggleTool('history')">版本历史</PButton>
-          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='snapshots'" @click="toggleTool('snapshots')">项目快照</PButton>
-          <PButton size="sm" variant="secondary" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='drafts'" @click="toggleTool('drafts')">草稿恢复{{ draftRows.length?' ('+draftRows.length+')':'' }}</PButton>
-          <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='members'" :disabled="memberMutating||snapshotMutating" @click="toggleTool('members')">项目成员</PButton>
-          <PButton size="sm" variant="secondary" type="button" :disabled="switchingFile||navigating||saving||uploadBusy||snapshotMutating||memberMutating||compiling||hasActiveCompile" @click="refreshServerProject">刷新项目</PButton>
-        </nav>
+
         <p v-if="!ownerAccess&&!collaborationOpen" class="papers-workspace__stale" role="status">{{ writeAccess?(collaborationGate.state==='available'?'共享编辑：普通保存会检查文件版本；可使用实时协作。':'共享编辑：保存时检查文件版本，暂不支持实时共同编辑。'):'共享阅读：当前账号无编辑权限。' }}</p>
         <p v-if="refreshMessage" class="papers-workspace__stale" role="status">{{ refreshMessage }}</p>
-        <section v-if="toolMode&&toolMode!=='ai'&&(!collaborationOpen||toolMode==='snapshots')" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'文件历史'">
-          <div class="papers-workspace__outline-heading">
-            <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'当前文件版本历史' }}</strong>
-            <PButton size="sm" variant="ghost" v-if="toolMode!=='figures'" type="button" class="papers-workspace__sync"  :disabled="toolBusy||snapshotMutating||memberMutating" @click="refreshTool">刷新</PButton>
+
+
+        <PaperCollaborationPanel v-if="collaborationOpen&&activeFile?.kind==='text'&&collaborationAccount===accountId" :key="projectId+':'+activeFile.id+':'+accountId" ref="collaborationRef" :project-id="projectId" :file="activeFile" :role="ownerAccess?'owner':writeAccess?'editor':'viewer'" :account-id="accountId" :citations="citationKeys" :operation-busy="snapshotMutating||compiling" @confirmed="onCollaborationConfirmed" @ai-state="onCollaborationAIState" @exit="exitCollaboration" @unavailable="onCollaborationUnavailable" />
+        <LatexEditor v-else-if="!collaborationOpen&&activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef"  :model-value="draft" @update:model-value="updateDraft" :citations="citationKeys" :readonly="!writeAccess || switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
+        <PaperAssetPreview v-else-if="activeFile?.kind === 'binary'" :key="activeFile.id+':'+activeFile.revision" :file="activeFile" />
+        <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
+        <p v-if="draftWarning" class="papers-workspace__error" role="alert">{{ draftWarning }} <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" @click="toggleTool('drafts')">草稿管理</PButton></p>
+        <p v-if="exportError" class="papers-workspace__error" role="alert">{{ exportError }}</p>
+        <p v-if="saveError" class="papers-workspace__error" role="alert">
+          {{ saveError }} 当前输入已保留。
+          <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" @click="copyDraft">复制当前源码</PButton>
+          <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" :disabled="saving" @click="saveNow">重试保存</PButton>
+        </p>
+      </section>
+      <div v-if="layoutMode === 'split'&&!compactLayout" class="papers-workspace__divider" role="separator" aria-label="调整编辑器和预览宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="Math.round(previewWidth)" title="拖动调整宽度，双击恢复默认" @dblclick="resetPanelWidths" @pointerdown="beginResize" @pointermove="resizeMove" @pointerup="endResize" @pointercancel="endResize" @keydown.left.prevent="resizePreview(previewWidth+3)" @keydown.right.prevent="resizePreview(previewWidth-3)" />
+      <aside v-if="aiPanelOpen&&aiFile" class="papers-workspace__preview papers-workspace__ai-panel" aria-label="AI 论文助手">
+        <div class="papers-workspace__preview-heading"><strong>AI 任务工作区</strong><span class="papers-workspace__ai-subtitle">Papers Agent</span><PButton size="sm" variant="secondary" type="button" v-if="!compactLayout" :aria-pressed="aiExpanded" @click="aiExpanded=!aiExpanded">{{aiExpanded?'恢复分栏':'展开工作区'}}</PButton><PButton size="sm" variant="secondary" type="button" @click="returnPDF">返回 PDF</PButton></div>
+        <div class="papers-workspace__ai-scroll">
+          <PaperAITools :key="projectId+':'+accountId+':'+aiFile.id+':'+(collaborationOpen?aiSharedState?.epoch:'ordinary')" :project-id="projectId" :account-id="accountId" :file="aiFile" :source="collaborationOpen?(aiSharedState?.source||''):draft" :files="files" :collaboration-epoch="collaborationOpen?aiSharedState?.epoch:undefined" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||compiling||hasActiveCompile||(collaborationOpen&&!aiSharedState?.ready)" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :project-revision="project?.head_revision" :apply-project="applyAIProject" :rollback-activity="rollbackAIActivity" :compile-enabled="compileEnabled" :compile-job="compileJob" :compiler="selectedCompiler" :compile-repair="compileForAI" @repair-active="setAIRepairActive" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
+        </div>
+      </aside>
+      <aside v-if="projectToolOpen||outlineOpen&&!collaborationOpen" class="papers-workspace__preview papers-workspace__tools-panel" aria-label="项目工具工作区">
+        <section v-if="projectToolOpen" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':toolMode==='submission'?'投稿检查':toolMode==='git'?'GitHub':'文件历史'">
+          <div class="papers-workspace__tool-heading">
+            <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':toolMode==='submission'?'投稿前检查':toolMode==='git'?'GitHub 分支发布':'当前文件版本历史' }}</strong>
+            <PButton size="sm" variant="ghost" v-if="['search','references','history','snapshots','drafts','members'].includes(toolMode)" type="button" class="papers-workspace__sync"  :disabled="toolBusy||snapshotMutating||memberMutating" @click="refreshTool">刷新</PButton>
             <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" :disabled="snapshotMutating||memberMutating" @click="closeTool">关闭</PButton>
           </div>
+          <div class="papers-workspace__tool-body">
           <p v-if="toolError" role="alert" class="papers-workspace__error">{{ toolError }}</p>
           <p v-if="toolBusy" role="status">正在读取…</p>
           <template v-if="toolMode==='search'">
@@ -104,20 +133,23 @@
             <PButton size="sm" variant="ghost" v-for="(hit,index) in searchResult.matches" :key="hit.fileId+':'+hit.line+':'+hit.column+':'+index" type="button" class="papers-workspace__toolrow" :disabled="searchStale" @click="jumpSearch(hit)"><strong>{{ hit.path }}:{{ hit.line }}:{{ hit.column }}</strong><code>{{ hit.preview }}</code></PButton>
           </template>
           <template v-else-if="toolMode==='references'">
+            <PaperReferenceImport v-if="ownerAccess" :key="projectId+':'+accountId" :project-id="projectId" :account-id="accountId" :files="files" :disabled="saving||navigating||switchingFile||uploadBusy||snapshotMutating||compiling||hasActiveCompile||(activeFile?.kind==='text'&&draft!==activeFile.content)" :append="appendReferences" />
             <label>查找引用键或标题<PInput v-model="referenceQuery" placeholder="例如 smith2026" maxlength="200" /></label>
             <p v-if="bibError" role="alert">{{ bibError }}</p>
             <p>{{ referenceRows.length }} 条参考文献<span v-if="filteredReferences.length>200">（显示前 200 条）</span>。</p>
             <p v-if="!referenceRows.length">在项目中新建或导入 .bib 文件后即可使用文献检索和引用补全。</p>
             <div v-for="(entry,index) in filteredReferences.slice(0,200)" :key="entry.fileId+':'+entry.key+':'+index" class="papers-workspace__refrow">
               <PButton size="sm" variant="ghost" type="button" class="papers-workspace__toolrow" @click="jumpReference(entry)"><strong>{{ entry.key }}</strong><span>{{ entry.title || entry.path }}</span></PButton>
-              <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" :disabled="!writeAccess||activeFile?.kind!=='text'||!/\.tex$/i.test(activeFile?.path||'')||switchingFile||addingFile||navigating" @click="editorRef?.insertCitation(entry.key)">插入引用</PButton>
+              <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" :disabled="!writeAccess||activeFile?.kind!=='text'||!/\.tex$/i.test(activeFile?.path||'')||switchingFile||addingFile||navigating" @click="insertReference(entry.key)">插入引用</PButton>
             </div>
           </template>
           <template v-else-if="toolMode==='figures'">
           <p v-if="fileError" role="alert" class="papers-workspace__error">{{ fileError }}</p>
           <PaperFigureTools :key="projectId" :project-id="projectId" :files="files" :disabled="uploadBusy||switchingFile||navigating" :can-insert="activeFile?.kind==='text'&&/\.tex$/i.test(activeFile.path)" @upload="uploadFigureFiles" @insert="insertFigure" />
           </template>
-          <PaperSnapshotTools v-else-if="toolMode==='snapshots'" :key="projectId" :rows="snapshots" :detail="snapshotDetail" :busy="toolBusy||snapshotMutating" :disabled="uploadBusy||switchingFile||navigating||saving||hasActiveCompile||compiling||(collaborationOpen&&collaborationRevision===null)" :restore-disabled="collaborationOpen" :message="snapshotMessage" @create="createSnapshot" @preview="previewSnapshot" @remove="deleteSnapshot" @restore="restoreSnapshot" />
+          <PaperGitHubTools v-else-if="toolMode==='git'&&ownerAccess" :key="projectId+':'+accountId" mode="export" :project-id="projectId" :account-id="accountId" :revision="project?.head_revision||0" :files="files" :disabled="saving||navigating||switchingFile||uploadBusy||snapshotMutating||compiling||hasActiveCompile||(activeFile?.kind==='text'&&draft!==activeFile.content)" />
+          <PaperSubmissionTools v-else-if="toolMode==='submission'&&ownerAccess" :key="projectId+':'+accountId" :project-id="projectId" :account-id="accountId" :revision="project?.head_revision||0" :files="files" :disabled="saving||navigating||switchingFile||uploadBusy||snapshotMutating||compiling||hasActiveCompile||(activeFile?.kind==='text'&&draft!==activeFile.content)" :compile-job="compileJob" :pdf="previewStale?null:submissionPDF" />
+          <PaperSnapshotTools v-else-if="toolMode==='snapshots'" :key="projectId" :project-id="projectId" :account-id="accountId" :rows="snapshots" :detail="snapshotDetail" :busy="toolBusy||snapshotMutating" :disabled="uploadBusy||switchingFile||navigating||saving||hasActiveCompile||compiling||(collaborationOpen&&collaborationRevision===null)" :restore-disabled="collaborationOpen" :message="snapshotMessage" @create="createSnapshot" @preview="previewSnapshot" @remove="deleteSnapshot" @restore="restoreSnapshot" />
           <PaperDraftTools v-else-if="toolMode==='drafts'" :key="projectId+':'+accountId" :available="draftAvailable" :enabled="draftEnabled" :rows="draftRows" :files="files" :disabled="uploadBusy||switchingFile||navigating||saving" :can-recover="canRecoverDraft" :message="draftMessage" @toggle="toggleDraftProtection" @recover="recoverDraft" @remove="discardDraft" />
           <template v-else-if="toolMode==='members'">
             <PaperShareLinks v-if="ownerAccess" :key="'share:'+projectId+':'+accountId" :project-id="projectId" :account-id="accountId" :disabled="navigating||memberMutating||snapshotMutating" />
@@ -136,33 +168,18 @@
               <PButton size="sm" variant="secondary" :disabled="toolBusy||addingFile||switchingFile||preparingUpload||!versionDifference" @click="restoreVersion">恢复源码为此版本</PButton>
             </div>
           </template>
+          </div>
         </section>
-        <section v-if="outlineOpen&&!collaborationOpen" class="papers-workspace__outline" aria-label="论文结构大纲">
-          <div class="papers-workspace__outline-heading"><strong>项目大纲</strong><PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" :disabled="outlineLoading" @click="loadOutline">刷新</PButton></div>
+        <section v-if="outlineOpen&&!collaborationOpen" class="papers-workspace__outline papers-workspace__toolpanel" aria-label="论文结构大纲">
+          <div class="papers-workspace__tool-heading"><strong>项目大纲</strong><PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" :disabled="outlineLoading" @click="loadOutline">刷新</PButton><PButton size="sm" variant="ghost" type="button" @click="toggleOutline">关闭</PButton></div>
+          <div class="papers-workspace__tool-body">
           <p v-if="outlineLoading">正在读取各 TeX 文件…</p>
           <p v-else-if="!outlineRows.length">未找到章节标题。</p>
           <PButton size="sm" variant="ghost" v-for="item in outlineRows" :key="item.fileId+':'+item.line+':'+item.title" type="button" :style="{paddingLeft:Math.max(0,item.level-1)*12+'px'}" :title="item.path+':'+item.line" @click="jumpOutline(item)">{{ item.title }} <small>{{ item.path }}:{{ item.line }}</small></PButton>
+          </div>
         </section>
-        <PaperCollaborationPanel v-if="collaborationOpen&&activeFile?.kind==='text'&&collaborationAccount===accountId" :key="projectId+':'+activeFile.id+':'+accountId" ref="collaborationRef" :project-id="projectId" :file="activeFile" :role="ownerAccess?'owner':writeAccess?'editor':'viewer'" :account-id="accountId" :citations="citationKeys" :operation-busy="snapshotMutating||compiling" @confirmed="onCollaborationConfirmed" @ai-state="onCollaborationAIState" @exit="exitCollaboration" @unavailable="onCollaborationUnavailable" />
-        <LatexEditor v-else-if="!collaborationOpen&&activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef"  :model-value="draft" @update:model-value="updateDraft" :citations="citationKeys" :readonly="!writeAccess || switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
-        <PaperAssetPreview v-else-if="activeFile?.kind === 'binary'" :key="activeFile.id+':'+activeFile.revision" :file="activeFile" />
-        <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
-        <p v-if="draftWarning" class="papers-workspace__error" role="alert">{{ draftWarning }} <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" @click="toggleTool('drafts')">草稿管理</PButton></p>
-        <p v-if="exportError" class="papers-workspace__error" role="alert">{{ exportError }}</p>
-        <p v-if="saveError" class="papers-workspace__error" role="alert">
-          {{ saveError }} 当前输入已保留。
-          <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" @click="copyDraft">复制当前源码</PButton>
-          <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" :disabled="saving" @click="saveNow">重试保存</PButton>
-        </p>
-      </section>
-      <div v-if="layoutMode === 'split'" class="papers-workspace__divider" role="separator" aria-label="调整编辑器和预览宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="previewWidth" @pointerdown="beginResize" @pointermove="resizeMove" @pointerup="endResize" @pointercancel="endResize" @keydown.left.prevent="previewWidth=Math.min(75,previewWidth+3)" @keydown.right.prevent="previewWidth=Math.max(25,previewWidth-3)" />
-      <aside v-if="aiPanelOpen&&aiFile" class="papers-workspace__preview papers-workspace__ai-panel" aria-label="AI 论文助手">
-        <div class="papers-workspace__preview-heading"><strong>AI 任务工作区</strong><span class="papers-workspace__ai-subtitle">Papers Agent</span><PButton size="sm" variant="secondary" type="button" :aria-pressed="aiExpanded" @click="aiExpanded=!aiExpanded">{{aiExpanded?'恢复分栏':'展开工作区'}}</PButton><PButton size="sm" variant="secondary" type="button" @click="closeTool">返回 PDF</PButton></div>
-        <div class="papers-workspace__ai-scroll">
-          <PaperAITools :key="projectId+':'+accountId+':'+aiFile.id+':'+(collaborationOpen?aiSharedState?.epoch:'ordinary')" :project-id="projectId" :account-id="accountId" :file="aiFile" :source="collaborationOpen?(aiSharedState?.source||''):draft" :files="files" :collaboration-epoch="collaborationOpen?aiSharedState?.epoch:undefined" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||compiling||hasActiveCompile||(collaborationOpen&&!aiSharedState?.ready)" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :project-revision="project?.head_revision" :apply-project="applyAIProject" :rollback-activity="rollbackAIActivity" :compile-enabled="compileEnabled" :compile-job="compileJob" :compiler="selectedCompiler" :compile-repair="compileForAI" @repair-active="setAIRepairActive" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
-        </div>
       </aside>
-      <aside v-show="!aiPanelOpen" class="papers-workspace__preview" aria-label="编译预览">
+      <aside v-show="!aiPanelOpen&&!projectToolOpen&&(!outlineOpen||collaborationOpen)" class="papers-workspace__preview papers-workspace__pdf-panel" aria-label="编译预览">
         <div class="papers-workspace__preview-heading">
           <div class="papers-workspace__preview-left">
             <strong>PDF 预览</strong>
@@ -223,6 +240,7 @@
           :revision="previewJob.source_revision"
           @pdf-position="jumpFromPDF"
           @displayed-job="displayedPDFJob = $event"
+          @page-count="submissionPDF = $event"
         />
       </aside>
     </div>
@@ -238,7 +256,7 @@ import PCheckbox from '@/components/ui/PCheckbox.vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
-import { ChevronDown, ChevronRight, Folder, FolderOpen, FileCode2, FileText, Image as ImageIcon, Plus, Upload, PanelLeftClose } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, Folder, FolderOpen, FileCode2, FileText, Image as ImageIcon, Plus, Upload, PanelLeftClose, Sparkles, Search, BookOpen, History, Layers, GitBranch, ClipboardCheck, FileClock, Users, RefreshCw } from 'lucide-vue-next'
 import {useAuthStore} from '@/stores/auth'
 import PaperSnapshotTools from '@/components/papers/PaperSnapshotTools.vue'
 import PaperDraftTools from '@/components/papers/PaperDraftTools.vue'
@@ -262,6 +280,11 @@ import {paperFileTree,preparePaperUploads} from '@/components/papers/fileTools'
 import {searchProject,planProjectReplacement,bibtexReferences,changedLineRange,type ProjectMatch,type PaperReference} from '@/components/papers/projectTools'
 import {latexHeadings,recommendedTexCompiler,type LatexHeading} from '@/components/papers/latexLanguage'
 import PaperPDFPreview from '@/components/papers/PaperPDFPreview.vue'
+import PaperSubmissionTools from '@/components/papers/PaperSubmissionTools.vue'
+import PaperReferenceImport from '@/components/papers/PaperReferenceImport.vue'
+import PaperGitHubTools from '@/components/papers/PaperGitHubTools.vue'
+import {planBibtexAppend,existingBibtexKeys} from '@/components/papers/referenceImport'
+import {readProjectText,projectFileFence} from '@/components/papers/projectRead'
 import { decodeSourceMap, sourceToPDF, pdfToSource, type PaperSourceMap } from '@/components/papers/sourceMap'
 import {
   createPaperFile, managePaperFiles, getPaperFile, getPaperProject, listPaperFiles, savePaperFile, getPaperProjectZIP, downloadPaperZIP,
@@ -437,7 +460,7 @@ const draft = ref('')
 function updateDraft(value:string){if(writeAccess.value&&!collaborationOpen.value)draft.value=value}
 const refreshMessage=ref('')
 
-type ToolMode='search'|'references'|'history'|'figures'|'snapshots'|'drafts'|'members'|'ai'
+type ToolMode='search'|'references'|'history'|'figures'|'snapshots'|'drafts'|'members'|'ai'|'submission'|'git'
 const toolMode=ref<ToolMode|''>(''),toolBusy=ref(false),toolError=ref('')
 const aiFile=computed<PaperFile|null>(()=>{
  const file=activeFile.value
@@ -447,6 +470,8 @@ const aiFile=computed<PaperFile|null>(()=>{
  return state?{...file,revision:state.revision,content:state.source}:null
 })
 const aiPanelOpen=computed(()=>toolMode.value==='ai'&&ownerAccess.value&&!!aiFile.value)
+const projectToolOpen=computed(()=>!!toolMode.value&&toolMode.value!=='ai'&&(!collaborationOpen.value||toolMode.value==='snapshots'))
+const auxiliaryOpen=computed(()=>aiPanelOpen.value||projectToolOpen.value||outlineOpen.value&&!collaborationOpen.value)
 const aiExpanded=ref(false)
 watch(aiPanelOpen,open=>{if(!open)aiExpanded.value=false})
 const searchQuery=ref(''),replaceQuery=ref(''),referenceQuery=ref('')
@@ -560,8 +585,8 @@ function onDraftStorage(event:StorageEvent){
 
 let toolSerial=0,bibSerial=0
 function formatVersionDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString()}
-function closeTool(){if(aiApplying.value)return;toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null;snapshotDetail.value=null}
-function toggleTool(mode:ToolMode){if(aiApplying.value)return;if((collaborationOpen.value&&mode!=='snapshots'&&(mode!=='ai'||!aiSharedState.value?.ready))||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures','ai'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;if(mode==='ai')layoutMode.value='split';refreshTool()}
+function closeTool(){if(aiApplying.value)return;toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null;snapshotDetail.value=null;if(compactLayout.value&&!outlineOpen.value&&layoutMode.value==='split')layoutMode.value='editor'}
+function toggleTool(mode:ToolMode){if(aiApplying.value)return;if((collaborationOpen.value&&mode!=='snapshots'&&(mode!=='ai'||!aiSharedState.value?.ready))||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures','ai','submission','git'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;layoutMode.value='split';if(compactLayout.value){showFiles.value=false;moreToolsOpen.value=false}refreshTool()}
 function refreshTool(){if(toolMode.value==='search')void loadSearchSources();else if(toolMode.value==='references')void refreshBib();else if(toolMode.value==='history')void loadVersions();else if(toolMode.value==='snapshots')void loadSnapshots();else if(toolMode.value==='drafts')refreshLocalDrafts();else if(toolMode.value==='members'&&ownerAccess.value)void loadMembers()}
 function memberError(cause:unknown){
  const code=cause instanceof ApiErrorResponseError?cause.code:''
@@ -728,13 +753,47 @@ async function jumpSearch(hit:ProjectMatch){
  const file=files.value.find(f=>f.id===hit.fileId&&f.revision===hit.revision)
  if(!file)return
  await selectFile(file);await nextTick()
- if(activeFile.value?.id===hit.fileId&&activeFile.value.revision===hit.revision)editorRef.value?.goToMatch(hit.line,hit.column,searchQuery.value.length)
+ if(activeFile.value?.id===hit.fileId&&activeFile.value.revision===hit.revision){revealSource();await nextTick();editorRef.value?.goToMatch(hit.line,hit.column,searchQuery.value.length)}
+}
+async function appendReferences(targetId:string,raw:string):Promise<boolean>{
+ const pid=projectId.value,owner=accountId.value,base=project.value?.head_revision,prior=activeFile.value,manifest=projectFileFence(files.value)
+ if(!base||!prior)return false
+ const valid=()=>!disposed&&!!owner&&owner===accountId.value&&pid===projectId.value&&project.value?.id===pid&&project.value?.head_revision===base&&manifest===projectFileFence(files.value)&&ownerAccess.value&&toolMode.value==='references'&&!collaborationOpen.value&&!navigating.value&&!saving.value&&!savePromise&&!switchingFile.value&&!snapshotMutating.value&&!memberMutating.value&&!compiling.value&&!hasActiveCompile.value&&!preparingUpload.value&&activeFile.value?.id===prior.id&&activeFile.value.revision===prior.revision&&(prior.kind!=='text'||draft.value===prior.content)
+ if(!valid()||uploadBusy.value)return false
+ const bibFiles=files.value.filter(f=>f.kind==='text'&&/\.bib$/i.test(f.path))
+ if(targetId==='new'?(bibFiles.length!==0||files.value.some(f=>f.path==='references.bib')):!bibFiles.some(f=>f.id===targetId))return false
+ toolError.value=''
+ try{
+  const rows=await readProjectText(bibFiles,base,id=>getPaperFile(pid,id),valid)
+  if(!valid()||uploadBusy.value)return false
+  const current=rows.find(f=>f.id===targetId)
+  if(targetId!=='new'&&!current)return false
+  const plan=planBibtexAppend(current?.content||'',raw,rows.flatMap(r=>existingBibtexKeys(r.content)))
+  if(!await confirmPaper('将 '+plan.keys.length+' 条 BibTeX 文献导入 '+(current?.path||'references.bib')+'？仅追加条目，不自动插入正文引用。'))return false
+  if(!valid()||uploadBusy.value)return false
+  addingFile.value=true;clearAuto()
+  try{
+   await nextTick()
+   if(!valid())return false
+   const result=current?await managePaperFiles(pid,{action:'replace_text',base_revision:base,replacements:[{file_id:current.id,base_revision:current.revision,content:plan.content}]}):await managePaperFiles(pid,{action:'upload',base_revision:base,uploads:[{path:'references.bib',kind:'text',content:plan.content}]})
+   if(!valid())return false
+   const saved=result.files.find(f=>f.path===(current?.path||'references.bib')&&f.kind==='text')
+   if(result.project.id!==pid||result.project.head_revision!==base+1||!saved||(current&&(saved.id!==current.id||saved.revision!==current.revision+1)))throw Error('Unexpected import result')
+   const updated=result.files.find(f=>f.id===prior.id)
+   if(!updated)throw Error('Active file missing')
+   project.value={...result.project,access_role:'owner'};files.value=result.files
+   const content=updated.id===saved.id?plan.content:prior.content
+   activeFile.value={...updated,content};draft.value=content;saveStatus.value='已保存';autoDirty=true
+   await refreshBib()
+   return true
+  }finally{if(pid===projectId.value&&owner===accountId.value){addingFile.value=false;scheduleAuto()}}
+ }catch(e){if(pid===projectId.value&&owner===accountId.value&&!disposed)toolError.value=e instanceof Error&&e.message.startsWith('项目已有引用键')?e.message:'参考文献导入未确认，请刷新项目并检查引用键。';return false}
 }
 async function jumpReference(entry:PaperReference){
  const file=files.value.find(f=>f.id===entry.fileId)
  if(!file)return
  await selectFile(file);await nextTick()
- if(activeFile.value?.id===entry.fileId)editorRef.value?.goToLine(entry.line)
+ if(activeFile.value?.id===entry.fileId){revealSource();await nextTick();editorRef.value?.goToLine(entry.line)}
 }
 async function replaceProject(){
  if(!ownerAccess.value||toolBusy.value||uploadBusy.value||switchingFile.value||navigating.value||searchStale.value||!project.value)return
@@ -825,14 +884,14 @@ async function loadOutline(){
   if(serial===outlineSerial)outlineCache.value=collected
  }finally{if(serial===outlineSerial)outlineLoading.value=false}
 }
-function toggleOutline(){if(!outlineOpen.value)closeTool();outlineOpen.value=!outlineOpen.value;if(outlineOpen.value)void loadOutline()}
+function toggleOutline(){if(aiApplying.value)return;if(!outlineOpen.value){closeTool();outlineOpen.value=true;layoutMode.value='split';if(compactLayout.value)showFiles.value=false;void loadOutline()}else{outlineOpen.value=false;if(compactLayout.value)layoutMode.value='editor'}}
 async function jumpOutline(item:OutlineRow){
  const target=files.value.find(f=>f.id===item.fileId)
  if(!target)return
  if(target.id!==activeFile.value?.id&&target.revision!==item.revision){fileError.value='大纲已过期，请刷新。';return}
  if(layoutMode.value==='pdf')layoutMode.value=compactLayout.value?'editor':'split'
  await selectFile(target);await nextTick()
- if(activeFile.value?.id===target.id&&activeFile.value.revision===item.revision)editorRef.value?.goToLine(item.line)
+ if(activeFile.value?.id===target.id&&activeFile.value.revision===item.revision){revealSource();await nextTick();editorRef.value?.goToLine(item.line)}
 }
 
 const newFilePath = ref('')
@@ -849,6 +908,7 @@ function compilerChanged(){compilerChangedByUser=true;autoDirty=true;scheduleAut
 const pdfEnabled = ref(false)
 const compileJob = ref<PaperCompileJob | null>(null)
 const previewJob = ref<PaperCompileJob | null>(null)
+const submissionPDF=ref<{jobId:string;revision:number;pages:number}|null>(null)
 const sharedPreviewBusy=ref(false),sharedPreviewError=ref('')
 let sharedPreviewSerial=0
 async function loadSharedPreview(){
@@ -1001,7 +1061,7 @@ async function jumpToPDF(){
  if(!checkSync()||!sourceMap.value||!activeFile.value)return
  const p=sourceToPDF(sourceMap.value,activeFile.value.path,editorRef.value?.getLine?.()||1, pdfRef.value?.page||1)
  if(!p){syncMessage.value='当前源码行没有对应的 PDF 内容。';return}
- if(layoutMode.value==='editor')layoutMode.value=compactLayout.value?'pdf':'split'
+ if(auxiliaryOpen.value||layoutMode.value==='editor')setWorkspaceLayout(compactLayout.value?'pdf':'split')
  await nextTick()
  if(!await pdfRef.value?.showPosition(p[2],p[3]/10,p[4]/10,mapJob.value)){syncMessage.value='PDF 正在更新，请稍后再定位。';return}
  syncMessage.value=''
@@ -1020,18 +1080,47 @@ async function jumpFromPDF(pos:{jobId:string;page:number;x:number;y:number}){
 function jumpToCode(){const pos=pdfRef.value?.currentPosition();if(pos)void jumpFromPDF(pos)}
 
 const workspaceRoot=ref<HTMLElement|null>(null)
-const previewWidth=ref(49)
-const filesWidth=ref(248)
+const PANEL_PREFS_KEY='atoman.papers.layout.v1'
+function readPanelPrefs():{files:number;preview:number}{
+ try{
+  const data=JSON.parse(localStorage.getItem(PANEL_PREFS_KEY)||'null')
+  return {files:typeof data?.files==='number'&&Number.isFinite(data.files)?Math.max(180,Math.min(420,data.files)):248,preview:typeof data?.preview==='number'&&Number.isFinite(data.preview)?Math.max(25,Math.min(75,data.preview)):49}
+ }catch{return {files:248,preview:49}}
+}
+const panelPrefs=readPanelPrefs()
+const previewWidth=ref(panelPrefs.preview)
+const filesWidth=ref(panelPrefs.files)
+const maxFilesWidth=()=>Math.max(180,Math.min(420,(workspaceRoot.value?.clientWidth||1200)-600))
+function resizeFiles(value:number){filesWidth.value=Math.max(180,Math.min(maxFilesWidth(),value))}
+function resizePreview(value:number){
+ const full=workspaceRoot.value?.clientWidth||1200
+ const sidebar=showFiles.value?(workspaceRoot.value?.querySelector('.papers-workspace__files')?.clientWidth||filesWidth.value):0
+ const available=Math.max(1,full-sidebar-12)
+ const min=Math.max(25,Math.min(50,280/available*100))
+ previewWidth.value=Math.max(min,Math.min(100-min,value))
+}
+function resetPanelWidths(){filesWidth.value=248;previewWidth.value=49;resizeFiles(248);resizePreview(49)}
+watch([filesWidth,previewWidth],([files,preview])=>{try{localStorage.setItem(PANEL_PREFS_KEY,JSON.stringify({files,preview}))}catch{/* layout storage is optional */}})
 let draggingFilesDivider=false
 function beginFilesResize(e:PointerEvent){draggingFilesDivider=true;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);moveFilesResize(e)}
-function moveFilesResize(e:PointerEvent){if(!draggingFilesDivider||!workspaceRoot.value)return;filesWidth.value=Math.max(180,Math.min(420,e.clientX-workspaceRoot.value.getBoundingClientRect().left))}
+function moveFilesResize(e:PointerEvent){if(!draggingFilesDivider||!workspaceRoot.value)return;resizeFiles(e.clientX-workspaceRoot.value.getBoundingClientRect().left)}
 function endFilesResize(){draggingFilesDivider=false}
-const isCompactViewport=()=>typeof window!=='undefined'&&(window.innerWidth<=760||document.documentElement.dataset.atomanApp==='mobile')
+const isCompactViewport=()=>typeof window!=='undefined'&&(window.innerWidth<900||document.documentElement.dataset.atomanApp==='mobile')
 const compactLayout=ref(isCompactViewport())
+const moreToolsOpen=ref(false)
 const showFiles=ref(!compactLayout.value)
 const layoutMode=ref<'split'|'editor'|'pdf'>(compactLayout.value?'editor':'split')
-function setWorkspaceLayout(mode:'split'|'editor'|'pdf'){if(aiApplying.value)return;if(mode!=='split'&&toolMode.value==='ai')closeTool();layoutMode.value=mode}
-function onViewportChange(){const small=isCompactViewport();if(small===compactLayout.value)return;compactLayout.value=small;showFiles.value=!small}
+function setWorkspaceLayout(mode:'split'|'editor'|'pdf'){
+ if(aiApplying.value||snapshotMutating.value||memberMutating.value)return
+ closeTool();outlineOpen.value=false;aiExpanded.value=false
+ layoutMode.value=compactLayout.value&&mode==='split'?'editor':mode
+ if(compactLayout.value)showFiles.value=false
+}
+function returnPDF(){setWorkspaceLayout(compactLayout.value?'pdf':'split')}
+async function compileAndShowPDF(){setWorkspaceLayout(compactLayout.value?'pdf':'split');await nextTick();await compileNow()}
+function revealSource(){if(compactLayout.value)setWorkspaceLayout('editor')}
+async function insertReference(key:string){if(!writeAccess.value)return;if(compactLayout.value){revealSource();await nextTick()}editorRef.value?.insertCitation(key)}
+function onViewportChange(){const small=isCompactViewport();if(small===compactLayout.value){if(!small){resizeFiles(filesWidth.value);resizePreview(previewWidth.value)}return;}compactLayout.value=small;showFiles.value=!small;moreToolsOpen.value=false;if(small&&!auxiliaryOpen.value&&layoutMode.value==='split')layoutMode.value='editor';if(!small&&auxiliaryOpen.value)layoutMode.value='split';aiExpanded.value=false}
 const autoCompile=ref(false)
 let dragging=false
 let autoTimer:ReturnType<typeof setTimeout>|null=null
@@ -1042,7 +1131,7 @@ function resizeMove(e:PointerEvent){
  if(!dragging||!workspaceRoot.value)return
  const r=workspaceRoot.value.getBoundingClientRect()
  const filesWidth=showFiles.value?(workspaceRoot.value.querySelector('.papers-workspace__files')?.clientWidth||0):0
- previewWidth.value=Math.max(25,Math.min(75,(r.right-e.clientX)/Math.max(1,r.width-filesWidth)*100))
+ resizePreview((r.right-e.clientX)/Math.max(1,r.width-filesWidth)*100)
 }
 function endResize(){dragging=false}
 function clearAuto(){if(autoTimer)clearTimeout(autoTimer);autoTimer=null}
@@ -1251,6 +1340,10 @@ async function selectFile(file:PaperFile){
   finally{if(serial===fileSerial)switchingFile.value=false}
 }
 
+async function selectTreeFile(file:PaperFile){
+ await selectFile(file)
+ if(activeFile.value?.id===file.id&&compactLayout.value)setWorkspaceLayout('editor')
+}
 async function addFile(){
   if(!ownerAccess.value||!newFilePath.value||uploadBusy.value||switchingFile.value||navigating.value)return
   const pid=projectId.value
@@ -1549,6 +1642,7 @@ watch(projectId, () => {
 })
 
 function onShortcut(e:KeyboardEvent){
+ if(e.key==='Escape'&&compactLayout.value&&showFiles.value){e.preventDefault();showFiles.value=false;return}
  if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();void compileNow()}
 }
 onMounted(() => {
@@ -1583,148 +1677,5 @@ onBeforeUnmount(() => {
 })
 </script>
 
-<style scoped>
-.papers-workspace{height:calc(100dvh - var(--a-topbar-height,56px) - var(--a-content-bottom-offset,0px));min-height:440px;display:flex;flex-direction:column;overflow:hidden;color:var(--a-color-text,#20242c)}
-.papers-workspace__header{display:flex;gap:12px;align-items:center;padding:8px 14px;flex-shrink:0;border-bottom:1px solid var(--a-color-border-soft,#e0e4ea);min-height:44px}
-.papers-workspace__header a{color:inherit;text-decoration:none;white-space:nowrap;font-size:12px}
-.papers-workspace__header strong{flex:1;min-width:40px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
-.papers-workspace__status{font-size:12px;color:var(--a-color-text-secondary,#64748b);white-space:nowrap}
-.papers-workspace__layout-tools{display:flex;gap:3px;align-items:center}
-.papers-workspace__layout-tools button[aria-pressed=true]{background:var(--a-color-bg-subtle,#e7edf3);font-weight:600}
-.papers-workspace__content{position:relative;display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}
-.papers-workspace__files{box-sizing:border-box;width:196px;flex-shrink:0;min-height:0;overflow:auto;padding:10px 8px;border-right:1px solid var(--a-color-border-soft,#e0e4ea)}
-.papers-workspace__files-heading{display:flex;justify-content:space-between;align-items:center;margin:4px 6px 10px}
-.papers-workspace__files-heading h2{font-weight:650;font-size:13px;margin:0}
-.papers-workspace__files :deep(.p-button--ghost){justify-content:flex-start;text-align:left;min-width:0;overflow-wrap:anywhere;font-size:12px;line-height:1.4}
-.papers-workspace__files button.active{background:var(--a-color-bg-subtle,#e7edf3);font-weight:650}
-.papers-workspace__add{margin-top:18px;display:grid;gap:6px}
-.papers-workspace__add label{font-size:12px;font-weight:600}
-.papers-workspace__editor{min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden;flex:var(--editor-grow,51) 1 0%}
-.papers-workspace__editor-header{min-height:42px;box-sizing:border-box;flex-shrink:0;padding:6px 10px;border-bottom:1px solid var(--a-color-border-soft,#e0e4ea);display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px}
-.papers-workspace__editor-header span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.papers-workspace__editor :deep(.papers-latex-editor){flex:1;min-height:0;height:auto}
-.papers-workspace__divider{width:8px;flex-shrink:0;background:var(--a-color-bg-subtle,#e5e9ee);border-left:1px solid var(--a-color-border-soft,#d0d6de);border-right:1px solid var(--a-color-border-soft,#d0d6de);cursor:col-resize;touch-action:none;position:relative}
-.papers-workspace__divider:after{content:'';position:absolute;left:2px;top:calc(50% - 18px);width:2px;height:36px;border-radius:3px;background:#9ba6b5}
-.papers-workspace__preview{flex:var(--preview-grow,49) 1 0%;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
-/* Keep status and cancellation in the middle of the PDF toolbar, not a
-   separate banner. Narrow desktop panes scroll inside the toolbar. */
-.papers-workspace__preview-heading{min-height:42px;flex-shrink:0;padding:5px 8px;display:flex;align-items:center;gap:8px;font-size:12px;border-bottom:1px solid var(--a-color-border-soft,#e0e4ea);overflow-x:auto}
-.papers-workspace__preview-left,.papers-workspace__preview-right{display:flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap}
-.papers-workspace__preview-right{margin-left:auto}
-.papers-workspace__auto{display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap}
-.papers-workspace__preview-empty{padding:24px 12px;text-align:center;font-size:13px;color:var(--a-color-text-secondary,#64748b)}
-.papers-workspace__compile-status{display:flex;align-items:center;justify-content:center;flex:1 0 auto;gap:5px;font-size:11px;white-space:nowrap;color:var(--a-color-text-secondary,#64748b)}
-.papers-workspace__compile-label.status-failed,.papers-workspace__compile-label.status-blocked{color:var(--a-color-danger,#b91c1c)}
-.papers-workspace__stale{color:#96620a;font-size:10px}
-.papers-workspace__diagnostics{max-height:35%;overflow:auto;flex-shrink:0;display:grid;gap:7px;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--a-color-border-soft,#e0e4ea)}
-.papers-workspace__diagnostics-header{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.papers-workspace__diagnostics p{margin:0;color:var(--a-color-text-secondary,#64748b)}
-.papers-workspace__diagnostics small{color:var(--a-color-text-secondary,#64748b)}
-.papers-workspace__diagnostic{display:grid;gap:4px;border-left:2px solid #b91c1c;padding:4px 8px;overflow-wrap:anywhere}
-.papers-workspace__diagnostic code{white-space:pre-wrap;word-break:break-word;font-family:monospace;font-size:12px}
-.papers-workspace__diagnostic-location{align-self:start;justify-self:start;background:none;border:0;text-align:left;padding:0;font:inherit;color:var(--a-color-primary,#26784b);text-decoration:underline;cursor:pointer;overflow-wrap:anywhere}
-.papers-workspace__diagnostic-location:disabled{opacity:.6;cursor:default}
-.papers-workspace__message{padding:12px;font-size:13px;color:var(--a-color-text-secondary,#64748b)}
-.papers-workspace__error{color:#b91c1c;padding:6px 10px;font-size:12px;margin:0}
-.papers-workspace__asset-label{font-size:10px;opacity:.65;margin-left:6px}
-.files-hidden .papers-workspace__files,.pdf-only .papers-workspace__editor,.editor-only .papers-workspace__preview{display:none}
-.pdf-only .papers-workspace__preview{flex:1}
-@media(max-width:1000px){.papers-workspace__files{width:155px}.papers-workspace__header{gap:7px}.papers-workspace__header strong{min-width:60px}}
-.papers-workspace__files-backdrop{display:none}
-.papers-workspace__files-heading small{color:var(--a-color-text-secondary,#64748b);font-weight:400}
-.papers-workspace__files-heading .papers-workspace__close-files{width:28px;text-align:center;font-size:18px}
-.papers-workspace--compact{min-height:300px}
-.papers-workspace--compact .papers-workspace__header{flex-wrap:wrap;padding:6px 8px;gap:6px}
-.papers-workspace--compact .papers-workspace__header strong{min-width:80px}
-.papers-workspace--compact .papers-workspace__content{flex-direction:column}
-.papers-workspace--compact .papers-workspace__files{position:absolute;z-index:5;top:0;left:0;bottom:0;width:min(280px,82vw);background:var(--a-color-bg,#fff);box-shadow:4px 0 14px #0003}
-.papers-workspace--compact .papers-workspace__files-backdrop{display:block;position:absolute;inset:0;border:0;background:#0004;z-index:4}
-.papers-workspace--compact .papers-workspace__divider{display:none}
-.papers-workspace--compact .papers-workspace__preview-heading{padding-inline:6px;gap:6px;flex-wrap:wrap;overflow-x:visible}
-.papers-workspace--compact .papers-workspace__compile-status{order:1;flex:1 0 100%;justify-content:center;flex-wrap:wrap;white-space:normal}
-.papers-workspace--compact .papers-workspace__preview-right{margin-left:auto}
-.papers-workspace--compact .papers-workspace__editor-header{gap:4px}
-.papers-workspace--compact .papers-workspace__editor-header .papers-workspace__sync{padding-inline:4px}
 
-.papers-workspace__sync{font-size:11px;white-space:nowrap;background:transparent;color:var(--a-color-primary,#26784b);border:1px solid var(--a-color-border-soft,#d7dde4);border-radius:4px;padding:4px 7px;cursor:pointer}.papers-workspace__sync:disabled{opacity:.4;cursor:default}.papers-workspace__sync-message{font-size:12px;padding:5px 10px;margin:0;color:var(--a-color-text-secondary,#64748b);flex-shrink:0}
-.papers-workspace__file-row{display:flex;align-items:center;min-width:0}
-.papers-workspace__file-row button:first-child{flex:1;min-width:0}
-.papers-workspace__files .papers-workspace__file-menu{width:26px!important;flex-shrink:0;text-align:center!important;font-weight:700}
-.papers-workspace__folder{font-weight:600}
-.papers-workspace__manage{display:grid;gap:5px;margin-top:10px;padding-top:8px;border-top:1px solid var(--a-color-border-soft,#ddd);font-size:12px;overflow-wrap:anywhere}
-.papers-workspace__manage label{display:grid;gap:4px}
-.papers-workspace__outline{display:flex;flex-direction:column;gap:4px;max-height:32%;overflow:auto;flex-shrink:0;padding:7px 9px;border-bottom:1px solid var(--a-color-border-soft,#ddd);font-size:12px}
-.papers-workspace__outline-heading{display:flex;align-items:center;justify-content:space-between}
-.papers-workspace__outline>button{display:block;text-align:left;border:0;background:transparent;color:inherit;cursor:pointer;font-size:12px;overflow-wrap:anywhere;padding-block:4px}
-.papers-workspace__outline small{color:var(--a-color-text-secondary,#64748b);font-weight:400;font-size:10px}
-
-.papers-workspace__toolnav{display:flex;flex-shrink:0;gap:5px;overflow:auto;padding:4px 10px;border-bottom:1px solid var(--a-color-border-soft,#ddd)}
-.papers-workspace__toolnav button{white-space:nowrap}
-.papers-workspace__toolnav button[aria-pressed=true]{background:var(--a-color-bg-subtle,#e7edf3);font-weight:600}
-.papers-workspace__toolnav button:disabled,.papers-workspace__toolrow:disabled{opacity:.5;cursor:default}
-.papers-workspace__toolpanel{display:flex;flex-direction:column;gap:6px;max-height:43%;overflow:auto;flex-shrink:0;padding:8px 10px;border-bottom:1px solid var(--a-color-border-soft,#ddd);font-size:12px}
-.papers-workspace__toolpanel label{display:grid;gap:4px;min-width:0}
-.papers-workspace__toolpanel p{margin:0;overflow-wrap:anywhere}
-.papers-workspace__toolrow{display:grid;text-align:left;gap:3px;overflow-wrap:anywhere;min-width:0;width:100%}
-.papers-workspace__toolrow code{white-space:pre-wrap;overflow-wrap:anywhere}
-.papers-workspace__refrow{display:flex;align-items:center;gap:6px}
-.papers-workspace__version-preview{display:grid;gap:6px}
-.papers-workspace__compare{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-.papers-workspace__compare textarea{height:105px;font-family:monospace;resize:vertical;white-space:pre;overflow:auto}
-@media(max-width:760px){.papers-workspace__compare{grid-template-columns:1fr}}
- .papers-workspace__compiler{display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap}
-.papers-workspace__compiler{display:flex;align-items:center;gap:4px}.papers-workspace__compiler :deep(.p-select-trigger){min-width:100px}
-@media(max-width:1000px){.papers-workspace__compiler>span{display:none}}
-
-.papers-workspace__drop-zone{display:grid;gap:4px;padding:12px 6px;border:1px solid var(--a-color-border-soft,#aab1ba);border-radius:5px;text-align:center;color:var(--a-color-text-secondary,#64748b);overflow-wrap:anywhere}
-.papers-workspace__drop-zone strong{font-weight:550;color:inherit;font-size:12px}
-.papers-workspace__drop-zone small{font-size:10px}
-.papers-workspace__drop-zone.active,.papers-workspace__files--dropping .papers-workspace__drop-zone{background:var(--a-color-bg-subtle,#e7edf3);border-color:var(--a-color-text-secondary,#64748b);color:var(--a-color-text,#20242c)}
-
-/* A compact, independently scrolling file navigator; mutations are disclosed
-   on demand so a large manuscript does not push tools below the viewport. */
-.papers-workspace__header{min-height:40px;padding-block:5px;gap:10px}
-.papers-workspace__files{width:var(--files-width,248px);display:flex;flex-direction:column;padding:8px;overflow:hidden;border-right:0;background:var(--a-color-bg,#fff)}
-.papers-workspace__files-heading{flex-shrink:0;margin:0 4px 5px}
-.papers-workspace__files-toolbar,.papers-workspace__file-actions{display:flex;align-items:center;gap:5px;flex-shrink:0;padding:4px}
-.papers-workspace__files-toolbar :deep(.p-field){flex:1;min-width:0}.papers-workspace__files-toolbar :deep(.p-input){min-height:var(--a-control-height-sm);font-size:12px}
-.papers-workspace__files-toolbar button{flex:0 0 24px}
-.papers-workspace__file-actions button{flex:1;display:flex!important;align-items:center;justify-content:center;gap:5px;text-align:center!important;background:var(--a-color-bg-subtle,#f2f4f6)!important}
-.papers-workspace__file-actions button[aria-expanded=true]{font-weight:600;color:var(--a-color-primary,#26784b)}
-.papers-workspace__tree{flex:1;min-height:0;overflow:auto;padding:4px 0;scrollbar-gutter:stable}
-.papers-workspace__tree-empty{font-size:12px;padding:8px;color:var(--a-color-text-secondary,#64748b)}
-.papers-workspace__file-row{border-radius:4px;min-height:28px}
-.papers-workspace__file-row button:first-child{display:flex;align-items:center;justify-content:flex-start;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:5px 6px;min-height:28px}
-.papers-workspace__filename{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.papers-workspace__file-row svg{flex-shrink:0;color:var(--a-color-text-secondary,#64748b)}
-.papers-workspace__file-row button.active svg{color:var(--a-color-primary,#26784b)}
-.papers-workspace__file-row button:disabled:not(.papers-workspace__folder){cursor:default}
-.papers-workspace__files-heading .papers-workspace__close-files{display:flex;align-items:center;justify-content:center;padding:4px}
-.papers-workspace__folder:disabled{cursor:default!important}
-.papers-workspace__asset-label{flex-shrink:0;margin-left:0}
-.papers-workspace__file-row:hover{background:var(--a-color-bg-subtle,#f2f4f6)}
-.papers-workspace__files .papers-workspace__file-menu{opacity:.65}
-.papers-workspace__file-row:hover .papers-workspace__file-menu,.papers-workspace__file-menu:focus-visible{opacity:1}
-.papers-workspace__manage,.papers-workspace__add{flex-shrink:0;margin-top:4px;padding:8px 4px;border-top:1px solid var(--a-color-border-soft,#ddd);max-height:40%;overflow:auto}
-.papers-workspace__files-divider{width:5px;flex-shrink:0;cursor:col-resize;touch-action:none;background:var(--a-color-border-soft,#e0e4ea)}
-.papers-workspace__files-divider:hover,.papers-workspace__files-divider:focus-visible{background:var(--a-color-primary,#26784b)}
-.papers-workspace__editor-header{min-height:36px;padding-block:4px}
-.papers-workspace__editor-header>span{flex:1}
-.papers-workspace__toolnav{gap:4px;padding:4px 8px;scrollbar-width:thin}
-.papers-workspace__toolnav button{border-color:transparent;padding:4px 6px;font-size:11px}
-.papers-workspace__preview-heading{min-height:36px;flex-wrap:wrap;gap:4px 8px;overflow-x:visible}
-.papers-workspace__compile-status{flex:1 1 100%;order:2;justify-content:flex-start;white-space:normal;flex-wrap:wrap}
-.papers-workspace__preview-right{flex-wrap:wrap;flex-shrink:1;min-width:0;justify-content:flex-end}
-.papers-workspace--compact .papers-workspace__files{width:min(300px,86vw)}
-
-.papers-workspace__ai-panel .papers-workspace__preview-heading{justify-content:space-between;flex-wrap:wrap}
-.papers-workspace__ai-subtitle{flex:1;font-size:11px;color:var(--a-color-text-secondary,#64748b)}
-.ai-expanded .papers-workspace__editor,.ai-expanded .papers-workspace__divider{display:none}
-.ai-expanded .papers-workspace__ai-panel{flex:1 1 0%}
-.ai-expanded .papers-workspace__ai-scroll :deep(.paper-ai){max-width:1100px;margin-inline:auto}
-.papers-workspace__ai-scroll{flex:1;min-height:0;overflow:auto;padding:10px;scrollbar-gutter:stable}
-.papers-workspace--compact .papers-workspace__ai-panel{flex:2 1 0%}
-.papers-workspace__add :deep(.p-field){flex:1;min-width:0}
-.papers-workspace__toolrow{white-space:normal;justify-content:flex-start;text-align:left}
-.papers-workspace__folder{width:100%}
-</style>
+<style scoped src="./PaperWorkspaceLayout.css"></style>

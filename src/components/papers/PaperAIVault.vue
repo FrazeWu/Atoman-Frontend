@@ -92,8 +92,10 @@ async function saveSession(){
 function restoreSession(){
  const s=savedSession.value,p=vault.value
  if(!s||!p||props.disabled||working.value)return
- const profile=p.data.profiles.find(x=>x.baseURL===s.baseURL&&x.model===s.model)
+ const matches=p.data.profiles.filter(x=>x.baseURL===s.baseURL&&x.model===s.model)
+ const profile=matches.length===1?matches[0]:undefined
  autoSave.value=false
+ if(matches.length>1)message.value='此会话对应多个 API 配置，请手动选择正确的配置。'
  emit('restore',{...s,history:s.history.map(t=>({...t}))},profile?{...profile}:undefined)
 }
 async function removeSession(){

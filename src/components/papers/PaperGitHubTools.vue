@@ -65,15 +65,16 @@ function begin(){
  const initial=scope(),n=++serial,target:GitHubTarget={repository:repository.value,branch:branch.value,token:token.value},ctrl=new AbortController()
  controller=ctrl;busy.value=true;message.value=''
  const deadline=setTimeout(()=>ctrl.abort(),90000)
- const valid=()=>!disposed&&n===serial&&initial===scope()&&target.repository===repository.value&&target.branch===branch.value&&target.token===token.value&&!ctrl.signal.aborted
- return {target,signal:ctrl.signal,valid,done:()=>{clearTimeout(deadline);if(!disposed&&n===serial&&initial===scope()){busy.value=false;controller=null}}}
+ const current=()=>!disposed&&n===serial&&initial===scope()&&target.repository===repository.value&&target.branch===branch.value&&target.token===token.value
+ const valid=()=>current()&&!ctrl.signal.aborted
+ return {target,signal:ctrl.signal,valid,current,done:()=>{clearTimeout(deadline);if(!disposed&&n===serial&&initial===scope()){busy.value=false;controller=null}}}
 }
 function cancel(){reset();message.value='已停止等待；若外部写入已发送，需在 GitHub 核对是否创建分支，不会自动重试。'}
 async function inspect(){
  const state=begin();if(!state)return
  plan.value=null;exportPlan.value=null;consent.value=false
  try{const value=await inspectGitHub(state.target,state.signal);if(state.valid()){plan.value=value;name.value=repository.value.split('/').at(-1)||'GitHub project';mainFile.value=rootTex.value.find(x=>x.value==='main.tex')?.value||rootTex.value[0]?.value||'';message.value='已读取固定分支提交，请核对文件清单。'}}
- catch{if(state.valid())message.value='无法读取仓库，请检查仓库、分支、令牌权限或网络。'}
+ catch{if(state.current())message.value='无法读取仓库，请检查仓库、分支、令牌权限或网络。'}
  finally{state.done()}
 }
 async function importProject(){
@@ -87,7 +88,7 @@ async function importProject(){
   if(!state.valid()||props.disabled||projectName!==name.value||main!==mainFile.value)return
   const project=await importPaperProject(projectName,archive,main)
   if(state.valid()){message.value='已从固定提交创建项目。';emit('imported',project)}
- }catch{if(state.valid())message.value='导入未确认：请检查项目容量、文件格式和网络；先刷新项目列表，避免重复导入。'}
+ }catch{if(state.current())message.value='导入未确认：请检查项目容量、文件格式和网络；先刷新项目列表，避免重复导入。'}
  finally{state.done()}
 }
 async function prepareExport(){
@@ -113,7 +114,7 @@ async function prepareExport(){
   const overlap=checkGitOverlay(p,sources)
   exportPlan.value={branch:'papers-export-'+new Date().toISOString().slice(0,10)+'-'+crypto.randomUUID().slice(0,12),files:sources,overlap,fence,revision:base}
   message.value='已准备新分支文件清单，尚未向 GitHub 上传源码。'
- }catch{if(state.valid())message.value='无法准备导出：项目版本变化、路径冲突、容量超限或读取失败。'}
+ }catch{if(state.current())message.value='无法准备导出：项目版本变化、路径冲突、容量超限或读取失败。'}
  finally{state.done()}
 }
 async function exportBranch(){
@@ -127,7 +128,7 @@ async function exportBranch(){
   if(!valid()||current.id!==props.projectId||current.head_revision!==x.revision||current.access_role&&current.access_role!=='owner')throw Error('Project changed')
   const result=await publishGitHubBranch(state.target,p,x.files,x.branch,state.signal,valid)
   if(state.valid()){resultURL.value='https://github.com/'+p.repository+'/tree/'+result.branch;message.value='已确认创建独立分支 '+result.branch+' · '+result.commit.slice(0,12)+'。现有分支未更新。';exportPlan.value=null}
- }catch{if(state.valid())message.value='发布未确认：基准可能变化或权限、网络异常。请在 GitHub 核对该新分支，避免重复发布。'}
+ }catch{if(state.current())message.value='发布未确认：基准可能变化或权限、网络异常。请在 GitHub 核对 '+x.branch+'，避免重复发布。'}
  finally{state.done()}
 }
 onBeforeUnmount(()=>{disposed=true;reset();token.value=''})

@@ -279,14 +279,15 @@ const visibleContextFiles=computed(()=>eligibleFiles.value.filter(file=>file.pat
 watch(()=>props.file.id,()=>{contextFilter.value=''})
 const staleTarget=(item:Captured|null)=>!item||item.fileId!==props.file.id||item.revision!==props.file.revision||item.baseline!==props.source||item.collaborationEpoch!==props.collaborationEpoch
 const stale=computed(()=>staleTarget(target.value))
+const contextIsStale=(context:readonly PaperFile[])=>context.some(f=>!props.files.some(current=>current.id===f.id&&current.kind==='text'&&current.revision===f.revision&&current.path===f.path&&(!f.sha256||current.sha256===f.sha256)))
 const resultStale=computed(()=>{
  const item=suggestion.value
- if(!item||staleTarget(item.target))return true
+ if(!item||staleTarget(item.target)||contextIsStale(item.context||[]))return true
  if(item.repairJobId&&(!repair.value||repair.value.phase!=='review'||repair.value.jobId!==item.repairJobId||!repairJobCurrent(repair.value)))return true
  if(item.task!=='project')return false
- return !projectModeAvailable.value||!projectReady.value||item.response.project_revision!==props.projectRevision||!!item.context?.some(f=>!props.files.some(current=>current.id===f.id&&current.revision===f.revision&&current.path===f.path))
+ return !projectModeAvailable.value||!projectReady.value||item.response.project_revision!==props.projectRevision
 })
-const extraStale=computed(()=>extras.value.some(extra=>!eligibleFiles.value.some(item=>item.id===extra.id&&item.revision===extra.revision)))
+const extraStale=computed(()=>contextIsStale(extras.value))
 const canGenerate=computed(()=>!!capability.value?.enabled&&!!target.value&&!stale.value&&!extraStale.value&&!props.disabled&&!busy.value&&!contextBusy.value&&consent.value&&baseValid.value&&paperAIModelPattern.test(model.value)&&validPaperAIKey(key.value.trim())&&!modelsLoading.value&&instruction.value.trim()&&selectedSource.value.trim()&&sourceBytes.value<=capability.value.max_source_bytes&&contextBytes.value<=capability.value.max_context_bytes&&paperAIBytes(instruction.value)<=4000&&(task.value!=='project'||projectReady.value)&&(!repairActive.value||(task.value==='project'&&repair.value?.phase==='review'&&repairJobCurrent(repair.value))))
 const taskSteps=['准备模型','确认范围','生成建议','审阅审批']
 const taskStep=computed(()=>{
@@ -321,7 +322,7 @@ function restoreCheckpoint(session:AISessionCheckpoint,profile:AIProfile|undefin
  if(busy.value||commitBusy.value||repairActive.value||props.disabled||!capability.value||session.projectId!==props.projectId)return
  if(!validPaperAIBase(session.baseURL,capability.value.custom_base_urls===true,capability.value.base_urls)||!paperAIModelPattern.test(session.model)){message.value='会话对应的服务已不可用。';return}
  if(profile)restoreProfile(profile)
- else if(baseURL.value!==session.baseURL||model.value!==session.model){baseURL.value=session.baseURL;model.value=session.model;key.value=''}
+ else{baseURL.value=session.baseURL;model.value=session.model;key.value=''}
  instruction.value=session.instruction;task.value=session.task==='project'&&!projectModeAvailable.value?'revise':session.task
  const restored:PaperAIHistoryTurn[]=[]
  if(historyAvailable.value)for(const turn of session.history)restored.push(turn)
@@ -415,7 +416,7 @@ async function toggleContext(file:PaperFile,checked:boolean){
  try{
   const loaded=await getPaperFile(props.projectId,file.id)
   if(disposed||n!==contextSerial||initial!==scope())return
-  if(loaded.id!==file.id||loaded.kind!=='text'||loaded.revision!==file.revision||!eligibleFiles.value.some(item=>item.id===file.id&&item.revision===file.revision))throw new Error('changed')
+  if(loaded.id!==file.id||loaded.kind!=='text'||loaded.path!==file.path||loaded.revision!==file.revision||(file.sha256&&loaded.sha256!==file.sha256)||contextIsStale([loaded]))throw new Error('changed')
   if(paperAIBytes(loaded.content)>32*1024||contextBytes.value+paperAIBytes(loaded.content)>capability.value.max_context_bytes){message.value='附加文件过大，未加入发送范围。';return}
   extras.value=[...extras.value,loaded]
  }catch{if(!disposed&&initial===scope()&&n===contextSerial)message.value='无法读取选定文件，请刷新项目后重试。'}
@@ -436,11 +437,13 @@ async function generate(){
  try{
   const response=await requestPaperAISuggestion(props.projectId,request,abort.signal)
   if(!alive(n,initial))return
-  if(typeof response.text!=='string'||!response.text.trim()||paperAIBytes(response.text)>48*1024)throw new Error('invalid result')
+  if(staleTarget(captured)||contextIsStale(context)||(mode==='project'&&base!==props.projectRevision)||request.base_url!==baseURL.value||request.model!==model.value||request.api_key!==key.value.trim()){message.value='源码、附加文件或模型配置已变化，已丢弃旧响应；请重新确认。';return}
+  if(typeof response.text!=='string'||!response.text.trim()||paperAIBytes(response.text)>48*1024||response.text.includes(request.api_key))throw new Error('invalid result')
   let changes:ReviewedPaperAIChange[]|undefined
   if(mode==='project'){
    if(response.project_revision!==base)throw new Error('Invalid plan revision')
    if(capability.value?.activity&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(response.proposal_id||''))throw new Error('Missing server proposal identifier')
+   if(response.edits?.some(edit=>[edit.path,edit.before,edit.after].some(text=>typeof text!=='string'||text.includes(request.api_key))))throw Error('Credential in proposal')
    changes=reviewProjectEdits([currentFile,...context],response.edits??[])
    if(!changes)throw new Error('Invalid project plan')
   }

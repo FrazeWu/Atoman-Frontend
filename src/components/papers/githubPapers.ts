@@ -122,7 +122,7 @@ export function checkGitOverlay(plan:GitHubPlan,files:GitPaperSource[]){
   const path=f.path.toLowerCase(),existing=tree.get(path)
   if(existing&&(existing.path!==f.path||existing.type!=='blob'||!['100644','100755'].includes(existing.mode)))throw Error('Git 路径或文件类型冲突')
   const parts=path.split('/')
-  for(let i=1;i<parts.length;i++){const parent=tree.get(parts.slice(0,i).join('/'));if(parent&&parent.type!=='tree')throw Error('Git 目录冲突')}
+  for(let i=1;i<parts.length;i++){const parent=tree.get(parts.slice(0,i).join('/'));if(parent&&(parent.type!=='tree'||parent.path!==f.path.split('/').slice(0,i).join('/')))throw Error('Git 目录冲突')}
   if(plan.entries.some(e=>e.path.toLowerCase().startsWith(path+'/')))throw Error('Git 文件目录冲突')
  }
  return files.filter(f=>tree.has(f.path.toLowerCase())).map(f=>f.path)
@@ -131,26 +131,36 @@ export async function publishGitHubBranch(target:GitHubTarget,plan:GitHubPlan,fi
  assertGitPlan(target,plan)
  if(!target.token||!validGitHubBranch(branch)||!branch.startsWith('papers-export-')||branch===target.branch||!valid())throw Error('Invalid export')
  checkGitOverlay(plan,files)
- const info=await gh(target,'',signal)
- if(typeof info.full_name!=='string'||info.full_name.toLowerCase()!==target.repository.toLowerCase()||info.private!==plan.private)throw Error('Repository visibility changed')
- if(await branchCommit(target,signal)!==plan.commit)throw Error('Base branch changed')
  const guard=()=>{if(!valid()||signal.aborted)throw Error('Scope changed')}
+ async function verifyDestination(){
+  guard()
+  const info=await gh(target,'',signal)
+  if(typeof info.full_name!=='string'||info.full_name.toLowerCase()!==target.repository.toLowerCase()||info.private!==plan.private)throw Error('Repository visibility changed')
+  guard()
+ }
+ await verifyDestination()
+ if(await branchCommit(target,signal)!==plan.commit)throw Error('Base branch changed')
  const tree=[]
  for(const f of files){
   guard()
   const expected=await gitHash(f.data)
+  guard()
   const existing=plan.entries.find(e=>e.path===f.path&&e.type==='blob'&&e.sha===expected)
   if(existing){tree.push({path:f.path,mode:existing.mode,type:'blob',sha:expected});continue}
+  await verifyDestination()
   const blob=await gh(target,'/git/blobs',signal,{content:b64(f.data),encoding:'base64'})
   if(sha(blob.sha)!==expected)throw Error('Blob verification failed')
   tree.push({path:f.path,mode:'100644',type:'blob',sha:expected})
  }
  guard()
+ await verifyDestination()
  const newTree=sha((await gh(target,'/git/trees',signal,{base_tree:plan.tree,tree})).sha)
+ await verifyDestination()
  const commit=await gh(target,'/git/commits',signal,{message:'AToMAN Papers reviewed project export',tree:newTree,parents:[plan.commit]})
  const commitSha=sha(commit.sha)
  guard()
  if(await branchCommit(target,signal)!==plan.commit)throw Error('Base branch changed')
+ await verifyDestination()
  guard()
  // Never update or force-push an existing ref. This creates only a fresh ref.
  const ref=await gh(target,'/git/refs',signal,{ref:'refs/heads/'+branch,sha:commitSha})

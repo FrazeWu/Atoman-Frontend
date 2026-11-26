@@ -6,6 +6,7 @@ import {listLocalDrafts,writeLocalDraft,setLocalDraftEnabled,type PaperLocalDraf
 import LatexEditor from "@/components/papers/LatexEditor.vue"
 import PaperWorkspaceView from '@/views/papers/PaperWorkspaceView.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
+import PaperSubmissionTools from '@/components/papers/PaperSubmissionTools.vue'
 import { ApiErrorResponseError } from '@/api/client'
 import {getPaperSharedPreview,getPaperCollaborationCapability,listPaperMembers,setPaperMember,removePaperMember,listPaperProjectSnapshots,getPaperProjectSnapshot,createPaperProjectSnapshot,restorePaperProjectSnapshot,deletePaperProjectSnapshot, managePaperFiles, savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, listPaperFileVersions, getPaperFileVersion } from '@/api/papers'
 
@@ -239,6 +240,34 @@ describe('Papers save and transition regression',()=>{
    expect(wrapper.find('[data-test="editor"]').attributes('data-readonly')).toBe('false')
    expect(savePaperFile).toHaveBeenCalledTimes(2)
    expect(getPaperFile).not.toHaveBeenCalledWith('two','chapter')
+  }finally{wrapper.unmount()}
+ })
+ it('updates the saved file hash without retaining private text in the manifest',async()=>{
+  const {wrapper}=await open()
+  try{
+   wrapper.findComponent(LatexEditor).vm.$emit('update:modelValue','New saved text')
+   await nextTick()
+   vi.mocked(savePaperFile).mockResolvedValueOnce({...f2,content:'New saved text',revision:2,sha256:'a'.repeat(64),project_head_revision:2} as never)
+   await wrapper.findAll('button').find(b=>b.text()==='保存')!.trigger('click')
+   await flushPromises()
+   await wrapper.findAll('button').find(b=>b.text()==='投稿检查')!.trigger('click')
+   const panel=wrapper.getComponent(PaperSubmissionTools)
+   expect(panel.props('revision')).toBe(2)
+   expect(panel.props('files').find(f=>f.id===f2.id)).toMatchObject({revision:2,sha256:'a'.repeat(64),content:''})
+  }finally{wrapper.unmount()}
+ })
+ it('does not promote a stale manifest to a newer project-wide CAS after a file save',async()=>{
+  const {wrapper}=await open()
+  try{
+   wrapper.findComponent(LatexEditor).vm.$emit('update:modelValue','Locally saved text')
+   await nextTick()
+   vi.mocked(savePaperFile).mockResolvedValueOnce({...f2,content:'Locally saved text',revision:2,sha256:'b'.repeat(64),project_head_revision:4} as never)
+   await wrapper.findAll('button').find(b=>b.text()==='保存')!.trigger('click')
+   await flushPromises()
+   expect(wrapper.text()).toContain('其他窗口也更新了项目')
+   await wrapper.findAll('button').find(b=>b.text()==='投稿检查')!.trigger('click')
+   expect(wrapper.getComponent(PaperSubmissionTools).props('revision')).toBe(1)
+   expect(wrapper.find('[data-test="editor"]').text()).toBe('Locally saved text')
   }finally{wrapper.unmount()}
  })
  it('keeps the local draft and refuses route exit when saving fails',async()=>{

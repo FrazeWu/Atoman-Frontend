@@ -61,6 +61,50 @@ describe('Papers AI review workflow',()=>{
    expect(w.props('applyEdit')).not.toHaveBeenCalled()
   }finally{w.unmount()}
  })
+ it('invalidates an accepted single-file suggestion when an approved context file changes',async()=>{
+  const w=create()
+  try{
+   await configure(w)
+   await w.get('.paper-ai__context input[type=checkbox]').setValue(true)
+   await flushPromises()
+   await w.get('.paper-ai__consent input').setValue(true)
+   await button(w,'生成建议').trigger('click')
+   await flushPromises()
+   expect(button(w,'接受修改').attributes('disabled')).toBeUndefined()
+   await w.setProps({files:[file,{...extra,revision:2}]})
+   expect(button(w,'接受修改').attributes('disabled')).toBeDefined()
+   expect(w.props('applyEdit')).not.toHaveBeenCalled()
+  }finally{w.unmount()}
+ })
+ it('discards late model results when context changes before the provider replies',async()=>{
+  const w=create()
+  try{
+   await configure(w)
+   await w.get('.paper-ai__context input[type=checkbox]').setValue(true)
+   await flushPromises()
+   let resolve!:(value:{text:string;model:string})=>void
+   vi.mocked(requestPaperAISuggestion).mockImplementation(()=>new Promise(r=>{resolve=r}))
+   await w.get('.paper-ai__consent input').setValue(true)
+   await button(w,'生成建议').trigger('click')
+   await w.setProps({files:[file,{...extra,revision:2}]})
+   resolve({text:'Stale proposed replacement',model:'test-model'})
+   await flushPromises()
+   expect(w.text()).not.toContain('Stale proposed replacement')
+   expect(w.text()).toContain('已丢弃旧响应')
+  }finally{w.unmount()}
+ })
+ it('never displays a credential echoed by the provider',async()=>{
+  const w=create()
+  try{
+   await configure(w)
+   vi.mocked(requestPaperAISuggestion).mockResolvedValue({text:'Echo '+key,model:'test-model'})
+   await w.get('.paper-ai__consent input').setValue(true)
+   await button(w,'生成建议').trigger('click')
+   await flushPromises()
+   expect(w.text()).not.toContain('Echo '+key)
+   expect(button(w,'接受修改')).toBeUndefined()
+  }finally{w.unmount()}
+ })
  it('invalidates consent when the request instruction changes',async()=>{
   const w=create()
   try{

@@ -1026,7 +1026,7 @@ function failureMessage(code:string){
  return labels[code]||'编译未成功'
 }
 async function jumpDiagnostic(item:PaperCompileDiagnostic){
- if(!item.file||!item.line||diagnosticStale.value)return
+ if(aiApplying.value||aiRepairActive.value||!item.file||!item.line||diagnosticStale.value)return
  const target=files.value.find(f=>f.path===item.file&&f.kind==='text')
  if(!target){syncMessage.value='当前项目中找不到对应源文件。';return}
  const jobId=compileJob.value?.id
@@ -1287,11 +1287,20 @@ async function loadProject() {
   loading.value = true
   error.value = ''
   try {
-    const [currentProject, currentFiles, capability] = await Promise.all([
+    let [currentProject, currentFiles, capability] = await Promise.all([
       getPaperProject(requestedProjectId), listPaperFiles(requestedProjectId),
       Promise.resolve().then(() => getPaperCompileCapability(requestedProjectId)).catch(():PaperCompileCapability => ({ enabled: false, pdf_available: false })),
     ])
     if (disposed || serial !== loadSerial || requestedProjectId !== projectId.value || ownerAtStart!==accountId.value) return
+    const manifestMatches=()=>currentProject.id===requestedProjectId&&!currentFiles.some(file=>file.project_head_revision!==undefined&&file.project_head_revision!==currentProject.head_revision)
+    if(!manifestMatches()){
+      // A concurrent save may occur between the project and file-list
+      // requests. Retry once; never accept a mixed manifest.
+      currentProject=await getPaperProject(requestedProjectId)
+      currentFiles=await listPaperFiles(requestedProjectId)
+      if(disposed||serial!==loadSerial||requestedProjectId!==projectId.value||ownerAtStart!==accountId.value)return
+      if(!manifestMatches())throw Error('Project manifest changed during load')
+    }
     project.value = currentProject
     files.value = currentFiles
     initializeLocalDrafts(ownerAtStart)
@@ -1365,29 +1374,38 @@ function persist(): Promise<boolean> {
   if(saveTimer){clearTimeout(saveTimer);saveTimer=null}
   clearSaveRetry()
   if(savePromise)return savePromise
-  const pid=project.value?.id
+  const pid=project.value?.id,owner=accountId.value,generation=loadSerial
   const initial=activeFile.value
   if(!pid||pid!==projectId.value||!initial||initial.kind!=='text')return Promise.resolve(true)
+  if(!owner)return Promise.resolve(false)
+  const currentScope=()=>!disposed&&owner===accountId.value&&generation===loadSerial&&project.value?.id===pid&&projectId.value===pid&&activeFile.value?.id===initial.id
   if(draft.value===initial.content){saveError.value='';retryableSave=false;saveRetryAttempt=0;saveStatus.value='已保存';return Promise.resolve(true)}
   if(!writeAccess.value){saveStatus.value='只读 · 尚未保存';saveError.value='当前账号已无编辑权限，请复制当前源码。';return Promise.resolve(false)}
   if(navigator.onLine===false){retryableSave=true;saveStatus.value='离线 · 尚未保存';saveError.value='当前网络已断开，恢复连接后将自动保存。';return Promise.resolve(false)}
   saving.value=true;saveStatus.value='保存中...'
   const work=(async()=>{
-    while(!disposed&&project.value?.id===pid&&projectId.value===pid&&activeFile.value?.id===initial.id){
-      const file=activeFile.value,content=draft.value
+    while(currentScope()){
+      const file=activeFile.value!,content=draft.value,priorHead=project.value!.head_revision
       if(content===file.content){saveStatus.value='已保存';saveError.value='';retryableSave=false;saveRetryAttempt=0;return true}
       try{
         const saved=await savePaperFile(pid,file.id,content,file.revision)
-        if(disposed||project.value?.id!==pid||projectId.value!==pid||activeFile.value?.id!==initial.id)return false
-        if(saved.id!==file.id||saved.content!==content||saved.revision<file.revision)throw new Error('Invalid saved file')
+        if(!currentScope())return false
+        if(saved.id!==file.id||saved.kind!=='text'||saved.path!==file.path||saved.content!==content||!Number.isSafeInteger(saved.revision)||saved.revision<file.revision||(saved.project_head_revision!==undefined&&(!Number.isSafeInteger(saved.project_head_revision)||saved.project_head_revision<priorHead)))throw new Error('Invalid saved file')
         activeFile.value=saved
         acknowledgeLocalDraft(saved)
-        files.value=files.value.map(item=>item.id===saved.id?{...item,revision:saved.revision}:item)
-        project.value.head_revision=saved.project_head_revision??(project.value.head_revision+(saved.revision>file.revision?1:0))
+        files.value=files.value.map(item=>item.id===saved.id?{...item,...saved,content:''}:item)
+        const expectedHead=priorHead+(saved.revision>file.revision?1:0)
+        const observedHead=saved.project_head_revision??expectedHead
+        if(observedHead===expectedHead)project.value!.head_revision=observedHead
+        else{
+          // Do not advance the project CAS against a stale file manifest.
+          // File-level saves remain safe; project-wide writes must refresh.
+          refreshMessage.value='当前文件已保存，但其他窗口也更新了项目。请刷新项目后再执行全文检索、编译、文件管理或跨文件修改。'
+        }
         saveError.value='';retryableSave=false;saveRetryAttempt=0
         if(saveTimer){clearTimeout(saveTimer);saveTimer=null}
       }catch(cause){
-        if(!disposed&&project.value?.id===pid){
+        if(currentScope()){
           saveStatus.value='保存失败'
           const code=cause instanceof ApiErrorResponseError?cause.code:''
           retryableSave=!(cause instanceof ApiErrorResponseError)||cause.status>=500||cause.status===429
@@ -1416,7 +1434,7 @@ async function selectFile(file:PaperFile){
   if(collaborationOpen.value)return
   if(navigating.value||preparingUpload.value||snapshotMutating.value)return
   const serial=++fileSerial
-  const pid=projectId.value
+  const pid=projectId.value,owner=accountId.value
   if(activeFile.value?.id===file.id){switchingFile.value=false;if(compactLayout.value){showFiles.value=false;if(layoutMode.value==='pdf')layoutMode.value='editor'}return}
   switchingFile.value=true
   try{
@@ -1427,17 +1445,23 @@ async function selectFile(file:PaperFile){
     if(disposed||serial!==fileSerial||pid!==projectId.value||navigating.value)return
     fileError.value=''
     const content=await getPaperFile(pid,file.id)
+    if(content.id!==file.id||content.kind!==file.kind||!Number.isSafeInteger(content.revision)||content.revision<1)throw Error('Unexpected file response')
     if(disposed||serial!==fileSerial||pid!==projectId.value||navigating.value)return
     // A change emitted just before CodeMirror became read-only must also
     // be saved. Never overwrite a dirty draft with an incoming response.
     if(!await persist())return
     if(disposed||serial!==fileSerial||pid!==projectId.value||navigating.value)return
-    if(content.revision!==file.revision){
-      const latest=await getPaperProject(pid)
-      if(disposed||serial!==fileSerial||pid!==projectId.value||navigating.value)return
-      project.value=latest
-      files.value=files.value.map(item=>item.id===content.id?{...item,revision:content.revision}:item)
+    if(content.revision!==file.revision||content.path!==file.path||(file.sha256&&content.sha256!==file.sha256)||(content.project_head_revision!==undefined&&content.project_head_revision!==project.value?.head_revision)){
+      const [latest,manifest]=await Promise.all([getPaperProject(pid),listPaperFiles(pid)])
+      if(disposed||serial!==fileSerial||pid!==projectId.value||owner!==accountId.value||navigating.value)return
+      const row=manifest.find(item=>item.id===content.id)
+      if(latest.id!==pid||!row||row.path!==content.path||row.kind!==content.kind||row.revision!==content.revision||(row.sha256&&row.sha256!==content.sha256)||(content.project_head_revision!==undefined&&latest.head_revision!==content.project_head_revision)||manifest.some(item=>item.project_head_revision!==undefined&&item.project_head_revision!==latest.head_revision)){
+        fileError.value='项目在读取过程中发生变化，请刷新后重试。';return
+      }
+      project.value=latest;files.value=manifest
+      refreshMessage.value=''
     }
+    files.value=files.value.map(item=>item.id===content.id?{...item,...content,content:''}:item)
     activeFile.value=content;draft.value=content.kind==='text'?content.content:'';revealFile(content.path)
     saveStatus.value=content.kind==='binary'?'资源文件':'已保存'
     saveError.value=''
@@ -1461,7 +1485,11 @@ async function addFile(){
     const created=await createPaperFile(pid,newFilePath.value)
     if(disposed||pid!==projectId.value||navigating.value)return
     files.value=[...files.value,created].sort((a,b)=>a.path.localeCompare(b.path))
-    if(project.value)project.value.head_revision=created.project_head_revision??project.value.head_revision+1
+    if(project.value){
+      const expected=project.value.head_revision+1
+      if(created.project_head_revision===undefined||created.project_head_revision===expected)project.value.head_revision=expected
+      else refreshMessage.value='文件已创建，但其他窗口也更新了项目。正在核对项目文件清单。'
+    }
     newFilePath.value=''
     autoDirty=true
     await selectFile(created)
@@ -1664,7 +1692,7 @@ watch(accountId,(next,previous)=>{
  // canonical source or previously authorized PDF.
  collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null;aiSharedState.value=null
  loadSerial++;fileSerial++;pollSerial++;historySerial++;mapSerial++
- pendingSubmission=null;compiling.value=false;canceling.value=false;snapshotMutating.value=false;addingFile.value=false;aiApplying.value=false;aiRepairActive.value=false
+ pendingSubmission=null;compiling.value=false;canceling.value=false;snapshotMutating.value=false;addingFile.value=false;aiApplying.value=false;aiRepairActive.value=false;savePromise=null;saving.value=false;clearSaveRetry();retryableSave=false;if(saveTimer){clearTimeout(saveTimer);saveTimer=null}
  clearAuto();stopCompilePoll();mapAbort?.abort()
  activeFile.value=null;draft.value='';files.value=[];project.value=null
  previewJob.value=null;compileJob.value=null;sourceMap.value=null

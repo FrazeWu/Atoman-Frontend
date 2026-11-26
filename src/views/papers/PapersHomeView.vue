@@ -20,8 +20,51 @@
       <p v-if="error" role="alert" class="papers-home__error">{{ error }}</p>
     </section>
     <section v-else class="papers-home__body">
+      <p v-if="error" role="alert" class="papers-home__error">{{ error }}</p>
+      <div class="papers-home__dashboard" :class="{'templates-open':showTemplates}">
+       <section class="papers-home__library" aria-label="我的论文项目">
+      <div class="papers-home__list-heading">
+        <div class="papers-home__list-title"><h2>我的论文</h2><small>{{showTrash?trashed.length:visibleProjects.length}} 个项目</small></div>
+        <PInput v-model.trim="query" aria-label="搜索论文项目" placeholder="搜索项目名称" />
+        <PButton size="sm" type="button" @click="focusCreate">新建项目</PButton>
+        <PButton size="sm" variant="secondary" @click="toggleTrash">{{ showTrash?'返回项目':'回收站' }}</PButton>
+      </div>
+      <section v-if="showTrash" class="papers-home__create">
+        <h3>回收站</h3>
+        <p>项目删除后保留在这里，可恢复；暂不自动清理。</p>
+        <p v-if="trashLoading">正在加载…</p>
+        <p v-else-if="!trashed.length">暂无已删除项目。</p>
+        <div v-for="item in trashed" :key="item.id" class="papers-home__trash-row">
+          <span>{{ item.name }} · {{ new Date(item.trashed_at).toLocaleDateString() }}</span>
+          <PButton size="sm" variant="secondary" :disabled="!!managing" @click="restore(item)">恢复</PButton>
+        </div>
+      </section>
+      <template v-else>
+      <div v-if="!visibleProjects.length" class="papers-home__empty"><FileText :size="30" aria-hidden="true" /><strong>{{query?'没有匹配的论文':'还没有论文项目'}}</strong><p>{{query?'尝试其他关键词。':'创建项目、选择模板或导入现有 LaTeX 文件开始写作。'}}</p><PButton size="sm" type="button" variant="secondary" @click="query?query='':focusCreate()">{{query?'清空搜索':'创建第一个项目'}}</PButton></div>
+      <div v-else class="papers-home__grid">
+        <article v-for="project in visibleProjects" :key="project.id" class="papers-home__card">
+          <RouterLink :to="'/papers/' + project.id" class="papers-home__project-link">
+            <div class="papers-home__project-icon"><FileText :size="19" aria-hidden="true" /></div>
+            <div class="papers-home__project-info"><strong>{{ project.name }}</strong><span>项目版本 {{ project.head_revision }} · {{ projectRoleLabel(project) }}</span><time :datetime="project.updated_at">{{ new Date(project.updated_at).toLocaleString() }}</time></div>
+            <ChevronRight :size="17" aria-hidden="true" class="papers-home__project-chevron" />
+          </RouterLink>
+          <div v-if="isOwner(project)&&renaming===project.id" class="papers-home__rename">
+            <PInput v-model.trim="renameValue" maxlength="100" aria-label="新的项目名称" @keydown.enter.prevent="rename(project)" />
+            <PButton size="sm" :disabled="!renameValue||!!managing" @click="rename(project)">确认</PButton>
+            <PButton size="sm" variant="secondary" :disabled="!!managing" @click="renaming=''">取消</PButton>
+          </div>
+          <div v-if="isOwner(project)" class="papers-home__project-actions">
+            <PButton type="button" size="sm" variant="secondary" :disabled="!!exporting" @click="exportProject(project)">{{ exporting === project.id ? '正在导出…' : '导出 ZIP' }}</PButton>
+            <PButton size="sm" variant="secondary" :disabled="!!managing" @click="renaming=project.id;renameValue=project.name">重命名</PButton>
+            <PButton size="sm" variant="secondary" :disabled="!!managing" @click="deleteProject(project)">删除</PButton>
+          </div>
+        </article>
+      </div>
+      </template>
+       </section>
+       <aside id="paper-create-panel" ref="createPanel" class="papers-home__creation" aria-label="新建或导入项目">
       <form class="papers-home__create" @submit.prevent="create()">
-        <h2>新建论文项目</h2>
+        <h2>新建论文项目</h2><p class="papers-home__create-hint">选择来源，创建你的私有 LaTeX 工作区。</p>
         <div class="papers-home__import-actions">
           <PButton type="button" size="sm" :variant="!importSource && !selectedTemplate && !showTemplates ? 'primary' : 'secondary'" :disabled="creating" @click="clearImport">空白项目</PButton>
           <PButton type="button" size="sm" :variant="showTemplates||selectedTemplate?'primary':'secondary'" :disabled="creating" :aria-expanded="showTemplates" @click="showTemplates=!showTemplates">模板库</PButton>
@@ -62,44 +105,9 @@
           </div>
         </section>
       </form>
-      <p v-if="error" role="alert" class="papers-home__error">{{ error }}</p>
-      <div class="papers-home__list-heading">
-        <h2>我的论文</h2>
-        <PInput v-model.trim="query" aria-label="搜索论文项目" placeholder="搜索项目名称" />
-        <PButton size="sm" variant="secondary" @click="toggleTrash">{{ showTrash?'返回项目':'回收站' }}</PButton>
+      <PaperGitHubTools mode="import" :account-id="auth.isAuthenticated?auth.user?.uuid||'':''" :disabled="creating||!allowed" @imported="router.push('/papers/'+$event.id)" />
+       </aside>
       </div>
-      <section v-if="showTrash" class="papers-home__create">
-        <h3>回收站</h3>
-        <p>项目删除后保留在这里，可恢复；暂不自动清理。</p>
-        <p v-if="trashLoading">正在加载…</p>
-        <p v-else-if="!trashed.length">暂无已删除项目。</p>
-        <div v-for="item in trashed" :key="item.id" class="papers-home__trash-row">
-          <span>{{ item.name }} · {{ new Date(item.trashed_at).toLocaleDateString() }}</span>
-          <PButton size="sm" variant="secondary" :disabled="!!managing" @click="restore(item)">恢复</PButton>
-        </div>
-      </section>
-      <template v-else>
-      <p v-if="!visibleProjects.length" class="papers-home__empty">还没有论文项目。创建项目后会自动生成 main.tex。</p>
-      <div v-else class="papers-home__grid">
-        <article v-for="project in visibleProjects" :key="project.id" class="papers-home__card">
-          <RouterLink :to="'/papers/' + project.id" class="papers-home__project-link">
-            <strong>{{ project.name }}</strong>
-            <span>项目版本 {{ project.head_revision }} · {{ projectRoleLabel(project) }}</span>
-            <time :datetime="project.updated_at">{{ new Date(project.updated_at).toLocaleString() }}</time>
-          </RouterLink>
-          <div v-if="isOwner(project)&&renaming===project.id" class="papers-home__rename">
-            <PInput v-model.trim="renameValue" maxlength="100" aria-label="新的项目名称" @keydown.enter.prevent="rename(project)" />
-            <PButton size="sm" :disabled="!renameValue||!!managing" @click="rename(project)">确认</PButton>
-            <PButton size="sm" variant="secondary" :disabled="!!managing" @click="renaming=''">取消</PButton>
-          </div>
-          <div v-if="isOwner(project)" class="papers-home__project-actions">
-            <PButton type="button" size="sm" variant="secondary" :disabled="!!exporting" @click="exportProject(project)">{{ exporting === project.id ? '正在导出…' : '导出 ZIP' }}</PButton>
-            <PButton size="sm" variant="secondary" :disabled="!!managing" @click="renaming=project.id;renameValue=project.name">重命名</PButton>
-            <PButton size="sm" variant="secondary" :disabled="!!managing" @click="deleteProject(project)">删除</PButton>
-          </div>
-        </article>
-      </div>
-      </template>
     </section>
   <PConfirm :show="!!confirmationMessage" title="请确认操作" :message="confirmationMessage" danger @confirm="resolveConfirmation(true)" @cancel="resolveConfirmation(false)" />
   </main>
@@ -108,7 +116,8 @@
 <script setup lang="ts">
 import PInput from '@/components/ui/PInput.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, nextTick } from 'vue'
+import { FileText, ChevronRight } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
@@ -118,6 +127,7 @@ import PButton from '@/components/ui/PButton.vue'
 import { paperAccess, listPaperProjects, createPaperProject, getPaperApplication, submitPaperApplication, importPaperProject, getPaperProjectZIP, downloadPaperZIP, paperImportZIPLimit, renamePaperProject, trashPaperProject, listTrashedPaperProjects, restorePaperProject, type TrashedPaperProject, type PaperProject, type PaperApplication } from '@/api/papers'
 import { packPaperFolder, packPaperTemplate, suggestPaperProjectName, unsupportedPaperFolderFiles, paperArchiveExclusion } from '@/components/papers/projectArchive'
 import PaperTemplateLibrary from '@/components/papers/PaperTemplateLibrary.vue'
+import PaperGitHubTools from '@/components/papers/PaperGitHubTools.vue'
 import { getPaperTemplate } from '@/components/papers/templateCatalog'
 
 defineOptions({name:'PapersHomeView'})
@@ -133,6 +143,12 @@ function isOwner(p:PaperProject){return p.access_role===undefined||p.access_role
 function projectRoleLabel(p:PaperProject){return isOwner(p)?'所有者':p.access_role==='editor'?'编辑者':'阅读者'}
 
 const query=ref('')
+const createPanel=ref<HTMLElement|null>(null)
+async function focusCreate(){
+ await nextTick()
+ createPanel.value?.scrollIntoView?.({block:'start',behavior:'smooth'})
+ createPanel.value?.querySelector<HTMLInputElement>('#paper-project-name')?.focus({preventScroll:true})
+}
 const visibleProjects=computed(()=>projects.value.filter(p=>p.name.toLocaleLowerCase().includes(query.value.toLocaleLowerCase())))
 const showTrash=ref(false),trashLoading=ref(false)
 const trashed=ref<TrashedPaperProject[]>([])
@@ -295,37 +311,60 @@ async function create(confirmed = false) {
 onMounted(load)
 </script>
 
+
 <style scoped>
-.papers-home { max-width: 1100px; margin-inline: auto; padding: 32px 24px 64px; }
-.papers-home__body { display: grid; gap: 22px; }
-.papers-home__body h2 { font-size: 1.1rem; font-weight: 650; margin-top: 12px; }
-.papers-home__notice,.papers-home__create,.papers-home__card { border: 1px solid var(--border, #d9dce2); border-radius: 12px; padding: 20px; }
-.papers-home__notice p,.papers-home__empty,.papers-home__card span,.papers-home__card time { color: var(--text-secondary, #697281); }
-.papers-home__create label { display: block; font-weight: 650; margin-bottom: 10px; }
-.papers-home__actions { display: flex; gap: 12px; }
-.papers-home__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
-.papers-home__card { display: flex; flex-direction: column; gap: 12px; color: inherit; text-decoration: none; }
-.papers-home__card:hover { border-color: var(--text-primary, #4a5867); }
-.papers-home__error { color: #b91c1c; }
-@media (max-width: 600px) { .papers-home { padding: 20px 16px 48px; } .papers-home__actions { flex-direction: column; } }
-.papers-home__apply {display:grid;gap:10px;margin-top:16px;max-width:620px}
-.papers-home__create h2 {margin:0 0 14px}
-.papers-home__import-actions {display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
-.papers-home__selected {display:flex;gap:12px;align-items:center;justify-content:space-between;overflow-wrap:anywhere;margin-bottom:12px;font-size:.85rem}
-.papers-home__main-file {display:grid;gap:8px;margin-top:14px}
-.papers-home__main-file label {margin:0}
-.papers-home__main-file p {font-size:.8rem;color:var(--a-color-text-secondary);margin:0}
-.papers-home__project-link {display:flex;flex-direction:column;gap:8px;color:inherit;text-decoration:none;overflow-wrap:anywhere}
-.papers-home__project-link:hover strong {text-decoration:underline}
-.papers-home__exclusion {display:grid;gap:10px;margin-top:18px;padding:16px;border:1px solid var(--a-color-border-soft,#d9dce2);border-radius:10px;background:var(--a-color-bg-soft,transparent)}
-.papers-home__exclusion h3 {font-size:.95rem;font-weight:650;margin:0}
-.papers-home__exclusion p {font-size:.84rem;line-height:1.6;margin:0;color:var(--a-color-text-secondary,#697281)}
-.papers-home__exclusion-list {max-height:220px;overflow:auto;margin:0;padding-left:22px;font-size:.83rem;line-height:1.7;overflow-wrap:anywhere}
-.papers-home__exclusion-actions {display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.papers-home__list-heading,.papers-home__project-actions,.papers-home__trash-row,.papers-home__rename{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.papers-home__list-heading h2{flex:1}
-.papers-home__trash-row{justify-content:space-between;padding:8px 0;border-top:1px solid var(--a-color-border-soft,#ddd)}
-.papers-home__template-selection{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;margin-bottom:14px;border:1px solid var(--a-color-border-soft,#ddd);border-radius:8px;background:var(--a-color-bg-subtle,transparent)}
-.papers-home__template-selection p{font-size:.8rem;color:var(--a-color-text-secondary,#697281);margin:4px 0 0}
+.papers-home {max-width:1280px; margin-inline:auto; padding:24px clamp(14px,2.8vw,34px) 64px; color:var(--a-color-text,#20242c); min-width:0}
+.papers-home__body {display:grid; gap:16px; min-width:0; container-type:inline-size}
+.papers-home__dashboard {display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,360px); align-items:start; gap:18px; min-width:0}
+.papers-home__library,.papers-home__creation {display:flex; flex-direction:column; gap:12px; min-width:0}
+.papers-home__notice,.papers-home__create,.papers-home__card {border:1px solid var(--a-color-border-soft,#d9dce2); border-radius:9px; padding:16px; background:var(--a-color-bg,#fff); min-width:0}
+.papers-home__notice {max-width:760px}
+.papers-home__notice p,.papers-home__empty p,.papers-home__project-info span,.papers-home__project-info time,.papers-home__create-hint {color:var(--a-color-text-secondary,#697281)}
+.papers-home__notice h2,.papers-home__create h2,.papers-home__list-title h2 {font-size:1.05rem;font-weight:650;margin:0}
+.papers-home__create {display:grid;gap:10px}
+.papers-home__create-hint {font-size:.83rem;line-height:1.5;margin:0 0 2px}
+.papers-home__create label {display:block;font-weight:550;font-size:.83rem}
+.papers-home__actions {display:flex;gap:8px;align-items:flex-end}
 .papers-home__actions :deep(.p-field),.papers-home__rename :deep(.p-field){flex:1;min-width:0}
+.papers-home__actions>button {flex:none}
+.papers-home__import-actions {display:flex;gap:6px;flex-wrap:wrap}
+.papers-home__import-actions button {flex:1 1 calc(50% - 6px);min-width:0}
+.papers-home__selected,.papers-home__template-selection {display:flex;gap:8px;align-items:center;justify-content:space-between;padding:9px;border:1px solid var(--a-color-border-soft,#ddd);border-radius:6px;background:var(--a-color-bg-soft,#f4f6f8);overflow-wrap:anywhere;font-size:.83rem}
+.papers-home__template-selection p,.papers-home__main-file p {font-size:.8rem;color:var(--a-color-text-secondary,#697281);margin:4px 0 0;line-height:1.6}
+.papers-home__main-file {display:grid;gap:6px}
+.papers-home__list-heading {display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.papers-home__list-title {flex:1;min-width:90px;display:flex;flex-direction:column;gap:2px}
+.papers-home__list-title small {font-size:11px;color:var(--a-color-text-secondary,#64748b)}
+.papers-home__list-heading :deep(.p-field) {flex:0 1 190px;min-width:120px}
+.papers-home__list-heading :deep(.p-input) {min-height:var(--a-control-height-sm);font-size:13px}
+.papers-home__grid {display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-width:0}
+.papers-home__card {display:flex;align-items:center;gap:12px;padding:11px 12px;min-width:0}
+.papers-home__card:hover {border-color:var(--a-color-text-secondary,#64748b)}
+.papers-home__project-link {flex:1;min-width:0;display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none}
+.papers-home__project-icon {flex:none;display:grid;place-items:center;width:38px;height:43px;border:1px solid var(--a-color-border-soft,#ddd);border-radius:7px;background:var(--a-color-bg-soft,#f4f6f8);color:var(--a-color-primary,#26784b)}
+.papers-home__project-info {display:grid;gap:3px;min-width:0;flex:1}
+.papers-home__project-info strong {font-size:14px;font-weight:650;overflow-wrap:anywhere}
+.papers-home__project-info span,.papers-home__project-info time {font-size:11px;overflow-wrap:anywhere}
+.papers-home__project-link:hover strong {color:var(--a-color-primary,#26784b)}
+.papers-home__project-chevron {flex:none;color:var(--a-color-text-secondary,#64748b)}
+.papers-home__project-actions,.papers-home__trash-row,.papers-home__rename {display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-width:0}
+.papers-home__project-actions button {font-size:11px}
+.papers-home__trash-row {justify-content:space-between;padding:8px 0;border-top:1px solid var(--a-color-border-soft,#ddd);overflow-wrap:anywhere}
+.papers-home__rename {flex:1 1 200px}
+.papers-home__empty {min-height:170px;display:grid;place-items:center;place-content:center;gap:8px;padding:20px;text-align:center;border:1px solid var(--a-color-border-soft,#ddd);border-radius:9px;color:var(--a-color-text-secondary,#64748b)}
+.papers-home__empty p {font-size:13px;margin:0}
+.papers-home__error {color:var(--a-color-danger,#b91c1c);font-size:13px;overflow-wrap:anywhere;margin:0}
+.papers-home__apply {display:grid;gap:10px;margin-top:16px;max-width:620px}
+.papers-home__exclusion {display:grid;gap:10px;padding:12px;border:1px solid var(--a-color-border-soft,#d9dce2);border-radius:8px;background:var(--a-color-bg-soft,#f4f6f8)}
+.papers-home__exclusion h3 {font-size:.93rem;font-weight:650;margin:0}
+.papers-home__exclusion p {font-size:.83rem;line-height:1.6;margin:0;color:var(--a-color-text-secondary,#697281)}
+.papers-home__exclusion-list {max-height:220px;overflow:auto;margin:0;padding-left:22px;font-size:.83rem;line-height:1.7;overflow-wrap:anywhere}
+.papers-home__exclusion-actions {display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.papers-home__dashboard.templates-open {grid-template-columns:minmax(0,1fr)}
+.papers-home__dashboard.templates-open .papers-home__creation {grid-row:1}
+.papers-home__dashboard.templates-open .papers-home__import-actions button {flex:0 1 auto}
+.papers-home__creation :deep(.paper-github) {background:var(--a-color-bg,#fff)}
+@container(max-width:930px) {.papers-home__card {flex-wrap:wrap;gap:6px}.papers-home__project-link{flex-basis:100%}.papers-home__project-actions{padding-left:48px}}
+@container(max-width:720px) {.papers-home__dashboard {grid-template-columns:minmax(0,1fr)}.papers-home__list-heading :deep(.p-field){flex:1 1 100%;order:2}.papers-home__card {padding:10px}.papers-home__project-actions {padding-left:0}.papers-home__import-actions button {flex:0 1 auto}}
+@media(max-width:480px) {.papers-home {padding-top:16px}.papers-home__actions {flex-direction:column;align-items:stretch}.papers-home__actions>button {width:100%}}
 </style>

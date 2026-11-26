@@ -1,17 +1,17 @@
 <template>
   <section class="paper-pdf" aria-label="PDF 预览">
-    <div class="paper-pdf__toolbar">
+    <div class="paper-pdf__toolbar" aria-label="PDF 阅读工具"><div class="paper-pdf__toolbar-group" aria-label="页码导航">
       <PButton size="sm" variant="secondary" type="button" title="上一页" aria-label="上一页" :disabled="page <= 1 || !pageCount" @click="jump(page - 1)">‹</PButton>
       <div class="paper-pdf__page-control"><PInput v-model="pageInput" class="paper-pdf__page-input" aria-label="页码" inputmode="numeric" @focus="editingPageInput = true" @input="editingPageInput = true" @blur="commitPageInput" @keydown.enter.prevent="commitPageInput" /></div>
       <span class="paper-pdf__count">/ {{ pageCount || '—' }}</span>
       <PButton size="sm" variant="secondary" type="button" title="下一页" aria-label="下一页" :disabled="page >= pageCount || !pageCount" @click="jump(page + 1)">›</PButton>
-      <PButton size="sm" variant="secondary" type="button" :disabled="!pageCount" :aria-expanded="outlineOpen" @click="toggleOutline">目录</PButton>
+      </div><div class="paper-pdf__toolbar-group" aria-label="阅读模式"><PButton size="sm" variant="secondary" type="button" :disabled="!pageCount" :aria-expanded="outlineOpen" @click="toggleOutline">目录</PButton>
       <PButton size="sm" variant="secondary" type="button" :disabled="!pageCount" :aria-pressed="textMode" title="切换文字选择；关闭后可双击定位源码" @click="toggleTextMode">{{ textMode?'选字中':'选择文字' }}</PButton>
-      <span class="paper-pdf__separator"></span>
+      </div><div class="paper-pdf__toolbar-group paper-pdf__zoom-group" aria-label="缩放">
       <PButton size="sm" variant="secondary" type="button" title="缩小" aria-label="缩小" :disabled="!pageCount" @click="adjustZoom(-1)">−</PButton>
       <PSelect :model-value="zoom" placeholder="PDF 缩放" size="sm" :options="[{value:'width',label:'适合宽度'},{value:'page',label:'适合页面'},...zoomLevels.map(n=>({value:String(n),label:n+'%'}))]" @update:model-value="zoom=String($event);resizePages(true)" />
       <PButton size="sm" variant="secondary" type="button" title="放大" aria-label="放大" :disabled="!pageCount" @click="adjustZoom(1)">+</PButton>
-      <PButton size="sm" variant="secondary" type="button" class="paper-pdf__download" :disabled="!documentBlob" title="下载 PDF" @click="download">下载 PDF</PButton>
+      </div><PButton size="sm" variant="secondary" type="button" class="paper-pdf__download" :disabled="!documentBlob" title="下载 PDF" @click="download">下载 PDF</PButton>
     </div>
     <div v-if="outlineOpen" class="paper-pdf__outline" aria-label="PDF 目录">
       <p v-if="outlineLoading">正在读取 PDF 书签…</p>
@@ -45,7 +45,7 @@ import { getPaperCompilePDF } from '@/api/papers'
 import { loadPdfEngine } from '@/utils/bookReaderEngines'
 
 const props=defineProps<{projectId:string;jobId:string;revision:number;assetBlob?:Blob;assetName?:string}>()
-const emit=defineEmits<{ 'pdf-position':[value:{jobId:string;page:number;x:number;y:number}]; 'displayed-job':[jobId:string] }>()
+const emit=defineEmits<{ 'pdf-position':[value:{jobId:string;page:number;x:number;y:number}]; 'displayed-job':[jobId:string] ; 'page-count':[meta:{jobId:string;revision:number;pages:number}] }>()
 const textMode=ref(false)
 const outlineOpen=ref(false),outlineLoading=ref(false)
 const outline=ref<{title:string;page:number;depth:number}[]>([])
@@ -332,6 +332,7 @@ async function load(){
   await nextTick()
   await resizePages(false)
   emit('displayed-job',jid)
+  emit('page-count',{jobId:jid,revision,pages:incoming.numPages})
   await nextTick();restore(a);schedule()
   if(old&&old!==task)void old.destroy().catch(()=>{})
  }catch{
@@ -411,10 +412,10 @@ defineExpose({jump,page,scroller,showPosition,currentPosition})
 </script>
 <style scoped>
 .paper-pdf{display:flex;flex-direction:column;min-width:0;min-height:0;flex:1;overflow:hidden}
-.paper-pdf__toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:7px 8px;border-bottom:1px solid var(--a-color-border-soft,#d8dde3);font-size:12px;background:var(--a-color-bg-elevated,var(--a-color-bg,#fff))}
-.paper-pdf__page-control{width:48px;flex:none}.paper-pdf__page-control :deep(.p-input){min-height:var(--a-control-height-sm);padding:4px;text-align:center;font-size:12px}.paper-pdf__count{white-space:nowrap}.paper-pdf__separator{flex:1;min-width:2px}.paper-pdf__download{margin-left:auto}
-.paper-pdf__scroll{min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;padding:12px;box-sizing:border-box;background:#dfe3e8;scrollbar-gutter:stable}
-.paper-pdf__sheet{position:relative;box-sizing:content-box;margin:0 auto 12px;background:white;box-shadow:0 1px 5px #0003;overflow:hidden;flex-shrink:0}
+.paper-pdf__toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;padding:6px 8px;border-bottom:1px solid var(--a-color-border-soft,#d8dde3);font-size:12px;background:var(--a-color-bg-elevated,var(--a-color-bg,#fff))}
+.paper-pdf__page-control{width:48px;flex:none}.paper-pdf__page-control :deep(.p-input){min-height:var(--a-control-height-sm);padding:4px;text-align:center;font-size:12px}.paper-pdf__count{white-space:nowrap}.paper-pdf__toolbar-group{display:flex;align-items:center;gap:4px;flex:none;white-space:nowrap}.paper-pdf__toolbar-group+.paper-pdf__toolbar-group{border-left:1px solid var(--a-color-border-soft,#ddd);padding-left:7px}.paper-pdf__zoom-group :deep(.p-select-trigger){min-width:84px;font-size:12px}.paper-pdf__download{margin-left:auto}
+.paper-pdf__scroll{min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;padding:12px;box-sizing:border-box;background:var(--a-color-bg-soft,#e4e8ed);scrollbar-gutter:stable}
+.paper-pdf__sheet{position:relative;box-sizing:content-box;margin:0 auto 12px;background:white;box-shadow:0 2px 7px #0002;overflow:hidden;flex-shrink:0}
 .paper-pdf__sheet canvas{display:block;width:100%;height:100%;background:white}
 .paper-pdf__page-loading,.paper-pdf__page-error{position:absolute;top:12px;left:12px;font-size:12px;color:#64748b;background:#fff;padding:5px}
 .paper-pdf__notice,.paper-pdf__footer{padding:6px 10px;font-size:12px;flex-shrink:0;color:var(--a-color-text-secondary,#64748b);border-bottom:1px solid var(--a-color-border-soft,#d8dde3)}
@@ -428,4 +429,6 @@ defineExpose({jump,page,scroller,showPosition,currentPosition})
 .paper-pdf__text-note{padding:4px 8px;font-size:11px;color:var(--a-color-text-secondary,#64748b)}
 .paper-pdf__text-layer{position:absolute;inset:0;overflow:hidden;z-index:2;user-select:text;cursor:text}
 .paper-pdf__text-layer :deep(span){user-select:text}
+.paper-pdf__footer{font-size:11px}.paper-pdf__footer>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.paper-pdf__footer>span:last-child{white-space:nowrap;flex:none}
+@media(max-width:480px){.paper-pdf__toolbar{gap:5px;padding:5px 6px}.paper-pdf__toolbar-group+.paper-pdf__toolbar-group{padding-left:5px}.paper-pdf__toolbar button{font-size:11px;padding-inline:7px}}
 </style>

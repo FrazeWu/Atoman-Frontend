@@ -209,7 +209,8 @@ function acceptAIEdit(edit:PaperAIEdit):boolean{
  editor.focus()
  return editor.state.doc.toString()===next
 }
-defineExpose({getLine,goToLine,goToMatch,insertCitation,insertBlock,runUndo,getAISelection,acceptAIEdit})
+function focusEditor(){editor?.focus()}
+defineExpose({focusEditor,getLine,goToLine,goToMatch,insertCitation,insertBlock,runUndo,getAISelection,acceptAIEdit})
 
 onBeforeUnmount(() => {
   undoManager?.destroy()
@@ -221,7 +222,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .papers-latex-editor { display:flex;flex-direction:column; min-height: 0; height: 100%; overflow: hidden; background: var(--a-color-bg,#fff);color:var(--a-color-text,#20242c); }
-.papers-latex-editor :deep(.cm-editor) { height: 100%; min-height: 0; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 13px; line-height: 1.65; }
+.papers-latex-editor :deep(.cm-editor) { height: 100%; min-height: 0; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 13px; line-height: 1.7; }
 .papers-latex-editor :deep(.cm-scroller) { overflow: auto; }
 .papers-latex-editor :deep(.cm-gutters) { border-right:1px solid var(--a-color-border-soft,#e5e7eb);background:var(--a-color-bg-soft,#f1f3f5);color:var(--a-color-text-secondary,#64748b); }
 .papers-latex-editor :deep(.cm-focused) { outline: none; }
@@ -230,8 +231,8 @@ onBeforeUnmount(() => {
 .papers-latex-editor :deep(.papers-remote-cursor){position:relative;display:inline-block;width:0;height:1.15em;border-left:2px solid;vertical-align:text-bottom;pointer-events:none;z-index:3}
 .papers-latex-editor :deep(.papers-remote-cursor-label){position:absolute;left:-2px;bottom:100%;font:10px/1.3 sans-serif;color:white;border-radius:3px 3px 3px 0;padding:2px 4px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
 .latex-editor-host{flex:1;min-height:0;overflow:hidden}
-.latex-editor-tools{display:flex;align-items:center;gap:6px;padding:4px 8px;border-bottom:1px solid var(--a-color-border-soft,#ddd);font-size:11px}
-.latex-editor-tools span{margin-left:auto;color:var(--a-color-text-secondary,#64748b)}
+.latex-editor-tools{display:flex;align-items:center;flex-wrap:wrap;gap:5px;padding:5px 8px;border-bottom:1px solid var(--a-color-border-soft,#ddd);font-size:11px}
+.latex-editor-tools span{margin-left:auto;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--a-color-text-secondary,#64748b)}
 .papers-latex-editor :deep(.cm-panel){font-size:12px;overflow-wrap:anywhere}
 .papers-latex-editor :deep(.cm-tooltip-autocomplete){max-width:100%;z-index:30}
 @media(prefers-color-scheme:dark){.papers-latex-editor{--papers-command:#82bfff;--papers-definition:#d4a4fa;--papers-comment:#a6c99b;--papers-bracket:#e2c28c;--papers-operator:#eab0d8}}

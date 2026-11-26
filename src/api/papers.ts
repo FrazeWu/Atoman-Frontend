@@ -71,6 +71,8 @@ export const savePaperFile = (projectId: string, fileId: string, content: string
   })
 
 
+export const getPaperSharedPreview=(pid:string)=>papersRequest<PaperCompileJob|null>('/projects/'+encodeURIComponent(pid)+'/shared-preview')
+
 export type PaperCompiler = 'pdflatex' | 'lualatex' | 'xelatex'
 
 export interface PaperCompileCapability {

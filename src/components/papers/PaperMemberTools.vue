@@ -1,7 +1,7 @@
 <template>
  <div class="paper-members">
   <strong>已加入的成员</strong>
-  <p>编辑者可保存已有文本文件并参与实时协作；阅读者只能查看项目文件。直接添加或更新账号权限是备用方式。</p>
+  <p>编辑者可保存已有文本文件并参与实时协作；阅读者只能查看项目文件和最新成功编译的 PDF。直接添加或更新账号权限是备用方式。</p>
   <form class="paper-members__form" @submit.prevent="submit">
    <label>成员账号 UUID
     <input v-model.trim="userId" aria-label="成员账号 UUID" maxlength="36" autocomplete="off" :disabled="busy||disabled" placeholder="输入协作者的账号 UUID" />

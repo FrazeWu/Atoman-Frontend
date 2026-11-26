@@ -7,7 +7,7 @@
     <option value="viewer">可以查看</option><option value="editor">可以编辑</option>
    </select>
   </label>
-  <p>{{ role==='viewer'?'可查看项目源码和资源，不能修改。':'可修改已有文本文件并参加实时协作，不授予管理权限。' }}</p>
+  <p>{{ role==='viewer'?'可查看项目源码、资源和最新成功编译的 PDF，不能修改。':'可修改已有文本文件并参加实时协作，不授予管理权限。' }}</p>
   <PButton type="button" size="sm" :disabled="busy||disabled" @click="generate">生成邀请链接</PButton>
   <div v-if="created" class="paper-share__created">
    <label>邀请链接（仅本次显示）<input :value="link" readonly aria-label="新建邀请链接" autocomplete="off" @focus="($event.target as HTMLInputElement).select()" /></label>

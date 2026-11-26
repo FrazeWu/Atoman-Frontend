@@ -7,10 +7,11 @@ import LatexEditor from "@/components/papers/LatexEditor.vue"
 import PaperWorkspaceView from '@/views/papers/PaperWorkspaceView.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import { ApiErrorResponseError } from '@/api/client'
-import {getPaperCollaborationCapability,listPaperMembers,setPaperMember,removePaperMember,listPaperProjectSnapshots,getPaperProjectSnapshot,createPaperProjectSnapshot,restorePaperProjectSnapshot,deletePaperProjectSnapshot, managePaperFiles, savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, listPaperFileVersions, getPaperFileVersion } from '@/api/papers'
+import {getPaperSharedPreview,getPaperCollaborationCapability,listPaperMembers,setPaperMember,removePaperMember,listPaperProjectSnapshots,getPaperProjectSnapshot,createPaperProjectSnapshot,restorePaperProjectSnapshot,deletePaperProjectSnapshot, managePaperFiles, savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, listPaperFileVersions, getPaperFileVersion } from '@/api/papers'
 
 vi.mock('@/stores/auth',()=>({useAuthStore:()=>({isAuthenticated:true,user:{uuid:'owner-a'}})}))
 vi.mock('@/api/papers', () => ({
+  getPaperSharedPreview:vi.fn().mockResolvedValue(null),
   getPaperCollaborationCapability:vi.fn().mockResolvedValue({enabled:false}),
   listPaperMembers:vi.fn(),setPaperMember:vi.fn(),removePaperMember:vi.fn(),
   listPaperProjectSnapshots:vi.fn(),
@@ -53,6 +54,7 @@ const f2 = { id: 'f2', path: 'main.tex', kind: 'text', revision: 1, content: 'Cu
 
 afterEach(() => {
   vi.clearAllMocks()
+  vi.mocked(getPaperSharedPreview).mockReset().mockResolvedValue(null)
   vi.mocked(getPaperCollaborationCapability).mockReset().mockResolvedValue({enabled:false})
   vi.mocked(getPaperCompileCapability).mockResolvedValue({ enabled: false, pdf_available: false })
   vi.mocked(listPaperCompileJobs).mockResolvedValue([])
@@ -665,6 +667,20 @@ describe('Papers shared project access',()=>{
    expect(removePaperMember).toHaveBeenCalledWith('two',uid)
    expect(w.text()).toContain('暂无共享成员')
   }finally{w.unmount();vi.unstubAllGlobals()}
+ })
+ it('lets a reader see the latest shared PDF without exposing compile controls or source maps',async()=>{
+  vi.mocked(getPaperSharedPreview).mockResolvedValue({id:'shared-pdf',project_id:'two',source_revision:1,status:'succeeded',pdf_available:true} as never)
+  const w=await open('viewer')
+  try{
+   expect(getPaperSharedPreview).toHaveBeenCalledWith('two')
+   expect(w.get('[data-test="paper-pdf-preview"]').text()).toBe('two:shared-pdf:1')
+   expect(w.findAll('button').find(b=>b.text()==='编译')!.attributes('disabled')).toBeDefined()
+   expect(listPaperCompileJobs).not.toHaveBeenCalled()
+   vi.mocked(getPaperSharedPreview).mockRejectedValue(new Error('permission revoked'))
+   await w.findAll('button').find(b=>b.text()==='刷新预览')!.trigger('click')
+   await flushPromises()
+   expect(w.find('[data-test="paper-pdf-preview"]').exists()).toBe(false)
+  }finally{w.unmount()}
  })
  it('enforces reader read-only UI and prevents accidental model saves',async()=>{
   const w=await open('viewer')

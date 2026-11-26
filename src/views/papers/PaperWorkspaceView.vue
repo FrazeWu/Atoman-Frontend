@@ -169,8 +169,10 @@
               <button v-if="compileJob.failure_code" type="button" class="papers-workspace__sync" :aria-expanded="showDiagnostics" @click="showDiagnostics=!showDiagnostics">错误详情{{ diagnostics.length ? ' ('+diagnostics.length+')' : '' }}</button>
             </template>
             <span v-else-if="compileEnabled">准备编译</span>
+            <span v-else-if="!ownerAccess&&previewJob">共享 PDF · 版本 {{ previewJob.source_revision }}<template v-if="previewJob.source_revision!==project?.head_revision">（上次成功版本）</template></span>
           </div>
           <div class="papers-workspace__preview-right">
+            <PButton v-if="!ownerAccess" type="button" size="sm" variant="secondary" :disabled="sharedPreviewBusy" @click="loadSharedPreview">{{ sharedPreviewBusy?'刷新中…':'刷新预览' }}</PButton>
             <label class="papers-workspace__compiler" title="选择此任务的 TeX 编译器"><span>编译器</span><select v-model="selectedCompiler" aria-label="TeX 编译器" :disabled="!compileEnabled||compiling||hasActiveCompile||saving||uploadBusy||navigating" @change="compilerChanged"><option v-for="engine in compilerOptions" :key="engine" :value="engine">{{ compilerLabel(engine) }}</option></select></label>
             <label class="papers-workspace__auto"><input type="checkbox" v-model="autoCompile" :disabled="collaborationOpen||!compileEnabled||recommendedUnavailable" /> 自动编译</label>
             <PButton type="button" size="sm" :disabled="(collaborationOpen&&collaborationRevision===null) || !compileEnabled || compiling || saving || switchingFile || navigating || uploadBusy || snapshotMutating || !project || hasActiveCompile" @click="compileNow">{{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}</PButton>
@@ -194,18 +196,20 @@
           <p v-if="!diagnostics.length">本次任务没有可用的源码错误详情。旧版编译结果需要重新编译，系统环境错误不会提供宿主机日志。</p>
           <small>错误代码：{{ compileJob.failure_code }} · 源码版本 {{ compileJob.source_revision }}</small>
         </section>
-        <div v-if="!compileEnabled" class="papers-workspace__preview-empty">
+        <p v-if="!ownerAccess&&sharedPreviewError" class="papers-workspace__error" role="alert">{{ sharedPreviewError }}</p>
+        <div v-if="!ownerAccess&&!previewJob" class="papers-workspace__preview-empty"><p>{{ sharedPreviewBusy?'正在读取共享 PDF…':'暂无可查看的已编译 PDF。请等待拥有者编译后刷新预览。' }}</p></div>
+        <div v-else-if="ownerAccess&&!compileEnabled" class="papers-workspace__preview-empty">
           <strong>编译尚未开放</strong>
           <p>源码编辑与保存可用。可信编译服务尚未完成生产安全验收，编译按钮保持禁用。</p>
         </div>
-        <div v-else-if="!compileJob" class="papers-workspace__preview-empty">
+        <div v-else-if="ownerAccess&&!compileJob" class="papers-workspace__preview-empty">
           <p>点击编译生成 PDF。</p>
         </div>
-        <p v-else-if="compileJob.status === 'succeeded' && (!pdfEnabled || !compileJob.pdf_available)" class="papers-workspace__message">编译已完成，暂无可验证的 PDF 产物。</p>
+        <p v-else-if="ownerAccess&&compileJob?.status === 'succeeded' && (!pdfEnabled || !compileJob.pdf_available)" class="papers-workspace__message">编译已完成，暂无可验证的 PDF 产物。</p>
         <PaperPDFPreview
-          v-if="compileEnabled && pdfEnabled && previewJob"
+          v-if="pdfEnabled && previewJob"
           ref="pdfRef"
-          :key="projectId"
+          :key="projectId+':'+accountId"
           :project-id="projectId"
           :job-id="previewJob.id"
           :revision="previewJob.source_revision"
@@ -245,7 +249,7 @@ import PaperPDFPreview from '@/components/papers/PaperPDFPreview.vue'
 import { decodeSourceMap, sourceToPDF, pdfToSource, type PaperSourceMap } from '@/components/papers/sourceMap'
 import {
   createPaperFile, managePaperFiles, getPaperFile, getPaperProject, listPaperFiles, savePaperFile, getPaperProjectZIP, downloadPaperZIP,
-  getPaperCollaborationCapability, getPaperCompileCapability, getPaperCompileJob, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, getPaperCompileSourceMap,
+  getPaperSharedPreview, getPaperCollaborationCapability, getPaperCompileCapability, getPaperCompileJob, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, getPaperCompileSourceMap,
   listPaperFileVersions, getPaperFileVersion,
   listPaperProjectSnapshots,getPaperProjectSnapshot,createPaperProjectSnapshot,restorePaperProjectSnapshot,deletePaperProjectSnapshot,
   listPaperMembers,setPaperMember,removePaperMember,type PaperProjectMember,type PaperMemberRole,
@@ -812,6 +816,23 @@ function compilerChanged(){compilerChangedByUser=true;autoDirty=true;scheduleAut
 const pdfEnabled = ref(false)
 const compileJob = ref<PaperCompileJob | null>(null)
 const previewJob = ref<PaperCompileJob | null>(null)
+const sharedPreviewBusy=ref(false),sharedPreviewError=ref('')
+let sharedPreviewSerial=0
+async function loadSharedPreview(){
+ if(disposed||ownerAccess.value||!project.value||sharedPreviewBusy.value)return
+ const pid=projectId.value,account=accountId.value,n=++sharedPreviewSerial,load=loadSerial
+ const valid=()=>!disposed&&n===sharedPreviewSerial&&load===loadSerial&&pid===projectId.value&&account===accountId.value&&!ownerAccess.value
+ sharedPreviewBusy.value=true;sharedPreviewError.value=''
+ try{
+  const job=await getPaperSharedPreview(pid)
+  if(!valid())return
+  previewJob.value=job?.project_id===pid&&job.status==='succeeded'&&job.pdf_available?job:null
+  pdfEnabled.value=!!previewJob.value
+ }catch{
+  if(valid()){previewJob.value=null;pdfEnabled.value=false;sharedPreviewError.value='暂时无法读取共享 PDF，请检查项目权限后刷新。'}
+ }finally{if(n===sharedPreviewSerial)sharedPreviewBusy.value=false}
+}
+function resetSharedPreview(){sharedPreviewSerial++;sharedPreviewBusy.value=false;sharedPreviewError.value=''}
 const showDiagnostics=ref(false)
 const diagnostics=computed(()=>(compileJob.value?.diagnostics||[]).slice(0,12))
 const diagnosticStale=computed(()=>collaborationOpen.value||compileJob.value?.source_revision!==project.value?.head_revision || (activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content))
@@ -857,11 +878,11 @@ const displayedPDFJob=ref('')
 const syncMessage=ref('')
 let mapAbort:AbortController|undefined
 let mapSerial=0
-const syncReady=computed(()=>!collaborationOpen.value&&!!sourceMap.value&&!!previewJob.value&&mapJob.value===previewJob.value.id&&displayedPDFJob.value===mapJob.value&&previewJob.value.source_revision===project.value?.head_revision&&draft.value===activeFile.value?.content)
+const syncReady=computed(()=>ownerAccess.value&&!collaborationOpen.value&&!!sourceMap.value&&!!previewJob.value&&mapJob.value===previewJob.value.id&&displayedPDFJob.value===mapJob.value&&previewJob.value.source_revision===project.value?.head_revision&&draft.value===activeFile.value?.content)
 watch(()=>[projectId.value,previewJob.value?.id] as const,async ([pid,jid])=>{
  const serial=++mapSerial;mapAbort?.abort();mapAbort=new AbortController()
  sourceMap.value=null;mapJob.value='';syncMessage.value=''
- if(!jid)return
+ if(!jid||!ownerAccess.value)return
  try{
   const raw=await getPaperCompileSourceMap(pid,jid,mapAbort.signal)
   if(serial!==mapSerial||disposed||projectId.value!==pid)return
@@ -970,7 +991,7 @@ async function loadProject() {
       getPaperProject(requestedProjectId), listPaperFiles(requestedProjectId),
       Promise.resolve().then(() => getPaperCompileCapability(requestedProjectId)).catch(():PaperCompileCapability => ({ enabled: false, pdf_available: false })),
     ])
-    if (disposed || serial !== loadSerial || requestedProjectId !== projectId.value) return
+    if (disposed || serial !== loadSerial || requestedProjectId !== projectId.value || ownerAtStart!==accountId.value) return
     project.value = currentProject
     files.value = currentFiles
     initializeLocalDrafts(ownerAtStart)
@@ -989,6 +1010,10 @@ async function loadProject() {
       if(compileEnabled.value&&recommendedCompiler.value&&compilerOptions.value.includes(recommendedCompiler.value))selectedCompiler.value=recommendedCompiler.value
     }
 
+    if(!ownerAccess.value&&!disposed&&serial===loadSerial&&ownerAtStart===accountId.value){
+      resetSharedPreview()
+      void loadSharedPreview()
+    }
     if (compileEnabled.value && !disposed && serial === loadSerial) {
       // Do not hold the editor's loading state hostage to queue history.
       const historyRequest=++historySerial
@@ -1321,9 +1346,10 @@ async function exitCollaboration(){
 }
 watch(accountId,(next,previous)=>{
  if(next!==previous)resolveConfirmation(false)
- if(next===previous||!collaborationOpen.value)return
- // A different account must never inherit the preceding account's live
- // Y.Doc or a stale canonical source. The keyed panel is unmounted.
+ if(next===previous)return
+ resetSharedPreview()
+ // A different account must never inherit another account's live Y.Doc,
+ // canonical source or previously authorized PDF.
  collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null
  loadSerial++;fileSerial++;pollSerial++;historySerial++;mapSerial++
  pendingSubmission=null;compiling.value=false;canceling.value=false;snapshotMutating.value=false;addingFile.value=false
@@ -1382,6 +1408,7 @@ onBeforeRouteUpdate(beforeNavigate)
 const removeNavigationHook=router.afterEach(()=>{navigating.value=false})
 
 watch(projectId, () => {
+  resetSharedPreview()
   collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null
   loadSerial++
   uploadSerial++;preparingUpload.value=false;draggingFiles.value=false
@@ -1424,6 +1451,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   disposed = true
+  resetSharedPreview()
   memberSerial++;uploadSerial++;draggingFiles.value=false
   closeTool();bibSerial++;clearSaveRetry()
   loadSerial++

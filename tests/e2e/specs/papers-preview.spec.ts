@@ -206,3 +206,52 @@ test.describe('Papers isolated browser acceptance', () => {
     expect(requests).toBe(1)
   })
 })
+
+test('read-only collaborator can render the latest shared PDF and refresh after revocation',async({page,baseURL})=>{
+ test.setTimeout(60000)
+ const origin=new URL(baseURL!).origin
+ expect(new URL(origin).hostname).toMatch(/^(localhost|127\.0\.0\.1)$/)
+ const pdf=fixturePDF(),pid='shared-preview-project',prefix='/papers/projects/'+pid
+ const now='2026-11-26T00:00:00Z'
+ const project={id:pid,name:'Shared PDF acceptance',main_file_id:'main',head_revision:2,access_role:'viewer',created_at:now,updated_at:now}
+ const file={id:'main',path:'main.tex',kind:'text',content:'Shared manuscript',sha256:'',revision:1,created_at:now,updated_at:now}
+ const job={id:'latest-pdf',project_id:pid,source_revision:1,status:'succeeded',compiler:'xelatex',pdf_available:true,attempts:1,max_attempts:2,cancel_requested:false,created_at:now}
+ let allowed=true,pdfReads=0,historyReads=0,mapReads=0
+ await page.route('**/*',async route=>{
+  const url=new URL(route.request().url())
+  const api=url.pathname.startsWith('/api/v1/')&&(url.origin===origin||url.origin==='https://api.atoman.org')
+  if(!api)return url.origin===origin&&!url.pathname.startsWith('/api/')?route.continue():route.abort()
+  const headers={'access-control-allow-origin':origin,'access-control-allow-credentials':'true','access-control-allow-methods':'GET, OPTIONS, POST, PUT, DELETE','access-control-allow-headers':'content-type, x-csrf-token, authorization'}
+  if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers})
+  const path=url.pathname.slice('/api/v1'.length)
+  const ok=(data:unknown)=>route.fulfill({headers,json:{data}})
+  const denied=()=>route.fulfill({status:404,headers,json:{code:'papers.project_not_found',message:'Not found'}})
+  if(path==='/auth/session')return route.fulfill({headers,json:{csrf_token:'fixture-csrf',user:{uuid:'fixture-viewer',username:'viewer',email:'fixture@example.test',role:'user',onboarding_completed_at:now}}})
+  if(path==='/site/access')return route.fulfill({headers,json:{}})
+  if(path===prefix)return ok(project)
+  if(path===prefix+'/files')return ok([file])
+  if(path===prefix+'/files/main')return ok(file)
+  if(path===prefix+'/compile-capability')return denied()
+  if(path===prefix+'/shared-preview')return allowed?ok(job):denied()
+  if(path===prefix+'/compiles'){historyReads++;return denied()}
+  if(path.endsWith('/source-map')){mapReads++;return denied()}
+  if(path===prefix+'/compiles/latest-pdf/pdf'){
+   if(!allowed)return denied()
+   pdfReads++
+   return route.fulfill({contentType:'application/pdf',body:pdf,headers:{...headers,'cache-control':'private, no-store'}})
+  }
+  return ok({items:[],total:0})
+ })
+ await page.goto('/papers/'+pid)
+ await expect(page.locator('.cm-content')).toContainText('Shared manuscript')
+ await expect(page.locator('.paper-pdf__sheet[data-page="1"]')).toHaveAttribute('data-rendered','true',{timeout:30000})
+ await expect(page.getByText('共享 PDF · 版本 1（上次成功版本）')).toBeVisible()
+ await expect(page.getByRole('button',{name:'编译',exact:true})).toBeDisabled()
+ expect(pdfReads).toBe(1)
+ expect(historyReads).toBe(0)
+ expect(mapReads).toBe(0)
+ allowed=false
+ await page.getByRole('button',{name:'刷新预览'}).click()
+ await expect(page.locator('.paper-pdf canvas')).toHaveCount(0)
+ await expect(page.getByText('暂时无法读取共享 PDF，请检查项目权限后刷新。')).toBeVisible()
+})

@@ -19,6 +19,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirro
 import {openSearchPanel} from '@codemirror/search'
 import {startCompletion} from '@codemirror/autocomplete'
 import {latexExtensionsFor} from './latexLanguage'
+import {paperAIReplacement,type PaperAIEdit,type PaperAISourceRange} from './aiSuggestion'
 import {UndoManager,type Text as YText} from 'yjs'
 import {yCollab,ySyncFacet,ySyncAnnotation} from 'y-codemirror.next'
 import {remoteCursorDecorations,type CollaborationPeer,type LocalSelection} from './paperPresence'
@@ -186,7 +187,23 @@ function insertBlock(block:string):boolean{
  editor.focus()
  return true
 }
-defineExpose({getLine,goToLine,goToMatch,insertCitation,insertBlock,runUndo})
+// AI suggestions must pass through a normal CodeMirror transaction so undo
+// and the workspace's existing save/version checks remain authoritative.
+function getAISelection():PaperAISourceRange|null{
+ if(!editor||props.collaborativeText||props.readonly)return null
+ const main=editor.state.selection.main
+ if(main.empty)return null
+ return {from:main.from,to:main.to,baseline:editor.state.doc.toString()}
+}
+function acceptAIEdit(edit:PaperAIEdit):boolean{
+ if(!editor||props.collaborativeText||props.readonly||editor.state.readOnly)return false
+ const current=editor.state.doc.toString()
+ if(paperAIReplacement(current,edit)===null)return false
+ editor.dispatch({changes:{from:edit.from,to:edit.to,insert:edit.replacement},selection:{anchor:edit.from,head:edit.from+edit.replacement.length},scrollIntoView:true,userEvent:'input'})
+ editor.focus()
+ return true
+}
+defineExpose({getLine,goToLine,goToMatch,insertCitation,insertBlock,runUndo,getAISelection,acceptAIEdit})
 
 onBeforeUnmount(() => {
   undoManager?.destroy()

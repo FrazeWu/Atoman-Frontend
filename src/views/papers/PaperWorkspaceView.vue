@@ -5,9 +5,9 @@
       <strong>{{ project?.name || '论文工作台' }}</strong>
       <div class="papers-workspace__layout-tools">
         <button type="button" title="显示或隐藏文件栏" :aria-pressed="showFiles" @click="showFiles = !showFiles">文件栏</button>
-        <button type="button" :aria-pressed="layoutMode === 'split'" @click="layoutMode = 'split'">分栏</button>
-        <button type="button" :aria-pressed="layoutMode === 'editor'" @click="layoutMode = 'editor'">源码</button>
-        <button type="button" :aria-pressed="layoutMode === 'pdf'" @click="layoutMode = 'pdf'">预览</button>
+        <button type="button" :aria-pressed="layoutMode === 'split'" @click="setWorkspaceLayout('split')">分栏</button>
+        <button type="button" :aria-pressed="layoutMode === 'editor'" @click="setWorkspaceLayout('editor')">源码</button>
+        <button type="button" :aria-pressed="layoutMode === 'pdf'" @click="setWorkspaceLayout('pdf')">预览</button>
       </div>
       <span v-if="project" class="papers-workspace__status">{{ roleLabel }}</span>
       <span class="papers-workspace__status" role="status">{{ saveStatus }}</span>
@@ -74,6 +74,7 @@
         </div>
         <p v-if="!collaborationOpen&&collaborationScope&&collaborationGateMessage" class="papers-workspace__stale" role="status">{{ collaborationGateMessage }} <button v-if="collaborationGate.scope===collaborationScope&&collaborationGate.state==='unavailable'" type="button" class="papers-workspace__sync" :disabled="navigating||switchingFile" @click="checkCollaborationCapability">重新检查</button></p>
         <nav v-if="!collaborationOpen" class="papers-workspace__toolnav" aria-label="项目工具">
+          <button v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='ai'" @click="toggleTool('ai')">AI 助手</button>
           <button type="button" :aria-pressed="toolMode==='search'" @click="toggleTool('search')">全项目搜索</button>
           <button type="button" :aria-pressed="toolMode==='references'" @click="toggleTool('references')">参考文献</button>
           <button v-if="ownerAccess" type="button" :aria-pressed="toolMode==='figures'" @click="toggleTool('figures')">插图</button>
@@ -85,7 +86,7 @@
         </nav>
         <p v-if="!ownerAccess&&!collaborationOpen" class="papers-workspace__stale" role="status">{{ writeAccess?(collaborationGate.state==='available'?'共享编辑：普通保存会检查文件版本；可使用实时协作。':'共享编辑：保存时检查文件版本，暂不支持实时共同编辑。'):'共享阅读：当前账号无编辑权限。' }}</p>
         <p v-if="refreshMessage" class="papers-workspace__stale" role="status">{{ refreshMessage }}</p>
-        <section v-if="toolMode&&(!collaborationOpen||toolMode==='snapshots')" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'文件历史'">
+        <section v-if="toolMode&&toolMode!=='ai'&&(!collaborationOpen||toolMode==='snapshots')" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'文件历史'">
           <div class="papers-workspace__outline-heading">
             <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'当前文件版本历史' }}</strong>
             <button v-if="toolMode!=='figures'" type="button" class="papers-workspace__sync"  :disabled="toolBusy||snapshotMutating||memberMutating" @click="refreshTool">刷新</button>
@@ -154,7 +155,13 @@
         </p>
       </section>
       <div v-if="layoutMode === 'split'" class="papers-workspace__divider" role="separator" aria-label="调整编辑器和预览宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="previewWidth" @pointerdown="beginResize" @pointermove="resizeMove" @pointerup="endResize" @pointercancel="endResize" @keydown.left.prevent="previewWidth=Math.min(75,previewWidth+3)" @keydown.right.prevent="previewWidth=Math.max(25,previewWidth-3)" />
-      <aside class="papers-workspace__preview" aria-label="编译预览">
+      <aside v-if="aiPanelOpen&&activeFile?.kind==='text'" class="papers-workspace__preview papers-workspace__ai-panel" aria-label="AI 论文助手">
+        <div class="papers-workspace__preview-heading"><strong>AI 论文助手</strong><span class="papers-workspace__ai-subtitle">审阅后修改</span><PButton size="sm" variant="secondary" type="button" @click="closeTool">返回 PDF</PButton></div>
+        <div class="papers-workspace__ai-scroll">
+          <PaperAITools v-if="toolMode==='ai'&&ownerAccess&&activeFile?.kind==='text'" :key="projectId+':'+accountId+':'+activeFile.id" :project-id="projectId" :account-id="accountId" :file="activeFile" :source="draft" :files="files" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||collaborationOpen" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
+        </div>
+      </aside>
+      <aside v-show="!aiPanelOpen" class="papers-workspace__preview" aria-label="编译预览">
         <div class="papers-workspace__preview-heading">
           <div class="papers-workspace__preview-left">
             <strong>PDF 预览</strong>
@@ -232,6 +239,8 @@ import PaperSnapshotTools from '@/components/papers/PaperSnapshotTools.vue'
 import PaperDraftTools from '@/components/papers/PaperDraftTools.vue'
 import PaperMemberTools from '@/components/papers/PaperMemberTools.vue'
 import PaperShareLinks from '@/components/papers/PaperShareLinks.vue'
+import PaperAITools from '@/components/papers/PaperAITools.vue'
+import type {PaperAIEdit} from '@/components/papers/aiSuggestion'
 import PaperCollaborationPanel from '@/components/papers/PaperCollaborationPanel.vue'
 import {collaborationCapabilityError,collaborationUnavailableReason} from '@/components/papers/collaborationCapability'
 import {draftKey,listLocalDrafts,localDraftEnabled,setLocalDraftEnabled,writeLocalDraft,readLocalDraft,removeLocalDraft,sameLocalDraft,matchesLocalDraftBase,type PaperLocalDraft} from '@/components/papers/localDrafts'
@@ -414,8 +423,9 @@ const draft = ref('')
 function updateDraft(value:string){if(writeAccess.value&&!collaborationOpen.value)draft.value=value}
 const refreshMessage=ref('')
 
-type ToolMode='search'|'references'|'history'|'figures'|'snapshots'|'drafts'|'members'
+type ToolMode='search'|'references'|'history'|'figures'|'snapshots'|'drafts'|'members'|'ai'
 const toolMode=ref<ToolMode|''>(''),toolBusy=ref(false),toolError=ref('')
+const aiPanelOpen=computed(()=>toolMode.value==='ai'&&ownerAccess.value&&!collaborationOpen.value&&activeFile.value?.kind==='text')
 const searchQuery=ref(''),replaceQuery=ref(''),referenceQuery=ref('')
 const searchSources=shallowRef<PaperFile[]>([]),searchBase=ref(0)
 const searchStale=computed(()=>!searchBase.value||searchBase.value!==project.value?.head_revision||(activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content))
@@ -528,7 +538,7 @@ function onDraftStorage(event:StorageEvent){
 let toolSerial=0,bibSerial=0
 function formatVersionDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString()}
 function closeTool(){toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null;snapshotDetail.value=null}
-function toggleTool(mode:ToolMode){if((collaborationOpen.value&&mode!=='snapshots')||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;refreshTool()}
+function toggleTool(mode:ToolMode){if((collaborationOpen.value&&mode!=='snapshots')||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures','ai'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;if(mode==='ai')layoutMode.value='split';refreshTool()}
 function refreshTool(){if(toolMode.value==='search')void loadSearchSources();else if(toolMode.value==='references')void refreshBib();else if(toolMode.value==='history')void loadVersions();else if(toolMode.value==='snapshots')void loadSnapshots();else if(toolMode.value==='drafts')refreshLocalDrafts();else if(toolMode.value==='members'&&ownerAccess.value)void loadMembers()}
 function memberError(cause:unknown){
  const code=cause instanceof ApiErrorResponseError?cause.code:''
@@ -871,6 +881,12 @@ const previewStale = computed(() => !!previewJob.value && (previewJob.value.id !
  (previewJob.value.compiler||'pdflatex')!==selectedCompiler.value ||
  (!collaborationOpen.value&&activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)))
 const editorRef=ref<InstanceType<typeof LatexEditor>|null>(null)
+function captureAISelection(){return editorRef.value?.getAISelection?.()??null}
+function applyAIEdit(edit:PaperAIEdit){
+ if(disposed||!ownerAccess.value||collaborationOpen.value||saving.value||navigating.value||switchingFile.value||uploadBusy.value||addingFile.value||snapshotMutating.value||
+    activeFile.value?.kind!=='text'||activeFile.value.id!==edit.fileId||activeFile.value.revision!==edit.revision||draft.value!==edit.baseline)return false
+ return editorRef.value?.acceptAIEdit?.(edit)===true
+}
 const pdfRef=ref<InstanceType<typeof PaperPDFPreview>|null>(null)
 const sourceMap=shallowRef<PaperSourceMap|null>(null)
 const mapJob=ref('')
@@ -926,6 +942,7 @@ const isCompactViewport=()=>typeof window!=='undefined'&&(window.innerWidth<=760
 const compactLayout=ref(isCompactViewport())
 const showFiles=ref(!compactLayout.value)
 const layoutMode=ref<'split'|'editor'|'pdf'>(compactLayout.value?'editor':'split')
+function setWorkspaceLayout(mode:'split'|'editor'|'pdf'){if(mode!=='split'&&toolMode.value==='ai')closeTool();layoutMode.value=mode}
 function onViewportChange(){const small=isCompactViewport();if(small===compactLayout.value)return;compactLayout.value=small;showFiles.value=!small}
 const autoCompile=ref(false)
 let dragging=false
@@ -1609,4 +1626,9 @@ onBeforeUnmount(() => {
 .papers-workspace__compile-status{flex:1 1 100%;order:2;justify-content:flex-start;white-space:normal;flex-wrap:wrap}
 .papers-workspace__preview-right{flex-wrap:wrap;flex-shrink:1;min-width:0;justify-content:flex-end}
 .papers-workspace--compact .papers-workspace__files{width:min(300px,86vw)}
+
+.papers-workspace__ai-panel .papers-workspace__preview-heading{justify-content:space-between;flex-wrap:wrap}
+.papers-workspace__ai-subtitle{flex:1;font-size:11px;color:var(--a-color-text-secondary,#64748b)}
+.papers-workspace__ai-scroll{flex:1;min-height:0;overflow:auto;padding:10px;scrollbar-gutter:stable}
+.papers-workspace--compact .papers-workspace__ai-panel{flex:2 1 0%}
 </style>

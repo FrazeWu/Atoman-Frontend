@@ -102,7 +102,7 @@ test('AI audit attests reviewed plans, persists timeline after reopen, and rolls
  await expect(editor).toHaveText(changed)
  await expect(panel).toContainText('修改已提交')
  expect(writes).toBe(1)
- await page.getByRole('button',{name:'返回 PDF',exact:true}).click()
+ await page.getByRole('button',{name:'关闭 AI',exact:true}).click()
  await page.getByRole('button',{name:'AI 助手',exact:true}).click()
  await expect(page.getByLabel('AI API Key')).toHaveValue('')
  await panel.locator('summary').click()

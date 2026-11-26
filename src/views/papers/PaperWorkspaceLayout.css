@@ -64,7 +64,8 @@
 .papers-workspace__divider { width:7px; }
 .papers-workspace__divider:after,.papers-workspace__files-divider:after { content:''; position:absolute; top:calc(50% - 15px); left:calc(50% - 1px); height:30px; width:2px; border-radius:2px; background:var(--papers-muted); opacity:.55; }
 .papers-workspace__files-divider:hover,.papers-workspace__divider:hover,.papers-workspace__files-divider:focus-visible,.papers-workspace__divider:focus-visible { background:var(--papers-accent); outline:none; }
-.papers-workspace__editor { flex:var(--editor-grow,51) 1 0%; min-height:0; min-width:0; display:flex; flex-direction:column; overflow:hidden; background:var(--papers-surface); }
+.papers-workspace__editor-column { flex:var(--editor-grow,51) 1 0%; min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden; }
+.papers-workspace__editor { flex:1 1 0%; min-height:0; min-width:0; display:flex; flex-direction:column; overflow:hidden; background:var(--papers-surface); }
 .papers-workspace__editor-header,.papers-workspace__preview-heading,.papers-workspace__tool-heading { display:flex; align-items:center; gap:6px; min-height:42px; padding:6px 10px; flex-shrink:0; border-bottom:1px solid var(--papers-border); font-size:12px; background:var(--papers-surface); min-width:0; box-sizing:border-box; }
 .papers-workspace__editor-header { flex-wrap:wrap; }
 .papers-workspace__editor-header>span { flex:1; min-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
@@ -117,9 +118,9 @@
 .papers-workspace__outline small { color:var(--papers-muted); font-size:11px; }
 .papers-workspace__ai-subtitle { flex:1; color:var(--papers-muted); font-size:11px; }
 .papers-workspace__files-backdrop { display:none; }
-.files-hidden .papers-workspace__files,.pdf-only .papers-workspace__editor,.editor-only:not(.tool-open) .papers-workspace__preview { display:none; }
+.files-hidden .papers-workspace__files,.pdf-only .papers-workspace__editor-column,.editor-only:not(.tool-open) .papers-workspace__preview { display:none; }
 .pdf-only .papers-workspace__preview { flex:1; }
-.ai-expanded .papers-workspace__editor,.ai-expanded .papers-workspace__divider { display:none; }
+.ai-expanded .papers-workspace__editor { display:none; }
 .ai-expanded .papers-workspace__ai-panel { flex:1 1 0%; }
 .ai-expanded .papers-workspace__ai-scroll :deep(.paper-ai) { max-width:1040px; margin-inline:auto; }
 @media(min-width:1450px) { .papers-workspace__toolnav { gap:12px; padding-inline:14px; } .papers-workspace__toolnav button { padding-inline:10px; } }
@@ -137,8 +138,8 @@
 .papers-workspace--compact .papers-workspace__files { position:absolute; inset:0 auto 0 0; width:min(320px,86vw); z-index:25; box-shadow:4px 0 16px #0003; }
 .papers-workspace--compact .papers-workspace__files-backdrop { display:block; position:absolute; inset:0; border:0; background:#0005; z-index:24; }
 .papers-workspace--compact .papers-workspace__divider,.papers-workspace--compact .papers-workspace__files-divider { display:none; }
-.papers-workspace--compact .papers-workspace__editor,.papers-workspace--compact .papers-workspace__preview { flex:1 1 0%; }
-.papers-workspace--compact .tool-open .papers-workspace__editor { display:none; }
+.papers-workspace--compact .papers-workspace__editor-column,.papers-workspace--compact .papers-workspace__preview { flex:1 1 0%; }
+.papers-workspace--compact .tool-open .papers-workspace__editor-column { display:none; }
 .papers-workspace--compact .papers-workspace__tool-body,.papers-workspace--compact .papers-workspace__ai-scroll { padding:10px; }
 .papers-workspace--compact .papers-workspace__editor-header,.papers-workspace--compact .papers-workspace__preview-heading { gap:5px; padding-inline:8px; }
 @media(max-width:400px) { .papers-workspace--compact .papers-workspace__header { gap:5px; } .papers-workspace--compact .papers-workspace__layout-tools button,.papers-workspace--compact .papers-workspace__header-actions button { padding-inline:6px; font-size:11px; } .papers-workspace--compact .papers-workspace__project-title {flex-basis:36%} .papers-workspace--compact .papers-workspace__header-actions {flex:1;justify-content:flex-end} }
@@ -178,12 +179,24 @@
 .papers-workspace__dirty {color:var(--papers-accent);font-size:8px;flex:none}
 .papers-workspace__tab-add {display:flex;align-items:center;justify-content:center;flex:none;min-width:34px;padding-inline:6px}
 .papers-workspace--focus .papers-workspace__files,.papers-workspace--focus .papers-workspace__files-divider {display:none}
-.papers-workspace--focus .papers-workspace__editor {flex:1 1 auto}
+.papers-workspace--focus .papers-workspace__editor-column {flex:1 1 auto}
 .papers-workspace--focus .papers-workspace__editor :deep(.cm-content){max-width:1200px}
-.pdf-docked .papers-workspace__files {width:min(var(--files-width,248px),max(180px,calc(100% - 1080px)))}
-.pdf-docked .papers-workspace__editor,.pdf-docked .papers-workspace__pdf-panel,.pdf-docked .papers-workspace__ai-panel {flex:1 1 0%}
-.pdf-docked .papers-workspace__pdf-panel {order:4;border-left:1px solid var(--papers-border);border-right:1px solid var(--papers-border)}
-.pdf-docked .papers-workspace__ai-panel {order:5}
 @media(max-width:1100px){.papers-workspace__tab{max-width:190px}.papers-workspace__quick-button,.papers-workspace__focus-button{padding-inline:5px}}
 .papers-workspace--compact .papers-workspace__tabs {min-height:32px}
 .papers-workspace--compact .papers-workspace__tab {max-width:min(190px,65%)}
+
+/* Bottom assistant shares the source column; PDF remains independent. */
+.papers-workspace__ai-panel{flex:0 0 var(--ai-height,43%);display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;background:var(--papers-subtle);border-top:1px solid var(--papers-border)}
+.papers-workspace__ai-heading{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:5px 8px;flex-shrink:0;min-height:34px;background:var(--papers-surface);border-bottom:1px solid var(--papers-border);font-size:12px}
+.papers-workspace__ai-heading>svg{flex:none;color:var(--papers-accent)}
+.papers-workspace__ai-heading>strong{font-weight:650;white-space:nowrap}
+.papers-workspace__ai-heading .papers-workspace__ai-subtitle{flex:1;min-width:30px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.papers-workspace__ai-heading button{font-size:11px;min-height:27px;padding-inline:5px;white-space:nowrap}
+.papers-workspace__ai-panel.collapsed{flex:0 0 auto}
+.papers-workspace__ai-divider{height:7px;flex:none;cursor:row-resize;touch-action:none;background:var(--papers-border);position:relative}
+.papers-workspace__ai-divider:after{content:'';position:absolute;left:calc(50% - 17px);top:calc(50% - 1px);width:34px;height:2px;border-radius:2px;background:var(--papers-muted);opacity:.65}
+.papers-workspace__ai-divider:hover,.papers-workspace__ai-divider:focus-visible{background:var(--papers-accent);outline:none}
+.ai-expanded .papers-workspace__ai-panel{flex:1 1 0%}
+.papers-workspace__ai-scroll{padding:8px;scrollbar-gutter:stable}
+.papers-workspace__ai-scroll :deep(.paper-ai){gap:8px}
+@media(max-width:480px){.papers-workspace__ai-heading{gap:4px;padding:4px 6px}.papers-workspace__ai-heading .papers-workspace__ai-subtitle{display:none}.papers-workspace__ai-heading strong{flex:1}.papers-workspace__ai-divider{height:9px}}

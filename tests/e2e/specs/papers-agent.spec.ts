@@ -111,7 +111,7 @@ test('owner reviews a multi-file Agent proposal, selectively commits, and contin
  await expect(page.getByText('The reference proposal was not applied.',{exact:true}).last()).toBeVisible()
  expect(aiCalls).toBe(2);expect(writes).toBe(1)
  expect(await page.evaluate(secret=>JSON.stringify({...localStorage,...sessionStorage}).includes(secret),key)).toBe(false)
- await page.getByRole('button',{name:'返回 PDF',exact:true}).click()
+ await page.getByRole('button',{name:'关闭 AI',exact:true}).click()
  await page.getByRole('button',{name:'AI 助手',exact:true}).click()
  await expect(page.getByLabel('AI API Key')).toHaveValue('')
  await expect(page.getByText('本轮对话（2 轮）')).toHaveCount(0)

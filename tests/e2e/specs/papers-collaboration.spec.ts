@@ -135,7 +135,7 @@ test('two independent CodeMirror clients merge confirmed edits and preserve unco
   await expect.poll(()=>source.toString()).toBe('First Original manuscript Second Remote')
   await expect(secondSource).toHaveText(source.toString())
   await expect(first.locator('.papers-collab [role=status]')).toContainText('服务器已保存')
-  await first.getByRole('button',{name:'返回 PDF',exact:true}).click()
+  await first.getByRole('button',{name:'关闭 AI',exact:true}).click()
   expect(legacyWrites).toBe(0)
   disconnectEditor=true
   await secondSource.click();await second.keyboard.press('End');await second.keyboard.insertText(' NOT ACKED')

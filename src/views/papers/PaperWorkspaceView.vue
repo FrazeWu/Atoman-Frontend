@@ -7,10 +7,10 @@
         <PButton size="sm" variant="ghost" type="button" class="papers-workspace__quick-button" aria-label="快速打开文件" title="快速打开文件 (Ctrl/Cmd+P)" :disabled="!canSwitchWorkspaceFile" @click="openQuick"><Search :size="15" aria-hidden="true" /></PButton>
         <PButton v-if="!compactLayout" size="sm" variant="ghost" type="button" class="papers-workspace__focus-button" :aria-label="focusMode?'退出专注模式':'专注模式'" :title="focusMode?'退出专注模式':'专注模式'" :aria-pressed="focusMode" :disabled="!focusMode&&(auxiliaryOpen||collaborationOpen||!project||loading||!!error)" @click="toggleFocus"><Maximize2 v-if="!focusMode" :size="15" aria-hidden="true" /><Minimize2 v-else :size="15" aria-hidden="true" /></PButton>
         <PButton size="sm" variant="secondary" type="button" title="显示或隐藏文件栏" :aria-pressed="showFiles" @click="toggleFilePane">文件栏</PButton>
-        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'split'&&!auxiliaryOpen" v-if="!compactLayout" @click="setWorkspaceLayout('split')">分栏</PButton>
-        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'editor'&&!auxiliaryOpen" @click="setWorkspaceLayout('editor')">源码</PButton>
-        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'pdf'&&!auxiliaryOpen" @click="setWorkspaceLayout('pdf')">预览</PButton>
-        <PButton v-if="ownerAccess&&!aiPanelOpen&&(auxiliaryOpen||layoutMode==='editor')" type="button" size="sm" :disabled="!compileEnabled||compiling||saving||switchingFile||navigating||uploadBusy||snapshotMutating||memberMutating||hasActiveCompile||!project||(collaborationOpen&&collaborationRevision===null)" @click="compileAndShowPDF">{{hasActiveCompile?'编译中':'编译'}}</PButton>
+        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'split'&&!sideToolOpen" v-if="!compactLayout" @click="setWorkspaceLayout('split')">分栏</PButton>
+        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'editor'&&!sideToolOpen" @click="setWorkspaceLayout('editor')">源码</PButton>
+        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'pdf'&&!sideToolOpen" @click="setWorkspaceLayout('pdf')">预览</PButton>
+        <PButton v-if="ownerAccess&&(sideToolOpen||layoutMode==='editor')" type="button" size="sm" :disabled="!compileEnabled||compiling||saving||switchingFile||navigating||uploadBusy||snapshotMutating||memberMutating||hasActiveCompile||!project||aiRepairActive||aiApplying||(collaborationOpen&&collaborationRevision===null)" @click="compileAndShowPDF">{{hasActiveCompile?'编译中':'编译'}}</PButton>
       </div>
 
       <span class="papers-workspace__status papers-workspace__save-state" role="status" :title="saveStatus"><span class="papers-workspace__save-dot" :class="{saved:saveStatus==='已保存'}" aria-hidden="true"></span>{{ saveStatus }}</span>
@@ -34,7 +34,7 @@
         </div></nav>
     <p v-if="loading" class="papers-workspace__message">正在打开项目...</p>
     <p v-else-if="error" role="alert" class="papers-workspace__error">{{ error }}</p>
-    <div v-else ref="workspaceRoot" class="papers-workspace__content" :class="{ 'files-hidden': !showFiles, 'editor-only': layoutMode === 'editor', 'pdf-only': layoutMode === 'pdf', 'ai-expanded': aiPanelOpen&&aiExpanded, 'tool-open': auxiliaryOpen, 'pdf-docked': pdfDocked }" :style="{ '--preview-grow': previewWidth, '--editor-grow': 100-previewWidth, '--files-width': filesWidth+'px' }">
+    <div v-else ref="workspaceRoot" class="papers-workspace__content" :class="{ 'files-hidden': !showFiles, 'editor-only': layoutMode === 'editor', 'pdf-only': layoutMode === 'pdf', 'ai-expanded': aiPanelOpen&&aiExpanded, 'tool-open': sideToolOpen, 'ai-open': aiPanelOpen, 'ai-collapsed': aiPanelOpen&&aiCollapsed }" :style="{ '--preview-grow': previewWidth, '--editor-grow': 100-previewWidth, '--files-width': filesWidth+'px' }">
       <button v-if="compactLayout && showFiles" type="button" class="papers-workspace__files-backdrop" aria-label="关闭文件栏" @click="showFiles=false" />
       <aside class="papers-workspace__files" :class="{'papers-workspace__files--dropping':draggingFiles}" aria-label="论文文件" @dragenter="onFigureDragOver" @dragover="onFigureDragOver" @dragleave="onFigureDragLeave" @drop="onFigureDrop">
         <div class="papers-workspace__files-heading"><h2>项目文件 <small>{{ files.length }}</small></h2><PButton size="sm" variant="secondary" type="button" class="papers-workspace__close-files" aria-label="关闭文件面板" @click="showFiles=false"><PanelLeftClose :size="15" aria-hidden="true" /></PButton></div>
@@ -81,6 +81,7 @@
         <p v-if="fileError" class="papers-workspace__error" role="alert">{{ fileError }}</p>
       </aside>
       <div v-if="showFiles&&!compactLayout" class="papers-workspace__files-divider" role="separator" aria-label="调整文件栏宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="filesWidth" title="拖动调整宽度，双击恢复默认" @dblclick="resetPanelWidths" @pointerdown="beginFilesResize" @pointermove="moveFilesResize" @pointerup="endFilesResize" @pointercancel="endFilesResize" @keydown.left.prevent="resizeFiles(filesWidth-16)" @keydown.right.prevent="resizeFiles(filesWidth+16)" />
+      <div ref="sourceColumn" class="papers-workspace__editor-column" :style="{'--ai-height':aiHeight+'%'}">
       <section class="papers-workspace__editor" aria-label="源码编辑">
         <nav v-if="openTabs.length" class="papers-workspace__tabs" aria-label="已打开文件">
           <div v-for="file in openTabs" :key="file.id" class="papers-workspace__tab" :class="{active:file.id===activeFile?.id}">
@@ -119,13 +120,22 @@
           <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" :disabled="saving" @click="saveNow">重试保存</PButton>
         </p>
       </section>
-      <div v-if="layoutMode === 'split'&&!compactLayout&&!pdfDocked" class="papers-workspace__divider" role="separator" aria-label="调整编辑器和预览宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="Math.round(previewWidth)" title="拖动调整宽度，双击恢复默认" @dblclick="resetPanelWidths" @pointerdown="beginResize" @pointermove="resizeMove" @pointerup="endResize" @pointercancel="endResize" @keydown.left.prevent="resizePreview(previewWidth+3)" @keydown.right.prevent="resizePreview(previewWidth-3)" />
-      <aside v-if="aiPanelOpen&&aiFile" class="papers-workspace__preview papers-workspace__ai-panel" aria-label="AI 论文助手">
-        <div class="papers-workspace__preview-heading"><strong>AI 任务工作区</strong><span class="papers-workspace__ai-subtitle">Papers Agent</span><PButton size="sm" variant="secondary" type="button" v-if="!compactLayout" :aria-pressed="aiExpanded" @click="aiExpanded=!aiExpanded">{{aiExpanded?'恢复分栏':'展开工作区'}}</PButton><PButton size="sm" variant="secondary" type="button" @click="returnPDF">返回 PDF</PButton><PButton v-if="wideLayout&&!compactLayout&&!aiExpanded" size="sm" variant="secondary" type="button" :aria-pressed="pinPDF" :title="pinPDF?'隐藏并排 PDF':'同时查看源码、PDF 和 AI'" @click="pinPDF=!pinPDF">{{pinPDF?'隐藏并排 PDF':'并排 PDF'}}</PButton></div>
-        <div class="papers-workspace__ai-scroll">
+      <div v-if="aiPanelOpen&&!aiCollapsed&&!aiExpanded" class="papers-workspace__ai-divider" role="separator" aria-label="调整 AI 面板高度" aria-orientation="horizontal" tabindex="0" :aria-valuemin="25" :aria-valuemax="70" :aria-valuenow="aiHeight" title="拖动调整高度，双击恢复默认" @dblclick="resizeAI(43)" @pointerdown="beginAIResize" @pointermove="moveAIResize" @pointerup="endAIResize" @pointercancel="endAIResize" @keydown.up.prevent="resizeAI(aiHeight+5)" @keydown.down.prevent="resizeAI(aiHeight-5)" />
+      <aside v-if="aiPanelOpen&&aiFile" class="papers-workspace__ai-panel" :class="{collapsed:aiCollapsed}" aria-label="AI 论文助手">
+        <div class="papers-workspace__ai-heading">
+          <Sparkles :size="16" aria-hidden="true"/><strong>AI 助手</strong>
+          <span class="papers-workspace__ai-subtitle" :title="aiFile.path">{{aiFile.path}}</span>
+          <PButton v-if="!aiCollapsed" size="sm" variant="ghost" type="button" :aria-pressed="aiExpanded" @click="aiExpanded=!aiExpanded">{{aiExpanded?'恢复分栏':'展开工作区'}}</PButton>
+          <PButton size="sm" variant="ghost" type="button" :aria-expanded="!aiCollapsed" @click="toggleAICollapse">{{aiCollapsed?'展开 AI':'收起 AI'}}</PButton>
+          <PButton size="sm" variant="ghost" type="button" :disabled="aiApplying" aria-label="关闭 AI" title="关闭并清除当前未保存的 AI 会话" @click="closeTool"><X :size="15" aria-hidden="true"/></PButton>
+        </div>
+        <div v-show="!aiCollapsed" class="papers-workspace__ai-scroll">
           <PaperAITools :key="projectId+':'+accountId+':'+aiFile.id+':'+(collaborationOpen?aiSharedState?.epoch:'ordinary')" :project-id="projectId" :account-id="accountId" :file="aiFile" :source="collaborationOpen?(aiSharedState?.source||''):draft" :files="files" :collaboration-epoch="collaborationOpen?aiSharedState?.epoch:undefined" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||compiling||hasActiveCompile||(collaborationOpen&&!aiSharedState?.ready)" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :project-revision="project?.head_revision" :apply-project="applyAIProject" :rollback-activity="rollbackAIActivity" :compile-enabled="compileEnabled" :compile-job="compileJob" :compiler="selectedCompiler" :compile-repair="compileForAI" @repair-active="setAIRepairActive" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
         </div>
       </aside>
+      </div>
+      <div v-if="layoutMode === 'split'&&!compactLayout" class="papers-workspace__divider" role="separator" aria-label="调整编辑器和预览宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="Math.round(previewWidth)" title="拖动调整宽度，双击恢复默认" @dblclick="resetPanelWidths" @pointerdown="beginResize" @pointermove="resizeMove" @pointerup="endResize" @pointercancel="endResize" @keydown.left.prevent="resizePreview(previewWidth+3)" @keydown.right.prevent="resizePreview(previewWidth-3)" />
+
       <aside v-if="projectToolOpen||outlineOpen&&!collaborationOpen" class="papers-workspace__preview papers-workspace__tools-panel" aria-label="项目工具工作区">
         <section v-if="projectToolOpen" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':toolMode==='submission'?'投稿检查':toolMode==='git'?'GitHub':'文件历史'">
           <div class="papers-workspace__tool-heading">
@@ -191,7 +201,7 @@
           </div>
         </section>
       </aside>
-      <aside v-show="pdfDocked||!aiPanelOpen&&!projectToolOpen&&(!outlineOpen||collaborationOpen)" class="papers-workspace__preview papers-workspace__pdf-panel" aria-label="编译预览">
+      <aside v-show="!sideToolOpen&&layoutMode!=='editor'" class="papers-workspace__preview papers-workspace__pdf-panel" aria-label="编译预览">
         <div class="papers-workspace__preview-heading">
           <div class="papers-workspace__preview-left">
             <strong>PDF 预览</strong>
@@ -496,6 +506,7 @@ async function openWorkspaceFile(file:PaperFile){
  const pid=projectId.value,account=accountId.value
  await selectFile(file)
  if(pid===projectId.value&&account===accountId.value&&activeFile.value?.id===file.id){
+  aiExpanded.value=false
   if(compactLayout.value||layoutMode.value==='pdf')setWorkspaceLayout('editor')
   await nextTick()
   editorRef.value?.focusEditor?.()
@@ -527,14 +538,15 @@ const aiFile=computed<PaperFile|null>(()=>{
 })
 const aiPanelOpen=computed(()=>toolMode.value==='ai'&&ownerAccess.value&&!!aiFile.value)
 const projectToolOpen=computed(()=>!!toolMode.value&&toolMode.value!=='ai'&&(!collaborationOpen.value||toolMode.value==='snapshots'))
-const auxiliaryOpen=computed(()=>aiPanelOpen.value||projectToolOpen.value||outlineOpen.value&&!collaborationOpen.value)
-const aiExpanded=ref(false)
-const pinPDF=ref(false)
-const wideLayout=ref(typeof window!=='undefined'&&window.innerWidth>=1440)
-const pdfDocked=computed(()=>aiPanelOpen.value&&pinPDF.value&&wideLayout.value&&!compactLayout.value&&!aiExpanded.value)
-watch(aiPanelOpen,open=>{if(!open){aiExpanded.value=false;pinPDF.value=false}})
-watch(aiExpanded,expanded=>{if(expanded)pinPDF.value=false})
-watch(wideLayout,wide=>{if(!wide)pinPDF.value=false})
+const sideToolOpen=computed(()=>projectToolOpen.value||outlineOpen.value&&!collaborationOpen.value)
+const auxiliaryOpen=computed(()=>aiPanelOpen.value||sideToolOpen.value)
+const aiExpanded=ref(false),aiCollapsed=ref(false)
+watch(aiPanelOpen,open=>{if(!open){aiExpanded.value=false;aiCollapsed.value=false}})
+function toggleAICollapse(){
+ if(aiApplying.value)return
+ aiCollapsed.value=!aiCollapsed.value
+ if(aiCollapsed.value)aiExpanded.value=false
+}
 const searchQuery=ref(''),replaceQuery=ref(''),referenceQuery=ref('')
 const searchSources=shallowRef<PaperFile[]>([]),searchBase=ref(0)
 const searchStale=computed(()=>!searchBase.value||searchBase.value!==project.value?.head_revision||(activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content))
@@ -647,7 +659,10 @@ function onDraftStorage(event:StorageEvent){
 let toolSerial=0,bibSerial=0
 function formatVersionDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString()}
 function closeTool(){if(aiApplying.value)return;toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null;snapshotDetail.value=null;if(compactLayout.value&&!outlineOpen.value&&layoutMode.value==='split')layoutMode.value='editor'}
-function toggleTool(mode:ToolMode){if(aiApplying.value)return;if((collaborationOpen.value&&mode!=='snapshots'&&(mode!=='ai'||!aiSharedState.value?.ready))||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures','ai','submission','git'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}leaveFocus();closeTool();toolMode.value=mode;outlineOpen.value=false;layoutMode.value='split';if(compactLayout.value){showFiles.value=false;moreToolsOpen.value=false}refreshTool()}
+function toggleTool(mode:ToolMode){if(aiApplying.value)return;if((collaborationOpen.value&&mode!=='snapshots'&&(mode!=='ai'||!aiSharedState.value?.ready))||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures','ai','submission','git'].includes(mode)))return;if(toolMode.value===mode){
+ if(mode==='ai'&&(aiCollapsed.value||layoutMode.value==='pdf')){aiCollapsed.value=false;layoutMode.value=compactLayout.value?'editor':'split';return}
+ closeTool();return
+ }leaveFocus();closeTool();toolMode.value=mode;outlineOpen.value=false;layoutMode.value=mode==='ai'&&compactLayout.value?'editor':'split';if(compactLayout.value){showFiles.value=false;moreToolsOpen.value=false}refreshTool()}
 function refreshTool(){if(toolMode.value==='search')void loadSearchSources();else if(toolMode.value==='references')void refreshBib();else if(toolMode.value==='history')void loadVersions();else if(toolMode.value==='snapshots')void loadSnapshots();else if(toolMode.value==='drafts')refreshLocalDrafts();else if(toolMode.value==='members'&&ownerAccess.value)void loadMembers()}
 function memberError(cause:unknown){
  const code=cause instanceof ApiErrorResponseError?cause.code:''
@@ -951,6 +966,7 @@ async function jumpOutline(item:OutlineRow){
  if(!target)return
  if(target.id!==activeFile.value?.id&&target.revision!==item.revision){fileError.value='大纲已过期，请刷新。';return}
  if(layoutMode.value==='pdf')layoutMode.value=compactLayout.value?'editor':'split'
+ if(aiPanelOpen.value)aiExpanded.value=false
  await selectFile(target);await nextTick()
  if(activeFile.value?.id===target.id&&activeFile.value.revision===item.revision){revealSource();await nextTick();editorRef.value?.goToLine(item.line)}
 }
@@ -1015,6 +1031,7 @@ async function jumpDiagnostic(item:PaperCompileDiagnostic){
  if(!target){syncMessage.value='当前项目中找不到对应源文件。';return}
  const jobId=compileJob.value?.id
  if(layoutMode.value==='pdf')layoutMode.value=compactLayout.value?'editor':'split'
+ if(aiPanelOpen.value)aiExpanded.value=false
  await selectFile(target)
  await nextTick()
  if(jobId===compileJob.value?.id&&!diagnosticStale.value&&activeFile.value?.id===target.id)editorRef.value?.goToLine(item.line)
@@ -1122,7 +1139,7 @@ async function jumpToPDF(){
  if(!checkSync()||!sourceMap.value||!activeFile.value)return
  const p=sourceToPDF(sourceMap.value,activeFile.value.path,editorRef.value?.getLine?.()||1, pdfRef.value?.page||1)
  if(!p){syncMessage.value='当前源码行没有对应的 PDF 内容。';return}
- if((auxiliaryOpen.value&&!pdfDocked.value)||layoutMode.value==='editor')setWorkspaceLayout(compactLayout.value?'pdf':'split')
+ if(sideToolOpen.value||layoutMode.value==='editor')setWorkspaceLayout(compactLayout.value?'pdf':'split')
  await nextTick()
  if(!await pdfRef.value?.showPosition(p[2],p[3]/10,p[4]/10,mapJob.value)){syncMessage.value='PDF 正在更新，请稍后再定位。';return}
  syncMessage.value=''
@@ -1134,6 +1151,7 @@ async function jumpFromPDF(pos:{jobId:string;page:number;x:number;y:number}){
  const target=files.value.find(f=>f.path===sourceMap.value?.files[p[0]]&&f.kind==='text')
  if(!target){syncMessage.value='没有找到对应的项目源文件。';return}
  if(layoutMode.value==='pdf')layoutMode.value=compactLayout.value?'editor':'split'
+ if(aiPanelOpen.value)aiExpanded.value=false
  await selectFile(target)
  await nextTick()
  if(activeFile.value?.id===target.id&&syncReady.value&&pos.jobId===mapJob.value){editorRef.value?.goToLine?.(p[1]);syncMessage.value=''}
@@ -1141,17 +1159,28 @@ async function jumpFromPDF(pos:{jobId:string;page:number;x:number;y:number}){
 function jumpToCode(){const pos=pdfRef.value?.currentPosition();if(pos)void jumpFromPDF(pos)}
 
 const workspaceRoot=ref<HTMLElement|null>(null)
+const sourceColumn=ref<HTMLElement|null>(null)
 const PANEL_PREFS_KEY='atoman.papers.layout.v1'
-function readPanelPrefs():{files:number;preview:number}{
+function readPanelPrefs():{files:number;preview:number;ai:number}{
  try{
   const data=JSON.parse(localStorage.getItem(PANEL_PREFS_KEY)||'null')
-  return {files:typeof data?.files==='number'&&Number.isFinite(data.files)?Math.max(180,Math.min(420,data.files)):248,preview:typeof data?.preview==='number'&&Number.isFinite(data.preview)?Math.max(25,Math.min(75,data.preview)):49}
- }catch{return {files:248,preview:49}}
+  return {files:typeof data?.files==='number'&&Number.isFinite(data.files)?Math.max(180,Math.min(420,data.files)):248,preview:typeof data?.preview==='number'&&Number.isFinite(data.preview)?Math.max(25,Math.min(75,data.preview)):49,ai:typeof data?.ai==='number'&&Number.isFinite(data.ai)?Math.max(25,Math.min(70,Math.round(data.ai))):43}
+ }catch{return {files:248,preview:49,ai:43}}
 }
 const panelPrefs=readPanelPrefs()
 const previewWidth=ref(panelPrefs.preview)
 const filesWidth=ref(panelPrefs.files)
-const maxFilesWidth=()=>Math.max(180,Math.min(420,(workspaceRoot.value?.clientWidth||1200)-(pdfDocked.value?1080:600)))
+const aiHeight=ref(panelPrefs.ai)
+function resizeAI(value:number){aiHeight.value=Math.max(25,Math.min(70,Math.round(value)))}
+let draggingAI=false
+function beginAIResize(e:PointerEvent){draggingAI=true;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);moveAIResize(e)}
+function moveAIResize(e:PointerEvent){
+ if(!draggingAI||!sourceColumn.value)return
+ const r=sourceColumn.value.getBoundingClientRect()
+ if(r.height>0)resizeAI((r.bottom-e.clientY)/r.height*100)
+}
+function endAIResize(){draggingAI=false}
+const maxFilesWidth=()=>Math.max(180,Math.min(420,(workspaceRoot.value?.clientWidth||1200)-600))
 function resizeFiles(value:number){filesWidth.value=Math.max(180,Math.min(maxFilesWidth(),value))}
 function resizePreview(value:number){
  const full=workspaceRoot.value?.clientWidth||1200
@@ -1161,7 +1190,7 @@ function resizePreview(value:number){
  previewWidth.value=Math.max(min,Math.min(100-min,value))
 }
 function resetPanelWidths(){filesWidth.value=248;previewWidth.value=49;resizeFiles(248);resizePreview(49)}
-watch([filesWidth,previewWidth],([files,preview])=>{try{localStorage.setItem(PANEL_PREFS_KEY,JSON.stringify({files,preview}))}catch{/* layout storage is optional */}})
+watch([filesWidth,previewWidth,aiHeight],([files,preview,ai])=>{try{localStorage.setItem(PANEL_PREFS_KEY,JSON.stringify({files,preview,ai}))}catch{/* layout storage is optional */}})
 let draggingFilesDivider=false
 function beginFilesResize(e:PointerEvent){draggingFilesDivider=true;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);moveFilesResize(e)}
 function moveFilesResize(e:PointerEvent){if(!draggingFilesDivider||!workspaceRoot.value)return;resizeFiles(e.clientX-workspaceRoot.value.getBoundingClientRect().left)}
@@ -1190,15 +1219,14 @@ function toggleFilePane(){if(focusMode.value){leaveFocus();showFiles.value=true}
 watch([projectId,accountId],leaveFocus)
 function setWorkspaceLayout(mode:'split'|'editor'|'pdf'){
  if(aiApplying.value||snapshotMutating.value||memberMutating.value)return
- leaveFocus();closeTool();outlineOpen.value=false;aiExpanded.value=false
+ leaveFocus();if(!aiPanelOpen.value)closeTool();outlineOpen.value=false;aiExpanded.value=false
  layoutMode.value=compactLayout.value&&mode==='split'?'editor':mode
  if(compactLayout.value)showFiles.value=false
 }
-function returnPDF(){setWorkspaceLayout(compactLayout.value?'pdf':'split')}
 async function compileAndShowPDF(){setWorkspaceLayout(compactLayout.value?'pdf':'split');await nextTick();await compileNow()}
 function revealSource(){if(compactLayout.value)setWorkspaceLayout('editor')}
 async function insertReference(key:string){if(!writeAccess.value)return;if(compactLayout.value){revealSource();await nextTick()}editorRef.value?.insertCitation(key)}
-function onViewportChange(){wideLayout.value=window.innerWidth>=1440;const small=isCompactViewport();if(small===compactLayout.value){if(!small){resizeFiles(filesWidth.value);resizePreview(previewWidth.value)}return;}if(small)leaveFocus();compactLayout.value=small;showFiles.value=!small;moreToolsOpen.value=false;if(small&&!auxiliaryOpen.value&&layoutMode.value==='split')layoutMode.value='editor';if(!small&&auxiliaryOpen.value)layoutMode.value='split';aiExpanded.value=false}
+function onViewportChange(){const small=isCompactViewport();if(small===compactLayout.value){if(!small){resizeFiles(filesWidth.value);resizePreview(previewWidth.value)}return;}if(small)leaveFocus();compactLayout.value=small;showFiles.value=!small;moreToolsOpen.value=false;if(small&&!sideToolOpen.value&&layoutMode.value==='split')layoutMode.value='editor';if(!small&&auxiliaryOpen.value&&layoutMode.value!=='pdf')layoutMode.value='split';aiExpanded.value=false}
 const autoCompile=ref(false)
 let dragging=false
 let autoTimer:ReturnType<typeof setTimeout>|null=null
@@ -1421,7 +1449,7 @@ async function selectFile(file:PaperFile){
 async function selectTreeFile(file:PaperFile){
  if(!canChooseTreeFile.value)return
  await selectFile(file)
- if(activeFile.value?.id===file.id&&compactLayout.value)setWorkspaceLayout('editor')
+ if(activeFile.value?.id===file.id){aiExpanded.value=false;if(compactLayout.value||layoutMode.value==='pdf')setWorkspaceLayout('editor')}
 }
 async function addFile(){
   if(!ownerAccess.value||!newFilePath.value||uploadBusy.value||switchingFile.value||navigating.value)return

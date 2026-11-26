@@ -67,7 +67,7 @@ describe("SiteFooter", () => {
 			"COOLSHELL",
 			"甲骨文",
 		]);
-		expect(wrapper.get('[data-footer-related-link="甲骨文"]').attributes("href")).toBe("https://oracle.fazong.eu.org/");
+		expect(wrapper.get('[data-footer-related-link="甲骨文"]').attributes("href")).toBe("https://oracle.atoman.org/");
 		expect(wrapper.get(".site-footer-center").text()).toContain(
 			"Docker 镜像加速",
 		);

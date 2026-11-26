@@ -47,7 +47,7 @@ describe("AppTopbar route reactivity", () => {
 		expect(last.attributes("href")).toBe("/papers");
 		expect(wrapper.get(".nav-tail").findAll(".nav-link")).toHaveLength(1);
 		expect(wrapper.get(".nav-tail .nav-link").text()).toBe("论文");
-		expect(wrapper.find('a[href="https://oracle.fazong.eu.org/"]').exists()).toBe(false);
+		expect(wrapper.find('a[href="https://oracle.atoman.org/"]').exists()).toBe(false);
 		await router.push("/papers");
 		await flushPromises();
 		expect(activeNavText(wrapper)).toEqual(["论文"]);

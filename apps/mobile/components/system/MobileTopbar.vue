@@ -53,7 +53,7 @@
       <a
         class="mobile-topbar__action mobile-topbar__oraclegraph"
         data-testid="oraclegraph-topbar-link"
-        href="https://oracle.fazong.eu.org/"
+        href="https://oracle.atoman.org/"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="甲骨文学习平台（在新标签页打开）"

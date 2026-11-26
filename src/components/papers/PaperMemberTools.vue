@@ -1,7 +1,7 @@
 <template>
  <div class="paper-members">
-  <p>当前为私有项目成员管理。成员必须已经获得 Papers 模块的访问资格。编辑者可以保存已有文本文件，阅读者只能查看当前项目文件。</p>
-  <p>实时共同编辑暂未开放；并发保存使用版本校验，冲突时保留各自的未保存源码。</p>
+  <strong>已加入的成员</strong>
+  <p>编辑者可保存已有文本文件并参与实时协作；阅读者只能查看项目文件。直接添加或更新账号权限是备用方式。</p>
   <form class="paper-members__form" @submit.prevent="submit">
    <label>成员账号 UUID
     <input v-model.trim="userId" aria-label="成员账号 UUID" maxlength="36" autocomplete="off" :disabled="busy||disabled" placeholder="输入协作者的账号 UUID" />

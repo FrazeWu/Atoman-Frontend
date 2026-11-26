@@ -11,6 +11,7 @@
       </div>
       <span v-if="project" class="papers-workspace__status">{{ roleLabel }}</span>
       <span class="papers-workspace__status" role="status">{{ saveStatus }}</span>
+      <PButton v-if="ownerAccess" type="button" size="sm" :disabled="collaborationOpen||memberMutating||snapshotMutating" @click="toggleTool('members')">分享</PButton>
       <PButton v-if="ownerAccess" type="button" size="sm" variant="secondary" :disabled="collaborationOpen || exporting || saving" @click="exportProject">{{ exporting ? '正在导出…' : '导出 ZIP' }}</PButton>
     </header>
     <p v-if="loading" class="papers-workspace__message">正在打开项目...</p>
@@ -117,6 +118,7 @@
           <PaperSnapshotTools v-else-if="toolMode==='snapshots'" :key="projectId" :rows="snapshots" :detail="snapshotDetail" :busy="toolBusy||snapshotMutating" :disabled="uploadBusy||switchingFile||navigating||saving||hasActiveCompile||compiling||(collaborationOpen&&collaborationRevision===null)" :restore-disabled="collaborationOpen" :message="snapshotMessage" @create="createSnapshot" @preview="previewSnapshot" @remove="deleteSnapshot" @restore="restoreSnapshot" />
           <PaperDraftTools v-else-if="toolMode==='drafts'" :key="projectId+':'+accountId" :available="draftAvailable" :enabled="draftEnabled" :rows="draftRows" :files="files" :disabled="uploadBusy||switchingFile||navigating||saving" :can-recover="canRecoverDraft" :message="draftMessage" @toggle="toggleDraftProtection" @recover="recoverDraft" @remove="discardDraft" />
           <template v-else-if="toolMode==='members'">
+            <PaperShareLinks v-if="ownerAccess" :key="'share:'+projectId+':'+accountId" :project-id="projectId" :account-id="accountId" :disabled="navigating||memberMutating||snapshotMutating" />
             <PaperMemberTools v-if="ownerAccess" :key="projectId+':'+accountId" :rows="members" :account-id="accountId" :busy="toolBusy||memberMutating" :disabled="navigating||uploadBusy||snapshotMutating" :message="memberMessage" @set="changeMember" @remove="deleteMember" />
             <div v-else><p>项目权限：{{ roleLabel }}。仅所有者可以管理共享成员。</p><p v-if="accountId">我的账号 UUID：<code>{{ accountId }}</code></p></div>
           </template>
@@ -225,6 +227,7 @@ import {useAuthStore} from '@/stores/auth'
 import PaperSnapshotTools from '@/components/papers/PaperSnapshotTools.vue'
 import PaperDraftTools from '@/components/papers/PaperDraftTools.vue'
 import PaperMemberTools from '@/components/papers/PaperMemberTools.vue'
+import PaperShareLinks from '@/components/papers/PaperShareLinks.vue'
 import PaperCollaborationPanel from '@/components/papers/PaperCollaborationPanel.vue'
 import {collaborationCapabilityError,collaborationUnavailableReason} from '@/components/papers/collaborationCapability'
 import {draftKey,listLocalDrafts,localDraftEnabled,setLocalDraftEnabled,writeLocalDraft,readLocalDraft,removeLocalDraft,sameLocalDraft,matchesLocalDraftBase,type PaperLocalDraft} from '@/components/papers/localDrafts'

@@ -281,6 +281,19 @@ export const listPaperMembers=(pid:string)=>papersRequest<PaperProjectMember[]>(
 export const setPaperMember=(pid:string,uid:string,role:PaperMemberRole)=>papersRequest<PaperProjectMember>(membersPath(pid)+'/'+encodeURIComponent(uid),'PUT',{role})
 export const removePaperMember=(pid:string,uid:string)=>papersRequest<{deleted:boolean}>(membersPath(pid)+'/'+encodeURIComponent(uid),'DELETE')
 
+export interface PaperProjectInvitation {
+ id:string
+ role:PaperMemberRole
+ created_at:string
+ expires_at:string
+}
+export interface CreatedPaperInvitation extends PaperProjectInvitation { token:string }
+const invitationsPath=(pid:string)=>'/projects/'+encodeURIComponent(pid)+'/invitations'
+export const listPaperInvitations=(pid:string)=>papersRequest<PaperProjectInvitation[]>(invitationsPath(pid))
+export const createPaperInvitation=(pid:string,role:PaperMemberRole)=>papersRequest<CreatedPaperInvitation>(invitationsPath(pid),'POST',{role})
+export const revokePaperInvitation=(pid:string,id:string)=>papersRequest<{revoked:boolean}>(invitationsPath(pid)+'/'+encodeURIComponent(id),'DELETE')
+export const acceptPaperInvitation=(token:string)=>papersRequest<{project_id:string;role:PaperMemberRole}>('/invitations/accept','POST',{token})
+
 export interface PaperCollaborationCapability {
  presence?: boolean
  enabled: boolean

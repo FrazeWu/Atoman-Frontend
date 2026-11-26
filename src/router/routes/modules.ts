@@ -43,6 +43,7 @@ export function commonModuleRoutes(): RouteRecordRaw[] {
 export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 	papers: [
 		{ path: "/", component: () => import("@/views/papers/PapersHomeView.vue"), meta: { requiresAuth: true } },
+		{ path: "/invite", component: () => import("@/views/papers/PaperInviteView.vue"), meta: { restoreSession: true } },
 		{ path: "/:projectId", component: () => import("@/views/papers/PaperWorkspaceView.vue"), meta: { requiresAuth: true } },
 	],
 	blog: [

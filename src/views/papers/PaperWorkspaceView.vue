@@ -159,7 +159,7 @@
       <aside v-if="aiPanelOpen&&aiFile" class="papers-workspace__preview papers-workspace__ai-panel" aria-label="AI 论文助手">
         <div class="papers-workspace__preview-heading"><strong>AI 论文助手</strong><span class="papers-workspace__ai-subtitle">审阅后修改</span><PButton size="sm" variant="secondary" type="button" @click="closeTool">返回 PDF</PButton></div>
         <div class="papers-workspace__ai-scroll">
-          <PaperAITools :key="projectId+':'+accountId+':'+aiFile.id+':'+(collaborationOpen?aiSharedState?.epoch:'ordinary')" :project-id="projectId" :account-id="accountId" :file="aiFile" :source="collaborationOpen?(aiSharedState?.source||''):draft" :files="files" :collaboration-epoch="collaborationOpen?aiSharedState?.epoch:undefined" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||compiling||(collaborationOpen&&!aiSharedState?.ready)" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
+          <PaperAITools :key="projectId+':'+accountId+':'+aiFile.id+':'+(collaborationOpen?aiSharedState?.epoch:'ordinary')" :project-id="projectId" :account-id="accountId" :file="aiFile" :source="collaborationOpen?(aiSharedState?.source||''):draft" :files="files" :collaboration-epoch="collaborationOpen?aiSharedState?.epoch:undefined" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||compiling||hasActiveCompile||(collaborationOpen&&!aiSharedState?.ready)" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :project-revision="project?.head_revision" :apply-project="applyAIProject" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
         </div>
       </aside>
       <aside v-show="!aiPanelOpen" class="papers-workspace__preview" aria-label="编译预览">
@@ -264,7 +264,7 @@ import {
   listPaperProjectSnapshots,getPaperProjectSnapshot,createPaperProjectSnapshot,restorePaperProjectSnapshot,deletePaperProjectSnapshot,
   listPaperMembers,setPaperMember,removePaperMember,type PaperProjectMember,type PaperMemberRole,
   type PaperProjectSnapshot,type PaperSnapshotDetail,type PaperProjectRole,
-  type PaperCompiler, type PaperCompileCapability, type PaperFileVersion, type PaperVersionSummary, type PaperFile, type PaperProject, type PaperCompileJob, type PaperCompileDiagnostic, type PaperUpload,
+  type PaperCompiler, type PaperCompileCapability, type PaperFileVersion, type PaperVersionSummary, type PaperFile, type PaperProject, type PaperCompileJob, type PaperCompileDiagnostic, type PaperUpload, type PaperTextReplacement,
 } from '@/api/papers'
 
 defineOptions({name:'PaperWorkspaceView'})
@@ -285,6 +285,7 @@ const exporting = ref(false)
 const exportError = ref('')
 const addingFile = ref(false)
 const snapshotMutating=ref(false)
+const aiApplying=ref(false)
 const project = ref<PaperProject | null>(null)
 const ownerAccess=computed(()=>!!project.value&&(project.value.access_role===undefined||project.value.access_role==='owner'))
 const writeAccess=computed(()=>ownerAccess.value||project.value?.access_role==='editor')
@@ -549,8 +550,8 @@ function onDraftStorage(event:StorageEvent){
 
 let toolSerial=0,bibSerial=0
 function formatVersionDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString()}
-function closeTool(){toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null;snapshotDetail.value=null}
-function toggleTool(mode:ToolMode){if((collaborationOpen.value&&mode!=='snapshots'&&(mode!=='ai'||!aiSharedState.value?.ready))||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures','ai'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;if(mode==='ai')layoutMode.value='split';refreshTool()}
+function closeTool(){if(aiApplying.value)return;toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null;snapshotDetail.value=null}
+function toggleTool(mode:ToolMode){if(aiApplying.value)return;if((collaborationOpen.value&&mode!=='snapshots'&&(mode!=='ai'||!aiSharedState.value?.ready))||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures','ai'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;if(mode==='ai')layoutMode.value='split';refreshTool()}
 function refreshTool(){if(toolMode.value==='search')void loadSearchSources();else if(toolMode.value==='references')void refreshBib();else if(toolMode.value==='history')void loadVersions();else if(toolMode.value==='snapshots')void loadSnapshots();else if(toolMode.value==='drafts')refreshLocalDrafts();else if(toolMode.value==='members'&&ownerAccess.value)void loadMembers()}
 function memberError(cause:unknown){
  const code=cause instanceof ApiErrorResponseError?cause.code:''
@@ -894,6 +895,36 @@ const previewStale = computed(() => !!previewJob.value && (previewJob.value.id !
  (!collaborationOpen.value&&activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)))
 const editorRef=ref<InstanceType<typeof LatexEditor>|null>(null)
 function captureAISelection(){return collaborationOpen.value?(collaborationRef.value?.getAISelection?.()??null):(editorRef.value?.getAISelection?.()??null)}
+async function applyAIProject(base:number,replacements:PaperTextReplacement[]):Promise<boolean>{
+ const pid=projectId.value,owner=accountId.value
+ const prior=activeFile.value
+ const valid=()=>!disposed&&!!owner&&owner===accountId.value&&pid===projectId.value&&project.value?.id===pid&&ownerAccess.value&&toolMode.value==='ai'&&!collaborationOpen.value&&!navigating.value&&!saving.value&&!savePromise&&!switchingFile.value&&!snapshotMutating.value&&!memberMutating.value&&!compiling.value&&!hasActiveCompile.value&&
+  project.value?.head_revision===base&&!!prior&&activeFile.value?.id===prior.id&&activeFile.value.revision===prior.revision&&draft.value===prior.content&&activeFile.value.content===prior.content&&replacements.every(change=>files.value.some(f=>f.id===change.file_id&&f.kind==='text'&&f.revision===change.base_revision))
+ if(!valid()||uploadBusy.value||aiApplying.value||!replacements.length||replacements.length>5||new Set(replacements.map(row=>row.file_id)).size!==replacements.length)return false
+ if(!await confirmPaper('将原子提交 '+replacements.length+' 个已审阅文件的修改？原版本会保留；普通文件管理写入可能使其他协作者的旧会话失效。'))return false
+ if(!valid()||uploadBusy.value)return false
+ aiApplying.value=true;addingFile.value=true;clearAuto()
+ try{
+  await nextTick()
+  if(!valid())return false
+  const result=await managePaperFiles(pid,{action:'replace_text',base_revision:base,replacements})
+  if(disposed||pid!==projectId.value||owner!==accountId.value)return false
+  if(result.project.id!==pid||result.project.head_revision!==base+1||replacements.some(change=>!result.files.some(f=>f.id===change.file_id&&f.revision===change.base_revision+1)))throw Error('Unexpected project response')
+  if(!valid())return false
+  const updated=result.files.find(f=>f.id===prior?.id)
+  if(prior&&!updated)throw Error('Active file missing')
+  project.value={...result.project,access_role:'owner'};files.value=result.files
+  if(prior&&updated){
+   const change=replacements.find(row=>row.file_id===prior.id)
+   const content=change?.content??prior.content
+   activeFile.value={...updated,content};draft.value=content
+   saveStatus.value='已保存';saveError.value=''
+  }
+  autoDirty=true
+  return true
+ }catch{return false}
+ finally{if(pid===projectId.value&&owner===accountId.value){aiApplying.value=false;addingFile.value=false;scheduleAuto()}}
+}
 function applyAIEdit(edit:PaperAIEdit){
  if(disposed||!ownerAccess.value||saving.value||navigating.value||switchingFile.value||uploadBusy.value||addingFile.value||snapshotMutating.value||compiling.value||
     activeFile.value?.kind!=='text'||activeFile.value.id!==edit.fileId)return false
@@ -959,7 +990,7 @@ const isCompactViewport=()=>typeof window!=='undefined'&&(window.innerWidth<=760
 const compactLayout=ref(isCompactViewport())
 const showFiles=ref(!compactLayout.value)
 const layoutMode=ref<'split'|'editor'|'pdf'>(compactLayout.value?'editor':'split')
-function setWorkspaceLayout(mode:'split'|'editor'|'pdf'){if(mode!=='split'&&toolMode.value==='ai')closeTool();layoutMode.value=mode}
+function setWorkspaceLayout(mode:'split'|'editor'|'pdf'){if(aiApplying.value)return;if(mode!=='split'&&toolMode.value==='ai')closeTool();layoutMode.value=mode}
 function onViewportChange(){const small=isCompactViewport();if(small===compactLayout.value)return;compactLayout.value=small;showFiles.value=!small}
 const autoCompile=ref(false)
 let dragging=false
@@ -1386,7 +1417,7 @@ watch(accountId,(next,previous)=>{
  // canonical source or previously authorized PDF.
  collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null;aiSharedState.value=null
  loadSerial++;fileSerial++;pollSerial++;historySerial++;mapSerial++
- pendingSubmission=null;compiling.value=false;canceling.value=false;snapshotMutating.value=false;addingFile.value=false
+ pendingSubmission=null;compiling.value=false;canceling.value=false;snapshotMutating.value=false;addingFile.value=false;aiApplying.value=false
  clearAuto();stopCompilePoll();mapAbort?.abort()
  activeFile.value=null;draft.value='';files.value=[];project.value=null
  previewJob.value=null;compileJob.value=null;sourceMap.value=null
@@ -1428,7 +1459,7 @@ function beforeUnload(event: BeforeUnloadEvent) {
 async function beforeNavigate(){
  resolveConfirmation(false)
  if(collaborationOpen.value){refreshMessage.value='请先退出实时协作，再离开项目。';return false}
- if(snapshotMutating.value||memberMutating.value)return false
+ if(snapshotMutating.value||memberMutating.value||aiApplying.value)return false
  navigating.value=true
  fileSerial++;switchingFile.value=false
  clearAuto()

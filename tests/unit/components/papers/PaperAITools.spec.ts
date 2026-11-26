@@ -99,3 +99,82 @@ describe('Papers AI review workflow',()=>{
   }finally{w.unmount()}
  })
 })
+
+describe('multi-file Agent review and temporary dialogue',()=>{
+ const cap2={...cap,project_edits:true,max_history_turns:6,max_history_bytes:16384}
+ const file2={...file,content:'Before Original After'}
+ const extra2={...extra,content:'Approved references'}
+ const projectEdits=[
+  {file_id:file2.id,path:file2.path,base_revision:file2.revision,before:'Original',after:'Revised'},
+  {file_id:extra2.id,path:extra2.path,base_revision:extra2.revision,before:'references',after:'citations'}
+ ]
+ beforeEach(()=>{
+  vi.resetAllMocks()
+  vi.mocked(getPaperAICapability).mockResolvedValue(cap2)
+  vi.mocked(getPaperFile).mockResolvedValue(extra2)
+  vi.mocked(requestPaperAISuggestion).mockResolvedValue({text:'Review both files',model:'test-model',project_revision:5,edits:projectEdits})
+ })
+ const create=()=>mount(PaperAITools,{props:{projectId:'project',accountId:'owner',file:file2,source:file2.content,files:[file2,extra2],projectRevision:5,disabled:false,captureSelection:()=>null,applyEdit:vi.fn(()=>true),applyProject:vi.fn(async()=>true)}})
+ const button=(w:ReturnType<typeof create>,name:string)=>w.findAll('button').find(b=>b.text()===name)!
+ async function prepare(w:ReturnType<typeof create>){
+  await flushPromises()
+  await w.get('[aria-label="AI API Key"]').setValue('synthetic-test-key')
+  await w.get('[aria-label="AI 模型"]').setValue('test-model')
+  await button(w,'使用整个文件').trigger('click')
+  await w.get('[aria-label="AI 任务类型"]').setValue('project')
+  await w.get('.paper-ai__context input[type=checkbox]').setValue(true)
+  await flushPromises()
+  await w.get('[aria-label="AI 修改指令"]').setValue('Review files')
+  await w.get('.paper-ai__consent input').setValue(true)
+  await button(w,'生成建议').trigger('click')
+  await flushPromises()
+ }
+ it('sends saved source and applies only explicitly checked proposals',async()=>{
+  const w=create()
+  try{
+   await prepare(w)
+   expect(requestPaperAISuggestion).toHaveBeenCalledTimes(1)
+   expect(vi.mocked(requestPaperAISuggestion).mock.calls[0]?.[1]).toMatchObject({task:'project',project_revision:5,source:file2.content,context:[{file_id:extra2.id,revision:extra2.revision}],consent:true})
+   expect(w.text()).toContain('Agent 跨文件修改计划')
+   expect(button(w,'应用已选修改（0）').attributes('disabled')).toBeDefined()
+   expect(w.props('applyProject')).not.toHaveBeenCalled()
+   await w.findAll('.paper-ai__result input[type=checkbox]')[1]!.setValue(true)
+   await button(w,'应用已选修改（1）').trigger('click')
+   await flushPromises()
+   expect(w.props('applyProject')).toHaveBeenCalledWith(5,[{file_id:extra2.id,base_revision:extra2.revision,content:'Approved citations'}])
+   expect(w.props('applyEdit')).not.toHaveBeenCalled()
+  }finally{w.unmount()}
+ })
+ it('refuses a stale project revision and clears review when provider configuration changes',async()=>{
+  const w=create()
+  try{
+   await prepare(w)
+   await w.findAll('.paper-ai__result input[type=checkbox]')[0]!.setValue(true)
+   await w.setProps({projectRevision:6})
+   expect(button(w,'应用已选修改（1）').attributes('disabled')).toBeDefined()
+   expect(w.props('applyProject')).not.toHaveBeenCalled()
+   await w.get('[aria-label="AI API Key"]').setValue('another-synthetic-key')
+   expect(w.find('.paper-ai__result').exists()).toBe(false)
+   expect(w.text()).not.toContain('本轮对话（1 轮）')
+  }finally{w.unmount()}
+ })
+ it('includes previewed history on a consented follow-up, and excludes it when unchecked',async()=>{
+  const w=create()
+  try{
+   await prepare(w)
+   expect(w.text()).toContain('本轮对话（1 轮）')
+   await w.get('[aria-label="AI 修改指令"]').setValue('Follow up')
+   expect(button(w,'生成建议').attributes('disabled')).toBeDefined()
+   await w.get('.paper-ai__consent input').setValue(true)
+   await button(w,'生成建议').trigger('click')
+   await flushPromises()
+   expect(vi.mocked(requestPaperAISuggestion).mock.calls[1]?.[1].history).toEqual([{task:'project',instruction:'Review files',reply:JSON.stringify({summary:'Review both files',edits:projectEdits})}])
+   const label=w.findAll('label').find(el=>el.text().includes('继续对话：'))
+   await label!.get('input').setValue(false)
+   await w.get('.paper-ai__consent input').setValue(true)
+   await button(w,'生成建议').trigger('click')
+   await flushPromises()
+   expect(vi.mocked(requestPaperAISuggestion).mock.calls[2]?.[1].history).toBeUndefined()
+  }finally{w.unmount()}
+ })
+})

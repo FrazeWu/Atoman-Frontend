@@ -6,6 +6,7 @@ import {listLocalDrafts,writeLocalDraft,setLocalDraftEnabled,type PaperLocalDraf
 import LatexEditor from "@/components/papers/LatexEditor.vue"
 import PaperWorkspaceView from '@/views/papers/PaperWorkspaceView.vue'
 import PConfirm from '@/components/ui/PConfirm.vue'
+import { ApiErrorResponseError } from '@/api/client'
 import {getPaperCollaborationCapability,listPaperMembers,setPaperMember,removePaperMember,listPaperProjectSnapshots,getPaperProjectSnapshot,createPaperProjectSnapshot,restorePaperProjectSnapshot,deletePaperProjectSnapshot, managePaperFiles, savePaperFile, getPaperFile, getPaperProject, listPaperFiles, getPaperCompileCapability, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, listPaperFileVersions, getPaperFileVersion } from '@/api/papers'
 
 vi.mock('@/stores/auth',()=>({useAuthStore:()=>({isAuthenticated:true,user:{uuid:'owner-a'}})}))
@@ -52,6 +53,7 @@ const f2 = { id: 'f2', path: 'main.tex', kind: 'text', revision: 1, content: 'Cu
 
 afterEach(() => {
   vi.clearAllMocks()
+  vi.mocked(getPaperCollaborationCapability).mockReset().mockResolvedValue({enabled:false})
   vi.mocked(getPaperCompileCapability).mockResolvedValue({ enabled: false, pdf_available: false })
   vi.mocked(listPaperCompileJobs).mockResolvedValue([])
 })
@@ -710,32 +712,82 @@ describe('Papers shared project access',()=>{
 })
 
 describe('Papers realtime collaboration gate',()=>{
- it('never opens a socket when capability is disabled and reloads canonical source on exit',async()=>{
-  vi.mocked(getPaperCollaborationCapability).mockResolvedValue({enabled:false})
+ async function openGate(){
   vi.mocked(getPaperProject).mockResolvedValue({...two,access_role:'owner'} as never)
   vi.mocked(listPaperFiles).mockResolvedValue([f2] as never)
   vi.mocked(getPaperFile).mockResolvedValue(f2 as never)
-  const create=vi.fn()
-  vi.stubGlobal('WebSocket',create)
   const router=createRouter({history:createMemoryHistory(),routes:[{path:'/papers/:projectId',component:PaperWorkspaceView},{path:'/papers',component:{template:'<div />'}}]})
   await router.push('/papers/two');await router.isReady()
   const w=mount(defineComponent({render:()=>h(RouterView)}),{global:{plugins:[router]}})
+  await flushPromises()
+  return {w,router}
+ }
+ const button=(w:Awaited<ReturnType<typeof openGate>>['w'],label:string)=>w.findAll('button').find(b=>b.text()===label)!
+ it('keeps the ordinary editor and save available when collaboration is disabled',async()=>{
+  vi.mocked(getPaperCollaborationCapability).mockResolvedValue({enabled:false})
+  const create=vi.fn();vi.stubGlobal('WebSocket',create)
+  const {w,router}=await openGate()
   try{
-   await flushPromises()
-   await w.findAll('button').find(b=>b.text()==='实时协作')!.trigger('click');await flushPromises()
    expect(getPaperCollaborationCapability).toHaveBeenCalledWith('two','f2')
+   expect(button(w,'实时协作').attributes('disabled')).toBeDefined()
    expect(w.text()).toContain('实时协作尚未开放')
+   expect(w.get('[data-test="editor"]').text()).toBe('Current source')
+   expect(button(w,'保存').attributes('disabled')).toBeUndefined()
    expect(create).not.toHaveBeenCalled()
-   expect(w.find('[data-test="editor"]').exists()).toBe(false)
-   expect(w.findAll('button').some(b=>b.text()==='保存')).toBe(false)
-   await router.push('/papers');await flushPromises()
-   expect(router.currentRoute.value.path).toBe('/papers/two')
-   vi.mocked(getPaperFile).mockResolvedValue({...f2,content:'Latest canonical source',revision:2} as never)
-   vi.mocked(listPaperFiles).mockResolvedValue([{...f2,revision:2}] as never)
-   vi.mocked(getPaperProject).mockResolvedValue({...two,head_revision:2,access_role:'owner'} as never)
-   await w.findAll('button').find(b=>b.text()==='退出协作')!.trigger('click');await flushPromises()
-   expect(w.get('[data-test="editor"]').text()).toBe('Latest canonical source')
    expect(savePaperFile).not.toHaveBeenCalled()
+   await router.push('/papers');await flushPromises()
+   expect(router.currentRoute.value.path).toBe('/papers')
   }finally{w.unmount();vi.unstubAllGlobals()}
+ })
+ it('distinguishes an old-backend 404 from network failure and permits retry',async()=>{
+  vi.mocked(getPaperCollaborationCapability).mockRejectedValue(new ApiErrorResponseError(404,'not_found','Not found'))
+  const {w}=await openGate()
+  try{
+   expect(w.text()).toContain('实时协作接口尚不可用')
+   expect(button(w,'实时协作').attributes('disabled')).toBeDefined()
+   expect(w.get('[data-test="editor"]').text()).toBe('Current source')
+   vi.mocked(getPaperCollaborationCapability).mockRejectedValue(new Error('offline'))
+   await button(w,'重新检查').trigger('click');await flushPromises()
+   expect(w.text()).toContain('暂时无法验证实时协作能力')
+   vi.mocked(getPaperCollaborationCapability).mockResolvedValue({enabled:true,protocol:'papers-crdt-v1',role:'owner'})
+   await button(w,'重新检查').trigger('click');await flushPromises()
+   expect(button(w,'实时协作').attributes('disabled')).toBeUndefined()
+   expect(w.get('[data-test="editor"]').text()).toBe('Current source')
+  }finally{w.unmount()}
+ })
+ it('returns to ordinary editing without reloading or saving if the panel recheck fails',async()=>{
+  vi.mocked(getPaperCollaborationCapability)
+   .mockResolvedValueOnce({enabled:true,protocol:'papers-crdt-v1',role:'owner'})
+   .mockResolvedValue({enabled:false})
+  const create=vi.fn();vi.stubGlobal('WebSocket',create)
+  const {w}=await openGate()
+  try{
+   const initialReads=vi.mocked(getPaperFile).mock.calls.length
+   await button(w,'实时协作').trigger('click');await flushPromises()
+   expect(getPaperCollaborationCapability).toHaveBeenCalledTimes(2)
+   expect(w.get('[data-test="editor"]').text()).toBe('Current source')
+   expect(button(w,'实时协作').attributes('disabled')).toBeDefined()
+   expect(w.text()).toContain('实时协作尚未开放')
+   expect(vi.mocked(getPaperFile).mock.calls.length).toBe(initialReads)
+   expect(savePaperFile).not.toHaveBeenCalled()
+   expect(create).not.toHaveBeenCalled()
+  }finally{w.unmount();vi.unstubAllGlobals()}
+ })
+ it('does not let a late capability response enable another project',async()=>{
+  let release!: (value:{enabled:boolean;protocol:string;role:'owner'})=>void
+  vi.mocked(getPaperCollaborationCapability).mockImplementation(pid=>pid==='two'
+   ?new Promise(resolve=>{release=resolve}):Promise.resolve({enabled:false}))
+  const {w,router}=await openGate()
+  try{
+   expect(button(w,'实时协作').attributes('disabled')).toBeDefined()
+   vi.mocked(getPaperProject).mockResolvedValue({...one,access_role:'owner'} as never)
+   vi.mocked(listPaperFiles).mockResolvedValue([f1] as never)
+   vi.mocked(getPaperFile).mockResolvedValue(f1 as never)
+   await router.push('/papers/one');await flushPromises()
+   release({enabled:true,protocol:'papers-crdt-v1',role:'owner'});await flushPromises()
+   expect(w.get('[data-test="editor"]').text()).toBe('Old source')
+   expect(button(w,'实时协作').attributes('disabled')).toBeDefined()
+   expect(w.text()).toContain('实时协作尚未开放')
+  }finally{w.unmount()}
  })
 })

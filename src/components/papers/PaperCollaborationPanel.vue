@@ -47,6 +47,7 @@
 import {computed,onBeforeUnmount,onMounted,onUnmounted,ref,shallowRef} from 'vue'
 import {getPaperCollaborationCapability,type PaperFile,type PaperProjectRole} from '@/api/papers'
 import {useApiWebSocketUrl} from '@/composables/useApiUrl'
+import {collaborationCapabilityError,collaborationUnavailableReason} from './collaborationCapability'
 import {useAuthStore} from '@/stores/auth'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import {usePaperConfirmation} from '@/components/papers/usePaperConfirmation'
@@ -56,7 +57,7 @@ import {peerColor,type LocalSelection} from './paperPresence'
 import {collabDraftKey,collaborationDraftEnabled,setCollaborationDraftEnabled,listCollaborationDrafts,writeCollaborationDraft,sameCollaborationDraft,removeCollaborationDraft,type PaperCollaborationDraft} from './collaborationDrafts'
 
 const props=defineProps<{projectId:string;file:PaperFile;role:PaperProjectRole;accountId:string;citations?:readonly string[];operationBusy?:boolean}>()
-const emit=defineEmits<{exit:[];confirmed:[revision:number|null]}>()
+const emit=defineEmits<{exit:[];confirmed:[revision:number|null];unavailable:[reason:string]}>()
 const auth=useAuthStore()
 const view=shallowRef<CollaborationView|null>(null)
 const message=ref(''),copyFallback=ref(false)
@@ -222,10 +223,8 @@ onMounted(async()=>{
   const capability=await getPaperCollaborationCapability(props.projectId,props.file.id)
   if(!scope())return
   capabilityChecked.value=true;refreshDrafts()
-  if(capability.enabled!==true||capability.protocol!=='papers-crdt-v1'||capability.role!==props.role){
-   message.value='实时协作尚未开放，或项目权限发生变化。'
-   return
-  }
+  const reason=collaborationUnavailableReason(capability,props.role)
+  if(reason){emit('unavailable',reason);return}
   const path='papers/projects/'+encodeURIComponent(props.projectId)+'/files/'+encodeURIComponent(props.file.id)+'/collaboration/ws'
   session=new DurablePaperCollaboration({
    url:useApiWebSocketUrl(path)+(capability.presence===true?'?presence=1':''),expectedRole:props.role,presence:capability.presence===true,reconnect:true,
@@ -236,7 +235,10 @@ onMounted(async()=>{
    onChange:next=>{if(scope()){view.value=next;syncCollaborationDraft(next);emit('confirmed',confirmedRevision())}},
   })
   session.start()
- }catch{if(scope())message.value='无法读取协作能力，请检查网络或访问资格。'}
+ }catch(error){if(scope()){
+  if(!session)emit('unavailable',collaborationCapabilityError(error))
+  else message.value='无法建立协作连接，请检查网络后重试。'
+ }}
 })
 onBeforeUnmount(()=>{disposed=true;window.removeEventListener('storage',storageChanged);draftRows.value=[]})
 onUnmounted(()=>{session?.destroy();session=null;view.value=null})

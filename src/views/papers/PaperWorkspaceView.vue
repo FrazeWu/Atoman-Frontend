@@ -57,8 +57,9 @@
           <button type="button" class="papers-workspace__sync" title="定位当前源码行对应的 PDF 内容 (Ctrl/Cmd+Shift+J)" :disabled="!syncReady || activeFile?.kind !== 'text'" @click="jumpToPDF">定位 PDF →</button>
           <PButton v-if="writeAccess&&!collaborationOpen" type="button" size="sm" variant="secondary" :disabled="!activeFile || activeFile.kind !== 'text' || saving" @click="saveNow">保存</PButton>
           <PButton v-if="collaborationOpen&&ownerAccess" type="button" size="sm" variant="secondary" :disabled="snapshotMutating||compiling" @click="toggleTool('snapshots')">项目快照</PButton>
-          <PButton v-if="!collaborationOpen&&activeFile?.kind==='text'&&accountId" type="button" size="sm" variant="secondary" :disabled="!canStartCollaboration" @click="startCollaboration">实时协作</PButton>
+          <PButton v-if="!collaborationOpen&&activeFile?.kind==='text'&&accountId" type="button" size="sm" variant="secondary" :disabled="!canStartCollaboration" :title="collaborationGateMessage || undefined" @click="startCollaboration">实时协作</PButton>
         </div>
+        <p v-if="!collaborationOpen&&collaborationScope&&collaborationGateMessage" class="papers-workspace__stale" role="status">{{ collaborationGateMessage }} <button v-if="collaborationGate.scope===collaborationScope&&collaborationGate.state==='unavailable'" type="button" class="papers-workspace__sync" :disabled="navigating||switchingFile" @click="checkCollaborationCapability">重新检查</button></p>
         <nav v-if="!collaborationOpen" class="papers-workspace__toolnav" aria-label="项目工具">
           <button type="button" :aria-pressed="toolMode==='search'" @click="toggleTool('search')">全项目搜索</button>
           <button type="button" :aria-pressed="toolMode==='references'" @click="toggleTool('references')">参考文献</button>
@@ -126,7 +127,7 @@
           <p v-else-if="!outlineRows.length">未找到章节标题。</p>
           <button v-for="item in outlineRows" :key="item.fileId+':'+item.line+':'+item.title" type="button" :style="{paddingLeft:Math.max(0,item.level-1)*12+'px'}" :title="item.path+':'+item.line" @click="jumpOutline(item)">{{ item.title }} <small>{{ item.path }}:{{ item.line }}</small></button>
         </section>
-        <PaperCollaborationPanel v-if="collaborationOpen&&activeFile?.kind==='text'&&collaborationAccount===accountId" :key="projectId+':'+activeFile.id+':'+accountId" ref="collaborationRef" :project-id="projectId" :file="activeFile" :role="ownerAccess?'owner':writeAccess?'editor':'viewer'" :account-id="accountId" :citations="citationKeys" :operation-busy="snapshotMutating||compiling" @confirmed="onCollaborationConfirmed" @exit="exitCollaboration" />
+        <PaperCollaborationPanel v-if="collaborationOpen&&activeFile?.kind==='text'&&collaborationAccount===accountId" :key="projectId+':'+activeFile.id+':'+accountId" ref="collaborationRef" :project-id="projectId" :file="activeFile" :role="ownerAccess?'owner':writeAccess?'editor':'viewer'" :account-id="accountId" :citations="citationKeys" :operation-busy="snapshotMutating||compiling" @confirmed="onCollaborationConfirmed" @exit="exitCollaboration" @unavailable="onCollaborationUnavailable" />
         <LatexEditor v-else-if="!collaborationOpen&&activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef"  :model-value="draft" @update:model-value="updateDraft" :citations="citationKeys" :readonly="!writeAccess || switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
         <PaperAssetPreview v-else-if="activeFile?.kind === 'binary'" :key="activeFile.id+':'+activeFile.revision" :file="activeFile" />
         <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
@@ -212,6 +213,7 @@ import PaperSnapshotTools from '@/components/papers/PaperSnapshotTools.vue'
 import PaperDraftTools from '@/components/papers/PaperDraftTools.vue'
 import PaperMemberTools from '@/components/papers/PaperMemberTools.vue'
 import PaperCollaborationPanel from '@/components/papers/PaperCollaborationPanel.vue'
+import {collaborationCapabilityError,collaborationUnavailableReason} from '@/components/papers/collaborationCapability'
 import {draftKey,listLocalDrafts,localDraftEnabled,setLocalDraftEnabled,writeLocalDraft,readLocalDraft,removeLocalDraft,sameLocalDraft,matchesLocalDraftBase,type PaperLocalDraft} from '@/components/papers/localDrafts'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import {usePaperConfirmation} from '@/components/papers/usePaperConfirmation'
@@ -227,11 +229,11 @@ import PaperPDFPreview from '@/components/papers/PaperPDFPreview.vue'
 import { decodeSourceMap, sourceToPDF, pdfToSource, type PaperSourceMap } from '@/components/papers/sourceMap'
 import {
   createPaperFile, managePaperFiles, getPaperFile, getPaperProject, listPaperFiles, savePaperFile, getPaperProjectZIP, downloadPaperZIP,
-  getPaperCompileCapability, getPaperCompileJob, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, getPaperCompileSourceMap,
+  getPaperCollaborationCapability, getPaperCompileCapability, getPaperCompileJob, listPaperCompileJobs, submitPaperCompile, cancelPaperCompile, getPaperCompileSourceMap,
   listPaperFileVersions, getPaperFileVersion,
   listPaperProjectSnapshots,getPaperProjectSnapshot,createPaperProjectSnapshot,restorePaperProjectSnapshot,deletePaperProjectSnapshot,
   listPaperMembers,setPaperMember,removePaperMember,type PaperProjectMember,type PaperMemberRole,
-  type PaperProjectSnapshot,type PaperSnapshotDetail,
+  type PaperProjectSnapshot,type PaperSnapshotDetail,type PaperProjectRole,
   type PaperCompiler, type PaperCompileCapability, type PaperFileVersion, type PaperVersionSummary, type PaperFile, type PaperProject, type PaperCompileJob, type PaperCompileDiagnostic, type PaperUpload,
 } from '@/api/papers'
 
@@ -1220,7 +1222,46 @@ function saveNow() { if(!collaborationOpen.value&&writeAccess.value){saveRetryAt
 // A separate editor session owns the collaborative document. Never promote
 // its local text into the ordinary full-text PUT/autosave path. On exit,
  // reload the accepted canonical source and revision from the server.
+const collaborationRole=computed<PaperProjectRole>(()=>ownerAccess.value?'owner':writeAccess.value?'editor':'viewer')
+const collaborationScope=computed(()=>{
+ const file=activeFile.value
+ if(!accountId.value||project.value?.id!==projectId.value||file?.kind!=='text')return ''
+ return JSON.stringify([accountId.value,projectId.value,file.id,collaborationRole.value])
+})
+type CollaborationGate={scope:string;state:'idle'|'checking'|'available'|'unavailable';message:string}
+const collaborationGate=ref<CollaborationGate>({scope:'',state:'idle',message:''})
+let collaborationGateSerial=0
+const collaborationGateMessage=computed(()=>{
+ if(!collaborationScope.value)return ''
+ if(collaborationGate.value.scope!==collaborationScope.value)return '正在检查实时协作能力…'
+ return collaborationGate.value.message
+})
+async function checkCollaborationCapability(){
+ const scope=collaborationScope.value,serial=++collaborationGateSerial
+ const file=activeFile.value,pid=projectId.value,role=collaborationRole.value
+ if(!scope||!file||disposed||collaborationOpen.value){
+  collaborationGate.value={scope:'',state:'idle',message:''}
+  return
+ }
+ collaborationGate.value={scope,state:'checking',message:'正在检查实时协作能力…'}
+ let reason:string
+ try{reason=collaborationUnavailableReason(await getPaperCollaborationCapability(pid,file.id),role)}
+ catch(error){reason=collaborationCapabilityError(error)}
+ if(disposed||serial!==collaborationGateSerial||scope!==collaborationScope.value||collaborationOpen.value)return
+ collaborationGate.value={scope,state:reason?'unavailable':'available',message:reason}
+}
+watch(collaborationScope,()=>{if(!collaborationOpen.value)void checkCollaborationCapability()},{immediate:true})
+function onCollaborationUnavailable(reason:string){
+ // The panel only emits this before creating a collaborative session.
+ // Preserve the clean ordinary buffer; do not reload, clear or write it.
+ if(!collaborationOpen.value||collaborationAccount.value!==accountId.value||collaborationRef.value?.hasUnconfirmed())return
+ ++collaborationGateSerial
+ collaborationGate.value={scope:collaborationScope.value,state:'unavailable',message:reason}
+ collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null
+ saveStatus.value='普通编辑 · 未进入协作'
+}
 const canStartCollaboration=computed(()=>!collaborationOpen.value&&!disposed&&!!accountId.value&&
+ collaborationGate.value.scope===collaborationScope.value&&collaborationGate.value.state==='available'&&
  activeFile.value?.kind==='text'&&draft.value===activeFile.value.content&&
  !loading.value&&!saving.value&&!switchingFile.value&&!navigating.value&&!uploadBusy.value&&
  !snapshotMutating.value&&!memberMutating.value&&!toolBusy.value&&!compiling.value&&!hasActiveCompile.value&&!exporting.value&&!saveError.value)

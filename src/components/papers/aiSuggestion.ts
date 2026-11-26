@@ -1,5 +1,9 @@
 export interface PaperAISourceRange {from:number;to:number;baseline:string}
-export interface PaperAIEdit extends PaperAISourceRange {replacement:string;fileId:string;revision:number}
+export interface PaperAIEdit extends PaperAISourceRange {replacement:string;fileId:string;revision:number;collaborationEpoch?:string}
+export interface PaperAISharedState {epoch:string;revision:number;source:string;ready:boolean}
+export function sharedAIEditMatches(state:PaperAISharedState|null,fileId:string,edit:PaperAIEdit):boolean{
+ return !!state?.ready&&!!edit.collaborationEpoch&&state.epoch===edit.collaborationEpoch&&state.revision===edit.revision&&state.source===edit.baseline&&fileId===edit.fileId
+}
 export const paperAIBytes=(text:string)=>new TextEncoder().encode(text).length
 export function validAIRange(value:PaperAISourceRange){
  return Number.isSafeInteger(value.from)&&Number.isSafeInteger(value.to)&&value.from>=0&&value.to>value.from&&value.to<=value.baseline.length

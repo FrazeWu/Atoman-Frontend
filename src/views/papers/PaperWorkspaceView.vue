@@ -69,6 +69,7 @@
           <button v-if="!collaborationOpen" type="button" class="papers-workspace__sync" :aria-expanded="outlineOpen" @click="toggleOutline">大纲</button>
           <button type="button" class="papers-workspace__sync" title="定位当前源码行对应的 PDF 内容 (Ctrl/Cmd+Shift+J)" :disabled="!syncReady || activeFile?.kind !== 'text'" @click="jumpToPDF">定位 PDF →</button>
           <PButton v-if="writeAccess&&!collaborationOpen" type="button" size="sm" variant="secondary" :disabled="!activeFile || activeFile.kind !== 'text' || saving" @click="saveNow">保存</PButton>
+          <PButton v-if="collaborationOpen&&ownerAccess" type="button" size="sm" variant="secondary" :disabled="!aiSharedState?.ready||snapshotMutating||compiling" @click="toggleTool('ai')">AI 助手</PButton>
           <PButton v-if="collaborationOpen&&ownerAccess" type="button" size="sm" variant="secondary" :disabled="snapshotMutating||compiling" @click="toggleTool('snapshots')">项目快照</PButton>
           <PButton v-if="!collaborationOpen&&activeFile?.kind==='text'&&accountId" type="button" size="sm" variant="secondary" :disabled="!canStartCollaboration" :title="collaborationGateMessage || undefined" @click="startCollaboration">实时协作</PButton>
         </div>
@@ -142,7 +143,7 @@
           <p v-else-if="!outlineRows.length">未找到章节标题。</p>
           <button v-for="item in outlineRows" :key="item.fileId+':'+item.line+':'+item.title" type="button" :style="{paddingLeft:Math.max(0,item.level-1)*12+'px'}" :title="item.path+':'+item.line" @click="jumpOutline(item)">{{ item.title }} <small>{{ item.path }}:{{ item.line }}</small></button>
         </section>
-        <PaperCollaborationPanel v-if="collaborationOpen&&activeFile?.kind==='text'&&collaborationAccount===accountId" :key="projectId+':'+activeFile.id+':'+accountId" ref="collaborationRef" :project-id="projectId" :file="activeFile" :role="ownerAccess?'owner':writeAccess?'editor':'viewer'" :account-id="accountId" :citations="citationKeys" :operation-busy="snapshotMutating||compiling" @confirmed="onCollaborationConfirmed" @exit="exitCollaboration" @unavailable="onCollaborationUnavailable" />
+        <PaperCollaborationPanel v-if="collaborationOpen&&activeFile?.kind==='text'&&collaborationAccount===accountId" :key="projectId+':'+activeFile.id+':'+accountId" ref="collaborationRef" :project-id="projectId" :file="activeFile" :role="ownerAccess?'owner':writeAccess?'editor':'viewer'" :account-id="accountId" :citations="citationKeys" :operation-busy="snapshotMutating||compiling" @confirmed="onCollaborationConfirmed" @ai-state="onCollaborationAIState" @exit="exitCollaboration" @unavailable="onCollaborationUnavailable" />
         <LatexEditor v-else-if="!collaborationOpen&&activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef"  :model-value="draft" @update:model-value="updateDraft" :citations="citationKeys" :readonly="!writeAccess || switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
         <PaperAssetPreview v-else-if="activeFile?.kind === 'binary'" :key="activeFile.id+':'+activeFile.revision" :file="activeFile" />
         <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
@@ -155,10 +156,10 @@
         </p>
       </section>
       <div v-if="layoutMode === 'split'" class="papers-workspace__divider" role="separator" aria-label="调整编辑器和预览宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="previewWidth" @pointerdown="beginResize" @pointermove="resizeMove" @pointerup="endResize" @pointercancel="endResize" @keydown.left.prevent="previewWidth=Math.min(75,previewWidth+3)" @keydown.right.prevent="previewWidth=Math.max(25,previewWidth-3)" />
-      <aside v-if="aiPanelOpen&&activeFile?.kind==='text'" class="papers-workspace__preview papers-workspace__ai-panel" aria-label="AI 论文助手">
+      <aside v-if="aiPanelOpen&&aiFile" class="papers-workspace__preview papers-workspace__ai-panel" aria-label="AI 论文助手">
         <div class="papers-workspace__preview-heading"><strong>AI 论文助手</strong><span class="papers-workspace__ai-subtitle">审阅后修改</span><PButton size="sm" variant="secondary" type="button" @click="closeTool">返回 PDF</PButton></div>
         <div class="papers-workspace__ai-scroll">
-          <PaperAITools v-if="toolMode==='ai'&&ownerAccess&&activeFile?.kind==='text'" :key="projectId+':'+accountId+':'+activeFile.id" :project-id="projectId" :account-id="accountId" :file="activeFile" :source="draft" :files="files" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||collaborationOpen" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
+          <PaperAITools :key="projectId+':'+accountId+':'+aiFile.id+':'+(collaborationOpen?aiSharedState?.epoch:'ordinary')" :project-id="projectId" :account-id="accountId" :file="aiFile" :source="collaborationOpen?(aiSharedState?.source||''):draft" :files="files" :collaboration-epoch="collaborationOpen?aiSharedState?.epoch:undefined" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||compiling||(collaborationOpen&&!aiSharedState?.ready)" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
         </div>
       </aside>
       <aside v-show="!aiPanelOpen" class="papers-workspace__preview" aria-label="编译预览">
@@ -240,7 +241,7 @@ import PaperDraftTools from '@/components/papers/PaperDraftTools.vue'
 import PaperMemberTools from '@/components/papers/PaperMemberTools.vue'
 import PaperShareLinks from '@/components/papers/PaperShareLinks.vue'
 import PaperAITools from '@/components/papers/PaperAITools.vue'
-import type {PaperAIEdit} from '@/components/papers/aiSuggestion'
+import type {PaperAIEdit,PaperAISharedState} from '@/components/papers/aiSuggestion'
 import PaperCollaborationPanel from '@/components/papers/PaperCollaborationPanel.vue'
 import {collaborationCapabilityError,collaborationUnavailableReason} from '@/components/papers/collaborationCapability'
 import {draftKey,listLocalDrafts,localDraftEnabled,setLocalDraftEnabled,writeLocalDraft,readLocalDraft,removeLocalDraft,sameLocalDraft,matchesLocalDraftBase,type PaperLocalDraft} from '@/components/papers/localDrafts'
@@ -409,6 +410,10 @@ function insertFigure(figure:FigureInsertion){
 
 const collaborationOpen=ref(false)
 const collaborationRevision=ref<number|null>(null)
+const aiSharedState=shallowRef<PaperAISharedState|null>(null)
+function onCollaborationAIState(state:PaperAISharedState|null){
+ if(collaborationOpen.value&&collaborationAccount.value===accountId.value)aiSharedState.value=state
+}
 function onCollaborationConfirmed(revision:number|null){
  if(collaborationOpen.value&&collaborationAccount.value===accountId.value)collaborationRevision.value=revision
 }
@@ -425,7 +430,14 @@ const refreshMessage=ref('')
 
 type ToolMode='search'|'references'|'history'|'figures'|'snapshots'|'drafts'|'members'|'ai'
 const toolMode=ref<ToolMode|''>(''),toolBusy=ref(false),toolError=ref('')
-const aiPanelOpen=computed(()=>toolMode.value==='ai'&&ownerAccess.value&&!collaborationOpen.value&&activeFile.value?.kind==='text')
+const aiFile=computed<PaperFile|null>(()=>{
+ const file=activeFile.value
+ if(!file||file.kind!=='text')return null
+ if(!collaborationOpen.value)return file
+ const state=aiSharedState.value
+ return state?{...file,revision:state.revision,content:state.source}:null
+})
+const aiPanelOpen=computed(()=>toolMode.value==='ai'&&ownerAccess.value&&!!aiFile.value)
 const searchQuery=ref(''),replaceQuery=ref(''),referenceQuery=ref('')
 const searchSources=shallowRef<PaperFile[]>([]),searchBase=ref(0)
 const searchStale=computed(()=>!searchBase.value||searchBase.value!==project.value?.head_revision||(activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content))
@@ -538,7 +550,7 @@ function onDraftStorage(event:StorageEvent){
 let toolSerial=0,bibSerial=0
 function formatVersionDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString()}
 function closeTool(){toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null;snapshotDetail.value=null}
-function toggleTool(mode:ToolMode){if((collaborationOpen.value&&mode!=='snapshots')||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures','ai'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;if(mode==='ai')layoutMode.value='split';refreshTool()}
+function toggleTool(mode:ToolMode){if((collaborationOpen.value&&mode!=='snapshots'&&(mode!=='ai'||!aiSharedState.value?.ready))||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures','ai'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;if(mode==='ai')layoutMode.value='split';refreshTool()}
 function refreshTool(){if(toolMode.value==='search')void loadSearchSources();else if(toolMode.value==='references')void refreshBib();else if(toolMode.value==='history')void loadVersions();else if(toolMode.value==='snapshots')void loadSnapshots();else if(toolMode.value==='drafts')refreshLocalDrafts();else if(toolMode.value==='members'&&ownerAccess.value)void loadMembers()}
 function memberError(cause:unknown){
  const code=cause instanceof ApiErrorResponseError?cause.code:''
@@ -881,10 +893,15 @@ const previewStale = computed(() => !!previewJob.value && (previewJob.value.id !
  (previewJob.value.compiler||'pdflatex')!==selectedCompiler.value ||
  (!collaborationOpen.value&&activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)))
 const editorRef=ref<InstanceType<typeof LatexEditor>|null>(null)
-function captureAISelection(){return editorRef.value?.getAISelection?.()??null}
+function captureAISelection(){return collaborationOpen.value?(collaborationRef.value?.getAISelection?.()??null):(editorRef.value?.getAISelection?.()??null)}
 function applyAIEdit(edit:PaperAIEdit){
- if(disposed||!ownerAccess.value||collaborationOpen.value||saving.value||navigating.value||switchingFile.value||uploadBusy.value||addingFile.value||snapshotMutating.value||
-    activeFile.value?.kind!=='text'||activeFile.value.id!==edit.fileId||activeFile.value.revision!==edit.revision||draft.value!==edit.baseline)return false
+ if(disposed||!ownerAccess.value||saving.value||navigating.value||switchingFile.value||uploadBusy.value||addingFile.value||snapshotMutating.value||compiling.value||
+    activeFile.value?.kind!=='text'||activeFile.value.id!==edit.fileId)return false
+ if(collaborationOpen.value){
+  if(collaborationAccount.value!==accountId.value)return false
+  return collaborationRef.value?.acceptAIEdit?.(edit)===true
+ }
+ if(edit.collaborationEpoch||activeFile.value.revision!==edit.revision||draft.value!==edit.baseline)return false
  return editorRef.value?.acceptAIEdit?.(edit)===true
 }
 const pdfRef=ref<InstanceType<typeof PaperPDFPreview>|null>(null)
@@ -1327,7 +1344,7 @@ function onCollaborationUnavailable(reason:string){
  if(!collaborationOpen.value||collaborationAccount.value!==accountId.value||collaborationRef.value?.hasUnconfirmed())return
  ++collaborationGateSerial
  collaborationGate.value={scope:collaborationScope.value,state:'unavailable',message:reason}
- collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null
+ collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null;aiSharedState.value=null
  saveStatus.value='普通编辑 · 未进入协作'
 }
 const canStartCollaboration=computed(()=>!collaborationOpen.value&&!disposed&&!!accountId.value&&
@@ -1340,7 +1357,7 @@ function startCollaboration(){
  if(saveTimer){clearTimeout(saveTimer);saveTimer=null}
  clearSaveRetry();retryableSave=false
  closeTool();outlineOpen.value=false;managedFile.value=null;clearAuto();autoCompile.value=false;historySerial++
- collaborationAccount.value=accountId.value;collaborationRevision.value=null
+ collaborationAccount.value=accountId.value;collaborationRevision.value=null;aiSharedState.value=null
  collaborationOpen.value=true;saveStatus.value='实时协作模式'
  if(layoutMode.value==='pdf')layoutMode.value='editor'
 }
@@ -1351,7 +1368,7 @@ async function exitCollaboration(){
  // response raced the exit or the canonical reload fails.
  loading.value=true
  activeFile.value=null;draft.value=''
- collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null
+ collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null;aiSharedState.value=null
  closeTool();clearAuto();stopCompilePoll();pollSerial++;historySerial++;fileSerial++
  compileJob.value=null;previewJob.value=null;compileEnabled.value=false;pdfEnabled.value=false
  searchSources.value=[];searchBase.value=0;bibSources.value=[];outlineCache.value=[];members.value=[];managedFile.value=null
@@ -1367,7 +1384,7 @@ watch(accountId,(next,previous)=>{
  resetSharedPreview()
  // A different account must never inherit another account's live Y.Doc,
  // canonical source or previously authorized PDF.
- collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null
+ collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null;aiSharedState.value=null
  loadSerial++;fileSerial++;pollSerial++;historySerial++;mapSerial++
  pendingSubmission=null;compiling.value=false;canceling.value=false;snapshotMutating.value=false;addingFile.value=false
  clearAuto();stopCompilePoll();mapAbort?.abort()
@@ -1426,7 +1443,7 @@ const removeNavigationHook=router.afterEach(()=>{navigating.value=false})
 
 watch(projectId, () => {
   resetSharedPreview()
-  collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null
+  collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null;aiSharedState.value=null
   loadSerial++
   uploadSerial++;preparingUpload.value=false;draggingFiles.value=false
   memberSerial++;members.value=[];memberMessage.value='';memberMutating.value=false;refreshMessage.value=''

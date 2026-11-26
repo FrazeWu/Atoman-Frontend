@@ -11,7 +11,7 @@ test('two independent CodeMirror clients merge confirmed edits and preserve unco
  const doc=new Y.Doc(),source=doc.getText('source')
  source.insert(0,'Original manuscript')
  const sessions=new Map<WebSocketRoute,'owner'|'editor'>()
- let revision=1,legacyWrites=0,acceptedUpdates=0,disconnectEditor=false
+ let revision=1,legacyWrites=0,acceptedUpdates=0,disconnectEditor=false,aiCalls=0
  const project={id:'live-fixture',name:'Realtime collaboration fixture',head_revision:1,main_file_id:'main',created_at:now,updated_at:now}
  const file={id:'main',path:'main.tex',kind:'text',sha256:'',revision:1,content:'Original manuscript',created_at:now,updated_at:now}
  function frame(role:'owner'|'editor',request_id?:string){
@@ -58,6 +58,17 @@ test('two independent CodeMirror clients merge confirmed edits and preserve unco
      return ok(file)
     }
     if(path===capability)return ok({enabled:true,protocol:'papers-crdt-v1',role})
+    if(path===prefix+'/ai/capability'){
+     expect(role).toBe('owner')
+     return ok({enabled:true,base_urls:['https://api.openai.com/v1'],max_source_bytes:49152,max_context_bytes:98304,max_extra_files:4})
+    }
+    if(path===prefix+'/ai/suggestions'){
+     expect(role).toBe('owner')
+     aiCalls++
+     const input=route.request().postDataJSON()
+     expect(input).toMatchObject({file_id:'main',base_revision:revision,source:source.toString(),api_key:'synthetic-crdt-ai-key',task:'revise',consent:true,context:[]})
+     return ok({text:input.source.replace('Original','Refined'),model:'fixture-model'})
+    }
     if(path===prefix+'/compile-capability')return ok({enabled:false,pdf_available:false})
     if(path===prefix+'/compiles')return ok([])
     return ok({items:[],total:0})
@@ -92,6 +103,40 @@ test('two independent CodeMirror clients merge confirmed edits and preserve unco
   expect(legacyWrites).toBe(0)
   await expect(first.getByRole('button',{name:'保存',exact:true})).toHaveCount(0)
   await expect(first.getByRole('button',{name:'编译',exact:true})).toBeDisabled()
+  await expect(second.getByRole('button',{name:'AI 助手',exact:true})).toHaveCount(0)
+  await first.getByRole('button',{name:'AI 助手',exact:true}).click()
+  await first.getByLabel('AI API Key').fill('synthetic-crdt-ai-key')
+  await first.getByLabel('AI 模型').fill('fixture-model')
+  await first.getByRole('button',{name:'使用整个文件',exact:true}).click()
+  await first.getByRole('button',{name:'学术润色',exact:true}).click()
+  await first.locator('.paper-ai__consent input').check()
+  const generate=first.getByRole('button',{name:'生成建议',exact:true})
+  await generate.click()
+  await expect(first.getByText('建议替换为')).toBeVisible()
+  expect(aiCalls).toBe(1)
+  expect(source.toString()).toBe('First Original manuscript Second')
+  // Remote edit arriving after a reviewed proposal must invalidate it.
+  await secondSource.click();await second.keyboard.press('End');await second.keyboard.insertText(' Remote')
+  await expect.poll(()=>source.toString()).toBe('First Original manuscript Second Remote')
+  await expect(firstSource).toHaveText(source.toString())
+  await expect(first.getByRole('button',{name:'接受修改',exact:true})).toBeDisabled()
+  await expect(first.getByText('当前源码或文件版本已变化，不能应用旧建议，请重新生成。')).toBeVisible()
+  await expect(first.locator('.papers-collab [role=status]')).toContainText('服务器已保存')
+  await first.getByRole('button',{name:'使用整个文件',exact:true}).click()
+  await first.locator('.paper-ai__consent input').check()
+  await generate.click()
+  await expect(first.getByRole('button',{name:'接受修改',exact:true})).toBeEnabled()
+  expect(aiCalls).toBe(2)
+  await first.getByRole('button',{name:'接受修改',exact:true}).click()
+  await expect.poll(()=>source.toString()).toBe('First Refined manuscript Second Remote')
+  await expect(secondSource).toHaveText(source.toString())
+  await expect(first.locator('.papers-collab [role=status]')).toContainText('服务器已保存')
+  await first.keyboard.press('ControlOrMeta+z')
+  await expect.poll(()=>source.toString()).toBe('First Original manuscript Second Remote')
+  await expect(secondSource).toHaveText(source.toString())
+  await expect(first.locator('.papers-collab [role=status]')).toContainText('服务器已保存')
+  await first.getByRole('button',{name:'返回 PDF',exact:true}).click()
+  expect(legacyWrites).toBe(0)
   disconnectEditor=true
   await secondSource.click();await second.keyboard.press('End');await second.keyboard.insertText(' NOT ACKED')
   await expect(second.locator('.papers-collab [role=status]')).toHaveText('已断开 · 未确认修改')
@@ -108,8 +153,25 @@ test('two independent CodeMirror clients merge confirmed edits and preserve unco
   await second.getByRole('button',{name:'退出协作',exact:true}).click()
   await exitDialog.getByRole('button',{name:'确认',exact:true}).click()
   await expect(second.locator('.cm-content')).toHaveText(source.toString())
+  await first.getByRole('button',{name:'AI 助手',exact:true}).click()
+  await first.getByLabel('AI API Key').fill('synthetic-crdt-ai-key')
+  await first.getByLabel('AI 模型').fill('fixture-model')
+  await first.getByRole('button',{name:'使用整个文件',exact:true}).click()
+  await first.getByRole('button',{name:'学术润色',exact:true}).click()
+  await first.locator('.paper-ai__consent input').check()
+  await first.getByRole('button',{name:'生成建议',exact:true}).click()
+  await expect(first.getByRole('button',{name:'接受修改',exact:true})).toBeEnabled()
+  expect(aiCalls).toBe(3)
+  const ownerSocket=[...sessions].find(([,role])=>role==='owner')?.[0]
+  expect(ownerSocket).toBeDefined()
+  ownerSocket!.close({code:1008,reason:'fixture authorization loss'})
+  await expect(firstSource).toHaveAttribute('contenteditable','false')
+  await expect(first.getByRole('button',{name:'接受修改',exact:true})).toBeDisabled()
+  await expect(first.getByRole('button',{name:'生成建议',exact:true})).toBeDisabled()
+  expect(source.toString()).toBe('First Original manuscript Second Remote')
   await first.getByRole('button',{name:'退出协作',exact:true}).click()
   await expect(first.locator('.cm-content')).toHaveText(source.toString())
+  await expect(first.getByLabel('AI API Key')).toHaveCount(0)
   expect(legacyWrites).toBe(0)
  }finally{await a.close();await b.close();doc.destroy()}
 })

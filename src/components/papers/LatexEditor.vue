@@ -190,18 +190,23 @@ function insertBlock(block:string):boolean{
 // AI suggestions must pass through a normal CodeMirror transaction so undo
 // and the workspace's existing save/version checks remain authoritative.
 function getAISelection():PaperAISourceRange|null{
- if(!editor||props.collaborativeText||props.readonly)return null
+ if(!editor||props.readonly||editor.state.readOnly||props.canEditCollaboration?.()===false)return null
  const main=editor.state.selection.main
  if(main.empty)return null
  return {from:main.from,to:main.to,baseline:editor.state.doc.toString()}
 }
 function acceptAIEdit(edit:PaperAIEdit):boolean{
- if(!editor||props.collaborativeText||props.readonly||editor.state.readOnly)return false
+ if(!editor||props.readonly||editor.state.readOnly||props.canEditCollaboration?.()===false)return false
  const current=editor.state.doc.toString()
- if(paperAIReplacement(current,edit)===null)return false
+ const next=paperAIReplacement(current,edit)
+ if(next===null)return false
+ // Make the accepted suggestion one isolated local undo group.
+ // y-codemirror publishes the regular local transaction; no legacy save.
+ undoManager?.stopCapturing()
  editor.dispatch({changes:{from:edit.from,to:edit.to,insert:edit.replacement},selection:{anchor:edit.from,head:edit.from+edit.replacement.length},scrollIntoView:true,userEvent:'input'})
+ undoManager?.stopCapturing()
  editor.focus()
- return true
+ return editor.state.doc.toString()===next
 }
 defineExpose({getLine,goToLine,goToMatch,insertCitation,insertBlock,runUndo,getAISelection,acceptAIEdit})
 

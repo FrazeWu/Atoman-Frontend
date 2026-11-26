@@ -17,6 +17,7 @@
     <PButton type="button" size="sm" variant="secondary" :disabled="busy||disabled" @click="capture(true)">使用编辑器选区</PButton>
     <PButton type="button" size="sm" variant="secondary" :disabled="busy||disabled" @click="capture(false)">使用整个文件</PButton>
    </div>
+   <p v-if="collaborationEpoch">实时协作：仅处理已获服务器确认的当前版本；接受的建议作为你的本地编辑同步，断线或未确认时暂停操作。</p>
    <p v-if="!target">请选择源码范围。也可先在编辑器选中段落，再点击「使用编辑器选区」。</p>
    <div v-else class="paper-ai__context">
     <strong>{{ file.path }} · {{ target.from===0&&target.to===target.baseline.length?'整个文件':'选中文本' }}</strong>
@@ -73,28 +74,28 @@ import {ApiErrorResponseError} from '@/api/client'
 import {getPaperAICapability,requestPaperAISuggestion,type PaperAICapability,type PaperAISuggestion,type PaperAITask} from '@/api/papersAI'
 import {paperAIBytes,validAIRange,type PaperAISourceRange,type PaperAIEdit} from './aiSuggestion'
 
-type Captured=PaperAISourceRange&{fileId:string;revision:number}
+type Captured=PaperAISourceRange&{fileId:string;revision:number;collaborationEpoch?:string}
 type Suggestion={target:Captured;task:PaperAITask;response:PaperAISuggestion}
-const props=defineProps<{projectId:string;accountId:string;file:PaperFile;source:string;files:PaperFile[];disabled:boolean;captureSelection:()=>PaperAISourceRange|null;applyEdit:(edit:PaperAIEdit)=>boolean;diagnostics?:string}>()
+const props=defineProps<{projectId:string;accountId:string;file:PaperFile;source:string;files:PaperFile[];disabled:boolean;captureSelection:()=>PaperAISourceRange|null;applyEdit:(edit:PaperAIEdit)=>boolean;diagnostics?:string;collaborationEpoch?:string}>()
 const capability=ref<PaperAICapability|null>(null),loading=ref(false),message=ref('')
 const baseURL=ref(''),model=ref('gpt-4.1-mini'),key=ref(''),instruction=ref(''),task=ref<PaperAITask>('revise'),consent=ref(false)
 const target=shallowRef<Captured|null>(null),extras=shallowRef<PaperFile[]>([])
 const suggestion=shallowRef<Suggestion|null>(null)
 const busy=ref(false),contextBusy=ref(false)
 let disposed=false,serial=0,contextSerial=0,controller:AbortController|null=null
-const scope=()=>props.accountId+':'+props.projectId+':'+props.file.id
+const scope=()=>props.accountId+':'+props.projectId+':'+props.file.id+':'+(props.collaborationEpoch||'ordinary')
 const selectedSource=computed(()=>target.value?target.value.baseline.slice(target.value.from,target.value.to):'')
 const sourceBytes=computed(()=>paperAIBytes(selectedSource.value))
 const contextBytes=computed(()=>sourceBytes.value+extras.value.reduce((n,item)=>n+paperAIBytes(item.content),0))
 const eligibleFiles=computed(()=>props.files.filter(item=>item.kind==='text'&&item.id!==props.file.id))
-const staleTarget=(item:Captured|null)=>!item||item.fileId!==props.file.id||item.revision!==props.file.revision||item.baseline!==props.source
+const staleTarget=(item:Captured|null)=>!item||item.fileId!==props.file.id||item.revision!==props.file.revision||item.baseline!==props.source||item.collaborationEpoch!==props.collaborationEpoch
 const stale=computed(()=>staleTarget(target.value))
 const resultStale=computed(()=>!suggestion.value||staleTarget(suggestion.value.target))
 const extraStale=computed(()=>extras.value.some(extra=>!eligibleFiles.value.some(item=>item.id===extra.id&&item.revision===extra.revision)))
 const canGenerate=computed(()=>!!capability.value?.enabled&&!!target.value&&!stale.value&&!extraStale.value&&!props.disabled&&!busy.value&&!contextBusy.value&&consent.value&&baseURL.value&&model.value&&key.value.trim().length>=8&&instruction.value.trim()&&selectedSource.value.trim()&&sourceBytes.value<=capability.value.max_source_bytes&&contextBytes.value<=capability.value.max_context_bytes&&paperAIBytes(instruction.value)<=4000)
 function alive(n:number,initial:string){return !disposed&&n===serial&&initial===scope()}
 function clearConsent(){consent.value=false}
-watch([baseURL,model,key,instruction,task,target,extras,()=>props.source,()=>props.file.revision,extraStale],clearConsent,{flush:'sync'})
+watch([baseURL,model,key,instruction,task,target,extras,()=>props.source,()=>props.file.revision,()=>props.disabled,extraStale],clearConsent,{flush:'sync'})
 function stop(){serial++;controller?.abort();controller=null;busy.value=false;loading.value=false;clearConsent()}
 function reset(){stop();contextSerial++;contextBusy.value=false;capability.value=null;key.value='';target.value=null;extras.value=[];suggestion.value=null;message.value=''}
 watch(scope,()=>{reset();void loadCapability()})
@@ -119,7 +120,7 @@ function capture(selectionOnly:boolean){
  const range=selectionOnly?props.captureSelection():{from:0,to:props.source.length,baseline:props.source}
  if(!range||range.baseline!==props.source||!validAIRange(range)){message.value=selectionOnly?'请先在源码编辑器中选中需要处理的文字。':'当前文件没有可处理的源码。';return}
  if(capability.value&&paperAIBytes(range.baseline.slice(range.from,range.to))>capability.value.max_source_bytes){message.value='源码范围过大，请缩小选区。';return}
- target.value={...range,fileId:props.file.id,revision:props.file.revision}
+ target.value={...range,fileId:props.file.id,revision:props.file.revision,...(props.collaborationEpoch?{collaborationEpoch:props.collaborationEpoch}:{})}
  suggestion.value=null;message.value='';clearConsent()
 }
 async function toggleContext(file:PaperFile,checked:boolean){
@@ -162,7 +163,7 @@ function accept(){
  const item=suggestion.value
  if(!item||item.task!=='revise'||resultStale.value||props.disabled||busy.value)return
  if(!props.applyEdit({...item.target,replacement:item.response.text})){message.value='当前源码或权限已变化，未应用建议。';return}
- suggestion.value=null;target.value=null;message.value='已接受修改，可使用编辑器撤销；保存沿用现有版本校验。'
+ suggestion.value=null;target.value=null;message.value=props.collaborationEpoch?'已接受修改，正在通过实时协作通道同步；请留意服务器确认状态。':'已接受修改，可使用编辑器撤销；保存沿用现有版本校验。'
 }
 </script>
 

@@ -37,7 +37,7 @@
    </span>
   </div>
   <details v-if="view?.text" class="papers-collab__help"><summary>协作说明</summary><p class="papers-collab__hint">仅同步当前文件。普通保存与项目结构修改暂停；所有者可编译及快照已确认版本。断线默认暂停编辑；可开启本机草稿保护和离线编辑。撤销只影响本地操作。</p></details>
-  <LatexEditor v-if="view?.text" :key="view.epoch" :model-value="view.source" :collaborative-text="view.text" :citations="citations" :readonly="!editable" :can-edit-collaboration="canEditNow" :remote-peers="remotePeers" @presence-selection="selectionChanged" />
+  <LatexEditor v-if="view?.text" ref="editorRef" :key="view.epoch" :model-value="view.source" :collaborative-text="view.text" :citations="citations" :readonly="!editable" :can-edit-collaboration="canEditNow" :remote-peers="remotePeers" @presence-selection="selectionChanged" />
   <div v-else class="papers-collab__empty">
    <p v-if="view?.status==='stopped'||message">连接未建立。普通编辑模式仍可使用。</p>
    <p v-else>正在验证项目权限并读取服务端文档…</p>
@@ -49,7 +49,7 @@
  </section>
 </template>
 <script setup lang="ts">
-import {computed,onBeforeUnmount,onMounted,onUnmounted,ref,shallowRef} from 'vue'
+import {computed,onBeforeUnmount,onMounted,onUnmounted,ref,shallowRef,watch} from 'vue'
 import {getPaperCollaborationCapability,type PaperFile,type PaperProjectRole} from '@/api/papers'
 import {useApiWebSocketUrl} from '@/composables/useApiUrl'
 import {paperSocketProtocols} from './collaborationSocketAuth'
@@ -58,14 +58,16 @@ import {useAuthStore} from '@/stores/auth'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import {usePaperConfirmation} from '@/components/papers/usePaperConfirmation'
 import LatexEditor from './LatexEditor.vue'
+import {sharedAIEditMatches,type PaperAISharedState,type PaperAIEdit} from './aiSuggestion'
 import {DurablePaperCollaboration,type CollaborationView} from './durableCollaboration'
 import {peerColor,type LocalSelection} from './paperPresence'
 import {collabDraftKey,collaborationDraftEnabled,setCollaborationDraftEnabled,listCollaborationDrafts,writeCollaborationDraft,sameCollaborationDraft,removeCollaborationDraft,type PaperCollaborationDraft} from './collaborationDrafts'
 
 const props=defineProps<{projectId:string;file:PaperFile;role:PaperProjectRole;accountId:string;citations?:readonly string[];operationBusy?:boolean}>()
-const emit=defineEmits<{exit:[];confirmed:[revision:number|null];unavailable:[reason:string]}>()
+const emit=defineEmits<{exit:[];confirmed:[revision:number|null];unavailable:[reason:string];'ai-state':[state:PaperAISharedState|null]}>()
 const auth=useAuthStore()
 const view=shallowRef<CollaborationView|null>(null)
+const editorRef=ref<InstanceType<typeof LatexEditor>|null>(null)
 const message=ref(''),copyFallback=ref(false)
 let session:DurablePaperCollaboration|null=null
 let disposed=false
@@ -210,6 +212,25 @@ function confirmedRevision():number|null{
  return scope()&&props.role==='owner'&&current?.role==='owner'&&current.status==='ready'&&!current.pending&&
   !!current.epoch&&Number.isSafeInteger(current.projectRevision)&&current.projectRevision>0?current.projectRevision:null
 }
+function currentAIState():PaperAISharedState|null{
+ const current=session?.view
+ if(!scope()||props.role!=='owner'||current?.role!=='owner'||!current.epoch||!current.text||
+    !Number.isSafeInteger(current.fileRevision)||current.fileRevision<=0)return null
+ const source=current.text.toString()
+ return {epoch:current.epoch,revision:current.fileRevision,source,ready:current.status==='ready'&&!current.pending&&
+    current.source===source&&canEditNow()&&!props.operationBusy}
+}
+function getAISelection(){
+ const state=currentAIState()
+ if(!state?.ready)return null
+ const selection=editorRef.value?.getAISelection()
+ return selection?.baseline===state.source?selection:null
+}
+function acceptAIEdit(edit:PaperAIEdit){
+ if(!sharedAIEditMatches(currentAIState(),props.file.id,edit))return false
+ return editorRef.value?.acceptAIEdit(edit)===true
+}
+watch(()=>props.operationBusy,()=>{if(scope())emit('ai-state',currentAIState())})
 function hasUnconfirmed(){return !!session?.view.pending}
 async function requestExit(){
  if(props.operationBusy||!scope())return
@@ -238,7 +259,7 @@ async function connectInitial(){
     const protocols=paperSocketProtocols(auth.token)
     return protocols?new WebSocket(url,protocols):new WebSocket(url)
    },
-   onChange:next=>{if(scope()){view.value=next;syncCollaborationDraft(next);emit('confirmed',confirmedRevision())}},
+   onChange:next=>{if(scope()){view.value=next;syncCollaborationDraft(next);emit('confirmed',confirmedRevision());emit('ai-state',currentAIState())}},
   })
   session.start()
  }catch(error){if(scope()){
@@ -248,13 +269,13 @@ async function connectInitial(){
 }
 function retryInitialConnection(){
  if(!scope()||props.operationBusy||view.value?.epoch||view.value?.pending)return
- session?.destroy();session=null;view.value=null;message.value=''
+ session?.destroy();session=null;view.value=null;message.value='';emit('ai-state',null)
  void connectInitial()
 }
 onMounted(()=>{window.addEventListener('storage',storageChanged);void connectInitial()})
 onBeforeUnmount(()=>{disposed=true;window.removeEventListener('storage',storageChanged);draftRows.value=[]})
 onUnmounted(()=>{session?.destroy();session=null;view.value=null})
-defineExpose({hasUnconfirmed,requestExit,confirmedRevision})
+defineExpose({hasUnconfirmed,requestExit,confirmedRevision,getAISelection,acceptAIEdit})
 </script>
 <style scoped>
 .papers-collab{display:flex;flex:1;flex-direction:column;min-height:0;overflow:hidden}

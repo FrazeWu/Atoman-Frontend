@@ -19,7 +19,7 @@
       <p class="papers-review__reason">{{ item.reason }}</p>
       <template v-if="item.status === 'pending'">
         <label :for="'review-note-' + item.id">审核备注（拒绝时必填）</label>
-        <textarea :id="'review-note-' + item.id" v-model="notes[item.id]" maxlength="1000" rows="2" placeholder="填写审核说明" />
+        <PTextarea :id="'review-note-' + item.id" v-model="notes[item.id]" maxlength="1000" :rows="2" placeholder="填写审核说明" />
         <div class="papers-review__filters">
           <PButton size="sm" :disabled="!!busy" @click="review(item, 'approved')">通过并通知</PButton>
           <PButton size="sm" variant="secondary" :disabled="!!busy || !notes[item.id]?.trim()" @click="review(item, 'rejected')">拒绝</PButton>
@@ -38,6 +38,7 @@
   </section>
 </template>
 <script setup lang="ts">
+import PTextarea from '@/components/ui/PTextarea.vue'
 import { onMounted, onBeforeUnmount, ref, reactive } from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import { listPaperApplications, reviewPaperApplication, type PaperApplication } from '@/api/papers'

@@ -2,15 +2,11 @@
  <section class="paper-share" aria-label="邀请链接">
   <div class="paper-share__heading"><strong>邀请链接</strong><PButton size="sm" variant="ghost" type="button" :disabled="busy||disabled" @click="load">刷新</PButton></div>
   <p>生成一次有效的私有链接。受邀者需要登录并拥有 Papers 访问资格，七天内接受邀请。</p>
-  <label class="paper-share__label">链接权限
-   <select v-model="role" aria-label="链接权限" :disabled="busy||disabled">
-    <option value="viewer">可以查看</option><option value="editor">可以编辑</option>
-   </select>
-  </label>
+  <PSelect :model-value="role" label="链接权限" size="sm" :options="[{value:'viewer',label:'可以查看'},{value:'editor',label:'可以编辑'}]" :disabled="busy||disabled" @update:model-value="role=$event as PaperMemberRole" />
   <p>{{ role==='viewer'?'可查看项目源码、资源和最新成功编译的 PDF，不能修改。':'可修改已有文本文件并参加实时协作，不授予管理权限。' }}</p>
   <PButton type="button" size="sm" :disabled="busy||disabled" @click="generate">生成邀请链接</PButton>
   <div v-if="created" class="paper-share__created">
-   <label>邀请链接（仅本次显示）<input :value="link" readonly aria-label="新建邀请链接" autocomplete="off" @focus="($event.target as HTMLInputElement).select()" /></label>
+   <label>邀请链接（仅本次显示）<PInput :model-value="link" readonly aria-label="新建邀请链接" autocomplete="off" @focus="($event.target as HTMLInputElement).select()" /></label>
    <PButton type="button" size="sm" variant="secondary" @click="copy">复制链接</PButton>
    <p>请发送给指定协作者，不要公开发布。已加入成员的权限需要在成员列表单独调整。</p>
   </div>
@@ -23,6 +19,8 @@
  </section>
 </template>
 <script setup lang="ts">
+import PInput from '@/components/ui/PInput.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import {computed,onBeforeUnmount,onMounted,ref,watch} from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import {createPaperInvitation,listPaperInvitations,revokePaperInvitation,type CreatedPaperInvitation,type PaperProjectInvitation,type PaperMemberRole} from '@/api/papers'

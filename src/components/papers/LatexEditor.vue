@@ -1,10 +1,10 @@
 <template>
   <div class="papers-latex-editor">
     <div class="latex-editor-tools">
-      <button type="button" title="Ctrl/Cmd + F" @click="find">查找替换</button>
-      <button v-if="collaborativeText" type="button" title="Ctrl/Cmd + Z" :disabled="readonly||!canUndo" @click="runUndo(false)">撤销</button>
-      <button v-if="collaborativeText" type="button" title="Ctrl/Cmd + Shift + Z" :disabled="readonly||!canRedo" @click="runUndo(true)">重做</button>
-      <button type="button" title="Ctrl + Space" :disabled="readonly" @click="complete">命令补全</button>
+      <PButton size="sm" variant="secondary" type="button" title="Ctrl/Cmd + F" @click="find">查找替换</PButton>
+      <PButton size="sm" variant="secondary" v-if="collaborativeText" type="button" title="Ctrl/Cmd + Z" :disabled="readonly||!canUndo" @click="runUndo(false)">撤销</PButton>
+      <PButton size="sm" variant="secondary" v-if="collaborativeText" type="button" title="Ctrl/Cmd + Shift + Z" :disabled="readonly||!canRedo" @click="runUndo(true)">重做</PButton>
+      <PButton size="sm" variant="secondary" type="button" title="Ctrl + Space" :disabled="readonly" @click="complete">命令补全</PButton>
       <span>{{ position }}</span>
     </div>
     <div ref="editorRoot" class="latex-editor-host" aria-label="LaTeX 源码编辑器" />
@@ -12,6 +12,7 @@
 </template>
 
 <script setup lang="ts">
+import PButton from '@/components/ui/PButton.vue'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Compartment, EditorState, Prec, StateEffect, StateField } from '@codemirror/state'
 import { EditorView, Decoration, type DecorationSet, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view'
@@ -230,7 +231,6 @@ onBeforeUnmount(() => {
 .papers-latex-editor :deep(.papers-remote-cursor-label){position:absolute;left:-2px;bottom:100%;font:10px/1.3 sans-serif;color:white;border-radius:3px 3px 3px 0;padding:2px 4px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
 .latex-editor-host{flex:1;min-height:0;overflow:hidden}
 .latex-editor-tools{display:flex;align-items:center;gap:6px;padding:4px 8px;border-bottom:1px solid var(--a-color-border-soft,#ddd);font-size:11px}
-.latex-editor-tools button{background:transparent;color:inherit;font:inherit;border:1px solid var(--a-color-border-soft,#ddd);border-radius:4px;padding:4px 6px}
 .latex-editor-tools span{margin-left:auto;color:var(--a-color-text-secondary,#64748b)}
 .papers-latex-editor :deep(.cm-panel){font-size:12px;overflow-wrap:anywhere}
 .papers-latex-editor :deep(.cm-tooltip-autocomplete){max-width:100%;z-index:30}

@@ -1,35 +1,32 @@
 <template>
   <section class="paper-pdf" aria-label="PDF 预览">
     <div class="paper-pdf__toolbar">
-      <button type="button" title="上一页" aria-label="上一页" :disabled="page <= 1 || !pageCount" @click="jump(page - 1)">‹</button>
-      <input v-model="pageInput" class="paper-pdf__page-input" aria-label="页码" inputmode="numeric" @focus="editingPageInput = true" @input="editingPageInput = true" @blur="commitPageInput" @keydown.enter.prevent="commitPageInput" />
+      <PButton size="sm" variant="secondary" type="button" title="上一页" aria-label="上一页" :disabled="page <= 1 || !pageCount" @click="jump(page - 1)">‹</PButton>
+      <div class="paper-pdf__page-control"><PInput v-model="pageInput" class="paper-pdf__page-input" aria-label="页码" inputmode="numeric" @focus="editingPageInput = true" @input="editingPageInput = true" @blur="commitPageInput" @keydown.enter.prevent="commitPageInput" /></div>
       <span class="paper-pdf__count">/ {{ pageCount || '—' }}</span>
-      <button type="button" title="下一页" aria-label="下一页" :disabled="page >= pageCount || !pageCount" @click="jump(page + 1)">›</button>
-      <button type="button" :disabled="!pageCount" :aria-expanded="outlineOpen" @click="toggleOutline">目录</button>
-      <button type="button" :disabled="!pageCount" :aria-pressed="textMode" title="切换文字选择；关闭后可双击定位源码" @click="toggleTextMode">{{ textMode?'选字中':'选择文字' }}</button>
+      <PButton size="sm" variant="secondary" type="button" title="下一页" aria-label="下一页" :disabled="page >= pageCount || !pageCount" @click="jump(page + 1)">›</PButton>
+      <PButton size="sm" variant="secondary" type="button" :disabled="!pageCount" :aria-expanded="outlineOpen" @click="toggleOutline">目录</PButton>
+      <PButton size="sm" variant="secondary" type="button" :disabled="!pageCount" :aria-pressed="textMode" title="切换文字选择；关闭后可双击定位源码" @click="toggleTextMode">{{ textMode?'选字中':'选择文字' }}</PButton>
       <span class="paper-pdf__separator"></span>
-      <button type="button" title="缩小" aria-label="缩小" :disabled="!pageCount" @click="adjustZoom(-1)">−</button>
-      <select v-model="zoom" aria-label="PDF 缩放" @change="resizePages(true)">
-        <option value="width">适合宽度</option><option value="page">适合页面</option>
-        <option v-for="n in zoomLevels" :key="n" :value="String(n)">{{ n }}%</option>
-      </select>
-      <button type="button" title="放大" aria-label="放大" :disabled="!pageCount" @click="adjustZoom(1)">+</button>
-      <button type="button" class="paper-pdf__download" :disabled="!documentBlob" title="下载 PDF" @click="download">下载 PDF</button>
+      <PButton size="sm" variant="secondary" type="button" title="缩小" aria-label="缩小" :disabled="!pageCount" @click="adjustZoom(-1)">−</PButton>
+      <PSelect :model-value="zoom" placeholder="PDF 缩放" size="sm" :options="[{value:'width',label:'适合宽度'},{value:'page',label:'适合页面'},...zoomLevels.map(n=>({value:String(n),label:n+'%'}))]" @update:model-value="zoom=String($event);resizePages(true)" />
+      <PButton size="sm" variant="secondary" type="button" title="放大" aria-label="放大" :disabled="!pageCount" @click="adjustZoom(1)">+</PButton>
+      <PButton size="sm" variant="secondary" type="button" class="paper-pdf__download" :disabled="!documentBlob" title="下载 PDF" @click="download">下载 PDF</PButton>
     </div>
     <div v-if="outlineOpen" class="paper-pdf__outline" aria-label="PDF 目录">
       <p v-if="outlineLoading">正在读取 PDF 书签…</p>
       <p v-else-if="!outline.length">此 PDF 没有内嵌目录。</p>
-      <button v-for="(entry,i) in outline" :key="i" type="button" :style="{paddingLeft:(entry.depth*12+8)+'px'}" @click="jump(entry.page);outlineOpen=false">{{ entry.title }} <small>{{ entry.page }}</small></button>
+      <PButton size="sm" variant="ghost" v-for="(entry,i) in outline" :key="i" type="button" :style="{paddingLeft:(entry.depth*12+8)+'px'}" @click="jump(entry.page);outlineOpen=false">{{ entry.title }} <small>{{ entry.page }}</small></PButton>
     </div>
     <div v-if="textMode" class="paper-pdf__text-note">可拖选和复制 PDF 文字；关闭选字模式后恢复双击定位。</div>
-    <div v-if="error" class="paper-pdf__notice" role="alert">{{ error }} <button type="button" @click="load">重试</button></div>
+    <div v-if="error" class="paper-pdf__notice" role="alert">{{ error }} <PButton size="sm" variant="secondary" type="button" @click="load">重试</PButton></div>
     <div v-if="loading" class="paper-pdf__notice" role="status">{{ pageCount ? '正在更新预览，保留当前页面…' : '正在读取 PDF…' }}</div>
     <div ref="scroller" class="paper-pdf__scroll" tabindex="0" @scroll.passive="onScroll">
       <div v-if="!pageCount" class="paper-pdf__placeholder">{{ loading ? '正在加载编译结果' : '暂无可预览的 PDF' }}</div>
       <div v-for="item in pages" :key="displayedJob + ':' + item.number" :ref="el => registerPage(item.number, el as HTMLElement | null)" class="paper-pdf__sheet" :data-page="item.number" :data-rendered="item.ready ? 'true' : 'false'" @dblclick="onPDFDoubleClick($event,item)" :style="{width: item.width + 'px',height:item.height + 'px'}">
         <canvas :ref="el => registerCanvas(item.number, el as HTMLCanvasElement | null)" :aria-label="'PDF 第 ' + item.number + ' 页'" />
         <div v-if="textMode" class="textLayer paper-pdf__text-layer" aria-label="PDF 可选择文字"></div>
-        <div v-if="item.error" class="paper-pdf__page-error">第 {{ item.number }} 页暂时无法渲染 <button type="button" @click="retryPage(item.number)">重试</button></div>
+        <div v-if="item.error" class="paper-pdf__page-error">第 {{ item.number }} 页暂时无法渲染 <PButton size="sm" variant="secondary" type="button" @click="retryPage(item.number)">重试</PButton></div>
         <span v-else-if="!item.ready && !item.hasPixels" class="paper-pdf__page-loading">第 {{ item.number }} 页</span>
         <span v-if="marker?.page===item.number" class="paper-pdf__sync-marker" :style="{left:(marker.x/item.naturalWidth*100)+'%',top:(marker.y/item.naturalHeight*100)+'%'}" aria-hidden="true" />
       </div>
@@ -39,6 +36,9 @@
 </template>
 
 <script setup lang="ts">
+import PButton from '@/components/ui/PButton.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import { computed, nextTick, onMounted, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import type { PDFDocumentProxy, PDFDocumentLoadingTask, RenderTask, TextLayer } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { getPaperCompilePDF } from '@/api/papers'
@@ -412,9 +412,7 @@ defineExpose({jump,page,scroller,showPosition,currentPosition})
 <style scoped>
 .paper-pdf{display:flex;flex-direction:column;min-width:0;min-height:0;flex:1;overflow:hidden}
 .paper-pdf__toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:7px 8px;border-bottom:1px solid var(--a-color-border-soft,#d8dde3);font-size:12px;background:var(--a-color-bg-elevated,var(--a-color-bg,#fff))}
-.paper-pdf__toolbar button,.paper-pdf__toolbar select,.paper-pdf__toolbar input,.paper-pdf__notice button,.paper-pdf__page-error button{font:inherit;color:inherit;background:transparent;border:1px solid var(--a-color-border-soft,#d8dde3);border-radius:5px;padding:4px 7px;min-height:27px;cursor:pointer}
-.paper-pdf__toolbar button:disabled{opacity:.4;cursor:default}.paper-pdf__toolbar button:hover:not(:disabled){background:var(--a-color-bg-subtle,#eef0f3)}
-.paper-pdf__page-input{width:40px;text-align:center;box-sizing:border-box}.paper-pdf__count{white-space:nowrap}.paper-pdf__separator{flex:1;min-width:2px}.paper-pdf__download{margin-left:auto}
+.paper-pdf__page-control{width:48px;flex:none}.paper-pdf__page-control :deep(.p-input){min-height:var(--a-control-height-sm);padding:4px;text-align:center;font-size:12px}.paper-pdf__count{white-space:nowrap}.paper-pdf__separator{flex:1;min-width:2px}.paper-pdf__download{margin-left:auto}
 .paper-pdf__scroll{min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;padding:12px;box-sizing:border-box;background:#dfe3e8;scrollbar-gutter:stable}
 .paper-pdf__sheet{position:relative;box-sizing:content-box;margin:0 auto 12px;background:white;box-shadow:0 1px 5px #0003;overflow:hidden;flex-shrink:0}
 .paper-pdf__sheet canvas{display:block;width:100%;height:100%;background:white}

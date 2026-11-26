@@ -18,10 +18,18 @@
   <template v-else>
    <details class="paper-ai__settings" open>
     <summary>模型与 API 设置</summary>
-    <label>API 地址<select v-model="baseURL" aria-label="AI API 地址" :disabled="busy"><option v-for="url in capability.base_urls" :key="url" :value="url">{{ url }}</option></select></label>
-    <label>模型<input v-model.trim="model" aria-label="AI 模型" maxlength="128" placeholder="例如 gpt-4.1-mini" :disabled="busy" /></label>
-    <label>API Key<input v-model="key" type="password" autocomplete="off" spellcheck="false" aria-label="AI API Key" maxlength="2048" :disabled="busy" placeholder="使用你的模型账户密钥" /></label>
-    <p>密钥仅保留在当前面板内存中，关闭即清除，不写入数据库或浏览器存储。模型调用由你的 API 账户计费。其他兼容 API 地址需由服务器批准后才会出现在列表中。</p>
+    <PInput v-if="capability?.custom_base_urls" v-model.trim="baseURL" label="API 地址" aria-label="AI API 地址" maxlength="512" placeholder="https://api.example.com/v1" spellcheck="false" autocomplete="off" :disabled="busy" :error="baseURL&&!baseValid?'请输入公开 HTTPS API 基础地址':''" />
+    <PSelect v-else :model-value="baseURL" label="AI API 地址" size="sm" :options="capability!.base_urls.map(value=>({value,label:value}))" :disabled="busy" @update:model-value="baseURL=String($event)" />
+    <small>填写 OpenAI 兼容基础地址，不包含 /chat/completions 或 /models；仅允许公开 HTTPS 服务。更换地址会清除旧密钥。</small>
+    <PInput v-model="key" label="API Key" type="password" autocomplete="off" spellcheck="false" aria-label="AI API Key" maxlength="2048" :disabled="busy" placeholder="使用该 API 服务的密钥" />
+    <div v-if="capability?.model_discovery" class="paper-ai__row">
+     <PButton type="button" size="sm" variant="secondary" :loading="modelsLoading" :disabled="!canDiscoverModels" @click="discoverModels">获取模型列表</PButton>
+    </div>
+    <small v-if="capability?.model_discovery">获取列表只向此地址发送 API Key，不发送论文内容。请选择支持聊天补全的模型。</small>
+    <p v-if="modelsMessage" role="status">{{modelsMessage}}</p>
+    <PSelect v-if="modelList.length" :model-value="model" :options="modelList.map(value=>({value,label:value}))" label="可用模型" placeholder="请选择模型" size="sm" :disabled="busy||modelsLoading" @update:model-value="model=String($event)" />
+    <PInput v-model.trim="model" label="模型 ID" aria-label="AI 模型" maxlength="128" placeholder="也可手动输入，例如 gpt-4.1-mini" :disabled="busy" />
+    <p>密钥仅保留在当前面板内存中，关闭即清除，不写入数据库或浏览器存储。模型调用由你的 API 账户计费；仅向你选择并明确确认的服务发送源码。</p>
    </details>
    <section v-if="repairAvailable||repair" class="paper-ai__context" aria-label="Agent 编译修复">
     <strong>Agent 编译修复</strong>
@@ -45,36 +53,34 @@
     <details open><summary>预览待发送源码</summary><pre>{{ selectedSource }}</pre></details>
    </div>
    <details class="paper-ai__context">
-    <summary>附加项目文件（{{ extras.length }}/{{ capability.max_extra_files }}）</summary>
+    <summary>附加项目文件（{{ extras.length }}/{{ capability!.max_extra_files }}）</summary>
     <p>{{task==='project'?'仅允许 Agent 提议修改当前完整文件及下面勾选、预览的文件。':'仅发送下方主动选择并成功预览的已保存文本文件，不发送图片或其他项目内容。'}}</p>
-    <label v-for="item in eligibleFiles" :key="item.id" class="paper-ai__check">
-     <input type="checkbox" :checked="extras.some(extra=>extra.id===item.id)" :disabled="busy||contextBusy||(!extras.some(extra=>extra.id===item.id)&&extras.length>=capability.max_extra_files)" @change="toggleContext(item,($event.target as HTMLInputElement).checked)" /><span>{{ item.path }}</span>
-    </label>
+    <PCheckbox v-for="item in eligibleFiles" :key="item.id" class="paper-ai__check" :model-value="extras.some(extra=>extra.id===item.id)" :disabled="busy||contextBusy||(!extras.some(extra=>extra.id===item.id)&&extras.length>=capability!.max_extra_files)" @update:model-value="toggleContext(item,$event)">{{item.path}}</PCheckbox>
     <p v-if="contextBusy">读取文件预览中…</p>
     <details v-for="extra in extras" :key="extra.id"><summary>{{ extra.path }} · v{{ extra.revision }}</summary><pre>{{ extra.content }}</pre></details>
    </details>
-   <label>任务类型<select v-model="task" :disabled="busy||repairActive" aria-label="AI 任务类型"><option value="revise">修改源码（可审阅后接受）</option><option value="explain">解释、分析或排查</option><option v-if="projectModeAvailable" value="project">Agent · 跨文件修改</option></select></label>
+   <PSelect :model-value="task" :options="taskOptions" label="AI 任务类型" size="sm" :disabled="busy||repairActive" @update:model-value="task=$event as PaperAITask" />
    <p v-if="task==='project'">使用已保存的完整文件。每个文件最多一处连续替换，审阅并勾选后才能提交。该操作仅在普通编辑模式开放，可能使其他协作者的旧会话失效，请先协调。</p>
    <p v-if="task==='project'&&!projectReady" role="status">请先保存源码并选择整个文件，再生成跨文件建议。</p>
    <details v-if="historyAvailable&&history.length" class="paper-ai__context" open>
     <summary>本轮对话（{{history.length}} 轮）</summary>
-    <label class="paper-ai__check"><input v-model="includeHistory" type="checkbox" :disabled="busy" /><span>继续对话：发送以下已预览的历史记录</span></label>
+    <PCheckbox v-model="includeHistory" class="paper-ai__check" :disabled="busy">继续对话：发送以下已预览的历史记录</PCheckbox>
     <div v-for="(turn,index) in history" :key="index" class="paper-ai__turn">
      <strong>你 · 第 {{index+1}} 轮</strong><pre>{{turn.instruction}}</pre>
      <strong>AI 建议（不表示已应用）</strong><pre>{{turn.reply}}</pre>
     </div>
-    <small>最多 {{capability.max_history_turns}} 轮、{{capability.max_history_bytes}} 字节；关闭面板、切换文件或模型配置后清除。</small>
+    <small>最多 {{capability!.max_history_turns}} 轮、{{capability!.max_history_bytes}} 字节；关闭面板、切换文件或模型配置后清除。</small>
     <PButton type="button" size="sm" variant="secondary" :disabled="busy" @click="clearHistory">开始新对话</PButton>
    </details>
    <div class="paper-ai__row">
-    <button type="button" :disabled="busy||repairActive" @click="preset('润色这段论文，保持研究事实、数值、引用键和 LaTeX 结构。','revise')">学术润色</button>
-    <button type="button" :disabled="busy||repairActive" @click="preset('将这段论文翻译为英文，保留 LaTeX 命令、公式和引用。','revise')">英文翻译</button>
-    <button type="button" :disabled="busy||repairActive" @click="preset('检查 LaTeX 语法和学术表达，解释问题并提出具体修改建议。','explain')">源码检查</button>
-    <button v-if="diagnostics" type="button" :disabled="busy||repairActive" @click="diagnosticPreset">分析编译错误</button>
+    <PButton size="sm" variant="secondary" type="button" :disabled="busy||repairActive" @click="preset('润色这段论文，保持研究事实、数值、引用键和 LaTeX 结构。','revise')">学术润色</PButton>
+    <PButton size="sm" variant="secondary" type="button" :disabled="busy||repairActive" @click="preset('将这段论文翻译为英文，保留 LaTeX 命令、公式和引用。','revise')">英文翻译</PButton>
+    <PButton size="sm" variant="secondary" type="button" :disabled="busy||repairActive" @click="preset('检查 LaTeX 语法和学术表达，解释问题并提出具体修改建议。','explain')">源码检查</PButton>
+    <PButton size="sm" variant="secondary" v-if="diagnostics" type="button" :disabled="busy||repairActive" @click="diagnosticPreset">分析编译错误</PButton>
    </div>
-   <label>给 AI 的指令<textarea v-model="instruction" aria-label="AI 修改指令" rows="3" maxlength="4000" :disabled="busy" placeholder="描述需要完成的任务…" /></label>
-   <label class="paper-ai__check paper-ai__consent"><input v-model="consent" type="checkbox" :disabled="busy" /> <span>我确认将上方预览的源码、附加文件和指令以及勾选的对话历史发送到所选模型服务，允许该服务处理这些内容。</span></label>
-   <p>{{ contextBytes.toLocaleString() }} / {{ capability.max_context_bytes.toLocaleString() }} 字节 · 每次最多生成 4096 tokens</p>
+   <PTextarea v-model="instruction" label="给 AI 的指令" aria-label="AI 修改指令" :rows="3" maxlength="4000" :disabled="busy" placeholder="描述需要完成的任务…" />
+   <PCheckbox v-model="consent" class="paper-ai__check paper-ai__consent" :disabled="busy">我确认将上方预览的源码、附加文件和指令以及勾选的对话历史发送到所选模型服务，允许该服务处理这些内容。</PCheckbox>
+   <p>{{ contextBytes.toLocaleString() }} / {{ capability!.max_context_bytes.toLocaleString() }} 字节 · 每次最多生成 4096 tokens</p>
    <div class="paper-ai__row">
     <PButton size="sm" type="button" :disabled="!canGenerate" @click="generate">{{ busy?'生成中…':'生成建议' }}</PButton>
     <PButton v-if="busy&&!commitBusy" size="sm" type="button" variant="secondary" @click="cancel">取消等待</PButton>
@@ -89,7 +95,7 @@
     <template v-if="suggestion.task==='project'">
      <p v-if="!suggestion.changes?.length">没有需要修改的文件。</p>
      <div v-for="change in suggestion.changes||[]" :key="change.file_id" class="paper-ai__context">
-      <label class="paper-ai__check"><input type="checkbox" :checked="approved.includes(change.file_id)" :disabled="busy||disabled||resultStale" @change="approve(change.file_id,($event.target as HTMLInputElement).checked)" /><strong>{{change.path}} · v{{change.base_revision}}</strong></label>
+      <PCheckbox class="paper-ai__check" :model-value="approved.includes(change.file_id)" :disabled="busy||disabled||resultStale" @update:model-value="approve(change.file_id,$event)"><strong>{{change.path}} · v{{change.base_revision}}</strong></PCheckbox>
       <PaperAIDiff :before="change.before" :after="change.after" />
      </div>
      <PButton v-if="suggestion.changes?.length" type="button" size="sm" :disabled="resultStale||disabled||busy||!approved.length" @click="acceptProject">应用已选修改（{{approved.length}}）</PButton>
@@ -107,11 +113,16 @@
 <script setup lang="ts">
 import {computed,nextTick,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue'
 import PButton from '@/components/ui/PButton.vue'
+import PInput from '@/components/ui/PInput.vue'
+import PSelect from '@/components/ui/PSelect.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PCheckbox from '@/components/ui/PCheckbox.vue'
+import {paperAIModelPattern,validPaperAIBase,validPaperAIKey} from './aiProvider'
 import PaperAIActivityPanel from './PaperAIActivityPanel.vue'
 import PaperAIDiff from './PaperAIDiff.vue'
 import {getPaperFile,type PaperFile,type PaperTextReplacement,type PaperCompileJob,type PaperCompiler} from '@/api/papers'
 import {ApiErrorResponseError} from '@/api/client'
-import {getPaperAICapability,requestPaperAISuggestion,type PaperAICapability,type PaperAISuggestion,type PaperAITask,type PaperAIHistoryTurn,type PaperAIActivity} from '@/api/papersAI'
+import {getPaperAICapability,requestPaperAISuggestion,discoverPaperAIModels,type PaperAICapability,type PaperAISuggestion,type PaperAITask,type PaperAIHistoryTurn,type PaperAIActivity} from '@/api/papersAI'
 import {paperAIBytes,validAIRange,type PaperAISourceRange,type PaperAIEdit} from './aiSuggestion'
 import {reviewProjectEdits,appendAgentHistory,type ReviewedPaperAIChange} from './aiAgent'
 import {MAX_REPAIR_ROUNDS,matchesRepairJob,repairOutcome,validRepairApplyFence,type RepairApplyFence} from './aiRepair'
@@ -203,6 +214,11 @@ const historyAvailable=computed(()=>Number.isSafeInteger(capability.value?.max_h
 const projectModeAvailable=computed(()=>capability.value?.project_edits===true&&!props.collaborationEpoch&&!!props.applyProject&&Number.isSafeInteger(props.projectRevision)&&(props.projectRevision||0)>0)
 const projectReady=computed(()=>projectModeAvailable.value&&!!target.value&&target.value.from===0&&target.value.to===target.value.baseline.length&&target.value.baseline===props.file.content&&props.source===props.file.content)
 const busy=ref(false),contextBusy=ref(false)
+const modelList=ref<string[]>([]),modelsLoading=ref(false),modelsMessage=ref('')
+let modelsSerial=0,modelsController:AbortController|null=null
+const baseValid=computed(()=>!!capability.value&&validPaperAIBase(baseURL.value,capability.value.custom_base_urls===true,capability.value.base_urls))
+const canDiscoverModels=computed(()=>!!capability.value?.enabled&&capability.value.model_discovery===true&&baseValid.value&&validPaperAIKey(key.value.trim())&&!busy.value&&!modelsLoading.value)
+const taskOptions=computed(()=>[{value:'revise',label:'修改源码（可审阅后接受）'},{value:'explain',label:'解释、分析或排查'},...(projectModeAvailable.value?[{value:'project',label:'Agent · 跨文件修改'}]:[])])
 let disposed=false,serial=0,contextSerial=0,controller:AbortController|null=null
 const scope=()=>props.accountId+':'+props.projectId+':'+props.file.id+':'+(props.collaborationEpoch||'ordinary')
 const selectedSource=computed(()=>target.value?target.value.baseline.slice(target.value.from,target.value.to):'')
@@ -219,7 +235,7 @@ const resultStale=computed(()=>{
  return !projectModeAvailable.value||!projectReady.value||item.response.project_revision!==props.projectRevision||!!item.context?.some(f=>!props.files.some(current=>current.id===f.id&&current.revision===f.revision&&current.path===f.path))
 })
 const extraStale=computed(()=>extras.value.some(extra=>!eligibleFiles.value.some(item=>item.id===extra.id&&item.revision===extra.revision)))
-const canGenerate=computed(()=>!!capability.value?.enabled&&!!target.value&&!stale.value&&!extraStale.value&&!props.disabled&&!busy.value&&!contextBusy.value&&consent.value&&baseURL.value&&model.value&&key.value.trim().length>=8&&instruction.value.trim()&&selectedSource.value.trim()&&sourceBytes.value<=capability.value.max_source_bytes&&contextBytes.value<=capability.value.max_context_bytes&&paperAIBytes(instruction.value)<=4000&&(task.value!=='project'||projectReady.value)&&(!repairActive.value||(task.value==='project'&&repair.value?.phase==='review'&&repairJobCurrent(repair.value))))
+const canGenerate=computed(()=>!!capability.value?.enabled&&!!target.value&&!stale.value&&!extraStale.value&&!props.disabled&&!busy.value&&!contextBusy.value&&consent.value&&baseValid.value&&paperAIModelPattern.test(model.value)&&validPaperAIKey(key.value.trim())&&!modelsLoading.value&&instruction.value.trim()&&selectedSource.value.trim()&&sourceBytes.value<=capability.value.max_source_bytes&&contextBytes.value<=capability.value.max_context_bytes&&paperAIBytes(instruction.value)<=4000&&(task.value!=='project'||projectReady.value)&&(!repairActive.value||(task.value==='project'&&repair.value?.phase==='review'&&repairJobCurrent(repair.value))))
 const taskSteps=['准备模型','确认范围','生成建议','审阅审批']
 const taskStep=computed(()=>{
  if(commitBusy.value||suggestion.value)return 3
@@ -241,8 +257,32 @@ function alive(n:number,initial:string){return !disposed&&n===serial&&initial===
 function clearConsent(){consent.value=false}
 watch([baseURL,model,key,instruction,task,target,extras,()=>props.source,()=>props.file.revision,()=>props.disabled,()=>props.projectRevision,extraStale,includeHistory,history],clearConsent,{flush:'sync'})
 function stop(){serial++;controller?.abort();controller=null;busy.value=false;loading.value=false;clearConsent()}
-function reset(){repairSerial++;repair.value=null;commitBusy.value=false;stop();contextSerial++;contextBusy.value=false;capability.value=null;key.value='';target.value=null;extras.value=[];suggestion.value=null;history.value=[];approved.value=[];task.value='revise';includeHistory.value=true;message.value=''}
+function reset(){resetModels();repairSerial++;repair.value=null;commitBusy.value=false;stop();contextSerial++;contextBusy.value=false;capability.value=null;key.value='';target.value=null;extras.value=[];suggestion.value=null;history.value=[];approved.value=[];task.value='revise';includeHistory.value=true;message.value=''}
 watch([baseURL,model,key],()=>{history.value=[];suggestion.value=null;approved.value=[]},{flush:'sync'})
+function resetModels(){modelsSerial++;modelsController?.abort();modelsController=null;modelList.value=[];modelsLoading.value=false;modelsMessage.value=''}
+watch(baseURL,(value,previous)=>{
+ if(value!==previous){resetModels();key.value='';model.value=value==='https://api.openai.com/v1'?'gpt-4.1-mini':''}
+},{flush:'sync'})
+watch(key,resetModels,{flush:'sync'})
+async function discoverModels(){
+ if(!canDiscoverModels.value||disposed)return
+ resetModels()
+ const n=++modelsSerial,initial=scope(),endpoint=baseURL.value,secret=key.value.trim(),abort=new AbortController()
+ modelsController=abort;modelsLoading.value=true;clearConsent()
+ const alive=()=>!disposed&&n===modelsSerial&&initial===scope()&&endpoint===baseURL.value&&secret===key.value.trim()
+ try{
+  const result=await discoverPaperAIModels(props.projectId,{base_url:endpoint,api_key:secret,consent:true},abort.signal)
+  if(!alive())return
+  if(!Array.isArray(result.models)||result.models.length>512||result.models.some(id=>typeof id!=='string'||!paperAIModelPattern.test(id)||id.includes(secret)))throw Error('Invalid model list')
+  modelList.value=[...new Set(result.models)].sort()
+  if(modelList.value.length&&!modelList.value.includes(model.value))model.value=''
+  modelsMessage.value=modelList.value.length?'已获取 '+modelList.value.length+' 个模型'+(result.truncated?'（列表已截断）':'')+'，请选择或手动输入。':'服务未返回可用模型，请手动输入模型 ID。'
+ }catch(cause){
+  if(!alive())return
+  const code=cause instanceof ApiErrorResponseError?cause.code:''
+  modelsMessage.value=code==='papers.ai_models_unsupported'?'此接口不支持模型列表，请手动输入模型 ID。':code==='papers.ai_provider_auth'?'API Key 被拒绝，请检查密钥及权限。':code==='papers.ai_endpoint_denied'?'API 地址不符合公开 HTTPS 安全限制。':'获取模型失败，请检查接口地址、密钥和网络，也可手动输入模型 ID。'
+ }finally{if(alive()){modelsLoading.value=false;modelsController=null}}
+}
 watch(projectModeAvailable,available=>{if(!available&&task.value==='project')task.value='revise'})
 watch([()=>props.compileJob,()=>props.projectRevision,()=>props.compiler,()=>props.source,()=>props.file.revision,()=>props.disabled,repairAvailable],settleRepair,{flush:'post'})
 function clearHistory(){if(!busy.value){history.value=[];suggestion.value=null;approved.value=[];message.value='已开始新对话。'}}
@@ -322,7 +362,7 @@ async function generate(){
  }catch(cause){
   if(!alive(n,initial))return
   const code=cause instanceof ApiErrorResponseError?cause.code:''
-  message.value=code==='papers.ai_context_changed'?'服务器文件版本已变化，请刷新项目并重新确认上下文。':code==='papers.ai_provider_auth'?'模型服务拒绝了 API Key，请核对密钥及权限。':code==='papers.ai_provider_rate'?'模型服务限流或额度不足。':code==='papers.ai_endpoint_denied'?'该 API 地址尚未获服务器批准。':code==='papers.ai_busy'?'AI 请求容量已满，请稍后重试。':code==='papers.ai_invalid_project_response'?'模型给出的文件或片段无法安全匹配，请缩小任务或重新生成。':code==='papers.ai_incomplete_response'?'模型输出不完整，请缩小源码范围或任务。':'生成失败，请检查模型、API Key 和网络，原稿未修改。'
+  message.value=code==='papers.ai_context_changed'?'服务器文件版本已变化，请刷新项目并重新确认上下文。':code==='papers.ai_provider_auth'?'模型服务拒绝了 API Key，请核对密钥及权限。':code==='papers.ai_provider_rate'?'模型服务限流或额度不足。':code==='papers.ai_endpoint_denied'?'该 API 地址不符合公开 HTTPS 安全限制。':code==='papers.ai_busy'?'AI 请求容量已满，请稍后重试。':code==='papers.ai_invalid_project_response'?'模型给出的文件或片段无法安全匹配，请缩小任务或重新生成。':code==='papers.ai_incomplete_response'?'模型输出不完整，请缩小源码范围或任务。':'生成失败，请检查模型、API Key 和网络，原稿未修改。'
  }finally{if(alive(n,initial)){busy.value=false;controller=null;activityRefresh.value++}}
 }
 async function acceptProject(){
@@ -376,8 +416,6 @@ function accept(){
 .paper-ai label,.paper-ai__settings,.paper-ai__context,.paper-ai__result{display:grid;gap:5px;min-width:0}
 .paper-ai__settings,.paper-ai__context,.paper-ai__result,.paper-ai__notice{border:1px solid var(--a-color-border-soft,#ddd);border-radius:6px;padding:9px}
 .paper-ai summary{cursor:pointer;font-weight:600}
-.paper-ai input:not([type=checkbox]),.paper-ai textarea,.paper-ai select{box-sizing:border-box;width:100%;min-width:0;border:1px solid var(--a-color-border-soft,#ddd);border-radius:4px;background:var(--a-color-bg,#fff);color:inherit;padding:6px;font:inherit}
-.paper-ai textarea{resize:vertical}
 .paper-ai__row{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
 .paper-ai__row>button{font-size:12px}
 .paper-ai label.paper-ai__check{display:flex;align-items:flex-start;gap:6px;overflow-wrap:anywhere}

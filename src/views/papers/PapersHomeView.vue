@@ -13,7 +13,7 @@
       <p v-else>提交使用申请，审核通过后即可创建私有论文项目。通知邮件将发送到你当前账号绑定的邮箱。</p>
       <form v-if="canApply && !accessError" class="papers-home__apply" @submit.prevent="apply">
         <label for="paper-application-reason">申请理由</label>
-        <textarea id="paper-application-reason" v-model.trim="reason" rows="4" maxlength="1000" minlength="5" required :disabled="applying" placeholder="简要说明你的科研、写作或 LaTeX 使用需求（至少 5 字）" />
+        <PTextarea id="paper-application-reason" v-model.trim="reason" :rows="4" maxlength="1000" minlength="5" required :disabled="applying" placeholder="简要说明你的科研、写作或 LaTeX 使用需求（至少 5 字）" />
         <PButton type="submit" :disabled="applying || reason.length < 5">提交申请</PButton>
       </form>
       <PButton v-else size="sm" variant="secondary" @click="load">刷新状态</PButton>
@@ -41,12 +41,12 @@
         </div>
         <label for="paper-project-name">项目名称</label>
         <div class="papers-home__actions">
-          <input id="paper-project-name" v-model.trim="projectName" maxlength="100" placeholder="例如：Jailbreak Defense" required :disabled="creating" />
+          <PInput id="paper-project-name" v-model.trim="projectName" maxlength="100" placeholder="例如：Jailbreak Defense" required :disabled="creating" />
           <PButton type="submit" :disabled="creating || !projectName || !!exclusion">{{ creating ? '处理中…' : selectedTemplate ? '从模板创建' : importSource ? '创建并导入' : '创建' }}</PButton>
         </div>
         <div v-if="importSource" class="papers-home__main-file">
           <label for="paper-main-file">主 TeX 文件（可选）</label>
-          <input id="paper-main-file" v-model.trim="mainFile" maxlength="255" :disabled="creating" placeholder="自动识别，例如 paper.tex" />
+          <PInput id="paper-main-file" v-model.trim="mainFile" maxlength="255" :disabled="creating" placeholder="自动识别，例如 paper.tex" />
           <p>支持 TeX、BibTeX、样式及 PNG/JPG/PDF 资源。ZIP 最大 5 MiB，编译源文件最多 64 个、编码后总计 4 MiB。忽略常见系统和 Git 元数据。</p>
         </div>
         <section v-if="exclusion" class="papers-home__exclusion" aria-label="不支持的项目文件">
@@ -65,7 +65,7 @@
       <p v-if="error" role="alert" class="papers-home__error">{{ error }}</p>
       <div class="papers-home__list-heading">
         <h2>我的论文</h2>
-        <input v-model.trim="query" aria-label="搜索论文项目" placeholder="搜索项目名称" />
+        <PInput v-model.trim="query" aria-label="搜索论文项目" placeholder="搜索项目名称" />
         <PButton size="sm" variant="secondary" @click="toggleTrash">{{ showTrash?'返回项目':'回收站' }}</PButton>
       </div>
       <section v-if="showTrash" class="papers-home__create">
@@ -88,7 +88,7 @@
             <time :datetime="project.updated_at">{{ new Date(project.updated_at).toLocaleString() }}</time>
           </RouterLink>
           <div v-if="isOwner(project)&&renaming===project.id" class="papers-home__rename">
-            <input v-model.trim="renameValue" maxlength="100" aria-label="新的项目名称" @keydown.enter.prevent="rename(project)" />
+            <PInput v-model.trim="renameValue" maxlength="100" aria-label="新的项目名称" @keydown.enter.prevent="rename(project)" />
             <PButton size="sm" :disabled="!renameValue||!!managing" @click="rename(project)">确认</PButton>
             <PButton size="sm" variant="secondary" :disabled="!!managing" @click="renaming=''">取消</PButton>
           </div>
@@ -106,6 +106,8 @@
 </template>
 
 <script setup lang="ts">
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
 import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
@@ -301,20 +303,17 @@ onMounted(load)
 .papers-home__notice p,.papers-home__empty,.papers-home__card span,.papers-home__card time { color: var(--text-secondary, #697281); }
 .papers-home__create label { display: block; font-weight: 650; margin-bottom: 10px; }
 .papers-home__actions { display: flex; gap: 12px; }
-.papers-home__actions input { flex: 1; min-width: 0; padding: 11px 13px; border: 1px solid var(--border, #d9dce2); border-radius: 8px; background: var(--surface, #fff); color: inherit; }
 .papers-home__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
 .papers-home__card { display: flex; flex-direction: column; gap: 12px; color: inherit; text-decoration: none; }
 .papers-home__card:hover { border-color: var(--text-primary, #4a5867); }
 .papers-home__error { color: #b91c1c; }
 @media (max-width: 600px) { .papers-home { padding: 20px 16px 48px; } .papers-home__actions { flex-direction: column; } }
 .papers-home__apply {display:grid;gap:10px;margin-top:16px;max-width:620px}
-.papers-home__apply textarea {padding:12px;border:1px solid var(--border,#d9dce2);border-radius:8px;background:var(--surface,#fff);color:inherit;width:100%;box-sizing:border-box;resize:vertical}
 .papers-home__create h2 {margin:0 0 14px}
 .papers-home__import-actions {display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
 .papers-home__selected {display:flex;gap:12px;align-items:center;justify-content:space-between;overflow-wrap:anywhere;margin-bottom:12px;font-size:.85rem}
 .papers-home__main-file {display:grid;gap:8px;margin-top:14px}
 .papers-home__main-file label {margin:0}
-.papers-home__main-file input {padding:10px 12px;border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-control);background:var(--a-color-bg);color:inherit}
 .papers-home__main-file p {font-size:.8rem;color:var(--a-color-text-secondary);margin:0}
 .papers-home__project-link {display:flex;flex-direction:column;gap:8px;color:inherit;text-decoration:none;overflow-wrap:anywhere}
 .papers-home__project-link:hover strong {text-decoration:underline}
@@ -325,9 +324,8 @@ onMounted(load)
 .papers-home__exclusion-actions {display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .papers-home__list-heading,.papers-home__project-actions,.papers-home__trash-row,.papers-home__rename{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .papers-home__list-heading h2{flex:1}
-.papers-home__list-heading input,.papers-home__rename input{min-width:0;max-width:100%;padding:8px;border:1px solid var(--a-color-border-soft,#ddd);background:var(--a-color-bg,#fff);color:inherit;border-radius:6px}
-.papers-home__rename input{flex:1}
 .papers-home__trash-row{justify-content:space-between;padding:8px 0;border-top:1px solid var(--a-color-border-soft,#ddd)}
 .papers-home__template-selection{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;margin-bottom:14px;border:1px solid var(--a-color-border-soft,#ddd);border-radius:8px;background:var(--a-color-bg-subtle,transparent)}
 .papers-home__template-selection p{font-size:.8rem;color:var(--a-color-text-secondary,#697281);margin:4px 0 0}
+.papers-home__actions :deep(.p-field),.papers-home__rename :deep(.p-field){flex:1;min-width:0}
 </style>

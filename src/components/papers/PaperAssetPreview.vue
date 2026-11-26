@@ -4,11 +4,12 @@
   <PaperPDFPreview v-else-if="blob.type==='application/pdf'" :project-id="''" :job-id="file.id" :revision="file.revision" :asset-blob="blob" :asset-name="file.path.split('/').pop()" />
   <div v-else class="paper-asset__image">
    <img v-if="url" :src="url" :alt="file.path" />
-   <button type="button" @click="download">下载原图</button>
+   <PButton size="sm" variant="secondary" type="button" @click="download">下载原图</PButton>
   </div>
  </section>
 </template>
 <script setup lang="ts">
+import PButton from '@/components/ui/PButton.vue'
 import {computed,onBeforeUnmount,ref,watch} from 'vue'
 import type {PaperFile} from '@/api/papers'
 import PaperPDFPreview from './PaperPDFPreview.vue'

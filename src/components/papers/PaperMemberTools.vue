@@ -4,11 +4,9 @@
   <p>编辑者可保存已有文本文件并参与实时协作；阅读者只能查看项目文件和最新成功编译的 PDF。直接添加或更新账号权限是备用方式。</p>
   <form class="paper-members__form" @submit.prevent="submit">
    <label>成员账号 UUID
-    <input v-model.trim="userId" aria-label="成员账号 UUID" maxlength="36" autocomplete="off" :disabled="busy||disabled" placeholder="输入协作者的账号 UUID" />
+    <PInput v-model.trim="userId" aria-label="成员账号 UUID" maxlength="36" autocomplete="off" :disabled="busy||disabled" placeholder="输入协作者的账号 UUID" />
    </label>
-   <label>权限
-    <select v-model="role" aria-label="成员权限" :disabled="busy||disabled"><option value="editor">编辑者</option><option value="viewer">阅读者</option></select>
-   </label>
+   <PSelect :model-value="role" label="成员权限" size="sm" :options="[{value:'editor',label:'编辑者'},{value:'viewer',label:'阅读者'}]" :disabled="busy||disabled" @update:model-value="role=$event as PaperMemberRole" />
    <PButton type="submit" size="sm" :disabled="!valid||busy||disabled">添加 / 更新成员</PButton>
   </form>
   <p v-if="rows.length===0&&!busy">暂无共享成员。</p>
@@ -18,11 +16,13 @@
    <PButton size="sm" type="button" variant="ghost" :disabled="disabled||busy" @click="$emit('remove',member.user_id)">移除</PButton>
   </div>
   <p>只有项目所有者可以管理成员、文件结构、快照、编译和 ZIP 导出。删除项目时清除共享授权。移除成员不能撤回此前已经读取或复制的内容。</p>
-  <p v-if="accountId">我的账号 UUID：<code class="paper-members__uuid">{{ accountId }}</code> <button type="button" class="paper-members__copy" @click="copyId">复制</button></p>
+  <p v-if="accountId">我的账号 UUID：<code class="paper-members__uuid">{{ accountId }}</code> <PButton size="sm" variant="ghost" type="button" class="paper-members__copy" @click="copyId">复制</PButton></p>
   <p v-if="message||copyMessage" role="status">{{ message||copyMessage }}</p>
  </div>
 </template>
 <script setup lang="ts">
+import PInput from '@/components/ui/PInput.vue'
+import PSelect from '@/components/ui/PSelect.vue'
 import {computed,ref} from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import type {PaperMemberRole,PaperProjectMember} from '@/api/papers'
@@ -37,10 +37,8 @@ async function copyId(){try{await navigator.clipboard.writeText(props.accountId)
 .paper-members,.paper-members__form{display:grid;gap:8px;min-width:0}
 .paper-members p{margin:0;line-height:1.6;overflow-wrap:anywhere}
 .paper-members__form label{display:grid;gap:4px}
-.paper-members__form input,.paper-members__form select{width:100%;box-sizing:border-box;border:1px solid var(--a-color-border-soft,#ddd);border-radius:5px;padding:6px;color:inherit;background:var(--a-color-bg,#fff);font:inherit}
 .paper-members__row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;border:1px solid var(--a-color-border-soft,#ddd);border-radius:5px;padding:7px}
 .paper-members__identity{flex:1;min-width:120px;display:grid;gap:3px;overflow-wrap:anywhere}
 .paper-members__identity small{color:var(--a-color-text-secondary,#64748b)}
 .paper-members__uuid{overflow-wrap:anywhere}
-.paper-members__copy{color:inherit;background:transparent;border:1px solid var(--a-color-border-soft,#ddd);border-radius:4px;padding:3px;font:inherit}
 </style>

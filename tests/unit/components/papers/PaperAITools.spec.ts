@@ -1,10 +1,10 @@
 import {afterEach,beforeEach,describe,it,expect,vi} from 'vitest'
 import {mount,flushPromises} from '@vue/test-utils'
 import PaperAITools from '@/components/papers/PaperAITools.vue'
-import {getPaperAICapability,requestPaperAISuggestion} from '@/api/papersAI'
+import {getPaperAICapability,requestPaperAISuggestion,discoverPaperAIModels} from '@/api/papersAI'
 import {getPaperFile,type PaperFile} from '@/api/papers'
 
-vi.mock('@/api/papersAI',()=>({getPaperAICapability:vi.fn(),requestPaperAISuggestion:vi.fn()}))
+vi.mock('@/api/papersAI',()=>({getPaperAICapability:vi.fn(),requestPaperAISuggestion:vi.fn(),discoverPaperAIModels:vi.fn()}))
 vi.mock('@/api/papers',()=>({getPaperFile:vi.fn()}))
 const file:PaperFile={id:'main',path:'main.tex',kind:'text',content:'Before Original After',revision:1,sha256:'',created_at:'',updated_at:''}
 const extra:PaperFile={...file,id:'refs',path:'refs.bib',content:'Approved references'}
@@ -121,7 +121,8 @@ describe('multi-file Agent review and temporary dialogue',()=>{
   await w.get('[aria-label="AI API Key"]').setValue('synthetic-test-key')
   await w.get('[aria-label="AI 模型"]').setValue('test-model')
   await button(w,'使用整个文件').trigger('click')
-  await w.get('[aria-label="AI 任务类型"]').setValue('project')
+  await w.get('[aria-label="AI 任务类型"]').trigger('click')
+  await w.findAll('[role="option"]').find(o=>o.text().includes('跨文件修改'))!.trigger('click')
   await w.get('.paper-ai__context input[type=checkbox]').setValue(true)
   await flushPromises()
   await w.get('[aria-label="AI 修改指令"]').setValue('Review files')
@@ -175,6 +176,87 @@ describe('multi-file Agent review and temporary dialogue',()=>{
    await button(w,'生成建议').trigger('click')
    await flushPromises()
    expect(vi.mocked(requestPaperAISuggestion).mock.calls[2]?.[1].history).toBeUndefined()
+  }finally{w.unmount()}
+ })
+})
+
+describe('custom compatible providers and model discovery',()=>{
+ const capability={...cap,custom_base_urls:true,model_discovery:true}
+ const create=()=>mount(PaperAITools,{props:{projectId:'project',accountId:'owner',file,source:file.content,files:[file,extra],disabled:false,captureSelection:()=>null,applyEdit:vi.fn(()=>true)}})
+ const button=(w:ReturnType<typeof create>,name:string)=>w.findAll('button').find(b=>b.text()===name)!
+ const custom='https://provider.example.net/openai/v1'
+ beforeEach(()=>{
+  vi.resetAllMocks()
+  vi.mocked(getPaperAICapability).mockResolvedValue(capability)
+  vi.mocked(discoverPaperAIModels).mockResolvedValue({models:['z-chat','provider/chat','z-chat'],truncated:false})
+ })
+ async function configure(w:ReturnType<typeof create>){
+  await flushPromises()
+  await w.get('[aria-label="AI API 地址"]').setValue(custom)
+  await w.get('[aria-label="AI API Key"]').setValue(key)
+ }
+ it('requests only the approved provider URL and key, and supports model selection or manual entry',async()=>{
+  const w=create()
+  try{
+   await configure(w)
+   expect(discoverPaperAIModels).not.toHaveBeenCalled()
+   expect(button(w,'获取模型列表').attributes('disabled')).toBeUndefined()
+   await button(w,'获取模型列表').trigger('click');await flushPromises()
+   expect(discoverPaperAIModels).toHaveBeenCalledWith('project',{base_url:custom,api_key:key,consent:true},expect.any(AbortSignal))
+   expect(requestPaperAISuggestion).not.toHaveBeenCalled()
+   expect(w.text()).toContain('已获取 2 个模型')
+   await w.get('[aria-label="可用模型"]').trigger('click')
+   await w.findAll('[role="option"]').find(o=>o.text()==='provider/chat')!.trigger('click')
+   expect((w.get('[aria-label="AI 模型"]').element as HTMLInputElement).value).toBe('provider/chat')
+   await w.get('[aria-label="AI 模型"]').setValue('manual-model')
+   expect((w.get('[aria-label="AI 模型"]').element as HTMLInputElement).value).toBe('manual-model')
+  }finally{w.unmount()}
+ })
+ it('rejects private/invalid addresses and clears keys and old models on provider change',async()=>{
+  const w=create()
+  try{
+   await configure(w)
+   await button(w,'获取模型列表').trigger('click');await flushPromises()
+   expect(w.get('[aria-label="可用模型"]').exists()).toBe(true)
+   await w.get('[aria-label="AI API 地址"]').setValue('https://127.0.0.1/v1')
+   expect((w.get('[aria-label="AI API Key"]').element as HTMLInputElement).value).toBe('')
+   expect(w.find('[aria-label="可用模型"]').exists()).toBe(false)
+   await w.get('[aria-label="AI API Key"]').setValue(key)
+   expect(button(w,'获取模型列表').attributes('disabled')).toBeDefined()
+   expect(discoverPaperAIModels).toHaveBeenCalledTimes(1)
+  }finally{w.unmount()}
+ })
+ it('ignores delayed responses after API address or account changes',async()=>{
+  const w=create()
+  let finish!:(value:{models:string[];truncated:boolean})=>void
+  vi.mocked(discoverPaperAIModels).mockImplementation(()=>new Promise(resolve=>{finish=resolve}))
+  try{
+   await configure(w)
+   await button(w,'获取模型列表').trigger('click')
+   const signal=vi.mocked(discoverPaperAIModels).mock.calls[0]![2]!
+   await w.get('[aria-label="AI API 地址"]').setValue('https://another.example.net/v1')
+   expect(signal.aborted).toBe(true)
+   finish({models:['old-private-model'],truncated:false})
+   await flushPromises()
+   expect(w.text()).not.toContain('old-private-model')
+   expect(w.find('[aria-label="可用模型"]').exists()).toBe(false)
+   expect((w.get('[aria-label="AI API Key"]').element as HTMLInputElement).value).toBe('')
+  }finally{w.unmount()}
+ })
+ it('keeps manual model entry when listing is unsupported or returns no models',async()=>{
+  const w=create()
+  vi.mocked(discoverPaperAIModels).mockRejectedValue(new Error('synthetic unavailable'))
+  try{
+   await configure(w)
+   await button(w,'获取模型列表').trigger('click');await flushPromises()
+   expect(w.text()).toContain('也可手动输入模型 ID')
+   await w.get('[aria-label="AI 模型"]').setValue('manual-chat')
+   await button(w,'使用整个文件').trigger('click')
+   await w.get('[aria-label="AI 修改指令"]').setValue('Review this fixture')
+   await w.get('.paper-ai__consent input').setValue(true)
+   vi.mocked(requestPaperAISuggestion).mockResolvedValue({text:'Suggested source',model:'manual-chat'})
+   await button(w,'生成建议').trigger('click');await flushPromises()
+   expect(requestPaperAISuggestion).toHaveBeenCalledWith('project',expect.objectContaining({base_url:custom,model:'manual-chat',api_key:key}),expect.any(AbortSignal))
   }finally{w.unmount()}
  })
 })

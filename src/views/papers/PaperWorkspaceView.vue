@@ -4,10 +4,10 @@
       <RouterLink to="/papers" title="返回我的论文">‹ 我的论文</RouterLink>
       <strong>{{ project?.name || '论文工作台' }}</strong>
       <div class="papers-workspace__layout-tools">
-        <button type="button" title="显示或隐藏文件栏" :aria-pressed="showFiles" @click="showFiles = !showFiles">文件栏</button>
-        <button type="button" :aria-pressed="layoutMode === 'split'" @click="setWorkspaceLayout('split')">分栏</button>
-        <button type="button" :aria-pressed="layoutMode === 'editor'" @click="setWorkspaceLayout('editor')">源码</button>
-        <button type="button" :aria-pressed="layoutMode === 'pdf'" @click="setWorkspaceLayout('pdf')">预览</button>
+        <PButton size="sm" variant="secondary" type="button" title="显示或隐藏文件栏" :aria-pressed="showFiles" @click="showFiles = !showFiles">文件栏</PButton>
+        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'split'" @click="setWorkspaceLayout('split')">分栏</PButton>
+        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'editor'" @click="setWorkspaceLayout('editor')">源码</PButton>
+        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'pdf'" @click="setWorkspaceLayout('pdf')">预览</PButton>
       </div>
       <span v-if="project" class="papers-workspace__status">{{ roleLabel }}</span>
       <span class="papers-workspace__status" role="status">{{ saveStatus }}</span>
@@ -19,35 +19,35 @@
     <div v-else ref="workspaceRoot" class="papers-workspace__content" :class="{ 'files-hidden': !showFiles, 'editor-only': layoutMode === 'editor', 'pdf-only': layoutMode === 'pdf', 'ai-expanded': aiPanelOpen&&aiExpanded }" :style="{ '--preview-grow': previewWidth, '--editor-grow': 100-previewWidth, '--files-width': filesWidth+'px' }">
       <button v-if="compactLayout && showFiles" type="button" class="papers-workspace__files-backdrop" aria-label="关闭文件栏" @click="showFiles=false" />
       <aside class="papers-workspace__files" :class="{'papers-workspace__files--dropping':draggingFiles}" aria-label="论文文件" @dragenter="onFigureDragOver" @dragover="onFigureDragOver" @dragleave="onFigureDragLeave" @drop="onFigureDrop">
-        <div class="papers-workspace__files-heading"><h2>项目文件 <small>{{ files.length }}</small></h2><button type="button" class="papers-workspace__close-files" aria-label="关闭文件面板" @click="showFiles=false"><PanelLeftClose :size="15" aria-hidden="true" /></button></div>
+        <div class="papers-workspace__files-heading"><h2>项目文件 <small>{{ files.length }}</small></h2><PButton size="sm" variant="secondary" type="button" class="papers-workspace__close-files" aria-label="关闭文件面板" @click="showFiles=false"><PanelLeftClose :size="15" aria-hidden="true" /></PButton></div>
         <div class="papers-workspace__files-toolbar">
-          <input v-model.trim="fileFilter" aria-label="筛选项目文件" placeholder="搜索文件…" />
-          <button v-if="fileFilter" type="button" aria-label="清空文件筛选" @click="fileFilter=''">×</button>
+          <PInput v-model.trim="fileFilter" aria-label="筛选项目文件" placeholder="搜索文件…" />
+          <PButton size="sm" variant="secondary" v-if="fileFilter" type="button" aria-label="清空文件筛选" @click="fileFilter=''">×</PButton>
         </div>
         <div v-if="ownerAccess&&!collaborationOpen" class="papers-workspace__file-actions">
-          <button type="button" title="新建文本文件" :aria-expanded="fileAction==='create'" @click="fileAction=fileAction==='create'?'':'create';managedFile=null"><Plus :size="14" aria-hidden="true" /> 新建</button>
-          <button type="button" title="上传文件" :aria-expanded="fileAction==='upload'" @click="fileAction=fileAction==='upload'?'':'upload';managedFile=null"><Upload :size="14" aria-hidden="true" /> 上传</button>
+          <PButton size="sm" variant="secondary" type="button" title="新建文本文件" :aria-expanded="fileAction==='create'" @click="fileAction=fileAction==='create'?'':'create';managedFile=null"><Plus :size="14" aria-hidden="true" /> 新建</PButton>
+          <PButton size="sm" variant="secondary" type="button" title="上传文件" :aria-expanded="fileAction==='upload'" @click="fileAction=fileAction==='upload'?'':'upload';managedFile=null"><Upload :size="14" aria-hidden="true" /> 上传</PButton>
         </div>
         <div class="papers-workspace__tree" aria-label="文件列表">
         <p v-if="!visibleTreeRows.length" class="papers-workspace__tree-empty">没有匹配的文件</p>
         <div v-for="entry in visibleTreeRows" :key="entry.key" class="papers-workspace__file-row" :style="{paddingLeft:Math.min(entry.depth,8)*10+'px'}">
-          <button v-if="entry.kind==='folder'" type="button" class="papers-workspace__folder" :aria-expanded="!!fileFilter||!closedFolders.has(entry.path)" :disabled="!!fileFilter" @click="toggleFolder(entry.path)"><ChevronRight v-if="!fileFilter&&closedFolders.has(entry.path)" :size="12" aria-hidden="true" /><ChevronDown v-else :size="12" aria-hidden="true" /><Folder v-if="!fileFilter&&closedFolders.has(entry.path)" :size="14" aria-hidden="true" /><FolderOpen v-else :size="14" aria-hidden="true" /><span class="papers-workspace__filename">{{ entry.name }}</span></button>
+          <PButton size="sm" variant="ghost" v-if="entry.kind==='folder'" type="button" class="papers-workspace__folder" :aria-expanded="!!fileFilter||!closedFolders.has(entry.path)" :disabled="!!fileFilter" @click="toggleFolder(entry.path)"><ChevronRight v-if="!fileFilter&&closedFolders.has(entry.path)" :size="12" aria-hidden="true" /><ChevronDown v-else :size="12" aria-hidden="true" /><Folder v-if="!fileFilter&&closedFolders.has(entry.path)" :size="14" aria-hidden="true" /><FolderOpen v-else :size="14" aria-hidden="true" /><span class="papers-workspace__filename">{{ entry.name }}</span></PButton>
           <template v-else>
-            <button type="button" :title="entry.path" :class="{active:activeFile?.id===entry.file.id}" :disabled="collaborationOpen||uploadBusy||navigating" @click="selectFile(entry.file)"><ImageIcon v-if="entry.file.kind==='binary'" :size="14" aria-hidden="true" /><FileCode2 v-else-if="/\.(tex|bib|cls|sty|bst)$/i.test(entry.path)" :size="14" aria-hidden="true" /><FileText v-else :size="14" aria-hidden="true" /><span class="papers-workspace__filename">{{ entry.name }}</span><span v-if="entry.file.id===project?.main_file_id" class="papers-workspace__asset-label">主文件</span><span v-else-if="entry.file.kind==='binary'" class="papers-workspace__asset-label">资源</span></button>
-            <button v-if="ownerAccess&&!collaborationOpen" type="button" class="papers-workspace__file-menu" :aria-label="'管理 '+entry.path" :disabled="uploadBusy||navigating||switchingFile" @click="openFileMenu(entry.file)">⋯</button>
+            <PButton size="sm" variant="ghost" type="button" :title="entry.path" :class="{active:activeFile?.id===entry.file.id}" :disabled="collaborationOpen||uploadBusy||navigating" @click="selectFile(entry.file)"><ImageIcon v-if="entry.file.kind==='binary'" :size="14" aria-hidden="true" /><FileCode2 v-else-if="/\.(tex|bib|cls|sty|bst)$/i.test(entry.path)" :size="14" aria-hidden="true" /><FileText v-else :size="14" aria-hidden="true" /><span class="papers-workspace__filename">{{ entry.name }}</span><span v-if="entry.file.id===project?.main_file_id" class="papers-workspace__asset-label">主文件</span><span v-else-if="entry.file.kind==='binary'" class="papers-workspace__asset-label">资源</span></PButton>
+            <PButton size="sm" variant="ghost" v-if="ownerAccess&&!collaborationOpen" type="button" class="papers-workspace__file-menu" :aria-label="'管理 '+entry.path" :disabled="uploadBusy||navigating||switchingFile" @click="openFileMenu(entry.file)">⋯</PButton>
           </template>
         </div>
         </div>
         <div v-if="ownerAccess&&!collaborationOpen&&managedFile" class="papers-workspace__manage">
           <strong>{{ managedFile.path }}</strong>
-          <label>新路径<input v-model.trim="managedPath" maxlength="512" aria-label="文件新路径" /></label>
+          <label>新路径<PInput v-model.trim="managedPath" maxlength="512" aria-label="文件新路径" /></label>
           <PButton size="sm" variant="secondary" :disabled="uploadBusy||!managedPath||managedPath===managedFile.path" @click="changeFile('rename')">重命名 / 移动</PButton>
           <PButton v-if="managedFile.kind==='text'&&/^[^/]+\.tex$/i.test(managedFile.path)&&managedFile.id!==project?.main_file_id" size="sm" variant="secondary" :disabled="uploadBusy" @click="changeFile('set_main')">设为主文件</PButton>
           <PButton v-if="managedFile.id!==project?.main_file_id" size="sm" variant="secondary" :disabled="uploadBusy" @click="changeFile('delete')">删除文件</PButton>
           <PButton size="sm" variant="ghost" :disabled="addingFile" @click="managedFile=null">关闭</PButton>
         </div>
         <div v-if="ownerAccess&&!collaborationOpen" v-show="fileAction==='upload'" class="papers-workspace__manage">
-          <label>上传到目录（可选）<input v-model.trim="uploadDir" placeholder="figures" maxlength="255" /></label>
+          <label>上传到目录（可选）<PInput v-model.trim="uploadDir" placeholder="figures" maxlength="255" /></label>
           <input ref="uploadInput" type="file" multiple hidden :disabled="uploadBusy" @change="uploadFiles" />
           <PButton size="sm" variant="secondary" :disabled="uploadBusy||switchingFile||navigating" @click="uploadInput?.click()">{{ uploadBusy?'处理中…':'上传文件' }}</PButton>
           <div class="papers-workspace__drop-zone" :class="{'active':draggingFiles}" aria-label="图片拖放上传区域">
@@ -57,7 +57,7 @@
         </div>
         <form v-if="ownerAccess&&!collaborationOpen" v-show="fileAction==='create'" class="papers-workspace__add" @submit.prevent="addFile">
           <label for="papers-new-file">新建文本文件</label>
-          <input id="papers-new-file" v-model.trim="newFilePath" placeholder="chapters/intro.tex" maxlength="512" required />
+          <PInput id="papers-new-file" v-model.trim="newFilePath" placeholder="chapters/intro.tex" maxlength="512" required />
           <PButton type="submit" size="sm" :disabled="!newFilePath || uploadBusy || switchingFile || navigating">添加文件</PButton>
         </form>
         <p v-if="fileError" class="papers-workspace__error" role="alert">{{ fileError }}</p>
@@ -66,51 +66,51 @@
       <section class="papers-workspace__editor" aria-label="源码编辑">
         <div class="papers-workspace__editor-header">
           <span :title="activeFile?.path">{{ activeFile?.path || '请选择文件' }}</span>
-          <button v-if="!collaborationOpen" type="button" class="papers-workspace__sync" :aria-expanded="outlineOpen" @click="toggleOutline">大纲</button>
-          <button type="button" class="papers-workspace__sync" title="定位当前源码行对应的 PDF 内容 (Ctrl/Cmd+Shift+J)" :disabled="!syncReady || activeFile?.kind !== 'text'" @click="jumpToPDF">定位 PDF →</button>
+          <PButton size="sm" variant="ghost" v-if="!collaborationOpen" type="button" class="papers-workspace__sync" :aria-expanded="outlineOpen" @click="toggleOutline">大纲</PButton>
+          <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" title="定位当前源码行对应的 PDF 内容 (Ctrl/Cmd+Shift+J)" :disabled="!syncReady || activeFile?.kind !== 'text'" @click="jumpToPDF">定位 PDF →</PButton>
           <PButton v-if="writeAccess&&!collaborationOpen" type="button" size="sm" variant="secondary" :disabled="!activeFile || activeFile.kind !== 'text' || saving" @click="saveNow">保存</PButton>
           <PButton v-if="collaborationOpen&&ownerAccess" type="button" size="sm" variant="secondary" :disabled="!aiSharedState?.ready||snapshotMutating||compiling" @click="toggleTool('ai')">AI 助手</PButton>
           <PButton v-if="collaborationOpen&&ownerAccess" type="button" size="sm" variant="secondary" :disabled="snapshotMutating||compiling" @click="toggleTool('snapshots')">项目快照</PButton>
           <PButton v-if="!collaborationOpen&&activeFile?.kind==='text'&&accountId" type="button" size="sm" variant="secondary" :disabled="!canStartCollaboration" :title="collaborationGateMessage || undefined" @click="startCollaboration">实时协作</PButton>
         </div>
-        <p v-if="!collaborationOpen&&collaborationScope&&collaborationGateMessage" class="papers-workspace__stale" role="status">{{ collaborationGateMessage }} <button v-if="collaborationGate.scope===collaborationScope&&collaborationGate.state==='unavailable'" type="button" class="papers-workspace__sync" :disabled="navigating||switchingFile" @click="checkCollaborationCapability">重新检查</button></p>
+        <p v-if="!collaborationOpen&&collaborationScope&&collaborationGateMessage" class="papers-workspace__stale" role="status">{{ collaborationGateMessage }} <PButton size="sm" variant="ghost" v-if="collaborationGate.scope===collaborationScope&&collaborationGate.state==='unavailable'" type="button" class="papers-workspace__sync" :disabled="navigating||switchingFile" @click="checkCollaborationCapability">重新检查</PButton></p>
         <nav v-if="!collaborationOpen" class="papers-workspace__toolnav" aria-label="项目工具">
-          <button v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='ai'" @click="toggleTool('ai')">AI 助手</button>
-          <button type="button" :aria-pressed="toolMode==='search'" @click="toggleTool('search')">全项目搜索</button>
-          <button type="button" :aria-pressed="toolMode==='references'" @click="toggleTool('references')">参考文献</button>
-          <button v-if="ownerAccess" type="button" :aria-pressed="toolMode==='figures'" @click="toggleTool('figures')">插图</button>
-          <button v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='history'" @click="toggleTool('history')">版本历史</button>
-          <button v-if="ownerAccess" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='snapshots'" @click="toggleTool('snapshots')">项目快照</button>
-          <button type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='drafts'" @click="toggleTool('drafts')">草稿恢复{{ draftRows.length?' ('+draftRows.length+')':'' }}</button>
-          <button type="button" :aria-pressed="toolMode==='members'" :disabled="memberMutating||snapshotMutating" @click="toggleTool('members')">项目成员</button>
-          <button type="button" :disabled="switchingFile||navigating||saving||uploadBusy||snapshotMutating||memberMutating||compiling||hasActiveCompile" @click="refreshServerProject">刷新项目</button>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='ai'" @click="toggleTool('ai')">AI 助手</PButton>
+          <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='search'" @click="toggleTool('search')">全项目搜索</PButton>
+          <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='references'" @click="toggleTool('references')">参考文献</PButton>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='figures'" @click="toggleTool('figures')">插图</PButton>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='history'" @click="toggleTool('history')">版本历史</PButton>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='snapshots'" @click="toggleTool('snapshots')">项目快照</PButton>
+          <PButton size="sm" variant="secondary" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='drafts'" @click="toggleTool('drafts')">草稿恢复{{ draftRows.length?' ('+draftRows.length+')':'' }}</PButton>
+          <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='members'" :disabled="memberMutating||snapshotMutating" @click="toggleTool('members')">项目成员</PButton>
+          <PButton size="sm" variant="secondary" type="button" :disabled="switchingFile||navigating||saving||uploadBusy||snapshotMutating||memberMutating||compiling||hasActiveCompile" @click="refreshServerProject">刷新项目</PButton>
         </nav>
         <p v-if="!ownerAccess&&!collaborationOpen" class="papers-workspace__stale" role="status">{{ writeAccess?(collaborationGate.state==='available'?'共享编辑：普通保存会检查文件版本；可使用实时协作。':'共享编辑：保存时检查文件版本，暂不支持实时共同编辑。'):'共享阅读：当前账号无编辑权限。' }}</p>
         <p v-if="refreshMessage" class="papers-workspace__stale" role="status">{{ refreshMessage }}</p>
         <section v-if="toolMode&&toolMode!=='ai'&&(!collaborationOpen||toolMode==='snapshots')" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'文件历史'">
           <div class="papers-workspace__outline-heading">
             <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'当前文件版本历史' }}</strong>
-            <button v-if="toolMode!=='figures'" type="button" class="papers-workspace__sync"  :disabled="toolBusy||snapshotMutating||memberMutating" @click="refreshTool">刷新</button>
-            <button type="button" class="papers-workspace__sync" :disabled="snapshotMutating||memberMutating" @click="closeTool">关闭</button>
+            <PButton size="sm" variant="ghost" v-if="toolMode!=='figures'" type="button" class="papers-workspace__sync"  :disabled="toolBusy||snapshotMutating||memberMutating" @click="refreshTool">刷新</PButton>
+            <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" :disabled="snapshotMutating||memberMutating" @click="closeTool">关闭</PButton>
           </div>
           <p v-if="toolError" role="alert" class="papers-workspace__error">{{ toolError }}</p>
           <p v-if="toolBusy" role="status">正在读取…</p>
           <template v-if="toolMode==='search'">
-            <label>查找（区分大小写）<input v-model="searchQuery" maxlength="250" placeholder="输入源码或关键字" /></label>
-            <label v-if="ownerAccess">替换为<input v-model="replaceQuery" maxlength="1000" placeholder="留空表示删除匹配文字" /></label>
+            <label>查找（区分大小写）<PInput v-model="searchQuery" maxlength="250" placeholder="输入源码或关键字" /></label>
+            <label v-if="ownerAccess">替换为<PInput v-model="replaceQuery" maxlength="1000" placeholder="留空表示删除匹配文字" /></label>
             <p v-if="searchStale">项目或未保存源码已有变化，请刷新搜索后操作。</p>
             <p v-else>{{ searchResult.total }} 处匹配<span v-if="searchResult.total>200">（显示前 200 处）</span></p>
             <PButton v-if="ownerAccess" size="sm" variant="secondary" :disabled="toolBusy||addingFile||switchingFile||navigating||preparingUpload||searchStale||!searchResult.total||searchQuery===replaceQuery" @click="replaceProject">全部替换</PButton>
-            <button v-for="(hit,index) in searchResult.matches" :key="hit.fileId+':'+hit.line+':'+hit.column+':'+index" type="button" class="papers-workspace__toolrow" :disabled="searchStale" @click="jumpSearch(hit)"><strong>{{ hit.path }}:{{ hit.line }}:{{ hit.column }}</strong><code>{{ hit.preview }}</code></button>
+            <PButton size="sm" variant="ghost" v-for="(hit,index) in searchResult.matches" :key="hit.fileId+':'+hit.line+':'+hit.column+':'+index" type="button" class="papers-workspace__toolrow" :disabled="searchStale" @click="jumpSearch(hit)"><strong>{{ hit.path }}:{{ hit.line }}:{{ hit.column }}</strong><code>{{ hit.preview }}</code></PButton>
           </template>
           <template v-else-if="toolMode==='references'">
-            <label>查找引用键或标题<input v-model="referenceQuery" placeholder="例如 smith2026" maxlength="200" /></label>
+            <label>查找引用键或标题<PInput v-model="referenceQuery" placeholder="例如 smith2026" maxlength="200" /></label>
             <p v-if="bibError" role="alert">{{ bibError }}</p>
             <p>{{ referenceRows.length }} 条参考文献<span v-if="filteredReferences.length>200">（显示前 200 条）</span>。</p>
             <p v-if="!referenceRows.length">在项目中新建或导入 .bib 文件后即可使用文献检索和引用补全。</p>
             <div v-for="(entry,index) in filteredReferences.slice(0,200)" :key="entry.fileId+':'+entry.key+':'+index" class="papers-workspace__refrow">
-              <button type="button" class="papers-workspace__toolrow" @click="jumpReference(entry)"><strong>{{ entry.key }}</strong><span>{{ entry.title || entry.path }}</span></button>
-              <button type="button" class="papers-workspace__sync" :disabled="!writeAccess||activeFile?.kind!=='text'||!/\.tex$/i.test(activeFile?.path||'')||switchingFile||addingFile||navigating" @click="editorRef?.insertCitation(entry.key)">插入引用</button>
+              <PButton size="sm" variant="ghost" type="button" class="papers-workspace__toolrow" @click="jumpReference(entry)"><strong>{{ entry.key }}</strong><span>{{ entry.title || entry.path }}</span></PButton>
+              <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" :disabled="!writeAccess||activeFile?.kind!=='text'||!/\.tex$/i.test(activeFile?.path||'')||switchingFile||addingFile||navigating" @click="editorRef?.insertCitation(entry.key)">插入引用</PButton>
             </div>
           </template>
           <template v-else-if="toolMode==='figures'">
@@ -126,33 +126,33 @@
           </template>
           <template v-else-if="toolMode==='history'">
             <p v-if="activeFile?.kind!=='text'">请选择文本文件。</p>
-            <button v-for="version in fileVersions" :key="version.revision" type="button" class="papers-workspace__toolrow" :disabled="toolBusy" @click="previewVersion(version)"><strong>版本 {{ version.revision }}{{ activeFile?.revision===version.revision?' · 当前':'' }}</strong><span>{{ formatVersionDate(version.created_at) }} · {{ version.path }}</span></button>
-            <button v-if="moreVersions" type="button" class="papers-workspace__sync" :disabled="toolBusy" @click="loadVersions(true)">加载更早版本</button>
+            <PButton size="sm" variant="ghost" v-for="version in fileVersions" :key="version.revision" type="button" class="papers-workspace__toolrow" :disabled="toolBusy" @click="previewVersion(version)"><strong>版本 {{ version.revision }}{{ activeFile?.revision===version.revision?' · 当前':'' }}</strong><span>{{ formatVersionDate(version.created_at) }} · {{ version.path }}</span></PButton>
+            <PButton size="sm" variant="ghost" v-if="moreVersions" type="button" class="papers-workspace__sync" :disabled="toolBusy" @click="loadVersions(true)">加载更早版本</PButton>
             <div v-if="selectedVersion" class="papers-workspace__version-preview">
               <strong>版本 {{ selectedVersion.revision }} 与当前编辑内容对比</strong>
               <p v-if="versionDifference">差异范围：旧版第 {{ versionDifference.from }}–{{ Math.max(versionDifference.from,versionDifference.oldTo) }} 行；当前第 {{ versionDifference.from }}–{{ Math.max(versionDifference.from,versionDifference.newTo) }} 行。</p>
               <p v-else>源码一致。</p>
-              <div class="papers-workspace__compare"><label>历史源码<textarea readonly :value="selectedVersion.content" /></label><label>当前源码<textarea readonly :value="draft" /></label></div>
+              <div class="papers-workspace__compare"><label>历史源码<PTextarea readonly :model-value="selectedVersion.content" /></label><label>当前源码<PTextarea readonly :model-value="draft" /></label></div>
               <PButton size="sm" variant="secondary" :disabled="toolBusy||addingFile||switchingFile||preparingUpload||!versionDifference" @click="restoreVersion">恢复源码为此版本</PButton>
             </div>
           </template>
         </section>
         <section v-if="outlineOpen&&!collaborationOpen" class="papers-workspace__outline" aria-label="论文结构大纲">
-          <div class="papers-workspace__outline-heading"><strong>项目大纲</strong><button type="button" class="papers-workspace__sync" :disabled="outlineLoading" @click="loadOutline">刷新</button></div>
+          <div class="papers-workspace__outline-heading"><strong>项目大纲</strong><PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" :disabled="outlineLoading" @click="loadOutline">刷新</PButton></div>
           <p v-if="outlineLoading">正在读取各 TeX 文件…</p>
           <p v-else-if="!outlineRows.length">未找到章节标题。</p>
-          <button v-for="item in outlineRows" :key="item.fileId+':'+item.line+':'+item.title" type="button" :style="{paddingLeft:Math.max(0,item.level-1)*12+'px'}" :title="item.path+':'+item.line" @click="jumpOutline(item)">{{ item.title }} <small>{{ item.path }}:{{ item.line }}</small></button>
+          <PButton size="sm" variant="ghost" v-for="item in outlineRows" :key="item.fileId+':'+item.line+':'+item.title" type="button" :style="{paddingLeft:Math.max(0,item.level-1)*12+'px'}" :title="item.path+':'+item.line" @click="jumpOutline(item)">{{ item.title }} <small>{{ item.path }}:{{ item.line }}</small></PButton>
         </section>
         <PaperCollaborationPanel v-if="collaborationOpen&&activeFile?.kind==='text'&&collaborationAccount===accountId" :key="projectId+':'+activeFile.id+':'+accountId" ref="collaborationRef" :project-id="projectId" :file="activeFile" :role="ownerAccess?'owner':writeAccess?'editor':'viewer'" :account-id="accountId" :citations="citationKeys" :operation-busy="snapshotMutating||compiling" @confirmed="onCollaborationConfirmed" @ai-state="onCollaborationAIState" @exit="exitCollaboration" @unavailable="onCollaborationUnavailable" />
         <LatexEditor v-else-if="!collaborationOpen&&activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef"  :model-value="draft" @update:model-value="updateDraft" :citations="citationKeys" :readonly="!writeAccess || switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
         <PaperAssetPreview v-else-if="activeFile?.kind === 'binary'" :key="activeFile.id+':'+activeFile.revision" :file="activeFile" />
         <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
-        <p v-if="draftWarning" class="papers-workspace__error" role="alert">{{ draftWarning }} <button type="button" class="papers-workspace__sync" @click="toggleTool('drafts')">草稿管理</button></p>
+        <p v-if="draftWarning" class="papers-workspace__error" role="alert">{{ draftWarning }} <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" @click="toggleTool('drafts')">草稿管理</PButton></p>
         <p v-if="exportError" class="papers-workspace__error" role="alert">{{ exportError }}</p>
         <p v-if="saveError" class="papers-workspace__error" role="alert">
           {{ saveError }} 当前输入已保留。
-          <button type="button" class="papers-workspace__sync" @click="copyDraft">复制当前源码</button>
-          <button type="button" class="papers-workspace__sync" :disabled="saving" @click="saveNow">重试保存</button>
+          <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" @click="copyDraft">复制当前源码</PButton>
+          <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" :disabled="saving" @click="saveNow">重试保存</PButton>
         </p>
       </section>
       <div v-if="layoutMode === 'split'" class="papers-workspace__divider" role="separator" aria-label="调整编辑器和预览宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="previewWidth" @pointerdown="beginResize" @pointermove="resizeMove" @pointerup="endResize" @pointercancel="endResize" @keydown.left.prevent="previewWidth=Math.min(75,previewWidth+3)" @keydown.right.prevent="previewWidth=Math.max(25,previewWidth-3)" />
@@ -166,7 +166,7 @@
         <div class="papers-workspace__preview-heading">
           <div class="papers-workspace__preview-left">
             <strong>PDF 预览</strong>
-            <button type="button" class="papers-workspace__sync" title="跳到预览对应源码（也可双击 PDF）" :disabled="!syncReady" @click="jumpToCode">← 源码</button>
+            <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" title="跳到预览对应源码（也可双击 PDF）" :disabled="!syncReady" @click="jumpToCode">← 源码</PButton>
           </div>
           <div class="papers-workspace__compile-status" role="status" aria-live="polite">
             <template v-if="compileEnabled && compileJob">
@@ -174,15 +174,15 @@
               <span v-if="previewStale" class="papers-workspace__stale" title="当前 PDF 是上一次编译成功的版本">预览为上次成功版本</span>
               <PButton v-if="canCancelCompile" type="button" size="sm" variant="secondary" :disabled="canceling" @click="cancelCompile">{{ canceling ? '取消中…' : '取消任务' }}</PButton>
               <span v-else-if="compileJob.cancel_requested && hasActiveCompile">取消中…</span>
-              <button v-if="compileJob.failure_code" type="button" class="papers-workspace__sync" :aria-expanded="showDiagnostics" @click="showDiagnostics=!showDiagnostics">错误详情{{ diagnostics.length ? ' ('+diagnostics.length+')' : '' }}</button>
+              <PButton size="sm" variant="ghost" v-if="compileJob.failure_code" type="button" class="papers-workspace__sync" :aria-expanded="showDiagnostics" @click="showDiagnostics=!showDiagnostics">错误详情{{ diagnostics.length ? ' ('+diagnostics.length+')' : '' }}</PButton>
             </template>
             <span v-else-if="compileEnabled">准备编译</span>
             <span v-else-if="!ownerAccess&&previewJob">共享 PDF · 版本 {{ previewJob.source_revision }}<template v-if="previewJob.source_revision!==project?.head_revision">（上次成功版本）</template></span>
           </div>
           <div class="papers-workspace__preview-right">
             <PButton v-if="!ownerAccess" type="button" size="sm" variant="secondary" :disabled="sharedPreviewBusy" @click="loadSharedPreview">{{ sharedPreviewBusy?'刷新中…':'刷新预览' }}</PButton>
-            <label class="papers-workspace__compiler" title="选择此任务的 TeX 编译器"><span>编译器</span><select v-model="selectedCompiler" aria-label="TeX 编译器" :disabled="!compileEnabled||compiling||hasActiveCompile||saving||uploadBusy||navigating" @change="compilerChanged"><option v-for="engine in compilerOptions" :key="engine" :value="engine">{{ compilerLabel(engine) }}</option></select></label>
-            <label class="papers-workspace__auto"><input type="checkbox" v-model="autoCompile" :disabled="collaborationOpen||!compileEnabled||recommendedUnavailable" /> 自动编译</label>
+            <div class="papers-workspace__compiler" title="选择此任务的 TeX 编译器"><span>编译器</span><PSelect :model-value="selectedCompiler" placeholder="TeX 编译器" size="sm" :options="compilerOptions.map(value=>({value,label:compilerLabel(value)}))" :disabled="!compileEnabled||compiling||hasActiveCompile||saving||uploadBusy||navigating" @update:model-value="selectedCompiler=$event as PaperCompiler;compilerChanged()" /></div>
+            <PCheckbox v-model="autoCompile" class="papers-workspace__auto" :disabled="collaborationOpen||!compileEnabled||recommendedUnavailable">自动编译</PCheckbox>
             <PButton type="button" size="sm" :disabled="(collaborationOpen&&collaborationRevision===null) || !compileEnabled || compiling || saving || switchingFile || navigating || uploadBusy || snapshotMutating || !project || hasActiveCompile" @click="compileNow">{{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}</PButton>
           </div>
         </div>
@@ -193,11 +193,11 @@
         <section v-if="showDiagnostics && compileJob?.failure_code" class="papers-workspace__diagnostics" aria-label="编译错误详情">
           <div class="papers-workspace__diagnostics-header">
             <strong>{{ failureMessage(compileJob.failure_code) }}</strong>
-            <button type="button" class="papers-workspace__sync" @click="showDiagnostics=false">收起</button>
+            <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" @click="showDiagnostics=false">收起</PButton>
           </div>
           <p v-if="diagnostics.length && diagnosticStale" class="papers-workspace__stale">源码已发生变化。以下行号对应编译版本 {{ compileJob.source_revision }}，重新编译后可准确定位。</p>
           <div v-for="(item,index) in diagnostics" :key="index" class="papers-workspace__diagnostic">
-            <button v-if="item.file && item.line" type="button" class="papers-workspace__diagnostic-location" :disabled="diagnosticStale" @click="jumpDiagnostic(item)">{{ item.file }}:{{ item.line }}</button>
+            <PButton size="sm" variant="ghost" v-if="item.file && item.line" type="button" class="papers-workspace__diagnostic-location" :disabled="diagnosticStale" @click="jumpDiagnostic(item)">{{ item.file }}:{{ item.line }}</PButton>
             <span v-else>{{ item.tool==='bibtex' ? 'BibTeX' : 'LaTeX' }}</span>
             <code>{{ item.message }}</code>
           </div>
@@ -231,6 +231,10 @@
 </template>
 
 <script setup lang="ts">
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PSelect from '@/components/ui/PSelect.vue'
+import PCheckbox from '@/components/ui/PCheckbox.vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
@@ -1586,17 +1590,15 @@ onBeforeUnmount(() => {
 .papers-workspace__header strong{flex:1;min-width:40px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
 .papers-workspace__status{font-size:12px;color:var(--a-color-text-secondary,#64748b);white-space:nowrap}
 .papers-workspace__layout-tools{display:flex;gap:3px;align-items:center}
-.papers-workspace__layout-tools button{border:1px solid var(--a-color-border-soft,#dce1e7);border-radius:4px;padding:4px 7px;background:transparent;color:inherit;font-size:12px;cursor:pointer;white-space:nowrap}
 .papers-workspace__layout-tools button[aria-pressed=true]{background:var(--a-color-bg-subtle,#e7edf3);font-weight:600}
 .papers-workspace__content{position:relative;display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}
 .papers-workspace__files{box-sizing:border-box;width:196px;flex-shrink:0;min-height:0;overflow:auto;padding:10px 8px;border-right:1px solid var(--a-color-border-soft,#e0e4ea)}
 .papers-workspace__files-heading{display:flex;justify-content:space-between;align-items:center;margin:4px 6px 10px}
 .papers-workspace__files-heading h2{font-weight:650;font-size:13px;margin:0}
-.papers-workspace__files button:not(.p-button){display:block;width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:7px 6px;cursor:pointer;border-radius:4px;overflow-wrap:anywhere;font-size:12px;line-height:1.4}
+.papers-workspace__files :deep(.p-button--ghost){justify-content:flex-start;text-align:left;min-width:0;overflow-wrap:anywhere;font-size:12px;line-height:1.4}
 .papers-workspace__files button.active{background:var(--a-color-bg-subtle,#e7edf3);font-weight:650}
 .papers-workspace__add{margin-top:18px;display:grid;gap:6px}
 .papers-workspace__add label{font-size:12px;font-weight:600}
-.papers-workspace__add input{min-width:0;padding:6px;border:1px solid var(--a-color-border-soft,#d6dde3);border-radius:5px;background:var(--a-color-bg,#fff);color:inherit;font-size:12px}
 .papers-workspace__editor{min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden;flex:var(--editor-grow,51) 1 0%}
 .papers-workspace__editor-header{min-height:42px;box-sizing:border-box;flex-shrink:0;padding:6px 10px;border-bottom:1px solid var(--a-color-border-soft,#e0e4ea);display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px}
 .papers-workspace__editor-header span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1651,20 +1653,17 @@ onBeforeUnmount(() => {
 .papers-workspace__folder{font-weight:600}
 .papers-workspace__manage{display:grid;gap:5px;margin-top:10px;padding-top:8px;border-top:1px solid var(--a-color-border-soft,#ddd);font-size:12px;overflow-wrap:anywhere}
 .papers-workspace__manage label{display:grid;gap:4px}
-.papers-workspace__manage input:not([type=file]){min-width:0;width:100%;box-sizing:border-box;border:1px solid var(--a-color-border-soft,#ddd);border-radius:4px;padding:5px;color:inherit;background:var(--a-color-bg,#fff)}
 .papers-workspace__outline{display:flex;flex-direction:column;gap:4px;max-height:32%;overflow:auto;flex-shrink:0;padding:7px 9px;border-bottom:1px solid var(--a-color-border-soft,#ddd);font-size:12px}
 .papers-workspace__outline-heading{display:flex;align-items:center;justify-content:space-between}
 .papers-workspace__outline>button{display:block;text-align:left;border:0;background:transparent;color:inherit;cursor:pointer;font-size:12px;overflow-wrap:anywhere;padding-block:4px}
 .papers-workspace__outline small{color:var(--a-color-text-secondary,#64748b);font-weight:400;font-size:10px}
 
 .papers-workspace__toolnav{display:flex;flex-shrink:0;gap:5px;overflow:auto;padding:4px 10px;border-bottom:1px solid var(--a-color-border-soft,#ddd)}
-.papers-workspace__toolnav button,.papers-workspace__toolrow{background:transparent;color:inherit;border:1px solid var(--a-color-border-soft,#ddd);border-radius:4px;padding:5px 7px;font-size:12px;cursor:pointer}
 .papers-workspace__toolnav button{white-space:nowrap}
 .papers-workspace__toolnav button[aria-pressed=true]{background:var(--a-color-bg-subtle,#e7edf3);font-weight:600}
 .papers-workspace__toolnav button:disabled,.papers-workspace__toolrow:disabled{opacity:.5;cursor:default}
 .papers-workspace__toolpanel{display:flex;flex-direction:column;gap:6px;max-height:43%;overflow:auto;flex-shrink:0;padding:8px 10px;border-bottom:1px solid var(--a-color-border-soft,#ddd);font-size:12px}
 .papers-workspace__toolpanel label{display:grid;gap:4px;min-width:0}
-.papers-workspace__toolpanel input,.papers-workspace__toolpanel textarea{min-width:0;border:1px solid var(--a-color-border-soft,#ddd);background:var(--a-color-bg,#fff);color:inherit;border-radius:4px;padding:5px;font:inherit}
 .papers-workspace__toolpanel p{margin:0;overflow-wrap:anywhere}
 .papers-workspace__toolrow{display:grid;text-align:left;gap:3px;overflow-wrap:anywhere;min-width:0;width:100%}
 .papers-workspace__toolrow code{white-space:pre-wrap;overflow-wrap:anywhere}
@@ -1674,7 +1673,7 @@ onBeforeUnmount(() => {
 .papers-workspace__compare textarea{height:105px;font-family:monospace;resize:vertical;white-space:pre;overflow:auto}
 @media(max-width:760px){.papers-workspace__compare{grid-template-columns:1fr}}
  .papers-workspace__compiler{display:flex;align-items:center;gap:3px;font-size:11px;white-space:nowrap}
-.papers-workspace__compiler select{color:inherit;background:var(--a-color-bg,#fff);border:1px solid var(--a-color-border-soft,#ddd);border-radius:4px;padding:4px 5px;font:inherit;max-width:104px}
+.papers-workspace__compiler{display:flex;align-items:center;gap:4px}.papers-workspace__compiler :deep(.p-select-trigger){min-width:100px}
 @media(max-width:1000px){.papers-workspace__compiler>span{display:none}}
 
 .papers-workspace__drop-zone{display:grid;gap:4px;padding:12px 6px;border:1px solid var(--a-color-border-soft,#aab1ba);border-radius:5px;text-align:center;color:var(--a-color-text-secondary,#64748b);overflow-wrap:anywhere}
@@ -1688,14 +1687,14 @@ onBeforeUnmount(() => {
 .papers-workspace__files{width:var(--files-width,248px);display:flex;flex-direction:column;padding:8px;overflow:hidden;border-right:0;background:var(--a-color-bg,#fff)}
 .papers-workspace__files-heading{flex-shrink:0;margin:0 4px 5px}
 .papers-workspace__files-toolbar,.papers-workspace__file-actions{display:flex;align-items:center;gap:5px;flex-shrink:0;padding:4px}
-.papers-workspace__files-toolbar input{width:100%;min-width:0;border:1px solid var(--a-color-border-soft,#ddd);border-radius:5px;background:var(--a-color-bg,#fff);color:inherit;padding:6px 8px;font:inherit;font-size:12px}
+.papers-workspace__files-toolbar :deep(.p-field){flex:1;min-width:0}.papers-workspace__files-toolbar :deep(.p-input){min-height:var(--a-control-height-sm);font-size:12px}
 .papers-workspace__files-toolbar button{flex:0 0 24px}
 .papers-workspace__file-actions button{flex:1;display:flex!important;align-items:center;justify-content:center;gap:5px;text-align:center!important;background:var(--a-color-bg-subtle,#f2f4f6)!important}
 .papers-workspace__file-actions button[aria-expanded=true]{font-weight:600;color:var(--a-color-primary,#26784b)}
 .papers-workspace__tree{flex:1;min-height:0;overflow:auto;padding:4px 0;scrollbar-gutter:stable}
 .papers-workspace__tree-empty{font-size:12px;padding:8px;color:var(--a-color-text-secondary,#64748b)}
 .papers-workspace__file-row{border-radius:4px;min-height:28px}
-.papers-workspace__file-row button:first-child{display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:5px 6px;min-height:28px}
+.papers-workspace__file-row button:first-child{display:flex;align-items:center;justify-content:flex-start;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:5px 6px;min-height:28px}
 .papers-workspace__filename{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .papers-workspace__file-row svg{flex-shrink:0;color:var(--a-color-text-secondary,#64748b)}
 .papers-workspace__file-row button.active svg{color:var(--a-color-primary,#26784b)}
@@ -1725,4 +1724,7 @@ onBeforeUnmount(() => {
 .ai-expanded .papers-workspace__ai-scroll :deep(.paper-ai){max-width:1100px;margin-inline:auto}
 .papers-workspace__ai-scroll{flex:1;min-height:0;overflow:auto;padding:10px;scrollbar-gutter:stable}
 .papers-workspace--compact .papers-workspace__ai-panel{flex:2 1 0%}
+.papers-workspace__add :deep(.p-field){flex:1;min-width:0}
+.papers-workspace__toolrow{white-space:normal;justify-content:flex-start;text-align:left}
+.papers-workspace__folder{width:100%}
 </style>

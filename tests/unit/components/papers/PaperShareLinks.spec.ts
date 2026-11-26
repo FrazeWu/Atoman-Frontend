@@ -17,7 +17,8 @@ describe('owner invitation links',()=>{
  it('creates the selected permission link, uses a fragment, and revokes it',async()=>{
   const w=mount(PaperShareLinks,{props:{projectId:'project-a',accountId:'owner-a',disabled:false}})
   await flushPromises()
-  await w.get('[aria-label="链接权限"]').setValue('editor')
+  await w.get('[aria-label="链接权限"]').trigger('click')
+  await w.findAll('[role="option"]').find(o=>o.text()==='可以编辑')!.trigger('click')
   await w.findAll('button').find(b=>b.text()==='生成邀请链接')!.trigger('click')
   await flushPromises()
   expect(createPaperInvitation).toHaveBeenCalledWith('project-a','editor')

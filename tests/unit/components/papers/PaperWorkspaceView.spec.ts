@@ -426,16 +426,17 @@ describe('Papers compiler capability',()=>{
  }
  it('does not advertise unsupported compilers for a legacy server',async()=>{
   const wrapper=await openCompilerWorkspace()
-  try{expect(wrapper.get('select[aria-label="TeX 编译器"]').findAll('option').map(o=>o.text())).toEqual(['pdfLaTeX'])}
+  try{await wrapper.get('button[aria-label="TeX 编译器"]').trigger('click');expect(wrapper.findAll('[role="option"]').map(o=>o.text())).toEqual(['pdfLaTeX'])}
   finally{wrapper.unmount()}
  })
  it('submits selected approved engine and prevents changes during an active job',async()=>{
   const wrapper=await openCompilerWorkspace(['pdflatex','lualatex'])
   vi.mocked(submitPaperCompile).mockResolvedValue({id:'lua-1',project_id:'two',source_revision:1,compiler:'lualatex',status:'queued',attempts:0,max_attempts:2,cancel_requested:false,created_at:'2026-11-25T00:00:00Z'} as never)
   try{
-   const select=wrapper.get('select[aria-label="TeX 编译器"]')
-   expect(select.findAll('option').map(o=>o.text())).toEqual(['pdfLaTeX','LuaLaTeX'])
-   await select.setValue('lualatex')
+   const select=wrapper.get('button[aria-label="TeX 编译器"]')
+   await select.trigger('click')
+   expect(wrapper.findAll('[role="option"]').map(o=>o.text())).toEqual(['pdfLaTeX','LuaLaTeX'])
+   await wrapper.findAll('[role="option"]').find(o=>o.text()==='LuaLaTeX')!.trigger('click')
    await wrapper.findAll('button').find(b=>b.text()==='编译')!.trigger('click');await flushPromises()
    expect(submitPaperCompile).toHaveBeenCalledWith('two',1,expect.any(String),'lualatex')
    expect(wrapper.find('.papers-workspace__compile-status').text()).toContain('LuaLaTeX')
@@ -447,9 +448,10 @@ describe('Papers compiler capability',()=>{
   const wrapper=await openCompilerWorkspace(['pdflatex','xelatex'])
   vi.mocked(submitPaperCompile).mockResolvedValue({id:'xe-1',project_id:'two',source_revision:1,compiler:'xelatex',status:'queued',attempts:0,max_attempts:2,cancel_requested:false,created_at:'2026-11-25T00:00:00Z'} as never)
   try{
-   const select=wrapper.get('select[aria-label="TeX 编译器"]')
-   expect(select.findAll('option').map(o=>o.text())).toEqual(['pdfLaTeX','XeLaTeX'])
-   await select.setValue('xelatex')
+   const select=wrapper.get('button[aria-label="TeX 编译器"]')
+   await select.trigger('click')
+   expect(wrapper.findAll('[role="option"]').map(o=>o.text())).toEqual(['pdfLaTeX','XeLaTeX'])
+   await wrapper.findAll('[role="option"]').find(o=>o.text()==='XeLaTeX')!.trigger('click')
    await wrapper.findAll('button').find(b=>b.text()==='编译')!.trigger('click');await flushPromises()
    expect(submitPaperCompile).toHaveBeenCalledWith('two',1,expect.any(String),'xelatex')
    expect(wrapper.find('.papers-workspace__compile-status').text()).toContain('XeLaTeX')
@@ -529,14 +531,14 @@ describe('Papers template compiler recommendation',()=>{
  }
  it('selects the recommended XeLaTeX compiler only if the server allows it',async()=>{
   const w=await openRecommended(['pdflatex','xelatex'])
-  try{expect((w.get('select[aria-label="TeX 编译器"]').element as HTMLSelectElement).value).toBe('xelatex')}
+  try{expect(w.get('button[aria-label="TeX 编译器"]').text()).toContain('XeLaTeX')}
   finally{w.unmount()}
  })
  it('shows an explicit recommendation when the compiler is not available and blocks automatic compilation',async()=>{
   const w=await openRecommended(['pdflatex'])
   try{
    expect(w.text()).toContain('源码建议使用 XeLaTeX，当前编译环境尚未开放此编译器')
-   expect((w.get('select[aria-label="TeX 编译器"]').element as HTMLSelectElement).value).toBe('pdflatex')
+   expect(w.get('button[aria-label="TeX 编译器"]').text()).toContain('pdfLaTeX')
    expect(w.get('.papers-workspace__auto input').attributes('disabled')).toBeDefined()
   }finally{w.unmount()}
  })

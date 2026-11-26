@@ -32,7 +32,8 @@ describe('Papers figure panel',()=>{
   vi.mocked(getPaperFile).mockImplementation(async(_pid,id)=>id==='a'?new Promise<PaperFile>(r=>{resolveA=r}):b)
   const wrapper=mount(PaperFigureTools,{props:{projectId:'p',files:[a,b],disabled:false,canInsert:false}})
   try{
-   await wrapper.get('select[aria-label="插图文件"]').setValue('b')
+   await wrapper.get('[aria-label="插图文件"]').trigger('click')
+   await wrapper.findAll('[role="option"]').find(o=>o.text()===b.path)!.trigger('click')
    await flushPromises()
    resolveA(a);await flushPromises()
    expect(buttons(wrapper,'插入到光标处').attributes('disabled')).toBeDefined()

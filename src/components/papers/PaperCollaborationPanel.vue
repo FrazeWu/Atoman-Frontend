@@ -3,8 +3,8 @@
   <div class="papers-collab__bar">
    <strong>实时协作</strong>
    <span role="status">{{ statusLabel }}</span>
-   <button v-if="view?.text" type="button" @click="copySource">复制源码</button>
-   <button type="button" :disabled="operationBusy" @click="requestExit">退出协作</button>
+   <PButton size="sm" variant="secondary" v-if="view?.text" type="button" @click="copySource">复制源码</PButton>
+   <PButton size="sm" variant="secondary" type="button" :disabled="operationBusy" @click="requestExit">退出协作</PButton>
   </div>
   <p v-if="message" role="alert">{{ message }}</p>
   <p v-if="view?.message" role="alert">{{ view.message }}</p>
@@ -12,21 +12,21 @@
   <details v-if="scope()&&capabilityChecked" class="papers-collab__drafts">
    <summary>本机协作草稿{{ otherDrafts.length?'（'+otherDrafts.length+'）':'' }}</summary>
    <p>仅备份未确认的修改，明文保存在当前浏览器，不上传云端。请勿在公共设备开启；关闭保护不会删除已有草稿。</p>
-   <label><input type="checkbox" :checked="draftEnabled" :disabled="props.role==='viewer'" @change="toggleDraftProtection(($event.target as HTMLInputElement).checked)" /> 启用本机协作草稿保护</label>
-   <label v-if="view?.epoch&&props.role!=='viewer'"><input type="checkbox" :checked="view.offlineEnabled" :disabled="!draftEnabled||view.status==='stopped'" @change="toggleOffline(($event.target as HTMLInputElement).checked)" /> 允许重连期间离线编辑（需本机草稿保护）</label>
+   <PCheckbox :model-value="draftEnabled" :disabled="props.role==='viewer'" @update:model-value="toggleDraftProtection">启用本机协作草稿保护</PCheckbox>
+   <PCheckbox v-if="view?.epoch&&props.role!=='viewer'" :model-value="view.offlineEnabled" :disabled="!draftEnabled||view.status==='stopped'" @update:model-value="toggleOffline">允许重连期间离线编辑（需本机草稿保护）</PCheckbox>
    <p v-if="view?.offlineEditable">离线修改尚未提交；仅在原协作版本和权限验证通过后同步。重连失败、存储失败或超限时暂停编辑。</p>
    <p v-if="draftNotice" role="status">{{ draftNotice }}</p>
    <p v-if="!otherDrafts.length">当前文件没有其他会话留下的协作草稿。</p>
    <div v-for="row in otherDrafts" :key="collabDraftKey(row)" class="papers-collab__draft">
-    <button type="button" :aria-pressed="selectedDraftKey===collabDraftKey(row)" @click="selectedDraftKey=collabDraftKey(row)">{{ new Date(row.updatedAt).toLocaleString() }} · v{{row.payload.fileRevision}} · {{ compatible(row)?'可恢复':'需手动合并' }}</button>
+    <PButton size="sm" variant="secondary" type="button" :aria-pressed="selectedDraftKey===collabDraftKey(row)" @click="selectedDraftKey=collabDraftKey(row)">{{ new Date(row.updatedAt).toLocaleString() }} · v{{row.payload.fileRevision}} · {{ compatible(row)?'可恢复':'需手动合并' }}</PButton>
    </div>
    <div v-if="selectedDraft" class="papers-collab__draft">
-    <textarea readonly :value="selectedDraft.payload.source" aria-label="本机协作草稿源码" rows="5" spellcheck="false" />
+    <PTextarea readonly :model-value="selectedDraft.payload.source" aria-label="本机协作草稿源码" :rows="5" spellcheck="false" />
     <p>{{ compatible(selectedDraft)?'已匹配原协作版本。恢复会合并未确认的增量，并等待服务器提交确认。':'服务器版本、权限或草稿状态不匹配。仅允许复制，不会直接覆盖服务器。' }}</p>
     <div class="papers-collab__draft-actions">
-     <button type="button" :disabled="!compatible(selectedDraft)" @click="restoreDraft(selectedDraft)">恢复协作草稿</button>
-     <button type="button" @click="copyDraft(selectedDraft)">复制协作草稿</button>
-     <button type="button" :disabled="!!view?.pending" @click="discardDraft(selectedDraft)">删除协作草稿</button>
+     <PButton size="sm" variant="secondary" type="button" :disabled="!compatible(selectedDraft)" @click="restoreDraft(selectedDraft)">恢复协作草稿</PButton>
+     <PButton size="sm" variant="secondary" type="button" @click="copyDraft(selectedDraft)">复制协作草稿</PButton>
+     <PButton size="sm" variant="secondary" type="button" :disabled="!!view?.pending" @click="discardDraft(selectedDraft)">删除协作草稿</PButton>
     </div>
    </div>
   </details>
@@ -41,14 +41,17 @@
   <div v-else class="papers-collab__empty">
    <p v-if="view?.status==='stopped'||message">连接未建立。普通编辑模式仍可使用。</p>
    <p v-else>正在验证项目权限并读取服务端文档…</p>
-   <div v-if="view?.status==='stopped'||message" class="papers-collab__draft-actions"><button type="button" @click="retryInitialConnection">重新连接</button><button type="button" :disabled="operationBusy" @click="requestExit">返回普通编辑</button></div>
+   <div v-if="view?.status==='stopped'||message" class="papers-collab__draft-actions"><PButton size="sm" variant="secondary" type="button" @click="retryInitialConnection">重新连接</PButton><PButton size="sm" variant="secondary" type="button" :disabled="operationBusy" @click="requestExit">返回普通编辑</PButton></div>
    <pre class="papers-collab__source-preview" aria-label="连接前已保存的源码">{{ file.content }}</pre>
   </div>
-  <textarea v-if="copyFallback" readonly :value="view?.source||''" aria-label="可手动复制的协作源码" />
+  <PTextarea v-if="copyFallback" readonly :model-value="view?.source||''" aria-label="可手动复制的协作源码" />
   <PConfirm :show="!!confirmationMessage" title="请确认操作" :message="confirmationMessage" danger @confirm="resolveConfirmation(true)" @cancel="resolveConfirmation(false)" />
  </section>
 </template>
 <script setup lang="ts">
+import PButton from '@/components/ui/PButton.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PCheckbox from '@/components/ui/PCheckbox.vue'
 import {computed,onBeforeUnmount,onMounted,onUnmounted,ref,shallowRef,watch} from 'vue'
 import {getPaperCollaborationCapability,type PaperFile,type PaperProjectRole} from '@/api/papers'
 import {useApiWebSocketUrl} from '@/composables/useApiUrl'

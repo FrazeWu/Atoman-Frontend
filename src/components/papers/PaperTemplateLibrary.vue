@@ -5,10 +5,10 @@
         <h3>论文模板库</h3>
         <p>从可编辑的章节结构开始，或导入会议提供的正式模板。</p>
       </div>
-      <input v-model.trim="search" aria-label="搜索论文模板" placeholder="搜索模板" />
+      <PInput v-model.trim="search" aria-label="搜索论文模板" placeholder="搜索模板" />
     </div>
     <nav class="paper-templates__filters" aria-label="模板分类">
-      <button v-for="item in paperTemplateCategories" :key="item.value" type="button" :aria-pressed="category===item.value" @click="category=item.value">{{ item.label }}</button>
+      <PButton size="sm" variant="secondary" v-for="item in paperTemplateCategories" :key="item.value" type="button" :aria-pressed="category===item.value" @click="category=item.value">{{ item.label }}</PButton>
     </nav>
     <div class="paper-templates__grid">
       <article v-for="template in visible" :key="template.id" class="paper-templates__card" :class="{selected:selectedId===template.id}">
@@ -32,6 +32,7 @@
   </section>
 </template>
 <script setup lang="ts">
+import PInput from '@/components/ui/PInput.vue'
 import {computed,ref} from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import {paperTemplateCategories,paperTemplates} from './templateCatalog'
@@ -47,8 +48,6 @@ const visible=computed(()=>paperTemplates.filter(template=>(category.value==='al
 .paper-templates__toolbar{justify-content:space-between;align-items:flex-start}
 .paper-templates__toolbar h3{font-size:1rem;margin:0 0 4px;font-weight:650}
 .paper-templates p{font-size:.84rem;line-height:1.6;margin:0;overflow-wrap:anywhere}
-.paper-templates__toolbar input{max-width:100%;min-width:0;border:1px solid var(--a-color-border-soft,#ddd);padding:7px 9px;border-radius:6px;background:var(--a-color-bg,#fff);color:inherit;font:inherit}
-.paper-templates__filters button{border:1px solid var(--a-color-border-soft,#ddd);background:transparent;color:inherit;border-radius:5px;padding:5px 8px;font-size:.8rem;cursor:pointer}
 .paper-templates__filters button[aria-pressed=true]{background:var(--a-color-bg-subtle,#e7edf3);font-weight:650}
 .paper-templates__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:9px}
 .paper-templates__card{display:flex;flex-direction:column;gap:8px;min-width:0;border:1px solid var(--a-color-border-soft,#ddd);border-radius:8px;padding:12px}

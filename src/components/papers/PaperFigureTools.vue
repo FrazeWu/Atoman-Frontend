@@ -7,40 +7,32 @@
     </div>
     <p v-if="!figures.length">上传 PNG、JPEG 或 PDF 插图后即可生成 LaTeX 插图代码。也可以拖入左侧文件栏。</p>
     <template v-else>
-      <label>插图文件
-        <select v-model="selectedId" aria-label="插图文件">
-          <option v-for="file in figures" :key="file.id" :value="file.id">{{ file.path }}</option>
-        </select>
-      </label>
+      <PSelect :model-value="selectedId" label="插图文件" size="sm" :options="figures.map(file=>({value:file.id,label:file.path}))" @update:model-value="selectedId=String($event)" />
       <p v-if="checking" role="status">正在读取图片资源…</p>
       <p v-if="assetError" role="alert" class="paper-figures__error">{{ assetError }}</p>
       <div v-if="asset" class="paper-figures__asset">
         <span>{{ asset.path }} · {{ assetSize }}</span>
-        <button type="button" class="paper-figures__link" :aria-expanded="previewOpen" @click="previewOpen=!previewOpen">{{ previewOpen?'收起预览':'预览资源' }}</button>
+        <PButton size="sm" variant="ghost" type="button" class="paper-figures__link" :aria-expanded="previewOpen" @click="previewOpen=!previewOpen">{{ previewOpen?'收起预览':'预览资源' }}</PButton>
       </div>
       <div v-if="asset && previewOpen" class="paper-figures__preview">
         <PaperAssetPreview :key="asset.id+':'+asset.revision" :file="asset" />
       </div>
       <div class="paper-figures__fields">
         <label>图片宽度（%）
-          <input v-model.number="width" type="number" min="10" max="100" step="5" aria-label="图片宽度百分比" />
+          <PInput :model-value="width" @update:model-value="width=Number($event)" type="number" min="10" max="100" step="5" aria-label="图片宽度百分比" />
         </label>
-        <label>浮动位置
-          <select v-model="placement" aria-label="插图浮动位置">
-            <option v-for="option in figurePlacementOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-          </select>
-        </label>
+        <PSelect :model-value="placement" label="插图浮动位置" size="sm" :options="[...figurePlacementOptions]" @update:model-value="placement=$event as FigurePlacement" />
       </div>
-      <label class="paper-figures__check"><input v-model="wide" type="checkbox" /> 双栏通栏图（figure*）</label>
+      <PCheckbox v-model="wide" class="paper-figures__check">双栏通栏图（figure*）</PCheckbox>
       <label>图注
-        <input v-model="caption" maxlength="400" placeholder="输入图片说明" aria-label="图片图注" />
+        <PInput v-model="caption" maxlength="400" placeholder="输入图片说明" aria-label="图片图注" />
       </label>
       <label>引用标签
-        <input v-model="label" maxlength="100" placeholder="fig:architecture" aria-label="图片引用标签" />
+        <PInput v-model="label" maxlength="100" placeholder="fig:architecture" aria-label="图片引用标签" />
       </label>
       <p v-if="codeError" role="alert" class="paper-figures__error">{{ codeError }}</p>
       <label v-if="code">生成的 LaTeX 代码
-        <textarea readonly :value="code" rows="6" spellcheck="false" aria-label="生成的插图代码" />
+        <PTextarea readonly :model-value="code" :rows="6" spellcheck="false" aria-label="生成的插图代码" />
       </label>
       <div class="paper-figures__actions">
         <PButton type="button" size="sm" :disabled="disabled||!canInsert||!asset||!code" @click="insert">插入到光标处</PButton>
@@ -54,6 +46,10 @@
 </template>
 
 <script setup lang="ts">
+import PInput from '@/components/ui/PInput.vue'
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PSelect from '@/components/ui/PSelect.vue'
+import PCheckbox from '@/components/ui/PCheckbox.vue'
 import {computed,ref,shallowRef,watch,onBeforeUnmount} from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PaperAssetPreview from './PaperAssetPreview.vue'

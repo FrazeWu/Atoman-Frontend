@@ -1,20 +1,20 @@
 <template>
  <div class="paper-drafts">
   <p>本机草稿保护仅保存尚未提交的源码，刷新或关闭浏览器后仍可恢复。数据以明文留在当前浏览器，非云端备份；请勿在公共设备开启。清理浏览器数据会删除这些草稿。</p>
-  <label class="paper-drafts__check"><input type="checkbox" :checked="enabled" :disabled="!available||disabled" @change="$emit('toggle',($event.target as HTMLInputElement).checked)" /> 启用本机草稿保护</label>
+  <PCheckbox class="paper-drafts__check" :model-value="enabled" :disabled="!available||disabled" @update:model-value="$emit('toggle',$event)">启用本机草稿保护</PCheckbox>
   <p v-if="!available">需要已验证的登录账号和可用的浏览器存储。</p>
   <p v-if="message" role="status">{{ message }}</p>
   <p v-if="!rows.length">当前项目没有可恢复的本机草稿。</p>
   <p v-else>已备份 {{ rows.length }} 份草稿。关闭保护不会删除既有草稿，可在下方逐条删除。</p>
   <div v-for="row in rows" :key="draftKey(row)" class="paper-drafts__row">
-   <button type="button" class="paper-drafts__select" :aria-pressed="selectedKey===draftKey(row)" @click="selectedKey=draftKey(row)">
+   <PButton size="sm" variant="ghost" type="button" class="paper-drafts__select" :aria-pressed="selectedKey===draftKey(row)" @click="selectedKey=draftKey(row)">
     <strong>{{ row.path }}</strong>
     <small>基于 v{{ row.baseRevision }} · {{ new Date(row.updatedAt).toLocaleString() }} · {{ label(row) }}</small>
-   </button>
+   </PButton>
   </div>
   <div v-if="selected" class="paper-drafts__detail">
    <p>{{ compatible(selected)?'服务器版本与草稿基础版本一致，可恢复至编辑器。恢复后按常规自动保存流程提交。':'服务器文件已变化或被删除。请复制草稿并手动合并，不会直接覆盖服务器版本。' }}</p>
-   <textarea readonly :value="selected.content" aria-label="本机草稿源码" rows="8" spellcheck="false"/>
+   <PTextarea readonly :model-value="selected.content" aria-label="本机草稿源码" :rows="8" spellcheck="false"/>
    <div class="paper-drafts__actions">
     <PButton type="button" size="sm" :disabled="disabled||!compatible(selected)||!canRecover" @click="$emit('recover',selected)">恢复到编辑器</PButton>
     <PButton type="button" size="sm" variant="secondary" @click="copy(selected)">复制草稿</PButton>
@@ -25,6 +25,8 @@
  </div>
 </template>
 <script setup lang="ts">
+import PTextarea from '@/components/ui/PTextarea.vue'
+import PCheckbox from '@/components/ui/PCheckbox.vue'
 import {computed,ref} from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import type {PaperFile} from '@/api/papers'

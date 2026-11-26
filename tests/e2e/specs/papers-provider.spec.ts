@@ -1,0 +1,72 @@
+import {test,expect} from '@playwright/test'
+test('owner supplies an HTTPS compatible endpoint, discovers models and chooses one for a consented request',async({page,baseURL})=>{
+ test.setTimeout(60000)
+ const origin=new URL(baseURL!).origin
+ expect(new URL(origin).hostname).toMatch(/^(localhost|127\.0\.0\.1)$/)
+ const pid='provider-fixture',prefix='/papers/projects/'+pid,now='2026-11-26T00:00:00Z'
+ const provider='https://provider.example.net/openai/v1',key='synthetic-provider-browser-key',source='Synthetic source only'
+ let discoveries=0,suggestions=0
+ const project={id:pid,name:'Provider fixture',main_file_id:'main',head_revision:1,access_role:'owner',created_at:now,updated_at:now}
+ const main={id:'main',path:'main.tex',kind:'text',revision:1,content:source,sha256:'',created_at:now,updated_at:now}
+ await page.route('**/*',async route=>{
+  const url=new URL(route.request().url())
+  expect(url.href).not.toContain(key)
+  const api=url.pathname.startsWith('/api/v1/')&&(url.origin===origin||url.origin==='https://api.atoman.org')
+  if(!api)return url.origin===origin&&!url.pathname.startsWith('/api/')?route.continue():route.abort()
+  const headers={'access-control-allow-origin':origin,'access-control-allow-credentials':'true','access-control-allow-methods':'GET, OPTIONS, POST, PUT, DELETE','access-control-allow-headers':'content-type, x-csrf-token, authorization'}
+  if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers})
+  const path=url.pathname.slice('/api/v1'.length)
+  const ok=(data:unknown)=>route.fulfill({headers,json:{data}})
+  if(path==='/auth/session')return route.fulfill({headers,json:{csrf_token:'fixture-csrf',user:{uuid:'provider-owner',username:'owner',email:'fixture@example.test',role:'user',onboarding_completed_at:now}}})
+  if(path==='/site/access')return route.fulfill({headers,json:{}})
+  if(path==='/papers/access')return ok({allowed:true})
+  if(path===prefix)return ok(project)
+  if(path===prefix+'/files')return ok([{...main,content:''}])
+  if(path===prefix+'/files/main')return ok({...main,project_head_revision:1})
+  if(path===prefix+'/ai/capability')return ok({enabled:true,base_urls:['https://api.openai.com/v1'],custom_base_urls:true,model_discovery:true,max_source_bytes:49152,max_context_bytes:98304,max_extra_files:4,project_edits:true,max_history_turns:6,max_history_bytes:16384})
+  if(path===prefix+'/ai/models'){
+   discoveries++
+   expect(route.request().method()).toBe('POST')
+   expect(route.request().postDataJSON()).toEqual({base_url:provider,api_key:key,consent:true})
+   return ok({models:['model/a','model/b'],truncated:false})
+  }
+  if(path===prefix+'/ai/suggestions'){
+   suggestions++
+   expect(route.request().postDataJSON()).toMatchObject({base_url:provider,api_key:key,model:'model/b',task:'explain',source,consent:true})
+   return ok({text:'Synthetic explanation',model:'model/b'})
+  }
+  if(path===prefix+'/files/main/collaboration')return ok({enabled:false})
+  if(path===prefix+'/compile-capability')return ok({enabled:false,pdf_available:false})
+  return ok({items:[],total:0})
+ })
+ await page.goto('/papers/'+pid)
+ await expect(page.locator('.cm-content')).toHaveText(source)
+ await page.getByRole('button',{name:'AI 助手',exact:true}).click()
+ const endpoint=page.getByLabel('AI API 地址',{exact:true}),secret=page.getByLabel('AI API Key',{exact:true}),getModels=page.getByRole('button',{name:'获取模型列表',exact:true})
+ await endpoint.fill('https://127.0.0.1/v1')
+ await secret.fill(key)
+ await expect(getModels).toBeDisabled()
+ await endpoint.fill(provider)
+ await expect(secret).toHaveValue('')
+ await secret.fill(key)
+ expect(discoveries).toBe(0)
+ await getModels.click()
+ await expect(page.getByText('已获取 2 个模型，', {exact:false})).toBeVisible()
+ expect(discoveries).toBe(1)
+ await page.getByRole('button',{name:'可用模型',exact:true}).click()
+ await page.getByRole('option',{name:'model/b',exact:true}).click()
+ await expect(page.getByLabel('AI 模型',{exact:true})).toHaveValue('model/b')
+ await page.getByRole('button',{name:'AI 任务类型',exact:true}).click()
+ await page.getByRole('option',{name:'解释、分析或排查',exact:true}).click()
+ await page.getByRole('button',{name:'使用整个文件',exact:true}).click()
+ await page.getByLabel('AI 修改指令').fill('Explain the fixture')
+ await page.locator('.paper-ai__consent input').check()
+ await page.getByRole('button',{name:'生成建议',exact:true}).click()
+ await expect(page.locator('.paper-ai__result')).toContainText('Synthetic explanation')
+ expect(suggestions).toBe(1)
+ await endpoint.fill('https://another.example.net/v1')
+ await expect(secret).toHaveValue('')
+ await expect(page.getByRole('button',{name:'可用模型',exact:true})).toHaveCount(0)
+ await expect(page.locator('.paper-ai__result')).toHaveCount(0)
+ expect(await page.evaluate(secret=>JSON.stringify({...localStorage,...sessionStorage}).includes(secret),key)).toBe(false)
+})

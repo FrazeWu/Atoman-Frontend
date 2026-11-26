@@ -32,6 +32,7 @@ let suppressNaturalProgress = true
 let restoration: { page: number; offset: number } | null = null
 let lastEmitted = { page: 0, offset: -1, advanced: false }
 let pendingFrame = 0
+let lastViewport = { width: 0, height: 0 }
 const abort = new AbortController()
 const clamp = (value: number) => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0
 function markScrollInteraction() { suppressNaturalProgress = false }
@@ -48,7 +49,14 @@ function applyReaderScale(percent: number) {
 
 function handleViewportResize() {
   if (!initialized || disposed || !pdfViewer) return
-  restoration = visiblePosition()
+  const root = container.value
+  if (!root) return
+  const width = root.clientWidth, height = root.clientHeight
+  if (!width || !height || (width === lastViewport.width && height === lastViewport.height)) return
+  lastViewport = { width, height }
+  // ResizeObserver may fire during startup before the saved anchor is
+  // restored. Never replace a pending restore with the default top page.
+  restoration = restoration || visiblePosition()
   suppressNaturalProgress = true
   applyReaderScale(props.zoom)
   requestAnimationFrame(restoreAnchor)
@@ -187,6 +195,7 @@ onMounted(async () => {
     eventBus.on('pagesinit', () => {
       if (disposed) return
       viewer.scrollMode = ScrollMode.VERTICAL
+      lastViewport = { width: root.clientWidth, height: root.clientHeight }
       applyReaderScale(props.zoom)
       const page = Math.min(props.document.numPages, Math.max(1, props.initialPage))
       restoration = { page, offset: clamp(props.initialOffset || 0) }
@@ -194,10 +203,13 @@ onMounted(async () => {
       initialized = true
       requestAnimationFrame(restoreAnchor)
     })
-    eventBus.on('pagechanging', ({ pageNumber }: { pageNumber: number }) => {
+    eventBus.on('pagechanging', () => {
       if (disposed || !initialized || restoration) return
+      // PDF.js chooses the most visible page, which can differ from the
+      // page intersecting the top of the viewport. Preserve the same exact
+      // page/offset anchor as onScroll rather than resetting it to zero.
       const position = visiblePosition()
-      sendPosition(pageNumber, position.page === pageNumber ? position.offset : 0, !deliberateJump && !suppressNaturalProgress)
+      sendPosition(position.page, position.offset, !deliberateJump && !suppressNaturalProgress)
       deliberateJump = false
     })
     eventBus.on('pagerendered', ({ pageNumber }: { pageNumber: number }) => {

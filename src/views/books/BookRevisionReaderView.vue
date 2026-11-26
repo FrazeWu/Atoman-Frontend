@@ -95,7 +95,16 @@ onBeforeUnmount(() => { generation++; controller?.abort() })
   overflow: hidden;
 }
 .revision-reader__status {
-  display: none;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: .25rem .75rem;
+  padding: .25rem .75rem;
+  color: var(--a-color-text-secondary);
+  background: var(--a-color-bg);
+  font-size: .75rem;
 }
 .revision-reader__discussions {
   display: none;

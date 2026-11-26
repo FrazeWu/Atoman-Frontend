@@ -240,7 +240,7 @@ const activePanel = ref<'tools' | 'settings' | ''>(
 )
 const hasTools = computed(() => Boolean(props.toc.length || slots.tools || slots.settings))
 
-const showSidebar = ref(desktopLayout && initialViewportWidth >= 960)
+const showSidebar = ref(desktopLayout && initialViewportWidth >= 1152)
 const zoom = ref(props.initialZoom)
 const scrollMode = ref<BookReaderScrollMode>(props.initialScrollMode)
 
@@ -269,6 +269,7 @@ function togglePanel(panel: 'tools' | 'settings') {
 
 <style scoped>
 .book-reader-shell {
+  container: book-reader / inline-size;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -370,6 +371,7 @@ function togglePanel(panel: 'tools' | 'settings') {
 }
 
 .book-reader-shell__workspace {
+  position: relative;
   display: flex;
   align-items: stretch;
   gap: 0;
@@ -396,7 +398,7 @@ function togglePanel(panel: 'tools' | 'settings') {
 .book-reader-shell__toolbar {
   position: relative;
   top: 0;
-  z-index: 10;
+  z-index: 30;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -722,6 +724,27 @@ function togglePanel(panel: 'tools' | 'settings') {
 .book-reader-shell__toc button.is-nested {
   padding-left: 1rem;
   color: var(--a-color-muted);
+}
+
+/* The reader may live in a narrower sheet beside the site's navigation.
+   Base tool placement on the actual reader width, not just window width. */
+@container book-reader (max-width: 1160px) {
+  .book-reader-shell__panel {
+    position: absolute;
+    inset: 2.875rem 0 0 auto;
+    height: auto;
+    z-index: 20;
+    max-width: 100%;
+  }
+}
+
+@container book-reader (max-width: 800px) {
+  .book-reader-shell__sidebar-wrapper {
+    position: absolute;
+    inset: 2.875rem auto 0 0;
+    max-width: 100%;
+    z-index: 21;
+  }
 }
 
 @media (max-width: 640px) {

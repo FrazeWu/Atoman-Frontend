@@ -26,7 +26,7 @@
       :initial-zoom="displayPreferences.zoom_level || 100"
       :show-scroll-mode-toggle="['pdf', 'txt', 'epub'].includes(asset?.format || '')"
       :initial-scroll-mode="displayPreferences.scroll_mode || 'continuous'"
-      :initial-panel="source ? '' : undefined"
+      :initial-panel="source || asset?.format === 'pdf' ? '' : undefined"
       @previous="movePrevious"
       @next="moveNext"
       @toc-select="jumpToEpubTOC"
@@ -592,8 +592,18 @@ async function loadPDF() {
     pdfLoadingTask = getDocument({ data: await contentBlob!.arrayBuffer() })
     pdfDocument = await pdfLoadingTask.promise
     if (disposed) return
-    pdfDocumentRef.value = pdfDocument
     pdfPageCount.value = pdfDocument.numPages
+    // Initialize the saved anchor before mounting the continuous viewer.
+    // Outline extraction can yield to Vue and otherwise mount it at page 1.
+    if (localProgress) {
+      pdfPage.value = Math.min(pdfPageCount.value, Math.max(1, localProgress.pdf_page || Math.round(localProgress.reading_percent * pdfPageCount.value)))
+      pdfOffset.value = localProgress.pdf_offset || 0
+    }
+    if (props.source?.initialPosition?.pdf_page) {
+      pdfPage.value = Math.min(pdfPageCount.value, Math.max(1, props.source.initialPosition.pdf_page))
+      pdfOffset.value = props.source.initialPosition.pdf_offset || 0
+    }
+    pdfDocumentRef.value = pdfDocument
 
     try {
       const outline = await pdfDocument.getOutline()
@@ -607,14 +617,6 @@ async function loadPDF() {
       }
     } catch (e) {
       console.warn('获取 PDF 大纲异常:', e)
-    }
-    if (localProgress) {
-      pdfPage.value = Math.min(pdfPageCount.value, Math.max(1, localProgress.pdf_page || Math.round(localProgress.reading_percent * pdfPageCount.value)))
-      pdfOffset.value = localProgress.pdf_offset || 0
-    }
-    if (props.source?.initialPosition?.pdf_page) {
-      pdfPage.value = Math.min(pdfPageCount.value, props.source.initialPosition.pdf_page)
-      pdfOffset.value = props.source.initialPosition.pdf_offset || 0
     }
     await nextTick()
     if (displayPreferences.value.scroll_mode === 'paginated') await renderPDFPage(false)

@@ -63,10 +63,11 @@ describe('BookReaderShell', () => {
       slots: { settings: '<div>显示设置面板</div>', sidebar: '<div>章节目录</div>' },
     })
     expect(wrapper.find('aside[aria-label="显示设置"]').exists()).toBe(false)
-    await wrapper.find('button[aria-label="切换导览侧栏"]').trigger('click')
     expect(wrapper.find('.book-reader-shell__sidebar-wrapper').exists()).toBe(false)
     await wrapper.find('button[aria-label="切换导览侧栏"]').trigger('click')
     expect(wrapper.find('.book-reader-shell__sidebar-wrapper').exists()).toBe(true)
+    await wrapper.find('button[aria-label="切换导览侧栏"]').trigger('click')
+    expect(wrapper.find('.book-reader-shell__sidebar-wrapper').exists()).toBe(false)
     const setting = wrapper.findAll('.book-reader-shell__panel-tabs button').find(item => item.text().includes('显示设置'))
     expect(setting).toBeDefined()
     await setting!.trigger('click')

@@ -13,9 +13,19 @@
     <label>API Key<input v-model="key" type="password" autocomplete="off" spellcheck="false" aria-label="AI API Key" maxlength="2048" :disabled="busy" placeholder="使用你的模型账户密钥" /></label>
     <p>密钥仅保留在当前面板内存中，关闭即清除，不写入数据库或浏览器存储。模型调用由你的 API 账户计费。其他兼容 API 地址需由服务器批准后才会出现在列表中。</p>
    </details>
+   <section v-if="repairAvailable||repair" class="paper-ai__context" aria-label="Agent 编译修复">
+    <strong>Agent 编译修复</strong>
+    <p>复用当前编译器，最多三轮。每轮检查已保存版本的错误，审阅并应用修复后自动重新编译。模型请求仍需逐轮确认发送范围。</p>
+    <p v-if="repair" role="status">{{repair.message}} · 已应用 {{repair.rounds}} / {{MAX_REPAIR_ROUNDS}} 轮 · {{repair.compiler}}</p>
+    <p v-if="repair?.phase==='review'&&repair.files.length">涉及文件：{{repair.files.join('、')}}。如有其他源码文件，请在下方勾选并预览。</p>
+    <div class="paper-ai__row">
+     <PButton v-if="!repairActive" type="button" size="sm" :disabled="!canStartRepair" @click="startRepair">开始编译修复</PButton>
+     <PButton v-else type="button" size="sm" variant="secondary" :disabled="commitBusy" @click="endRepair('已停止修复。已提交的编译仍可在 PDF 面板查看或取消。')">停止修复</PButton>
+    </div>
+   </section>
    <div class="paper-ai__row">
-    <PButton type="button" size="sm" variant="secondary" :disabled="busy||disabled" @click="capture(true)">使用编辑器选区</PButton>
-    <PButton type="button" size="sm" variant="secondary" :disabled="busy||disabled" @click="capture(false)">使用整个文件</PButton>
+    <PButton type="button" size="sm" variant="secondary" :disabled="busy||disabled||repairActive" @click="capture(true)">使用编辑器选区</PButton>
+    <PButton type="button" size="sm" variant="secondary" :disabled="busy||disabled||repairActive" @click="capture(false)">使用整个文件</PButton>
    </div>
    <p v-if="collaborationEpoch">实时协作：仅处理已获服务器确认的当前版本；接受的建议作为你的本地编辑同步，断线或未确认时暂停操作。</p>
    <p v-if="!target">请选择源码范围。也可先在编辑器选中段落，再点击「使用编辑器选区」。</p>
@@ -33,7 +43,7 @@
     <p v-if="contextBusy">读取文件预览中…</p>
     <details v-for="extra in extras" :key="extra.id"><summary>{{ extra.path }} · v{{ extra.revision }}</summary><pre>{{ extra.content }}</pre></details>
    </details>
-   <label>任务类型<select v-model="task" :disabled="busy" aria-label="AI 任务类型"><option value="revise">修改源码（可审阅后接受）</option><option value="explain">解释、分析或排查</option><option v-if="projectModeAvailable" value="project">Agent · 跨文件修改</option></select></label>
+   <label>任务类型<select v-model="task" :disabled="busy||repairActive" aria-label="AI 任务类型"><option value="revise">修改源码（可审阅后接受）</option><option value="explain">解释、分析或排查</option><option v-if="projectModeAvailable" value="project">Agent · 跨文件修改</option></select></label>
    <p v-if="task==='project'">使用已保存的完整文件。每个文件最多一处连续替换，审阅并勾选后才能提交。该操作仅在普通编辑模式开放，可能使其他协作者的旧会话失效，请先协调。</p>
    <p v-if="task==='project'&&!projectReady" role="status">请先保存源码并选择整个文件，再生成跨文件建议。</p>
    <details v-if="historyAvailable&&history.length" class="paper-ai__context" open>
@@ -47,17 +57,17 @@
     <PButton type="button" size="sm" variant="secondary" :disabled="busy" @click="clearHistory">开始新对话</PButton>
    </details>
    <div class="paper-ai__row">
-    <button type="button" :disabled="busy" @click="preset('润色这段论文，保持研究事实、数值、引用键和 LaTeX 结构。','revise')">学术润色</button>
-    <button type="button" :disabled="busy" @click="preset('将这段论文翻译为英文，保留 LaTeX 命令、公式和引用。','revise')">英文翻译</button>
-    <button type="button" :disabled="busy" @click="preset('检查 LaTeX 语法和学术表达，解释问题并提出具体修改建议。','explain')">源码检查</button>
-    <button v-if="diagnostics" type="button" :disabled="busy" @click="diagnosticPreset">分析编译错误</button>
+    <button type="button" :disabled="busy||repairActive" @click="preset('润色这段论文，保持研究事实、数值、引用键和 LaTeX 结构。','revise')">学术润色</button>
+    <button type="button" :disabled="busy||repairActive" @click="preset('将这段论文翻译为英文，保留 LaTeX 命令、公式和引用。','revise')">英文翻译</button>
+    <button type="button" :disabled="busy||repairActive" @click="preset('检查 LaTeX 语法和学术表达，解释问题并提出具体修改建议。','explain')">源码检查</button>
+    <button v-if="diagnostics" type="button" :disabled="busy||repairActive" @click="diagnosticPreset">分析编译错误</button>
    </div>
    <label>给 AI 的指令<textarea v-model="instruction" aria-label="AI 修改指令" rows="3" maxlength="4000" :disabled="busy" placeholder="描述需要完成的任务…" /></label>
    <label class="paper-ai__check paper-ai__consent"><input v-model="consent" type="checkbox" :disabled="busy" /> <span>我确认将上方预览的源码、附加文件和指令以及勾选的对话历史发送到所选模型服务，允许该服务处理这些内容。</span></label>
    <p>{{ contextBytes.toLocaleString() }} / {{ capability.max_context_bytes.toLocaleString() }} 字节 · 每次最多生成 4096 tokens</p>
    <div class="paper-ai__row">
     <PButton size="sm" type="button" :disabled="!canGenerate" @click="generate">{{ busy?'生成中…':'生成建议' }}</PButton>
-    <PButton v-if="busy" size="sm" type="button" variant="secondary" @click="cancel">取消等待</PButton>
+    <PButton v-if="busy&&!commitBusy" size="sm" type="button" variant="secondary" @click="cancel">取消等待</PButton>
    </div>
    <p v-if="message" role="status">{{ message }}</p>
    <section v-if="suggestion" class="paper-ai__result">
@@ -90,17 +100,92 @@
 </template>
 
 <script setup lang="ts">
-import {computed,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue'
+import {computed,nextTick,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue'
 import PButton from '@/components/ui/PButton.vue'
-import {getPaperFile,type PaperFile,type PaperTextReplacement} from '@/api/papers'
+import {getPaperFile,type PaperFile,type PaperTextReplacement,type PaperCompileJob,type PaperCompiler} from '@/api/papers'
 import {ApiErrorResponseError} from '@/api/client'
 import {getPaperAICapability,requestPaperAISuggestion,type PaperAICapability,type PaperAISuggestion,type PaperAITask,type PaperAIHistoryTurn} from '@/api/papersAI'
 import {paperAIBytes,validAIRange,type PaperAISourceRange,type PaperAIEdit} from './aiSuggestion'
 import {reviewProjectEdits,appendAgentHistory,type ReviewedPaperAIChange} from './aiAgent'
+import {MAX_REPAIR_ROUNDS,matchesRepairJob,repairOutcome,validRepairApplyFence,type RepairApplyFence} from './aiRepair'
 
 type Captured=PaperAISourceRange&{fileId:string;revision:number;collaborationEpoch?:string}
-type Suggestion={target:Captured;task:PaperAITask;response:PaperAISuggestion;changes?:ReviewedPaperAIChange[];context?:PaperFile[]}
-const props=defineProps<{projectId:string;accountId:string;file:PaperFile;source:string;files:PaperFile[];disabled:boolean;captureSelection:()=>PaperAISourceRange|null;applyEdit:(edit:PaperAIEdit)=>boolean;diagnostics?:string;collaborationEpoch?:string;projectRevision?:number;applyProject?:(revision:number,replacements:PaperTextReplacement[])=>Promise<boolean>}>()
+type Suggestion={target:Captured;task:PaperAITask;response:PaperAISuggestion;changes?:ReviewedPaperAIChange[];context?:PaperFile[];repairJobId?:string}
+const props=defineProps<{projectId:string;accountId:string;file:PaperFile;source:string;files:PaperFile[];disabled:boolean;captureSelection:()=>PaperAISourceRange|null;applyEdit:(edit:PaperAIEdit)=>boolean;diagnostics?:string;collaborationEpoch?:string;projectRevision?:number;applyProject?:(revision:number,replacements:PaperTextReplacement[],repairFence?:RepairApplyFence)=>Promise<boolean>;compileEnabled?:boolean;compileJob?:PaperCompileJob|null;compiler?:PaperCompiler;compileRepair?:(revision:number,compiler:PaperCompiler)=>Promise<PaperCompileJob|null>}>()
+const emit=defineEmits<{'repair-active':[active:boolean]}>()
+type RepairState={phase:'submitting'|'compiling'|'review'|'applying'|'passed'|'stopped';revision:number;compiler:PaperCompiler;rounds:number;jobId:string;message:string;files:string[]}
+const repair=shallowRef<RepairState|null>(null)
+const commitBusy=ref(false)
+let repairSerial=0
+const repairActive=computed(()=>!!repair.value&&['submitting','compiling','review','applying'].includes(repair.value.phase))
+watch(repairActive,active=>emit('repair-active',active),{flush:'sync'})
+const repairAvailable=computed(()=>projectModeAvailable.value&&props.compileEnabled===true&&!!props.compileRepair&&!!props.compiler)
+const cleanSource=computed(()=>props.source===props.file.content&&props.source.trim()!==''&&!!capability.value&&paperAIBytes(props.source)<=capability.value.max_source_bytes)
+const canStartRepair=computed(()=>repairAvailable.value&&!repairActive.value&&!busy.value&&!contextBusy.value&&!props.disabled&&cleanSource.value)
+function repairCurrent(state:RepairState){
+ return repairAvailable.value&&cleanSource.value&&props.projectRevision===state.revision&&props.compiler===state.compiler
+}
+function repairJobCurrent(state:RepairState){
+ return repairCurrent(state)&&validRepairApplyFence(props.compileJob,{projectId:props.projectId,revision:state.revision,compiler:state.compiler},{jobId:state.jobId,compiler:state.compiler})
+}
+function endRepair(reason:string){
+ if(commitBusy.value)return
+ repairSerial++
+ if(busy.value)stop()
+ if(repair.value)repair.value={...repair.value,phase:'stopped',message:reason}
+ if(suggestion.value?.repairJobId){suggestion.value=null;approved.value=[]}
+ clearConsent()
+}
+function settleRepair(){
+ const state=repair.value
+ if(!state||!['compiling','review'].includes(state.phase))return
+ if(!repairCurrent(state)||props.compileJob?.id!==state.jobId){
+  endRepair('源码、编译器或任务已变化，已停止；请重新开始。');return
+ }
+ if(state.phase==='review'){
+  if(!repairJobCurrent(state))endRepair('编译状态已变化，旧修复计划已失效。')
+  return
+ }
+ const job=props.compileJob
+ if(!job)return
+ const result=repairOutcome(job,{projectId:props.projectId,revision:state.revision,compiler:state.compiler},state.rounds)
+ if(result.kind==='waiting')return
+ if(result.kind==='review'){
+  if(props.disabled)return
+  task.value='project';capture(false);instruction.value=result.instruction
+  repair.value={...state,phase:'review',message:result.message,files:result.files}
+  clearConsent()
+ }else repair.value={...state,phase:result.kind,message:result.message}
+}
+async function runRepairCompile(revision:number,rounds:number,compiler:PaperCompiler){
+ if(disposed||!props.compileRepair||!repairAvailable.value||props.projectRevision!==revision||props.compiler!==compiler||!cleanSource.value||props.disabled){endRepair('源码或编译状态已变化，未重新编译。');return}
+ const n=++repairSerial,initial=scope()
+ repair.value={phase:'submitting',revision,rounds,compiler,jobId:'',message:'正在提交已保存版本进行编译…',files:[]}
+ clearConsent()
+ try{
+  const job=await props.compileRepair(revision,compiler)
+  await nextTick()
+  if(disposed||n!==repairSerial||initial!==scope())return
+  const state=repair.value
+  if(!state||!job||!repairCurrent(state)||!matchesRepairJob(job,{projectId:props.projectId,revision,compiler})||props.compileJob?.id!==job.id){
+   endRepair('未确认编译任务成功提交，请核对编译状态后重试。');return
+  }
+  repair.value={...state,phase:'compiling',jobId:job.id,message:'等待编译结果…'}
+  settleRepair()
+ }catch{if(!disposed&&n===repairSerial)endRepair('提交编译失败，已停止修复。')}
+}
+function startRepair(){
+ if(!canStartRepair.value||!props.projectRevision||!props.compiler)return
+ const revision=props.projectRevision,compiler=props.compiler
+ suggestion.value=null;approved.value=[];task.value='project';capture(false);clearConsent()
+ const latest=props.compileJob
+ if(latest&&latest.status==='failed'&&latest.failure_code==='compile_failed'&&!latest.cancel_requested&&matchesRepairJob(latest,{projectId:props.projectId,revision,compiler})){
+  repair.value={phase:'compiling',revision,compiler,rounds:0,jobId:latest.id,message:'读取当前编译错误…',files:[]}
+  settleRepair()
+ }else void runRepairCompile(revision,0,compiler)
+}
+
+
 const capability=ref<PaperAICapability|null>(null),loading=ref(false),message=ref('')
 const baseURL=ref(''),model=ref('gpt-4.1-mini'),key=ref(''),instruction=ref(''),task=ref<PaperAITask>('revise'),consent=ref(false)
 const target=shallowRef<Captured|null>(null),extras=shallowRef<PaperFile[]>([])
@@ -121,18 +206,20 @@ const stale=computed(()=>staleTarget(target.value))
 const resultStale=computed(()=>{
  const item=suggestion.value
  if(!item||staleTarget(item.target))return true
+ if(item.repairJobId&&(!repair.value||repair.value.phase!=='review'||repair.value.jobId!==item.repairJobId||!repairJobCurrent(repair.value)))return true
  if(item.task!=='project')return false
  return !projectModeAvailable.value||!projectReady.value||item.response.project_revision!==props.projectRevision||!!item.context?.some(f=>!props.files.some(current=>current.id===f.id&&current.revision===f.revision&&current.path===f.path))
 })
 const extraStale=computed(()=>extras.value.some(extra=>!eligibleFiles.value.some(item=>item.id===extra.id&&item.revision===extra.revision)))
-const canGenerate=computed(()=>!!capability.value?.enabled&&!!target.value&&!stale.value&&!extraStale.value&&!props.disabled&&!busy.value&&!contextBusy.value&&consent.value&&baseURL.value&&model.value&&key.value.trim().length>=8&&instruction.value.trim()&&selectedSource.value.trim()&&sourceBytes.value<=capability.value.max_source_bytes&&contextBytes.value<=capability.value.max_context_bytes&&paperAIBytes(instruction.value)<=4000&&(task.value!=='project'||projectReady.value))
+const canGenerate=computed(()=>!!capability.value?.enabled&&!!target.value&&!stale.value&&!extraStale.value&&!props.disabled&&!busy.value&&!contextBusy.value&&consent.value&&baseURL.value&&model.value&&key.value.trim().length>=8&&instruction.value.trim()&&selectedSource.value.trim()&&sourceBytes.value<=capability.value.max_source_bytes&&contextBytes.value<=capability.value.max_context_bytes&&paperAIBytes(instruction.value)<=4000&&(task.value!=='project'||projectReady.value)&&(!repairActive.value||(task.value==='project'&&repair.value?.phase==='review'&&repairJobCurrent(repair.value))))
 function alive(n:number,initial:string){return !disposed&&n===serial&&initial===scope()}
 function clearConsent(){consent.value=false}
 watch([baseURL,model,key,instruction,task,target,extras,()=>props.source,()=>props.file.revision,()=>props.disabled,()=>props.projectRevision,extraStale,includeHistory,history],clearConsent,{flush:'sync'})
 function stop(){serial++;controller?.abort();controller=null;busy.value=false;loading.value=false;clearConsent()}
-function reset(){stop();contextSerial++;contextBusy.value=false;capability.value=null;key.value='';target.value=null;extras.value=[];suggestion.value=null;history.value=[];approved.value=[];task.value='revise';includeHistory.value=true;message.value=''}
+function reset(){repairSerial++;repair.value=null;commitBusy.value=false;stop();contextSerial++;contextBusy.value=false;capability.value=null;key.value='';target.value=null;extras.value=[];suggestion.value=null;history.value=[];approved.value=[];task.value='revise';includeHistory.value=true;message.value=''}
 watch([baseURL,model,key],()=>{history.value=[];suggestion.value=null;approved.value=[]},{flush:'sync'})
 watch(projectModeAvailable,available=>{if(!available&&task.value==='project')task.value='revise'})
+watch([()=>props.compileJob,()=>props.projectRevision,()=>props.compiler,()=>props.source,()=>props.file.revision,()=>props.disabled,repairAvailable],settleRepair,{flush:'post'})
 function clearHistory(){if(!busy.value){history.value=[];suggestion.value=null;approved.value=[];message.value='已开始新对话。'}}
 function approve(id:string,checked:boolean){
  if(busy.value||props.disabled||resultStale.value||!suggestion.value?.changes?.some(change=>change.file_id===id))return
@@ -179,13 +266,13 @@ async function toggleContext(file:PaperFile,checked:boolean){
 }
 function preset(value:string,mode:PaperAITask){if(busy.value)return;instruction.value=value;task.value=mode}
 function diagnosticPreset(){preset('分析以下编译错误，注意行号可能对应之前的编译版本。不要编造内容：\\n'+(props.diagnostics||'').slice(0,1800),'explain')}
-function cancel(){stop();message.value='已取消等待；如果模型服务已收到请求，仍可能产生费用。'}
+function cancel(){if(commitBusy.value)return;stop();message.value='已取消等待；如果模型服务已收到请求，仍可能产生费用。'}
 function discard(){suggestion.value=null;approved.value=[];message.value='已丢弃建议，原稿未修改。'}
 async function generate(){
  if(!canGenerate.value||!target.value||disposed)return
  const captured={...target.value},mode=task.value,initial=scope(),n=++serial,abort=new AbortController()
  controller=abort;busy.value=true;message.value='';suggestion.value=null;approved.value=[]
- const context=extras.value.map(item=>({...item})),base=props.projectRevision
+ const context=extras.value.map(item=>({...item})),base=props.projectRevision,repairJobId=repairActive.value?repair.value?.jobId:undefined
  const currentFile={...props.file,content:captured.baseline}
  const request={base_url:baseURL.value,model:model.value,api_key:key.value.trim(),file_id:captured.fileId,base_revision:captured.revision,source:selectedSource.value,task:mode,instruction:instruction.value,context:context.map(item=>({file_id:item.id,revision:item.revision})),consent:true as const,...(historyAvailable.value&&includeHistory.value&&history.value.length?{history:[...history.value]}:{}),...(mode==='project'?{project_revision:base}:{})}
  clearConsent()
@@ -199,7 +286,8 @@ async function generate(){
    changes=reviewProjectEdits([currentFile,...context],response.edits??[])
    if(!changes)throw new Error('Invalid project plan')
   }
-  suggestion.value={target:captured,task:mode,response,changes,context}
+  if(repairJobId&&(!repair.value||repair.value.phase!=='review'||repair.value.jobId!==repairJobId||!repairJobCurrent(repair.value)))return
+  suggestion.value={target:captured,task:mode,response,changes,context,repairJobId}
   if(historyAvailable.value&&capability.value){
    const reply=mode==='project'?JSON.stringify({summary:response.text,edits:response.edits||[]}):response.text
    history.value=appendAgentHistory(history.value,{task:mode,instruction:request.instruction,reply},Math.min(capability.value.max_history_turns||0,6),Math.min(capability.value.max_history_bytes||0,16384))
@@ -216,16 +304,24 @@ async function acceptProject(){
  if(!item||item.task!=='project'||!item.changes||resultStale.value||props.disabled||busy.value||!props.applyProject||!item.response.project_revision)return
  const chosen=item.changes.filter(change=>approved.value.includes(change.file_id))
  if(!chosen.length)return
- const n=++serial,initial=scope()
- busy.value=true;message.value=''
+ const n=++serial,initial=scope(),repairBefore=item.repairJobId?repair.value:null
+ if(repairBefore)repair.value={...repairBefore,phase:'applying',message:'正在提交已审阅的修复…'}
+ commitBusy.value=true;busy.value=true;message.value=''
  try{
-  const saved=await props.applyProject(item.response.project_revision,chosen.map(({file_id,base_revision,content})=>({file_id,base_revision,content})))
+  const replacements=chosen.map(({file_id,base_revision,content})=>({file_id,base_revision,content}))
+  const saved=repairBefore?await props.applyProject(item.response.project_revision,replacements,{jobId:repairBefore.jobId,compiler:repairBefore.compiler}):await props.applyProject(item.response.project_revision,replacements)
   if(!alive(n,initial))return
-  if(!saved){message.value='未确认提交成功。若项目版本变化或网络中断，请刷新服务器版本后再重新生成，避免重复提交。';return}
+  if(!saved){message.value='未确认提交成功。若项目版本变化或网络中断，请刷新服务器版本后再重新生成，避免重复提交。';if(repairBefore){commitBusy.value=false;busy.value=false;endRepair('修复未确认提交成功，已停止自动编译。')}return}
   suggestion.value=null;approved.value=[];target.value=null;extras.value=[]
   message.value='已原子提交所选文件修改，原版本保留在文件历史中。'
- }catch{if(alive(n,initial))message.value='提交未确认，请核对服务器版本后重试。'}
- finally{if(alive(n,initial))busy.value=false}
+  if(repairBefore){
+   await nextTick()
+   if(!alive(n,initial))return
+   commitBusy.value=false;busy.value=false
+   await runRepairCompile(repairBefore.revision+1,repairBefore.rounds+1,repairBefore.compiler)
+  }
+ }catch{if(alive(n,initial)){message.value='提交未确认，请核对服务器版本后重试。';if(repairBefore){commitBusy.value=false;busy.value=false;endRepair('修复提交未确认，已停止。')}}}
+ finally{if(alive(n,initial)){commitBusy.value=false;busy.value=false}}
 }
 function accept(){
  const item=suggestion.value

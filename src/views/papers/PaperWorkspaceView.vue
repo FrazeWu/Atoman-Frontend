@@ -159,7 +159,7 @@
       <aside v-if="aiPanelOpen&&aiFile" class="papers-workspace__preview papers-workspace__ai-panel" aria-label="AI 论文助手">
         <div class="papers-workspace__preview-heading"><strong>AI 论文助手</strong><span class="papers-workspace__ai-subtitle">审阅后修改</span><PButton size="sm" variant="secondary" type="button" @click="closeTool">返回 PDF</PButton></div>
         <div class="papers-workspace__ai-scroll">
-          <PaperAITools :key="projectId+':'+accountId+':'+aiFile.id+':'+(collaborationOpen?aiSharedState?.epoch:'ordinary')" :project-id="projectId" :account-id="accountId" :file="aiFile" :source="collaborationOpen?(aiSharedState?.source||''):draft" :files="files" :collaboration-epoch="collaborationOpen?aiSharedState?.epoch:undefined" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||compiling||hasActiveCompile||(collaborationOpen&&!aiSharedState?.ready)" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :project-revision="project?.head_revision" :apply-project="applyAIProject" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
+          <PaperAITools :key="projectId+':'+accountId+':'+aiFile.id+':'+(collaborationOpen?aiSharedState?.epoch:'ordinary')" :project-id="projectId" :account-id="accountId" :file="aiFile" :source="collaborationOpen?(aiSharedState?.source||''):draft" :files="files" :collaboration-epoch="collaborationOpen?aiSharedState?.epoch:undefined" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||compiling||hasActiveCompile||(collaborationOpen&&!aiSharedState?.ready)" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :project-revision="project?.head_revision" :apply-project="applyAIProject" :compile-enabled="compileEnabled" :compile-job="compileJob" :compiler="selectedCompiler" :compile-repair="compileForAI" @repair-active="setAIRepairActive" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
         </div>
       </aside>
       <aside v-show="!aiPanelOpen" class="papers-workspace__preview" aria-label="编译预览">
@@ -242,6 +242,7 @@ import PaperMemberTools from '@/components/papers/PaperMemberTools.vue'
 import PaperShareLinks from '@/components/papers/PaperShareLinks.vue'
 import PaperAITools from '@/components/papers/PaperAITools.vue'
 import type {PaperAIEdit,PaperAISharedState} from '@/components/papers/aiSuggestion'
+import {validRepairApplyFence,type RepairApplyFence} from '@/components/papers/aiRepair'
 import PaperCollaborationPanel from '@/components/papers/PaperCollaborationPanel.vue'
 import {collaborationCapabilityError,collaborationUnavailableReason} from '@/components/papers/collaborationCapability'
 import {draftKey,listLocalDrafts,localDraftEnabled,setLocalDraftEnabled,writeLocalDraft,readLocalDraft,removeLocalDraft,sameLocalDraft,matchesLocalDraftBase,type PaperLocalDraft} from '@/components/papers/localDrafts'
@@ -286,6 +287,8 @@ const exportError = ref('')
 const addingFile = ref(false)
 const snapshotMutating=ref(false)
 const aiApplying=ref(false)
+const aiRepairActive=ref(false)
+function setAIRepairActive(active:boolean){aiRepairActive.value=active;if(active)clearAuto();else scheduleAuto()}
 const project = ref<PaperProject | null>(null)
 const ownerAccess=computed(()=>!!project.value&&(project.value.access_role===undefined||project.value.access_role==='owner'))
 const writeAccess=computed(()=>ownerAccess.value||project.value?.access_role==='editor')
@@ -895,11 +898,11 @@ const previewStale = computed(() => !!previewJob.value && (previewJob.value.id !
  (!collaborationOpen.value&&activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)))
 const editorRef=ref<InstanceType<typeof LatexEditor>|null>(null)
 function captureAISelection(){return collaborationOpen.value?(collaborationRef.value?.getAISelection?.()??null):(editorRef.value?.getAISelection?.()??null)}
-async function applyAIProject(base:number,replacements:PaperTextReplacement[]):Promise<boolean>{
+async function applyAIProject(base:number,replacements:PaperTextReplacement[],repairFence?:RepairApplyFence):Promise<boolean>{
  const pid=projectId.value,owner=accountId.value
  const prior=activeFile.value
  const valid=()=>!disposed&&!!owner&&owner===accountId.value&&pid===projectId.value&&project.value?.id===pid&&ownerAccess.value&&toolMode.value==='ai'&&!collaborationOpen.value&&!navigating.value&&!saving.value&&!savePromise&&!switchingFile.value&&!snapshotMutating.value&&!memberMutating.value&&!compiling.value&&!hasActiveCompile.value&&
-  project.value?.head_revision===base&&!!prior&&activeFile.value?.id===prior.id&&activeFile.value.revision===prior.revision&&draft.value===prior.content&&activeFile.value.content===prior.content&&replacements.every(change=>files.value.some(f=>f.id===change.file_id&&f.kind==='text'&&f.revision===change.base_revision))
+  project.value?.head_revision===base&&(!repairFence||(aiRepairActive.value&&validRepairApplyFence(compileJob.value,{projectId:pid,revision:base,compiler:selectedCompiler.value},repairFence)))&&!!prior&&activeFile.value?.id===prior.id&&activeFile.value.revision===prior.revision&&draft.value===prior.content&&activeFile.value.content===prior.content&&replacements.every(change=>files.value.some(f=>f.id===change.file_id&&f.kind==='text'&&f.revision===change.base_revision))
  if(!valid()||uploadBusy.value||aiApplying.value||!replacements.length||replacements.length>5||new Set(replacements.map(row=>row.file_id)).size!==replacements.length)return false
  if(!await confirmPaper('将原子提交 '+replacements.length+' 个已审阅文件的修改？原版本会保留；普通文件管理写入可能使其他协作者的旧会话失效。'))return false
  if(!valid()||uploadBusy.value)return false
@@ -1009,9 +1012,9 @@ function clearAuto(){if(autoTimer)clearTimeout(autoTimer);autoTimer=null}
 function scheduleAuto(){
  clearAuto()
  if(collaborationOpen.value)return
- if(!autoCompile.value||!autoDirty||!compileEnabled.value||recommendedUnavailable.value||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||uploadBusy.value||saveError.value||disposed)return
+ if(aiRepairActive.value||!autoCompile.value||!autoDirty||!compileEnabled.value||recommendedUnavailable.value||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||uploadBusy.value||saveError.value||disposed)return
  autoTimer=setTimeout(()=>{
-  if(!autoCompile.value||!autoDirty||recommendedUnavailable.value||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||uploadBusy.value||saveError.value||disposed||document.visibilityState==='hidden')return
+  if(aiRepairActive.value||!autoCompile.value||!autoDirty||recommendedUnavailable.value||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||uploadBusy.value||saveError.value||disposed||document.visibilityState==='hidden')return
   autoDirty=false;lastAutoCompile=Date.now();void compileNow()
  },Math.max(15000,60000-(Date.now()-lastAutoCompile)))
 }
@@ -1260,7 +1263,12 @@ async function refreshCompileStatus() {
   }
 }
 
-async function compileNow() {
+async function compileNow(){return submitCompile()}
+async function compileForAI(revision:number,compiler:PaperCompiler):Promise<PaperCompileJob|null>{
+ if(!aiRepairActive.value||toolMode.value!=='ai'||collaborationOpen.value||project.value?.head_revision!==revision||selectedCompiler.value!==compiler||draft.value!==activeFile.value?.content||saving.value||savePromise||saveError.value||!activeFile.value)return null
+ return await submitCompile({revision,compiler})??null
+}
+async function submitCompile(expected?:{revision:number;compiler:PaperCompiler}):Promise<PaperCompileJob|undefined> {
   if (!compileEnabled.value || !ownerAccess.value || compiling.value || snapshotMutating.value || hasActiveCompile.value || !project.value || switchingFile.value || navigating.value || uploadBusy.value || disposed) return
   const collaborating=collaborationOpen.value
   if(collaborating&&currentCollaborationRevision()===null)return
@@ -1277,6 +1285,7 @@ async function compileNow() {
     }
     const revision=collaborating?currentCollaborationRevision():project.value?.head_revision
     if(disposed||requestedProjectId!==projectId.value||owner!==accountId.value||collaborating!==collaborationOpen.value||!revision)return
+    if(expected&&(!aiRepairActive.value||toolMode.value!=='ai'||revision!==expected.revision||selectedCompiler.value!==expected.compiler||draft.value!==activeFile.value?.content||collaborationOpen.value))return
     if(!pendingSubmission||pendingSubmission.projectId!==requestedProjectId||pendingSubmission.revision!==revision||pendingSubmission.compiler!==selectedCompiler.value){
       pendingSubmission={projectId:requestedProjectId,revision,compiler:selectedCompiler.value,key:globalThis.crypto?.randomUUID?.()??('compile-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2))}
     }
@@ -1285,6 +1294,7 @@ async function compileNow() {
     pendingSubmission=null
     compileJob.value = job
     scheduleCompilePoll()
+    return job
   } catch(cause) {
     if (!disposed && requestedProjectId === projectId.value&&owner===accountId.value){
       const code=cause instanceof ApiErrorResponseError?cause.code:''
@@ -1417,7 +1427,7 @@ watch(accountId,(next,previous)=>{
  // canonical source or previously authorized PDF.
  collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null;aiSharedState.value=null
  loadSerial++;fileSerial++;pollSerial++;historySerial++;mapSerial++
- pendingSubmission=null;compiling.value=false;canceling.value=false;snapshotMutating.value=false;addingFile.value=false;aiApplying.value=false
+ pendingSubmission=null;compiling.value=false;canceling.value=false;snapshotMutating.value=false;addingFile.value=false;aiApplying.value=false;aiRepairActive.value=false
  clearAuto();stopCompilePoll();mapAbort?.abort()
  activeFile.value=null;draft.value='';files.value=[];project.value=null
  previewJob.value=null;compileJob.value=null;sourceMap.value=null

@@ -1472,7 +1472,7 @@ onBeforeUnmount(() => {
 .papers-workspace__compiler select{color:inherit;background:var(--a-color-bg,#fff);border:1px solid var(--a-color-border-soft,#ddd);border-radius:4px;padding:4px 5px;font:inherit;max-width:104px}
 @media(max-width:1000px){.papers-workspace__compiler>span{display:none}}
 
-.papers-workspace__drop-zone{display:grid;gap:4px;padding:12px 6px;border:1px dashed var(--a-color-border-soft,#aab1ba);border-radius:5px;text-align:center;color:var(--a-color-text-secondary,#64748b);overflow-wrap:anywhere}
+.papers-workspace__drop-zone{display:grid;gap:4px;padding:12px 6px;border:1px solid var(--a-color-border-soft,#aab1ba);border-radius:5px;text-align:center;color:var(--a-color-text-secondary,#64748b);overflow-wrap:anywhere}
 .papers-workspace__drop-zone strong{font-weight:550;color:inherit;font-size:12px}
 .papers-workspace__drop-zone small{font-size:10px}
 .papers-workspace__drop-zone.active,.papers-workspace__files--dropping .papers-workspace__drop-zone{background:var(--a-color-bg-subtle,#e7edf3);border-color:var(--a-color-text-secondary,#64748b);color:var(--a-color-text,#20242c)}

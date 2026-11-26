@@ -62,6 +62,7 @@
           </div>
         </section>
       </form>
+      <PaperGitHubTools mode="import" :account-id="auth.isAuthenticated?auth.user?.uuid||'':''" :disabled="creating||!allowed" @imported="router.push('/papers/'+$event.id)" />
       <p v-if="error" role="alert" class="papers-home__error">{{ error }}</p>
       <div class="papers-home__list-heading">
         <h2>我的论文</h2>
@@ -118,6 +119,7 @@ import PButton from '@/components/ui/PButton.vue'
 import { paperAccess, listPaperProjects, createPaperProject, getPaperApplication, submitPaperApplication, importPaperProject, getPaperProjectZIP, downloadPaperZIP, paperImportZIPLimit, renamePaperProject, trashPaperProject, listTrashedPaperProjects, restorePaperProject, type TrashedPaperProject, type PaperProject, type PaperApplication } from '@/api/papers'
 import { packPaperFolder, packPaperTemplate, suggestPaperProjectName, unsupportedPaperFolderFiles, paperArchiveExclusion } from '@/components/papers/projectArchive'
 import PaperTemplateLibrary from '@/components/papers/PaperTemplateLibrary.vue'
+import PaperGitHubTools from '@/components/papers/PaperGitHubTools.vue'
 import { getPaperTemplate } from '@/components/papers/templateCatalog'
 
 defineOptions({name:'PapersHomeView'})

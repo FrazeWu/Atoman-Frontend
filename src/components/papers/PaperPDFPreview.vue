@@ -45,7 +45,7 @@ import { getPaperCompilePDF } from '@/api/papers'
 import { loadPdfEngine } from '@/utils/bookReaderEngines'
 
 const props=defineProps<{projectId:string;jobId:string;revision:number;assetBlob?:Blob;assetName?:string}>()
-const emit=defineEmits<{ 'pdf-position':[value:{jobId:string;page:number;x:number;y:number}]; 'displayed-job':[jobId:string] }>()
+const emit=defineEmits<{ 'pdf-position':[value:{jobId:string;page:number;x:number;y:number}]; 'displayed-job':[jobId:string] ; 'page-count':[meta:{jobId:string;revision:number;pages:number}] }>()
 const textMode=ref(false)
 const outlineOpen=ref(false),outlineLoading=ref(false)
 const outline=ref<{title:string;page:number;depth:number}[]>([])
@@ -332,6 +332,7 @@ async function load(){
   await nextTick()
   await resizePages(false)
   emit('displayed-job',jid)
+  emit('page-count',{jobId:jid,revision,pages:incoming.numPages})
   await nextTick();restore(a);schedule()
   if(old&&old!==task)void old.destroy().catch(()=>{})
  }catch{

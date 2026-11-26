@@ -29,7 +29,8 @@
     <p v-if="modelsMessage" role="status">{{modelsMessage}}</p>
     <PSelect v-if="modelList.length" :model-value="model" :options="modelList.map(value=>({value,label:value}))" label="可用模型" placeholder="请选择模型" size="sm" :disabled="busy||modelsLoading" @update:model-value="model=String($event)" />
     <PInput v-model.trim="model" label="模型 ID" aria-label="AI 模型" maxlength="128" placeholder="也可手动输入，例如 gpt-4.1-mini" :disabled="busy" />
-    <p>密钥仅保留在当前面板内存中，关闭即清除，不写入数据库或浏览器存储。模型调用由你的 API 账户计费；仅向你选择并明确确认的服务发送源码。</p>
+    <p>默认密钥只保留在当前面板。可主动使用下方本机加密保险库保存配置，模型调用由你的 API 账户计费；仅向你明确确认的服务发送源码。</p>
+    <PaperAIVault :account-id="accountId" :project-id="projectId" :file-id="file.id" :revision="file.revision" v-bind="{baseURL}" :model="model" :api-key="key" :task="task" :instruction="instruction" :history="history" :disabled="busy||commitBusy||repairActive||disabled" @profile="restoreProfile" @restore="restoreCheckpoint" @lock="lockVault" />
    </details>
    <section v-if="repairAvailable||repair" class="paper-ai__context" aria-label="Agent 编译修复">
     <strong>Agent 编译修复</strong>
@@ -55,6 +56,10 @@
    <details class="paper-ai__context">
     <summary>附加项目文件（{{ extras.length }}/{{ capability!.max_extra_files }}）</summary>
     <p>{{task==='project'?'仅允许 Agent 提议修改当前完整文件及下面勾选、预览的文件。':'仅发送下方主动选择并成功预览的已保存文本文件，不发送图片或其他项目内容。'}}</p>
+    <PButton type="button" size="sm" variant="secondary" :disabled="busy||contextBusy||disabled||!target||stale||!instruction.trim()" @click="recommendContext">全项目检索并选择相关文件</PButton>
+    <small>在本站读取已保存文本并按任务关键词、LaTeX 引用关系与编译错误推荐，替换下方附加文件选择。不会直接调用模型；仍需检查发送范围。每次受服务的文件数和字节限制。</small>
+    <p v-if="recommendMessage" role="status">{{recommendMessage}}</p>
+    <div v-for="candidate in recommended" :key="candidate.file.id"><small>{{candidate.file.path}} · {{candidate.reasons.join('；')}}</small></div>
     <PCheckbox v-for="item in eligibleFiles" :key="item.id" class="paper-ai__check" :model-value="extras.some(extra=>extra.id===item.id)" :disabled="busy||contextBusy||(!extras.some(extra=>extra.id===item.id)&&extras.length>=capability!.max_extra_files)" @update:model-value="toggleContext(item,$event)">{{item.path}}</PCheckbox>
     <p v-if="contextBusy">读取文件预览中…</p>
     <details v-for="extra in extras" :key="extra.id"><summary>{{ extra.path }} · v{{ extra.revision }}</summary><pre>{{ extra.content }}</pre></details>
@@ -69,7 +74,7 @@
      <strong>你 · 第 {{index+1}} 轮</strong><pre>{{turn.instruction}}</pre>
      <strong>AI 建议（不表示已应用）</strong><pre>{{turn.reply}}</pre>
     </div>
-    <small>最多 {{capability!.max_history_turns}} 轮、{{capability!.max_history_bytes}} 字节；关闭面板、切换文件或模型配置后清除。</small>
+    <small>最多 {{capability!.max_history_turns}} 轮、{{capability!.max_history_bytes}} 字节；默认关闭面板、切换文件或模型配置后清除；可在保险库中加密保存会话。</small>
     <PButton type="button" size="sm" variant="secondary" :disabled="busy" @click="clearHistory">开始新对话</PButton>
    </details>
    <div class="paper-ai__row">
@@ -120,6 +125,10 @@ import PCheckbox from '@/components/ui/PCheckbox.vue'
 import {paperAIModelPattern,validPaperAIBase,validPaperAIKey} from './aiProvider'
 import PaperAIActivityPanel from './PaperAIActivityPanel.vue'
 import PaperAIDiff from './PaperAIDiff.vue'
+import PaperAIVault from './PaperAIVault.vue'
+import type {AIProfile,AISessionCheckpoint} from './aiVault'
+import {readProjectText,projectFileFence} from './projectRead'
+import {rankProjectContext,chooseProjectContext,type ContextCandidate} from './aiProjectContext'
 import {getPaperFile,type PaperFile,type PaperTextReplacement,type PaperCompileJob,type PaperCompiler} from '@/api/papers'
 import {ApiErrorResponseError} from '@/api/client'
 import {getPaperAICapability,requestPaperAISuggestion,discoverPaperAIModels,type PaperAICapability,type PaperAISuggestion,type PaperAITask,type PaperAIHistoryTurn,type PaperAIActivity} from '@/api/papersAI'
@@ -214,6 +223,7 @@ const historyAvailable=computed(()=>Number.isSafeInteger(capability.value?.max_h
 const projectModeAvailable=computed(()=>capability.value?.project_edits===true&&!props.collaborationEpoch&&!!props.applyProject&&Number.isSafeInteger(props.projectRevision)&&(props.projectRevision||0)>0)
 const projectReady=computed(()=>projectModeAvailable.value&&!!target.value&&target.value.from===0&&target.value.to===target.value.baseline.length&&target.value.baseline===props.file.content&&props.source===props.file.content)
 const busy=ref(false),contextBusy=ref(false)
+const recommended=shallowRef<ContextCandidate[]>([]),recommendMessage=ref('')
 const modelList=ref<string[]>([]),modelsLoading=ref(false),modelsMessage=ref('')
 let modelsSerial=0,modelsController:AbortController|null=null
 const baseValid=computed(()=>!!capability.value&&validPaperAIBase(baseURL.value,capability.value.custom_base_urls===true,capability.value.base_urls))
@@ -257,8 +267,30 @@ function alive(n:number,initial:string){return !disposed&&n===serial&&initial===
 function clearConsent(){consent.value=false}
 watch([baseURL,model,key,instruction,task,target,extras,()=>props.source,()=>props.file.revision,()=>props.disabled,()=>props.projectRevision,extraStale,includeHistory,history],clearConsent,{flush:'sync'})
 function stop(){serial++;controller?.abort();controller=null;busy.value=false;loading.value=false;clearConsent()}
-function reset(){resetModels();repairSerial++;repair.value=null;commitBusy.value=false;stop();contextSerial++;contextBusy.value=false;capability.value=null;key.value='';target.value=null;extras.value=[];suggestion.value=null;history.value=[];approved.value=[];task.value='revise';includeHistory.value=true;message.value=''}
+function reset(){recommended.value=[];recommendMessage.value='';resetModels();repairSerial++;repair.value=null;commitBusy.value=false;stop();contextSerial++;contextBusy.value=false;capability.value=null;key.value='';target.value=null;extras.value=[];suggestion.value=null;history.value=[];approved.value=[];task.value='revise';includeHistory.value=true;message.value=''}
 watch([baseURL,model,key],()=>{history.value=[];suggestion.value=null;approved.value=[]},{flush:'sync'})
+function restoreProfile(profile:AIProfile){
+ if(busy.value||commitBusy.value||repairActive.value||props.disabled||!capability.value)return
+ if(!validPaperAIBase(profile.baseURL,capability.value.custom_base_urls===true,capability.value.base_urls)||!paperAIModelPattern.test(profile.model)||!validPaperAIKey(profile.key)){message.value='保存的配置不符合当前服务限制。';return}
+ baseURL.value=profile.baseURL;model.value=profile.model;key.value=profile.key
+ clearConsent();message.value='已载入加密配置；尚未向模型服务发送请求。'
+}
+function restoreCheckpoint(session:AISessionCheckpoint,profile:AIProfile|undefined){
+ if(busy.value||commitBusy.value||repairActive.value||props.disabled||!capability.value||session.projectId!==props.projectId)return
+ if(!validPaperAIBase(session.baseURL,capability.value.custom_base_urls===true,capability.value.base_urls)||!paperAIModelPattern.test(session.model)){message.value='会话对应的服务已不可用。';return}
+ if(profile)restoreProfile(profile)
+ else if(baseURL.value!==session.baseURL||model.value!==session.model){baseURL.value=session.baseURL;model.value=session.model;key.value=''}
+ instruction.value=session.instruction;task.value=session.task==='project'&&!projectModeAvailable.value?'revise':session.task
+ const restored:PaperAIHistoryTurn[]=[]
+ if(historyAvailable.value)for(const turn of session.history)restored.push(turn)
+ history.value=restored.reduce((all,turn)=>appendAgentHistory(all,turn,Math.min(capability.value!.max_history_turns||0,6),Math.min(capability.value!.max_history_bytes||0,16384)),[] as PaperAIHistoryTurn[])
+ target.value=null;extras.value=[];suggestion.value=null;approved.value=[];includeHistory.value=false;clearConsent()
+ message.value='已恢复会话和任务指令。原文件 '+session.fileId.slice(0,8)+' · v'+session.revision+'；请重新选择当前源码和确认发送范围。'
+}
+function lockVault(){
+ if(busy.value||commitBusy.value||repairActive.value)return
+ key.value='';history.value=[];suggestion.value=null;approved.value=[];clearConsent()
+}
 function resetModels(){modelsSerial++;modelsController?.abort();modelsController=null;modelList.value=[];modelsLoading.value=false;modelsMessage.value=''}
 watch(baseURL,(value,previous)=>{
  if(value!==previous){resetModels();key.value='';model.value=value==='https://api.openai.com/v1'?'gpt-4.1-mini':''}
@@ -315,9 +347,27 @@ function capture(selectionOnly:boolean){
  target.value={...range,fileId:props.file.id,revision:props.file.revision,...(props.collaborationEpoch?{collaborationEpoch:props.collaborationEpoch}:{})}
  suggestion.value=null;message.value='';clearConsent()
 }
+async function recommendContext(){
+ if(disposed||busy.value||contextBusy.value||props.disabled||!target.value||stale.value||!instruction.value.trim()||!capability.value||!props.projectRevision)return
+ const n=++contextSerial,initial=scope(),base=props.projectRevision,manifest=projectFileFence(props.files),query=instruction.value,captured=target.value,diagnosticText=props.diagnostics||'',limits=capability.value
+ const valid=()=>!disposed&&n===contextSerial&&initial===scope()&&props.projectRevision===base&&projectFileFence(props.files)===manifest&&instruction.value===query&&target.value===captured&&!stale.value&&(props.diagnostics||'')===diagnosticText
+ contextBusy.value=true;clearConsent();recommended.value=[];recommendMessage.value='正在检索项目的已保存文本…'
+ try{
+  const rows=await readProjectText([...props.files],base,id=>getPaperFile(props.projectId,id),valid)
+  if(!valid())return
+  const current={...props.file,content:captured.baseline}
+  const ranked=rankProjectContext(rows,current,query,diagnosticText)
+  const selected=chooseProjectContext(ranked,limits.max_extra_files,Math.max(0,limits.max_context_bytes-sourceBytes.value))
+  if(!valid())return
+  extras.value=selected.map(c=>c.file);recommended.value=selected
+  recommendMessage.value='已检索 '+rows.length+' 个文本文件；'+ranked.length+' 个相关候选，已选择 '+selected.length+' 个符合发送容量的文件。请预览并确认。'
+ }catch{if(n===contextSerial&&initial===scope()&&!disposed)recommendMessage.value='未更新发送范围：项目版本变化、读取失败或总源码超过 4 MiB。请刷新后重试。'}
+ finally{if(n===contextSerial)contextBusy.value=false}
+}
+watch([instruction,()=>props.projectRevision,()=>props.file.revision,()=>props.source],()=>{recommended.value=[];recommendMessage.value=''})
 async function toggleContext(file:PaperFile,checked:boolean){
  if(busy.value||contextBusy.value||disposed||!capability.value)return
- if(!checked){extras.value=extras.value.filter(item=>item.id!==file.id);return}
+ if(!checked){extras.value=extras.value.filter(item=>item.id!==file.id);recommended.value=recommended.value.filter(item=>item.file.id!==file.id);return}
  if(extras.value.length>=capability.value.max_extra_files)return
  const n=++contextSerial,initial=scope();contextBusy.value=true;message.value=''
  try{

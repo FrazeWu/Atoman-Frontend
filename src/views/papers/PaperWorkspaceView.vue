@@ -81,15 +81,17 @@
           <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='figures'" @click="toggleTool('figures')">插图</PButton>
           <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='history'" @click="toggleTool('history')">版本历史</PButton>
           <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='snapshots'" @click="toggleTool('snapshots')">项目快照</PButton>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='git'" @click="toggleTool('git')">GitHub</PButton>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='submission'" @click="toggleTool('submission')">投稿检查</PButton>
           <PButton size="sm" variant="secondary" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='drafts'" @click="toggleTool('drafts')">草稿恢复{{ draftRows.length?' ('+draftRows.length+')':'' }}</PButton>
           <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='members'" :disabled="memberMutating||snapshotMutating" @click="toggleTool('members')">项目成员</PButton>
           <PButton size="sm" variant="secondary" type="button" :disabled="switchingFile||navigating||saving||uploadBusy||snapshotMutating||memberMutating||compiling||hasActiveCompile" @click="refreshServerProject">刷新项目</PButton>
         </nav>
         <p v-if="!ownerAccess&&!collaborationOpen" class="papers-workspace__stale" role="status">{{ writeAccess?(collaborationGate.state==='available'?'共享编辑：普通保存会检查文件版本；可使用实时协作。':'共享编辑：保存时检查文件版本，暂不支持实时共同编辑。'):'共享阅读：当前账号无编辑权限。' }}</p>
         <p v-if="refreshMessage" class="papers-workspace__stale" role="status">{{ refreshMessage }}</p>
-        <section v-if="toolMode&&toolMode!=='ai'&&(!collaborationOpen||toolMode==='snapshots')" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'文件历史'">
+        <section v-if="toolMode&&toolMode!=='ai'&&(!collaborationOpen||toolMode==='snapshots')" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':toolMode==='submission'?'投稿检查':toolMode==='git'?'GitHub':'文件历史'">
           <div class="papers-workspace__outline-heading">
-            <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':'当前文件版本历史' }}</strong>
+            <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':toolMode==='submission'?'投稿前检查':toolMode==='git'?'GitHub 分支发布':'当前文件版本历史' }}</strong>
             <PButton size="sm" variant="ghost" v-if="toolMode!=='figures'" type="button" class="papers-workspace__sync"  :disabled="toolBusy||snapshotMutating||memberMutating" @click="refreshTool">刷新</PButton>
             <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" :disabled="snapshotMutating||memberMutating" @click="closeTool">关闭</PButton>
           </div>
@@ -104,6 +106,7 @@
             <PButton size="sm" variant="ghost" v-for="(hit,index) in searchResult.matches" :key="hit.fileId+':'+hit.line+':'+hit.column+':'+index" type="button" class="papers-workspace__toolrow" :disabled="searchStale" @click="jumpSearch(hit)"><strong>{{ hit.path }}:{{ hit.line }}:{{ hit.column }}</strong><code>{{ hit.preview }}</code></PButton>
           </template>
           <template v-else-if="toolMode==='references'">
+            <PaperReferenceImport v-if="ownerAccess" :key="projectId+':'+accountId" :project-id="projectId" :account-id="accountId" :files="files" :disabled="saving||navigating||switchingFile||uploadBusy||snapshotMutating||compiling||hasActiveCompile||(activeFile?.kind==='text'&&draft!==activeFile.content)" :append="appendReferences" />
             <label>查找引用键或标题<PInput v-model="referenceQuery" placeholder="例如 smith2026" maxlength="200" /></label>
             <p v-if="bibError" role="alert">{{ bibError }}</p>
             <p>{{ referenceRows.length }} 条参考文献<span v-if="filteredReferences.length>200">（显示前 200 条）</span>。</p>
@@ -117,7 +120,9 @@
           <p v-if="fileError" role="alert" class="papers-workspace__error">{{ fileError }}</p>
           <PaperFigureTools :key="projectId" :project-id="projectId" :files="files" :disabled="uploadBusy||switchingFile||navigating" :can-insert="activeFile?.kind==='text'&&/\.tex$/i.test(activeFile.path)" @upload="uploadFigureFiles" @insert="insertFigure" />
           </template>
-          <PaperSnapshotTools v-else-if="toolMode==='snapshots'" :key="projectId" :rows="snapshots" :detail="snapshotDetail" :busy="toolBusy||snapshotMutating" :disabled="uploadBusy||switchingFile||navigating||saving||hasActiveCompile||compiling||(collaborationOpen&&collaborationRevision===null)" :restore-disabled="collaborationOpen" :message="snapshotMessage" @create="createSnapshot" @preview="previewSnapshot" @remove="deleteSnapshot" @restore="restoreSnapshot" />
+          <PaperGitHubTools v-else-if="toolMode==='git'&&ownerAccess" :key="projectId+':'+accountId" mode="export" :project-id="projectId" :account-id="accountId" :revision="project?.head_revision||0" :files="files" :disabled="saving||navigating||switchingFile||uploadBusy||snapshotMutating||compiling||hasActiveCompile||(activeFile?.kind==='text'&&draft!==activeFile.content)" />
+          <PaperSubmissionTools v-else-if="toolMode==='submission'&&ownerAccess" :key="projectId+':'+accountId" :project-id="projectId" :account-id="accountId" :revision="project?.head_revision||0" :files="files" :disabled="saving||navigating||switchingFile||uploadBusy||snapshotMutating||compiling||hasActiveCompile||(activeFile?.kind==='text'&&draft!==activeFile.content)" :compile-job="compileJob" :pdf="previewStale?null:submissionPDF" />
+          <PaperSnapshotTools v-else-if="toolMode==='snapshots'" :key="projectId" :project-id="projectId" :account-id="accountId" :rows="snapshots" :detail="snapshotDetail" :busy="toolBusy||snapshotMutating" :disabled="uploadBusy||switchingFile||navigating||saving||hasActiveCompile||compiling||(collaborationOpen&&collaborationRevision===null)" :restore-disabled="collaborationOpen" :message="snapshotMessage" @create="createSnapshot" @preview="previewSnapshot" @remove="deleteSnapshot" @restore="restoreSnapshot" />
           <PaperDraftTools v-else-if="toolMode==='drafts'" :key="projectId+':'+accountId" :available="draftAvailable" :enabled="draftEnabled" :rows="draftRows" :files="files" :disabled="uploadBusy||switchingFile||navigating||saving" :can-recover="canRecoverDraft" :message="draftMessage" @toggle="toggleDraftProtection" @recover="recoverDraft" @remove="discardDraft" />
           <template v-else-if="toolMode==='members'">
             <PaperShareLinks v-if="ownerAccess" :key="'share:'+projectId+':'+accountId" :project-id="projectId" :account-id="accountId" :disabled="navigating||memberMutating||snapshotMutating" />
@@ -223,6 +228,7 @@
           :revision="previewJob.source_revision"
           @pdf-position="jumpFromPDF"
           @displayed-job="displayedPDFJob = $event"
+          @page-count="submissionPDF = $event"
         />
       </aside>
     </div>
@@ -262,6 +268,11 @@ import {paperFileTree,preparePaperUploads} from '@/components/papers/fileTools'
 import {searchProject,planProjectReplacement,bibtexReferences,changedLineRange,type ProjectMatch,type PaperReference} from '@/components/papers/projectTools'
 import {latexHeadings,recommendedTexCompiler,type LatexHeading} from '@/components/papers/latexLanguage'
 import PaperPDFPreview from '@/components/papers/PaperPDFPreview.vue'
+import PaperSubmissionTools from '@/components/papers/PaperSubmissionTools.vue'
+import PaperReferenceImport from '@/components/papers/PaperReferenceImport.vue'
+import PaperGitHubTools from '@/components/papers/PaperGitHubTools.vue'
+import {planBibtexAppend,existingBibtexKeys} from '@/components/papers/referenceImport'
+import {readProjectText,projectFileFence} from '@/components/papers/projectRead'
 import { decodeSourceMap, sourceToPDF, pdfToSource, type PaperSourceMap } from '@/components/papers/sourceMap'
 import {
   createPaperFile, managePaperFiles, getPaperFile, getPaperProject, listPaperFiles, savePaperFile, getPaperProjectZIP, downloadPaperZIP,
@@ -437,7 +448,7 @@ const draft = ref('')
 function updateDraft(value:string){if(writeAccess.value&&!collaborationOpen.value)draft.value=value}
 const refreshMessage=ref('')
 
-type ToolMode='search'|'references'|'history'|'figures'|'snapshots'|'drafts'|'members'|'ai'
+type ToolMode='search'|'references'|'history'|'figures'|'snapshots'|'drafts'|'members'|'ai'|'submission'|'git'
 const toolMode=ref<ToolMode|''>(''),toolBusy=ref(false),toolError=ref('')
 const aiFile=computed<PaperFile|null>(()=>{
  const file=activeFile.value
@@ -561,7 +572,7 @@ function onDraftStorage(event:StorageEvent){
 let toolSerial=0,bibSerial=0
 function formatVersionDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString()}
 function closeTool(){if(aiApplying.value)return;toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null;snapshotDetail.value=null}
-function toggleTool(mode:ToolMode){if(aiApplying.value)return;if((collaborationOpen.value&&mode!=='snapshots'&&(mode!=='ai'||!aiSharedState.value?.ready))||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures','ai'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;if(mode==='ai')layoutMode.value='split';refreshTool()}
+function toggleTool(mode:ToolMode){if(aiApplying.value)return;if((collaborationOpen.value&&mode!=='snapshots'&&(mode!=='ai'||!aiSharedState.value?.ready))||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures','ai','submission','git'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;if(mode==='ai')layoutMode.value='split';refreshTool()}
 function refreshTool(){if(toolMode.value==='search')void loadSearchSources();else if(toolMode.value==='references')void refreshBib();else if(toolMode.value==='history')void loadVersions();else if(toolMode.value==='snapshots')void loadSnapshots();else if(toolMode.value==='drafts')refreshLocalDrafts();else if(toolMode.value==='members'&&ownerAccess.value)void loadMembers()}
 function memberError(cause:unknown){
  const code=cause instanceof ApiErrorResponseError?cause.code:''
@@ -730,6 +741,40 @@ async function jumpSearch(hit:ProjectMatch){
  await selectFile(file);await nextTick()
  if(activeFile.value?.id===hit.fileId&&activeFile.value.revision===hit.revision)editorRef.value?.goToMatch(hit.line,hit.column,searchQuery.value.length)
 }
+async function appendReferences(targetId:string,raw:string):Promise<boolean>{
+ const pid=projectId.value,owner=accountId.value,base=project.value?.head_revision,prior=activeFile.value,manifest=projectFileFence(files.value)
+ if(!base||!prior)return false
+ const valid=()=>!disposed&&!!owner&&owner===accountId.value&&pid===projectId.value&&project.value?.id===pid&&project.value?.head_revision===base&&manifest===projectFileFence(files.value)&&ownerAccess.value&&toolMode.value==='references'&&!collaborationOpen.value&&!navigating.value&&!saving.value&&!savePromise&&!switchingFile.value&&!snapshotMutating.value&&!memberMutating.value&&!compiling.value&&!hasActiveCompile.value&&!preparingUpload.value&&activeFile.value?.id===prior.id&&activeFile.value.revision===prior.revision&&(prior.kind!=='text'||draft.value===prior.content)
+ if(!valid()||uploadBusy.value)return false
+ const bibFiles=files.value.filter(f=>f.kind==='text'&&/\.bib$/i.test(f.path))
+ if(targetId==='new'?(bibFiles.length!==0||files.value.some(f=>f.path==='references.bib')):!bibFiles.some(f=>f.id===targetId))return false
+ toolError.value=''
+ try{
+  const rows=await readProjectText(bibFiles,base,id=>getPaperFile(pid,id),valid)
+  if(!valid()||uploadBusy.value)return false
+  const current=rows.find(f=>f.id===targetId)
+  if(targetId!=='new'&&!current)return false
+  const plan=planBibtexAppend(current?.content||'',raw,rows.flatMap(r=>existingBibtexKeys(r.content)))
+  if(!await confirmPaper('将 '+plan.keys.length+' 条 BibTeX 文献导入 '+(current?.path||'references.bib')+'？仅追加条目，不自动插入正文引用。'))return false
+  if(!valid()||uploadBusy.value)return false
+  addingFile.value=true;clearAuto()
+  try{
+   await nextTick()
+   if(!valid())return false
+   const result=current?await managePaperFiles(pid,{action:'replace_text',base_revision:base,replacements:[{file_id:current.id,base_revision:current.revision,content:plan.content}]}):await managePaperFiles(pid,{action:'upload',base_revision:base,uploads:[{path:'references.bib',kind:'text',content:plan.content}]})
+   if(!valid())return false
+   const saved=result.files.find(f=>f.path===(current?.path||'references.bib')&&f.kind==='text')
+   if(result.project.id!==pid||result.project.head_revision!==base+1||!saved||(current&&(saved.id!==current.id||saved.revision!==current.revision+1)))throw Error('Unexpected import result')
+   const updated=result.files.find(f=>f.id===prior.id)
+   if(!updated)throw Error('Active file missing')
+   project.value={...result.project,access_role:'owner'};files.value=result.files
+   const content=updated.id===saved.id?plan.content:prior.content
+   activeFile.value={...updated,content};draft.value=content;saveStatus.value='已保存';autoDirty=true
+   await refreshBib()
+   return true
+  }finally{if(pid===projectId.value&&owner===accountId.value){addingFile.value=false;scheduleAuto()}}
+ }catch(e){if(pid===projectId.value&&owner===accountId.value&&!disposed)toolError.value=e instanceof Error&&e.message.startsWith('项目已有引用键')?e.message:'参考文献导入未确认，请刷新项目并检查引用键。';return false}
+}
 async function jumpReference(entry:PaperReference){
  const file=files.value.find(f=>f.id===entry.fileId)
  if(!file)return
@@ -849,6 +894,7 @@ function compilerChanged(){compilerChangedByUser=true;autoDirty=true;scheduleAut
 const pdfEnabled = ref(false)
 const compileJob = ref<PaperCompileJob | null>(null)
 const previewJob = ref<PaperCompileJob | null>(null)
+const submissionPDF=ref<{jobId:string;revision:number;pages:number}|null>(null)
 const sharedPreviewBusy=ref(false),sharedPreviewError=ref('')
 let sharedPreviewSerial=0
 async function loadSharedPreview(){

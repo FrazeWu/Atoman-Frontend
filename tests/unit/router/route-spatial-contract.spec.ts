@@ -71,8 +71,8 @@ describe('route-spatial-contract', () => {
       const resolved = router.resolve(target)
       expect(resolved.matched.length).toBeGreaterThan(0)
       const last = resolved.matched[resolved.matched.length - 1]
-      expect(last.path).not.toBe('/:pathMatch(.*)*')
-      expect(last.path).not.toBe('/__not_found__')
+      expect(last.path, target).not.toBe('/:pathMatch(.*)*')
+      expect(last.path, target).not.toBe('/__not_found__')
     }
   })
 })

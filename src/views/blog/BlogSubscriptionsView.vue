@@ -53,7 +53,7 @@
         description="关注创作者或订阅专栏合集后，最新博文与短笺将呈现在这里"
       >
         <template #action>
-          <PButton variant="primary" size="sm" to="/posts/explore">
+          <PButton variant="primary" size="sm" to="/posts">
             发现更多精彩
           </PButton>
         </template>

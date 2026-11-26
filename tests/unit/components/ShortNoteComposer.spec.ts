@@ -18,10 +18,13 @@ function uploadFile(wrapper: ReturnType<typeof mount>, file: File) {
 afterEach(() => mockedApiRequestResult.mockReset())
 
 describe('ShortNoteComposer', () => {
-  it('shows the 500-character limit and an image picker', () => {
+  it('shows the 500-character limit after typing and an image picker', async () => {
     const wrapper = mount(ShortNoteComposer, { global: { plugins: [createPinia()] } })
 
-    expect(wrapper.text()).toContain('0/500')
+    expect(wrapper.get('textarea').attributes('maxlength')).toBe('500')
+    expect(wrapper.find('.short-note-composer__count').exists()).toBe(false)
+    await wrapper.get('textarea').setValue('abc')
+    expect(wrapper.text()).toContain('3/500')
     expect(wrapper.find('input[type="file"]').attributes('accept')).toContain('image/')
     expect(wrapper.get('button[type="submit"]').text()).toBe('发布')
     expect(wrapper.get('textarea').classes()).toContain('p-textarea')

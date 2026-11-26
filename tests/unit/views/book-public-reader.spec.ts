@@ -83,7 +83,8 @@ describe('BookPublicReaderView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Public text')
-    expect(wrapper.text()).toContain('公共正文')
+    expect(wrapper.get('[aria-label="举报这本公共电子书"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[aria-label="添加书签"]').exists()).toBe(true)
     expect(privateStateSpy).not.toHaveBeenCalled()
     wrapper.unmount()
   })

@@ -64,6 +64,7 @@ describe("books module foundation", () => {
       "note-shares/:shareKey",
       "shared-notes",
       "edition/:editionId",
+      "author/:personId",
       "tags",
       "shelf",
       "library",
@@ -74,11 +75,15 @@ describe("books module foundation", () => {
       "notes",
       "read",
       "read/:workId/:assetId/:revisionId",
+      "read/:assetId",
+      "public-read/:assetId",
     ]);
     expect(
       children.find((route) => route.path === "library")?.meta?.requiresAuth,
     ).toBe(true);
-    expect(children.some(route => ['authors', 'contributions', 'review', 'read/:assetId'].includes(route.path))).toBe(false);
+    expect(children.some(route => ['authors', 'contributions', 'review'].includes(route.path))).toBe(false);
+    expect(children.find(route => route.path === 'read/:assetId')?.meta?.requiresAuth).toBe(true);
+    expect(children.find(route => route.path === 'public-read/:assetId')?.meta?.requiresAuth).toBeUndefined();
   });
 
   it("keeps discovery mounted under route-driven detail sheets", () => {

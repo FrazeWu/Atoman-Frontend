@@ -838,8 +838,6 @@ body:has(.studio-layout) {
 	overflow-x: hidden;
 	overscroll-behavior: contain;
 	background: rgba(15, 23, 42, 0.45);
-	backdrop-filter: blur(4px);
-	-webkit-backdrop-filter: blur(4px);
 }
 .a-modal,
 .p-modal {

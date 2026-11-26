@@ -639,7 +639,7 @@ onMounted(() => {
   font-size: 0.8125rem;
   text-decoration: none;
   line-height: 1.35;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .channel-clickable-pill:hover {

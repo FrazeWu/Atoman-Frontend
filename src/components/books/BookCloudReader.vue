@@ -1,10 +1,11 @@
 <template>
   <div class="cloud-reader" @pointerdown.capture="reading.activity" @keydown.capture="reading.activity" @wheel.capture.passive="reading.activity" @touchstart.capture.passive="reading.activity">
-    <div v-if="!opened" class="cloud-reader__status">
+    <div v-if="!opened || reading.status.value === 'offline'" class="cloud-reader__status">
       <span role="status" aria-live="polite">{{ message }}</span>
       <PButton v-if="reading.status.value === 'offline'" variant="secondary" @click="retry">重试同步</PButton>
       <PButton v-if="!opened && reading.status.value === 'offline'" variant="ghost" @click="localOnly = true">仅本机阅读</PButton>
     </div>
+    <span v-else class="cloud-reader__sr-status" role="status" aria-live="polite">{{ message }}</span>
     <div v-if="reading.status.value === 'conflict'" class="cloud-reader__conflict" role="alert">
       <p>其他设备已更新进度（云端：{{ formatPositionSummary(reading.conflict.value) }}；本机：{{ formatPositionSummary(reading.localPosition.value) }}）。请选择继续位置，不会自动覆盖。</p>
       <PButton variant="secondary" @click="chooseCloud">采用云端位置（{{ formatPositionSummary(reading.conflict.value) }}）</PButton>
@@ -29,7 +30,7 @@
       @annotation-delete="deleteHighlight"
       @chapter-note="openChapterNote"
     />
-    <div v-if="opened && chapterListOpen" class="cloud-reader__note-actions">
+    <div v-if="opened" class="cloud-reader__note-actions">
       <PButton size="sm" variant="ghost" @click="toggleChapterNotes">{{ chapterListOpen ? '收起本书笔记' : '查看本书章节笔记' }}</PButton>
       <RouterLink :to="`/books/work/${source.asset.work_id}/notes?revision_id=${revisionId}`">本作品全部笔记</RouterLink>
     </div>
@@ -452,6 +453,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
+.cloud-reader__sr-status { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .cloud-reader__status { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; color: var(--a-color-muted-soft); padding: 0.5rem 1rem; }
 .cloud-reader__discussions { display: none; }
 .cloud-reader__conflict { padding: 1rem; border: 1px solid var(--a-color-border-soft); }

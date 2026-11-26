@@ -759,7 +759,7 @@ onMounted(() => {
   cursor: pointer;
   font-size: 0.85rem;
   color: var(--a-color-muted);
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   position: relative;
 }
 
@@ -772,7 +772,7 @@ onMounted(() => {
   background: var(--a-color-bg);
   color: var(--a-color-fg);
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
 }
 
 .macos-folder-item-left {
@@ -982,7 +982,7 @@ onMounted(() => {
   padding: 0.2rem 0.55rem;
   border-radius: var(--a-radius-control, 4px);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .collection-subscribe-btn:hover {

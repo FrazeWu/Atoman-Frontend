@@ -400,6 +400,23 @@ describe("useDialogFocus", () => {
       expect(close).toHaveBeenCalledTimes(1);
     });
 
+    it("does not let a later-mounted lower sheet suppress Escape on the top layer", async () => {
+      const openTop = ref(true);
+      const openLower = ref(true);
+      const closeTop = vi.fn();
+      const closeLower = vi.fn();
+      const root = ref<HTMLElement | null>(container);
+      useDialogFocus(openTop, root, closeTop, { isTopLayer: true, initialFocus: false });
+      useDialogFocus(openLower, root, closeLower, { isTopLayer: false, initialFocus: false });
+      await flush();
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+      expect(closeTop).toHaveBeenCalledTimes(1);
+      expect(closeLower).not.toHaveBeenCalled();
+      openTop.value = false;
+      openLower.value = false;
+      await flush();
+    });
+
     it("global focusin interceptor redirects focus back into dialog if top layer", async () => {
       container.innerHTML = `<button id="dialog-btn">Inside Dialog</button>`;
       const outsideBtn = document.createElement("button");

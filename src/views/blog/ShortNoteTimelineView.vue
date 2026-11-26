@@ -449,11 +449,11 @@ onBeforeUnmount(() => loadMoreObserver?.disconnect())
 
 /* 发布新短笺时向下推出动效 */
 .note-push-enter-active {
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .note-push-leave-active {
-  transition: all 0.25s ease;
+  transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
 .note-push-enter-from {
@@ -634,7 +634,7 @@ onBeforeUnmount(() => loadMoreObserver?.disconnect())
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .short-note-timeline__topic-pill:hover {

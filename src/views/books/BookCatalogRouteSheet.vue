@@ -259,7 +259,6 @@ body.is-book-reader-open {
     height: 36px !important;
     border-radius: 9999px !important;
     background: var(--a-color-surface-muted, rgba(0, 0, 0, 0.08)) !important;
-    backdrop-filter: blur(12px) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;

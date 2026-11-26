@@ -97,7 +97,7 @@ export function getFocusableElements(container: HTMLElement | null): HTMLElement
 
 let originalHtmlOverflow = "";
 export let activeScrollLockCount = 0;
-const activeDialogStack: symbol[] = [];
+const activeDialogStack: { id: symbol; eligible: () => boolean }[] = [];
 
 export function hasActiveDialog(): boolean {
   if (activeDialogStack.length > 0) return true;
@@ -136,15 +136,15 @@ export function useDialogFocus(
   let hasLockedScroll = false;
   let isListening = false;
 
+  const eligible = () => options.isTopLayer === undefined || Boolean(unref(options.isTopLayer));
   const isCurrentTopLayer = (): boolean => {
-    const stackIndex = activeDialogStack.indexOf(dialogId);
-    if (stackIndex !== -1 && stackIndex < activeDialogStack.length - 1) {
-      return false;
+    // A lower sheet can mount after the visual top sheet. Its explicit
+    // layer state must not prevent the real top dialog handling Escape.
+    for (let index = activeDialogStack.length - 1; index >= 0; index--) {
+      const entry = activeDialogStack[index];
+      if (entry?.eligible()) return entry.id === dialogId;
     }
-    if (options.isTopLayer !== undefined) {
-      return Boolean(unref(options.isTopLayer));
-    }
-    return activeDialogStack[activeDialogStack.length - 1] === dialogId;
+    return false;
   };
 
   const lockBodyScroll = () => {
@@ -173,13 +173,13 @@ export function useDialogFocus(
   };
 
   const pushToStack = () => {
-    if (!activeDialogStack.includes(dialogId)) {
-      activeDialogStack.push(dialogId);
+    if (!activeDialogStack.some(entry => entry.id === dialogId)) {
+      activeDialogStack.push({ id: dialogId, eligible });
     }
   };
 
   const removeFromStack = () => {
-    const idx = activeDialogStack.indexOf(dialogId);
+    const idx = activeDialogStack.findIndex(entry => entry.id === dialogId);
     if (idx !== -1) {
       activeDialogStack.splice(idx, 1);
     }

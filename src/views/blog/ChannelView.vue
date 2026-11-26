@@ -481,6 +481,10 @@ const loadChannel = async () => {
   channel.value = null
   collections.value = []
   channelPosts.value = []
+  activeCollectionId.value = null
+  channelSubscribed.value = false
+  channelSubscribeLoading.value = false
+  postsLoading.value = false
   postsPage.value = 1
   postsTotal.value = 0
   postsHasMore.value = false
@@ -498,7 +502,7 @@ const loadChannel = async () => {
     return
   }
 
-  void loadCreatorTheme(loadedChannel.user?.uuid || loadedChannel.user_id)
+  void loadCreatorTheme(loadedChannel.user?.uuid || loadedChannel.user_id).catch(() => { /* Optional creator styling must not interrupt channel content. */ })
   await Promise.all([
     fetchCollections(loadedChannel, param, slug, generation),
     fetchPosts(loadedChannel, generation),

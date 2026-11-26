@@ -20,8 +20,11 @@ describe("UI 准则", () => {
 		const globalStyle = read("src/style.css");
 
 		expect(topbar).not.toMatch(/border-bottom\s*:/);
+		// The approved topbar hides the resting line, revealing it on scroll.
+		expect(topbar).toMatch(/\.topbar::after\s*\{[^}]*opacity:\s*0\s*;/);
+		expect(topbar).toMatch(/\.topbar\.is-scrolled::after\s*\{[^}]*opacity:\s*1\s*;/);
 		expect(topbar).toMatch(
-			/\.topbar::after\s*\{[\s\S]*?left:\s*calc\(50%\s*\+\s*var\(--a-sidebar-width,\s*0px\)\s*\/\s*2\)[\s\S]*?width:\s*20px[\s\S]*?height:\s*1px/,
+			/\.topbar::after\s*\{[\s\S]*?left:\s*calc\(50%\s*\+\s*var\(--a-sidebar-width,\s*0px\)\s*\/\s*2\)[\s\S]*?width:\s*0[;\s]+height:\s*1px/,
 		);
 		expect(topbar).toMatch(
 			/\.topbar\.is-scrolled::after\s*\{[\s\S]*?width:\s*calc\(\(100%\s*-\s*var\(--a-sidebar-width,\s*0px\)\)\s*\*\s*0\.75\)/,

@@ -1,9 +1,9 @@
 <template>
  <section class="papers-collab" aria-label="实时协作">
   <div class="papers-collab__bar">
-   <strong>实时协作 · {{ file.path }}</strong>
+   <strong>实时协作</strong>
    <span role="status">{{ statusLabel }}</span>
-   <button v-if="view?.text" type="button" @click="copySource">复制协作源码</button>
+   <button v-if="view?.text" type="button" @click="copySource">复制源码</button>
    <button type="button" :disabled="operationBusy" @click="requestExit">退出协作</button>
   </div>
   <p v-if="message" role="alert">{{ message }}</p>
@@ -36,9 +36,14 @@
     <span class="papers-collab__dot" :style="{backgroundColor:peerColor(peer.connection_id)}" />{{ peer.name }}{{peer.connection_id===view.connectionId?'（我）':''}}
    </span>
   </div>
-  <p v-if="view?.text" class="papers-collab__hint">仅同步当前文件。协作期间暂停普通保存和项目结构修改；所有者可编译或创建已确认版本的项目快照；断线默认暂停编辑并尝试恢复原协作会话；可选择离线编辑和本机草稿保护。撤销仅影响当前编辑器中的本地操作。</p>
+  <details v-if="view?.text" class="papers-collab__help"><summary>协作说明</summary><p class="papers-collab__hint">仅同步当前文件。普通保存与项目结构修改暂停；所有者可编译及快照已确认版本。断线默认暂停编辑；可开启本机草稿保护和离线编辑。撤销只影响本地操作。</p></details>
   <LatexEditor v-if="view?.text" :key="view.epoch" :model-value="view.source" :collaborative-text="view.text" :citations="citations" :readonly="!editable" :can-edit-collaboration="canEditNow" :remote-peers="remotePeers" @presence-selection="selectionChanged" />
-  <p v-else class="papers-collab__empty">{{ message?'请退出协作，继续普通编辑。':'正在验证项目权限并读取服务端文档…' }}</p>
+  <div v-else class="papers-collab__empty">
+   <p v-if="view?.status==='stopped'||message">连接未建立。普通编辑模式仍可使用。</p>
+   <p v-else>正在验证项目权限并读取服务端文档…</p>
+   <div v-if="view?.status==='stopped'||message" class="papers-collab__draft-actions"><button type="button" @click="retryInitialConnection">重新连接</button><button type="button" :disabled="operationBusy" @click="requestExit">返回普通编辑</button></div>
+   <pre class="papers-collab__source-preview" aria-label="连接前已保存的源码">{{ file.content }}</pre>
+  </div>
   <textarea v-if="copyFallback" readonly :value="view?.source||''" aria-label="可手动复制的协作源码" />
   <PConfirm :show="!!confirmationMessage" title="请确认操作" :message="confirmationMessage" danger @confirm="resolveConfirmation(true)" @cancel="resolveConfirmation(false)" />
  </section>
@@ -47,6 +52,7 @@
 import {computed,onBeforeUnmount,onMounted,onUnmounted,ref,shallowRef} from 'vue'
 import {getPaperCollaborationCapability,type PaperFile,type PaperProjectRole} from '@/api/papers'
 import {useApiWebSocketUrl} from '@/composables/useApiUrl'
+import {paperSocketProtocols} from './collaborationSocketAuth'
 import {collaborationCapabilityError,collaborationUnavailableReason} from './collaborationCapability'
 import {useAuthStore} from '@/stores/auth'
 import PConfirm from '@/components/ui/PConfirm.vue'
@@ -217,8 +223,7 @@ async function copySource(){
  try{await navigator.clipboard.writeText(source);message.value='当前协作源码已复制。'}
  catch{copyFallback.value=true;message.value='请从下方文本框手动复制。'}
 }
-onMounted(async()=>{
- window.addEventListener('storage',storageChanged)
+async function connectInitial(){
  try{
   const capability=await getPaperCollaborationCapability(props.projectId,props.file.id)
   if(!scope())return
@@ -230,7 +235,8 @@ onMounted(async()=>{
    url:useApiWebSocketUrl(path)+(capability.presence===true?'?presence=1':''),expectedRole:props.role,presence:capability.presence===true,reconnect:true,
    createSocket:url=>{
     if(!scope())throw Error('collaboration account changed')
-    return auth.token?new WebSocket(url,[`atoman.api.${auth.token}`]):new WebSocket(url)
+    const protocols=paperSocketProtocols(auth.token)
+    return protocols?new WebSocket(url,protocols):new WebSocket(url)
    },
    onChange:next=>{if(scope()){view.value=next;syncCollaborationDraft(next);emit('confirmed',confirmedRevision())}},
   })
@@ -239,7 +245,13 @@ onMounted(async()=>{
   if(!session)emit('unavailable',collaborationCapabilityError(error))
   else message.value='无法建立协作连接，请检查网络后重试。'
  }}
-})
+}
+function retryInitialConnection(){
+ if(!scope()||props.operationBusy||view.value?.epoch||view.value?.pending)return
+ session?.destroy();session=null;view.value=null;message.value=''
+ void connectInitial()
+}
+onMounted(()=>{window.addEventListener('storage',storageChanged);void connectInitial()})
 onBeforeUnmount(()=>{disposed=true;window.removeEventListener('storage',storageChanged);draftRows.value=[]})
 onUnmounted(()=>{session?.destroy();session=null;view.value=null})
 defineExpose({hasUnconfirmed,requestExit,confirmedRevision})
@@ -264,4 +276,11 @@ defineExpose({hasUnconfirmed,requestExit,confirmedRevision})
 .papers-collab__dot{width:8px;height:8px;flex-shrink:0;border-radius:50%}
 .papers-collab :deep(.papers-latex-editor){flex:1;min-height:0}
 .papers-collab textarea{min-height:100px;max-height:25%;width:100%;font:12px monospace;box-sizing:border-box}
+ .papers-collab__bar>button:first-of-type{margin-left:auto}
+.papers-collab__help{padding:4px 10px;font-size:11px;color:var(--a-color-text-secondary,#64748b)}
+.papers-collab__help summary{cursor:pointer}
+.papers-collab__empty{display:flex;flex:1;min-height:0;flex-direction:column;padding:8px 10px;gap:8px;overflow:hidden}
+.papers-collab__empty p{padding:0}
+.papers-collab__empty button{font:inherit;font-size:12px;border:1px solid var(--a-color-border-soft,#ddd);border-radius:4px;background:transparent;color:inherit;padding:5px 8px}
+.papers-collab__source-preview{flex:1;min-height:0;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.65 monospace;color:var(--a-color-text-secondary,#64748b);margin:0;padding:12px;background:var(--a-color-bg-subtle,#f4f6f8)}
 </style>

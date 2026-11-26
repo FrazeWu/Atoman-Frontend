@@ -450,6 +450,10 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 	const song = record(detail?.song);
 	if (!song || !text(song.id) || !text(song.title) ||
 		(text(song.lifecycle_status) && text(song.lifecycle_status) !== "active")) return undefined;
+	// The public detail API resolves merged song IDs to a visible active target.
+	// A canonical URL must identify that target, not the historical request.
+	const returnedId = text(song.id);
+	const canonicalId = uuidPattern.test(id) && uuidPattern.test(returnedId) ? returnedId.toLowerCase() : id;
 	const title = text(song.title);
 	const artists = names(detail?.artists);
 	const album = record(song.album);
@@ -482,7 +486,7 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 		lifecycle_status: text(song.lifecycle_status),
 		status: text(song.status),
 		entry_status: text(song.entry_status),
-	}) ? getSongEditorialNote(id, title, text(album?.id) || text(song.album_id)) : undefined;
+	}) ? getSongEditorialNote(canonicalId, title, text(album?.id) || text(song.album_id)) : undefined;
 	const description = plainText(song.description, editorialNote?.text || factualFallback);
 	const relatedLinks = ([
 		{ record: record(detail?.previous), prefix: "上一首" },
@@ -494,7 +498,7 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 			? [{ href, label: `${prefix}：${label}` }] : [];
 	});
 	return content(
-		`/music/song/${encodeURIComponent(id)}`,
+		`/music/song/${encodeURIComponent(canonicalId)}`,
 		[
 			`《${title}》${artists.length ? ` - ${artists.join("、")}` : ""}`,
 			"歌曲",

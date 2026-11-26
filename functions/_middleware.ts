@@ -165,6 +165,18 @@ export async function onRequest(context: MiddlewareContext) {
 			requestUrl.origin,
 			seoFetcher,
 		);
+        // A successful public song lookup can resolve a merged historical ID.
+        // Redirect only validated song-to-song UUID paths on the same origin.
+        const songPath = /^\/music\/song\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i;
+        const requestedSong = requestUrl.pathname.match(songPath);
+        const canonicalSong = lookup.content?.path.match(songPath);
+        if (response.status === 200 && !lookup.retryable && requestedSong && canonicalSong &&
+            requestedSong[1].toLowerCase() !== canonicalSong[1].toLowerCase() &&
+            (context.request.method === "GET" || context.request.method === "HEAD")) {
+            const destination = new URL(requestUrl.href);
+            destination.pathname = "/music/song/" + canonicalSong[1].toLowerCase();
+            return new Response(null, { status: 301, headers: { location: destination.href, "cache-control": "no-store" } });
+        }
 		// A failed SEO lookup is not a successful, indexable detail page.
 		// Keep the client application shell, but tell crawlers to retry rather
 		// than returning duplicate generic HTML with status 200.

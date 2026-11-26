@@ -510,6 +510,41 @@ describe("public content SEO", () => {
 		expect(fetcher).not.toHaveBeenCalled();
 	});
 
+	it("uses the actual active target ID as canonical and redirects merged song aliases", async () => {
+		const alias = "01a07774-5cc5-7963-8c45-0d7001d962da";
+		const target = "01a01037-7a14-786d-8c05-c2f3fb559ce5";
+		const origin = "https://www.atoman.org";
+		const sourcePath = "/music/song/" + alias;
+		const targetPath = "/music/song/" + target;
+		const responseData = (id: string, lifecycle_status = "active") => json({ data: { song: { id, title: "Example", lifecycle_status }, artists: [] } });
+		const fetcher = vi.fn(async () => responseData(target)) as unknown as typeof fetch;
+		const lookup = await resolvePublicContentSeo(sourcePath, undefined, origin, fetcher);
+		expect(lookup.content?.path).toBe(targetPath);
+		expect(buildPublicContentHtml(shell, lookup.content!)).toContain(`rel="canonical" href="${origin}${targetPath}"`);
+		const run = (path: string, fetch: () => Promise<Response>, method = "GET") => pageMiddleware({
+			request: new Request(origin + path, { method }),
+			env: { SEO_ORIGIN: { fetch } },
+			next: async () => new Response(shell, { headers: { "content-type": "text/html" } }),
+		});
+		for (const method of ["GET", "HEAD"]) {
+			const response = await run(sourcePath, async () => responseData(target), method);
+			expect(response.status).toBe(301);
+			expect(response.headers.get("location")).toBe(origin + targetPath);
+			expect(response.headers.get("cache-control")).toBe("no-store");
+		}
+		const current = await run(targetPath, async () => responseData(target));
+		expect(current.status).toBe(200);
+		expect(current.headers.get("location")).toBeNull();
+		const invalid = await run(sourcePath, async () => responseData("https://evil.example/"));
+		expect(invalid.headers.get("location")).toBeNull();
+		const draft = await run(sourcePath, async () => responseData(target, "draft"));
+		expect(draft.status).toBe(404);
+		expect(draft.headers.get("location")).toBeNull();
+		const unavailable = await run(sourcePath, async () => json({ error: "unavailable" }, 503));
+		expect(unavailable.status).toBe(503);
+		expect(unavailable.headers.get("location")).toBeNull();
+	});
+
 	it("returns a 404 for a matched but unavailable detail route", async () => {
 		const fetcher = vi.fn(async () =>
 			json({ error: "not found" }, 404),

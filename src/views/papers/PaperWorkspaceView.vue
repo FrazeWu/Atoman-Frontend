@@ -159,7 +159,7 @@
       <aside v-if="aiPanelOpen&&aiFile" class="papers-workspace__preview papers-workspace__ai-panel" aria-label="AI 论文助手">
         <div class="papers-workspace__preview-heading"><strong>AI 论文助手</strong><span class="papers-workspace__ai-subtitle">审阅后修改</span><PButton size="sm" variant="secondary" type="button" @click="closeTool">返回 PDF</PButton></div>
         <div class="papers-workspace__ai-scroll">
-          <PaperAITools :key="projectId+':'+accountId+':'+aiFile.id+':'+(collaborationOpen?aiSharedState?.epoch:'ordinary')" :project-id="projectId" :account-id="accountId" :file="aiFile" :source="collaborationOpen?(aiSharedState?.source||''):draft" :files="files" :collaboration-epoch="collaborationOpen?aiSharedState?.epoch:undefined" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||compiling||hasActiveCompile||(collaborationOpen&&!aiSharedState?.ready)" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :project-revision="project?.head_revision" :apply-project="applyAIProject" :compile-enabled="compileEnabled" :compile-job="compileJob" :compiler="selectedCompiler" :compile-repair="compileForAI" @repair-active="setAIRepairActive" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
+          <PaperAITools :key="projectId+':'+accountId+':'+aiFile.id+':'+(collaborationOpen?aiSharedState?.epoch:'ordinary')" :project-id="projectId" :account-id="accountId" :file="aiFile" :source="collaborationOpen?(aiSharedState?.source||''):draft" :files="files" :collaboration-epoch="collaborationOpen?aiSharedState?.epoch:undefined" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||compiling||hasActiveCompile||(collaborationOpen&&!aiSharedState?.ready)" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :project-revision="project?.head_revision" :apply-project="applyAIProject" :rollback-activity="rollbackAIActivity" :compile-enabled="compileEnabled" :compile-job="compileJob" :compiler="selectedCompiler" :compile-repair="compileForAI" @repair-active="setAIRepairActive" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
         </div>
       </aside>
       <aside v-show="!aiPanelOpen" class="papers-workspace__preview" aria-label="编译预览">
@@ -243,6 +243,7 @@ import PaperShareLinks from '@/components/papers/PaperShareLinks.vue'
 import PaperAITools from '@/components/papers/PaperAITools.vue'
 import type {PaperAIEdit,PaperAISharedState} from '@/components/papers/aiSuggestion'
 import {validRepairApplyFence,type RepairApplyFence} from '@/components/papers/aiRepair'
+import type {PaperAIActivity} from '@/api/papersAI'
 import PaperCollaborationPanel from '@/components/papers/PaperCollaborationPanel.vue'
 import {collaborationCapabilityError,collaborationUnavailableReason} from '@/components/papers/collaborationCapability'
 import {draftKey,listLocalDrafts,localDraftEnabled,setLocalDraftEnabled,writeLocalDraft,readLocalDraft,removeLocalDraft,sameLocalDraft,matchesLocalDraftBase,type PaperLocalDraft} from '@/components/papers/localDrafts'
@@ -898,7 +899,7 @@ const previewStale = computed(() => !!previewJob.value && (previewJob.value.id !
  (!collaborationOpen.value&&activeFile.value?.kind === 'text' && draft.value !== activeFile.value.content)))
 const editorRef=ref<InstanceType<typeof LatexEditor>|null>(null)
 function captureAISelection(){return collaborationOpen.value?(collaborationRef.value?.getAISelection?.()??null):(editorRef.value?.getAISelection?.()??null)}
-async function applyAIProject(base:number,replacements:PaperTextReplacement[],repairFence?:RepairApplyFence):Promise<boolean>{
+async function applyAIProject(base:number,replacements:PaperTextReplacement[],repairFence?:RepairApplyFence,proposalId?:string):Promise<boolean>{
  const pid=projectId.value,owner=accountId.value
  const prior=activeFile.value
  const valid=()=>!disposed&&!!owner&&owner===accountId.value&&pid===projectId.value&&project.value?.id===pid&&ownerAccess.value&&toolMode.value==='ai'&&!collaborationOpen.value&&!navigating.value&&!saving.value&&!savePromise&&!switchingFile.value&&!snapshotMutating.value&&!memberMutating.value&&!compiling.value&&!hasActiveCompile.value&&
@@ -910,9 +911,9 @@ async function applyAIProject(base:number,replacements:PaperTextReplacement[],re
  try{
   await nextTick()
   if(!valid())return false
-  const result=await managePaperFiles(pid,{action:'replace_text',base_revision:base,replacements})
+  const result=await managePaperFiles(pid,{action:proposalId?'ai_apply':'replace_text',base_revision:base,replacements,...(proposalId?{ai_event_id:proposalId}:{})})
   if(disposed||pid!==projectId.value||owner!==accountId.value)return false
-  if(result.project.id!==pid||result.project.head_revision!==base+1||replacements.some(change=>!result.files.some(f=>f.id===change.file_id&&f.revision===change.base_revision+1)))throw Error('Unexpected project response')
+  if((proposalId&&!result.ai_event_id)||result.project.id!==pid||result.project.head_revision!==base+1||replacements.some(change=>!result.files.some(f=>f.id===change.file_id&&f.revision===change.base_revision+1)))throw Error('Unexpected project response')
   if(!valid())return false
   const updated=result.files.find(f=>f.id===prior?.id)
   if(prior&&!updated)throw Error('Active file missing')
@@ -923,6 +924,36 @@ async function applyAIProject(base:number,replacements:PaperTextReplacement[],re
    activeFile.value={...updated,content};draft.value=content
    saveStatus.value='已保存';saveError.value=''
   }
+  autoDirty=true
+  return true
+ }catch{return false}
+ finally{if(pid===projectId.value&&owner===accountId.value){aiApplying.value=false;addingFile.value=false;scheduleAuto()}}
+}
+async function rollbackAIActivity(event:PaperAIActivity):Promise<boolean>{
+ const pid=projectId.value,owner=accountId.value,base=project.value?.head_revision,prior=activeFile.value
+ if(!base||!prior||event.action!=='papers.ai.applied'||!event.id||!event.files.length||event.files.length>5||new Set(event.files.map(f=>f.file_id)).size!==event.files.length)return false
+ const valid=()=>!disposed&&!!owner&&owner===accountId.value&&pid===projectId.value&&project.value?.id===pid&&project.value?.head_revision===base&&ownerAccess.value&&toolMode.value==='ai'&&!collaborationOpen.value&&!aiRepairActive.value&&!navigating.value&&!saving.value&&!savePromise&&!switchingFile.value&&!snapshotMutating.value&&!memberMutating.value&&!compiling.value&&!hasActiveCompile.value&&!preparingUpload.value&&activeFile.value?.id===prior.id&&activeFile.value.revision===prior.revision&&draft.value===prior.content&&activeFile.value.content===prior.content&&event.files.every(change=>files.value.some(f=>f.id===change.file_id&&f.kind==='text'&&f.revision===change.after_revision))
+ if(!valid()||aiApplying.value||addingFile.value)return false
+ if(!await confirmPaper('回滚这次 AI 操作涉及的 '+event.files.length+' 个文件？仅在这些文件之后没有修改时恢复原版本，并创建新的版本记录；其他文件不受影响。普通文件管理写入可能使协作会话失效。'))return false
+ if(!valid()||aiApplying.value||addingFile.value)return false
+ aiApplying.value=true;addingFile.value=true;clearAuto()
+ try{
+  await nextTick()
+  if(!valid())return false
+  const affected=event.files.find(f=>f.file_id===prior.id)
+  // Read the immutable before-version for the currently visible file only.
+  const original=affected?await getPaperFileVersion(pid,prior.id,affected.before_revision):null
+  if(!valid()||(affected&&(!original||original.file_id!==prior.id||original.revision!==affected.before_revision||original.path!==prior.path)))return false
+  const result=await managePaperFiles(pid,{action:'ai_rollback',base_revision:base,ai_event_id:event.id})
+  if(disposed||pid!==projectId.value||owner!==accountId.value)return false
+  if(!result.ai_event_id||result.project.id!==pid||result.project.head_revision!==base+1||event.files.some(change=>!result.files.some(f=>f.id===change.file_id&&f.revision===change.after_revision+1)))throw Error('Unexpected rollback response')
+  if(!valid())return false
+  const updated=result.files.find(f=>f.id===prior.id)
+  if(!updated||(original&&updated.sha256!==original.sha256))throw Error('Unexpected rollback file')
+  project.value={...result.project,access_role:'owner'};files.value=result.files
+  const content=original?.content??prior.content
+  activeFile.value={...updated,content};draft.value=content
+  saveStatus.value='已回滚为新版本';saveError.value=''
   autoDirty=true
   return true
  }catch{return false}

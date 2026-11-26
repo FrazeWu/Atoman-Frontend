@@ -10,6 +10,7 @@ export interface PaperAICapability {
  max_history_turns?:number
  max_history_bytes?:number
  project_edits?:boolean
+ activity?:boolean
 }
 export type PaperAITask='revise'|'explain'|'project'
 export interface PaperAIHistoryTurn {task:PaperAITask;instruction:string;reply:string}
@@ -28,7 +29,13 @@ export interface PaperAIRequest {
  history?:PaperAIHistoryTurn[]
  project_revision?:number
 }
-export interface PaperAISuggestion {text:string;model:string;input_tokens?:number;output_tokens?:number;project_revision?:number;edits?:PaperAIProjectEdit[]}
+export interface PaperAISuggestion {text:string;model:string;input_tokens?:number;output_tokens?:number;project_revision?:number;edits?:PaperAIProjectEdit[];proposal_id?:string}
+export type PaperAIEventAction='papers.ai.started'|'papers.ai.proposed'|'papers.ai.failed'|'papers.ai.applied'|'papers.ai.rolled_back'
+export interface PaperAIActivityFile {file_id:string;before_revision:number;after_revision:number}
+export interface PaperAIActivity {id:string;action:PaperAIEventAction;created_at:string;attempt_id:string;related_id:string;task:PaperAITask;project_revision:number;files:PaperAIActivityFile[];input_tokens?:number;output_tokens?:number}
+export async function listPaperAIActivity(pid:string,signal?:AbortSignal){
+ return (await apiRequestEnvelope<PaperAIActivity[]>(endpoint(pid,'activity'),{cache:'no-store',signal})).data
+}
 function endpoint(pid:string,resource:string){return useApiUrl()+'/papers/projects/'+encodeURIComponent(pid)+'/ai/'+resource}
 export async function getPaperAICapability(pid:string,signal?:AbortSignal){
  return (await apiRequestEnvelope<PaperAICapability>(endpoint(pid,'capability'),{cache:'no-store',signal})).data

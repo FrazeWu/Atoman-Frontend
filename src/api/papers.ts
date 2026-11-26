@@ -48,7 +48,7 @@ export async function trashPaperProject(id:string){
 export const listTrashedPaperProjects=()=>papersRequest<TrashedPaperProject[]>('/projects/trash')
 export const restorePaperProject=(id:string)=>papersRequest<PaperProject>('/projects/'+encodeURIComponent(id)+'/restore','POST')
 export interface PaperUpload {path:string;kind:'text'|'binary';content:string}
-export interface PaperManagedProject {project:PaperProject;files:PaperFile[]}
+export interface PaperManagedProject {project:PaperProject;files:PaperFile[];ai_event_id?:string}
 export interface PaperTextReplacement {file_id:string;base_revision:number;content:string}
 export interface PaperVersionSummary {revision:number;path:string;sha256:string;created_at:string}
 export interface PaperFileVersion extends PaperVersionSummary {file_id:string;content:string}
@@ -56,7 +56,7 @@ const fileVersionPrefix=(pid:string,fid:string)=>'/projects/'+encodeURIComponent
 export const listPaperFileVersions=(pid:string,fid:string,before?:number)=>papersRequest<PaperVersionSummary[]>(fileVersionPrefix(pid,fid)+(before?'?before='+before:''))
 export const getPaperFileVersion=(pid:string,fid:string,revision:number)=>papersRequest<PaperFileVersion>(fileVersionPrefix(pid,fid)+'/'+revision)
 
-export const managePaperFiles=(id:string,change:{action:'upload'|'rename'|'delete'|'set_main'|'replace_text';base_revision:number;file_id?:string;path?:string;uploads?:PaperUpload[];replacements?:PaperTextReplacement[]})=>
+export const managePaperFiles=(id:string,change:{action:'upload'|'rename'|'delete'|'set_main'|'replace_text'|'ai_apply'|'ai_rollback';ai_event_id?:string;base_revision:number;file_id?:string;path?:string;uploads?:PaperUpload[];replacements?:PaperTextReplacement[]})=>
  papersRequest<PaperManagedProject>('/projects/'+encodeURIComponent(id)+'/files/manage','POST',change)
 export const getPaperProject = (id: string) => papersRequest<PaperProject>(`/projects/${encodeURIComponent(id)}`)
 export const listPaperFiles = (id: string) => papersRequest<PaperFile[]>(`/projects/${encodeURIComponent(id)}/files`)

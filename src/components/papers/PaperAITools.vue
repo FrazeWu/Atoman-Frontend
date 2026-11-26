@@ -1,5 +1,6 @@
 <template>
  <section class="paper-ai" aria-label="AI 修改建议">
+  <PaperAIActivityPanel v-if="capability?.activity" :project-id="projectId" :account-id="accountId" :files="files" :refresh="activityRefresh" :disabled="busy||disabled||repairActive||!!collaborationEpoch||source!==file.content" :rollback="rollbackActivity" />
   <p v-if="loading" role="status">正在检查 AI 服务…</p>
   <div v-else-if="!capability?.enabled" class="paper-ai__notice">
    <strong>AI 助手尚未开放</strong><p>{{ message||'源码编辑不受影响。' }}</p>
@@ -102,20 +103,22 @@
 <script setup lang="ts">
 import {computed,nextTick,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue'
 import PButton from '@/components/ui/PButton.vue'
+import PaperAIActivityPanel from './PaperAIActivityPanel.vue'
 import {getPaperFile,type PaperFile,type PaperTextReplacement,type PaperCompileJob,type PaperCompiler} from '@/api/papers'
 import {ApiErrorResponseError} from '@/api/client'
-import {getPaperAICapability,requestPaperAISuggestion,type PaperAICapability,type PaperAISuggestion,type PaperAITask,type PaperAIHistoryTurn} from '@/api/papersAI'
+import {getPaperAICapability,requestPaperAISuggestion,type PaperAICapability,type PaperAISuggestion,type PaperAITask,type PaperAIHistoryTurn,type PaperAIActivity} from '@/api/papersAI'
 import {paperAIBytes,validAIRange,type PaperAISourceRange,type PaperAIEdit} from './aiSuggestion'
 import {reviewProjectEdits,appendAgentHistory,type ReviewedPaperAIChange} from './aiAgent'
 import {MAX_REPAIR_ROUNDS,matchesRepairJob,repairOutcome,validRepairApplyFence,type RepairApplyFence} from './aiRepair'
 
 type Captured=PaperAISourceRange&{fileId:string;revision:number;collaborationEpoch?:string}
 type Suggestion={target:Captured;task:PaperAITask;response:PaperAISuggestion;changes?:ReviewedPaperAIChange[];context?:PaperFile[];repairJobId?:string}
-const props=defineProps<{projectId:string;accountId:string;file:PaperFile;source:string;files:PaperFile[];disabled:boolean;captureSelection:()=>PaperAISourceRange|null;applyEdit:(edit:PaperAIEdit)=>boolean;diagnostics?:string;collaborationEpoch?:string;projectRevision?:number;applyProject?:(revision:number,replacements:PaperTextReplacement[],repairFence?:RepairApplyFence)=>Promise<boolean>;compileEnabled?:boolean;compileJob?:PaperCompileJob|null;compiler?:PaperCompiler;compileRepair?:(revision:number,compiler:PaperCompiler)=>Promise<PaperCompileJob|null>}>()
+const props=defineProps<{projectId:string;accountId:string;file:PaperFile;source:string;files:PaperFile[];disabled:boolean;captureSelection:()=>PaperAISourceRange|null;applyEdit:(edit:PaperAIEdit)=>boolean;diagnostics?:string;collaborationEpoch?:string;projectRevision?:number;applyProject?:(revision:number,replacements:PaperTextReplacement[],repairFence?:RepairApplyFence,proposalId?:string)=>Promise<boolean>;rollbackActivity?:(event:PaperAIActivity)=>Promise<boolean>;compileEnabled?:boolean;compileJob?:PaperCompileJob|null;compiler?:PaperCompiler;compileRepair?:(revision:number,compiler:PaperCompiler)=>Promise<PaperCompileJob|null>}>()
 const emit=defineEmits<{'repair-active':[active:boolean]}>()
 type RepairState={phase:'submitting'|'compiling'|'review'|'applying'|'passed'|'stopped';revision:number;compiler:PaperCompiler;rounds:number;jobId:string;message:string;files:string[]}
 const repair=shallowRef<RepairState|null>(null)
 const commitBusy=ref(false)
+const activityRefresh=ref(0)
 let repairSerial=0
 const repairActive=computed(()=>!!repair.value&&['submitting','compiling','review','applying'].includes(repair.value.phase))
 watch(repairActive,active=>emit('repair-active',active),{flush:'sync'})
@@ -266,7 +269,7 @@ async function toggleContext(file:PaperFile,checked:boolean){
 }
 function preset(value:string,mode:PaperAITask){if(busy.value)return;instruction.value=value;task.value=mode}
 function diagnosticPreset(){preset('分析以下编译错误，注意行号可能对应之前的编译版本。不要编造内容：\\n'+(props.diagnostics||'').slice(0,1800),'explain')}
-function cancel(){if(commitBusy.value)return;stop();message.value='已取消等待；如果模型服务已收到请求，仍可能产生费用。'}
+function cancel(){if(commitBusy.value)return;stop();activityRefresh.value++;message.value='已取消等待；如果模型服务已收到请求，仍可能产生费用。'}
 function discard(){suggestion.value=null;approved.value=[];message.value='已丢弃建议，原稿未修改。'}
 async function generate(){
  if(!canGenerate.value||!target.value||disposed)return
@@ -283,6 +286,7 @@ async function generate(){
   let changes:ReviewedPaperAIChange[]|undefined
   if(mode==='project'){
    if(response.project_revision!==base)throw new Error('Invalid plan revision')
+   if(capability.value?.activity&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(response.proposal_id||''))throw new Error('Missing server proposal identifier')
    changes=reviewProjectEdits([currentFile,...context],response.edits??[])
    if(!changes)throw new Error('Invalid project plan')
   }
@@ -297,7 +301,7 @@ async function generate(){
   if(!alive(n,initial))return
   const code=cause instanceof ApiErrorResponseError?cause.code:''
   message.value=code==='papers.ai_context_changed'?'服务器文件版本已变化，请刷新项目并重新确认上下文。':code==='papers.ai_provider_auth'?'模型服务拒绝了 API Key，请核对密钥及权限。':code==='papers.ai_provider_rate'?'模型服务限流或额度不足。':code==='papers.ai_endpoint_denied'?'该 API 地址尚未获服务器批准。':code==='papers.ai_busy'?'AI 请求容量已满，请稍后重试。':code==='papers.ai_invalid_project_response'?'模型给出的文件或片段无法安全匹配，请缩小任务或重新生成。':code==='papers.ai_incomplete_response'?'模型输出不完整，请缩小源码范围或任务。':'生成失败，请检查模型、API Key 和网络，原稿未修改。'
- }finally{if(alive(n,initial)){busy.value=false;controller=null}}
+ }finally{if(alive(n,initial)){busy.value=false;controller=null;activityRefresh.value++}}
 }
 async function acceptProject(){
  const item=suggestion.value
@@ -309,7 +313,11 @@ async function acceptProject(){
  commitBusy.value=true;busy.value=true;message.value=''
  try{
   const replacements=chosen.map(({file_id,base_revision,content})=>({file_id,base_revision,content}))
-  const saved=repairBefore?await props.applyProject(item.response.project_revision,replacements,{jobId:repairBefore.jobId,compiler:repairBefore.compiler}):await props.applyProject(item.response.project_revision,replacements)
+  const fence=repairBefore?{jobId:repairBefore.jobId,compiler:repairBefore.compiler}:undefined
+  const proposalId=capability.value?.activity?item.response.proposal_id:undefined
+  if(capability.value?.activity&&!proposalId)throw Error('Missing server proposal identifier')
+  const saved=proposalId?await props.applyProject(item.response.project_revision,replacements,fence,proposalId):fence?await props.applyProject(item.response.project_revision,replacements,fence):await props.applyProject(item.response.project_revision,replacements)
+  activityRefresh.value++
   if(!alive(n,initial))return
   if(!saved){message.value='未确认提交成功。若项目版本变化或网络中断，请刷新服务器版本后再重新生成，避免重复提交。';if(repairBefore){commitBusy.value=false;busy.value=false;endRepair('修复未确认提交成功，已停止自动编译。')}return}
   suggestion.value=null;approved.value=[];target.value=null;extras.value=[]

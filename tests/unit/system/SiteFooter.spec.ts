@@ -58,14 +58,16 @@ describe("SiteFooter", () => {
 		expect(wrapper.get(".site-footer-secondary").text()).toContain("问题反馈");
 		expect(relatedLinks.map((link) => link.label)).toEqual([
 			"Docker 镜像加速",
-			"阮一峰的网络日志",
+			"阮一峰",
 			"少数派",
 			"小众软件",
 			"Matrix67",
 			"稀土掘金",
 			"码农周刊",
 			"COOLSHELL",
+			"甲骨文",
 		]);
+		expect(wrapper.get('[data-footer-related-link="甲骨文"]').attributes("href")).toBe("https://oracle.fazong.eu.org/");
 		expect(wrapper.get(".site-footer-center").text()).toContain(
 			"Docker 镜像加速",
 		);

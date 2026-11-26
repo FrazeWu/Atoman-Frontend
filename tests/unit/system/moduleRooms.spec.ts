@@ -11,14 +11,15 @@ describe('module room naming config', () => {
     expect(moduleRooms.timeline).toMatchObject({ name: '时间线', helper: '人物时间线' })
     expect(moduleRooms.podcast).toMatchObject({ name: '播客', helper: '内容视图' })
     expect(moduleRooms.video).toMatchObject({ name: '视频', helper: '内容视图' })
+    expect(moduleRooms.papers).toMatchObject({ name: '论文', helper: '私有 LaTeX 写作', publicPathSegment: 'papers' })
   })
 
   it('keeps module navigation order stable', () => {
-    expect(moduleNavOrder).toEqual(['feed', 'blog', 'books', 'music', 'forum', 'debate', 'timeline', 'podcast', 'video'])
+    expect(moduleNavOrder).toEqual(['feed', 'blog', 'books', 'music', 'forum', 'debate', 'timeline', 'podcast', 'video', 'papers'])
   })
 
   it('keeps topbar navigation order stable', () => {
-    expect(topbarNavOrder).toEqual(['feed', 'blog', 'music', 'video', 'podcast', 'books'])
+    expect(topbarNavOrder).toEqual(['feed', 'blog', 'music', 'video', 'podcast', 'books', 'papers'])
   })
 
   it('uses root home paths for subdomain-scoped modules', () => {

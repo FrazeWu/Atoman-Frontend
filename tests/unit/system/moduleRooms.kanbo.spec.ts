@@ -11,8 +11,8 @@ describe('moduleRooms content integration', () => {
     expect(moduleRooms.podcast.name).toBe('播客')
   })
 
-  it('keeps full module order and dedicated topbar order without media', () => {
+  it('keeps full module order and dedicated topbar order with Papers last', () => {
     expect(moduleNavOrder.slice(0, 5)).toEqual(['feed', 'blog', 'books', 'music', 'forum'])
-    expect(topbarNavOrder).toEqual(['feed', 'blog', 'music', 'video', 'podcast', 'books'])
+    expect(topbarNavOrder).toEqual(['feed', 'blog', 'music', 'video', 'podcast', 'books', 'papers'])
   })
 })

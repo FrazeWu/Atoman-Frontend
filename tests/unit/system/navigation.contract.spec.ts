@@ -23,7 +23,8 @@ describe("application navigation contracts", () => {
 	it("renders topbar navigation from the shared room config", () => {
 		const source = readSource("src/components/system/AppTopbar.vue");
 
-		expect(source).toContain('v-for="room in navRooms"');
+		expect(source).toContain(`v-for="room in orderedNavRooms.filter(room => room.key !== 'papers')"`);
+		expect(source).toContain(`v-for="room in orderedNavRooms.filter(room => room.key === 'papers')"`);
 		expect(source).toContain("<RouterLink");
 		expect(source).toContain(':to="moduleUrl(room.key)"');
 		expect(source).not.toContain('@click.prevent="handleModuleNavigation');
@@ -37,6 +38,7 @@ describe("application navigation contracts", () => {
 			"视频",
 			"播客",
 			"书籍",
+			"论文",
 		]);
 		expect(topbarNavOrder).not.toContain("media");
 		for (const key of topbarNavOrder) {

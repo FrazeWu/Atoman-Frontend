@@ -13,6 +13,7 @@ const makeRouter = async () => {
 		routes: [
 			{ path: "/", component: { template: "<div />" } },
 			{ path: "/feed", component: { template: "<div />" } },
+			{ path: "/papers", component: { template: "<div />" } },
 			{ path: "/music", component: { template: "<div />" } },
 			{ path: "/music/song/:id", component: { template: "<div />" } },
 			{ path: "/studio/video/content", component: { template: "<div />" } },
@@ -37,16 +38,19 @@ describe("AppTopbar route reactivity", () => {
 		vi.unstubAllGlobals();
 	});
 
-	it("keeps OracleGraph at the end of the main navigation rather than the account actions", async () => {
+	it("keeps Papers at the end of the main navigation and OracleGraph out of the topbar", async () => {
 		const router = await makeRouter();
 		const wrapper = mount(AppTopbar, { global: { plugins: [router] } });
 		const tabs = wrapper.findAll(".nav .nav-link");
 		const last = tabs[tabs.length - 1]!;
-		expect(last.text()).toBe("甲骨文");
-		expect(last.attributes("href")).toBe("https://oracle.fazong.eu.org/");
-		expect(last.attributes("target")).toBe("_blank");
-		expect(wrapper.find(".nav-right .oraclegraph-nav-link").exists()).toBe(false);
-		expect(wrapper.find(".nav-tail .oraclegraph-nav-link").exists()).toBe(true);
+		expect(last.text()).toBe("论文");
+		expect(last.attributes("href")).toBe("/papers");
+		expect(wrapper.get(".nav-tail").findAll(".nav-link")).toHaveLength(1);
+		expect(wrapper.get(".nav-tail .nav-link").text()).toBe("论文");
+		expect(wrapper.find('a[href="https://oracle.fazong.eu.org/"]').exists()).toBe(false);
+		await router.push("/papers");
+		await flushPromises();
+		expect(activeNavText(wrapper)).toEqual(["论文"]);
 		wrapper.unmount();
 	});
 

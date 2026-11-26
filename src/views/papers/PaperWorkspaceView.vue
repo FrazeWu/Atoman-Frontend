@@ -16,7 +16,7 @@
     </header>
     <p v-if="loading" class="papers-workspace__message">正在打开项目...</p>
     <p v-else-if="error" role="alert" class="papers-workspace__error">{{ error }}</p>
-    <div v-else ref="workspaceRoot" class="papers-workspace__content" :class="{ 'files-hidden': !showFiles, 'editor-only': layoutMode === 'editor', 'pdf-only': layoutMode === 'pdf' }" :style="{ '--preview-grow': previewWidth, '--editor-grow': 100-previewWidth, '--files-width': filesWidth+'px' }">
+    <div v-else ref="workspaceRoot" class="papers-workspace__content" :class="{ 'files-hidden': !showFiles, 'editor-only': layoutMode === 'editor', 'pdf-only': layoutMode === 'pdf', 'ai-expanded': aiPanelOpen&&aiExpanded }" :style="{ '--preview-grow': previewWidth, '--editor-grow': 100-previewWidth, '--files-width': filesWidth+'px' }">
       <button v-if="compactLayout && showFiles" type="button" class="papers-workspace__files-backdrop" aria-label="关闭文件栏" @click="showFiles=false" />
       <aside class="papers-workspace__files" :class="{'papers-workspace__files--dropping':draggingFiles}" aria-label="论文文件" @dragenter="onFigureDragOver" @dragover="onFigureDragOver" @dragleave="onFigureDragLeave" @drop="onFigureDrop">
         <div class="papers-workspace__files-heading"><h2>项目文件 <small>{{ files.length }}</small></h2><button type="button" class="papers-workspace__close-files" aria-label="关闭文件面板" @click="showFiles=false"><PanelLeftClose :size="15" aria-hidden="true" /></button></div>
@@ -157,7 +157,7 @@
       </section>
       <div v-if="layoutMode === 'split'" class="papers-workspace__divider" role="separator" aria-label="调整编辑器和预览宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="previewWidth" @pointerdown="beginResize" @pointermove="resizeMove" @pointerup="endResize" @pointercancel="endResize" @keydown.left.prevent="previewWidth=Math.min(75,previewWidth+3)" @keydown.right.prevent="previewWidth=Math.max(25,previewWidth-3)" />
       <aside v-if="aiPanelOpen&&aiFile" class="papers-workspace__preview papers-workspace__ai-panel" aria-label="AI 论文助手">
-        <div class="papers-workspace__preview-heading"><strong>AI 论文助手</strong><span class="papers-workspace__ai-subtitle">审阅后修改</span><PButton size="sm" variant="secondary" type="button" @click="closeTool">返回 PDF</PButton></div>
+        <div class="papers-workspace__preview-heading"><strong>AI 任务工作区</strong><span class="papers-workspace__ai-subtitle">Papers Agent</span><PButton size="sm" variant="secondary" type="button" :aria-pressed="aiExpanded" @click="aiExpanded=!aiExpanded">{{aiExpanded?'恢复分栏':'展开工作区'}}</PButton><PButton size="sm" variant="secondary" type="button" @click="closeTool">返回 PDF</PButton></div>
         <div class="papers-workspace__ai-scroll">
           <PaperAITools :key="projectId+':'+accountId+':'+aiFile.id+':'+(collaborationOpen?aiSharedState?.epoch:'ordinary')" :project-id="projectId" :account-id="accountId" :file="aiFile" :source="collaborationOpen?(aiSharedState?.source||''):draft" :files="files" :collaboration-epoch="collaborationOpen?aiSharedState?.epoch:undefined" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||compiling||hasActiveCompile||(collaborationOpen&&!aiSharedState?.ready)" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :project-revision="project?.head_revision" :apply-project="applyAIProject" :rollback-activity="rollbackAIActivity" :compile-enabled="compileEnabled" :compile-job="compileJob" :compiler="selectedCompiler" :compile-repair="compileForAI" @repair-active="setAIRepairActive" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
         </div>
@@ -443,6 +443,8 @@ const aiFile=computed<PaperFile|null>(()=>{
  return state?{...file,revision:state.revision,content:state.source}:null
 })
 const aiPanelOpen=computed(()=>toolMode.value==='ai'&&ownerAccess.value&&!!aiFile.value)
+const aiExpanded=ref(false)
+watch(aiPanelOpen,open=>{if(!open)aiExpanded.value=false})
 const searchQuery=ref(''),replaceQuery=ref(''),referenceQuery=ref('')
 const searchSources=shallowRef<PaperFile[]>([]),searchBase=ref(0)
 const searchStale=computed(()=>!searchBase.value||searchBase.value!==project.value?.head_revision||(activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content))
@@ -1718,6 +1720,9 @@ onBeforeUnmount(() => {
 
 .papers-workspace__ai-panel .papers-workspace__preview-heading{justify-content:space-between;flex-wrap:wrap}
 .papers-workspace__ai-subtitle{flex:1;font-size:11px;color:var(--a-color-text-secondary,#64748b)}
+.ai-expanded .papers-workspace__editor,.ai-expanded .papers-workspace__divider{display:none}
+.ai-expanded .papers-workspace__ai-panel{flex:1 1 0%}
+.ai-expanded .papers-workspace__ai-scroll :deep(.paper-ai){max-width:1100px;margin-inline:auto}
 .papers-workspace__ai-scroll{flex:1;min-height:0;overflow:auto;padding:10px;scrollbar-gutter:stable}
 .papers-workspace--compact .papers-workspace__ai-panel{flex:2 1 0%}
 </style>

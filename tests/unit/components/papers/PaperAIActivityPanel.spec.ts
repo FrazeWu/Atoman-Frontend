@@ -1,9 +1,9 @@
 import {beforeEach,describe,it,expect,vi} from 'vitest'
 import {mount,flushPromises} from '@vue/test-utils'
 import PaperAIActivityPanel from '@/components/papers/PaperAIActivityPanel.vue'
-import {listPaperAIActivity,type PaperAIActivity} from '@/api/papersAI'
+import {listPaperAIActivity,getPaperAIHistoricalChange,type PaperAIActivity,type PaperAIHistoricalChange} from '@/api/papersAI'
 import type {PaperFile} from '@/api/papers'
-vi.mock('@/api/papersAI',()=>({listPaperAIActivity:vi.fn()}))
+vi.mock('@/api/papersAI',()=>({listPaperAIActivity:vi.fn(),getPaperAIHistoricalChange:vi.fn()}))
 const file:PaperFile={id:'file',path:'main.tex',kind:'text',revision:2,content:'Changed',sha256:'',created_at:'',updated_at:''}
 const event:PaperAIActivity={id:'applied-id',action:'papers.ai.applied',created_at:'2026-11-26T09:00:00Z',attempt_id:'attempt-id',related_id:'proposal-id',task:'project',project_revision:5,files:[{file_id:file.id,before_revision:1,after_revision:2}]}
 describe('AI activity panel',()=>{
@@ -34,6 +34,25 @@ describe('AI activity panel',()=>{
    await w.setProps({files:[file],disabled:true})
    expect(undo(w).attributes('disabled')).toBeDefined()
    expect(w.props('rollback')).not.toHaveBeenCalled()
+  }finally{w.unmount()}
+ })
+ it('loads a verified immutable historical diff on demand and clears it on scope change',async()=>{
+  const identity={id:'papers-agent',display_name:'Papers Agent',kind:'ai',permission:'propose_only'} as const
+  const change:PaperAIHistoricalChange={event_id:event.id,file_id:file.id,action:event.action,contributor:identity,decision:'owner_approved',path:file.path,before_revision:1,after_revision:2,before:'Before Original After',after:'Before Revised After'}
+  vi.mocked(getPaperAIHistoricalChange).mockResolvedValue(change)
+  const w=create()
+  try{
+   await w.setProps({historicalChanges:true})
+   await flushPromises()
+   expect(getPaperAIHistoricalChange).not.toHaveBeenCalled()
+   await w.findAll('button').find(b=>b.text()==='查看修改差异')!.trigger('click')
+   await flushPromises()
+   expect(getPaperAIHistoricalChange).toHaveBeenCalledWith('p',event.id,file.id,expect.any(AbortSignal))
+   expect(w.get('.paper-ai-activity__change del').text()).toBe('Original')
+   expect(w.get('.paper-ai-activity__change ins').text()).toBe('Revised')
+   await w.setProps({projectId:'other',accountId:'other-owner'})
+   await flushPromises()
+   expect(w.find('.paper-ai-activity__change').exists()).toBe(false)
   }finally{w.unmount()}
  })
  it('does not show a previous account’s delayed records',async()=>{

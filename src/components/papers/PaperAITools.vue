@@ -1,6 +1,15 @@
 <template>
  <section class="paper-ai" aria-label="AI 修改建议">
-  <PaperAIActivityPanel v-if="capability?.activity" :project-id="projectId" :account-id="accountId" :files="files" :refresh="activityRefresh" :disabled="busy||disabled||repairActive||!!collaborationEpoch||source!==file.content" :rollback="rollbackActivity" />
+  <header class="paper-ai__workbench" aria-label="当前 AI 任务">
+   <div class="paper-ai__identity"><span class="paper-ai__avatar" aria-hidden="true">AI</span><div><strong>{{capability?.agent?.id==='papers-agent'?capability.agent.display_name:'Papers Agent'}}</strong><small>AI 建议者 · 拥有者审批</small></div></div>
+   <p>当前任务：{{task==='project'?'跨文件修改':task==='explain'?'解释与分析':'源码修改'}} · {{file.path}} · v{{file.revision}}</p>
+   <div class="paper-ai__steps" aria-label="任务进度">
+    <span v-for="(step,index) in taskSteps" :key="step" :aria-current="index===taskStep?'step':undefined" :class="{current:index===taskStep,done:index<taskStep}">{{index+1}}. {{step}}</span>
+   </div>
+   <p role="status">{{taskStatus}}</p>
+   <small>AI 不作为可登录成员，不能自主提交。跨文件任务的提交者仍是拥有者；实时协作编辑继续使用你的身份。</small>
+  </header>
+  <PaperAIActivityPanel v-if="capability?.activity" :project-id="projectId" :account-id="accountId" :files="files" :refresh="activityRefresh" :disabled="busy||disabled||repairActive||!!collaborationEpoch||source!==file.content" :rollback="rollbackActivity" :historical-changes="capability.historical_changes===true" :pending-proposal="suggestion?.response.proposal_id" />
   <p v-if="loading" role="status">正在检查 AI 服务…</p>
   <div v-else-if="!capability?.enabled" class="paper-ai__notice">
    <strong>AI 助手尚未开放</strong><p>{{ message||'源码编辑不受影响。' }}</p>
@@ -73,20 +82,15 @@
    <p v-if="message" role="status">{{ message }}</p>
    <section v-if="suggestion" class="paper-ai__result">
     <strong>{{ suggestion.task==='project'?'Agent 跨文件修改计划':suggestion.task==='revise'?'待审阅修改':'AI 分析结果' }}</strong>
+    <small>提议者：Papers Agent · {{suggestion.task==='explain'?'仅供分析':resultStale?'版本已变化，需重新生成':'尚未提交，请审阅'}}{{suggestion.response.proposal_id?' · '+suggestion.response.proposal_id.slice(0,8):''}}</small>
     <small v-if="suggestion.response.input_tokens||suggestion.response.output_tokens">输入 {{ suggestion.response.input_tokens||0 }} · 输出 {{ suggestion.response.output_tokens||0 }} tokens</small>
-    <div v-if="suggestion.task==='revise'" class="paper-ai__diff">
-     <div><strong>原文</strong><pre>{{ suggestion.target.baseline.slice(suggestion.target.from,suggestion.target.to) }}</pre></div>
-     <div><strong>建议替换为</strong><pre>{{ suggestion.response.text }}</pre></div>
-    </div>
+    <PaperAIDiff v-if="suggestion.task==='revise'" :before="suggestion.target.baseline.slice(suggestion.target.from,suggestion.target.to)" :after="suggestion.response.text" />
     <pre v-else>{{ suggestion.response.text }}</pre>
     <template v-if="suggestion.task==='project'">
      <p v-if="!suggestion.changes?.length">没有需要修改的文件。</p>
      <div v-for="change in suggestion.changes||[]" :key="change.file_id" class="paper-ai__context">
       <label class="paper-ai__check"><input type="checkbox" :checked="approved.includes(change.file_id)" :disabled="busy||disabled||resultStale" @change="approve(change.file_id,($event.target as HTMLInputElement).checked)" /><strong>{{change.path}} · v{{change.base_revision}}</strong></label>
-      <div class="paper-ai__diff">
-       <div><strong>原文</strong><pre>{{change.before}}</pre></div>
-       <div><strong>建议替换为</strong><pre>{{change.after||'（删除该片段）'}}</pre></div>
-      </div>
+      <PaperAIDiff :before="change.before" :after="change.after" />
      </div>
      <PButton v-if="suggestion.changes?.length" type="button" size="sm" :disabled="resultStale||disabled||busy||!approved.length" @click="acceptProject">应用已选修改（{{approved.length}}）</PButton>
     </template>
@@ -104,6 +108,7 @@
 import {computed,nextTick,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue'
 import PButton from '@/components/ui/PButton.vue'
 import PaperAIActivityPanel from './PaperAIActivityPanel.vue'
+import PaperAIDiff from './PaperAIDiff.vue'
 import {getPaperFile,type PaperFile,type PaperTextReplacement,type PaperCompileJob,type PaperCompiler} from '@/api/papers'
 import {ApiErrorResponseError} from '@/api/client'
 import {getPaperAICapability,requestPaperAISuggestion,type PaperAICapability,type PaperAISuggestion,type PaperAITask,type PaperAIHistoryTurn,type PaperAIActivity} from '@/api/papersAI'
@@ -215,6 +220,23 @@ const resultStale=computed(()=>{
 })
 const extraStale=computed(()=>extras.value.some(extra=>!eligibleFiles.value.some(item=>item.id===extra.id&&item.revision===extra.revision)))
 const canGenerate=computed(()=>!!capability.value?.enabled&&!!target.value&&!stale.value&&!extraStale.value&&!props.disabled&&!busy.value&&!contextBusy.value&&consent.value&&baseURL.value&&model.value&&key.value.trim().length>=8&&instruction.value.trim()&&selectedSource.value.trim()&&sourceBytes.value<=capability.value.max_source_bytes&&contextBytes.value<=capability.value.max_context_bytes&&paperAIBytes(instruction.value)<=4000&&(task.value!=='project'||projectReady.value)&&(!repairActive.value||(task.value==='project'&&repair.value?.phase==='review'&&repairJobCurrent(repair.value))))
+const taskSteps=['准备模型','确认范围','生成建议','审阅审批']
+const taskStep=computed(()=>{
+ if(commitBusy.value||suggestion.value)return 3
+ if(busy.value||repairActive.value)return 2
+ if(!key.value.trim()||!model.value||!baseURL.value)return 0
+ return 1
+})
+const taskStatus=computed(()=>{
+ if(loading.value)return '读取服务能力'
+ if(!capability.value?.enabled)return '模型服务未开放'
+ if(commitBusy.value)return '等待拥有者确认或服务器提交结果'
+ if(suggestion.value)return resultStale.value?'旧建议已失效':suggestion.value.task==='explain'?'分析已返回':suggestion.value.task==='project'?'等待审批 · '+approved.value.length+' / '+(suggestion.value.changes?.length||0)+' 个文件已勾选':'等待审批 · 单文件建议'
+ if(busy.value)return '等待模型返回'
+ if(repairActive.value)return repair.value?.message||'编译修复进行中'
+ if(taskStep.value===0)return '请配置模型和 API Key'
+ return canGenerate.value?'已确认发送范围，可以生成':'请选择并确认任务及源码范围'
+})
 function alive(n:number,initial:string){return !disposed&&n===serial&&initial===scope()}
 function clearConsent(){consent.value=false}
 watch([baseURL,model,key,instruction,task,target,extras,()=>props.source,()=>props.file.revision,()=>props.disabled,()=>props.projectRevision,extraStale,includeHistory,history],clearConsent,{flush:'sync'})
@@ -341,6 +363,15 @@ function accept(){
 
 <style scoped>
 .paper-ai{display:grid;gap:9px;min-width:0;font-size:12px;line-height:1.5}
+.paper-ai__workbench{display:grid;gap:8px;padding:12px;border:1px solid var(--a-color-border-soft,#ddd);border-radius:8px}
+.paper-ai__identity{display:flex;align-items:center;gap:9px}
+.paper-ai__identity>div{display:grid;gap:2px}
+.paper-ai__identity strong{font-size:14px}
+.paper-ai__avatar{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;background:var(--a-color-bg-subtle,#e7edf3);color:var(--a-color-primary,#26784b);font-weight:700}
+.paper-ai__steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.paper-ai__steps span{padding:5px 7px;border:1px solid var(--a-color-border-soft,#ddd);border-radius:4px;color:var(--a-color-text-secondary,#64748b)}
+.paper-ai__steps .current{border-color:var(--a-color-primary,#26784b);color:var(--a-color-primary,#26784b);font-weight:600}
+.paper-ai__steps .done{color:inherit}
 .paper-ai p{margin:0;color:var(--a-color-text-secondary,#64748b)}
 .paper-ai label,.paper-ai__settings,.paper-ai__context,.paper-ai__result{display:grid;gap:5px;min-width:0}
 .paper-ai__settings,.paper-ai__context,.paper-ai__result,.paper-ai__notice{border:1px solid var(--a-color-border-soft,#ddd);border-radius:6px;padding:9px}

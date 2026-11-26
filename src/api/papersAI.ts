@@ -1,7 +1,10 @@
 import {apiRequestEnvelope} from '@/api/client'
 import {useApiUrl} from '@/composables/useApiUrl'
 
+export interface PaperAIContributor {id:string;display_name:string;kind:'ai';permission:'propose_only'}
 export interface PaperAICapability {
+ agent?:PaperAIContributor
+ historical_changes?:boolean
  enabled:boolean
  base_urls:string[]
  max_source_bytes:number
@@ -32,7 +35,11 @@ export interface PaperAIRequest {
 export interface PaperAISuggestion {text:string;model:string;input_tokens?:number;output_tokens?:number;project_revision?:number;edits?:PaperAIProjectEdit[];proposal_id?:string}
 export type PaperAIEventAction='papers.ai.started'|'papers.ai.proposed'|'papers.ai.failed'|'papers.ai.applied'|'papers.ai.rolled_back'
 export interface PaperAIActivityFile {file_id:string;before_revision:number;after_revision:number}
-export interface PaperAIActivity {id:string;action:PaperAIEventAction;created_at:string;attempt_id:string;related_id:string;task:PaperAITask;project_revision:number;files:PaperAIActivityFile[];input_tokens?:number;output_tokens?:number}
+export interface PaperAIActivity {contributor?:PaperAIContributor;decision?:string;id:string;action:PaperAIEventAction;created_at:string;attempt_id:string;related_id:string;task:PaperAITask;project_revision:number;files:PaperAIActivityFile[];input_tokens?:number;output_tokens?:number}
+export interface PaperAIHistoricalChange {event_id:string;file_id:string;action:PaperAIEventAction;contributor:PaperAIContributor;decision:string;path:string;before_revision:number;after_revision:number;before:string;after:string}
+export async function getPaperAIHistoricalChange(pid:string,eventId:string,fileId:string,signal?:AbortSignal){
+ return (await apiRequestEnvelope<PaperAIHistoricalChange>(endpoint(pid,'activity/'+encodeURIComponent(eventId)+'/changes/'+encodeURIComponent(fileId)),{cache:'no-store',signal})).data
+}
 export async function listPaperAIActivity(pid:string,signal?:AbortSignal){
  return (await apiRequestEnvelope<PaperAIActivity[]>(endpoint(pid,'activity'),{cache:'no-store',signal})).data
 }

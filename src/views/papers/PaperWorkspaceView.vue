@@ -1,10 +1,12 @@
 <template>
-  <main class="papers-workspace" :class="{ 'papers-workspace--compact': compactLayout }">
+  <main class="papers-workspace" :class="{ 'papers-workspace--compact': compactLayout, 'papers-workspace--rail': desktopRail, 'papers-workspace--focus': focusMode }">
     <header class="papers-workspace__header">
       <RouterLink to="/papers" title="返回我的论文">‹ 我的论文</RouterLink>
       <div class="papers-workspace__project-title"><strong :title="project?.name">{{ project?.name || '论文工作台' }}</strong><span v-if="project" class="papers-workspace__project-meta">v{{project.head_revision}} · {{roleLabel}}</span></div>
       <div class="papers-workspace__layout-tools">
-        <PButton size="sm" variant="secondary" type="button" title="显示或隐藏文件栏" :aria-pressed="showFiles" @click="showFiles = !showFiles">文件栏</PButton>
+        <PButton size="sm" variant="ghost" type="button" class="papers-workspace__quick-button" aria-label="快速打开文件" title="快速打开文件 (Ctrl/Cmd+P)" :disabled="!canSwitchWorkspaceFile" @click="openQuick"><Search :size="15" aria-hidden="true" /></PButton>
+        <PButton v-if="!compactLayout" size="sm" variant="ghost" type="button" class="papers-workspace__focus-button" :aria-label="focusMode?'退出专注模式':'专注模式'" :title="focusMode?'退出专注模式':'专注模式'" :aria-pressed="focusMode" :disabled="!focusMode&&(auxiliaryOpen||collaborationOpen||!project||loading||!!error)" @click="toggleFocus"><Maximize2 v-if="!focusMode" :size="15" aria-hidden="true" /><Minimize2 v-else :size="15" aria-hidden="true" /></PButton>
+        <PButton size="sm" variant="secondary" type="button" title="显示或隐藏文件栏" :aria-pressed="showFiles" @click="toggleFilePane">文件栏</PButton>
         <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'split'&&!auxiliaryOpen" v-if="!compactLayout" @click="setWorkspaceLayout('split')">分栏</PButton>
         <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'editor'&&!auxiliaryOpen" @click="setWorkspaceLayout('editor')">源码</PButton>
         <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'pdf'&&!auxiliaryOpen" @click="setWorkspaceLayout('pdf')">预览</PButton>
@@ -15,24 +17,24 @@
       <div class="papers-workspace__header-actions"><PButton v-if="ownerAccess" type="button" size="sm" :disabled="collaborationOpen||memberMutating||snapshotMutating" @click="toggleTool('members')">分享</PButton>
       <PButton v-if="ownerAccess" type="button" size="sm" variant="secondary" :disabled="collaborationOpen || exporting || saving" @click="exportProject">{{ exporting ? '正在导出…' : '导出 ZIP' }}</PButton></div>
     </header>
-        <nav v-if="project&&!loading&&!error&&!collaborationOpen" class="papers-workspace__toolnav" aria-label="项目工具"><div class="papers-workspace__toolgroup" aria-label="写作工具">
-          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='ai'" @click="toggleTool('ai')"><Sparkles :size="14" aria-hidden="true" /> AI 助手</PButton>
-          <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='search'" @click="toggleTool('search')"><Search :size="14" aria-hidden="true" /> 全项目搜索</PButton>
-          <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='references'" @click="toggleTool('references')"><BookOpen :size="14" aria-hidden="true" /> 参考文献</PButton>
-          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='figures'" @click="toggleTool('figures')"><ImageIcon :size="14" aria-hidden="true" /> 插图</PButton>
+        <nav v-if="project&&!loading&&!error&&!collaborationOpen&&!focusMode" class="papers-workspace__toolnav" aria-label="项目工具"><div class="papers-workspace__toolgroup" aria-label="写作工具">
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='ai'" @click="toggleTool('ai')" aria-label="AI 助手" title="AI 助手"><Sparkles :size="14" aria-hidden="true" /> AI 助手</PButton>
+          <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='search'" @click="toggleTool('search')" aria-label="全项目搜索" title="全项目搜索"><Search :size="14" aria-hidden="true" /> 全项目搜索</PButton>
+          <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='references'" @click="toggleTool('references')" aria-label="参考文献" title="参考文献"><BookOpen :size="14" aria-hidden="true" /> 参考文献</PButton>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='figures'" @click="toggleTool('figures')" aria-label="插图" title="插图"><ImageIcon :size="14" aria-hidden="true" /> 插图</PButton>
         </div><PButton v-if="compactLayout" size="sm" variant="ghost" type="button" class="papers-workspace__more-tools" :aria-expanded="moreToolsOpen" @click="moreToolsOpen=!moreToolsOpen">更多 <ChevronDown :size="14" aria-hidden="true" /></PButton><div v-show="!compactLayout||moreToolsOpen" class="papers-workspace__toolgroup papers-workspace__secondary-tools" aria-label="版本与投稿">
-          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='history'" @click="toggleTool('history')"><History :size="14" aria-hidden="true" /> 版本历史</PButton>
-          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='snapshots'" @click="toggleTool('snapshots')"><Layers :size="14" aria-hidden="true" /> 项目快照</PButton>
-          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='git'" @click="toggleTool('git')"><GitBranch :size="14" aria-hidden="true" /> GitHub</PButton>
-          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='submission'" @click="toggleTool('submission')"><ClipboardCheck :size="14" aria-hidden="true" /> 投稿检查</PButton>
-          <PButton size="sm" variant="secondary" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='drafts'" @click="toggleTool('drafts')"><FileClock :size="14" aria-hidden="true" /> 草稿恢复{{ draftRows.length?' ('+draftRows.length+')':'' }}</PButton>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='history'" @click="toggleTool('history')" aria-label="版本历史" title="版本历史"><History :size="14" aria-hidden="true" /> 版本历史</PButton>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='snapshots'" @click="toggleTool('snapshots')" aria-label="项目快照" title="项目快照"><Layers :size="14" aria-hidden="true" /> 项目快照</PButton>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='git'" @click="toggleTool('git')" aria-label="GitHub" title="GitHub"><GitBranch :size="14" aria-hidden="true" /> GitHub</PButton>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='submission'" @click="toggleTool('submission')" aria-label="投稿检查" title="投稿检查"><ClipboardCheck :size="14" aria-hidden="true" /> 投稿检查</PButton>
+          <PButton size="sm" variant="secondary" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='drafts'" @click="toggleTool('drafts')" :aria-label="'草稿恢复'+(draftRows.length?' ('+draftRows.length+')':'')" title="草稿恢复"><FileClock :size="14" aria-hidden="true" /> 草稿恢复{{ draftRows.length?' ('+draftRows.length+')':'' }}</PButton>
         </div><div v-show="!compactLayout||moreToolsOpen" class="papers-workspace__toolgroup papers-workspace__secondary-tools" aria-label="项目管理">
-          <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='members'" :disabled="memberMutating||snapshotMutating" @click="toggleTool('members')"><Users :size="14" aria-hidden="true" /> 项目成员</PButton>
-          <PButton size="sm" variant="secondary" type="button" :disabled="switchingFile||navigating||saving||uploadBusy||snapshotMutating||memberMutating||compiling||hasActiveCompile" @click="refreshServerProject"><RefreshCw :size="14" aria-hidden="true" /> 刷新项目</PButton>
+          <PButton size="sm" variant="secondary" type="button" :aria-pressed="toolMode==='members'" :disabled="memberMutating||snapshotMutating" @click="toggleTool('members')" aria-label="项目成员" title="项目成员"><Users :size="14" aria-hidden="true" /> 项目成员</PButton>
+          <PButton size="sm" variant="secondary" type="button" :disabled="switchingFile||navigating||saving||uploadBusy||snapshotMutating||memberMutating||compiling||hasActiveCompile" @click="refreshServerProject" aria-label="刷新项目" title="刷新项目"><RefreshCw :size="14" aria-hidden="true" /> 刷新项目</PButton>
         </div></nav>
     <p v-if="loading" class="papers-workspace__message">正在打开项目...</p>
     <p v-else-if="error" role="alert" class="papers-workspace__error">{{ error }}</p>
-    <div v-else ref="workspaceRoot" class="papers-workspace__content" :class="{ 'files-hidden': !showFiles, 'editor-only': layoutMode === 'editor', 'pdf-only': layoutMode === 'pdf', 'ai-expanded': aiPanelOpen&&aiExpanded, 'tool-open': auxiliaryOpen }" :style="{ '--preview-grow': previewWidth, '--editor-grow': 100-previewWidth, '--files-width': filesWidth+'px' }">
+    <div v-else ref="workspaceRoot" class="papers-workspace__content" :class="{ 'files-hidden': !showFiles, 'editor-only': layoutMode === 'editor', 'pdf-only': layoutMode === 'pdf', 'ai-expanded': aiPanelOpen&&aiExpanded, 'tool-open': auxiliaryOpen, 'pdf-docked': pdfDocked }" :style="{ '--preview-grow': previewWidth, '--editor-grow': 100-previewWidth, '--files-width': filesWidth+'px' }">
       <button v-if="compactLayout && showFiles" type="button" class="papers-workspace__files-backdrop" aria-label="关闭文件栏" @click="showFiles=false" />
       <aside class="papers-workspace__files" :class="{'papers-workspace__files--dropping':draggingFiles}" aria-label="论文文件" @dragenter="onFigureDragOver" @dragover="onFigureDragOver" @dragleave="onFigureDragLeave" @drop="onFigureDrop">
         <div class="papers-workspace__files-heading"><h2>项目文件 <small>{{ files.length }}</small></h2><PButton size="sm" variant="secondary" type="button" class="papers-workspace__close-files" aria-label="关闭文件面板" @click="showFiles=false"><PanelLeftClose :size="15" aria-hidden="true" /></PButton></div>
@@ -49,7 +51,7 @@
         <div v-for="entry in visibleTreeRows" :key="entry.key" class="papers-workspace__file-row" :style="{paddingLeft:Math.min(entry.depth,8)*10+'px'}">
           <PButton size="sm" variant="ghost" v-if="entry.kind==='folder'" type="button" class="papers-workspace__folder" :aria-expanded="!!fileFilter||!closedFolders.has(entry.path)" :disabled="!!fileFilter" @click="toggleFolder(entry.path)"><ChevronRight v-if="!fileFilter&&closedFolders.has(entry.path)" :size="12" aria-hidden="true" /><ChevronDown v-else :size="12" aria-hidden="true" /><Folder v-if="!fileFilter&&closedFolders.has(entry.path)" :size="14" aria-hidden="true" /><FolderOpen v-else :size="14" aria-hidden="true" /><span class="papers-workspace__filename">{{ entry.name }}</span></PButton>
           <template v-else>
-            <PButton size="sm" variant="ghost" type="button" :title="entry.path" :class="{active:activeFile?.id===entry.file.id}" :disabled="collaborationOpen||uploadBusy||navigating" @click="selectTreeFile(entry.file)"><ImageIcon v-if="entry.file.kind==='binary'" :size="14" aria-hidden="true" /><FileCode2 v-else-if="/\.(tex|bib|cls|sty|bst)$/i.test(entry.path)" :size="14" aria-hidden="true" /><FileText v-else :size="14" aria-hidden="true" /><span class="papers-workspace__filename">{{ entry.name }}</span><span v-if="entry.file.id===project?.main_file_id" class="papers-workspace__asset-label">主文件</span><span v-else-if="entry.file.kind==='binary'" class="papers-workspace__asset-label">资源</span></PButton>
+            <PButton size="sm" variant="ghost" type="button" :title="entry.path" :class="{active:activeFile?.id===entry.file.id}" :disabled="!canChooseTreeFile" @click="selectTreeFile(entry.file)"><ImageIcon v-if="entry.file.kind==='binary'" :size="14" aria-hidden="true" /><FileCode2 v-else-if="/\.(tex|bib|cls|sty|bst)$/i.test(entry.path)" :size="14" aria-hidden="true" /><FileText v-else :size="14" aria-hidden="true" /><span class="papers-workspace__filename">{{ entry.name }}</span><span v-if="entry.file.id===project?.main_file_id" class="papers-workspace__asset-label">主文件</span><span v-else-if="entry.file.kind==='binary'" class="papers-workspace__asset-label">资源</span></PButton>
             <PButton size="sm" variant="ghost" v-if="ownerAccess&&!collaborationOpen" type="button" class="papers-workspace__file-menu" :aria-label="'管理 '+entry.path" :disabled="uploadBusy||navigating||switchingFile" @click="openFileMenu(entry.file)">⋯</PButton>
           </template>
         </div>
@@ -80,6 +82,16 @@
       </aside>
       <div v-if="showFiles&&!compactLayout" class="papers-workspace__files-divider" role="separator" aria-label="调整文件栏宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="filesWidth" title="拖动调整宽度，双击恢复默认" @dblclick="resetPanelWidths" @pointerdown="beginFilesResize" @pointermove="moveFilesResize" @pointerup="endFilesResize" @pointercancel="endFilesResize" @keydown.left.prevent="resizeFiles(filesWidth-16)" @keydown.right.prevent="resizeFiles(filesWidth+16)" />
       <section class="papers-workspace__editor" aria-label="源码编辑">
+        <nav v-if="openTabs.length" class="papers-workspace__tabs" aria-label="已打开文件">
+          <div v-for="file in openTabs" :key="file.id" class="papers-workspace__tab" :class="{active:file.id===activeFile?.id}">
+            <PButton type="button" size="sm" variant="ghost" :aria-label="'切换到 '+file.path" :title="'切换到 '+file.path" :aria-current="file.id===activeFile?.id?'page':undefined" :disabled="!canSwitchWorkspaceFile" @click="openWorkspaceFile(file)">
+              <FileCode2 v-if="file.kind==='text'" :size="14" aria-hidden="true" /><ImageIcon v-else :size="14" aria-hidden="true" />
+              <span>{{file.path.split('/').at(-1)}}</span><span v-if="file.id===activeFile?.id&&file.kind==='text'&&draft!==activeFile?.content" class="papers-workspace__dirty" aria-label="未保存">●</span>
+            </PButton>
+            <PButton v-if="openTabs.length>1" type="button" size="sm" variant="ghost" class="papers-workspace__tab-close" :aria-label="'关闭标签 '+file.path" :title="'关闭标签 '+file.path" :disabled="!canSwitchWorkspaceFile" @click="closeWorkspaceTab(file)"><X :size="12" aria-hidden="true" /></PButton>
+          </div>
+          <PButton class="papers-workspace__tab-add" type="button" size="sm" variant="ghost" aria-label="快速查找其他文件" title="快速打开 (Ctrl/Cmd+P)" :disabled="!canSwitchWorkspaceFile" @click="openQuick"><Plus :size="15" aria-hidden="true"/></PButton>
+        </nav>
         <div class="papers-workspace__editor-header">
           <span :title="activeFile?.path">{{ activeFile?.path || '请选择文件' }}</span>
           <PButton size="sm" variant="ghost" v-if="!collaborationOpen" type="button" class="papers-workspace__sync" :aria-expanded="outlineOpen" @click="toggleOutline">大纲</PButton>
@@ -107,9 +119,9 @@
           <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" :disabled="saving" @click="saveNow">重试保存</PButton>
         </p>
       </section>
-      <div v-if="layoutMode === 'split'&&!compactLayout" class="papers-workspace__divider" role="separator" aria-label="调整编辑器和预览宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="Math.round(previewWidth)" title="拖动调整宽度，双击恢复默认" @dblclick="resetPanelWidths" @pointerdown="beginResize" @pointermove="resizeMove" @pointerup="endResize" @pointercancel="endResize" @keydown.left.prevent="resizePreview(previewWidth+3)" @keydown.right.prevent="resizePreview(previewWidth-3)" />
+      <div v-if="layoutMode === 'split'&&!compactLayout&&!pdfDocked" class="papers-workspace__divider" role="separator" aria-label="调整编辑器和预览宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="Math.round(previewWidth)" title="拖动调整宽度，双击恢复默认" @dblclick="resetPanelWidths" @pointerdown="beginResize" @pointermove="resizeMove" @pointerup="endResize" @pointercancel="endResize" @keydown.left.prevent="resizePreview(previewWidth+3)" @keydown.right.prevent="resizePreview(previewWidth-3)" />
       <aside v-if="aiPanelOpen&&aiFile" class="papers-workspace__preview papers-workspace__ai-panel" aria-label="AI 论文助手">
-        <div class="papers-workspace__preview-heading"><strong>AI 任务工作区</strong><span class="papers-workspace__ai-subtitle">Papers Agent</span><PButton size="sm" variant="secondary" type="button" v-if="!compactLayout" :aria-pressed="aiExpanded" @click="aiExpanded=!aiExpanded">{{aiExpanded?'恢复分栏':'展开工作区'}}</PButton><PButton size="sm" variant="secondary" type="button" @click="returnPDF">返回 PDF</PButton></div>
+        <div class="papers-workspace__preview-heading"><strong>AI 任务工作区</strong><span class="papers-workspace__ai-subtitle">Papers Agent</span><PButton size="sm" variant="secondary" type="button" v-if="!compactLayout" :aria-pressed="aiExpanded" @click="aiExpanded=!aiExpanded">{{aiExpanded?'恢复分栏':'展开工作区'}}</PButton><PButton size="sm" variant="secondary" type="button" @click="returnPDF">返回 PDF</PButton><PButton v-if="wideLayout&&!compactLayout&&!aiExpanded" size="sm" variant="secondary" type="button" :aria-pressed="pinPDF" :title="pinPDF?'隐藏并排 PDF':'同时查看源码、PDF 和 AI'" @click="pinPDF=!pinPDF">{{pinPDF?'隐藏并排 PDF':'并排 PDF'}}</PButton></div>
         <div class="papers-workspace__ai-scroll">
           <PaperAITools :key="projectId+':'+accountId+':'+aiFile.id+':'+(collaborationOpen?aiSharedState?.epoch:'ordinary')" :project-id="projectId" :account-id="accountId" :file="aiFile" :source="collaborationOpen?(aiSharedState?.source||''):draft" :files="files" :collaboration-epoch="collaborationOpen?aiSharedState?.epoch:undefined" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||compiling||hasActiveCompile||(collaborationOpen&&!aiSharedState?.ready)" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :project-revision="project?.head_revision" :apply-project="applyAIProject" :rollback-activity="rollbackAIActivity" :compile-enabled="compileEnabled" :compile-job="compileJob" :compiler="selectedCompiler" :compile-repair="compileForAI" @repair-active="setAIRepairActive" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
         </div>
@@ -179,7 +191,7 @@
           </div>
         </section>
       </aside>
-      <aside v-show="!aiPanelOpen&&!projectToolOpen&&(!outlineOpen||collaborationOpen)" class="papers-workspace__preview papers-workspace__pdf-panel" aria-label="编译预览">
+      <aside v-show="pdfDocked||!aiPanelOpen&&!projectToolOpen&&(!outlineOpen||collaborationOpen)" class="papers-workspace__preview papers-workspace__pdf-panel" aria-label="编译预览">
         <div class="papers-workspace__preview-heading">
           <div class="papers-workspace__preview-left">
             <strong>PDF 预览</strong>
@@ -198,9 +210,9 @@
           </div>
           <div class="papers-workspace__preview-right">
             <PButton v-if="!ownerAccess" type="button" size="sm" variant="secondary" :disabled="sharedPreviewBusy" @click="loadSharedPreview">{{ sharedPreviewBusy?'刷新中…':'刷新预览' }}</PButton>
-            <div class="papers-workspace__compiler" title="选择此任务的 TeX 编译器"><span>编译器</span><PSelect :model-value="selectedCompiler" placeholder="TeX 编译器" size="sm" :options="compilerOptions.map(value=>({value,label:compilerLabel(value)}))" :disabled="!compileEnabled||compiling||hasActiveCompile||saving||uploadBusy||navigating" @update:model-value="selectedCompiler=$event as PaperCompiler;compilerChanged()" /></div>
-            <PCheckbox v-model="autoCompile" class="papers-workspace__auto" :disabled="collaborationOpen||!compileEnabled||recommendedUnavailable">自动编译</PCheckbox>
-            <PButton type="button" size="sm" :disabled="(collaborationOpen&&collaborationRevision===null) || !compileEnabled || compiling || saving || switchingFile || navigating || uploadBusy || snapshotMutating || !project || hasActiveCompile" @click="compileNow">{{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}</PButton>
+            <div class="papers-workspace__compiler" title="选择此任务的 TeX 编译器"><span>编译器</span><PSelect :model-value="selectedCompiler" placeholder="TeX 编译器" size="sm" :options="compilerOptions.map(value=>({value,label:compilerLabel(value)}))"  :disabled="!compileEnabled||compiling||hasActiveCompile||saving||uploadBusy||navigating||aiRepairActive||aiApplying" @update:model-value="selectedCompiler=$event as PaperCompiler;compilerChanged()" /></div>
+            <PCheckbox v-model="autoCompile" class="papers-workspace__auto" :disabled="collaborationOpen||!compileEnabled||recommendedUnavailable||aiRepairActive||aiApplying">自动编译</PCheckbox>
+            <PButton type="button" size="sm" :disabled="(collaborationOpen&&collaborationRevision===null) || !compileEnabled || compiling || saving || switchingFile || navigating || uploadBusy || snapshotMutating || !project || hasActiveCompile || aiRepairActive || aiApplying" @click="compileNow">{{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}</PButton>
           </div>
         </div>
         <p v-if="collaborationOpen&&compileEnabled" class="papers-workspace__stale" role="status">{{collaborationRevision!==null?'编译已确认的项目版本 '+collaborationRevision+'，不会包含尚未提交的修改。':'等待当前协作修改确认后可编译。'}} 协作期间暂不开放自动编译及源码定位。</p>
@@ -244,6 +256,7 @@
         />
       </aside>
     </div>
+  <PaperQuickOpen v-if="project&&!loading&&!error" v-model:show="quickOpen" :files="files" :recent="recentFileIds" :active-id="activeFile?.id" :disabled="!canSwitchWorkspaceFile" @choose="openWorkspaceFile" />
   <PConfirm :show="!!confirmationMessage" title="请确认操作" :message="confirmationMessage" danger @confirm="resolveConfirmation(true)" @cancel="resolveConfirmation(false)" />
   </main>
 </template>
@@ -256,7 +269,7 @@ import PCheckbox from '@/components/ui/PCheckbox.vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
-import { ChevronDown, ChevronRight, Folder, FolderOpen, FileCode2, FileText, Image as ImageIcon, Plus, Upload, PanelLeftClose, Sparkles, Search, BookOpen, History, Layers, GitBranch, ClipboardCheck, FileClock, Users, RefreshCw } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, Folder, FolderOpen, FileCode2, FileText, Image as ImageIcon, Plus, Upload, PanelLeftClose, Sparkles, Search, BookOpen, History, Layers, GitBranch, ClipboardCheck, FileClock, Users, RefreshCw, X, Maximize2, Minimize2 } from 'lucide-vue-next'
 import {useAuthStore} from '@/stores/auth'
 import PaperSnapshotTools from '@/components/papers/PaperSnapshotTools.vue'
 import PaperDraftTools from '@/components/papers/PaperDraftTools.vue'
@@ -270,6 +283,8 @@ import PaperCollaborationPanel from '@/components/papers/PaperCollaborationPanel
 import {collaborationCapabilityError,collaborationUnavailableReason} from '@/components/papers/collaborationCapability'
 import {draftKey,listLocalDrafts,localDraftEnabled,setLocalDraftEnabled,writeLocalDraft,readLocalDraft,removeLocalDraft,sameLocalDraft,matchesLocalDraftBase,type PaperLocalDraft} from '@/components/papers/localDrafts'
 import PConfirm from '@/components/ui/PConfirm.vue'
+import PaperQuickOpen from '@/components/papers/PaperQuickOpen.vue'
+import {rememberPaperTab} from '@/components/papers/workbenchNavigation'
 import {usePaperConfirmation} from '@/components/papers/usePaperConfirmation'
 import PButton from '@/components/ui/PButton.vue'
 import LatexEditor from '@/components/papers/LatexEditor.vue'
@@ -457,6 +472,47 @@ const collaborationRef=ref<InstanceType<typeof PaperCollaborationPanel>|null>(nu
 const collaborationAccount=ref('')
 const activeFile = ref<PaperFile | null>(null)
 const draft = ref('')
+const tabIds=ref<string[]>([]),recentFileIds=ref<string[]>([])
+const quickOpen=ref(false)
+const openTabs=computed(()=>tabIds.value.map(id=>files.value.find(file=>file.id===id)).filter((file):file is PaperFile=>!!file))
+const canChooseTreeFile=computed(()=>!!project.value&&!!activeFile.value&&!loading.value&&!error.value&&!collaborationOpen.value&&!navigating.value&&!uploadBusy.value&&!snapshotMutating.value&&!memberMutating.value&&!aiApplying.value&&!aiRepairActive.value&&!confirmationMessage.value)
+const canSwitchWorkspaceFile=computed(()=>canChooseTreeFile.value&&!switchingFile.value)
+watch(()=>activeFile.value?.id,id=>{
+ if(!id)return
+ tabIds.value=rememberPaperTab(tabIds.value,id)
+ recentFileIds.value=[id,...recentFileIds.value.filter(value=>value!==id)].slice(0,32)
+},{flush:'sync'})
+watch(()=>files.value.map(file=>file.id).join('|'),()=>{
+ const ids=new Set(files.value.map(file=>file.id))
+ tabIds.value=tabIds.value.filter(id=>ids.has(id))
+ recentFileIds.value=recentFileIds.value.filter(id=>ids.has(id))
+ if(activeFile.value&&ids.has(activeFile.value.id))tabIds.value=rememberPaperTab(tabIds.value,activeFile.value.id)
+})
+watch([accountId,projectId],()=>{tabIds.value=[];recentFileIds.value=[];quickOpen.value=false},{flush:'sync'})
+watch(canSwitchWorkspaceFile,allowed=>{if(!allowed)quickOpen.value=false})
+function openQuick(){if(canSwitchWorkspaceFile.value)quickOpen.value=true}
+async function openWorkspaceFile(file:PaperFile){
+ if(!canSwitchWorkspaceFile.value||!files.value.some(f=>f.id===file.id&&f.path===file.path))return
+ const pid=projectId.value,account=accountId.value
+ await selectFile(file)
+ if(pid===projectId.value&&account===accountId.value&&activeFile.value?.id===file.id){
+  if(compactLayout.value||layoutMode.value==='pdf')setWorkspaceLayout('editor')
+  await nextTick()
+  editorRef.value?.focusEditor?.()
+ }
+}
+async function closeWorkspaceTab(file:PaperFile){
+ if(!canSwitchWorkspaceFile.value||openTabs.value.length<2)return
+ const pid=projectId.value,account=accountId.value
+ if(activeFile.value?.id===file.id){
+  const i=openTabs.value.findIndex(row=>row.id===file.id)
+  const other=openTabs.value[i-1]||openTabs.value[i+1]
+  if(!other)return
+  await openWorkspaceFile(other)
+  if(pid!==projectId.value||account!==accountId.value||activeFile.value?.id!==other.id)return
+ }
+ tabIds.value=tabIds.value.filter(id=>id!==file.id)
+}
 function updateDraft(value:string){if(writeAccess.value&&!collaborationOpen.value)draft.value=value}
 const refreshMessage=ref('')
 
@@ -473,7 +529,12 @@ const aiPanelOpen=computed(()=>toolMode.value==='ai'&&ownerAccess.value&&!!aiFil
 const projectToolOpen=computed(()=>!!toolMode.value&&toolMode.value!=='ai'&&(!collaborationOpen.value||toolMode.value==='snapshots'))
 const auxiliaryOpen=computed(()=>aiPanelOpen.value||projectToolOpen.value||outlineOpen.value&&!collaborationOpen.value)
 const aiExpanded=ref(false)
-watch(aiPanelOpen,open=>{if(!open)aiExpanded.value=false})
+const pinPDF=ref(false)
+const wideLayout=ref(typeof window!=='undefined'&&window.innerWidth>=1440)
+const pdfDocked=computed(()=>aiPanelOpen.value&&pinPDF.value&&wideLayout.value&&!compactLayout.value&&!aiExpanded.value)
+watch(aiPanelOpen,open=>{if(!open){aiExpanded.value=false;pinPDF.value=false}})
+watch(aiExpanded,expanded=>{if(expanded)pinPDF.value=false})
+watch(wideLayout,wide=>{if(!wide)pinPDF.value=false})
 const searchQuery=ref(''),replaceQuery=ref(''),referenceQuery=ref('')
 const searchSources=shallowRef<PaperFile[]>([]),searchBase=ref(0)
 const searchStale=computed(()=>!searchBase.value||searchBase.value!==project.value?.head_revision||(activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content))
@@ -586,7 +647,7 @@ function onDraftStorage(event:StorageEvent){
 let toolSerial=0,bibSerial=0
 function formatVersionDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString()}
 function closeTool(){if(aiApplying.value)return;toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null;snapshotDetail.value=null;if(compactLayout.value&&!outlineOpen.value&&layoutMode.value==='split')layoutMode.value='editor'}
-function toggleTool(mode:ToolMode){if(aiApplying.value)return;if((collaborationOpen.value&&mode!=='snapshots'&&(mode!=='ai'||!aiSharedState.value?.ready))||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures','ai','submission','git'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}closeTool();toolMode.value=mode;outlineOpen.value=false;layoutMode.value='split';if(compactLayout.value){showFiles.value=false;moreToolsOpen.value=false}refreshTool()}
+function toggleTool(mode:ToolMode){if(aiApplying.value)return;if((collaborationOpen.value&&mode!=='snapshots'&&(mode!=='ai'||!aiSharedState.value?.ready))||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures','ai','submission','git'].includes(mode)))return;if(toolMode.value===mode){closeTool();return}leaveFocus();closeTool();toolMode.value=mode;outlineOpen.value=false;layoutMode.value='split';if(compactLayout.value){showFiles.value=false;moreToolsOpen.value=false}refreshTool()}
 function refreshTool(){if(toolMode.value==='search')void loadSearchSources();else if(toolMode.value==='references')void refreshBib();else if(toolMode.value==='history')void loadVersions();else if(toolMode.value==='snapshots')void loadSnapshots();else if(toolMode.value==='drafts')refreshLocalDrafts();else if(toolMode.value==='members'&&ownerAccess.value)void loadMembers()}
 function memberError(cause:unknown){
  const code=cause instanceof ApiErrorResponseError?cause.code:''
@@ -884,7 +945,7 @@ async function loadOutline(){
   if(serial===outlineSerial)outlineCache.value=collected
  }finally{if(serial===outlineSerial)outlineLoading.value=false}
 }
-function toggleOutline(){if(aiApplying.value)return;if(!outlineOpen.value){closeTool();outlineOpen.value=true;layoutMode.value='split';if(compactLayout.value)showFiles.value=false;void loadOutline()}else{outlineOpen.value=false;if(compactLayout.value)layoutMode.value='editor'}}
+function toggleOutline(){if(aiApplying.value)return;if(!outlineOpen.value){leaveFocus();closeTool();outlineOpen.value=true;layoutMode.value='split';if(compactLayout.value)showFiles.value=false;void loadOutline()}else{outlineOpen.value=false;if(compactLayout.value)layoutMode.value='editor'}}
 async function jumpOutline(item:OutlineRow){
  const target=files.value.find(f=>f.id===item.fileId)
  if(!target)return
@@ -1042,7 +1103,7 @@ const displayedPDFJob=ref('')
 const syncMessage=ref('')
 let mapAbort:AbortController|undefined
 let mapSerial=0
-const syncReady=computed(()=>ownerAccess.value&&!collaborationOpen.value&&!!sourceMap.value&&!!previewJob.value&&mapJob.value===previewJob.value.id&&displayedPDFJob.value===mapJob.value&&previewJob.value.source_revision===project.value?.head_revision&&draft.value===activeFile.value?.content)
+const syncReady=computed(()=>ownerAccess.value&&!collaborationOpen.value&&!aiRepairActive.value&&!aiApplying.value&&!!sourceMap.value&&!!previewJob.value&&mapJob.value===previewJob.value.id&&displayedPDFJob.value===mapJob.value&&previewJob.value.source_revision===project.value?.head_revision&&draft.value===activeFile.value?.content)
 watch(()=>[projectId.value,previewJob.value?.id] as const,async ([pid,jid])=>{
  const serial=++mapSerial;mapAbort?.abort();mapAbort=new AbortController()
  sourceMap.value=null;mapJob.value='';syncMessage.value=''
@@ -1061,7 +1122,7 @@ async function jumpToPDF(){
  if(!checkSync()||!sourceMap.value||!activeFile.value)return
  const p=sourceToPDF(sourceMap.value,activeFile.value.path,editorRef.value?.getLine?.()||1, pdfRef.value?.page||1)
  if(!p){syncMessage.value='当前源码行没有对应的 PDF 内容。';return}
- if(auxiliaryOpen.value||layoutMode.value==='editor')setWorkspaceLayout(compactLayout.value?'pdf':'split')
+ if((auxiliaryOpen.value&&!pdfDocked.value)||layoutMode.value==='editor')setWorkspaceLayout(compactLayout.value?'pdf':'split')
  await nextTick()
  if(!await pdfRef.value?.showPosition(p[2],p[3]/10,p[4]/10,mapJob.value)){syncMessage.value='PDF 正在更新，请稍后再定位。';return}
  syncMessage.value=''
@@ -1090,7 +1151,7 @@ function readPanelPrefs():{files:number;preview:number}{
 const panelPrefs=readPanelPrefs()
 const previewWidth=ref(panelPrefs.preview)
 const filesWidth=ref(panelPrefs.files)
-const maxFilesWidth=()=>Math.max(180,Math.min(420,(workspaceRoot.value?.clientWidth||1200)-600))
+const maxFilesWidth=()=>Math.max(180,Math.min(420,(workspaceRoot.value?.clientWidth||1200)-(pdfDocked.value?1080:600)))
 function resizeFiles(value:number){filesWidth.value=Math.max(180,Math.min(maxFilesWidth(),value))}
 function resizePreview(value:number){
  const full=workspaceRoot.value?.clientWidth||1200
@@ -1110,9 +1171,26 @@ const compactLayout=ref(isCompactViewport())
 const moreToolsOpen=ref(false)
 const showFiles=ref(!compactLayout.value)
 const layoutMode=ref<'split'|'editor'|'pdf'>(compactLayout.value?'editor':'split')
+const focusMode=ref(false)
+let previousFocusLayout:{mode:'split'|'editor'|'pdf';files:boolean}|null=null
+const desktopRail=computed(()=>!compactLayout.value&&!focusMode.value&&!!project.value&&!loading.value&&!error.value&&!collaborationOpen.value)
+function leaveFocus(){
+ if(!focusMode.value)return
+ focusMode.value=false
+ if(previousFocusLayout){layoutMode.value=previousFocusLayout.mode;showFiles.value=previousFocusLayout.files}
+ previousFocusLayout=null
+}
+function toggleFocus(){
+ if(focusMode.value){leaveFocus();return}
+ if(compactLayout.value||auxiliaryOpen.value||collaborationOpen.value||!project.value||loading.value||error.value)return
+ previousFocusLayout={mode:layoutMode.value,files:showFiles.value}
+ focusMode.value=true;showFiles.value=false;layoutMode.value='editor'
+}
+function toggleFilePane(){if(focusMode.value){leaveFocus();showFiles.value=true}else showFiles.value=!showFiles.value}
+watch([projectId,accountId],leaveFocus)
 function setWorkspaceLayout(mode:'split'|'editor'|'pdf'){
  if(aiApplying.value||snapshotMutating.value||memberMutating.value)return
- closeTool();outlineOpen.value=false;aiExpanded.value=false
+ leaveFocus();closeTool();outlineOpen.value=false;aiExpanded.value=false
  layoutMode.value=compactLayout.value&&mode==='split'?'editor':mode
  if(compactLayout.value)showFiles.value=false
 }
@@ -1120,7 +1198,7 @@ function returnPDF(){setWorkspaceLayout(compactLayout.value?'pdf':'split')}
 async function compileAndShowPDF(){setWorkspaceLayout(compactLayout.value?'pdf':'split');await nextTick();await compileNow()}
 function revealSource(){if(compactLayout.value)setWorkspaceLayout('editor')}
 async function insertReference(key:string){if(!writeAccess.value)return;if(compactLayout.value){revealSource();await nextTick()}editorRef.value?.insertCitation(key)}
-function onViewportChange(){const small=isCompactViewport();if(small===compactLayout.value){if(!small){resizeFiles(filesWidth.value);resizePreview(previewWidth.value)}return;}compactLayout.value=small;showFiles.value=!small;moreToolsOpen.value=false;if(small&&!auxiliaryOpen.value&&layoutMode.value==='split')layoutMode.value='editor';if(!small&&auxiliaryOpen.value)layoutMode.value='split';aiExpanded.value=false}
+function onViewportChange(){wideLayout.value=window.innerWidth>=1440;const small=isCompactViewport();if(small===compactLayout.value){if(!small){resizeFiles(filesWidth.value);resizePreview(previewWidth.value)}return;}if(small)leaveFocus();compactLayout.value=small;showFiles.value=!small;moreToolsOpen.value=false;if(small&&!auxiliaryOpen.value&&layoutMode.value==='split')layoutMode.value='editor';if(!small&&auxiliaryOpen.value)layoutMode.value='split';aiExpanded.value=false}
 const autoCompile=ref(false)
 let dragging=false
 let autoTimer:ReturnType<typeof setTimeout>|null=null
@@ -1341,6 +1419,7 @@ async function selectFile(file:PaperFile){
 }
 
 async function selectTreeFile(file:PaperFile){
+ if(!canChooseTreeFile.value)return
  await selectFile(file)
  if(activeFile.value?.id===file.id&&compactLayout.value)setWorkspaceLayout('editor')
 }
@@ -1393,7 +1472,7 @@ async function refreshCompileStatus() {
   }
 }
 
-async function compileNow(){return submitCompile()}
+async function compileNow(){if(aiRepairActive.value||aiApplying.value)return;return submitCompile()}
 async function compileForAI(revision:number,compiler:PaperCompiler):Promise<PaperCompileJob|null>{
  if(!aiRepairActive.value||toolMode.value!=='ai'||collaborationOpen.value||project.value?.head_revision!==revision||selectedCompiler.value!==compiler||draft.value!==activeFile.value?.content||saving.value||savePromise||saveError.value||!activeFile.value)return null
  return await submitCompile({revision,compiler})??null
@@ -1527,7 +1606,7 @@ function startCollaboration(){
  if(!canStartCollaboration.value||savePromise||!activeFile.value)return
  if(saveTimer){clearTimeout(saveTimer);saveTimer=null}
  clearSaveRetry();retryableSave=false
- closeTool();outlineOpen.value=false;managedFile.value=null;clearAuto();autoCompile.value=false;historySerial++
+ leaveFocus();closeTool();outlineOpen.value=false;managedFile.value=null;clearAuto();autoCompile.value=false;historySerial++
  collaborationAccount.value=accountId.value;collaborationRevision.value=null;aiSharedState.value=null
  collaborationOpen.value=true;saveStatus.value='实时协作模式'
  if(layoutMode.value==='pdf')layoutMode.value='editor'
@@ -1642,6 +1721,10 @@ watch(projectId, () => {
 })
 
 function onShortcut(e:KeyboardEvent){
+ if(e.defaultPrevented||e.isComposing||e.repeat)return
+ if(quickOpen.value||confirmationMessage.value)return
+ if((e.metaKey||e.ctrlKey)&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='p'&&canSwitchWorkspaceFile.value){e.preventDefault();openQuick();return}
+ if(e.key==='Escape'&&focusMode.value){e.preventDefault();leaveFocus();return}
  if(e.key==='Escape'&&compactLayout.value&&showFiles.value){e.preventDefault();showFiles.value=false;return}
  if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();void compileNow()}
 }

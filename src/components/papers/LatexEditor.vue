@@ -209,7 +209,8 @@ function acceptAIEdit(edit:PaperAIEdit):boolean{
  editor.focus()
  return editor.state.doc.toString()===next
 }
-defineExpose({getLine,goToLine,goToMatch,insertCitation,insertBlock,runUndo,getAISelection,acceptAIEdit})
+function focusEditor(){editor?.focus()}
+defineExpose({focusEditor,getLine,goToLine,goToMatch,insertCitation,insertBlock,runUndo,getAISelection,acceptAIEdit})
 
 onBeforeUnmount(() => {
   undoManager?.destroy()

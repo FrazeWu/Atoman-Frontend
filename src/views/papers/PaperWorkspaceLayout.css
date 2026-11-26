@@ -149,3 +149,41 @@
 .papers-workspace--compact .papers-workspace__toolgroup:first-child button { padding-inline:5px; }
 .papers-workspace--compact .papers-workspace__secondary-tools { flex:1 1 100%; flex-wrap:wrap; border-left:0; padding:4px 0 0; border-top:1px solid var(--papers-border); }
 @media(max-width:420px) { .papers-workspace--compact .papers-workspace__toolgroup:first-child button svg:not(.lucide-sparkles) { display:none; } .papers-workspace--compact .papers-workspace__toolnav { gap:3px; } .papers-workspace--compact .papers-workspace__toolgroup:first-child button {font-size:11px;padding-inline:5px} .papers-workspace__more-tools {font-size:11px} }
+
+/* A VS Code-inspired activity rail keeps the workspace title row compact.
+   Labels stay in the accessibility tree and all actions have native titles. */
+.papers-workspace--rail {
+ display:grid;grid-template-columns:46px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);
+ grid-template-areas:"header header" "rail content";
+}
+.papers-workspace--rail .papers-workspace__header {grid-area:header}
+.papers-workspace--rail .papers-workspace__content {grid-area:content}
+.papers-workspace--rail .papers-workspace__toolnav {grid-area:rail;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:7px;padding:6px 4px;overflow:auto;border-right:1px solid var(--papers-border);border-bottom:0;background:var(--papers-subtle);scrollbar-width:thin}
+.papers-workspace--rail .papers-workspace__toolgroup {flex-direction:column;align-items:stretch;gap:3px}
+.papers-workspace--rail .papers-workspace__toolgroup+.papers-workspace__toolgroup {border-left:0;border-top:1px solid var(--papers-border);padding:7px 0 0}
+.papers-workspace--rail .papers-workspace__toolgroup:last-child {margin-top:auto}
+.papers-workspace--rail .papers-workspace__toolnav button {display:flex;align-items:center;justify-content:center;gap:0;padding:8px 4px;min-width:0;min-height:36px;font-size:0;line-height:0;position:relative;border-color:transparent;background:transparent;color:var(--papers-muted)}
+.papers-workspace--rail .papers-workspace__toolnav button svg {width:19px;height:19px;flex:none}
+.papers-workspace--rail .papers-workspace__toolnav button:hover {background:var(--papers-surface);color:var(--a-color-text)}
+.papers-workspace--rail .papers-workspace__toolnav button[aria-pressed=true] {background:var(--papers-surface);color:var(--papers-accent);box-shadow:inset 2px 0 var(--papers-accent)}
+.papers-workspace__quick-button,.papers-workspace__focus-button {flex:none;display:flex;align-items:center;justify-content:center;padding-inline:7px}
+.papers-workspace__tabs {display:flex;align-items:stretch;gap:0;min-height:34px;flex-shrink:0;overflow-x:auto;overflow-y:hidden;background:var(--papers-subtle);border-bottom:1px solid var(--papers-border);scrollbar-width:thin;min-width:0}
+.papers-workspace__tab {display:flex;align-items:stretch;flex:none;min-width:0;max-width:min(224px,75%);border-right:1px solid var(--papers-border);color:var(--papers-muted);border-top:2px solid transparent}
+.papers-workspace__tab.active {background:var(--papers-surface);color:var(--papers-accent);border-top-color:var(--papers-accent)}
+.papers-workspace__tab>button:first-child {min-width:0;max-width:100%;display:flex;align-items:center;justify-content:flex-start;gap:5px;white-space:nowrap;padding:5px 7px;font-size:12px;border:0;border-radius:0;font-weight:500}
+.papers-workspace__tab>button:first-child span:not(.papers-workspace__dirty) {min-width:0;overflow:hidden;text-overflow:ellipsis}
+.papers-workspace__tab>button:first-child svg {flex:none}
+.papers-workspace__tab.active>button:first-child {font-weight:650}
+.papers-workspace__tab-close {display:flex;align-items:center;justify-content:center;flex:none;width:23px;min-width:0;padding:0}
+.papers-workspace__dirty {color:var(--papers-accent);font-size:8px;flex:none}
+.papers-workspace__tab-add {display:flex;align-items:center;justify-content:center;flex:none;min-width:34px;padding-inline:6px}
+.papers-workspace--focus .papers-workspace__files,.papers-workspace--focus .papers-workspace__files-divider {display:none}
+.papers-workspace--focus .papers-workspace__editor {flex:1 1 auto}
+.papers-workspace--focus .papers-workspace__editor :deep(.cm-content){max-width:1200px}
+.pdf-docked .papers-workspace__files {width:min(var(--files-width,248px),max(180px,calc(100% - 1080px)))}
+.pdf-docked .papers-workspace__editor,.pdf-docked .papers-workspace__pdf-panel,.pdf-docked .papers-workspace__ai-panel {flex:1 1 0%}
+.pdf-docked .papers-workspace__pdf-panel {order:4;border-left:1px solid var(--papers-border);border-right:1px solid var(--papers-border)}
+.pdf-docked .papers-workspace__ai-panel {order:5}
+@media(max-width:1100px){.papers-workspace__tab{max-width:190px}.papers-workspace__quick-button,.papers-workspace__focus-button{padding-inline:5px}}
+.papers-workspace--compact .papers-workspace__tabs {min-height:32px}
+.papers-workspace--compact .papers-workspace__tab {max-width:min(190px,65%)}

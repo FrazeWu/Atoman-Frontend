@@ -1,5 +1,11 @@
 <template>
  <section class="paper-ai" aria-label="AI 修改建议">
+  <nav class="paper-ai__navigation" aria-label="AI 工作区导航">
+   <PButton size="sm" type="button" variant="ghost" :disabled="!capability?.enabled" @click="jumpAISection('settings')"><Settings2 :size="14" aria-hidden="true"/> 配置</PButton>
+   <PButton size="sm" type="button" variant="ghost" :disabled="!capability?.enabled" @click="jumpAISection('task')"><MessageSquare :size="14" aria-hidden="true"/> 任务</PButton>
+   <PButton size="sm" type="button" variant="ghost" :disabled="!suggestion" @click="jumpAISection('review')"><FileDiff :size="14" aria-hidden="true"/> 审阅{{suggestion?.changes?.length?' ('+suggestion.changes.length+')':''}}</PButton>
+   <PButton v-if="capability?.activity" size="sm" type="button" variant="ghost" @click="jumpAISection('activity')"><History :size="14" aria-hidden="true"/> 记录</PButton>
+  </nav>
   <header class="paper-ai__workbench" aria-label="当前 AI 任务">
    <div class="paper-ai__identity"><span class="paper-ai__avatar" aria-hidden="true">AI</span><div><strong>{{capability?.agent?.id==='papers-agent'?capability.agent.display_name:'Papers Agent'}}</strong><small>AI 建议者 · 拥有者审批</small></div></div>
    <p>当前任务：{{task==='project'?'跨文件修改':task==='explain'?'解释与分析':'源码修改'}} · {{file.path}} · v{{file.revision}}</p>
@@ -9,14 +15,14 @@
    <p role="status">{{taskStatus}}</p>
    <small>AI 不作为可登录成员，不能自主提交。跨文件任务的提交者仍是拥有者；实时协作编辑继续使用你的身份。</small>
   </header>
-  <PaperAIActivityPanel v-if="capability?.activity" :project-id="projectId" :account-id="accountId" :files="files" :refresh="activityRefresh" :disabled="busy||disabled||repairActive||!!collaborationEpoch||source!==file.content" :rollback="rollbackActivity" :historical-changes="capability.historical_changes===true" :pending-proposal="suggestion?.response.proposal_id" />
+  <div v-if="capability?.activity" ref="activityPanel" class="paper-ai__activity-anchor"><PaperAIActivityPanel :project-id="projectId" :account-id="accountId" :files="files" :refresh="activityRefresh" :disabled="busy||disabled||repairActive||!!collaborationEpoch||source!==file.content" :rollback="rollbackActivity" :historical-changes="capability.historical_changes===true" :pending-proposal="suggestion?.response.proposal_id" /></div>
   <p v-if="loading" role="status">正在检查 AI 服务…</p>
   <div v-else-if="!capability?.enabled" class="paper-ai__notice">
    <strong>AI 助手尚未开放</strong><p>{{ message||'源码编辑不受影响。' }}</p>
    <PButton size="sm" variant="secondary" type="button" @click="loadCapability">重新检查</PButton>
   </div>
   <template v-else>
-   <details class="paper-ai__settings" open>
+   <details ref="settingsPanel" class="paper-ai__settings" open>
     <summary><span>模型与 API 设置</span><small>{{baseValid&&key.trim()&&model?model:'待配置'}}</small></summary>
     <div class="paper-ai__settings-body"><PInput v-if="capability?.custom_base_urls" v-model.trim="baseURL" label="API 地址" aria-label="AI API 地址" maxlength="512" placeholder="https://api.example.com/v1" spellcheck="false" autocomplete="off" :disabled="busy" :error="baseURL&&!baseValid?'请输入公开 HTTPS API 基础地址':''" />
     <PSelect v-else :model-value="baseURL" label="AI API 地址" size="sm" :options="capability!.base_urls.map(value=>({value,label:value}))" :disabled="busy" @update:model-value="baseURL=String($event)" />
@@ -43,7 +49,7 @@
      <PButton v-else type="button" size="sm" variant="secondary" :disabled="commitBusy" @click="endRepair('已停止修复。已提交的编译仍可在 PDF 面板查看或取消。')">停止修复</PButton>
     </div>
    </section>
-   <section class="paper-ai__composer" aria-label="任务指令">
+   <section ref="taskPanel" class="paper-ai__composer" aria-label="任务指令">
     <strong class="paper-ai__section-title">任务与指令</strong>
    <PSelect :model-value="task" :options="taskOptions" label="AI 任务类型" size="sm" :disabled="busy||repairActive" @update:model-value="task=$event as PaperAITask" />
    <p v-if="task==='project'">使用已保存的完整文件。每个文件最多一处连续替换，审阅并勾选后才能提交。该操作仅在普通编辑模式开放，可能使其他协作者的旧会话失效，请先协调。</p>
@@ -76,7 +82,9 @@
     <small>在本站读取已保存文本并按任务关键词、LaTeX 引用关系与编译错误推荐，替换下方附加文件选择。不会直接调用模型；仍需检查发送范围。每次受服务的文件数和字节限制。</small>
     <p v-if="recommendMessage" role="status">{{recommendMessage}}</p>
     <div v-for="candidate in recommended" :key="candidate.file.id"><small>{{candidate.file.path}} · {{candidate.reasons.join('；')}}</small></div>
-    <PCheckbox v-for="item in eligibleFiles" :key="item.id" class="paper-ai__check" :model-value="extras.some(extra=>extra.id===item.id)" :disabled="busy||contextBusy||(!extras.some(extra=>extra.id===item.id)&&extras.length>=capability!.max_extra_files)" @update:model-value="toggleContext(item,$event)">{{item.path}}</PCheckbox>
+    <PInput v-if="eligibleFiles.length>7" v-model.trim="contextFilter" aria-label="筛选 AI 附加文件" placeholder="按文件名或路径筛选" maxlength="200" :disabled="busy" />
+    <p v-if="eligibleFiles.length&&!visibleContextFiles.length">没有匹配的文件；已选择的附加文件保持不变。</p>
+    <PCheckbox v-for="item in visibleContextFiles" :key="item.id" class="paper-ai__check" :model-value="extras.some(extra=>extra.id===item.id)" :disabled="busy||contextBusy||(!extras.some(extra=>extra.id===item.id)&&extras.length>=capability!.max_extra_files)" @update:model-value="toggleContext(item,$event)">{{item.path}}</PCheckbox>
     <p v-if="contextBusy">读取文件预览中…</p>
     <details v-for="extra in extras" :key="extra.id"><summary>{{ extra.path }} · v{{ extra.revision }}</summary><pre>{{ extra.content }}</pre></details>
    </details>
@@ -108,11 +116,22 @@
     <pre v-else>{{ suggestion.response.text }}</pre>
     <template v-if="suggestion.task==='project'">
      <p v-if="!suggestion.changes?.length">没有需要修改的文件。</p>
-     <div v-for="change in suggestion.changes||[]" :key="change.file_id" class="paper-ai__context">
-      <PCheckbox class="paper-ai__check" :model-value="approved.includes(change.file_id)" :disabled="busy||disabled||resultStale" @update:model-value="approve(change.file_id,$event)"><strong>{{change.path}} · v{{change.base_revision}}</strong></PCheckbox>
-      <PaperAIDiff :before="change.before" :after="change.after" />
+     <div v-if="suggestion.changes?.length" class="paper-ai__review-nav" aria-label="修改文件导航">
+      <strong>{{approved.length}} / {{suggestion.changes.length}} 个文件已选</strong>
+      <PButton size="sm" variant="ghost" type="button" :disabled="reviewIndex===0" @click="moveReview(-1)">上一文件</PButton>
+      <PButton size="sm" variant="ghost" type="button" :disabled="reviewIndex>=suggestion.changes.length-1" @click="moveReview(1)">下一文件</PButton>
      </div>
-     <PButton v-if="suggestion.changes?.length" type="button" size="sm" :disabled="resultStale||disabled||busy||!approved.length" @click="acceptProject">应用已选修改（{{approved.length}}）</PButton>
+     <div v-for="(change,index) in suggestion.changes||[]" :key="change.file_id" class="paper-ai__review-file" :class="{current:index===reviewIndex}">
+      <div class="paper-ai__review-file-heading">
+       <PCheckbox class="paper-ai__check" :model-value="approved.includes(change.file_id)" :disabled="busy||disabled||resultStale" @update:model-value="approve(change.file_id,$event)"><strong>{{change.path}} · v{{change.base_revision}}</strong></PCheckbox>
+       <PButton size="sm" variant="ghost" type="button" :aria-expanded="index===reviewIndex" :aria-label="'审阅 '+change.path" @click="reviewIndex=index">查看差异</PButton>
+      </div>
+      <PaperAIDiff v-if="index===reviewIndex" :before="change.before" :after="change.after" />
+     </div>
+     <div v-if="suggestion.changes?.length" class="paper-ai__review-actions">
+      <small>仅提交勾选的完整文件修改，仍需最终确认。</small>
+      <PButton type="button" size="sm" :disabled="resultStale||disabled||busy||!approved.length" @click="acceptProject">应用已选修改（{{approved.length}}）</PButton>
+     </div>
     </template>
     <p v-if="resultStale">当前源码或文件版本已变化，不能应用旧建议，请重新生成。</p>
     <div class="paper-ai__row">
@@ -126,6 +145,7 @@
 
 <script setup lang="ts">
 import {computed,nextTick,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue'
+import {Settings2,MessageSquare,FileDiff,History} from 'lucide-vue-next'
 import PButton from '@/components/ui/PButton.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
@@ -227,8 +247,16 @@ const capability=ref<PaperAICapability|null>(null),loading=ref(false),message=re
 const baseURL=ref(''),model=ref('gpt-4.1-mini'),key=ref(''),instruction=ref(''),task=ref<PaperAITask>('revise'),consent=ref(false)
 const target=shallowRef<Captured|null>(null),extras=shallowRef<PaperFile[]>([])
 const suggestion=shallowRef<Suggestion|null>(null)
-const resultPanel=ref<HTMLElement|null>(null)
-watch(suggestion,async (value)=>{if(!value)return;await nextTick();resultPanel.value?.scrollIntoView?.({block:'nearest',behavior:'auto'})})
+const resultPanel=ref<HTMLElement|null>(null),settingsPanel=ref<HTMLDetailsElement|null>(null),taskPanel=ref<HTMLElement|null>(null),activityPanel=ref<HTMLElement|null>(null)
+const reviewIndex=ref(0)
+function moveReview(delta:number){reviewIndex.value=Math.max(0,Math.min((suggestion.value?.changes?.length||1)-1,reviewIndex.value+delta))}
+function jumpAISection(section:'settings'|'task'|'review'|'activity'){
+ const target=section==='settings'?settingsPanel.value:section==='task'?taskPanel.value:section==='review'?resultPanel.value:activityPanel.value
+ if(section==='settings'&&settingsPanel.value)settingsPanel.value.open=true
+ if(section==='activity'){const details=activityPanel.value?.querySelector('details');if(details)details.open=true}
+ target?.scrollIntoView?.({block:'start',behavior:'auto'})
+}
+watch(suggestion,async (value)=>{reviewIndex.value=0;if(!value)return;await nextTick();jumpAISection('review')})
 const history=shallowRef<PaperAIHistoryTurn[]>([]),includeHistory=ref(true),approved=ref<string[]>([])
 const historyAvailable=computed(()=>Number.isSafeInteger(capability.value?.max_history_turns)&&Number.isSafeInteger(capability.value?.max_history_bytes)&&(capability.value?.max_history_turns||0)>0&&(capability.value?.max_history_bytes||0)>0)
 const projectModeAvailable=computed(()=>capability.value?.project_edits===true&&!props.collaborationEpoch&&!!props.applyProject&&Number.isSafeInteger(props.projectRevision)&&(props.projectRevision||0)>0)
@@ -246,6 +274,9 @@ const selectedSource=computed(()=>target.value?target.value.baseline.slice(targe
 const sourceBytes=computed(()=>paperAIBytes(selectedSource.value))
 const contextBytes=computed(()=>sourceBytes.value+extras.value.reduce((n,item)=>n+paperAIBytes(item.content),0))
 const eligibleFiles=computed(()=>props.files.filter(item=>item.kind==='text'&&item.id!==props.file.id))
+const contextFilter=ref('')
+const visibleContextFiles=computed(()=>eligibleFiles.value.filter(file=>file.path.toLowerCase().includes(contextFilter.value.toLowerCase())))
+watch(()=>props.file.id,()=>{contextFilter.value=''})
 const staleTarget=(item:Captured|null)=>!item||item.fileId!==props.file.id||item.revision!==props.file.revision||item.baseline!==props.source||item.collaborationEpoch!==props.collaborationEpoch
 const stale=computed(()=>staleTarget(target.value))
 const resultStale=computed(()=>{
@@ -499,4 +530,17 @@ function accept(){
 .paper-ai :deep(.p-input),.paper-ai :deep(.p-textarea){font-size:13px}
 @container(max-width:350px){.paper-ai__steps{grid-template-columns:repeat(2,minmax(0,1fr))}.paper-ai__workbench,.paper-ai__settings,.paper-ai__composer,.paper-ai__scope,.paper-ai__submit,.paper-ai__result{padding:9px}}
 @container(min-width:680px){.paper-ai__settings-body{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}.paper-ai__settings-body>p,.paper-ai__settings-body>small,.paper-ai__settings-body>.paper-ai-vault{grid-column:1/-1}.paper-ai__composer{grid-template-columns:repeat(2,minmax(0,1fr))}.paper-ai__composer>.paper-ai__section-title,.paper-ai__composer>.p-field:last-child,.paper-ai__composer>p,.paper-ai__composer>.paper-ai__row{grid-column:1/-1}.paper-ai__steps span{font-size:12px}}
+
+.paper-ai__navigation{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:4px;flex-wrap:wrap;background:var(--a-color-bg,#fff);padding:4px;border:1px solid var(--a-color-border-soft,#ddd);border-radius:7px}
+.paper-ai__navigation button{display:flex;align-items:center;gap:4px;flex:1;min-width:0;font-size:12px;padding-inline:5px;white-space:nowrap}
+.paper-ai__settings,.paper-ai__composer,.paper-ai__result,.paper-ai__activity-anchor{scroll-margin-top:46px}
+.paper-ai__review-nav,.paper-ai__review-file-heading{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.paper-ai__review-nav strong{flex:1;font-size:12px}
+.paper-ai__review-nav button{font-size:11px}
+.paper-ai__review-file{display:grid;gap:8px;min-width:0;border:1px solid var(--a-color-border-soft,#ddd);border-radius:6px;padding:9px}
+.paper-ai__review-file.current{border-color:var(--a-color-primary,#26784b)}
+.paper-ai__review-file-heading label{flex:1;min-width:100px;overflow-wrap:anywhere}
+.paper-ai__review-file-heading button{font-size:11px}
+.paper-ai__review-actions{display:grid;gap:6px;position:sticky;bottom:0;z-index:2;background:var(--a-color-bg,#fff);border-top:1px solid var(--a-color-border-soft,#ddd);padding-block:8px}
+@container(max-width:350px){.paper-ai__navigation button{font-size:11px;padding-inline:4px}.paper-ai__navigation button svg{display:none}}
 </style>

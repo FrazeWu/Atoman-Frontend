@@ -1097,7 +1097,7 @@ onBeforeUnmount(() => {
   padding: 14px clamp(16px, 4vw, 48px);
   background: var(--a-color-surface);
   border-top: 1px solid var(--a-color-border-soft);
-  box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
 }
 .mail-compose__footer-left {
   display: flex;

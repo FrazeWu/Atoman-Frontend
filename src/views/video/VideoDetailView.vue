@@ -839,6 +839,7 @@ async function toggleChannelSubscription() {
           <PBookmarkButton
             :bookmarked="bookmarks.isBookmarked(video.id)"
             :disabled="bookmarks.isPending(video.id)"
+            size="sm"
             variant="bordered"
             @bookmark="toggleBookmark"
             @unbookmark="toggleBookmark"

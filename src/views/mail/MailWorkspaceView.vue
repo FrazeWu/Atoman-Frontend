@@ -1,12 +1,12 @@
 <template>
   <section class="mail-page" data-testid="mail-workspace">
     <header class="mail-page__header">
-      <div class="mail-page__identity"><span class="mail-page__eyebrow">AToMAN · MAIL</span><h1>电子邮件</h1><p>{{ displayAddress }}</p></div>
+      <div class="mail-page__identity"><h1>电子邮件</h1><p>{{ displayAddress }}</p></div>
       <div class="mail-page__actions"><PBadge v-if="mailIsActive" class="mail-page__status" type="success" label="已连接" /><button v-if="mailIsActive" class="mail-icon-button" aria-label="邮箱设置" @click="settingsOpen = true"><Settings :size="19" /></button><button class="mail-icon-button" aria-label="刷新邮箱" :disabled="loadingAccount" @click="refreshMailbox"><RefreshCw :size="18" :class="{ 'mail-spin': loadingAccount }" /></button></div>
     </header>
     <div v-if="loadingAccount && !mailAccount" class="mail-gate"><RefreshCw class="mail-spin" :size="24" /><p>正在连接邮箱…</p></div>
     <div v-else-if="!mailIsActive" class="mail-gate" data-testid="mail-not-active">
-      <div class="mail-gate__icon"><Mail :size="30" :stroke-width="1.4" /></div><span class="mail-gate__eyebrow">{{ statusLabel }}</span><h2>{{ statusTitle }}</h2><p>{{ statusDescription }}</p>
+      <div class="mail-gate__icon"><Mail :size="30" :stroke-width="1.4" /></div><h2>{{ statusTitle }}</h2><p>{{ statusDescription }}</p>
       <p v-if="accountError" role="alert" class="mail-error">{{ accountError }}</p>
       <form v-if="mailAccount?.status === 'not_invited' || mailAccount?.status === 'not_ready'" class="mail-gate__redeem" :data-testid="isMailAdministrator ? 'mail-admin-reserve-form' : 'mail-invite-redeem-form'" @submit.prevent="claimAddress">
         <PInput v-if="!isMailAdministrator" id="mail-invitation" v-model="invitation" label="邀请码" autocomplete="off" placeholder="输入你的邀请码" required />
@@ -43,6 +43,7 @@
               aria-label="搜索邮件"
               :show-action-button="true"
               action-button-text="搜索"
+              action-button-variant="secondary"
               :enable-preview="false"
               :auto-navigate-on-select="false"
               :clearable="true"
@@ -132,49 +133,54 @@
                   <button class="mail-icon-button" aria-label="删除会话" title="删除会话 (#)" :disabled="actionBusy" @click="trashAndAdvance"><Trash2 :size="16" /></button>
                 </div>
                 <div class="mail-workspace__reader-head-right">
-                  <PBadge class="mail-workspace__read-tag" type="info" no-dot :label="readerMessages.length > 1 ? `${readerMessages.length} 封邮件` : '邮件'" />
+                  <span v-if="readerMessages.length > 1" class="mail-workspace__thread-count">{{ readerMessages.length }} 封邮件</span>
                   <button class="mail-icon-button mail-workspace__reader-close-btn" aria-label="关闭邮件" title="关闭邮件 (Esc)" @click="handleCloseReader"><X :size="16" /></button>
                 </div>
               </header>
               <div class="mail-workspace__reader-body" data-testid="mail-selected-preview">
-                <h2>{{ readerMessages[readerMessages.length - 1]?.subject || '无主题' }}</h2>
-                <p v-if="threadError" class="mail-error" role="alert">{{ threadError }}</p>
-                <section v-for="message in readerMessages" :key="message.id" class="mail-workspace__thread-card">
-                  <button class="mail-workspace__thread-summary" :aria-expanded="expanded.has(message.id)" @click="toggleExpanded(message)">
-                    <span><strong>{{ addressText(message.from || []) || '邮件' }}</strong><small v-if="!expanded.has(message.id)">{{ message.preview }}</small></span>
-                    <time>{{ mailTime(message.receivedAt, true) }}</time>
-                    <ChevronDown v-if="expanded.has(message.id)" :size="16" />
-                    <ChevronRight v-else :size="16" />
-                  </button>
-                  <div v-if="expanded.has(message.id)" class="mail-workspace__thread-content">
-                    <div v-if="detailLoading.has(message.id)" class="mail-workspace__detail-status"><RefreshCw class="mail-spin" :size="18" /> 正在打开邮件…</div>
-                    <div v-else-if="detailErrors[message.id]" class="mail-workspace__detail-status" role="alert"><p>{{ detailErrors[message.id] }}</p><button @click="loadDetail(message)">重新打开</button></div>
-                    <template v-else-if="details[message.id]">
-                      <dl class="mail-workspace__address-meta">
-                        <div><dt>发件人</dt><dd>{{ addressText(details[message.id]!.from) }}</dd></div>
-                        <div><dt>收件人</dt><dd>{{ addressText(details[message.id]!.to) }}</dd></div>
-                        <div v-if="details[message.id]!.cc.length"><dt>抄送</dt><dd>{{ addressText(details[message.id]!.cc) }}</dd></div>
-                      </dl>
-                      <div v-if="details[message.id]!.html" class="mail-workspace__format-choice">
-                        <button @click="htmlShown[message.id] = !htmlShown[message.id]">{{ htmlShown[message.id] ? '显示纯文本' : '显示排版' }}</button>
-                        <span v-if="htmlShown[message.id]">外部图片已隐藏</span>
-                      </div>
-                      <iframe v-if="htmlShown[message.id] && details[message.id]!.html" class="mail-workspace__html-frame" title="邮件正文" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" :srcdoc="mailFrameDocument(details[message.id]!.html || '')" />
-                      <p v-else class="mail-workspace__plain-body" data-testid="mail-plain-text">{{ details[message.id]!.plainText || (details[message.id]!.html ? '此邮件只有排版正文，请选择「显示排版」。' : '这封邮件没有正文。') }}</p>
-                      <p v-if="details[message.id]!.bodyTruncated" class="mail-workspace__body-warning">正文较长，当前显示部分内容。<button @click="downloadSource(details[message.id]!)">下载完整邮件</button></p>
-                      <div v-if="details[message.id]!.attachments.length" class="mail-workspace__attachments">
-                        <button v-for="(attachment, index) in details[message.id]!.attachments" :key="`${attachment.partId || index}-${attachment.name}`" class="mail-workspace__attachment-row" @click="previewAttachment(message, attachment)" :aria-label="'预览或下载附件 '+(attachment.name||'附件')"><Paperclip :size="14" /><span>{{ attachment.name || '附件' }} · {{ fileSize(attachment.size) }}</span><Download :size="14" /></button>
-                      </div>
-                      <div class="mail-workspace__reply-actions">
-                        <PButton size="sm" variant="secondary" @click="replyTo(details[message.id]!, false)"><Reply :size="15" /> 回复</PButton>
-                        <PButton size="sm" variant="secondary" @click="replyTo(details[message.id]!, true)"><ReplyAll :size="15" /> 全部回复</PButton>
-                        <PButton size="sm" variant="secondary" :disabled="actionBusy" @click="forwardMessage(details[message.id]!)"><Forward :size="15" /> 转发</PButton>
-                        <PButton size="sm" variant="ghost" :aria-label="message.isFlagged ? '取消星标' : '添加星标'" :disabled="actionBusy" @click="performAction(message.isFlagged ? 'unflag' : 'flag', [message.id])"><Star :size="15" :fill="message.isFlagged ? 'currentColor' : 'none'" /></PButton>
-                        <PButton v-if="details[message.id]!.from[0]?.email !== mailAccount?.address" size="sm" variant="ghost" title="拦截发件人并移到垃圾邮件" :disabled="actionBusy" @click="blockSender(details[message.id]!)"><ShieldAlert :size="15" /> 拦截</PButton>
-                      </div>
-                    </template>
-                  </div>
-                </section>
+                <div class="mail-workspace__reader-inner">
+                  <h2>{{ readerMessages[readerMessages.length - 1]?.subject || '无主题' }}</h2>
+                  <p v-if="threadError" class="mail-error" role="alert">{{ threadError }}</p>
+                  <section v-for="message in readerMessages" :key="message.id" class="mail-workspace__thread-card">
+                    <button class="mail-workspace__thread-summary" :aria-expanded="expanded.has(message.id)" @click="toggleExpanded(message)">
+                      <span><strong>{{ addressText(message.from || []) || '邮件' }}</strong><small v-if="!expanded.has(message.id)">{{ message.preview }}</small></span>
+                      <time>{{ mailTime(message.receivedAt, true) }}</time>
+                      <ChevronDown v-if="expanded.has(message.id)" :size="16" />
+                      <ChevronRight v-else :size="16" />
+                    </button>
+                    <div v-if="expanded.has(message.id)" class="mail-workspace__thread-content">
+                      <div v-if="detailLoading.has(message.id)" class="mail-workspace__detail-status"><RefreshCw class="mail-spin" :size="18" /> 正在打开邮件…</div>
+                      <div v-else-if="detailErrors[message.id]" class="mail-workspace__detail-status" role="alert"><p>{{ detailErrors[message.id] }}</p><button @click="loadDetail(message)">重新打开</button></div>
+                      <template v-else-if="details[message.id]">
+                        <dl class="mail-workspace__address-meta">
+                          <div><dt>收件人</dt><dd>{{ addressText(details[message.id]!.to) }}</dd></div>
+                          <div v-if="details[message.id]!.cc.length"><dt>抄送</dt><dd>{{ addressText(details[message.id]!.cc) }}</dd></div>
+                        </dl>
+                        <iframe
+                          v-if="details[message.id]!.html"
+                          class="mail-workspace__html-frame"
+                          title="邮件正文"
+                          sandbox="allow-popups allow-popups-to-escape-sandbox"
+                          referrerpolicy="no-referrer"
+                          :style="{ height: htmlFrameHeight(details[message.id]!) }"
+                          :srcdoc="mailFrameDocument(details[message.id]!.html || '')"
+                        />
+                        <p v-else class="mail-workspace__plain-body" data-testid="mail-plain-text">{{ details[message.id]!.plainText || '这封邮件没有正文。' }}</p>
+                        <p v-if="details[message.id]!.bodyTruncated" class="mail-workspace__body-warning">正文较长，当前显示部分内容。<button @click="downloadSource(details[message.id]!)">下载完整邮件</button></p>
+                        <div v-if="details[message.id]!.attachments.length" class="mail-workspace__attachments">
+                          <button v-for="(attachment, index) in details[message.id]!.attachments" :key="`${attachment.partId || index}-${attachment.name}`" class="mail-workspace__attachment-row" @click="previewAttachment(message, attachment)" :aria-label="'预览或下载附件 '+(attachment.name||'附件')"><Paperclip :size="14" /><span>{{ attachment.name || '附件' }} · {{ fileSize(attachment.size) }}</span><Download :size="14" /></button>
+                        </div>
+                        <div class="mail-workspace__reply-actions">
+                          <PButton size="sm" variant="secondary" @click="replyTo(details[message.id]!, false)"><Reply :size="15" /> 回复</PButton>
+                          <PButton size="sm" variant="secondary" @click="replyTo(details[message.id]!, true)"><ReplyAll :size="15" /> 全部回复</PButton>
+                          <PButton size="sm" variant="secondary" :disabled="actionBusy" @click="forwardMessage(details[message.id]!)"><Forward :size="15" /> 转发</PButton>
+                          <PButton size="sm" variant="ghost" :aria-label="message.isFlagged ? '取消星标' : '添加星标'" :disabled="actionBusy" @click="performAction(message.isFlagged ? 'unflag' : 'flag', [message.id])"><Star :size="15" :fill="message.isFlagged ? 'currentColor' : 'none'" /></PButton>
+                          <PButton v-if="details[message.id]!.from[0]?.email !== mailAccount?.address" size="sm" variant="ghost" title="拦截发件人并移到垃圾邮件" :disabled="actionBusy" @click="blockSender(details[message.id]!)"><ShieldAlert :size="15" /> 拦截</PButton>
+                        </div>
+                      </template>
+                    </div>
+                  </section>
+                </div>
               </div>
             </template>
           </article>
@@ -276,7 +282,7 @@
         @close="settingsOpen = false"
       />
       <PModal :show="folderDialog" title="新建文件夹" size="sm" @close="folderDialog = false"><form class="mail-workspace__folder-form" @submit.prevent="addFolder"><PInput id="new-mail-folder" v-model="newFolderName" label="文件夹名称" maxlength="100" required autofocus /><p v-if="folderError" class="mail-error" role="alert">{{ folderError }}</p><PButton type="submit" :disabled="folderWorking || !newFolderName.trim()">{{ folderWorking ? '创建中…' : '创建' }}</PButton></form></PModal>
-      <PModal :show="deleteFolderDialog" title="删除文件夹" size="sm" @close="deleteFolderDialog = false"><p>删除「{{ currentFolder?.name }}」？只有空文件夹可以删除。</p><p v-if="folderError" class="mail-error" role="alert">{{ folderError }}</p><template #footer><PButton variant="secondary" @click="deleteFolderDialog = false">取消</PButton><PButton :disabled="folderWorking" @click="removeFolder">删除文件夹</PButton></template></PModal>
+      <PModal :show="deleteFolderDialog" title="删除文件夹" size="sm" @close="deleteFolderDialog = false"><p>删除「{{ currentFolder?.name }}」？只有空文件夹可以删除。</p><p v-if="folderError" class="mail-error" role="alert">{{ folderError }}</p><template #footer><PButton variant="secondary" @click="deleteFolderDialog = false">取消</PButton><PButton variant="danger" :disabled="folderWorking" @click="removeFolder">删除文件夹</PButton></template></PModal>
     </template>
   </section>
 </template>
@@ -297,7 +303,7 @@ import MailAttachmentPreview from './MailAttachmentPreview.vue'
 import MailScheduledPanel from './MailScheduledPanel.vue'
 import { computed, nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useSheetNavigation, type SheetNavigationDirection } from '@/composables/useSheetNavigation'
-import type { MailSummary, MailAttachmentInfo } from '@/api/mail'
+import type { MailSummary, MailAttachmentInfo, MailDetail } from '@/api/mail'
 import MailSettings from './MailSettings.vue'
 import MailExternalAccounts from './MailExternalAccounts.vue'
 import MailOrganizerPanel from './MailOrganizerPanel.vue'
@@ -305,7 +311,16 @@ import { fetchMailOrganizer, createMailOrganizerLabel, updateMailOrganizerLabel,
 import { addressText, fileSize, mailFrameDocument, mailTime } from './mail-helpers'
 import { useMailWorkspace } from './useMailWorkspace'
 import './mail-workspace.css'
-const { advancedOpen,advancedFilters,allFolders,setAdvancedSearch,clearAdvancedSearch, mailAccount, loadingAccount, accountError, mailIsActive, isMailAdministrator, statusLabel, statusTitle, statusDescription, invitation, chosenLocalPart, isChosenLocalValid, redeeming, redeemError, claimAddress, folders, foldersLoading, foldersError, currentFolder, currentFolderId, folderLabel, mobilePane, messages, drafts, loadingMessages, messagesError, searchText, committedSearch, totalMessages, conversations, conversationMode, selection, selectedGroupId, allSelected, selectAll, toggleGroup, selectFolder, loadMessages, refreshMailbox, runSearch, hasMore, openConversation, readerMessages, expanded, details, detailErrors, detailLoading, htmlShown, threadError, toggleExpanded, loadDetail, newMessage, editDraft, composeDraft, composeWarning, settingsOpen, replyTo, forwardMessage, onDraftSaved, onQueued, pendingSends, remainingSeconds, queueLabel, undoSend, checkSend, refreshQueue, provisionAccount, cancelBusy, notice, actionUndo, actionBusy, performAction, undoAction, downloadAttachment, downloadSource, blockSender, folderDialog, deleteFolderDialog, newFolderName, folderError, folderWorking, addFolder, removeFolder, isDraftFolder, clearReader } = useMailWorkspace()
+const { advancedOpen,advancedFilters,allFolders,setAdvancedSearch,clearAdvancedSearch, mailAccount, loadingAccount, accountError, mailIsActive, isMailAdministrator, statusTitle, statusDescription, invitation, chosenLocalPart, isChosenLocalValid, redeeming, redeemError, claimAddress, folders, foldersLoading, foldersError, currentFolder, currentFolderId, folderLabel, mobilePane, messages, drafts, loadingMessages, messagesError, searchText, committedSearch, totalMessages, conversations, conversationMode, selection, selectedGroupId, allSelected, selectAll, toggleGroup, selectFolder, loadMessages, refreshMailbox, runSearch, hasMore, openConversation, readerMessages, expanded, details, detailErrors, detailLoading, threadError, toggleExpanded, loadDetail, newMessage, editDraft, composeDraft, composeWarning, settingsOpen, replyTo, forwardMessage, onDraftSaved, onQueued, pendingSends, remainingSeconds, queueLabel, undoSend, checkSend, refreshQueue, provisionAccount, cancelBusy, notice, actionUndo, actionBusy, performAction, undoAction, downloadAttachment, downloadSource, blockSender, folderDialog, deleteFolderDialog, newFolderName, folderError, folderWorking, addFolder, removeFolder, isDraftFolder, clearReader } = useMailWorkspace()
+
+function htmlFrameHeight(detail: MailDetail): string {
+  const source = detail.plainText || (detail.html || '').replace(/<[^>]+>/g, '\n')
+  const wrappedLines = source
+    .split('\n')
+    .reduce((sum, line) => sum + Math.max(1, Math.ceil(line.trim().length / 42)), 0)
+  const height = Math.min(680, Math.max(132, wrappedLines * 28 + 28))
+  return `${height}px`
+}
 const displayAddress = computed(() => mailAccount.value?.address || '管理电子邮箱')
 const shortcutHelp=ref(false)
 const scheduledOpen=ref(false)

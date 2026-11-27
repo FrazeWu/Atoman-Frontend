@@ -388,8 +388,8 @@ body:has(.studio-layout) {
 /* ─── Settings Center ─────────────────────────────────── */
 .settings-center {
 	display: grid;
-	gap: 2rem;
-	padding-bottom: 12rem;
+	gap: 1.5rem;
+	padding-bottom: 8rem;
 }
 
 .settings-center__shell {
@@ -497,9 +497,9 @@ body:has(.studio-layout) {
 }
 
 .settings-center__section-head h2 {
-	margin-top: 0.15rem;
+	margin-top: 0;
 	color: var(--a-color-text);
-	font-size: clamp(1.25rem, 2vw, 1.55rem);
+	font-size: 1.25rem;
 	font-weight: 500;
 }
 
@@ -1248,13 +1248,16 @@ body:has(.studio-layout) {
 	pointer-events: none;
 }
 
+.a-sidebar,
+.p-sidebar {
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
 .a-sidebar::-webkit-scrollbar,
 .p-sidebar::-webkit-scrollbar {
-	width: 4px;
-}
-.a-sidebar::-webkit-scrollbar-thumb,
-.p-sidebar::-webkit-scrollbar-thumb {
-	background: var(--a-color-disabled-border);
+	display: none;
+	width: 0;
+	height: 0;
 }
 
 .a-sidebar-label,

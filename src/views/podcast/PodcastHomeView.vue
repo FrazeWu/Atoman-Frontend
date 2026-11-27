@@ -136,10 +136,7 @@ function playEpisode(ep: PodcastEpisode) {
 
     <section class="ph-recommendations" aria-labelledby="ph-recommendations-title">
       <div class="ph-section-header">
-        <div>
-          <h2 id="ph-recommendations-title">推荐</h2>
-          <p>发现值得收听的新单集。</p>
-        </div>
+        <h2 id="ph-recommendations-title">推荐</h2>
         <PSegmentedControl
           v-model="recommendationMode"
           :options="recommendationOptions"
@@ -201,10 +198,7 @@ function playEpisode(ep: PodcastEpisode) {
       aria-labelledby="ph-latest-title"
     >
       <div class="ph-section-header ph-section-header--compact">
-        <div>
-          <h2 id="ph-latest-title">最新单集</h2>
-          <p>最近发布的播客内容。</p>
-        </div>
+        <h2 id="ph-latest-title">最新单集</h2>
       </div>
 
       <PContentProgress
@@ -298,14 +292,14 @@ function playEpisode(ep: PodcastEpisode) {
 }
 
 .ph-latest {
-  margin-top: 3rem;
+  margin-top: 2.25rem;
 }
 
 .ph-section-header {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .ph-section-header h2,
@@ -364,7 +358,6 @@ function playEpisode(ep: PodcastEpisode) {
   border-color: var(--a-color-border);
   background: var(--a-color-surface-muted);
   box-shadow: none;
-  transform: translateY(-2px);
 }
 
 .ph-recommendation-card:hover::before,
@@ -486,7 +479,6 @@ function playEpisode(ep: PodcastEpisode) {
   border-color: var(--a-color-border);
   box-shadow: none;
   background: var(--a-color-surface-muted);
-  transform: translateY(-1px);
 }
 
 .ph-episode-cover {

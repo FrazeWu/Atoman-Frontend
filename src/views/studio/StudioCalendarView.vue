@@ -1,6 +1,6 @@
 <template>
   <section class="studio-calendar">
-    <PPageHeader title="发布日历" sub="定时发布">
+    <PPageHeader title="发布日历">
       <template #action>
         <div class="studio-calendar__month-actions">
           <PButton type="button" variant="secondary" aria-label="上个月" title="上个月" @click="changeMonth(-1)">
@@ -68,6 +68,7 @@ const todayKey = localDateKey(new Date())
 const preflightLabels: Record<string, string> = {
   missing_title: '缺少标题',
   missing_cover: '缺少封面',
+  missing_summary: '缺少摘要',
   missing_collection: '未加入合集',
   missing_audio: '缺少音频',
   processing_failed: '处理失败',
@@ -162,7 +163,7 @@ onMounted(async () => {
 <style scoped>
 .studio-calendar { display: grid; gap: 1.25rem; }
 .studio-calendar__month-actions { display: flex; align-items: center; gap: 0.5rem; }
-.studio-calendar__month-actions strong { min-width: 7rem; text-align: center; font-size: 0.9rem; font-variant-numeric: tabular-nums; color: var(--a-color-text); }
+.studio-calendar__month-actions strong { min-width: 7rem; text-align: center; font-size: 0.9rem; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--a-color-text); }
 .studio-calendar__month-actions :deep(.p-button) { width: 2.25rem; height: 2.25rem; min-height: 2.25rem; padding: 0; }
 .studio-calendar__message { margin: 0; padding: 2rem 0; color: var(--a-color-muted); }
 .studio-calendar__message--error { color: var(--a-color-danger); }
@@ -233,6 +234,14 @@ onMounted(async () => {
   font-size: 0.65rem;
 }
 .studio-calendar__issues span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 640px) {
+  .studio-calendar__grid-scroll { overflow-x: visible; }
+  .studio-calendar__weekdays { display: none; }
+  .studio-calendar__days { min-width: 0; grid-template-columns: 1fr; }
+  .studio-calendar__days > li { min-height: auto; border-right: 0; padding: 0.75rem; }
+  .studio-calendar__days > li > time { text-align: left; font-weight: 500; }
+  .studio-calendar__days > li:not(:has(.studio-calendar__items)):not(.is-today) { display: none; }
+}
 @media (max-width: 560px) {
   .studio-calendar :deep(.p-page-header__action) { width: 100%; }
   .studio-calendar__month-actions { justify-content: space-between; width: 100%; }

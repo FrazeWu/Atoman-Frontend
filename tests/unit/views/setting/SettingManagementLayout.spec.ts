@@ -39,6 +39,7 @@ describe('SettingManagementLayout', () => {
       '用户管理',
       '社区管理',
       '公告管理',
+      '邮件管理',
       '模块管理',
     ])
 

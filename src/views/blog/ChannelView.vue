@@ -171,7 +171,7 @@
         title="装扮空间"
         @click="isThemeDrawerOpen = true"
       >
-        <span>🎨</span>
+        <Palette :size="14" aria-hidden="true" />
         <span>装扮空间</span>
       </button>
     </Teleport>
@@ -193,7 +193,7 @@ import { errorMessage, reportError } from '@/utils/logger'
 import { apiRequestResult } from '@/api/client'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { Check, MessageSquare, Plus, Rss } from 'lucide-vue-next'
+import { Check, MessageSquare, Palette, Plus, Rss } from 'lucide-vue-next'
 import PEmpty from '@/components/ui/PEmpty.vue'
 import PModal from '@/components/ui/PModal.vue'
 import PInput from '@/components/ui/PInput.vue'
@@ -544,10 +544,10 @@ onMounted(() => {
 .channel-title {
   margin: 0 0 0.5rem;
   font-size: 1.625rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--a-text-primary);
   line-height: 1.25;
-  letter-spacing: -0.015em;
+  letter-spacing: 0;
 }
 
 .channel-description {
@@ -686,12 +686,11 @@ onMounted(() => {
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
-  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
   outline: none;
 }
 
 .theme-customize-launcher:hover {
-  transform: scale(1.05);
   background-color: var(--a-color-surface-muted);
   border-color: var(--a-color-border);
 }

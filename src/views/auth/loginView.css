@@ -13,7 +13,7 @@
   width: min(100%, 23rem);
   background: var(--a-color-bg);
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-modal);
+  border-radius: var(--a-radius-card);
   box-shadow: none;
   padding: 2.5rem 2.25rem;
   position: relative;
@@ -91,8 +91,7 @@
 }
 
 .step-dot--active {
-  background: var(--a-color-fg);
-  outline: 2px solid var(--a-color-border-soft);
+  background: var(--a-color-primary);
   box-shadow: none;
 }
 
@@ -104,11 +103,11 @@
 }
 
 .step-line--active {
-  background: var(--a-color-fg);
+  background: var(--a-color-primary);
 }
 
 .step-label {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--a-color-fg);
 }
 
@@ -138,38 +137,20 @@
   color: var(--a-color-muted-soft);
 }
 
-.email-field-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  color: var(--a-color-muted);
-  font-family: var(--a-font-sans);
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0;
-}
-
-.email-field-dot {
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: var(--a-radius-control);
-  background: color-mix(in srgb, var(--a-color-text) 72%, transparent);
-  flex-shrink: 0;
-}
-
 .auth-code-input-group {
   display: flex;
   align-items: stretch;
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-control);
   background: var(--a-color-bg);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s ease, outline-color 0.2s ease;
   width: 100%;
 }
 
 .auth-code-input-group:focus-within {
-  border-color: var(--a-color-fg);
-  outline: 1px solid var(--a-color-fg);
+  border-color: var(--a-color-primary);
+  outline: 2px solid color-mix(in srgb, var(--a-color-primary) 24%, transparent);
+  outline-offset: 1px;
   box-shadow: none;
 }
 
@@ -199,33 +180,34 @@
 
 .auth-code-btn-inline {
   align-self: center;
-  margin-right: 0.5rem;
-  height: 2.2rem;
-  padding: 0 1rem;
-  border: 1px solid var(--a-color-primary);
-  background: var(--a-color-primary);
-  color: var(--a-color-primary-contrast);
+  margin-right: 0.45rem;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--a-color-border-soft);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-text);
   font-family: inherit;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0;
   cursor: pointer;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   box-shadow: none;
   border-radius: var(--a-radius-control);
 }
 
 .auth-code-btn-inline:hover:not(:disabled) {
-  background: var(--a-color-primary-hover);
-  border-color: var(--a-color-primary-hover);
+  background: var(--a-color-bg);
+  border-color: var(--a-color-primary);
+  color: var(--a-color-primary);
 }
 
 .auth-code-btn-inline:active:not(:disabled) {
-  background: var(--a-color-primary-pressed);
+  background: var(--a-color-surface-muted);
 }
 
 .auth-code-btn-inline:disabled {
@@ -278,7 +260,8 @@
 }
 
 .auth-back-btn:deep(.p-button:hover:not(:disabled)) {
-  background: var(--a-color-surface-muted);
+  border-color: var(--a-color-border);
+  background: var(--a-color-bg);
   text-decoration: none;
 }
 
@@ -415,7 +398,7 @@
 
   .auth-title {
     font-size: 1.75rem;
-    font-weight: 600;
+    font-weight: 500;
   }
 
   .auth-buttons-row {

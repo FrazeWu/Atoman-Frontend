@@ -291,15 +291,21 @@ function formatNumber(value: number) {
 .studio-content-table { min-width: 0; max-width: 100%; display: grid; gap: 1rem; }
 .studio-content-table__scroll { min-width: 0; width: 100%; max-width: 100%; overflow-x: auto; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); box-shadow: none; }
 table { width: 100%; border-collapse: collapse; min-width: 1180px; }
-th, td { padding: 0.75rem 0.625rem; border-bottom: 1px solid var(--a-color-border-soft); text-align: left; vertical-align: middle; }
+th, td { padding: 0.75rem 0.625rem; border-bottom: 1px solid var(--a-color-border-soft); text-align: left; vertical-align: middle; font-variant-numeric: tabular-nums; }
 tbody tr:last-child td { border-bottom: 0; }
 th { background: var(--a-color-bg); color: var(--a-color-muted); font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
 td { font-size: 0.875rem; }
+td[data-label="状态"],
+td[data-label="可见范围"],
+td[data-label="发布时间"],
+td[data-label="更新时间"] { white-space: nowrap; }
+td[data-label="合集"] { min-width: 7rem; }
 tbody tr:hover { background: var(--a-color-surface-muted); }
 td:first-child { min-width: 3.5rem; }
 .studio-content-table__col-select { width: 3rem; text-align: center; }
 .studio-content-table__col-select input[type="checkbox"] { cursor: pointer; }
 td strong, td span { display: block; }
+td strong { font-weight: 500; }
 td span { margin-top: 0.2rem; color: var(--a-color-muted); font-size: 0.75rem; }
 td .studio-content-table__schedule-status--failed, .studio-content-table__schedule-error { color: var(--a-color-danger); }
 .studio-content-table__collection-conflict { color: var(--a-color-danger); font-weight: 600; }
@@ -323,23 +329,32 @@ td .studio-content-table__schedule-status--failed, .studio-content-table__schedu
   tr {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.625rem 1rem;
-    padding: 1rem;
+    gap: 0.5rem 0.75rem;
+    padding: 0.875rem 1rem;
     border: 1px solid var(--a-color-border-soft);
     border-radius: var(--a-radius-card);
     background: var(--a-color-bg);
     box-shadow: none;
   }
   td { min-width: 0; padding: 0; border: 0; overflow-wrap: anywhere; }
-  td:first-child, td:last-child { grid-column: 1 / -1; }
+  td[data-label="合集"] { min-width: 0; }
+  td[data-label="状态"],
+  td[data-label="可见范围"],
+  td[data-label="发布时间"],
+  td[data-label="更新时间"] { white-space: normal; }
+  td:first-child { grid-column: 2; grid-row: 1; justify-self: end; align-self: start; width: auto; min-width: auto; z-index: 1; }
+  td:first-child::before { display: none; }
+  td[data-label="标题"] { grid-column: 1 / -1; grid-row: 1; padding-right: 2rem; }
+  td:last-child { grid-column: 1 / -1; border-top: 1px solid var(--a-color-border-soft); padding-top: 0.5rem; margin-top: 0.125rem; }
+  td:last-child::before { display: none; }
   td::before {
     content: attr(data-label);
     display: block;
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.15rem;
     color: var(--a-color-muted);
     font-size: 0.7rem;
-    font-weight: 600;
+    font-weight: 500;
   }
-  .studio-content-table__actions { justify-content: flex-start; flex-wrap: wrap; gap: 0.5rem; }
+  .studio-content-table__actions { justify-content: flex-start; flex-wrap: wrap; gap: 0.375rem; }
 }
 </style>

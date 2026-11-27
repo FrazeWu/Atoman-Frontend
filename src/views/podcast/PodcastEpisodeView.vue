@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { addPodcastEpisodeBookmark, addPodcastShowBookmark, getPodcastEpisode, setPodcastRating, deletePodcastRating } from '@/api/podcast'
-import { Bookmark, Check } from 'lucide-vue-next'
+import { Bookmark, Check, Headphones } from 'lucide-vue-next'
 import RatingControl from '@/components/shared/RatingControl.vue'
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -31,6 +31,7 @@ const ratingError = ref('')
 const commentsOpen = ref(false)
 const commentCount = ref<number | undefined>(undefined)
 const isFavorited = ref(false)
+const coverFailed = ref(false)
 const episodeContentAnchor = ref<HTMLElement | null>(null)
 let latestRequest = 0
 
@@ -42,6 +43,7 @@ async function loadEpisode(id: string) {
   const request = ++latestRequest
   ep.value = null
   isFavorited.value = false
+  coverFailed.value = false
   error.value = ''
   actionMessage.value = ''
   ratingLoading.value = false
@@ -193,10 +195,15 @@ function currentCommentTime() {
     <!-- 封面 + 标题区 -->
     <div class="pev-header">
       <img
+        v-if="episodeCover(ep) && !coverFailed"
         :src="episodeCover(ep)"
         class="pev-cover"
-        :alt="ep.post?.title"
+        :alt="ep.post?.title || '单集封面'"
+        @error="coverFailed = true"
       />
+      <div v-else class="pev-cover pev-cover--fallback" aria-hidden="true">
+        <Headphones :size="36" />
+      </div>
       <div class="pev-info">
         <h1 class="pev-title">{{ ep.post?.title }}</h1>
         <RouterLink
@@ -210,16 +217,17 @@ function currentCommentTime() {
           <span v-if="ep.duration_sec">{{ fmtDuration(ep.duration_sec) }}</span>
         </div>
         <div class="pev-actions">
-          <PButton label="播放" @click="playEpisode" />
-          <PButton label="订阅" variant="secondary" @click="subscribeShow" />
-          <PButton variant="secondary" :title="isFavorited ? '取消收藏' : '收藏'" @click="favoriteEpisode">
+          <PButton size="sm" label="播放" @click="playEpisode" />
+          <PButton size="sm" label="订阅" variant="secondary" @click="subscribeShow" />
+          <PButton size="sm" variant="secondary" :title="isFavorited ? '取消收藏' : '收藏'" @click="favoriteEpisode">
             <Check v-if="isFavorited" :size="15" aria-hidden="true" />
             <Bookmark v-else :size="15" aria-hidden="true" />
             {{ isFavorited ? '已收藏' : '收藏' }}
           </PButton>
-          <PButton label="稍后听" variant="secondary" @click="listenLater" />
+          <PButton size="sm" label="稍后听" variant="secondary" @click="listenLater" />
           <PButton
             v-if="ep.post?.visibility !== 'private'"
+            size="sm"
             label="分享"
             variant="secondary"
             @click="shareEpisode"
@@ -268,19 +276,20 @@ function currentCommentTime() {
 <style scoped>
 .pev-state { text-align: center; padding: 6rem 0; color: var(--a-color-muted); }
 .pev-error { color: var(--a-color-danger); }
-.pev-wrap { padding: 1.5rem 1rem; }
+.pev-wrap { max-width: 52rem; margin: 0 auto; padding: 1.5rem 1.5rem 5rem; }
 .pev-header { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; }
-.pev-cover { width: 7rem; height: 7rem; border-radius: var(--a-radius-card); object-fit: cover; flex-shrink: 0; }
-.pev-info { display: flex; min-width: 0; flex-direction: column; gap: 0.25rem; }
-.pev-title { font-size: 1.25rem; font-weight: 500; line-height: 1.3; }
+.pev-cover { width: 7.5rem; height: 7.5rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); object-fit: cover; flex-shrink: 0; }
+.pev-cover--fallback { display: flex; align-items: center; justify-content: center; background: var(--a-color-surface-muted); color: var(--a-color-muted); }
+.pev-info { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 0.25rem; }
+.pev-title { margin: 0; font-size: clamp(1.25rem, 2.2vw, 1.65rem); font-weight: 600; line-height: 1.3; color: var(--a-color-text); }
 .pev-show { font-size: 0.875rem; color: var(--a-color-text-secondary); text-decoration: none; }
 .pev-show:hover { text-decoration: underline; }
-.pev-meta { display: flex; gap: 0.75rem; font-size: 0.75rem; color: var(--a-color-muted); margin-top: 0.25rem; }
-.pev-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+.pev-meta { display: flex; gap: 0.75rem; font-size: 0.78rem; color: var(--a-color-muted); margin-top: 0.2rem; }
+.pev-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.85rem; }
 .pev-action-message { margin: 0.5rem 0 0; color: var(--a-color-text-secondary); font-size: 0.8125rem; }
-.pev-notes { margin-top: 2rem; }
-.pev-notes-title { font-size: 1rem; font-weight: 500; margin-bottom: 0.5rem; }
+.pev-notes { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid var(--a-color-border-soft); }
+.pev-notes-title { margin: 0 0 0.75rem; font-size: 1rem; font-weight: 500; color: var(--a-color-text); }
 @media (max-width: 640px) {
-  .pev-header { flex-direction: column; }
+  .pev-header { flex-direction: column; gap: 1rem; }
 }
 </style>

@@ -107,7 +107,7 @@
 
           <div v-if="!isProfilePrivate" class="profile-header__bio-row">
             <p v-if="profile.bio" class="profile-header__bio">{{ profile.bio }}</p>
-            <p v-else class="profile-header__bio profile-header__bio--empty">这个用户还没有填写简介</p>
+            <p v-else class="profile-header__bio profile-header__bio--empty">暂无简介</p>
           </div>
         </div>
       </section>
@@ -118,7 +118,7 @@
             <p class="profile-section__kicker">频道</p>
             <h2 id="profile-channels-title" class="profile-section__title">频道</h2>
           </div>
-          <p class="profile-section__note">仅显示{{ displayName }}创建的频道 · 每个频道可包含所有内容类型</p>
+          <p class="profile-section__note">仅显示{{ displayName }}创建的频道</p>
         </div>
         <div v-if="channelsLoading" class="profile-channel-grid" aria-label="正在加载频道">
           <div v-for="index in 2" :key="index" class="a-skeleton profile-channel-card__skeleton" />
@@ -141,7 +141,7 @@
                   <span v-else aria-hidden="true">{{ channel.name.slice(0, 1).toUpperCase() }}</span>
                 </div>
               </div>
-              <p class="profile-channel-card__description">{{ channel.description || '这个频道还没有填写简介。' }}</p>
+              <p class="profile-channel-card__description">{{ channel.description || '暂无简介' }}</p>
             </RouterLink>
             <div class="profile-channel-card__footer">
               <div class="profile-channel-card__actions">
@@ -236,7 +236,7 @@
           title="装扮空间"
           @click="isThemeDrawerOpen = true"
         >
-          <span>🎨</span>
+          <Palette :size="14" aria-hidden="true" />
           <span>装扮空间</span>
         </button>
       </Teleport>
@@ -318,6 +318,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { Palette } from 'lucide-vue-next'
 import { apiRequestResult } from '@/api/client'
 import BlogItemCard from '@/components/shared/BlogItemCard.vue'
 import PAvatar from '@/components/ui/PAvatar.vue'
@@ -867,6 +868,12 @@ onUnmounted(() => { clearTheme() })
   justify-content: flex-end;
   gap: 0.45rem;
 }
+.profile-header__actions :deep(.p-button),
+.profile-header__actions :deep(.p-clip),
+.profile-header__actions .a-toggle-btn {
+  min-height: 2.25rem;
+  height: 2.25rem;
+}
 
 @media (max-width: 900px) {
   .profile-header__identity-row {
@@ -891,5 +898,10 @@ onUnmounted(() => { clearTheme() })
   .profile-section__note { text-align: left; }
   .profile-channel-grid,
   .profile-content__list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .profile-channel-grid,
+  .profile-content__list { grid-template-columns: 1fr; }
 }
 </style>

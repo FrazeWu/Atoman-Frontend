@@ -308,6 +308,8 @@ function handleTrackClick() {
   right: 8px;
   bottom: calc(var(--mobile-app-player-bottom, calc(56px + env(safe-area-inset-bottom, 0px))) + 6px);
   left: 8px;
+  max-width: 464px;
+  margin-inline: auto;
   z-index: var(--a-z-player, 720);
   transition: bottom 0.2s ease, transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   display: flex;
@@ -330,7 +332,7 @@ function handleTrackClick() {
 .mobile-app-shell .mobile-app-dock > .mobile-mini-player {
   position: relative;
   inset: auto;
-  margin: 0 8px 6px 8px;
+  margin: 0 auto 6px;
   width: calc(100% - 16px);
   max-width: 464px;
   pointer-events: auto;

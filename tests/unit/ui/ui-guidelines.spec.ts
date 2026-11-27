@@ -137,13 +137,14 @@ describe("UI 准则", () => {
 	});
 
 	it("认证页面统一使用纯白极简底色背景", () => {
-		const sources = [
-			read("src/views/auth/LoginView.vue"),
-			read("src/views/auth/ForgotPasswordView.vue"),
-		];
+		const loginCss = read("src/views/auth/loginView.css");
+		const login = read("src/views/auth/LoginView.vue");
+		const forgot = read("src/views/auth/ForgotPasswordView.vue");
 
-		for (const source of sources) {
-			expect(source).toContain("background: var(--a-color-bg);");
+		expect(login).toContain('@import "./loginView.css"');
+		expect(forgot).toContain('@import "./loginView.css"');
+		expect(loginCss).toContain("background: var(--a-color-bg);");
+		for (const source of [login, forgot, loginCss]) {
 			expect(source).not.toContain("background-size: 24px 24px");
 		}
 	});

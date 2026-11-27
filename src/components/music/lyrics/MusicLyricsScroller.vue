@@ -256,8 +256,8 @@ defineExpose({
   color: var(--a-color-text);
   background: var(--a-color-bg-elevated, var(--a-color-bg));
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 9999px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+  border-radius: var(--a-radius-control, 4px);
+  box-shadow: none;
   cursor: pointer;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease, border-color 0.2s ease;
 }

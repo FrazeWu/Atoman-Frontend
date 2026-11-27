@@ -125,6 +125,19 @@ const starredAlbumIds = ref<string[]>([])
 const starredArtistIds = ref<string[]>([])
 const starredPlaylistIds = ref<string[]>([])
 
+function isDefaultReason(reason?: string): boolean {
+  if (!reason) return true
+  return [
+    '近期热门专辑',
+    '近期热门艺人',
+    '最新公开歌单',
+    '近期热门歌单',
+    '推荐专辑',
+    '推荐艺人',
+    '推荐歌单',
+  ].includes(reason.trim())
+}
+
 function hasDiscoverArtist(album: MusicAlbumListItem): boolean {
   return (album.artists?.length ?? 0) > 0
 }
@@ -883,6 +896,7 @@ const hasSearchResults = computed(() => searchSongs.value.length > 0 || searchAl
         <PButton
           v-if="canCreateMusic"
           variant="primary"
+          size="sm"
           class="search-side-action"
           data-testid="add-album"
           @click="startAlbumCreation"
@@ -947,7 +961,7 @@ const hasSearchResults = computed(() => searchSongs.value.length > 0 || searchAl
               @click-artist="openArtist"
               @toggle-bookmark="handleToggleAlbumBookmark(String(album.id))"
             />
-            <p v-if="album.reason" class="discover-result__reason">{{ album.reason }}</p>
+            <p v-if="album.reason" class="discover-result__reason" :class="{ 'is-default-reason': isDefaultReason(album.reason) }">{{ album.reason }}</p>
           </div>
         </div>
       </section>
@@ -1011,7 +1025,7 @@ const hasSearchResults = computed(() => searchSongs.value.length > 0 || searchAl
             @click-artist="openArtist"
             @toggle-bookmark="handleToggleAlbumBookmark(String(item.id))"
             />
-            <p v-if="item.reason" class="discover-result__reason">{{ item.reason }}</p>
+            <p v-if="item.reason" class="discover-result__reason" :class="{ 'is-default-reason': isDefaultReason(item.reason) }">{{ item.reason }}</p>
           </div>
         </div>
         <div v-if="discoverSectionMeta.album.has_more" class="discover-load-more-wrap">
@@ -1039,7 +1053,7 @@ const hasSearchResults = computed(() => searchSongs.value.length > 0 || searchAl
             @click="openDiscoverPlaylist(item)"
             @toggle-bookmark="handleTogglePlaylistBookmark(String(item.id))"
             />
-            <p v-if="item.reason" class="discover-result__reason">{{ item.reason }}</p>
+            <p v-if="item.reason" class="discover-result__reason" :class="{ 'is-default-reason': isDefaultReason(item.reason) }">{{ item.reason }}</p>
           </div>
         </div>
         <div v-if="discoverSectionMeta.playlist.has_more" class="discover-load-more-wrap">
@@ -1067,7 +1081,7 @@ const hasSearchResults = computed(() => searchSongs.value.length > 0 || searchAl
             @click="openDiscoverArtist(item)"
             @toggle-bookmark="handleToggleArtistBookmark(String(item.id))"
             />
-            <p v-if="item.reason" class="discover-result__reason">{{ item.reason }}</p>
+            <p v-if="item.reason" class="discover-result__reason" :class="{ 'is-default-reason': isDefaultReason(item.reason) }">{{ item.reason }}</p>
           </div>
         </div>
         <div v-if="discoverSectionMeta.artist.has_more" class="discover-load-more-wrap">

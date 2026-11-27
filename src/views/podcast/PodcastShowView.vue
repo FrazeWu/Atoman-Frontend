@@ -110,7 +110,7 @@ async function subscribeShow() {
       <div v-else class="ps-cover ps-cover--fallback">
         <Headphones :size="40" aria-hidden="true" />
       </div>
-      <div>
+      <div class="ps-header-info">
         <h1 class="ps-name">{{ channel.name }}</h1>
         <p v-if="channel.description" class="ps-desc">{{ channel.description }}</p>
         <div class="ps-actions">
@@ -137,7 +137,7 @@ async function subscribeShow() {
         <RouterLink :to="`/podcasts/episode/${ep.id}`" class="ps-ep-title">
           {{ ep.post?.title || '未命名单集' }}
         </RouterLink>
-        <PButton size="sm" @click="playEpisode(ep)">播放</PButton>
+        <PButton variant="secondary" size="sm" @click="playEpisode(ep)">播放</PButton>
       </li>
     </ul>
   </div>
@@ -145,17 +145,17 @@ async function subscribeShow() {
 
 <style scoped>
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-.ps-wrap { width: 100%; padding: 2rem 0 4rem; }
+.ps-wrap { width: 100%; max-width: 56rem; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 .ps-header { display: flex; gap: 1.5rem; margin-bottom: 2rem; border-bottom: 1px solid var(--a-color-border-soft); padding-bottom: 1.75rem; min-width: 0; }
-.ps-header > div { flex: 1; min-width: 0; }
-.ps-cover { width: 8rem; height: 8rem; border-radius: var(--a-radius-card); object-fit: cover; flex-shrink: 0; border: 1px solid var(--a-color-border-soft); }
+.ps-header-info { flex: 1; min-width: 0; }
+.ps-cover { width: 8rem; height: 8rem; border-radius: var(--a-radius-card); object-fit: cover; flex: 0 0 auto; border: 1px solid var(--a-color-border-soft); }
 .ps-cover--fallback { display: flex; align-items: center; justify-content: center; background: var(--a-color-surface-muted); color: var(--a-color-muted); }
 .ps-name { font-size: 1.5rem; font-weight: 500; color: var(--a-color-fg); margin: 0; }
 .ps-desc { font-size: 0.875rem; color: var(--a-color-muted); margin-top: 0.35rem; line-height: 1.5; }
 .ps-actions { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.85rem; }
 .ps-message { margin: 0.5rem 0 0; color: var(--a-color-muted); font-size: 0.8125rem; }
 .ps-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
-.ps-ep { display: flex; align-items: center; gap: 0.85rem; padding: 0.85rem 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+.ps-ep { display: flex; align-items: center; gap: 0.85rem; padding: 0.85rem 1rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); background: var(--a-color-bg); transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
 .ps-ep:hover { border-color: var(--a-color-border); background: var(--a-color-surface-muted); box-shadow: none; }
 .ps-ep-cover { width: 2.75rem; height: 2.75rem; border-radius: var(--a-radius-control); object-fit: cover; flex-shrink: 0; }
 .ps-ep-cover--fallback { display: flex; align-items: center; justify-content: center; background: var(--a-color-surface-muted); color: var(--a-color-muted); border: 1px solid var(--a-color-border-soft); }
@@ -164,6 +164,9 @@ async function subscribeShow() {
 .ps-ep-title:hover { text-decoration: underline; }
 
 @media (max-width: 640px) {
+  .ps-wrap {
+    padding: 0.75rem 0 4rem;
+  }
   .ps-header {
     flex-direction: column;
     align-items: center;

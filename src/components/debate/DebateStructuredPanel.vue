@@ -3,7 +3,7 @@
     <header class="structured-panel__header">
       <div class="structured-panel__title-wrap">
         <h2 class="structured-panel__heading">结构化论据与反驳</h2>
-        <span class="structured-panel__sub">论点 → 站内证据 → 反驳三层结构；证据须引用至少一条站内资源</span>
+        <span class="structured-panel__sub">按论点、站内证据与反驳分层展示，证据须引用站内内容</span>
       </div>
 
       <div class="structured-panel__toolbar">
@@ -146,11 +146,17 @@
     </div>
 
     <div v-if="loading" class="structured-panel__state" role="status">加载论据中...</div>
-    <PEmpty
+    <div
       v-else-if="visibleClaims.length === 0 && visibleStandaloneEvidence.length === 0"
-      title="暂无结构化论点与证据"
-      description="点击上方「提出核心论点」或「补充独立证据」，开始沉淀可追溯的依据。"
-    />
+      class="structured-panel__empty-box"
+    >
+      <PEmpty
+        align="center"
+        compact
+        title="暂无结构化论点与证据"
+        description="可通过右上角按钮补充论点或站内证据。"
+      />
+    </div>
 
     <div v-else class="structured-tree">
       <!-- Top-level claims with nested level-2 (evidence / direct rebuttal) and level-3 (rebuttal on evidence) -->
@@ -889,9 +895,9 @@ function confirmDelete() {
 <style scoped>
 .structured-panel {
   display: grid;
-  gap: 16px;
-  margin-top: 28px;
-  padding-top: 24px;
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 20px;
   border-top: 1px solid var(--a-color-border-soft);
 }
 
@@ -934,23 +940,25 @@ function confirmDelete() {
 
 .structured-panel__filter,
 .structured-form__stance {
-  min-height: 34px;
-  padding: 0 10px;
+  min-height: var(--a-control-height-sm, 2.25rem);
+  height: var(--a-control-height-sm, 2.25rem);
+  padding: 0 12px;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: var(--a-radius-control);
+  border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-bg);
   color: var(--a-color-text-secondary);
   cursor: pointer;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .structured-panel__filter.is-active,
 .structured-form__stance.is-selected {
   border-color: var(--a-color-primary);
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-text);
-  font-weight: 600;
+  background: color-mix(in srgb, var(--a-color-primary) 7%, var(--a-color-bg));
+  color: var(--a-color-primary);
+  font-weight: 500;
 }
 
 .structured-panel__state {
@@ -958,6 +966,13 @@ function confirmDelete() {
   color: var(--a-color-muted);
   text-align: center;
   font-size: 13px;
+}
+
+.structured-panel__empty-box {
+  padding: 12px 16px;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card, 4px);
+  background: var(--a-color-bg);
 }
 
 .structured-form,

@@ -23,7 +23,7 @@ export function useMailWorkspace() {
   const conversations = computed(() => groupConversations(messages.value, conversationMode.value))
   const allSelected = computed(() => messages.value.length > 0 && messages.value.every(row => selection.value.has(row.id)))
   const readerMessages = ref<MailSummary[]>([]), threadError = ref(''), expanded = ref(new Set<string>())
-  const details = ref<Record<string, MailDetail>>({}), detailErrors = ref<Record<string, string>>({}), detailLoading = ref(new Set<string>()), htmlShown = ref<Record<string, boolean>>({})
+  const details = ref<Record<string, MailDetail>>({}), detailErrors = ref<Record<string, string>>({}), detailLoading = ref(new Set<string>())
   const composeDraft = ref<MailDraft | null>(null), composeWarning = ref(''), settingsOpen = ref(false), notice = ref(''), actionUndo = ref(''), actionBusy = ref(false)
   const pendingSends = ref<MailOutbox[]>([]), cancelBusy = ref(''), now = ref(Date.now())
   const sendDrafts = new Map<string, MailDraft>()
@@ -51,7 +51,6 @@ export function useMailWorkspace() {
     details.value = {}
     detailErrors.value = {}
     detailLoading.value = new Set()
-    htmlShown.value = {}
     threadError.value = ''
   }
   function clearReader() {
@@ -324,5 +323,5 @@ export function useMailWorkspace() {
     document.addEventListener('visibilitychange', onVisibilityChange)
   })
   onBeforeUnmount(() => { disposed = true; accountGeneration++; folderGeneration++; messageGeneration++; readerGeneration++; clearInterval(refreshTimer); clearInterval(clockTimer); document.removeEventListener('visibilitychange', onVisibilityChange) })
-  return { advancedOpen,advancedFilters,allFolders,setAdvancedSearch,clearAdvancedSearch, mailAccount, loadingAccount, accountError, mailIsActive, isMailAdministrator, statusLabel, statusTitle, statusDescription, invitation, chosenLocalPart, isChosenLocalValid, redeeming, redeemError, claimAddress, folders, foldersLoading, foldersError, currentFolder, currentFolderId, folderLabel, mobilePane, messages, drafts, loadingMessages, messagesError, searchText, committedSearch, totalMessages, conversations, conversationMode, selection, selectedGroupId, allSelected, selectAll, toggleGroup, selectFolder, loadMessages, refreshMailbox, runSearch, hasMore, openConversation, readerMessages, expanded, details, detailErrors, detailLoading, htmlShown, threadError, toggleExpanded, loadDetail, newMessage, editDraft, composeDraft, composeWarning, settingsOpen, replyTo, forwardMessage, onDraftSaved, onQueued, pendingSends, remainingSeconds, queueLabel, undoSend, checkSend, refreshQueue, provisionAccount, cancelBusy, notice, actionUndo, actionBusy, performAction, undoAction, moveSelected, downloadAttachment, downloadSource, blockSender, folderDialog, deleteFolderDialog, newFolderName, folderError, folderWorking, addFolder, removeFolder, isDraftFolder, clearReader }
+  return { advancedOpen,advancedFilters,allFolders,setAdvancedSearch,clearAdvancedSearch, mailAccount, loadingAccount, accountError, mailIsActive, isMailAdministrator, statusLabel, statusTitle, statusDescription, invitation, chosenLocalPart, isChosenLocalValid, redeeming, redeemError, claimAddress, folders, foldersLoading, foldersError, currentFolder, currentFolderId, folderLabel, mobilePane, messages, drafts, loadingMessages, messagesError, searchText, committedSearch, totalMessages, conversations, conversationMode, selection, selectedGroupId, allSelected, selectAll, toggleGroup, selectFolder, loadMessages, refreshMailbox, runSearch, hasMore, openConversation, readerMessages, expanded, details, detailErrors, detailLoading, threadError, toggleExpanded, loadDetail, newMessage, editDraft, composeDraft, composeWarning, settingsOpen, replyTo, forwardMessage, onDraftSaved, onQueued, pendingSends, remainingSeconds, queueLabel, undoSend, checkSend, refreshQueue, provisionAccount, cancelBusy, notice, actionUndo, actionBusy, performAction, undoAction, moveSelected, downloadAttachment, downloadSource, blockSender, folderDialog, deleteFolderDialog, newFolderName, folderError, folderWorking, addFolder, removeFolder, isDraftFolder, clearReader }
 }

@@ -57,10 +57,7 @@
         <!-- REGISTER VIEW - STEP 1 (Email & Verification Code) -->
         <div v-else-if="currentStep === 1" class="auth-step-container">
           <div class="p-field">
-            <label class="email-field-label">
-              <span class="email-field-dot" aria-hidden="true" />
-              邮箱地址
-            </label>
+            <label class="p-field-label">邮箱地址</label>
             <div class="auth-code-input-group" :class="{ 'auth-code-input-group--error': fieldErrors.email }">
               <input
                 v-model="email"

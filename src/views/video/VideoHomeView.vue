@@ -154,10 +154,7 @@ watch(sort, () => {
 
     <section class="vh-recommendations" aria-label="视频推荐">
       <div class="vh-recommendations__header">
-        <div>
-          <h2 class="vh-recommendations__title">推荐</h2>
-          <p class="vh-recommendations__note">按热度、精选、探索切换当前视频推荐。</p>
-        </div>
+        <h2 class="vh-recommendations__title">推荐</h2>
         <PSegmentedControl
           v-model="recommendationMode"
           :options="recommendationOptions"
@@ -280,14 +277,14 @@ watch(sort, () => {
 }
 
 .vh-recommendations {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .vh-recommendations__header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem 1rem;
   margin-bottom: 1rem;
   flex-wrap: wrap;
 }
@@ -298,34 +295,37 @@ watch(sort, () => {
   font-weight: 500;
 }
 
-.vh-recommendations__note {
-  margin: 0.35rem 0 0;
-  color: var(--a-color-muted-soft);
-  font-size: 0.85rem;
-}
 .vh-recommendation-item { position: relative; min-width: 0; }
 .vh-recommendation-item :deep(.p-dropdown-root) {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
+  top: 8px;
+  right: 44px;
   z-index: 5;
 }
 .vh-recommendation-feedback {
   display: grid;
-  width: 2rem;
-  height: 2rem;
+  width: 32px;
+  height: 32px;
   place-items: center;
-  border: 0;
-  border-radius: var(--a-radius-control);
-  background: rgba(0, 0, 0, 0.65);
-  color: #fff;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-bg);
+  color: var(--a-color-fg);
   cursor: pointer;
-  opacity: 0.8;
-  transition: opacity 0.15s ease, background-color 0.15s ease;
+  opacity: 0;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+.vh-recommendation-item:hover .vh-recommendation-feedback,
+.vh-recommendation-item:focus-within .vh-recommendation-feedback {
+  opacity: 1;
 }
 .vh-recommendation-feedback:hover {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.85);
+  border-color: var(--a-color-border);
+}
+@media (hover: none) {
+  .vh-recommendation-feedback {
+    opacity: 1;
+  }
 }
 .vh-recommendation-menu { display: grid; min-width: 10rem; padding: .25rem; background: var(--a-color-bg); border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-card); }
 .vh-recommendation-menu button { min-height: 2.25rem; border: 0; border-radius: var(--a-radius-control); background: transparent; color: var(--a-color-fg); text-align: left; padding: 0 0.75rem; cursor: pointer; }
@@ -338,11 +338,12 @@ watch(sort, () => {
   top: var(--a-topbar-height, 56px);
   z-index: 10;
   background: var(--a-color-bg);
+  border-top: 1px solid var(--a-color-border-soft);
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 0;
-  margin-bottom: 2rem;
+  padding: 1rem 0 0.75rem;
+  margin-bottom: 1.25rem;
 }
 .vh-bar-inner {
   display: flex;
@@ -362,23 +363,24 @@ watch(sort, () => {
   padding: 0 0.85rem;
   font-size: 0.82rem;
   font-weight: 500;
-  border: none;
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-surface-muted);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-bg);
   cursor: pointer;
   color: var(--a-color-muted);
-  transition: color 0.15s ease, background-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
   white-space: nowrap;
 }
 
 .vh-chip:hover {
-  background: color-mix(in srgb, var(--a-color-surface-muted) 80%, var(--a-color-border-soft));
+  border-color: var(--a-color-border);
   color: var(--a-color-fg);
 }
 
 .vh-chip--active {
-  background: var(--a-color-text);
-  color: var(--a-color-bg);
+  border-color: var(--a-color-primary);
+  background: color-mix(in srgb, var(--a-color-primary) 7%, var(--a-color-bg));
+  color: var(--a-color-primary);
 }
 
 /* Grid */

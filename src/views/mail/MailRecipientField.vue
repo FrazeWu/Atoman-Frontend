@@ -34,7 +34,7 @@ onBeforeUnmount(()=>clearTimeout(closeTimer))
 </script>
 <style scoped>
 .mail-recipient {position:relative;min-width:0;}
-.mail-recipient__menu {position:absolute;top:100%;left:0;right:0;z-index:50;max-height:240px;overflow:auto;background:var(--a-color-bg);border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-control);box-shadow:0 7px 20px rgba(0,0,0,.08);}
+.mail-recipient__menu {position:absolute;top:100%;left:0;right:0;z-index:50;max-height:240px;overflow:auto;background:var(--a-color-bg);border:1px solid var(--a-color-border-soft);border-radius:var(--a-radius-control, 4px);box-shadow:0 2px 8px rgba(0,0,0,.06);}
 .mail-recipient__option {display:grid;gap:3px;width:100%;padding:10px 12px;border:0;background:transparent;color:var(--a-color-fg);text-align:left;cursor:pointer;}
 .mail-recipient__option:hover,.mail-recipient__option.is-active {background:var(--a-color-surface-muted);}
 .mail-recipient__option strong {font-size:13px;font-weight:600;}

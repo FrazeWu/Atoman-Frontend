@@ -1,7 +1,6 @@
 <template>
   <section class="setting-management-overview" aria-labelledby="management-overview-title">
     <div class="setting-management-overview__heading">
-      <p class="settings-center__kicker">模块开关</p>
       <h2 id="management-overview-title">模块开关</h2>
       <p>控制各模块在站点内的开放状态与基础权限。</p>
     </div>
@@ -95,6 +94,7 @@ const moduleIcons: Record<ModuleRoomKey, Component> = {
 
 .setting-management-overview__heading h2 {
   font-size: 1.05rem;
+  font-weight: 500;
 }
 
 .setting-management-overview__heading p:last-child {
@@ -148,7 +148,7 @@ const moduleIcons: Record<ModuleRoomKey, Component> = {
 
 .setting-management-overview__copy strong {
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .setting-management-overview__copy small {

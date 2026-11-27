@@ -23,7 +23,8 @@
         data-hint="上一首 (Alt+←)"
         @click="$emit('play-previous')"
       >
-        <span class="nav-text">上一首</span>
+        <PIcon name="skip-back" size="sm" aria-hidden="true" />
+        <span class="sr-only">上一首</span>
       </button>
 
       <!-- 主播放/暂停/错误重试按键 -->
@@ -64,7 +65,8 @@
         data-hint="下一首 (Alt+→)"
         @click="$emit('play-next')"
       >
-        <span class="nav-text">下一首</span>
+        <PIcon name="skip-forward" size="sm" aria-hidden="true" />
+        <span class="sr-only">下一首</span>
       </button>
 
       <!-- 播客模式下的前进 15 秒 -->
@@ -182,7 +184,7 @@ defineEmits<{
 .nav-btn {
   font-size: 11px;
   font-weight: 500;
-  opacity: 0.65;
+  opacity: 0.72;
   border: 0;
   background: transparent;
   color: inherit;
@@ -197,6 +199,12 @@ defineEmits<{
   transition:
     opacity 0.15s,
     background-color 0.15s;
+}
+
+.nav-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
 }
 
 .skip-btn:hover,

@@ -522,7 +522,7 @@ onMounted(() => {
   padding: 1px 6px;
   background-color: #f1f5f9;
   color: var(--a-color-muted, #64748b);
-  border-radius: 2px;
+  border-radius: var(--a-radius-control, 4px);
 }
 
 .studio-draft-item__time {
@@ -581,7 +581,7 @@ onMounted(() => {
 
 .studio-stat-value {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--a-color-text, #0f172a);
 }
 

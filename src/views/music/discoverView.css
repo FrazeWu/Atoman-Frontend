@@ -31,6 +31,8 @@
   min-width: 17rem;
   flex: 1 1 20rem;
   height: 36px;
+  display: flex;
+  align-items: center;
 }
 
 .ui-action {
@@ -372,6 +374,7 @@
 
 .discover-result { display: grid; min-width: 0; gap: 0.35rem; align-content: start; }
 .discover-result__reason { margin: 0; color: var(--a-color-muted); font-size: 0.75rem; line-height: 1.4; }
+.discover-result__reason.is-default-reason { display: none; }
 .discover-load-more { align-self: center; min-width: 8rem; }
 
 .discover-layout__playlist-placeholder {
@@ -416,6 +419,7 @@
 @media (max-width: 720px) {
   .music-explore-view {
     padding-inline: 1rem;
+    padding-bottom: calc(var(--a-content-bottom-offset, 0px) + 7rem);
   }
 
   .toolbar-row,

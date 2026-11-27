@@ -101,7 +101,6 @@
             >
               <MIcon
                 :name="albumFavorited ? 'check-circle-filled' : 'plus-circle'"
-                :class="{ 'text-[#1ed760]': albumFavorited }"
                 size="sm"
               />
             </button>
@@ -178,7 +177,7 @@
               </div>
 
               <div class="mobile-album-detail__song-info">
-                <span class="mobile-album-detail__song-title">{{ song.title }}</span>
+                <span class="mobile-album-detail__song-title">{{ formatDisplayTrackTitle(song.title) }}</span>
                 <div class="mobile-album-detail__song-sub">
                   <span
                     v-if="isLeakSong(song)"
@@ -207,7 +206,6 @@
               >
                 <MIcon
                   :name="isSongFavorited(song) ? 'check-circle-filled' : 'plus-circle'"
-                  :class="{ 'text-[#1ed760]': isSongFavorited(song) }"
                   size="xs"
                 />
               </button>
@@ -303,7 +301,7 @@
             <MIcon
               :name="isSongFavorited(activeMenuSong) ? 'check-circle-filled' : 'plus-circle'"
               size="sm"
-              :class="{ 'text-[#1ed760]': isSongFavorited(activeMenuSong) }"
+              :class="{ 'is-favorited': isSongFavorited(activeMenuSong) }"
             />
             <span>{{ isSongFavorited(activeMenuSong) ? '已添加至喜欢的音乐' : '添加至喜欢的音乐' }}</span>
           </button>
@@ -456,6 +454,11 @@ function extractAlbumTitle(item: any, fallback?: string): string {
   if (typeof item?.album?.title === 'string' && item.album.title.trim()) return item.album.title.trim()
   if (fallback && fallback.trim()) return fallback.trim()
   return ''
+}
+
+function formatDisplayTrackTitle(title: string): string {
+  const trimmed = String(title || '').trim()
+  return trimmed.replace(/^\d{2}\s+(?=\S)/, '') || trimmed
 }
 
 function toPlayerSong(item: any, albumContext?: { cover_url?: string; artist?: string; title?: string }): Song {
@@ -850,7 +853,7 @@ watch(() => route.params.albumId, (id, previous) => {
 .mobile-album-detail__artist-avatar {
   width: 18px;
   height: 18px;
-  border-radius: 50%;
+  border-radius: 4px;
   background: #eaeaea;
   display: flex;
   align-items: center;
@@ -915,7 +918,7 @@ watch(() => route.params.albumId, (id, previous) => {
 }
 
 .mobile-album-detail__icon-btn.is-active {
-  color: #1ed760;
+  color: var(--a-color-primary, #0066cc);
 }
 
 .mobile-album-detail__hero-actions-right {
@@ -957,11 +960,11 @@ watch(() => route.params.albumId, (id, previous) => {
   aspect-ratio: 1 / 1;
   border-radius: 50% !important;
   border: none;
-  background-color: #1ed760;
-  color: #000000;
+  background-color: var(--a-color-primary, #0066cc);
+  color: var(--a-color-primary-contrast, #ffffff);
   cursor: pointer;
   padding: 0;
-  box-shadow: 0 4px 12px rgba(30, 215, 96, 0.35);
+  box-shadow: none;
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
@@ -1001,7 +1004,7 @@ watch(() => route.params.albumId, (id, previous) => {
 }
 
 .mobile-album-detail__song-row.is-active {
-  background-color: #f7faf8;
+  background-color: color-mix(in srgb, var(--a-color-primary, #0066cc) 8%, transparent);
 }
 
 .mobile-album-detail :deep(.mobile-album-detail__song-item),
@@ -1035,7 +1038,7 @@ watch(() => route.params.albumId, (id, previous) => {
 }
 
 .mobile-album-detail__playing-icon {
-  color: #1ed760;
+  color: var(--a-color-primary, #0066cc);
 }
 
 .mobile-album-detail__song-info {
@@ -1056,7 +1059,7 @@ watch(() => route.params.albumId, (id, previous) => {
 }
 
 .mobile-album-detail__song-row.is-active .mobile-album-detail__song-title {
-  color: #1ed760;
+  color: var(--a-color-primary, #0066cc);
   font-weight: 600;
 }
 
@@ -1117,7 +1120,7 @@ watch(() => route.params.albumId, (id, previous) => {
 }
 
 .mobile-album-detail__song-action-btn.is-favorited {
-  color: #1ed760;
+  color: var(--a-color-primary, #0066cc);
 }
 
 /* Bottom Action Sheet (Spotify Style) */
@@ -1233,7 +1236,7 @@ watch(() => route.params.albumId, (id, previous) => {
 }
 
 .mobile-action-sheet__item .is-favorited {
-  color: #1ed760;
+  color: var(--a-color-primary, #0066cc);
   fill: currentColor;
 }
 

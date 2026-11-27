@@ -16,8 +16,10 @@ import {
   type MusicAlbumImport,
   type MusicSource,
 } from "@/api/musicV1";
+import { Disc3 } from "lucide-vue-next";
 import PButton from "@/components/ui/PButton.vue";
 import PInput from "@/components/ui/PInput.vue";
+import PPageHeader from "@/components/ui/PPageHeader.vue";
 import PConfirm from "@/components/ui/PConfirm.vue";
 import PaginationBar from "@/components/ui/PaginationBar.vue";
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
@@ -45,9 +47,17 @@ const searchQuery = ref('')
 const replacementInputs = ref<Record<string, HTMLInputElement | null>>({})
 const resumeInputs = ref<Record<string, HTMLInputElement | null>>({})
 const uploadProgress = ref<Record<string, number>>({})
-const { resumeMusicCreationFlow } = useMusicDrawers()
+const musicDrawers = useMusicDrawers()
+const { resumeMusicCreationFlow } = musicDrawers
+const canStartNewImport = typeof (musicDrawers as Record<string, unknown>).openMusicCreationFlow === 'function'
 const importRequests = useRequestGeneration()
 let pollTimer: ReturnType<typeof setTimeout> | null = null
+
+function startNewImport() {
+  if (canStartNewImport) {
+    musicDrawers.openMusicCreationFlow({ startStep: 'albumImport' })
+  }
+}
 
 const albumImports = computed(() => uniqueMusicAlbumImports(imports.value))
 
@@ -463,37 +473,57 @@ function continueImport() {
 
 <template>
   <div class="music-imports-view">
-    <header class="music-imports-view__header">
-      <div>
-        <h1>导入中心</h1>
-        <p>查看上传、处理和发布状态</p>
+    <PPageHeader title="导入中心" mb="0">
+      <template #action>
+        <div class="music-imports-view__header-actions">
+          <PButton variant="secondary" size="sm" :loading="loading" @click="() => loadImports(false)"
+            >刷新</PButton
+          >
+        </div>
+      </template>
+    </PPageHeader>
+
+    <div
+      v-if="!loading || albumImports.length"
+      class="music-imports-view__toolbar"
+    >
+      <div class="music-imports-view__filters" role="tablist" aria-label="导入状态">
+        <button
+          v-for="group in [{ key: 'in_progress', label: '进行中' }, { key: 'needs_attention', label: '需处理' }, { key: 'published', label: '已发布' }, { key: 'canceled', label: '已取消' }]"
+          :key="group.key"
+          type="button"
+          :class="{ 'music-imports-view__filter--active': activeGroup === group.key }"
+          :aria-selected="activeGroup === group.key"
+          role="tab"
+          @click="activeGroup = group.key as 'in_progress' | 'needs_attention' | 'published' | 'canceled'"
+        >
+          {{ group.label }} {{ importGroups[group.key as keyof typeof importGroups].length }}
+        </button>
       </div>
-      <PButton variant="secondary" :loading="loading" @click="() => loadImports(false)"
-        >刷新</PButton
-      >
-    </header>
+      <div v-if="albumImports.length" class="music-imports-view__search">
+        <PInput v-model="searchQuery" size="sm" placeholder="搜索标题或文件名…" />
+      </div>
+    </div>
 
     <p v-if="errorMessage" class="music-imports-view__error">
       {{ errorMessage }}
     </p>
     <p v-else-if="loading && !imports.length" class="music-imports-view__state">
-      正在加载
+      正在加载…
     </p>
-    <p v-else-if="!albumImports.length" class="music-imports-view__state">
-      暂无导入记录
-    </p>
+    <div v-else-if="!albumImports.length" class="music-imports-view__empty">
+      <p class="music-imports-view__state">暂无导入记录</p>
+      <PButton
+        v-if="canStartNewImport"
+        variant="primary"
+        size="sm"
+        @click="startNewImport"
+      >新建导入</PButton>
+    </div>
 
     <div v-else class="music-imports-view__layout">
-      <div class="music-imports-view__search">
-        <PInput v-model="searchQuery" placeholder="搜索标题或文件名…" />
-      </div>
       <section class="music-imports-view__list" aria-label="导入记录">
-        <div class="music-imports-view__filters" role="tablist" aria-label="导入状态">
-          <button v-for="group in [{ key: 'in_progress', label: '进行中' }, { key: 'needs_attention', label: '需处理' }, { key: 'published', label: '已发布' }, { key: 'canceled', label: '已取消' }]" :key="group.key" type="button" :class="{ 'music-imports-view__filter--active': activeGroup === group.key }" :aria-selected="activeGroup === group.key" role="tab" @click="activeGroup = group.key as 'in_progress' | 'needs_attention' | 'published' | 'canceled'">
-            {{ group.label }} {{ importGroups[group.key as keyof typeof importGroups].length }}
-          </button>
-        </div>
-        <p v-if="!visibleImports.length" class="music-imports-view__state">暂无记录</p>
+        <p v-if="!visibleImports.length" class="music-imports-view__list-empty">暂无记录</p>
         <button
           v-for="item in visibleImports"
           :key="item.importId"
@@ -526,13 +556,15 @@ function continueImport() {
             :src="selectedImport.coverUrl || selectedImport.derivedCover"
             alt="专辑封面"
           />
-          <div v-else class="no-cover">无封面</div>
+          <div v-else class="no-cover" aria-label="暂无封面">
+            <Disc3 :size="28" aria-hidden="true" />
+          </div>
         </div>
         <div class="detail-main">
           <h2>{{ musicImportAlbumTitle(selectedImport) }}</h2>
           <div class="detail-meta">
             <span class="status-badge" :data-status="selectedImport.status">{{ statusText[selectedImport.status] ?? selectedImport.status }}</span>
-            <span v-if="selectedImport.archiveName" class="meta-archive">文件: {{ selectedImport.archiveName }}</span>
+            <span v-if="selectedImport.archiveName" class="meta-archive">文件：{{ selectedImport.archiveName }}</span>
             <span v-if="formatDate(selectedImport.lastSyncedAt)" class="meta-time">更新于 {{ formatDate(selectedImport.lastSyncedAt) }}</span>
           </div>
 
@@ -546,10 +578,10 @@ function continueImport() {
             媒体处理已完成，请补充艺术家和专辑资料后提交。
           </p>
           <p v-else-if="selectedImport.status === 'uploading' && selectedImport.files.some(f => ['uploading', 'completing'].includes(f.uploadStatus))" class="status-hint">
-            若上传因刷新或网络中断而停止，请为未完成文件重新选择原文件，系统将跳过已上传分片。
+            如上传中断，请为未完成的文件重新选择原文件，将从断点继续上传。
           </p>
           <p v-else-if="selectedImport.status === 'needs_attention'" class="status-hint">
-            请替换或重试未完成的源文件恢复处理。
+            请替换或重试未完成的文件。
           </p>
 
           <p
@@ -563,6 +595,7 @@ function continueImport() {
             <PButton
               v-if="['ready', 'needs_attention', 'failed'].includes(selectedImport.status)"
               variant="primary"
+              size="sm"
               @click="continueImport"
             >
               {{ ['needs_attention', 'failed'].includes(selectedImport.status) ? '处理问题' : '打开编辑' }}
@@ -571,6 +604,7 @@ function continueImport() {
             <PButton
               v-if="selectedImport.files.some(f => f.processingStatus === 'failed')"
               variant="secondary"
+              size="sm"
               :loading="actionBusy === 'retry-all'"
               @click="retryAllFailedFiles"
             >一键重试失败文件</PButton>
@@ -578,6 +612,7 @@ function continueImport() {
             <PButton
               v-if="!['committed', 'canceled'].includes(selectedImport.status)"
               variant="secondary"
+              size="sm"
               :loading="actionBusy === 'cancel'"
               @click="cancelImport"
             >取消导入</PButton>
@@ -585,12 +620,14 @@ function continueImport() {
             <PButton
               v-else-if="selectedImport.status === 'committed' && (selectedImport.targetAlbumId || selectedImport.targetSongId)"
               variant="secondary"
+              size="sm"
               :loading="actionBusy === 'repair'"
               @click="repairImport"
             >修复资料</PButton>
             <PButton
               v-if="['committed', 'canceled'].includes(selectedImport.status)"
               variant="danger"
+              size="sm"
               :loading="actionBusy === 'delete-record'"
               @click="deleteRecord"
             >删除记录</PButton>
@@ -612,6 +649,7 @@ function continueImport() {
                 <PButton
                   v-if="selectedImport.status === 'uploading' && ['uploading', 'completing'].includes(file.uploadStatus)"
                   variant="secondary"
+                  size="sm"
                   data-testid="music-import-resume-action"
                   :disabled="actionBusy !== null"
                   @click="chooseResume(file.fileId)"
@@ -619,6 +657,7 @@ function continueImport() {
                 <PButton
                   v-if="file.processingStatus === 'failed'"
                   variant="secondary"
+                  size="sm"
                   :loading="actionBusy === file.fileId"
                   @click="retryFile(file.fileId)"
                   >重试</PButton
@@ -626,12 +665,14 @@ function continueImport() {
                 <PButton
                   v-if="file.uploadStatus === 'failed' || file.processingStatus === 'failed' || (selectedImport.status === 'needs_attention' && file.uploadStatus !== 'uploaded')"
                   variant="secondary"
+                  size="sm"
                   :disabled="actionBusy === file.fileId"
                   @click="chooseReplacement(file.fileId)"
                 >替换文件</PButton>
                 <PButton
                   v-if="file.uploadStatus === 'failed'"
                   variant="danger"
+                  size="sm"
                   :disabled="actionBusy === file.fileId"
                   @click="deleteFile(file.fileId)"
                   >删除</PButton
@@ -641,7 +682,7 @@ function continueImport() {
           </ul>
 
           <div v-if="selectedImport.derivedTracks.length" class="detail-tracks-section">
-            <h3>可辨识曲目列表 ({{ selectedImport.derivedTracks.length }})</h3>
+            <h3>已识别曲目 ({{ selectedImport.derivedTracks.length }})</h3>
             <ol class="detail-tracks-list">
               <li
                 v-for="track in selectedImport.derivedTracks"
@@ -651,8 +692,11 @@ function continueImport() {
               </li>
             </ol>
           </div>
-          <p v-else class="music-imports-view__state">{{ emptyTrackStateText }}</p>
+          <p v-else class="music-imports-view__list-empty">{{ emptyTrackStateText }}</p>
         </div>
+      </section>
+      <section v-else class="music-imports-view__detail-empty">
+        <p>选择左侧记录查看详情</p>
       </section>
     </div>
     <PaginationBar
@@ -663,13 +707,13 @@ function continueImport() {
   </div>
   <PConfirm
     :show="pendingConfirmation !== null"
-    title="确认导入操作"
+    title="确认操作"
     :message="pendingConfirmation?.kind === 'record'
       ? '确认删除这条导入记录？已发布的专辑和歌曲不会被删除。'
       : pendingConfirmation?.kind === 'file'
         ? '确认移除这个文件？'
-        : '确认取消这个导入任务？'"
-    :confirm-text="pendingConfirmation?.kind === 'cancel' ? '取消任务' : '确认删除'"
+        : '确认取消此次导入？'"
+    :confirm-text="pendingConfirmation?.kind === 'cancel' ? '确认取消' : '确认删除'"
     danger
     :loading="actionBusy !== null"
     @confirm="confirmPendingAction"

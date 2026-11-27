@@ -29,7 +29,7 @@
       <RouterView v-slot="{ Component, route: viewRoute }">
         <Transition :name="mobileRouteTransition">
           <KeepAlive :key="authStore.user?.uuid || 'guest'" :max="6" :exclude="['PaperWorkspaceView', 'PapersHomeView']">
-            <component :is="Component" :key="viewRoute.meta.mobileModule || /^\/(feed|music|studio)(\/|$)/.test(viewRoute.path) ? viewRoute.matched[0]?.path : viewRoute.path" />
+            <component :is="Component" :key="viewRoute.meta.mobileModule ? `${viewRoute.meta.mobileModule}-layout` : /^\/(feed|music|studio)(\/|$)/.test(viewRoute.path) ? viewRoute.matched[0]?.path : viewRoute.path" />
           </KeepAlive>
         </Transition>
       </RouterView>
@@ -414,6 +414,9 @@ html.dark .mobile-app-shell {
   bottom: 0;
   left: 0;
   z-index: var(--a-z-navigation);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   pointer-events: none;
 }
 

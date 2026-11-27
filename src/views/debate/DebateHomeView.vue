@@ -1,9 +1,11 @@
 <template>
   <div class="debate-home-view">
-    <PPageHeader title="辩论" mb="1.25rem">
+    <PPageHeader title="辩论" mb="1rem">
       <template #action>
-        <PButton to="/debate/rules" variant="secondary">规则</PButton>
-        <PButton v-if="authStore.isAuthenticated" @click="showCreateModal = true">发起辩题</PButton>
+        <div class="debate-header-actions">
+          <PButton to="/debate/rules" variant="secondary" size="sm">规则</PButton>
+          <PButton v-if="authStore.isAuthenticated" size="sm" @click="showCreateModal = true">发起辩题</PButton>
+        </div>
       </template>
     </PPageHeader>
 
@@ -12,6 +14,7 @@
       <PSelect
         v-model="filterStatus"
         :options="filterStatusOptions"
+        size="sm"
         placeholder="全部状态"
         class="debate-filter-status"
       />
@@ -83,7 +86,7 @@
             </div>
           </header>
 
-          <!-- 辩题标题 -->
+          <!-- 辩题标题与摘要 -->
           <h2 class="debate-card__title">
             <RouterLink
               :to="`/debate/${debate.id}`"
@@ -91,6 +94,7 @@
               @click.stop
             >{{ debate.title }}</RouterLink>
           </h2>
+          <p v-if="debate.description" class="debate-card__desc a-clamp-2">{{ debate.description }}</p>
 
           <!-- 底部统计 -->
           <footer class="debate-card__footer">
@@ -165,8 +169,6 @@ import PInput from '@/components/ui/PInput.vue'
 import PInteractionCard from '@/components/ui/PInteractionCard.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PPageHeader from '@/components/ui/PPageHeader.vue'
-import { moduleRooms } from '@/config/moduleRooms'
-import PContentCard from '@/components/ui/PContentCard.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -345,40 +347,50 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 </script>
 
 <style scoped>
+.debate-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .debate-filters {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1.25rem;
   flex-wrap: wrap;
 }
 
 .debate-filter-status {
-  max-width: 180px;
-  height: var(--a-control-height-sm, 2.25rem);
+  min-width: 9rem;
 }
 
-.debate-filter-tag {
-  max-width: 260px;
-  height: var(--a-control-height-sm, 2.25rem);
+.debate-filter-status :deep(.p-field),
+:deep(.p-field:has(input.debate-filter-tag)) {
+  gap: 0;
 }
 
-.debate-filter-tag :deep(.p-input) {
+:deep(input.debate-filter-tag) {
+  width: min(240px, 60vw);
+  min-height: var(--a-control-height-sm, 2.25rem);
   height: var(--a-control-height-sm, 2.25rem);
+  padding: 0 0.75rem;
+  font-size: var(--a-text-sm);
   box-sizing: border-box;
 }
 
 .debate-list {
   display: grid;
-  gap: 1rem;
+  gap: 0.625rem;
 }
 
 .debate-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 1.25rem 1.35rem;
+  gap: 0.55rem;
+  padding: 1rem 1.25rem;
   cursor: pointer;
   overflow: hidden;
 }
@@ -397,6 +409,7 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 
 .debate-card:hover {
   border-color: var(--a-color-border);
+  background: var(--a-color-surface);
 }
 
 .debate-card:hover::before {
@@ -413,35 +426,40 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 }
 
 .debate-dot {
-  color: var(--a-color-muted-soft);
+  color: var(--a-color-border);
+}
+
+.debate-status-badge,
+.debate-tag,
+.debate-conclusion-stamp,
+.debate-weak-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--a-radius-control, 4px);
 }
 
 .debate-status-badge {
-  font-size: 0.68rem;
-  font-weight: 500;
-  padding: 0.15em 0.55em;
-  border-radius: var(--a-radius-control);
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-surface-muted);
   color: var(--a-color-fg);
-  border: none;
 }
 
 .debate-status-badge.is-archived {
-  opacity: 0.7;
+  color: var(--a-color-muted-soft);
 }
 
 .debate-tag {
-  font-size: 0.68rem;
-  font-weight: 500;
   color: var(--a-color-primary);
   background: color-mix(in srgb, var(--a-color-primary) 8%, transparent);
-  padding: 0.15em 0.5em;
-  border-radius: var(--a-radius-control);
 }
 
 .debate-card__title {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 500;
   line-height: 1.4;
   color: var(--a-color-fg);
@@ -452,66 +470,22 @@ watch([routeStatus, routeTag], ([status, tag]) => {
   text-decoration: none;
 }
 
-/* 正反立场对比条 */
-.debate-card__stance-box {
-  display: grid;
-  gap: 0.45rem;
-  padding: 0.5rem 0;
-  background: transparent;
-  border-radius: 0;
-  border: none;
+.debate-title-link:hover {
+  text-decoration: underline;
 }
 
-.stance-bar {
-  display: flex;
-  height: 6px;
-  border-radius: var(--a-radius-control);
-  overflow: hidden;
-  background: var(--a-color-border-soft);
-  gap: 2px;
-}
-
-.stance-bar__pro {
-  background: var(--a-color-primary);
-  border-radius: var(--a-radius-control) 0 0 var(--a-radius-control);
-  transition: width 0.3s ease;
-}
-
-.stance-bar__con {
-  background: var(--a-color-danger);
-  border-radius: 0 var(--a-radius-control) var(--a-radius-control) 0;
-  transition: width 0.3s ease;
-}
-
-.stance-labels {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.72rem;
-}
-
-.stance-label--pro {
-  font-weight: 600;
-  color: var(--a-color-primary);
-}
-
-.stance-label--con {
-  font-weight: 600;
-  color: var(--a-color-danger);
-}
-
-.stance-action {
-  font-size: 0.7rem;
-  font-weight: 500;
-  color: var(--a-color-muted);
-  letter-spacing: 0.02em;
+.debate-card__desc {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--a-color-muted-soft);
 }
 
 .debate-card__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--a-color-muted);
 }
 
@@ -524,15 +498,8 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 .debate-modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
+  gap: 0.5rem;
   margin-top: 1.5rem;
-}
-
-.debate-conclusion-stamp {
-  padding: 0.15em 0.5em;
-  border-radius: var(--a-radius-control);
-  font-size: 0.68rem;
-  font-weight: 600;
 }
 
 .debate-conclusion-stamp--yes {
@@ -541,21 +508,34 @@ watch([routeStatus, routeTag], ([status, tag]) => {
 }
 
 .debate-conclusion-stamp--no {
-  border: none;
+  border: 1px solid var(--a-color-border-soft);
   background: var(--a-color-surface-muted);
   color: var(--a-color-text-secondary);
 }
 
 .debate-weak-badge {
-  padding: 0.15em 0.5em;
-  border: 1px solid var(--a-color-warning);
-  border-radius: var(--a-radius-control);
+  border: 1px solid color-mix(in srgb, var(--a-color-warning) 35%, transparent);
+  background: color-mix(in srgb, var(--a-color-warning) 8%, transparent);
   color: var(--a-color-warning);
-  font-size: 0.68rem;
-  font-weight: 500;
 }
 
 .debate-create-form-wrap {
-  padding: 1.5rem;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 5rem;
+}
+
+@media (max-width: 720px) {
+  .debate-filters {
+    align-items: stretch;
+  }
+
+  .debate-filter-status,
+  :deep(input.debate-filter-tag) {
+    width: 100%;
+    min-height: 44px;
+    height: auto;
+    font-size: 1rem;
+  }
 }
 </style>

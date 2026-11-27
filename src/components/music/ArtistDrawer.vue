@@ -701,6 +701,7 @@ watch([releaseType, groupWorkType, albumSortMode], () => {
       />
       <div v-if="!loading && artist" class="actions">
         <PButton
+          size="sm"
           variant="secondary"
           :disabled="bookmarkLoading"
           data-testid="artist-bookmark-toggle"
@@ -709,7 +710,8 @@ watch([releaseType, groupWorkType, albumSortMode], () => {
           {{ isBookmarked ? '已订阅' : '订阅' }}
         </PButton>
         <PButton
-          variant="primary"
+          size="sm"
+          variant="secondary"
           :disabled="artist?.edit_status && artist.edit_status !== 'development'"
           data-testid="artist-edit-action"
           @click="editArtist"
@@ -718,27 +720,30 @@ watch([releaseType, groupWorkType, albumSortMode], () => {
         </PButton>
         <PButton
           v-if="canCreateMusic"
+          size="sm"
           variant="primary"
           data-testid="artist-create-album-action"
           @click="createAlbum"
         >
           创建专辑/歌曲
         </PButton>
-		<PButton
-			variant="secondary"
-			data-testid="artist-link-album-action"
-			@click="linkAlbum"
-		>
-			关联现有专辑
-		</PButton>
         <PButton
+          size="sm"
           variant="secondary"
+          data-testid="artist-link-album-action"
+          @click="linkAlbum"
+        >
+          关联现有专辑
+        </PButton>
+        <PButton
+          size="sm"
+          variant="ghost"
           data-testid="artist-merge-action"
           @click="mergeArtist"
         >
           合并重复条目
         </PButton>
-        <PButton variant="secondary" @click="openNestedAction('artist_history', { artistId, name: artist?.name || '' })">
+        <PButton size="sm" variant="ghost" @click="openNestedAction('artist_history', { artistId, name: artist?.name || '' })">
           版本
         </PButton>
       </div>

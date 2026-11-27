@@ -1,18 +1,20 @@
 <template>
   <div class="forum-page">
     <section class="forum-main">
-      <PPageHeader title="论坛" mb="1.25rem">
+      <PPageHeader title="论坛" mb="1rem">
         <template #action>
-          <div class="forum-header-actions">
+          <div v-if="authStore.isAuthenticated && (canCreateTopic || canRequestCategory)" class="forum-header-actions">
             <PButton
-              v-if="authStore.isAuthenticated && canCreateTopic"
+              v-if="canCreateTopic"
+              size="sm"
               @click="router.push('/forum/new')"
             >
               发新话题
             </PButton>
             <PButton
-              v-if="authStore.isAuthenticated && canRequestCategory"
+              v-if="canRequestCategory"
               variant="secondary"
+              size="sm"
               @click="catReqModalOpen = true"
             >
               申请分类
@@ -71,11 +73,16 @@
           <!-- Tags / Category badge -->
           <template #meta>
             <span v-if="topicState(topic).pinned" class="tr-badge a-badge tr-badge-pin">置顶</span>
+            <span v-if="topicState(topic).featured" class="tr-badge a-badge tr-badge-featured">精华</span>
             <span v-if="topicState(topic).closed" class="tr-badge a-badge tr-badge-closed">已关闭</span>
             <span
               v-if="topic.category"
               class="tr-badge a-badge tr-badge-cat"
-              :style="{ borderColor: topic.category.color, color: topic.category.color }"
+              :style="{
+                color: topic.category.color || 'var(--a-color-fg)',
+                borderColor: topic.category.color ? `color-mix(in srgb, ${topic.category.color} 28%, transparent)` : 'var(--a-color-border-soft)',
+                background: topic.category.color ? `color-mix(in srgb, ${topic.category.color} 8%, transparent)` : 'var(--a-color-surface-muted)',
+              }"
               @click.stop="selectCategory(topic.category!.id)"
             >{{ topic.category.name }}</span>
             <span
@@ -84,9 +91,16 @@
               class="tr-badge a-badge tr-badge-tag"
               @click.stop="filterByTag(tag)"
             ># {{ tag }}</span>
-            <span class="tr-sep">·</span>
-            <span class="tr-author">{{ topic.user?.display_name || topic.user?.username || '匿名' }}</span>
-            <span class="tr-sep">·</span>
+            <span class="tr-sep" aria-hidden="true">·</span>
+            <span class="tr-author-inline">
+              <PAvatar
+                :src="topic.user?.avatar_url"
+                :name="topic.user?.display_name || topic.user?.username || '匿名'"
+                size="xs"
+              />
+              <span class="tr-author">{{ topic.user?.display_name || topic.user?.username || '匿名' }}</span>
+            </span>
+            <span class="tr-sep" aria-hidden="true">·</span>
             <span>{{ formatTime(topic.created_at) }}</span>
           </template>
 
@@ -99,22 +113,14 @@
             >{{ topic.title }}</RouterLink>
           </template>
 
-          <template #actions>
-            <div class="topic-entry-actions">
-              <div class="tr-avatars">
-                <PAvatar
-                  :src="topic.user?.avatar_url"
-                  :name="topic.user?.display_name || topic.user?.username || '匿名'"
-                  size="xs"
-                />
-              </div>
-              <span class="topic-entry-stat">
-                回复 {{ topic.reply_count }} · 浏览 {{ formatCount(topic.view_count) }}
-              </span>
-              <span v-if="topic.last_reply_at" class="topic-entry-last">
-                最后回复: {{ formatTime(topic.last_reply_at) }}
-              </span>
-            </div>
+          <template #footer>
+            <span class="topic-entry-stat">回复 {{ topic.reply_count }}</span>
+            <span class="tr-sep" aria-hidden="true">·</span>
+            <span class="topic-entry-stat">浏览 {{ formatCount(topic.view_count) }}</span>
+            <template v-if="topic.last_reply_at">
+              <span class="tr-sep" aria-hidden="true">·</span>
+              <span class="topic-entry-last">最后回复 {{ formatTime(topic.last_reply_at) }}</span>
+            </template>
           </template>
         </PContentCard>
       </div>

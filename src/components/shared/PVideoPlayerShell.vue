@@ -36,7 +36,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .vps-shell {
-  margin-bottom: 1rem;
+  margin-bottom: 0;
 }
 .vps-player {
   position: relative;

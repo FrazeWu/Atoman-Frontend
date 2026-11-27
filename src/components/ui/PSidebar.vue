@@ -25,6 +25,14 @@ const { sidebarCollapsed } = useSidebar()
 <style scoped>
 .p-sidebar {
   transition: width 0.2s ease;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.p-sidebar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .p-sidebar.is-collapsed {

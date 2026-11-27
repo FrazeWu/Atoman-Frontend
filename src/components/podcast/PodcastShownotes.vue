@@ -35,7 +35,7 @@ const lines = computed(() => parsePodcastTimeline(props.text || ''))
 .podcast-shownotes {
   display: grid;
   gap: 0.5rem;
-  color: #374151;
+  color: var(--a-color-text-secondary);
   font-size: 0.875rem;
   line-height: 1.7;
   white-space: pre-wrap;
@@ -51,7 +51,7 @@ const lines = computed(() => parsePodcastTimeline(props.text || ''))
 .shownote-time {
   flex: 0 0 auto;
   border: 1px solid var(--a-color-border-soft);
-  border-radius: 6px;
+  border-radius: var(--a-radius-control, 4px);
   padding: 0.125rem 0.375rem;
   color: var(--a-color-fg);
   background: var(--a-color-surface-muted);

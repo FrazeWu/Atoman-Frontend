@@ -89,7 +89,7 @@ function formatDateFull(isoString: string) {
 .conclusion-timeline {
   margin-top: 12px;
   padding: 20px;
-  border: 1px solid var(--a-color-border);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
 }

@@ -254,6 +254,14 @@ watch(
   padding: 1.2rem 1.15rem;
   background: var(--a-color-bg);
   color: var(--a-color-fg);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.music-sidebar-playlists::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .music-sidebar-playlists.is-collapsed {

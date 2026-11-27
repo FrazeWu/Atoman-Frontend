@@ -8,10 +8,7 @@
       <span class="dashboard-section__icon" aria-hidden="true">
         <component :is="moduleIcon" :size="18" />
       </span>
-      <div>
-        <h2>{{ config.label }}</h2>
-        <p>{{ config.itemLabel }}</p>
-      </div>
+      <h2>{{ config.label }}</h2>
       <RouterLink :to="`/studio/${section.module}/content`" class="dashboard-section__manage">
         <List :size="16" aria-hidden="true" />
         <span>管理</span>
@@ -104,9 +101,7 @@ function formatNumber(value: number) {
   background: var(--a-color-bg);
   color: var(--a-color-text-secondary);
 }
-.dashboard-section h2, .dashboard-section p { margin: 0; }
-.dashboard-section h2 { font-size: 0.9375rem; font-weight: 500; color: var(--a-color-text); }
-.dashboard-section p { margin-top: 0.1rem; color: var(--a-color-muted); font-size: 0.75rem; }
+.dashboard-section h2 { margin: 0; font-size: 0.9375rem; font-weight: 500; color: var(--a-color-text); }
 .dashboard-section__manage {
   min-height: 2rem;
   height: 2rem;
@@ -145,7 +140,7 @@ function formatNumber(value: number) {
 .dashboard-section__metrics dd {
   margin: 0.2rem 0 0;
   font-size: 1.125rem;
-  font-weight: 500;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--a-color-text);
 }

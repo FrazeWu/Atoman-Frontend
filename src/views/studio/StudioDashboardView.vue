@@ -1,6 +1,6 @@
 <template>
   <section class="studio-dashboard">
-    <PPageHeader :title="title" sub="当前频道的创作状态与近期表现" mb="1.5rem">
+    <PPageHeader :title="title" mb="1.5rem">
       <template #action>
         <div class="studio-dashboard__header-actions">
           <StudioChannelSelector />
@@ -46,7 +46,7 @@
         <PButton type="button" size="sm" @click="load">重试</PButton>
       </template>
     </PEmpty>
-    <PEmpty v-else-if="!studio.dashboard" title="暂无创作内容" description="在此管理你的博客文章、播客单集与视频。" />
+    <PEmpty v-else-if="!studio.dashboard" title="暂无创作内容" />
     <template v-else>
       <p v-if="retryError" class="studio-dashboard__retry-error" role="alert">{{ retryError }}</p>
 
@@ -75,10 +75,7 @@
 
       <section class="studio-dashboard__actions" aria-labelledby="studio-action-title">
         <header class="studio-dashboard__section-heading">
-          <div>
-            <h2 id="studio-action-title">工作队列</h2>
-            <p>安排发布并处理影响交付和互动的事项。</p>
-          </div>
+          <h2 id="studio-action-title">工作队列</h2>
         </header>
         <p v-if="!actionItems.length" class="studio-dashboard__empty">暂无待处理事项</p>
         <ul v-else>
@@ -98,10 +95,7 @@
       <div class="studio-dashboard__activity-grid">
         <section class="studio-dashboard__recent" aria-labelledby="studio-recent-title">
           <header class="studio-dashboard__section-heading">
-            <div>
-              <h2 id="studio-recent-title">最近创作</h2>
-              <p>按最后更新时间排序。</p>
-            </div>
+            <h2 id="studio-recent-title">最近创作</h2>
           </header>
           <p v-if="!recentItems.length" class="studio-dashboard__empty">暂无内容</p>
           <ul v-else>
@@ -120,10 +114,7 @@
 
         <section class="studio-dashboard__modules" aria-labelledby="studio-module-title">
           <header class="studio-dashboard__section-heading">
-            <div>
-              <h2 id="studio-module-title">按类型创作</h2>
-              <p>进入内容、数据和互动管理。</p>
-            </div>
+            <h2 id="studio-module-title">按类型创作</h2>
           </header>
           <div class="studio-dashboard__module-grid">
             <StudioDashboardSection
@@ -210,7 +201,7 @@ const actionItems = computed<DashboardAction[]>(() => orderedSections.value
   )))
 
 const recentItems = computed(() => orderedSections.value
-  .flatMap(section => section.recent)
+  .flatMap(section => section.recent.map(item => ({ ...item, module: item.module || section.module })))
   .sort((left, right) => dateValue(right.updated_at) - dateValue(left.updated_at))
   .slice(0, 5))
 
@@ -302,7 +293,7 @@ onMounted(load)
 .studio-dashboard__header-actions { display: flex; align-items: center; gap: 0.5rem; }
 .studio-dashboard__manage { min-height: 2.25rem; height: 2.25rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0 0.75rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: var(--a-color-text); font-size: 0.75rem; font-weight: 500; text-decoration: none; transition: border-color var(--a-motion-micro, 140ms) ease, background-color var(--a-motion-micro, 140ms) ease; }
 .studio-dashboard__create-menu { display: grid; min-width: 10rem; padding: 0.25rem; }
-.studio-dashboard__create-menu a { min-height: 2.5rem; display: flex; align-items: center; gap: 0.5rem; padding: 0 0.625rem; color: var(--a-color-text); text-decoration: none; font-size: 0.8125rem; }
+.studio-dashboard__create-menu a { min-height: 2.5rem; display: flex; align-items: center; gap: 0.5rem; padding: 0 0.625rem; border-radius: var(--a-radius-control); color: var(--a-color-text); text-decoration: none; font-size: 0.8125rem; }
 .studio-dashboard__create-menu a:hover { background: var(--a-color-surface-muted); color: var(--a-color-primary); }
 .studio-dashboard__manage:hover { border-color: var(--a-color-border); background: var(--a-color-surface-muted); color: var(--a-color-text); }
 .studio-dashboard__manage:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 1px; }
@@ -318,17 +309,12 @@ onMounted(load)
   border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
-  transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-.studio-dashboard__summary > div:hover {
-  background: var(--a-color-surface-muted);
 }
 .studio-dashboard__summary dt { color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-dashboard__summary dd { margin: 0.35rem 0 0; font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--a-color-text); }
 .studio-dashboard__actions, .studio-dashboard__recent, .studio-dashboard__modules { min-width: 0; display: grid; gap: 0.875rem; }
 .studio-dashboard__section-heading h2, .studio-dashboard__section-heading p, .studio-dashboard__empty, .studio-dashboard__retry-error, .studio-dashboard__state { margin: 0; }
-.studio-dashboard__section-heading h2 { font-size: 1.125rem; }
-.studio-dashboard__section-heading p { margin-top: 0.25rem; color: var(--a-color-muted); font-size: 0.8125rem; }
+.studio-dashboard__section-heading h2 { font-size: 1rem; font-weight: 500; color: var(--a-color-text); }
 .studio-dashboard__actions ul, .studio-dashboard__recent ul { display: grid; gap: 0.625rem; margin: 0; padding: 0; list-style: none; }
 .studio-dashboard__actions li, .studio-dashboard__recent li { border: none; }
 .studio-dashboard__actions a, .studio-dashboard__recent a {
@@ -343,16 +329,15 @@ onMounted(load)
   background: var(--a-color-bg);
   color: var(--a-color-text);
   text-decoration: none;
-  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+  transition: border-color var(--a-motion-micro, 140ms) ease, background-color var(--a-motion-micro, 140ms) ease;
 }
 .studio-dashboard__actions a:hover, .studio-dashboard__recent a:hover {
-  border-color: var(--a-color-border-hover, var(--a-color-fg));
-  background-color: var(--a-color-surface-subtle);
-  transform: translateY(-1px);
+  border-color: var(--a-color-border);
+  background: var(--a-color-surface-muted);
 }
 .studio-dashboard__actions a:focus-visible, .studio-dashboard__recent a:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 1px; }
 .studio-dashboard__actions span, .studio-dashboard__recent span { min-width: 0; display: grid; gap: 0.15rem; }
-.studio-dashboard__actions strong, .studio-dashboard__recent strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem; }
+.studio-dashboard__actions strong, .studio-dashboard__recent strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem; font-weight: 500; }
 .studio-dashboard__actions small, .studio-dashboard__recent small, .studio-dashboard__recent time { color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-dashboard__recent time { font-variant-numeric: tabular-nums; }
 .studio-dashboard__priority {

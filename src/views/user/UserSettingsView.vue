@@ -1,11 +1,12 @@
 <template>
   <main class="user-settings settings-center a-page-xl">
-    <PPageHeader title="账号设置" sub="管理你的资料、账号安全、通知和社交权限。" mb="1.5rem">
+    <PPageHeader title="账号设置" sub="管理你的资料、账号安全、通知和社交权限。" mb="0">
       <template #action>
         <PButton
           v-if="isOwnSettingsRoute()"
           class="user-settings__directory-trigger"
           variant="secondary"
+          size="sm"
           type="button"
           @click="mobileDirectoryOpen = true"
         >
@@ -38,10 +39,7 @@
         >
           <PSurface :layer="1" class="settings-center__section-card">
             <div class="settings-center__section-head">
-              <div>
-                <p class="settings-center__kicker">{{ item.kicker }}</p>
-                <h2>{{ item.label }}</h2>
-              </div>
+              <h2>{{ item.label }}</h2>
               <p>{{ item.description }}</p>
             </div>
 

@@ -23,6 +23,7 @@ const jsonResponse = (data: unknown, status = 200) => new Response(JSON.stringif
 })
 
 const stubs = {
+  RouterLink: true,
   BlogMediaContent: { template: '<div />' },
   BlogPostUpdateNotice: { template: '<div />' },
   BlogRelatedPosts: { template: '<div />' },

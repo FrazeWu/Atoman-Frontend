@@ -76,8 +76,8 @@ const lifecycle = useContentLifecycle()
 const postId = computed(() => props.postId)
 const interactions = useInteractions('blog', 'post', postId)
 
-const post = ref<Post | null>(null)
-const loading = ref(true)
+const post = ref<Post | null>(props.post || null)
+const loading = ref(!props.post)
 const errorStatus = ref<number | null>(null)
 const errorMessage = ref('')
 const readingMode = ref<'single' | 'double'>('single')
@@ -117,7 +117,7 @@ const reportLoading = ref(false)
 const reportMessage = ref('')
 
 const outlineOpen = ref(false)
-const directoryCollapsed = ref(typeof window !== 'undefined' ? window.innerWidth < 1200 : false)
+const directoryCollapsed = ref(typeof window !== 'undefined' ? window.innerWidth < 1320 : false)
 const mobileDirectoryOpen = ref(false)
 const activeHeadingId = ref<string>('')
 let headingObserver: IntersectionObserver | null = null
@@ -172,18 +172,27 @@ const displayPublicTags = computed(() => {
   )
 })
 
+function getScrollTarget(): HTMLElement | Window {
+  if (isSheet.value && postContentAnchor.value) {
+    const sheetContent = postContentAnchor.value.closest<HTMLElement>('.sheet-content')
+    if (sheetContent) return sheetContent
+  }
+  return window
+}
+
 function updateActiveHeadingOnScroll() {
   if (!outlineHeadings.value.length) return
-  const headings = document.querySelectorAll<HTMLElement>('.prose-blog h1[id], .prose-blog h2[id], .prose-blog h3[id], .prose-blog h4[id]')
+  const root = postContentAnchor.value
+  if (!root) return
+  const headings = root.querySelectorAll<HTMLElement>('.prose-blog h1[id], .prose-blog h2[id], .prose-blog h3[id], .prose-blog h4[id]')
   if (!headings.length) return
 
-  const scrollY = window.scrollY || document.documentElement.scrollTop
   const offset = 140
-
   let currentId = headings[0].id
   for (let i = 0; i < headings.length; i++) {
     const el = headings[i]
-    if (el.offsetTop - offset <= scrollY) {
+    const rect = el.getBoundingClientRect()
+    if (rect.top <= offset) {
       currentId = el.id
     } else {
       break
@@ -191,6 +200,28 @@ function updateActiveHeadingOnScroll() {
   }
   if (currentId) {
     activeHeadingId.value = currentId
+  }
+}
+
+let attachedScrollTarget: HTMLElement | Window | null = null
+
+function attachScrollListener() {
+  detachScrollListener()
+  const target = getScrollTarget()
+  attachedScrollTarget = target
+  target.addEventListener('scroll', updateActiveHeadingOnScroll, { passive: true })
+  if (!isSheet.value && target === window) {
+    window.addEventListener('scroll', trackReadingProgress, { passive: true })
+  }
+}
+
+function detachScrollListener() {
+  if (attachedScrollTarget) {
+    attachedScrollTarget.removeEventListener('scroll', updateActiveHeadingOnScroll)
+    if (attachedScrollTarget === window) {
+      window.removeEventListener('scroll', trackReadingProgress)
+    }
+    attachedScrollTarget = null
   }
 }
 
@@ -856,25 +887,22 @@ watch(() => props.postId, () => { void fetchPost() }, { immediate: true })
 
 watch(renderedContent, () => {
   nextTick(() => {
+    attachScrollListener()
     setupHeadingObserver()
     updateActiveHeadingOnScroll()
   })
 })
 
 onMounted(() => {
-  if (!isSheet.value) {
-    window.addEventListener('scroll', trackReadingProgress, { passive: true })
-    window.addEventListener('scroll', updateActiveHeadingOnScroll, { passive: true })
-  }
   nextTick(() => {
+    attachScrollListener()
     setupHeadingObserver()
     updateActiveHeadingOnScroll()
   })
 })
 
 onUnmounted(() => {
-  window.removeEventListener('scroll', trackReadingProgress)
-  window.removeEventListener('scroll', updateActiveHeadingOnScroll)
+  detachScrollListener()
   if (headingObserver) {
     headingObserver.disconnect()
     headingObserver = null
@@ -927,8 +955,22 @@ defineExpose({
     </div>
     <div v-else-if="post" class="post-reader-frame">
       <article ref="postContentAnchor" class="post-reader-article" @click="handleRenderedContentClick">
-        <div v-if="!isSheet || isOwner" class="post-reader-top-nav">
-          <RouterLink v-if="!isSheet" to="/posts" class="a-link post-reader-breadcrumb">← 文章</RouterLink>
+        <div class="post-reader-top-nav">
+          <nav class="post-reader-breadcrumbs" aria-label="文章位置导航">
+            <RouterLink v-if="!isSheet" to="/posts" class="post-reader-breadcrumb-item">文章</RouterLink>
+            <template v-if="post.channel">
+              <span v-if="!isSheet" class="post-reader-breadcrumb-sep">/</span>
+              <RouterLink :to="`/posts/channel/${post.channel.slug}`" class="post-reader-breadcrumb-item post-reader-breadcrumb-channel">
+                {{ post.channel.name }}
+              </RouterLink>
+            </template>
+            <template v-if="post.collection">
+              <span class="post-reader-breadcrumb-sep">/</span>
+              <RouterLink :to="`/posts/collection/${post.collection.id}`" class="post-reader-breadcrumb-item post-reader-breadcrumb-collection">
+                {{ post.collection.name }}
+              </RouterLink>
+            </template>
+          </nav>
           <div v-if="isOwner" class="post-sheet-actions">
             <RouterLink v-if="!isSheet" :to="`/studio/blog/${post.id}/edit`" class="a-btn a-btn--sm a-btn--secondary">编辑</RouterLink>
             <PButton v-else variant="secondary" size="sm" @click="editPost"><Pencil :size="15" aria-hidden="true" />编辑</PButton>
@@ -936,10 +978,32 @@ defineExpose({
         </div>
         <div class="article-eyebrow post-sheet-byline">
           <div class="post-sheet-byline-left">
-            <PAvatar class="post-sheet-author-avatar" :src="post.user?.avatar_url" :name="authorName" :alt="`${authorName} 的头像`" size="sm" />
+            <RouterLink
+              v-if="post.user?.username"
+              :to="`/u/${post.user.username}`"
+              class="post-sheet-author-link"
+              :aria-label="`查看 ${authorName} 的个人主页`"
+            >
+              <PAvatar class="post-sheet-author-avatar" :src="post.user?.avatar_url" :name="authorName" :alt="`${authorName} 的头像`" size="sm" />
+            </RouterLink>
+            <PAvatar v-else class="post-sheet-author-avatar" :src="post.user?.avatar_url" :name="authorName" :alt="`${authorName} 的头像`" size="sm" />
             <div class="post-sheet-author-info">
-              <div class="post-sheet-author-row"><span class="post-sheet-author">{{ authorName }}</span><span v-if="authorHandle" class="post-sheet-author-handle">{{ authorHandle }}</span></div>
-              <div class="post-sheet-publishing-meta"><span v-if="formattedPublicationDate">发布于 {{ formattedPublicationDate }}</span><span v-if="formattedPublicationDate" aria-hidden="true" class="article-eyebrow__sep">·</span><span class="post-sheet-reading-time">{{ readingTime }}</span></div>
+              <div class="post-sheet-author-row">
+                <RouterLink
+                  v-if="post.user?.username"
+                  :to="`/u/${post.user.username}`"
+                  class="post-sheet-author post-sheet-author--interactive"
+                >
+                  {{ authorName }}
+                </RouterLink>
+                <span v-else class="post-sheet-author">{{ authorName }}</span>
+                <span v-if="authorHandle" class="post-sheet-author-handle">{{ authorHandle }}</span>
+              </div>
+              <div class="post-sheet-publishing-meta">
+                <span v-if="formattedPublicationDate">发布于 {{ formattedPublicationDate }}</span>
+                <span v-if="formattedPublicationDate" aria-hidden="true" class="article-eyebrow__sep">·</span>
+                <span class="post-sheet-reading-time">{{ readingTime }}</span>
+              </div>
             </div>
           </div>
           <div class="post-sheet-byline-actions">
@@ -1105,7 +1169,8 @@ defineExpose({
           </PDropdown>
           <PButton v-else variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="toggleBookmark"><Check v-if="bookmarked" :size="15" aria-hidden="true" /><Bookmark v-else :size="15" aria-hidden="true" />{{ bookmarked ? '取消收藏' : '收藏' }}</PButton>
           <PButton variant="secondary" size="sm" :disabled="!authStore.isAuthenticated" @click="toggleReadingList"><Clock :size="15" aria-hidden="true" />{{ isInReadingList ? '取消稍后阅读' : '稍后阅读' }}</PButton>
-          <PButton variant="secondary" size="sm" @click="sharePost">分享</PButton>
+          <PButton variant="secondary" size="sm" @click="openComments"><MessageSquare :size="15" aria-hidden="true" />评论<span v-if="activeCommentCount" class="article-action-count">{{ activeCommentCount }}</span></PButton>
+          <PButton variant="secondary" size="sm" @click="sharePost"><Share2 :size="15" aria-hidden="true" />分享</PButton>
           <PButton v-if="authStore.isAuthenticated && !isOwner" variant="ghost" size="sm" @click="reportOpen = !reportOpen">举报</PButton>
           <a v-if="!isSheet && post.user?.username" :href="api.rss.user(post.user.username)" target="_blank" class="a-link post-detail-toolbar__rss">RSS ↗</a>
         </div>

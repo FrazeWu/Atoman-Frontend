@@ -105,3 +105,63 @@ export function reserveAdminMailAddress(localPart: string): Promise<MailAccountI
 export function redeemMailInvitation(token: string, localPart: string): Promise<MailAccountInfo> {
   return apiPostJson<MailAccountInfo>(`${mailBase()}/activate`, { token, local_part: localPart })
 }
+
+export interface AdminMailAccount {
+  id: string
+  user_id: string
+  username: string
+  display_name: string
+  user_email: string
+  local_part: string
+  address: string
+  status: MailAccountStatus
+  created_at: string
+  updated_at: string
+}
+
+export interface AdminMailInvite {
+  id: string
+  target_user_id: string
+  username: string
+  display_name: string
+  user_email: string
+  local_part: string
+  address?: string
+  state: 'pending' | 'used' | 'revoked' | 'expired'
+  expires_at: string
+  used_at?: string
+  revoked_at?: string
+  created_at: string
+}
+
+export function listAdminMailAccounts(params: { status?: string; q?: string } = {}): Promise<AdminMailAccount[]> {
+  const query = new URLSearchParams()
+  if (params.status && params.status !== 'all') query.set('status', params.status)
+  if (params.q?.trim()) query.set('q', params.q.trim())
+  const suffix = query.toString() ? `?${query.toString()}` : ''
+  return apiGet<AdminMailAccount[]>(`${mailBase()}/admin/accounts${suffix}`)
+}
+
+export function approveAdminMailAccount(id: string): Promise<AdminMailAccount> {
+  return apiPostJson<AdminMailAccount>(`${mailBase()}/admin/accounts/${encodeURIComponent(id)}/approve`, {})
+}
+
+export function rejectAdminMailAccount(id: string): Promise<{ rejected: boolean }> {
+  return apiPostJson<{ rejected: boolean }>(`${mailBase()}/admin/accounts/${encodeURIComponent(id)}/reject`, {})
+}
+
+export function suspendAdminMailAccount(id: string): Promise<AdminMailAccount> {
+  return apiPostJson<AdminMailAccount>(`${mailBase()}/admin/accounts/${encodeURIComponent(id)}/suspend`, {})
+}
+
+export function restoreAdminMailAccount(id: string): Promise<AdminMailAccount> {
+  return apiPostJson<AdminMailAccount>(`${mailBase()}/admin/accounts/${encodeURIComponent(id)}/restore`, {})
+}
+
+export function listAdminMailInvites(): Promise<AdminMailInvite[]> {
+  return apiGet<AdminMailInvite[]>(`${mailBase()}/admin/invites`)
+}
+
+export function revokeAdminMailInvite(id: string): Promise<AdminMailInvite> {
+  return apiPostJson<AdminMailInvite>(`${mailBase()}/admin/invites/${encodeURIComponent(id)}/revoke`, {})
+}

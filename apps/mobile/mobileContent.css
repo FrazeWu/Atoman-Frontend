@@ -353,10 +353,15 @@
   border: 0 !important;
 }
 
-.mobile-app-shell .mobile-app-main :is(.ph-page, .vh-wrap, .tl-page) > .p-page-header {
+.mobile-app-shell .mobile-app-main :is(.ph-page, .vh-wrap, .tl-page) > .p-page-header,
+.mobile-app-shell .mobile-app-main .forum-page > .forum-main > .p-page-header {
   padding-top: 0;
   padding-bottom: 0;
   margin-bottom: 12px !important;
+}
+
+.mobile-app-shell .mobile-app-main .forum-page > .forum-main > .p-page-header:not(:has(.p-page-header__action > *)) {
+  display: none;
 }
 
 @media (max-width: 480px) {

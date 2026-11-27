@@ -1,15 +1,14 @@
 <template>
   <section class="studio-content">
     <header class="studio-content__heading">
-      <div>
+      <div class="studio-content__heading-title">
         <h2>内容</h2>
-        <p>查看、筛选并管理{{ config.itemLabel }}。</p>
+        <span v-if="studio.contentPagination[module]?.total !== undefined" class="studio-content__count">
+          共 {{ studio.contentPagination[module]?.total ?? 0 }} 条
+        </span>
       </div>
       <div class="studio-content__heading-meta">
         <StudioChannelSelector />
-        <span v-if="studio.contentPagination[module]?.total !== undefined">
-          共 {{ studio.contentPagination[module]?.total ?? 0 }} 条
-        </span>
         <PButton
           v-if="canCreate"
           data-testid="create-content"
@@ -435,12 +434,11 @@ watch(() => studio.currentChannel?.id, (channelID, previousChannelID) => {
 
 <style scoped>
 .studio-content { min-width: 0; max-width: 100%; display: grid; gap: 1rem; }
-.studio-content__heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
-.studio-content__heading h2, .studio-content__heading p { margin: 0; }
-.studio-content__heading h2 { font-size: 1.25rem; }
-.studio-content__heading p { margin-top: 0.25rem; color: var(--a-color-muted); font-size: 0.8125rem; }
+.studio-content__heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.studio-content__heading-title { display: flex; align-items: baseline; gap: 0.625rem; }
+.studio-content__heading h2 { margin: 0; font-size: 1.125rem; font-weight: 500; }
+.studio-content__count { color: var(--a-color-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
 .studio-content__heading-meta { display: flex; align-items: center; gap: 0.75rem; }
-.studio-content__heading-meta > span { color: var(--a-color-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
 .studio-content__filters {
   position: relative;
   display: grid;
@@ -495,7 +493,7 @@ watch(() => studio.currentChannel?.id, (channelID, previousChannelID) => {
   align-items: center;
   gap: 0.5rem;
 }
-.studio-content__empty-action { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2.75rem; padding: 0 0.875rem; border: 1px solid var(--a-color-primary); border-radius: var(--a-radius-control); background: var(--a-color-primary); color: var(--a-color-primary-contrast); text-decoration: none; }
+.studio-content__empty-action { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2.25rem; height: 2.25rem; padding: 0 0.875rem; border: 1px solid var(--a-color-primary); border-radius: var(--a-radius-control); background: var(--a-color-primary); color: var(--a-color-primary-contrast); font-size: 0.875rem; font-weight: 500; text-decoration: none; }
 .studio-content__empty-action:hover { background: var(--a-color-primary-hover); }
 .studio-content__message { color: var(--a-color-muted); padding: 2rem 0; }
 .studio-content__feedback { margin: 0; color: var(--a-color-muted); }

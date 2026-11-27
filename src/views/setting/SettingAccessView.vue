@@ -1,13 +1,11 @@
 <template>
   <section class="setting-access settings-center">
-    <PSectionHeader title="站点设置" kicker="站点权限" description="控制功能开放范围和各模块的默认策略。" />
-
     <section id="module-access" class="setting-access__management-section" aria-label="模块开关">
       <SettingManagementOverview :access="draft" />
 
       <div class="setting-access__actions">
-        <PButton variant="secondary" to="/">返回首页</PButton>
-        <PButton :loading="saving || siteAccessStore.loading" :disabled="!siteAccessStore.loaded" loading-text="保存中..." @click="save">保存设置</PButton>
+        <PButton variant="secondary" size="sm" to="/">返回首页</PButton>
+        <PButton size="sm" :loading="saving || siteAccessStore.loading" :disabled="!siteAccessStore.loaded" loading-text="保存中..." @click="save">保存设置</PButton>
         <PActionFeedback class="setting-access__message" :message="siteAccessLoadError" />
         <PButton v-if="siteAccessLoadError" variant="ghost" size="sm" @click="loadAccess">重试加载</PButton>
         <PActionFeedback class="setting-access__message" :message="error" />
@@ -27,10 +25,13 @@
       <SettingAnnouncementsView />
     </section>
 
+    <section id="mail" class="setting-access__management-section" aria-label="邮件管理">
+      <SettingMailAdminPanel />
+    </section>
+
     <section id="module-management" class="setting-access__management-section" aria-label="模块管理">
       <PSectionHeader
         title="模块管理"
-        kicker="模块配置"
         description="进入各模块的独立配置与权限管理。"
       />
 
@@ -47,7 +48,6 @@
               <component :is="moduleIcons[key]" :size="18" stroke-width="1.8" />
             </span>
             <div>
-              <p class="settings-center__kicker">模块</p>
               <h3 :id="`${getSectionDomId(key)}-title`">{{ moduleRooms[key].name }}</h3>
               <p>{{ moduleDescriptions[key] }}</p>
             </div>
@@ -103,7 +103,6 @@
                 <component :is="moduleIcons[selectedModule]" :size="18" stroke-width="1.8" />
               </span>
               <div>
-                <p class="settings-center__kicker">模块配置</p>
                 <h2 :id="detailTitleId">{{ selectedModuleTitle }}</h2>
                 <p>{{ moduleDescriptions[selectedModule] }}</p>
               </div>
@@ -268,6 +267,7 @@ import { BookOpen as Book, MessagesSquare as Messages, Mic as Microphone, Music,
 
 import SettingAnnouncementsView from '@/views/setting/SettingAnnouncementsView.vue'
 import SettingCommunityView from '@/views/setting/SettingCommunityView.vue'
+import SettingMailAdminPanel from '@/components/setting/SettingMailAdminPanel.vue'
 import SettingUsersView from '@/views/setting/SettingUsersView.vue'
 import SettingFeedSourcePanel from '@/components/setting/SettingFeedSourcePanel.vue'
 import SettingForumModeratorPanel from '@/components/setting/SettingForumModeratorPanel.vue'
@@ -396,7 +396,7 @@ function syncDetailFromRoute() {
 }
 
 function routeSectionId(hash: string) {
-  if (['#module-access', '#users', '#community', '#announcements', '#module-management'].includes(hash)) {
+  if (['#module-access', '#users', '#community', '#announcements', '#mail', '#module-management'].includes(hash)) {
     return hash.slice(1)
   }
   const key = resolveInitialSettingSection(hash)
@@ -659,6 +659,7 @@ onMounted(async () => {
 
 .setting-access__detail-title h2 {
   font-size: 1.15rem;
+  font-weight: 500;
 }
 
 .setting-access__detail-title p:last-child {

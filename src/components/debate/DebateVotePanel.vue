@@ -171,7 +171,7 @@ async function chooseEvidence(rating: DebateEvidenceRating) {
   gap: 16px;
   min-height: 168px;
   padding: 20px;
-  border: 1px solid var(--a-color-border);
+  border: 1px solid var(--a-color-border-soft);
   border-radius: var(--a-radius-card);
   background: var(--a-color-bg);
 }
@@ -241,8 +241,8 @@ async function chooseEvidence(rating: DebateEvidenceRating) {
 
 .vote-panel__choice.is-selected {
   border-color: var(--a-color-primary);
-  background: var(--a-color-surface-muted);
-  border-left-width: 3px;
+  background: color-mix(in srgb, var(--a-color-primary) 7%, var(--a-color-bg));
+  color: var(--a-color-primary);
 }
 
 .vote-panel__choice:disabled {
@@ -317,8 +317,9 @@ async function chooseEvidence(rating: DebateEvidenceRating) {
 
 .vote-panel__evidence-btn.is-selected {
   border-color: var(--a-color-primary);
-  background: var(--a-color-surface-muted);
-  font-weight: 600;
+  background: color-mix(in srgb, var(--a-color-primary) 7%, var(--a-color-bg));
+  color: var(--a-color-primary);
+  font-weight: 500;
 }
 
 .vote-panel__evidence-btn strong {

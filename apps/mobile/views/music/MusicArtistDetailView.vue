@@ -94,18 +94,6 @@
       <section class="mobile-artist-detail__content-section">
         <div class="mobile-artist-detail__tabs-header" role="tablist" aria-label="作品分类">
           <button
-            type="button"
-            class="mobile-artist-detail__tab-btn"
-            :class="{ 'is-active': activeTab === 'songs' }"
-            role="tab"
-            :aria-selected="activeTab === 'songs'"
-            data-testid="artist-tab-songs"
-            @click="activeTab = 'songs'"
-          >
-            <span>单曲</span>
-            <span v-if="songs.length" class="mobile-artist-detail__tab-badge">{{ songs.length }}</span>
-          </button>
-          <button
             v-if="albums.length > 0"
             type="button"
             class="mobile-artist-detail__tab-btn"
@@ -117,6 +105,18 @@
           >
             <span>专辑</span>
             <span class="mobile-artist-detail__tab-badge">{{ albums.length }}</span>
+          </button>
+          <button
+            type="button"
+            class="mobile-artist-detail__tab-btn"
+            :class="{ 'is-active': activeTab === 'songs' }"
+            role="tab"
+            :aria-selected="activeTab === 'songs'"
+            data-testid="artist-tab-songs"
+            @click="activeTab = 'songs'"
+          >
+            <span>单曲</span>
+            <span v-if="songs.length" class="mobile-artist-detail__tab-badge">{{ songs.length }}</span>
           </button>
           <button
             v-if="artistForm !== 'group'"
@@ -245,7 +245,6 @@
                 >
                   <MIcon
                     :name="isSongFavorited(song) ? 'check-circle-filled' : 'plus-circle'"
-                    :class="{ 'text-[#1ed760]': isSongFavorited(song) }"
                     size="xs"
                   />
                 </button>
@@ -266,7 +265,7 @@
           <!-- Empty State -->
           <div v-else class="mobile-artist-detail__empty" data-testid="artist-empty">
             <MIcon name="note" size="lg" class="mobile-artist-detail__empty-icon" />
-            <p class="mobile-artist-detail__empty-text">暂无收录单曲</p>
+            <p class="mobile-artist-detail__empty-text">暂未收录独立单曲</p>
           </div>
         </div>
 
@@ -383,7 +382,7 @@
             <MIcon
               :name="isSongFavorited(activeMenuSong) ? 'check-circle-filled' : 'plus-circle'"
               size="sm"
-              :class="{ 'text-[#1ed760]': isSongFavorited(activeMenuSong) }"
+              :class="{ 'is-favorited': isSongFavorited(activeMenuSong) }"
             />
             <span>{{ isSongFavorited(activeMenuSong) ? '已添加至喜欢的音乐' : '添加至喜欢的音乐' }}</span>
           </button>
@@ -779,7 +778,7 @@ async function loadArtistData(force = false) {
         }))
       : []
     try {
-      const result = await listMusicSongs({ artist_id: id, page: 1, page_size: 20 }, { force })
+      const result = await listMusicSongs({ artist_id: id, release_type: 'single,leak', page: 1, page_size: 20 }, { force })
       if (generation !== detailGeneration || String(route.params.artistId || '') !== id) return
       songs.value = (result?.data || []).map((song) => toPlayerSong(song, {
         avatar_url: artist.value?.avatar_url,
@@ -900,7 +899,7 @@ watch(() => route.params.artistId, (id, previous) => {
 .mobile-artist-detail__skeleton-avatar {
   width: 88px;
   height: 88px;
-  border-radius: 50%;
+  border-radius: 6px;
   background-color: #f0f0f0;
   animation: pulse 1.5s infinite ease-in-out;
 }
@@ -940,11 +939,11 @@ watch(() => route.params.artistId, (id, previous) => {
 .mobile-artist-detail__avatar-wrap {
   width: 96px;
   height: 96px;
-  border-radius: 50%;
+  border-radius: 6px;
   overflow: hidden;
   background-color: #f4f4f5;
-  border: none;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
+  box-shadow: none;
   margin-bottom: 12px;
 }
 
@@ -1070,11 +1069,11 @@ watch(() => route.params.artistId, (id, previous) => {
   aspect-ratio: 1 / 1;
   border-radius: 50% !important;
   border: none;
-  background-color: #1ed760;
-  color: #000000;
+  background-color: var(--a-color-primary, #0066cc);
+  color: var(--a-color-primary-contrast, #ffffff);
   cursor: pointer;
   padding: 0;
-  box-shadow: 0 4px 12px rgba(30, 215, 96, 0.35);
+  box-shadow: none;
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
@@ -1200,7 +1199,7 @@ watch(() => route.params.artistId, (id, previous) => {
   background-color: #ffffff;
   color: #0f172a;
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
 }
 
 /* Albums Vertical List */
@@ -1260,9 +1259,9 @@ watch(() => route.params.artistId, (id, previous) => {
   border-radius: 4px;
   overflow: hidden;
   background-color: #f4f4f5;
-  border: none;
+  border: 1px solid var(--a-color-border-soft, #e2e8f0);
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1341,7 +1340,7 @@ watch(() => route.params.artistId, (id, previous) => {
 }
 
 .mobile-artist-detail__song-row.is-active {
-  background-color: #f7faf8;
+  background-color: color-mix(in srgb, var(--a-color-primary, #0066cc) 8%, transparent);
 }
 
 .mobile-artist-detail :deep(.mobile-artist-detail__song-item),
@@ -1375,7 +1374,7 @@ watch(() => route.params.artistId, (id, previous) => {
 }
 
 .mobile-artist-detail__playing-icon {
-  color: var(--a-color-primary, #059669);
+  color: var(--a-color-primary, #0066cc);
 }
 
 .mobile-artist-detail__song-cover {
@@ -1419,7 +1418,7 @@ watch(() => route.params.artistId, (id, previous) => {
 }
 
 .mobile-artist-detail__song-row.is-active .mobile-artist-detail__song-title {
-  color: var(--a-color-primary, #059669);
+  color: var(--a-color-primary, #0066cc);
   font-weight: 600;
 }
 
@@ -1462,7 +1461,7 @@ watch(() => route.params.artistId, (id, previous) => {
 }
 
 .mobile-artist-detail__song-action-btn.is-favorited {
-  color: #1ed760;
+  color: var(--a-color-primary, #0066cc);
   fill: currentColor;
 }
 
@@ -1579,7 +1578,7 @@ watch(() => route.params.artistId, (id, previous) => {
 }
 
 .mobile-action-sheet__item .is-favorited {
-  color: #1ed760;
+  color: var(--a-color-primary, #0066cc);
   fill: currentColor;
 }
 

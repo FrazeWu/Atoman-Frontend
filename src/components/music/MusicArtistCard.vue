@@ -170,14 +170,12 @@ const formattedSubscribers = computed(() => {
   position: relative;
   aspect-ratio: 1 / 1;
   background: var(--a-color-surface-muted);
-  border-radius: 4px;
+  border-radius: var(--a-radius-card);
   overflow: hidden;
   border: 1px solid var(--a-color-border-soft);
   box-shadow: none;
   transition: border-color 0.2s;
 }
-
-
 
 .avatar-action {
   position: absolute;
@@ -305,17 +303,7 @@ const formattedSubscribers = computed(() => {
 }
 
 .artist-info__arrow {
-  flex: 0 0 auto;
-  color: var(--a-color-muted);
-  font-size: 1rem;
-  line-height: 1;
-  transition: color 0.18s ease, transform 0.18s ease;
-}
-
-.music-artist-card:hover .artist-info__arrow,
-.music-artist-card:focus-within .artist-info__arrow {
-  color: var(--a-color-primary);
-  transform: translateX(2px);
+  display: none;
 }
 
 .artist-title {

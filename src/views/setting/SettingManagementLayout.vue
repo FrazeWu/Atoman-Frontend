@@ -1,6 +1,6 @@
 <template>
   <section class="setting-management-layout a-content-frame">
-    <PPageHeader title="站点设置" sub="管理平台访问权限、用户角色、社区与模块配置" mb="1.5rem">
+    <PPageHeader title="站点设置" sub="管理平台访问权限、用户角色、社区与模块配置" mb="0">
       <template #action>
         <PButton
           class="setting-management-layout__directory-trigger"
@@ -49,6 +49,7 @@ const directoryItems = [
   { id: 'users', label: '用户管理' },
   { id: 'community', label: '社区管理' },
   { id: 'announcements', label: '公告管理' },
+  { id: 'mail', label: '邮件管理' },
   { id: 'module-management', label: '模块管理' },
 ]
 

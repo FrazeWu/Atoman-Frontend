@@ -414,7 +414,7 @@
   border-left-color: transparent;
 }
 .artist-skeleton-name { max-width: 100%; }
-.artist-skeleton-avatar { flex-shrink: 0; }
+.artist-skeleton-avatar { flex-shrink: 0; border-radius: var(--a-radius-card); }
 .artist-skeleton-bio { margin-top: 0.75rem; }
 
 @media (max-width: 640px) {

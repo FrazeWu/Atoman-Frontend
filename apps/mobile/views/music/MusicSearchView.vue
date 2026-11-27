@@ -837,15 +837,15 @@ onMounted(() => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
+  align-items: flex-start;
+  text-align: left;
   cursor: pointer;
 }
 
 .mobile-music-search__rec-artist-avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
+  width: 68px;
+  height: 68px;
+  border-radius: var(--a-radius-card, 4px);
   overflow: hidden;
   background: #f5f5f5;
   border: 1px solid var(--a-color-border-soft, #eeeeee);

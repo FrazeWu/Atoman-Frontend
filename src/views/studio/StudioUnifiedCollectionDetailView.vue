@@ -1,7 +1,7 @@
 <template>
   <section class="studio-collection-detail">
     <PToast v-model="toastVisible" :message="toastMessage" />
-    <PPageHeader :title="collection?.name || '合集'" :sub="collection?.description || '管理合集成员与展示顺序。'" mb="0">
+    <PPageHeader :title="collection?.name || '合集'" :sub="collection?.description || undefined" mb="0">
       <template #action>
         <div class="studio-collection-detail__header-actions">
           <PButton type="button" size="sm" @click="openCandidates">
@@ -397,21 +397,22 @@ watch(() => studio.currentChannel?.id, (current, previous) => {
 </script>
 
 <style scoped>
-.studio-collection-detail { display: grid; gap: 1.5rem; max-width: 60rem; }
+.studio-collection-detail { display: grid; gap: 1.5rem; }
 .studio-collection-detail__header-actions { display: flex; align-items: center; gap: 0.5rem; }
-.studio-collection-detail__header-actions :deep(.p-button) { min-height: 2.75rem; }
+.studio-collection-detail__header-actions :deep(.p-button),
+.studio-collection-detail__header-actions :deep(.p-clip) { min-height: 2.25rem; height: 2.25rem; }
 .studio-collection-detail__candidate-search { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; align-items: end; }
 .studio-collection-detail__candidate-search :deep(.p-button) { width: 2.75rem; min-height: 2.75rem; padding: 0; }
 .studio-collection-detail__candidates { display: grid; gap: 0; margin: 1rem 0 0; padding: 0; border-top: 1px solid var(--a-color-border-soft); list-style: none; }
 .studio-collection-detail__candidates li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 4.5rem; border-bottom: 1px solid var(--a-color-border-soft); }
 .studio-collection-detail__candidates li > span { min-width: 0; display: grid; gap: 0.25rem; }
-.studio-collection-detail__candidates strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.studio-collection-detail__candidates strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .studio-collection-detail__candidates small, .studio-collection-detail__confirm { color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-collection-detail__confirm { margin: 0; line-height: 1.5; }
 
-.studio-collection-detail__back { min-height: 2.75rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0 0.875rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); color: var(--a-color-text); text-decoration: none; }
+.studio-collection-detail__back { min-height: 2.25rem; height: 2.25rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0 0.75rem; border: 1px solid var(--a-color-border-soft); border-radius: var(--a-radius-control); background: var(--a-color-bg); color: var(--a-color-text); font-size: 0.8125rem; font-weight: 500; text-decoration: none; white-space: nowrap; transition: border-color var(--a-motion-micro, 140ms) ease, background-color var(--a-motion-micro, 140ms) ease; }
 
-.studio-collection-detail__back:hover { border-color: var(--a-color-primary); color: var(--a-color-primary); }
+.studio-collection-detail__back:hover { border-color: var(--a-color-border); background: var(--a-color-surface-muted); color: var(--a-color-text); }
 .studio-collection-detail__back:focus-visible, .studio-collection-detail__content:focus-visible { outline: 2px solid var(--a-color-primary); outline-offset: 2px; }
 .studio-collection-detail__message { margin: 0; padding: 1.5rem 0; color: var(--a-color-muted); }
 .studio-collection-detail__message--error { color: var(--a-color-danger); }
@@ -514,7 +515,7 @@ watch(() => studio.currentChannel?.id, (current, previous) => {
 .studio-collection-detail__module { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--a-color-muted); font-size: 0.75rem; white-space: nowrap; }
 .studio-collection-detail__content { min-width: 0; display: grid; gap: 0.15rem; color: var(--a-color-text); text-decoration: none; }
 .studio-collection-detail__content:hover { color: var(--a-color-primary); }
-.studio-collection-detail__content strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.studio-collection-detail__content strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .studio-collection-detail__content small { color: var(--a-color-muted); font-size: 0.75rem; }
 .studio-collection-detail__actions { display: flex; gap: 0.25rem; }
 .studio-collection-detail__actions :deep(.p-button) { min-width: 2.75rem; min-height: 2.75rem; padding: 0; }

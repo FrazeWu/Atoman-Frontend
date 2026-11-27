@@ -16,8 +16,12 @@
 .post-reader-error__code { margin-bottom: 1rem; color: var(--a-color-disabled-border); font-size: 3rem; font-weight: 500; }
 .post-reader-error__title { font-size: 1.25rem; font-weight: 600; color: var(--a-color-fg); margin-bottom: 0.5rem; }
 .post-reader-error__actions { display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.5rem; }
-.post-reader-top-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+.post-reader-top-nav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
 .post-reader-top-nav .post-sheet-actions { margin-bottom: 0; }
+.post-reader-breadcrumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 0.45rem; font-size: 0.8125rem; line-height: 1.4; color: var(--a-color-muted); }
+.post-reader-breadcrumb-item { color: var(--a-color-muted); text-decoration: none; transition: color 0.15s ease; }
+.post-reader-breadcrumb-item:hover { color: var(--a-color-fg); }
+.post-reader-breadcrumb-sep { color: var(--a-color-border-soft); user-select: none; font-size: 0.75rem; }
 .post-reader-breadcrumb { display: inline-block; margin-bottom: 0; }
 .post-sheet-actions { display: flex; align-items: center; gap: 1rem; justify-content: flex-end; }
 .post-sheet-actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 1rem; }
@@ -137,7 +141,10 @@
 }
 .post-sheet-author-info { min-width: 0; }
 .post-sheet-author-row, .post-sheet-publishing-meta { display: flex; align-items: baseline; gap: 0.45rem; min-width: 0; }
+.post-sheet-author-link { display: flex; align-items: center; text-decoration: none; flex-shrink: 0; }
 .post-sheet-author { overflow: hidden; color: var(--a-color-fg); font-size: 0.9rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.post-sheet-author--interactive { text-decoration: none; transition: color 0.15s ease; }
+.post-sheet-author--interactive:hover { color: var(--a-color-primary); }
 .post-sheet-author-handle, .post-sheet-publishing-meta { color: var(--a-color-muted); font-size: 0.78rem; }
 .post-sheet-author-handle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .post-sheet-publishing-meta { margin-top: 0.2rem; }
@@ -394,6 +401,13 @@
 .post-report-form input { flex: 1 1 12rem; }
 .post-report-message { margin: 0.35rem 0 0; color: var(--a-color-muted); font-size: 0.8rem; }
 .post-sheet-content { width: 100%; max-width: 100%; margin: 0; }
+.prose-blog :deep(h1),
+.prose-blog :deep(h2),
+.prose-blog :deep(h3),
+.prose-blog :deep(h4),
+.prose-blog :deep([id]) {
+  scroll-margin-top: calc(var(--a-topbar-height, 3.5rem) + 1.5rem);
+}
 .prose-blog :deep(h1), .prose-blog :deep(h3), .prose-blog :deep(h4) { font-weight: 500; letter-spacing: 0; margin: 2rem 0 1rem; line-height: 1.25; }
 .prose-blog :deep(h1) { font-size: 2rem; }
 .prose-blog :deep(h2) {
@@ -503,7 +517,7 @@
   box-sizing: border-box;
 }
 
-@media (min-width: 1220px) {
+@media (min-width: 1240px) {
   .blog-post-reader--sheet .post-reader-frame {
     margin-left: max(3.5rem, calc(50vw - 21.25rem - var(--a-sidebar-width))) !important;
     margin-right: max(2rem, calc(50vw - 21.25rem)) !important;
@@ -544,13 +558,13 @@
   padding: 0.35rem 0.35rem 0.35rem 0.75rem;
 }
 
-@media (max-width: 1219px) {
+@media (max-width: 1239px) {
   .post-reader-directory-rail {
-    display: none;
+    display: none !important;
   }
 }
 
-@media (min-width: 1220px) {
+@media (min-width: 1240px) {
   .post-mobile-outline-toggle {
     display: none !important;
   }

@@ -3,7 +3,8 @@
     :show="true"
     title="话题详情"
     panel-class="forum-topic-route-sheet"
-    :side="side"
+    side="right"
+    mode="full"
     close-type="header"
     @close="$emit('close')"
   >
@@ -12,35 +13,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-
 import PSheet from '@/components/ui/PSheet.vue'
 import ForumTopicView from '@/views/forum/ForumTopicView.vue'
 
-defineEmits<{ close: [] }>()
-
-const isMobileViewport = ref(false)
-const side = computed<'right' | 'bottom'>(() => (isMobileViewport.value ? 'bottom' : 'right'))
-let mobileViewportQuery: MediaQueryList | null = null
-
-function syncViewport(event?: MediaQueryListEvent) {
-  isMobileViewport.value = event?.matches ?? mobileViewportQuery?.matches ?? false
-}
-
-onMounted(() => {
-  mobileViewportQuery = window.matchMedia?.('(max-width: 767px)') ?? null
-  syncViewport()
-  mobileViewportQuery?.addEventListener?.('change', syncViewport)
-})
-
-onBeforeUnmount(() => {
-  mobileViewportQuery?.removeEventListener?.('change', syncViewport)
-})
+defineEmits<{
+  (e: 'close'): void
+}>()
 </script>
 
 <style scoped>
 :global(.forum-topic-route-sheet.p-sheet-layer) {
-  min-height: calc(100dvh - var(--a-topbar-height, 3.5rem) - 3.75rem);
+  min-height: calc(100dvh - var(--a-topbar-height, 3.5rem));
   border: 0;
   box-shadow: none;
 }
@@ -50,7 +33,24 @@ onBeforeUnmount(() => {
 }
 
 :global(.forum-topic-route-sheet .topic-page) {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 2rem 2rem 5rem;
+}
+
+:global(.forum-topic-route-sheet.p-sheet-mobile-page) {
+  top: var(--a-topbar-height, 56px);
+  bottom: var(--a-content-bottom-offset, 0px);
+  padding-top: 0.75rem;
+  border-left: 0;
+}
+
+:global(.forum-topic-route-sheet.p-sheet-mobile-page .p-sheet-mobile-page__header) {
+  margin-bottom: 0.5rem;
+}
+
+:global(.forum-topic-route-sheet.p-sheet-mobile-page .topic-page) {
   max-width: none;
-  padding: 1.5rem;
+  padding: 0.5rem 1rem 5rem;
 }
 </style>

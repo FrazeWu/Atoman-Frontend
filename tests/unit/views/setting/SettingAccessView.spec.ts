@@ -62,6 +62,7 @@ const stubs = {
   SettingUsersView: defineComponent({ template: '<div data-test="users-management">用户管理</div>' }),
   SettingCommunityView: defineComponent({ template: '<div data-test="community-management">社区管理</div>' }),
   SettingAnnouncementsView: defineComponent({ template: '<div data-test="announcements-management">公告管理</div>' }),
+  SettingMailAdminPanel: defineComponent({ template: '<div data-test="mail-management">邮件管理</div>' }),
   SettingFeedSourcePanel: defineComponent({ template: '<div>订阅源面板</div>' }),
   SettingForumModeratorPanel: defineComponent({ template: '<div>版主管理面板</div>' }),
   PaperApplicationReview: defineComponent({ template: '<div data-test="papers-review-panel">论文申请审核</div>' }),
@@ -145,6 +146,7 @@ describe('SettingAccessView section sync', () => {
       'users',
       'community',
       'announcements',
+      'mail',
       'module-management',
     ])
     expect(wrapper.findAll('.setting-access__module-card').map((section) => section.attributes('id'))).toHaveLength(moduleNavOrder.length)

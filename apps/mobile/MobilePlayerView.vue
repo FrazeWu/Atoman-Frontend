@@ -145,7 +145,9 @@
                   width="40"
                   height="40"
                 />
-                <span v-else class="mobile-player-view__queue-cover-fallback">{{ queueSong.title.charAt(0) }}</span>
+                <span v-else class="mobile-player-view__queue-cover-fallback" aria-hidden="true">
+                  <MIcon name="note" size="sm" />
+                </span>
                 <span class="mobile-player-view__queue-copy">
                   <strong>{{ queueSong.title }}</strong>
                   <span>{{ queueSong.artist || '未知艺术家' }}</span>
@@ -214,7 +216,7 @@
             :title="isCurrentFavorite ? '已加入最爱' : '添加至最爱'"
             @click="handleToggleFavorite"
           >
-            <MIcon :name="isCurrentFavorite ? 'check-circle-filled' : 'plus-circle'" size="md" />
+            <MIcon :name="isCurrentFavorite ? 'heart-filled' : 'heart'" size="md" />
           </button>
         </div>
 
@@ -1197,23 +1199,24 @@ onUnmounted(() => {
   justify-content: center;
   align-items: center;
   min-height: 0;
-  padding: 0.5rem 0;
+  padding: 0.75rem 0;
 }
 
 .mobile-player-view__cover-wrap {
   padding: 0;
-  border: 0;
+  border: 1px solid var(--a-color-border-soft);
   background: transparent;
   color: inherit;
-  width: min(78vw, 300px);
+  width: min(82vw, 340px);
   aspect-ratio: 1;
   position: relative;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+  border-radius: var(--a-radius-card, 4px);
+  overflow: hidden;
+  box-shadow: none;
   will-change: transform, opacity;
 }
 
@@ -1275,7 +1278,8 @@ onUnmounted(() => {
 .mobile-player-view__lyrics-wrap {
   position: relative;
   width: 100%;
-  height: clamp(220px, 36vh, 400px);
+  height: 100%;
+  max-height: 100%;
   min-height: 180px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -1413,9 +1417,9 @@ onUnmounted(() => {
   color: #ffffff;
   font-size: 12px;
   font-weight: 600;
-  border-radius: 9999px;
+  border-radius: var(--a-radius-control, 4px);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  box-shadow: none;
   cursor: pointer;
   z-index: 10;
   transition: transform 0.15s ease, opacity 0.15s ease;
@@ -1429,10 +1433,11 @@ onUnmounted(() => {
 /* --- Queue Stage --- */
 .mobile-player-view__queue-wrap {
   width: 100%;
-  max-height: 34vh;
+  height: 100%;
+  max-height: 100%;
   min-height: 180px;
   overflow-y: auto;
-  border-radius: 8px;
+  border-radius: var(--a-radius-card, 4px);
   background: var(--a-color-surface-muted);
   border: 1px solid var(--a-color-border-soft);
   padding: 0.5rem;
@@ -1462,14 +1467,14 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.4rem 0.5rem;
-  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--a-radius-control, 4px);
   background: var(--a-color-surface);
 }
 
 .mobile-player-view__queue-item.is-current {
   border-left: 3px solid var(--a-color-primary);
-  background: var(--a-color-surface-soft, rgba(0, 0, 0, 0.04));
+  background: color-mix(in srgb, var(--a-color-primary) 8%, var(--a-color-surface));
 }
 
 .mobile-player-view__queue-main {
@@ -1499,9 +1504,9 @@ onUnmounted(() => {
   display: grid;
   place-items: center;
   background: var(--a-color-surface-muted);
+  color: var(--a-color-muted);
   border-radius: 4px;
-  font-weight: 600;
-  font-size: 0.8rem;
+  flex-shrink: 0;
 }
 
 .mobile-player-view__queue-copy {
@@ -1529,12 +1534,12 @@ onUnmounted(() => {
 .mobile-player-view__queue-actions {
   display: flex;
   flex-shrink: 0;
-  gap: 0;
+  gap: 4px;
 }
 
 .mobile-player-view__queue-actions button {
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -1629,7 +1634,7 @@ onUnmounted(() => {
 }
 
 .mobile-player-view__fav-btn.is-favorited {
-  color: #1ed760;
+  color: var(--a-color-danger, #ef4444);
 }
 
 /* --- Touch-Optimized Scrubber --- */
@@ -1733,7 +1738,7 @@ onUnmounted(() => {
 }
 
 .mobile-player-view__control--mode.is-active {
-  color: #1ed760;
+  color: var(--a-color-primary, #0066cc);
 }
 
 .mobile-player-view__control--secondary {
@@ -1770,7 +1775,7 @@ onUnmounted(() => {
   border-radius: 50% !important;
   background: var(--a-color-fg, #111111) !important;
   color: var(--a-color-bg, #ffffff) !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  box-shadow: none;
 }
 
 .mobile-player-view__control--primary:active {
@@ -1861,7 +1866,7 @@ onUnmounted(() => {
 }
 
 .mobile-player-view__action.is-active {
-  color: #1ed760;
+  color: var(--a-color-primary, #0066cc);
 }
 
 /* --- Toast Feedback --- */

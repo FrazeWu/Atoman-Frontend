@@ -5,118 +5,168 @@
     </div>
 
     <template v-else-if="forumStore.currentTopic">
-      <!-- Breadcrumb -->
-      <div class="topic-breadcrumb">
-        <RouterLink to="/forum" class="back-link-muted">论坛</RouterLink>
-        <span class="topic-divider">/</span>
-        <span
-          v-if="forumStore.currentTopic.category"
-          class="a-badge category-pill"
-          :style="{ borderColor: forumStore.currentTopic.category.color, color: forumStore.currentTopic.category.color }"
-          @click="router.push(`/forum?category_id=${forumStore.currentTopic.category_id}`)"
-        >{{ forumStore.currentTopic.category.name }}</span>
+      <!-- Top navigation bar -->
+      <div class="topic-top-nav">
+        <nav class="topic-breadcrumb" aria-label="话题位置导航">
+          <RouterLink to="/forum" class="back-link-muted">论坛</RouterLink>
+          <template v-if="forumStore.currentTopic.category">
+            <span class="topic-divider" aria-hidden="true">/</span>
+            <button
+              type="button"
+              class="a-badge category-pill"
+              :style="{
+                color: forumStore.currentTopic.category.color || 'var(--a-color-fg)',
+                borderColor: forumStore.currentTopic.category.color ? `color-mix(in srgb, ${forumStore.currentTopic.category.color} 28%, transparent)` : 'var(--a-color-border-soft)',
+                background: forumStore.currentTopic.category.color ? `color-mix(in srgb, ${forumStore.currentTopic.category.color} 8%, transparent)` : 'var(--a-color-surface-muted)',
+              }"
+              @click="router.push(`/forum?category_id=${forumStore.currentTopic.category_id}`)"
+            >{{ forumStore.currentTopic.category.name }}</button>
+          </template>
+        </nav>
+
+        <div
+          v-if="canEditTopic || canPinTopic || canLockTopic || isAdminRole(authStore.user?.role) || (authStore.isAuthenticated && authStore.user?.uuid !== forumStore.currentTopic.user_id)"
+          class="topic-top-actions"
+        >
+          <PButton v-if="canEditTopic" variant="secondary" size="sm" @click="editTopic">编辑</PButton>
+          <PButton
+            v-if="authStore.isAuthenticated && authStore.user?.uuid !== forumStore.currentTopic.user_id"
+            variant="ghost"
+            size="sm"
+            @click="openReportModal(forumStore.currentTopic!.id)"
+          >举报</PButton>
+          <PDropdown v-if="canEditTopic || canPinTopic || canLockTopic || isAdminRole(authStore.user?.role)">
+            <template #trigger="{ open }">
+              <PButton variant="secondary" size="sm" :aria-expanded="open">更多</PButton>
+            </template>
+            <template #default="{ close }">
+              <div class="topic-manage-menu">
+                <button
+                  v-if="canPinTopic"
+                  type="button"
+                  class="topic-manage-item"
+                  @click="togglePinned(); close()"
+                >{{ forumStore.currentTopic.pinned ? '取消置顶' : '置顶' }}</button>
+                <button
+                  v-if="canLockTopic"
+                  type="button"
+                  class="topic-manage-item"
+                  @click="toggleClosed(); close()"
+                >{{ forumStore.currentTopic.closed ? '解锁' : '锁定' }}</button>
+                <button
+                  v-if="isAdminRole(authStore.user?.role)"
+                  type="button"
+                  class="topic-manage-item"
+                  @click="toggleFeatured(); close()"
+                >{{ forumStore.currentTopic.featured ? '取消精华' : '设为精华' }}</button>
+                <button
+                  v-if="canEditTopic"
+                  type="button"
+                  class="topic-manage-item topic-manage-item--danger"
+                  @click="deleteTopic(); close()"
+                >删除话题</button>
+              </div>
+            </template>
+          </PDropdown>
+        </div>
       </div>
 
       <!-- Topic header -->
-      <div class="topic-header">
-        <h1 class="topic-title">
-          {{ forumStore.currentTopic.title }}
-        </h1>
-
-        <div class="topic-status-row">
+      <header class="topic-header">
+        <div
+          v-if="topicState.pinned || topicState.featured || topicState.closed || topicState.solved || (forumStore.currentTopic.tags || []).length > 0"
+          class="topic-badges-row"
+        >
           <span v-if="topicState.pinned" class="topic-status-badge">置顶</span>
-          <span v-if="topicState.featured" class="topic-status-badge">精华</span>
+          <span v-if="topicState.featured" class="topic-status-badge topic-status-featured">精华</span>
           <span v-if="topicState.closed" class="topic-status-badge topic-status-muted">已关闭</span>
           <span v-if="topicState.solved" class="topic-status-badge topic-status-solved">已解决</span>
-        </div>
-
-        <!-- Tags -->
-        <div v-if="(forumStore.currentTopic.tags || []).length > 0" class="topic-tag-row">
           <span
             v-for="tag in forumStore.currentTopic.tags"
             :key="tag"
             class="a-badge tag-pill"
-          >{{ tag }}</span>
+          ># {{ tag }}</span>
         </div>
 
-        <!-- Meta bar -->
+        <h1 class="topic-title">
+          {{ forumStore.currentTopic.title }}
+        </h1>
+
+        <!-- Byline & primary interaction strip -->
         <div class="topic-meta">
-          <div class="topic-meta-text">
-            <span>{{ forumStore.currentTopic.user?.display_name || forumStore.currentTopic.user?.username || '匿名' }}</span>
-            <span
-              v-if="forumStore.currentTopic.user?.forum_trust_level != null"
-              class="a-badge"
-              data-testid="forum-topic-trust-level"
-            >等级 {{ forumStore.currentTopic.user.forum_trust_level }}</span>
-            <span>{{ formatTime(forumStore.currentTopic.created_at) }}</span>
-            <span>{{ forumStore.currentTopic.view_count }} 浏览</span>
-          </div>
-          <InteractionBar
-            :liked="interactions.liked.value"
-            :like-count="interactions.likeCount.value"
-            :comment-count="interactions.commentCount.value"
-            :disabled="!authStore.isAuthenticated"
-            @like="interactions.like"
-            @unlike="interactions.unlike"
-            @comment="commentsOpen = true"
-          />
-
-          <!-- Bookmark button -->
-          <PButton
-            v-if="authStore.isAuthenticated"
-            @click="forumStore.toggleTopicBookmark(forumStore.currentTopic!.id)"
-            variant="secondary"
-            size="sm"
-            :class="{ 'topic-action-btn-active': forumStore.currentTopic.is_bookmarked }"
-            :title="forumStore.currentTopic.is_bookmarked ? '取消收藏' : '收藏'"
-          >
-            <Check v-if="forumStore.currentTopic.is_bookmarked" :size="14" aria-hidden="true" />
-            <Bookmark v-else :size="14" aria-hidden="true" />
-            {{ forumStore.currentTopic.is_bookmarked ? '已收藏' : '收藏' }}
-          </PButton>
-
-          <div v-if="canEditTopic || canPinTopic || canLockTopic" class="topic-action-group">
-            <PButton v-if="canEditTopic" variant="secondary" size="sm" @click="editTopic">编辑</PButton>
-            <PButton v-if="canEditTopic" variant="secondary" size="sm" class="topic-action-danger" @click="deleteTopic">删除</PButton>
-            <PButton v-if="canLockTopic" variant="secondary" size="sm" @click="toggleClosed">
-              {{ forumStore.currentTopic.closed ? '解锁' : '锁定' }}
-            </PButton>
-            <PButton v-if="canPinTopic" variant="secondary" size="sm" @click="togglePinned">
-              {{ forumStore.currentTopic.pinned ? '取消置顶' : '置顶' }}
-            </PButton>
+          <div class="topic-meta-author">
+            <PAvatar
+              :src="forumStore.currentTopic.user?.avatar_url"
+              :name="forumStore.currentTopic.user?.display_name || forumStore.currentTopic.user?.username || '匿名'"
+              size="sm"
+            />
+            <div class="topic-meta-text">
+              <div class="topic-meta-author-line">
+                <span class="topic-author-name">{{ forumStore.currentTopic.user?.display_name || forumStore.currentTopic.user?.username || '匿名' }}</span>
+                <span
+                  v-if="forumStore.currentTopic.user?.forum_trust_level != null"
+                  class="a-badge topic-trust-pill"
+                  data-testid="forum-topic-trust-level"
+                >等级 {{ forumStore.currentTopic.user.forum_trust_level }}</span>
+              </div>
+              <div class="topic-meta-subline">
+                <span>{{ formatTime(forumStore.currentTopic.created_at) }}</span>
+                <span aria-hidden="true">·</span>
+                <span>{{ forumStore.currentTopic.view_count }} 浏览</span>
+              </div>
+            </div>
           </div>
 
-          <!-- Report button (non-owner, authenticated) -->
-          <PButton
-            v-if="authStore.isAuthenticated && authStore.user?.uuid !== forumStore.currentTopic.user_id"
-            @click="openReportModal(forumStore.currentTopic!.id)"
-            variant="secondary"
-            size="sm"
-          >举报</PButton>
-
-          <!-- Admin: feature/unfeature -->
-          <PButton
-            v-if="isAdminRole(authStore.user?.role)"
-            @click="toggleFeatured"
-            variant="secondary"
-            size="sm"
-            :class="{ 'topic-action-btn-active': forumStore.currentTopic.featured }"
-          >{{ forumStore.currentTopic.featured ? '取消精华' : '设为精华' }}</PButton>
+          <div class="topic-meta-actions">
+            <InteractionBar
+              :liked="interactions.liked.value"
+              :like-count="interactions.likeCount.value"
+              :comment-count="interactions.commentCount.value"
+              :disabled="!authStore.isAuthenticated"
+              @like="interactions.like"
+              @unlike="interactions.unlike"
+              @comment="commentsOpen = true"
+            />
+            <PButton
+              v-if="authStore.isAuthenticated"
+              variant="secondary"
+              size="sm"
+              class="topic-bookmark-btn"
+              :class="{ 'topic-action-btn-active': forumStore.currentTopic.is_bookmarked }"
+              :title="forumStore.currentTopic.is_bookmarked ? '取消收藏' : '收藏'"
+              @click="forumStore.toggleTopicBookmark(forumStore.currentTopic!.id)"
+            >
+              <Check v-if="forumStore.currentTopic.is_bookmarked" :size="14" aria-hidden="true" />
+              <Bookmark v-else :size="14" aria-hidden="true" />
+              {{ forumStore.currentTopic.is_bookmarked ? '已收藏' : '收藏' }}
+            </PButton>
+          </div>
         </div>
-      </div>
+      </header>
 
       <div ref="topicContentAnchor" class="topic-main">
-          <!-- Topic content (Markdown rendered) -->
-          <div
-            class="markdown-body prose-blog topic-content-card"
-            v-html="renderedTopicContent"
-            @click="handleTopicContentClick"
-          />
-          <PReferenceCardList
-            v-if="forumStore.currentTopic.references?.length"
-            :references="forumStore.currentTopic.references"
-          />
+        <!-- Topic content (Markdown rendered) -->
+        <div
+          class="markdown-body prose-blog topic-content-card"
+          v-html="renderedTopicContent"
+          @click="handleTopicContentClick"
+        />
+        <PReferenceCardList
+          v-if="forumStore.currentTopic.references?.length"
+          :references="forumStore.currentTopic.references"
+        />
 
+        <section class="topic-discussion-bar" aria-label="话题回复入口">
+          <div class="topic-discussion-copy">
+            <strong>{{ topicState.closed ? '话题已关闭' : `全部回复 (${interactions.commentCount.value})` }}</strong>
+            <span v-if="!authStore.isAuthenticated">登录后即可参与讨论</span>
+          </div>
+          <div class="topic-discussion-actions">
+            <PButton variant="secondary" size="sm" @click="commentsOpen = true">
+              {{ authStore.isAuthenticated && !topicState.closed ? '参与讨论' : `查看回复 (${interactions.commentCount.value})` }}
+            </PButton>
+          </div>
+        </section>
       </div>
     </template>
 
@@ -193,7 +243,9 @@ import { useForumStore } from '@/stores/forum'
 import { useAuthStore } from '@/stores/auth'
 import { isAdminRole } from '@/utils/roles'
 import { useMarkdownRenderer } from '@/composables/useMarkdownRenderer'
+import PAvatar from '@/components/ui/PAvatar.vue'
 import PButton from '@/components/ui/PButton.vue'
+import PDropdown from '@/components/ui/PDropdown.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PModal from '@/components/ui/PModal.vue'
@@ -433,308 +485,270 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 </script>
 
 <style scoped>
-/* ── Topic header ─────────────────────────────────────────────────────────── */
+/* ── Topic layout ─────────────────────────────────────────────────────────── */
 .topic-page {
-  padding-bottom: 8rem;
+  max-width: 52rem;
+  margin: 0 auto;
+  padding-bottom: 6rem;
 }
 
-.topic-loading {
-  padding: 4rem 0;
-  color: var(--a-color-muted);
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  text-align: center;
-}
-
-.topic-header {
-  margin-bottom: 1.5rem;
-  padding-bottom: 0;
-}
-
-.topic-title {
-  font-size: 2rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  line-height: 1.15;
-  margin: 0 0 0.75rem;
-}
-
-.topic-status-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.topic-status-badge {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.7rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  padding: 0.15rem 0.45rem;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-fg);
-}
-
-.topic-status-muted {
-  border-color: transparent;
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-muted-soft);
-}
-
-.topic-status-solved {
-  border-color: transparent;
-  background: var(--a-color-success-bg, rgba(16, 185, 129, 0.12));
-  color: var(--a-color-success);
-}
-
-.topic-meta {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--a-color-muted);
-  flex-wrap: wrap;
-}
-
-.topic-meta-text {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.topic-action-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.topic-action-danger {
-  color: var(--a-color-danger);
-  border-color: var(--a-color-danger);
-}
-
-.topic-action-btn-active {
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
-  border-color: var(--a-color-fg);
-  box-shadow: none;
-}
-
-.topic-action-btn-active:hover {
-  background: var(--a-color-bg);
-  color: var(--a-color-fg);
-}
-
-.topic-main {
-  min-width: 0;
-}
-
-/* ── Reply form ───────────────────────────────────────────────────────────── */
-.reply-closed-notice {
-  border: var(--a-border);
-  border-color: var(--a-color-disabled-border);
-  padding: 1.25rem 1.5rem;
-  text-align: center;
-  font-weight: 500;
-  font-size: 0.8rem;
-  letter-spacing: 0;
-  color: var(--a-color-muted);
-}
-
-.reply-login-notice {
-  border: var(--a-border);
-  padding: 1.25rem 1.5rem;
-  text-align: center;
-}
-
-.reply-form-wrap {
-  border: none;
-  padding: 1.5rem;
-}
-
-.reply-login-text {
-  font-weight: 500;
-  font-size: 0.9rem;
-  margin: 0 0 1rem;
-}
-
-.reply-form-title {
-  font-weight: 500;
-  font-size: 0.7rem;
-  letter-spacing: 0;
-  margin: 0 0 1rem;
-}
-
-.reply-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 0.75rem;
-  gap: 0.75rem;
-}
-
+.topic-loading,
 .topic-not-found {
   padding: 4rem 0;
-  text-align: center;
-  font-weight: 500;
-  font-size: 0.8rem;
-  letter-spacing: 0;
-  color: var(--a-color-muted-soft);
-}
-
-.topic-divider {
-  color: var(--a-color-disabled-border);
-}
-
-.topic-content-card {
-  border: none;
-  padding: 2rem;
-  margin-bottom: 2.5rem;
-  background: var(--a-color-bg);
-}
-
-.reply-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.25rem;
-}
-
-.reply-count-title {
-  font-weight: 500;
-  font-size: 0.75rem;
-  letter-spacing: 0;
-  margin: 0;
-  padding-bottom: 0.75rem;
-  border-bottom: none;
-  flex: 1;
-}
-
-.reply-sort-tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-left: 1rem;
-}
-
-.reply-sort-tab {
-  box-shadow: none;
-}
-
-.reply-sort-tab-active {
-  background: var(--a-color-fg);
-  color: var(--a-color-bg);
-  border-color: var(--a-color-fg);
-}
-
-.quote-box {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.8rem 1rem;
-  background: var(--a-color-disabled-bg);
-  border-left: 3px solid var(--a-color-fg);
-  margin-bottom: 1rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.quote-preview {
-  margin-top: 0.35rem;
-  font-size: 0.75rem;
-  font-weight: 500;
   color: var(--a-color-muted);
-  line-height: 1.6;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
 }
 
-.draft-restored {
+/* ── Top navigation & management actions ─────────────────────────────────── */
+.topic-top-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.6rem 1rem;
-  background: var(--a-color-bg);
-  border: var(--a-border);
-  border-radius: var(--a-radius-card);
-  margin-bottom: 1rem;
-  font-size: 0.8rem;
-  font-weight: 500;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
 }
 
 .topic-breadcrumb {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
-}
-
-.topic-tag-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 0.75rem;
-}
-
-.reply-form-root {
-  margin-top: 2.5rem;
 }
 
 .back-link-muted {
   font-weight: 500;
-  font-size: 0.75rem;
-  letter-spacing: 0;
+  font-size: 0.8125rem;
   text-decoration: none;
   color: var(--a-color-muted);
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.2s;
+  transition: color 0.15s ease;
 }
 
 .back-link-muted:hover {
-  border-bottom-color: var(--a-color-muted);
+  color: var(--a-color-fg);
+}
+
+.topic-divider {
+  color: var(--a-color-border);
+  font-size: 0.75rem;
 }
 
 .category-pill {
   cursor: pointer;
-}
-
-.tag-pill {
+  font: inherit;
+  font-size: 0.72rem;
   font-weight: 500;
-  border: 1px solid transparent;
-  border-radius: var(--a-radius-control);
-  background: var(--a-color-surface-muted);
-  color: var(--a-color-muted);
+  line-height: 1.2;
+  min-height: 0;
+  height: auto;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--a-radius-control, 4px);
 }
 
-.sub-reply-wrap {
-  margin-left: 2rem;
-  margin-top: -0.25rem;
+.topic-top-actions {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 0.5rem;
 }
 
-.expand-replies-btn {
-  box-shadow: none;
-  align-self: flex-start;
+.topic-manage-menu {
+  display: grid;
+  min-width: 7.5rem;
+  padding: 0.25rem;
+  gap: 0.125rem;
 }
 
-.reply-sort-wrap {
+.topic-manage-item {
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  border: 0;
+  border-radius: var(--a-radius-control, 4px);
+  background: transparent;
+  color: var(--a-color-fg);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.topic-manage-item:hover {
+  background: var(--a-color-surface-muted);
+}
+
+.topic-manage-item--danger {
+  color: var(--a-color-danger);
+}
+
+.topic-manage-item--danger:hover {
+  background: color-mix(in srgb, var(--a-color-danger) 8%, transparent);
+}
+
+/* ── Topic header & byline ───────────────────────────────────────────────── */
+.topic-header {
+  margin-bottom: 1.75rem;
+}
+
+.topic-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.65rem;
+}
+
+.topic-status-badge,
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
+}
+
+.topic-status-featured {
+  border-color: color-mix(in srgb, var(--a-color-primary) 28%, transparent);
+  background: color-mix(in srgb, var(--a-color-primary) 8%, transparent);
+  color: var(--a-color-primary);
+}
+
+.topic-status-muted,
+.tag-pill {
+  border-color: transparent;
+  color: var(--a-color-muted-soft);
+}
+
+.topic-status-solved {
+  border-color: color-mix(in srgb, var(--a-color-success) 28%, transparent);
+  background: color-mix(in srgb, var(--a-color-success) 10%, transparent);
+  color: var(--a-color-success);
+}
+
+.topic-title {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  color: var(--a-color-text);
+  margin: 0 0 1rem;
+  text-wrap: balance;
+}
+
+.topic-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.25rem;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
-.reply-scroll-list {
+.topic-meta-author {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.topic-meta-text {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.topic-meta-author-line,
+.topic-meta-subline {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.topic-author-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--a-color-fg);
+}
+
+.topic-trust-pill {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  color: var(--a-color-muted);
+}
+
+.topic-meta-subline {
+  font-size: 0.78rem;
+  color: var(--a-color-muted);
+}
+
+.topic-meta-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.topic-action-btn-active {
+  border-color: var(--a-color-primary);
+  color: var(--a-color-primary);
+}
+
+/* ── Topic body & inline discussion entry ────────────────────────────────── */
+.topic-main {
+  min-width: 0;
+}
+
+.topic-content-card {
+  border: none;
+  padding: 0;
+  margin-bottom: 2rem;
+  background: var(--a-color-bg);
+}
+
+.topic-discussion-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--a-color-border-soft);
+}
+
+.topic-discussion-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.topic-discussion-copy strong {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--a-color-fg);
+}
+
+.topic-discussion-copy span {
+  font-size: 0.8125rem;
+  color: var(--a-color-muted);
+}
+
+.topic-discussion-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .back-to-top {
@@ -753,39 +767,40 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 }
 
 .markdown-body :deep(pre) {
-  background: var(--a-color-disabled-bg);
-  border: var(--a-border);
+  background: var(--a-color-surface);
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-card, 4px);
   padding: 1rem;
   overflow-x: auto;
   margin: 1rem 0;
 }
 
 .markdown-body :deep(blockquote) {
-  border-left: 3px solid var(--a-color-fg);
+  border-left: 2px solid var(--a-color-border);
   padding-left: 1rem;
   margin: 1rem 0;
   color: var(--a-color-muted);
 }
 
 .markdown-body :deep(a) {
-  color: var(--a-color-fg);
+  color: var(--a-color-primary);
   text-decoration: underline;
 }
 
 .markdown-body :deep(th),
 .markdown-body :deep(td) {
-  border: var(--a-border);
+  border: 1px solid var(--a-color-border-soft);
   padding: 0.5rem 0.75rem;
 }
 
 .markdown-body :deep(th) {
   font-weight: 500;
-  background: var(--a-color-bg);
+  background: var(--a-color-surface);
 }
 
 .markdown-body :deep(img) {
   max-width: 100%;
-  filter: grayscale(100%);
+  border-radius: var(--a-radius-card, 4px);
 }
 
 .markdown-body :deep(table) {
@@ -799,14 +814,14 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 }
 
 .markdown-body :deep(code) {
-  font-family: monospace;
+  font-family: var(--a-font-mono, monospace);
   font-size: 0.875em;
 }
 
 .markdown-body :deep(h1),
 .markdown-body :deep(h2),
 .markdown-body :deep(h3) {
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0;
   margin: 1.5em 0 0.75em;
   scroll-margin-top: 5rem;
@@ -815,11 +830,5 @@ const togglePinned = () => toggleModeration(topicState.value.pinned ? 'unpin' : 
 .markdown-body :deep(p) {
   line-height: 1.75;
   margin: 0.75em 0;
-}
-
-.reply-editor-wrap {
-  height: 300px;
-  display: flex;
-  flex-direction: column;
 }
 </style>

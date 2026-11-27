@@ -184,4 +184,11 @@ describe('Mail workspace', () => {
     await flushPromises()
     expect(api.action).toHaveBeenCalledWith('inbox', ['one', 'two'], 'junk', undefined)
   })
+  it('renders HTML emails formatted by default without a display toggle', async () => {
+    api.detail.mockResolvedValue({ ...detail('two'), html: '<p><strong>排版正文</strong></p>' })
+    const wrapper = mountView(); await flushPromises()
+    await wrapper.get('[data-testid="mail-message-two"]').trigger('click'); await flushPromises()
+    expect(wrapper.find('.mail-workspace__html-frame').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('显示排版')
+  })
 })

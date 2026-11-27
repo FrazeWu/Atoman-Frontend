@@ -1,13 +1,13 @@
 <template>
   <section class="studio-unified-collections">
-    <PPageHeader title="合集" sub="整理当前频道的内容专题" mb="0" />
+    <PPageHeader title="合集" mb="0" />
 
     <p v-if="loading" class="studio-unified-collections__message">加载中...</p>
     <p v-else-if="error" class="studio-unified-collections__message studio-unified-collections__message--error" role="alert">
       {{ error }}
       <PButton type="button" variant="secondary" size="sm" @click="loadCollections">重试</PButton>
     </p>
-    <PEmpty v-else-if="!studio.currentChannel" kicker="" title="请先创建频道" description="合集需要归属于一个频道。">
+    <PEmpty v-else-if="!studio.currentChannel" kicker="" title="请先创建频道">
       <template #action>
         <RouterLink class="studio-unified-collections__channel-link" to="/studio/manage/channel">管理频道</RouterLink>
       </template>
@@ -51,11 +51,12 @@ onMounted(loadCollections)
 </script>
 
 <style scoped>
-.studio-unified-collections { display: grid; gap: 1.5rem; max-width: 60rem; }
+.studio-unified-collections { display: grid; gap: 1.5rem; }
 .studio-unified-collections__message { margin: 0; padding: 2rem 0; color: var(--a-color-muted); }
 .studio-unified-collections__message--error { color: var(--a-color-danger); }
 .studio-unified-collections__channel-link {
-  min-height: 2.75rem;
+  min-height: 2.25rem;
+  height: 2.25rem;
   display: inline-flex;
   align-items: center;
   padding: 0 0.875rem;
@@ -63,6 +64,8 @@ onMounted(loadCollections)
   border-radius: var(--a-radius-control);
   background: var(--a-color-primary);
   color: var(--a-color-primary-contrast);
+  font-size: 0.875rem;
+  font-weight: 500;
   text-decoration: none;
   transition: background-color var(--a-motion-micro, 140ms) ease;
 }

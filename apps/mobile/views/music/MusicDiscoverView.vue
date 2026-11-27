@@ -626,8 +626,8 @@ onMounted(() => {
 .mobile-music-discover__artist-card {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
+  align-items: flex-start;
+  text-align: left;
   width: 76px;
   flex-shrink: 0;
   cursor: pointer;
@@ -635,9 +635,9 @@ onMounted(() => {
 }
 
 .mobile-music-discover__artist-avatar {
-  width: 68px;
-  height: 68px;
-  border-radius: 50%;
+  width: 76px;
+  height: 76px;
+  border-radius: 6px;
   overflow: hidden;
   background-color: #f1f5f9;
   border: none !important;

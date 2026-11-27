@@ -17,12 +17,18 @@
     <div class="filter-bar">
       <div class="filter-left">
         <div class="forum-category-select">
-          <PSelect :model-value="selectedCategoryValue" :options="categoryOptions" placeholder="全部分类" @update:model-value="(value) => $emit('update:selectedCategoryValue', String(value))" />
+          <PSelect
+            :model-value="selectedCategoryValue"
+            :options="categoryOptions"
+            size="sm"
+            placeholder="全部分类"
+            @update:model-value="(value) => $emit('update:selectedCategoryValue', String(value))"
+          />
         </div>
 
-        <div v-if="activeTag" class="active-tag-chip a-badge a-badge-fill">
+        <div v-if="activeTag" class="active-tag-chip a-badge">
           # {{ activeTag }}
-          <button @click="$emit('clear-tag')" class="tag-chip-close">×</button>
+          <button type="button" aria-label="清除标签筛选" @click="$emit('clear-tag')" class="tag-chip-close">×</button>
         </div>
       </div>
 
@@ -32,7 +38,8 @@
           data-testid="forum-filter-follow"
           variant="secondary"
           size="sm"
-          :class="{ 'forum-tab-btn-active': following }"
+          class="forum-follow-btn"
+          :class="{ 'is-following': following }"
           @click="$emit('toggle-follow', activeFollowTarget)"
         >{{ following ? '已关注' : '关注' }}</PButton>
         <div class="search-wrap">
@@ -43,7 +50,7 @@
             @update:model-value="(value) => $emit('update:searchQuery', value)"
             @keydown.enter="$emit('submit-search')"
           />
-          <button v-if="searchQuery" class="search-clear" @click="$emit('clear-search')">×</button>
+          <button v-if="searchQuery" type="button" aria-label="清空搜索" class="search-clear" @click="$emit('clear-search')">×</button>
         </div>
       </div>
     </div>
@@ -81,9 +88,9 @@ defineEmits<{
 <style scoped>
 .forum-topic-filters {
   display: grid;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
-  padding-bottom: 0.25rem;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0;
 }
 
 .tab-bar,
@@ -91,7 +98,11 @@ defineEmits<{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem 1rem;
+}
+
+.tab-bar {
+  border-bottom: 1px solid var(--a-color-border-soft);
 }
 
 .tab-bar-left,
@@ -99,16 +110,17 @@ defineEmits<{
 .filter-right {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem 0.75rem;
   flex-wrap: wrap;
 }
 
 .forum-tab-btn {
   padding-inline: 0.25rem;
+  margin-bottom: -1px;
 }
 
 .forum-category-select {
-  min-width: 12rem;
+  min-width: 11rem;
 }
 
 .forum-category-select :deep(.p-field),
@@ -116,45 +128,70 @@ defineEmits<{
   gap: 0;
 }
 
+.forum-follow-btn.is-following {
+  border-color: var(--a-color-primary);
+  color: var(--a-color-primary);
+}
+
 .search-wrap {
   position: relative;
 }
 
-.search-input {
-  width: min(260px, 62vw);
-}
-
-.search-input :deep(.p-input) {
-  padding-right: 2rem;
+.search-wrap :deep(.p-input),
+:deep(input.search-input) {
+  width: min(240px, 62vw);
+  min-height: var(--a-control-height-sm, 2.25rem);
+  height: var(--a-control-height-sm, 2.25rem);
+  padding: 0 2rem 0 0.75rem;
+  font-size: var(--a-text-sm);
 }
 
 .search-clear {
   position: absolute;
-  right: 0;
-  top: 0.1rem;
+  right: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
+  border-radius: var(--a-radius-control, 4px);
   background: transparent;
   color: var(--a-color-muted);
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 1rem;
   line-height: 1;
-  padding: 0.1rem 0;
+  padding: 0;
+}
+
+.search-clear:hover {
+  color: var(--a-color-fg);
 }
 
 .active-tag-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  border: 1px solid var(--a-color-border-soft);
+  border-radius: var(--a-radius-control, 4px);
+  background: var(--a-color-surface-muted);
+  color: var(--a-color-fg);
 }
 
 .tag-chip-close {
   border: 0;
   background: transparent;
-  color: currentColor;
+  color: var(--a-color-muted);
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.95rem;
   line-height: 1;
   padding: 0;
+}
+
+.tag-chip-close:hover {
+  color: var(--a-color-fg);
 }
 
 @media (max-width: 720px) {
@@ -164,9 +201,17 @@ defineEmits<{
     flex-direction: column;
   }
 
-  .search-input,
+  .search-wrap :deep(.p-input),
+  :deep(input.search-input),
   .forum-category-select {
     width: 100%;
+  }
+
+  .search-wrap :deep(.p-input),
+  :deep(input.search-input) {
+    min-height: 44px;
+    height: auto;
+    font-size: 1rem;
   }
 }
 </style>

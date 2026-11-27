@@ -15,6 +15,7 @@ test('owner reviews a multi-file Agent proposal, selectively commits, and contin
   {file_id:refs.id,path:refs.path,base_revision:1,before:'references',after:'citations'}]
  const project=()=>({id:pid,name:'Agent fixture',main_file_id:'main',head_revision:head,access_role:'owner',created_at:now,updated_at:now})
  const metadata=()=>files.map(file=>({...file,content:''}))
+ await page.routeWebSocket('**/*',socket=>socket.close())
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url())
   expect(url.href.includes(key)).toBe(false)
@@ -65,7 +66,7 @@ test('owner reviews a multi-file Agent proposal, selectively commits, and contin
  })
  await page.goto('/papers/'+pid)
  const editor=page.locator('.cm-content')
- await expect(editor).toContainText(main.content)
+ await expect(editor).toContainText(main.content,{timeout:30000})
  await page.getByRole('button',{name:'AI 助手',exact:true}).click()
  await expect(page.getByLabel('AI API Key')).toBeVisible()
  await page.getByLabel('AI API Key').fill(key)

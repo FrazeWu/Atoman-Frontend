@@ -5,7 +5,7 @@ test('owner supplies an HTTPS compatible endpoint, discovers models and chooses 
  expect(new URL(origin).hostname).toMatch(/^(localhost|127\.0\.0\.1)$/)
  const pid='provider-fixture',prefix='/papers/projects/'+pid,now='2026-11-26T00:00:00Z'
  const provider='https://provider.example.net/openai/v1',entered='https://provider.example.net/openai',key='synthetic-provider-browser-key',source='Synthetic source only'
- let discoveries=0,suggestions=0
+ let discoveries=0,suggestions=0,connectionTests=0
  const project={id:pid,name:'Provider fixture',main_file_id:'main',head_revision:1,access_role:'owner',created_at:now,updated_at:now}
  const main={id:'main',path:'main.tex',kind:'text',revision:1,content:source,sha256:'',created_at:now,updated_at:now}
  await page.route('**/*',async route=>{
@@ -23,12 +23,18 @@ test('owner supplies an HTTPS compatible endpoint, discovers models and chooses 
   if(path===prefix)return ok(project)
   if(path===prefix+'/files')return ok([{...main,content:''}])
   if(path===prefix+'/files/main')return ok({...main,project_head_revision:1})
-  if(path===prefix+'/ai/capability')return ok({enabled:true,base_urls:['https://api.openai.com/v1'],custom_base_urls:true,model_discovery:true,max_source_bytes:49152,max_context_bytes:98304,max_extra_files:4,project_edits:true,max_history_turns:6,max_history_bytes:16384})
+  if(path===prefix+'/ai/capability')return ok({enabled:true,base_urls:['https://api.openai.com/v1'],custom_base_urls:true,model_discovery:true,connection_test:true,max_source_bytes:49152,max_context_bytes:98304,max_extra_files:4,project_edits:true,max_history_turns:6,max_history_bytes:16384})
   if(path===prefix+'/ai/models'){
    discoveries++
    expect(route.request().method()).toBe('POST')
    expect(route.request().postDataJSON()).toEqual({base_url:entered,api_key:key,consent:true})
    return ok({models:['model/a','model/b','gpt-4o-mini'],truncated:false,resolved_base_url:provider})
+  }
+  if(path===prefix+'/ai/connection-test'){
+   connectionTests++
+   expect(route.request().method()).toBe('POST')
+   expect(route.request().postDataJSON()).toEqual({base_url:provider,model:'model/b',api_key:key,consent:true})
+   return ok({connected:true})
   }
   if(path===prefix+'/ai/suggestions'){
    suggestions++
@@ -52,6 +58,11 @@ test('owner supplies an HTTPS compatible endpoint, discovers models and chooses 
  await expect(page.getByLabel('AI 模型',{exact:true})).toBeHidden()
  expect(discoveries).toBe(0)
  await getModels.click()
+ await expect(page.locator('.paper-ai__settings > summary')).toContainText('已配置 · gpt-4o-mini')
+ await expect(page.locator('.paper-ai__settings')).not.toHaveAttribute('open','')
+ expect(connectionTests).toBe(0)
+ expect(suggestions).toBe(0)
+ await page.getByRole('button',{name:'配置',exact:true}).click()
  await expect(page.getByText('已获取 3 个模型，', {exact:false})).toBeVisible()
  await expect(endpoint).toHaveValue(provider)
  await expect(secret).toHaveValue(key)
@@ -62,17 +73,25 @@ test('owner supplies an HTTPS compatible endpoint, discovers models and chooses 
  await page.getByRole('button',{name:'可用模型',exact:true}).click()
  await page.getByRole('option',{name:'model/b',exact:true}).click()
  await expect(page.getByLabel('AI 模型',{exact:true})).toHaveValue('model/b')
+ await page.getByRole('button',{name:'测试聊天（可能计费）',exact:true}).click()
+ await expect(page.locator('.paper-ai__settings > summary')).toContainText('聊天已验证 · model/b')
+ await expect(page.locator('.paper-ai__settings')).not.toHaveAttribute('open','')
+ expect(connectionTests).toBe(1)
+ expect(suggestions).toBe(0)
  await page.getByRole('button',{name:'AI 任务类型',exact:true}).click()
  await page.getByRole('option',{name:'解释、分析或排查',exact:true}).click()
  await page.getByRole('button',{name:'使用整个文件',exact:true}).click()
+ await expect(page.locator('.paper-ai__generation-blocker')).toContainText('任务指令')
  await page.getByLabel('AI 修改指令').fill('Explain the fixture')
+ await expect(page.locator('.paper-ai__generation-blocker')).toContainText('发送范围确认')
  await page.locator('.paper-ai__consent input').check()
+ await expect(page.locator('.paper-ai__generation-blocker')).toHaveCount(0)
  await page.getByRole('button',{name:'生成建议',exact:true}).click()
  await expect(page.locator('.paper-ai__result')).toContainText('Synthetic explanation')
  expect(suggestions).toBe(1)
  await page.getByRole('button',{name:'关闭 AI',exact:true}).click()
  await page.getByRole('button',{name:'AI 助手',exact:true}).click()
- await expect(page.locator('.paper-ai__settings > summary')).toContainText('已配置 · model/b')
+ await expect(page.locator('.paper-ai__settings > summary')).toContainText('聊天已验证 · model/b')
  await expect(page.locator('.paper-ai__settings')).not.toHaveAttribute('open','')
  await expect(page.locator('.paper-ai__result')).toHaveCount(0)
  await page.getByRole('button',{name:'配置',exact:true}).click()
@@ -80,6 +99,7 @@ test('owner supplies an HTTPS compatible endpoint, discovers models and chooses 
  await expect(secret).toHaveValue(key)
  await expect(page.getByLabel('AI 模型',{exact:true})).toHaveValue('model/b')
  expect(discoveries).toBe(1)
+ expect(connectionTests).toBe(1)
  await page.getByRole('button',{name:'清除配置',exact:true}).click()
  await expect(secret).toHaveValue('')
  await endpoint.fill('https://another.example.net/v1')

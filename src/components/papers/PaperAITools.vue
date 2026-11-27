@@ -10,6 +10,11 @@
    <div class="paper-ai__identity"><strong>{{capability?.agent?.id==='papers-agent'?capability.agent.display_name:'Papers Agent'}}</strong><small>拥有者审批</small></div>
    <p class="paper-ai__task-summary" :title="file.path">当前任务：{{task==='project'?'跨文件修改':task==='explain'?'解释与分析':'源码修改'}} · v{{file.revision}}</p>
    <p role="status" class="paper-ai__task-status">{{taskStatus}}</p>
+   <div v-if="capability?.connection_test&&connectionReady&&!settingsOpen" class="paper-ai__row">
+    <small>{{chatTested?'聊天连接已验证':'模型已选定，聊天尚未验证'}}</small>
+    <PButton v-if="!chatTested" type="button" size="sm" variant="secondary" :loading="testingConnection" :disabled="!canTestConnection" title="只发送固定测试文本，可能产生 API 费用" @click="testConnection">测试聊天（可能计费）</PButton>
+   </div>
+   <p v-if="testMessage&&!settingsOpen" role="status" class="paper-ai__connection-message">{{testMessage}}</p>
    <details class="paper-ai__workflow"><summary>流程 {{taskStep+1}} / {{taskSteps.length}} · 审批说明</summary>
    <div class="paper-ai__steps" aria-label="任务进度">
     <span v-for="(step,index) in taskSteps" :key="step" :aria-current="index===taskStep?'step':undefined" :class="{current:index===taskStep,done:index<taskStep}">{{index+1}}. {{step}}</span>
@@ -36,9 +41,14 @@
      </div>
      <p v-if="modelsMessage" class="paper-ai__connection-message" role="status">{{modelsMessage}}</p>
      <PInput v-if="modelList.length>25&&!manualModel" v-model.trim="modelFilter" aria-label="搜索可用模型" placeholder="搜索模型…" maxlength="128" :disabled="busy||modelsLoading" />
-     <PSelect v-if="modelList.length" v-show="!manualModel" :model-value="model" :options="modelOptions" label="可用模型" placeholder="请选择模型" size="sm" :disabled="busy||modelsLoading" @update:model-value="selectModel" />
-     <PInput v-show="manualModel||!capability?.model_discovery" v-model.trim="model" label="模型 ID" aria-label="AI 模型" maxlength="128" placeholder="输入服务商提供的模型 ID" :disabled="busy||modelsLoading" />
+     <PSelect v-if="modelList.length" v-show="!manualModel" :model-value="model" :options="modelOptions" label="可用模型" placeholder="请选择模型" size="sm" :disabled="busy||modelsLoading||testingConnection" @update:model-value="selectModel" />
+     <PInput v-show="manualModel||!capability?.model_discovery" v-model.trim="model" label="模型 ID" aria-label="AI 模型" maxlength="128" placeholder="输入服务商提供的模型 ID" :disabled="busy||modelsLoading||testingConnection" />
      <PButton v-if="manualModel&&modelList.length" type="button" size="sm" variant="ghost" :disabled="busy||modelsLoading" @click="manualModel=false">从模型列表选择</PButton>
+     <div v-if="capability?.connection_test&&connectionReady" class="paper-ai__row">
+      <PButton type="button" size="sm" variant="secondary" :loading="testingConnection" :disabled="!canTestConnection" @click="testConnection">测试聊天（可能计费）</PButton>
+      <small>{{chatTested?'聊天连接已验证':'仅发送固定测试文本，不发送论文。'}}</small>
+     </div>
+     <p v-if="testMessage" class="paper-ai__connection-message" role="status">{{testMessage}}</p>
      <small class="paper-ai__connection-hint">{{connectionVerified?'本项目内已记住配置，刷新或离开项目后清除。':'填写地址和密钥后获取模型即可，系统自动修正接口路径。'}} 模型列表请求仅发送密钥，不发送论文内容。</small>
      <PaperAIVault :account-id="accountId" :project-id="projectId" :file-id="file.id" :revision="file.revision" v-bind="{baseURL}" :model="model" :api-key="key" :task="task" :instruction="instruction" :history="history" :disabled="busy||commitBusy||repairActive||disabled" @profile="restoreProfile" @restore="restoreCheckpoint" @lock="lockVault" />
     </div>
@@ -106,6 +116,7 @@
    <section class="paper-ai__submit" aria-label="确认并生成">
    <PCheckbox v-model="consent" class="paper-ai__check paper-ai__consent" :disabled="busy">确认将选定源码、附件、指令及勾选的对话历史发送给所选模型服务（按 API 账户计费）。</PCheckbox>
    <p>{{ contextBytes.toLocaleString() }} / {{ capability!.max_context_bytes.toLocaleString() }} 字节 · 每次最多生成 4096 tokens</p>
+   <p v-if="generationBlocker&&!busy" class="paper-ai__generation-blocker" role="status">下一步：{{generationBlocker}}</p>
    <div class="paper-ai__row">
     <PButton size="sm" type="button" :disabled="!canGenerate" @click="generate">{{ busy?'生成中…':'生成建议' }}</PButton>
     <PButton v-if="busy&&!commitBusy" size="sm" type="button" variant="secondary" @click="cancel">取消等待</PButton>
@@ -165,7 +176,7 @@ import {readProjectText,projectFileFence} from './projectRead'
 import {rankProjectContext,chooseProjectContext,type ContextCandidate} from './aiProjectContext'
 import {getPaperFile,type PaperFile,type PaperTextReplacement,type PaperCompileJob,type PaperCompiler} from '@/api/papers'
 import {ApiErrorResponseError} from '@/api/client'
-import {getPaperAICapability,requestPaperAISuggestion,discoverPaperAIModels,type PaperAICapability,type PaperAISuggestion,type PaperAITask,type PaperAIHistoryTurn,type PaperAIActivity} from '@/api/papersAI'
+import {getPaperAICapability,requestPaperAISuggestion,discoverPaperAIModels,testPaperAIConnection,type PaperAICapability,type PaperAISuggestion,type PaperAITask,type PaperAIHistoryTurn,type PaperAIActivity} from '@/api/papersAI'
 import {paperAIBytes,validAIRange,type PaperAISourceRange,type PaperAIEdit} from './aiSuggestion'
 import {reviewProjectEdits,appendAgentHistory,type ReviewedPaperAIChange} from './aiAgent'
 import {MAX_REPAIR_ROUNDS,matchesRepairJob,repairOutcome,validRepairApplyFence,type RepairApplyFence} from './aiRepair'
@@ -183,7 +194,7 @@ const repairActive=computed(()=>!!repair.value&&['submitting','compiling','revie
 watch(repairActive,active=>emit('repair-active',active),{flush:'sync'})
 const repairAvailable=computed(()=>projectModeAvailable.value&&props.compileEnabled===true&&!!props.compileRepair&&!!props.compiler)
 const cleanSource=computed(()=>props.source===props.file.content&&props.source.trim()!==''&&!!capability.value&&paperAIBytes(props.source)<=capability.value.max_source_bytes)
-const canStartRepair=computed(()=>repairAvailable.value&&!repairActive.value&&!busy.value&&!contextBusy.value&&!props.disabled&&cleanSource.value)
+const canStartRepair=computed(()=>repairAvailable.value&&!repairActive.value&&!busy.value&&!contextBusy.value&&!modelsLoading.value&&!testingConnection.value&&!props.disabled&&cleanSource.value)
 function repairCurrent(state:RepairState){
  return repairAvailable.value&&cleanSource.value&&props.projectRevision===state.revision&&props.compiler===state.compiler
 }
@@ -272,8 +283,8 @@ const recommended=shallowRef<ContextCandidate[]>([]),recommendMessage=ref('')
 const modelList=ref<string[]>([]),modelsLoading=ref(false),modelsMessage=ref('')
 let modelsSerial=0,modelsController:AbortController|null=null
 let applyingResolvedBase=false,restoringConnection=false,resettingConfig=false
-const connectionVerified=ref(false),manualModel=ref(false),modelFilter=ref('')
-const connectionSummary=computed(()=>modelsLoading.value?'正在连接…':connectionVerified.value?(model.value?'已配置 · '+model.value:'已获取模型 · 请选择'):baseValid.value&&validPaperAIKey(key.value.trim())&&paperAIModelPattern.test(model.value)?'已手动配置 · '+model.value:'待连接')
+const connectionVerified=ref(false),chatTested=ref(false),testingConnection=ref(false),testMessage=ref(''),manualModel=ref(false),modelFilter=ref('')
+const connectionSummary=computed(()=>testingConnection.value?'正在测试聊天…':modelsLoading.value?'正在连接…':chatTested.value?'聊天已验证 · '+model.value:connectionVerified.value?(model.value?'已配置 · '+model.value:'已获取模型 · 请选择'):baseValid.value&&validPaperAIKey(key.value.trim())&&paperAIModelPattern.test(model.value)?'已手动配置 · '+model.value:'待连接')
 const modelOptions=computed(()=>{
  const filter=modelFilter.value.toLowerCase()
  const entries=modelList.value.filter(id=>!filter||id.toLowerCase().includes(filter)||id===model.value).map(value=>({value,label:value}))
@@ -284,12 +295,12 @@ function selectModel(value:string|number){
  manualModel.value=false;model.value=String(value)
 }
 function forgetConnection(){
- connectionVerified.value=false
+ connectionVerified.value=false;chatTested.value=false;testMessage.value=''
  if(!disposed&&!resettingConfig&&!restoringConnection)emit('connection',null)
 }
 function rememberConnection(){
  if(!connectionVerified.value||disposed||resettingConfig||restoringConnection||!baseValid.value||!validPaperAIKey(key.value.trim())||baseURL.value.includes(key.value.trim())||model.value.includes(key.value.trim())||(model.value&&!paperAIModelPattern.test(model.value)))return
- emit('connection',{accountId:props.accountId,projectId:props.projectId,baseURL:normalizePaperAIBase(baseURL.value),key:key.value.trim(),model:model.value,models:[...modelList.value]})
+ emit('connection',{accountId:props.accountId,projectId:props.projectId,baseURL:normalizePaperAIBase(baseURL.value),key:key.value.trim(),model:model.value,models:[...modelList.value],...(chatTested.value?{chatTested:true}:{})})
 }
 function clearConnection(){
  if(busy.value)return
@@ -302,14 +313,22 @@ function restoreConnection(value:PaperAIConnection|null|undefined,cap:PaperAICap
  try{
   baseURL.value=value.baseURL;key.value=value.key;model.value=value.model;modelList.value=[...value.models]
   manualModel.value=!value.models.length||!!value.model&&!modelList.value.includes(value.model)
-  connectionVerified.value=true
+  connectionVerified.value=true;chatTested.value=value.chatTested===true
   modelsMessage.value='已恢复本项目的模型配置，无需重新连接。'
  }finally{restoringConnection=false}
  return true
 }
-watch(model,()=>rememberConnection(),{flush:'sync'})
+watch(model,()=>{
+ if(!restoringConnection){
+  chatTested.value=false;testMessage.value=''
+  if(testingConnection.value){modelsSerial++;modelsController?.abort();modelsController=null;testingConnection.value=false}
+ }
+ rememberConnection()
+},{flush:'sync'})
 const baseValid=computed(()=>!!capability.value&&validPaperAIBase(baseURL.value,capability.value.custom_base_urls===true,capability.value.base_urls))
-const canDiscoverModels=computed(()=>!!capability.value?.enabled&&capability.value.model_discovery===true&&baseValid.value&&validPaperAIKey(key.value.trim())&&!busy.value&&!modelsLoading.value)
+const connectionReady=computed(()=>baseValid.value&&validPaperAIKey(key.value.trim())&&paperAIModelPattern.test(model.value)&&!baseURL.value.includes(key.value.trim())&&!model.value.includes(key.value.trim()))
+const canTestConnection=computed(()=>!!capability.value?.enabled&&capability.value.connection_test===true&&connectionReady.value&&!busy.value&&!modelsLoading.value&&!testingConnection.value&&!repairActive.value&&!props.disabled)
+const canDiscoverModels=computed(()=>!!capability.value?.enabled&&capability.value.model_discovery===true&&baseValid.value&&validPaperAIKey(key.value.trim())&&!busy.value&&!modelsLoading.value&&!testingConnection.value&&!repairActive.value&&!props.disabled)
 const taskOptions=computed(()=>[{value:'revise',label:'修改源码（可审阅后接受）'},{value:'explain',label:'解释、分析或排查'},...(projectModeAvailable.value?[{value:'project',label:'Agent · 跨文件修改'}]:[])])
 let disposed=false,serial=0,contextSerial=0,controller:AbortController|null=null
 const scope=()=>props.accountId+':'+props.projectId+':'+props.file.id+':'+(props.collaborationEpoch||'ordinary')
@@ -331,12 +350,34 @@ const resultStale=computed(()=>{
  return !projectModeAvailable.value||!projectReady.value||item.response.project_revision!==props.projectRevision
 })
 const extraStale=computed(()=>contextIsStale(extras.value))
-const canGenerate=computed(()=>!!capability.value?.enabled&&!!target.value&&!stale.value&&!extraStale.value&&!props.disabled&&!busy.value&&!contextBusy.value&&consent.value&&baseValid.value&&paperAIModelPattern.test(model.value)&&validPaperAIKey(key.value.trim())&&!modelsLoading.value&&instruction.value.trim()&&selectedSource.value.trim()&&sourceBytes.value<=capability.value.max_source_bytes&&contextBytes.value<=capability.value.max_context_bytes&&paperAIBytes(instruction.value)<=4000&&(task.value!=='project'||projectReady.value)&&(!repairActive.value||(task.value==='project'&&repair.value?.phase==='review'&&repairJobCurrent(repair.value))))
+// A single source of truth for the disabled button and the actionable hint.
+const generationBlocker=computed(()=>{
+ const cap=capability.value
+ if(!cap?.enabled)return 'AI 服务尚未开放，请重新检查。'
+ if(busy.value)return '等待当前请求完成。'
+ if(modelsLoading.value||testingConnection.value)return '等待模型连接完成。'
+ if(props.disabled)return '等待编辑器保存、编译或同步完成。'
+ if(!baseValid.value)return '填写有效的 API 地址。'
+ if(!validPaperAIKey(key.value.trim()))return '填写有效的 API Key。'
+ if(!connectionReady.value)return '选择或手动填写有效的聊天模型。'
+ if(contextBusy.value)return '等待附加文件读取完成。'
+ if(!target.value)return '选择需要处理的源码。'
+ if(stale.value||extraStale.value)return '源码或附件已变化，请重新选择发送范围。'
+ if(!selectedSource.value.trim())return '选择非空源码。'
+ if(!instruction.value.trim())return '填写给 AI 的任务指令。'
+ if(paperAIBytes(instruction.value)>4000)return '缩短任务指令（最多 4000 字节）。'
+ if(sourceBytes.value>cap.max_source_bytes||contextBytes.value>cap.max_context_bytes)return '缩小源码范围或移除部分附件。'
+ if(task.value==='project'&&!projectReady.value)return '保存源码并选择整个文件。'
+ if(repairActive.value&&(task.value!=='project'||repair.value?.phase!=='review'||!repairJobCurrent(repair.value)))return '等待当前编译修复步骤完成。'
+ if(!consent.value)return '勾选发送范围确认。'
+ return ''
+})
+const canGenerate=computed(()=>!generationBlocker.value)
 const taskSteps=['准备模型','确认范围','生成建议','审阅审批']
 const taskStep=computed(()=>{
  if(commitBusy.value||suggestion.value)return 3
  if(busy.value||repairActive.value)return 2
- if(!key.value.trim()||!model.value||!baseURL.value)return 0
+ if(!connectionReady.value)return 0
  return 1
 })
 const taskStatus=computed(()=>{
@@ -346,8 +387,7 @@ const taskStatus=computed(()=>{
  if(suggestion.value)return resultStale.value?'旧建议已失效':suggestion.value.task==='explain'?'分析已返回':suggestion.value.task==='project'?'等待审批 · '+approved.value.length+' / '+(suggestion.value.changes?.length||0)+' 个文件已勾选':'等待审批 · 单文件建议'
  if(busy.value)return '等待模型返回'
  if(repairActive.value)return repair.value?.message||'编译修复进行中'
- if(taskStep.value===0)return '请配置模型和 API Key'
- return canGenerate.value?'已确认发送范围，可以生成':'请选择并确认任务及源码范围'
+ return canGenerate.value?'已确认发送范围，可以生成':generationBlocker.value
 })
 function alive(n:number,initial:string){return !disposed&&n===serial&&initial===scope()}
 function clearConsent(){consent.value=false}
@@ -355,7 +395,7 @@ watch([baseURL,model,key,instruction,task,target,extras,()=>props.source,()=>pro
 function stop(){serial++;controller?.abort();controller=null;busy.value=false;loading.value=false;clearConsent()}
 function reset(){
  resettingConfig=true
- try{recommended.value=[];recommendMessage.value='';resetModels();repairSerial++;repair.value=null;commitBusy.value=false;stop();contextSerial++;contextBusy.value=false;capability.value=null;key.value='';connectionVerified.value=false;manualModel.value=false;modelFilter.value='';target.value=null;extras.value=[];suggestion.value=null;history.value=[];approved.value=[];task.value='revise';includeHistory.value=true;message.value=''}finally{resettingConfig=false}
+ try{recommended.value=[];recommendMessage.value='';resetModels();repairSerial++;repair.value=null;commitBusy.value=false;stop();contextSerial++;contextBusy.value=false;capability.value=null;key.value='';connectionVerified.value=false;chatTested.value=false;testMessage.value='';manualModel.value=false;modelFilter.value='';target.value=null;extras.value=[];suggestion.value=null;history.value=[];approved.value=[];task.value='revise';includeHistory.value=true;message.value=''}finally{resettingConfig=false}
 }
 watch([baseURL,model,key],()=>{history.value=[];suggestion.value=null;approved.value=[]},{flush:'sync'})
 function restoreProfile(profile:AIProfile){
@@ -380,7 +420,7 @@ function lockVault(){
  if(busy.value||commitBusy.value||repairActive.value)return
  forgetConnection();key.value='';history.value=[];suggestion.value=null;approved.value=[];clearConsent()
 }
-function resetModels(){modelsSerial++;modelsController?.abort();modelsController=null;modelList.value=[];modelsLoading.value=false;modelsMessage.value=''}
+function resetModels(){modelsSerial++;modelsController?.abort();modelsController=null;modelList.value=[];modelsLoading.value=false;testingConnection.value=false;modelsMessage.value='';testMessage.value=''}
 watch(baseURL,(value,previous)=>{
  if(value!==previous&&!applyingResolvedBase&&!restoringConnection){forgetConnection();resetModels();key.value='';model.value=value==='https://api.openai.com/v1'&&!capability.value?.model_discovery?'gpt-4.1-mini':'';manualModel.value=false;modelFilter.value=''}
 },{flush:'sync'})
@@ -411,12 +451,37 @@ async function discoverModels(){
   connectionVerified.value=true;rememberConnection()
   const summary=modelList.value.length?'已获取 '+modelList.value.length+' 个模型'+(result.truncated?'（列表已截断）':'')+'，请选择或手动输入。':'服务未返回可用模型，请手动输入模型 ID。'
   modelsMessage.value=(corrected?'已自动修正 API 地址：'+resolved+'。':'')+summary+(model.value?' 已选择推荐模型，可以更换；聊天可用性以实际调用为准。':'')
+  // The new connection flow advances automatically when a model is selected.
+  // Keep the form open if a model still needs to be chosen.
+  if(capability.value?.connection_test&&model.value)void advanceToTask(initial)
  }catch(cause){
   if(!alive())return
   const code=cause instanceof ApiErrorResponseError?cause.code:''
   manualModel.value=true
   modelsMessage.value=paperAIProviderDiagnostic(code,'models',cause instanceof ApiErrorResponseError?cause.status:undefined)
  }finally{if(alive()){modelsLoading.value=false;modelsController=null}}
+}
+async function advanceToTask(initial:string){
+ settingsOpen.value=false
+ await nextTick()
+ if(!disposed&&scope()===initial&&!settingsOpen.value)jumpAISection('task')
+}
+async function testConnection(){
+ if(!canTestConnection.value||disposed)return
+ const n=++modelsSerial,initial=scope(),entered=baseURL.value,endpoint=normalizePaperAIBase(entered),secret=key.value.trim(),chosen=model.value,abort=new AbortController()
+ modelsController=abort;testingConnection.value=true;chatTested.value=false;rememberConnection();testMessage.value='正在测试所选聊天模型…'
+ const alive=()=>!disposed&&n===modelsSerial&&scope()===initial&&baseURL.value===entered&&key.value.trim()===secret&&model.value===chosen
+ try{
+  const result=await testPaperAIConnection(props.projectId,{base_url:endpoint,model:chosen,api_key:secret,consent:true},abort.signal)
+  if(!alive())return
+  if(result?.connected!==true)throw Error('Invalid connection result')
+  connectionVerified.value=true;chatTested.value=true;rememberConnection()
+  testMessage.value='聊天连接测试成功，可以开始任务。'
+  void advanceToTask(initial)
+ }catch(cause){
+  if(!alive())return
+  testMessage.value=paperAIProviderDiagnostic(cause instanceof ApiErrorResponseError?cause.code:'','chat',cause instanceof ApiErrorResponseError?cause.status:undefined)
+ }finally{if(alive()){testingConnection.value=false;modelsController=null}}
 }
 watch(projectModeAvailable,available=>{if(!available&&task.value==='project')task.value='revise'})
 watch([()=>props.compileJob,()=>props.projectRevision,()=>props.compiler,()=>props.source,()=>props.file.revision,()=>props.disabled,repairAvailable],settleRepair,{flush:'post'})
@@ -514,7 +579,7 @@ async function generate(){
    if(!changes)throw new Error('Invalid project plan')
   }
   if(repairJobId&&(!repair.value||repair.value.phase!=='review'||repair.value.jobId!==repairJobId||!repairJobCurrent(repair.value)))return
-  if(capability.value?.model_discovery&&!connectionVerified.value){connectionVerified.value=true;rememberConnection()}
+  if(capability.value?.model_discovery){connectionVerified.value=true;chatTested.value=true;rememberConnection()}
   suggestion.value={target:captured,task:mode,response,changes,context,repairJobId}
   if(historyAvailable.value&&capability.value){
    const reply=mode==='project'?JSON.stringify({summary:response.text,edits:response.edits||[]}):response.text
@@ -586,7 +651,7 @@ function accept(){
 .paper-ai__settings>summary small{font-weight:400;max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .paper-ai__connect-actions{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .paper-ai__connect-actions>button:first-child{flex:1}
-.paper-ai__connection-message{font-size:11px;line-height:1.5}
+.paper-ai__connection-message,.paper-ai__generation-blocker{font-size:11px;line-height:1.5}
 .paper-ai__connection-hint{font-size:11px}
 .paper-ai__settings-body>.paper-ai-vault{padding:5px 6px}
 .paper-ai__context{border:1px solid var(--a-color-border-soft,#ddd);border-radius:5px;padding:6px;background:var(--a-color-bg,#fff)}

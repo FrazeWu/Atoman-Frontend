@@ -3,7 +3,7 @@
 .wiki-form { display: flex; flex-direction: column; gap: 1.1rem; }
 /* 资料编辑表单在播放器上方滚动，末尾必须留出可滚动的安全空间。 */
 :global(html[data-player-active="true"] .wiki-form--player-safe) {
-  padding-bottom: calc(var(--a-player-height) + 2.5rem);
+  padding-bottom: calc(var(--a-player-reserved-height, 0px) + 2.5rem);
 }
 .form-section {
   display: flex;
@@ -146,6 +146,6 @@
 
 @media (max-width: 767px) {
   :global(html[data-player-active="true"] .wiki-form--player-safe) {
-    padding-bottom: calc(var(--a-mobile-player-height) + var(--a-mobile-nav-reserved-height) + 1rem);
+    padding-bottom: calc(var(--a-player-reserved-height, 0px) + var(--a-mobile-nav-reserved-height) + 1rem);
   }
 }

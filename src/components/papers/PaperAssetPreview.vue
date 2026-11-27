@@ -1,7 +1,7 @@
 <template>
  <section class="paper-asset">
   <p v-if="!blob" role="alert">此资源不是可识别的 PNG、JPEG 或 PDF 文件，仍会随项目导出。</p>
-  <PaperPDFPreview v-else-if="blob.type==='application/pdf'" :project-id="''" :job-id="file.id" :revision="file.revision" :asset-blob="blob" :asset-name="file.path.split('/').pop()" />
+  <PaperPDFPreview v-else-if="blob.type==='application/pdf'" :key="file.id+':'+file.revision" :project-id="''" :job-id="file.id" :revision="file.revision" :asset-blob="blob" :asset-name="file.path.split('/').pop()" />
   <div v-else class="paper-asset__image">
    <img v-if="url" :src="url" :alt="file.path" />
    <PButton size="sm" variant="secondary" type="button" @click="download">下载原图</PButton>

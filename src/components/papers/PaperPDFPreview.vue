@@ -31,7 +31,7 @@
         <span v-if="marker?.page===item.number" class="paper-pdf__sync-marker" :style="{left:(marker.x/item.naturalWidth*100)+'%',top:(marker.y/item.naturalHeight*100)+'%'}" aria-hidden="true" />
       </div>
     </div>
-    <div class="paper-pdf__footer"><span>{{ assetName || ('PDF 源码版本 ' + (displayedRevision || revision)) }}</span><span>{{ pageCount ? page + ' / ' + pageCount : '' }}</span></div>
+    <div class="paper-pdf__footer"><span>{{ displayedAssetName || (documentBlob ? ('PDF 源码版本 ' + displayedRevision) : assetName || ('PDF 源码版本 ' + revision)) }}</span><span>{{ pageCount ? page + ' / ' + pageCount : '' }}</span></div>
   </section>
 </template>
 
@@ -139,6 +139,7 @@ let preferredPage=0
 const zoom=ref('width')
 const zoomLevels=[50,75,100,125,150,200]
 const documentBlob=shallowRef<Blob>()
+const displayedAssetName=ref('')
 const displayedRevision=ref(0)
 const loading=ref(false),error=ref('')
 let task:PDFDocumentLoadingTask|undefined
@@ -297,7 +298,7 @@ async function pump(){
 async function load(){
  if(disposed)return
  const serial=++loadSerial
- const pid=props.projectId,jid=props.jobId,revision=props.revision
+ const pid=props.projectId,jid=props.jobId,revision=props.revision,assetName=props.assetName
  abort?.abort();abort=new AbortController()
  void pendingTask?.destroy().catch(()=>{})
  pendingTask=undefined
@@ -324,17 +325,23 @@ async function load(){
   await Promise.allSettled([...rendering.values()].map(t=>t.promise))
   if(disposed||serial!==loadSerial){await next.destroy();return}
   doc=incoming;task=next;pendingTask=undefined
+  if(old&&old!==task)void old.destroy().catch(()=>{})
+  if(markerTimer)clearTimeout(markerTimer)
+  markerTimer=undefined;marker.value=null
   outlineEpoch++;outlineLoaded=false;outline.value=[];outlineOpen.value=false;outlineLoading.value=false
-  documentBlob.value=blob;displayedRevision.value=revision;displayedJob.value=jid
+  documentBlob.value=blob;displayedAssetName.value=assetName||'';displayedRevision.value=revision;displayedJob.value=jid
   pages.value=Array.from({length:incoming.numPages},(_,i)=>({number:i+1,naturalWidth:natural.width,naturalHeight:natural.height,width:1,height:1,ready:false,error:false,hasPixels:false}))
   page.value=Math.min(incoming.numPages,a.page);pageInput.value=String(page.value)
   editingPageInput.value=false
   await nextTick()
+  if(disposed||serial!==loadSerial)return
   await resizePages(false)
+  if(disposed||serial!==loadSerial)return
   emit('displayed-job',jid)
   emit('page-count',{jobId:jid,revision,pages:incoming.numPages})
-  await nextTick();restore(a);schedule()
-  if(old&&old!==task)void old.destroy().catch(()=>{})
+  await nextTick()
+  if(disposed||serial!==loadSerial)return
+  restore(a);schedule()
  }catch{
   if(next&&next!==task)void next.destroy().catch(()=>{})
   if(!disposed&&serial===loadSerial)error.value='PDF 加载失败。请重试或下载上一次成功的结果。'
@@ -362,7 +369,7 @@ function retryPage(n:number){const p=pages.value[n-1];if(p){p.error=false;pendin
 function download(){
  if(!documentBlob.value)return
  const url=URL.createObjectURL(documentBlob.value),a=document.createElement('a')
- a.href=url;a.download=props.assetName||'paper.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
+ a.href=url;a.download=displayedAssetName.value||'paper.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 }
 watch(()=>[props.projectId,props.jobId,props.assetBlob],()=>void load())
 onMounted(()=>{
@@ -391,6 +398,7 @@ async function showPosition(n:number,x:number,y:number,jobId:string){
  const p=pages.value[n-1]
  if(!p||!Number.isFinite(x)||!Number.isFinite(y))return false
  await nextTick()
+ if(disposed||loading.value||displayedJob.value!==jobId||pages.value[n-1]!==p)return false
  const box=scroller.value,el=elements.get(n)
  if(!box||!el)return false
  preferredPage=n;page.value=n;pageInput.value=String(n)

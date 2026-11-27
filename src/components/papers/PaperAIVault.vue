@@ -16,8 +16,8 @@
     <PButton type="button" size="sm" variant="secondary" :disabled="working||disabled" @click="useProfile">使用配置</PButton>
     <PButton type="button" size="sm" variant="secondary" :disabled="working||disabled" @click="removeProfile">删除所选配置</PButton>
    </div>
-   <PInput v-model.trim="name" label="新配置名称" maxlength="60" :disabled="working||disabled" placeholder="例如：科研主力模型" />
-   <PButton type="button" size="sm" variant="secondary" :disabled="working||disabled||!validCurrent||!name.trim()||vault.data.profiles.length>=10" @click="saveProfile">保存当前 API 配置</PButton>
+   <PInput v-model.trim="name" label="新配置名称" maxlength="60" :disabled="working||disabled" placeholder="可选，默认使用模型名称" />
+   <PButton type="button" size="sm" variant="secondary" :disabled="working||disabled||!validCurrent||(!matchingCurrent&&vault.data.profiles.length>=10)" @click="saveProfile">保存当前 API 配置</PButton>
    <PCheckbox v-model="autoSave" :disabled="working||disabled">每次收到模型回复后加密保存本项目会话</PCheckbox>
    <div class="paper-ai-vault__row">
     <PButton type="button" size="sm" variant="secondary" :disabled="working||disabled||!validSession" @click="saveSession">保存当前会话</PButton>
@@ -48,8 +48,9 @@ function refresh(){
 }
 const selectedProfile=computed(()=>vault.value?.data.profiles.find(p=>p.id===selected.value))
 const savedSession=computed(()=>vault.value?.data.sessions.find(s=>s.projectId===props.projectId))
-function currentProfile(id:string):AIProfile{return {id,name:name.value.trim(),baseURL:props.baseURL,model:props.model,key:props.apiKey.trim()}}
+function currentProfile(id:string):AIProfile{return {id,name:name.value.trim()||props.model.slice(0,60),baseURL:props.baseURL,model:props.model,key:props.apiKey.trim()}}
 const validCurrent=computed(()=>validAIProfile(currentProfile('new')))
+const matchingCurrent=computed(()=>vault.value?.data.profiles.find(p=>p.baseURL===props.baseURL&&p.model===props.model&&p.key===props.apiKey.trim()))
 function checkpoint():AISessionCheckpoint{return {projectId:props.projectId,fileId:props.fileId,revision:props.revision,baseURL:props.baseURL,model:props.model,task:props.task,instruction:props.instruction,history:[...props.history],updatedAt:Date.now()}}
 const validSession=computed(()=>validAICheckpoint(checkpoint())&&!!(props.instruction.trim()||props.history.length))
 function reset(){serial++;vault.value=null;password.value='';name.value='';selected.value='';autoSave.value=false;working.value=false;message.value='';refresh()}
@@ -59,7 +60,7 @@ async function unlock(){
  const initial=scope(),n=++serial,secret=password.value,owner=props.accountId
  password.value='';working.value=true;message.value=''
  const valid=()=>!disposed&&initial===scope()&&n===serial
- try{const opened=await openAIVault(localStorage,owner,secret,valid);if(valid()){vault.value=opened;exists.value=true;message.value='保险库已解锁。'}}
+ try{const opened=await openAIVault(localStorage,owner,secret,valid);if(valid()){vault.value=opened;exists.value=true;if(opened.data.profiles.length===1)selected.value=opened.data.profiles[0]!.id;message.value='保险库已解锁。'}}
  catch{if(valid())message.value='无法解锁或创建：请核对口令、浏览器存储与安全环境。'}
  finally{if(valid())working.value=false}
 }
@@ -74,7 +75,9 @@ async function mutate(data:AIVaultData,success:string){
  finally{if(!disposed&&initial===scope()&&n===serial)working.value=false}
 }
 async function saveProfile(){
- const prior=vault.value;if(!prior||!validCurrent.value||prior.data.profiles.length>=10)return
+ const prior=vault.value;if(!prior||!validCurrent.value)return
+ if(matchingCurrent.value){selected.value=matchingCurrent.value.id;message.value='此 API 配置已加密保存。';return}
+ if(prior.data.profiles.length>=10)return
  const p=currentProfile(crypto.randomUUID())
  if(await mutate({...prior.data,profiles:[...prior.data.profiles,p]},'API 配置已加密保存。')){selected.value=p.id;name.value=''}
 }

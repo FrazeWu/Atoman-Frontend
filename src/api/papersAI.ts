@@ -9,6 +9,7 @@ export interface PaperAICapability {
  base_urls:string[]
  custom_base_urls?:boolean
  model_discovery?:boolean
+ connection_test?:boolean
  max_source_bytes:number
  max_context_bytes:number
  max_extra_files:number
@@ -52,6 +53,9 @@ export async function getPaperAICapability(pid:string,signal?:AbortSignal){
 export interface PaperAIModelList {models:string[];truncated:boolean;resolved_base_url?:string}
 export async function discoverPaperAIModels(pid:string,body:{base_url:string;api_key:string;consent:true},signal?:AbortSignal){
  return (await apiRequestEnvelope<PaperAIModelList>(endpoint(pid,'models'),{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify(body),signal})).data
+}
+export async function testPaperAIConnection(pid:string,body:{base_url:string;model:string;api_key:string;consent:true},signal?:AbortSignal){
+ return (await apiRequestEnvelope<{connected:boolean}>(endpoint(pid,'connection-test'),{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify(body),signal})).data
 }
 export async function requestPaperAISuggestion(pid:string,body:PaperAIRequest,signal?:AbortSignal){
  return (await apiRequestEnvelope<PaperAISuggestion>(endpoint(pid,'suggestions'),{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify(body),signal})).data

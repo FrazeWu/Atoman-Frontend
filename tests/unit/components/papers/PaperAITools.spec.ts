@@ -1,10 +1,10 @@
 import {afterEach,beforeEach,describe,it,expect,vi} from 'vitest'
 import {mount,flushPromises} from '@vue/test-utils'
 import PaperAITools from '@/components/papers/PaperAITools.vue'
-import {getPaperAICapability,requestPaperAISuggestion,discoverPaperAIModels} from '@/api/papersAI'
+import {getPaperAICapability,requestPaperAISuggestion,discoverPaperAIModels,testPaperAIConnection} from '@/api/papersAI'
 import {getPaperFile,type PaperFile} from '@/api/papers'
 
-vi.mock('@/api/papersAI',()=>({getPaperAICapability:vi.fn(),requestPaperAISuggestion:vi.fn(),discoverPaperAIModels:vi.fn()}))
+vi.mock('@/api/papersAI',()=>({getPaperAICapability:vi.fn(),requestPaperAISuggestion:vi.fn(),discoverPaperAIModels:vi.fn(),testPaperAIConnection:vi.fn()}))
 vi.mock('@/api/papers',()=>({getPaperFile:vi.fn()}))
 const file:PaperFile={id:'main',path:'main.tex',kind:'text',content:'Before Original After',revision:1,sha256:'',created_at:'',updated_at:''}
 const extra:PaperFile={...file,id:'refs',path:'refs.bib',content:'Approved references'}
@@ -323,6 +323,60 @@ describe('custom compatible providers and model discovery',()=>{
    await button(w,'清除配置').trigger('click')
    expect((w.get('[aria-label="AI API Key"]').element as HTMLInputElement).value).toBe('')
    expect(w.emitted('connection')?.at(-1)?.[0]).toBeNull()
+  }finally{w.unmount()}
+ })
+ it('advances after discovery, explains blockers, and tests chat only on an explicit click',async()=>{
+  vi.mocked(getPaperAICapability).mockResolvedValue({...capability,connection_test:true})
+  vi.mocked(discoverPaperAIModels).mockResolvedValue({models:['gpt-4o-mini','provider/chat'],truncated:false,resolved_base_url:custom})
+  vi.mocked(testPaperAIConnection).mockResolvedValue({connected:true})
+  const w=create()
+  try{
+   await flushPromises()
+   expect(w.find('.paper-ai__generation-blocker').text()).toContain('API Key')
+   await configure(w)
+   expect(w.find('.paper-ai__generation-blocker').text()).toContain('聊天模型')
+   await button(w,'获取模型列表').trigger('click');await flushPromises()
+   expect(w.get('.paper-ai__settings').attributes('open')).toBeUndefined()
+   expect(w.get('.paper-ai__settings > summary').text()).toContain('gpt-4o-mini')
+   expect(testPaperAIConnection).not.toHaveBeenCalled()
+   expect(requestPaperAISuggestion).not.toHaveBeenCalled()
+   await button(w,'测试聊天（可能计费）').trigger('click');await flushPromises()
+   expect(testPaperAIConnection).toHaveBeenCalledTimes(1)
+   expect(testPaperAIConnection).toHaveBeenCalledWith('project',{base_url:custom,api_key:key,model:'gpt-4o-mini',consent:true},expect.any(AbortSignal))
+   expect(w.get('.paper-ai__settings > summary').text()).toContain('聊天已验证')
+   expect(w.emitted('connection')?.at(-1)?.[0]).toMatchObject({chatTested:true,key,model:'gpt-4o-mini'})
+   expect(requestPaperAISuggestion).not.toHaveBeenCalled()
+   await button(w,'使用整个文件').trigger('click')
+   expect(w.find('.paper-ai__generation-blocker').text()).toContain('任务指令')
+   await w.get('[aria-label="AI 修改指令"]').setValue('Review this fixture')
+   expect(w.find('.paper-ai__generation-blocker').text()).toContain('发送范围确认')
+   expect(button(w,'生成建议').attributes('disabled')).toBeDefined()
+   await w.get('.paper-ai__consent input').setValue(true)
+   expect(button(w,'生成建议').attributes('disabled')).toBeUndefined()
+   await w.get('[aria-label="AI 模型"]').setValue('provider/chat')
+   expect(w.get('.paper-ai__settings > summary').text()).not.toContain('聊天已验证')
+   expect(w.emitted('connection')?.at(-1)?.[0]).not.toHaveProperty('chatTested')
+   expect(button(w,'生成建议').attributes('disabled')).toBeDefined()
+  }finally{w.unmount()}
+ })
+ it('cancels stale chat tests when the endpoint or credential changes',async()=>{
+  vi.mocked(getPaperAICapability).mockResolvedValue({...capability,connection_test:true})
+  vi.mocked(discoverPaperAIModels).mockResolvedValue({models:['gpt-4o-mini'],truncated:false,resolved_base_url:custom})
+  let finish!:(value:{connected:boolean})=>void
+  vi.mocked(testPaperAIConnection).mockImplementation(()=>new Promise(resolve=>{finish=resolve}))
+  const w=create()
+  try{
+   await configure(w)
+   await button(w,'获取模型列表').trigger('click');await flushPromises()
+   await button(w,'测试聊天（可能计费）').trigger('click')
+   const signal=vi.mocked(testPaperAIConnection).mock.calls[0]![2]!
+   await w.get('[aria-label="AI API Key"]').setValue('replacement-synthetic-key')
+   expect(signal.aborted).toBe(true)
+   finish({connected:true});await flushPromises()
+   expect(w.get('.paper-ai__settings > summary').text()).not.toContain('聊天已验证')
+   expect(w.text()).not.toContain('聊天连接测试成功')
+   expect(w.emitted('connection')?.at(-1)?.[0]).toBeNull()
+   expect(requestPaperAISuggestion).not.toHaveBeenCalled()
   }finally{w.unmount()}
  })
  it('restores only a matching in-memory project connection, without repeating discovery',async()=>{

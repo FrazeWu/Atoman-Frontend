@@ -58,6 +58,9 @@ export function validPaperAIKey(value:string){
 // Only display local, fixed diagnostic messages, not third-party error text.
 export function paperAIProviderDiagnostic(code:string,operation:'models'|'chat',status?:number){
  const messages:Record<string,string>={
+  'papers.ai_chat_unsupported':'该地址或所选模型不支持兼容的聊天补全请求，请检查模型 ID 或尝试另一个聊天模型。',
+  'papers.ai_invalid_response':'模型服务没有返回可用的聊天响应。',
+  'papers.ai_incomplete_response':'模型未返回完整文本，可能不适合短响应测试；可更换模型或尝试实际任务。',
   'papers.ai_models_wrong_path':'API 地址返回网页而不是模型列表，未找到兼容的模型接口。',
   'papers.ai_models_unsupported':'该服务不支持 GET /models，聊天接口仍可能正常。',
   'papers.ai_provider_auth':'第三方模型服务拒绝了认证，请检查该密钥是否具有相应接口权限。',
@@ -88,6 +91,7 @@ export interface PaperAIConnection {
  key:string
  model:string
  models:string[]
+ chatTested?:boolean
 }
 
 const nonChatModel=/(?:embed(?:ding)?|rerank|image|whisper|(?:^|[-_/])tts(?:$|[-_/])|audio|speech|moderation|dall-e|(?:^|[-_/])(?:video|realtime)(?:$|[-_/]))/i

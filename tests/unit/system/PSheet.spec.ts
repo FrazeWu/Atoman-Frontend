@@ -30,6 +30,20 @@ describe("PSheet.vue", () => {
       delete document.documentElement.dataset.atomanApp;
     }
   });
+  it("keeps an explicit above-player mobile sheet exempt from the bottom player offset", async () => {
+    document.documentElement.dataset.atomanApp = "mobile";
+    document.documentElement.dataset.playerActive = "true";
+    const wrapper = mount(PSheet, {props:{show:true,title:"编辑",abovePlayer:true}});
+    try {
+      expect(wrapper.get(".p-sheet-mobile-page").classes()).toContain("p-sheet-mobile-page--above-player");
+      await wrapper.setProps({abovePlayer:false});
+      expect(wrapper.get(".p-sheet-mobile-page").classes()).not.toContain("p-sheet-mobile-page--above-player");
+    } finally {
+      wrapper.unmount();
+      delete document.documentElement.dataset.atomanApp;
+      delete document.documentElement.dataset.playerActive;
+    }
+  });
 	it("uses the full viewport as the desktop sheet backdrop", () => {
 		const source = readFileSync(
 			resolve(process.cwd(), "src/components/ui/PSheet.vue"),
@@ -58,7 +72,7 @@ describe("PSheet.vue", () => {
 		 expect(source).toMatch(
 			/<Transition :name="transitionName" appear>\s*<section\s+v-if="isMobile && show"/,
 		);
-		expect(source).toMatch(/:class="\[panelClass, `is-\$\{side\}`, `is-\$\{mode\}`\]"/);
+		expect(source).toMatch(/:class="\[panelClass, `is-\$\{side\}`, `is-\$\{mode\}`, \{\x27p-sheet-mobile-page--above-player\x27:abovePlayer\}\]"/);
 		expect(source).toMatch(
 			/\.p-sheet-mobile-page\s*\{[\s\S]*?position:\s*fixed[\s\S]*?right:\s*0[\s\S]*?width:\s*min\(28rem, 100vw\)/,
 		);
@@ -76,7 +90,7 @@ describe("PSheet.vue", () => {
 
 	it("gives mobile partial sheets the shared width and backdrop", () => {
 		expect(readFileSync(resolve(process.cwd(), "src/components/ui/PSheet.vue"), "utf8")).toMatch(
-			/:class="\[panelClass, `is-\$\{side\}`, `is-\$\{mode\}`\]"/,
+			/:class="\[panelClass, `is-\$\{side\}`, `is-\$\{mode\}`, \{\x27p-sheet-mobile-page--above-player\x27:abovePlayer\}\]"/,
 		);
 		expect(readFileSync(resolve(process.cwd(), "src/components/ui/PSheet.vue"), "utf8")).toMatch(
 			/\.p-sheet-mobile-page\.is-partial\s*\{[\s\S]*?width:\s*min\(var\(--a-comment-sheet-width\), calc\(100vw - 1rem\)\)/,

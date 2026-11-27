@@ -1,11 +1,28 @@
 export const paperAIModelPattern=/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/
+const versionSegment=/^v[0-9]+(?:beta[0-9]*|alpha[0-9]*)?$/
+const baseSyntax=/^https:\/\/[a-z0-9.-]+(?:\/[A-Za-z0-9_-]+)*$/
 export function normalizePaperAIBase(raw:string){
- return raw.trim().replace(/\/$/,'').replace(/\/(?:chat\/completions|models)$/,'')
+ const trimmed=raw.trim()
+ if(!trimmed||trimmed.length>512)return trimmed
+ const value=(trimmed.includes('://')?trimmed:'https://'+trimmed).replace(/\/+$/,'')
+ // Validate the original syntax before stripping known suffixes.
+ if(value.length>512||!baseSyntax.test(value))return trimmed
+ let url:URL
+ try{url=new URL(value)}catch{return trimmed}
+ if(url.origin!==value.split('/').slice(0,3).join('/'))return trimmed
+ let path=url.pathname==='/'?'':url.pathname
+ while(/\/(?:chat\/completions|models|responses)$/.test(path))path=path.replace(/\/(?:chat\/completions|models|responses)$/,'')
+ const parts:string[]=[]
+ for(const part of path.split('/')){
+  if(parts[parts.length-1]===part&&versionSegment.test(part))continue
+  parts.push(part)
+ }
+ return url.origin+parts.join('/')
 }
 export function validPaperAIBase(raw:string,custom:boolean,approved:string[]){
  const value=normalizePaperAIBase(raw)
  if(!custom)return approved.includes(value)
- if(value.length>512||!/^https:\/\/[a-z0-9.-]+(?:\/[A-Za-z0-9_-]+)*$/.test(value))return false
+ if(value.length>512||!baseSyntax.test(value))return false
  try{
   const u=new URL(value)
   const host=u.hostname
@@ -13,6 +30,25 @@ export function validPaperAIBase(raw:string,custom:boolean,approved:string[]){
   if(['localhost','local','internal','localdomain','lan','home.arpa','onion','invalid','test','atoman.org'].some(s=>host===s||host.endsWith('.'+s)))return false
   return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&!u.search&&!u.hash
  }catch{return false}
+}
+// Independently verify that a resolved address returned by the server is one
+// of our deterministic same-origin candidates, not arbitrary provider data.
+export function paperAIModelBaseCandidates(raw:string,custom:boolean,approved:string[]){
+ const base=normalizePaperAIBase(raw)
+ if(!validPaperAIBase(base,custom,approved))return []
+ const u=new URL(base),out=[base]
+ const add=(value:string)=>{if(!out.includes(value)&&validPaperAIBase(value,custom,approved)&&new URL(value).origin===u.origin)out.push(value)}
+ if(u.pathname==='/'){add(base+'/v1');return out}
+ const parts=u.pathname.slice(1).split('/')
+ for(let i=parts.length-1;i>=0;i--){
+  if(!versionSegment.test(parts[i]!))continue
+  const versionBase=u.origin+'/'+parts.slice(0,i+1).join('/')
+  if(i<parts.length-1)add(versionBase)
+  if(parts[i]==='v1')add(versionBase.slice(0,-3))
+  return out
+ }
+ add(base+'/v1')
+ return out
 }
 export function validPaperAIKey(value:string){
  return /^[!-~]{8,2048}$/.test(value)
@@ -22,6 +58,7 @@ export function validPaperAIKey(value:string){
 // Only display local, fixed diagnostic messages, not third-party error text.
 export function paperAIProviderDiagnostic(code:string,operation:'models'|'chat',status?:number){
  const messages:Record<string,string>={
+  'papers.ai_models_wrong_path':'API 地址返回网页而不是模型列表，未找到兼容的模型接口。',
   'papers.ai_models_unsupported':'该服务不支持 GET /models，聊天接口仍可能正常。',
   'papers.ai_provider_auth':'第三方模型服务拒绝了认证，请检查该密钥是否具有相应接口权限。',
   'papers.ai_endpoint_denied':'API 地址或 DNS 解析结果不符合公开 HTTPS 安全限制。',

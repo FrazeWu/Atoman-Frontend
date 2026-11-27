@@ -4,7 +4,7 @@ test('owner supplies an HTTPS compatible endpoint, discovers models and chooses 
  const origin=new URL(baseURL!).origin
  expect(new URL(origin).hostname).toMatch(/^(localhost|127\.0\.0\.1)$/)
  const pid='provider-fixture',prefix='/papers/projects/'+pid,now='2026-11-26T00:00:00Z'
- const provider='https://provider.example.net/openai/v1',key='synthetic-provider-browser-key',source='Synthetic source only'
+ const provider='https://provider.example.net/openai/v1',entered='https://provider.example.net/openai',key='synthetic-provider-browser-key',source='Synthetic source only'
  let discoveries=0,suggestions=0
  const project={id:pid,name:'Provider fixture',main_file_id:'main',head_revision:1,access_role:'owner',created_at:now,updated_at:now}
  const main={id:'main',path:'main.tex',kind:'text',revision:1,content:source,sha256:'',created_at:now,updated_at:now}
@@ -27,8 +27,8 @@ test('owner supplies an HTTPS compatible endpoint, discovers models and chooses 
   if(path===prefix+'/ai/models'){
    discoveries++
    expect(route.request().method()).toBe('POST')
-   expect(route.request().postDataJSON()).toEqual({base_url:provider,api_key:key,consent:true})
-   return ok({models:['model/a','model/b'],truncated:false})
+   expect(route.request().postDataJSON()).toEqual({base_url:entered,api_key:key,consent:true})
+   return ok({models:['model/a','model/b'],truncated:false,resolved_base_url:provider})
   }
   if(path===prefix+'/ai/suggestions'){
    suggestions++
@@ -46,12 +46,15 @@ test('owner supplies an HTTPS compatible endpoint, discovers models and chooses 
  await endpoint.fill('https://127.0.0.1/v1')
  await secret.fill(key)
  await expect(getModels).toBeDisabled()
- await endpoint.fill(provider)
+ await endpoint.fill(entered)
  await expect(secret).toHaveValue('')
  await secret.fill(key)
  expect(discoveries).toBe(0)
  await getModels.click()
  await expect(page.getByText('已获取 2 个模型，', {exact:false})).toBeVisible()
+ await expect(endpoint).toHaveValue(provider)
+ await expect(secret).toHaveValue(key)
+ await expect(page.getByText('已自动修正 API 地址：', {exact:false})).toBeVisible()
  expect(discoveries).toBe(1)
  await page.getByRole('button',{name:'可用模型',exact:true}).click()
  await page.getByRole('option',{name:'model/b',exact:true}).click()

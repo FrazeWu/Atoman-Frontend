@@ -27,12 +27,12 @@
     <summary><span>模型与 API 设置</span><small>{{baseValid&&key.trim()&&model?model:'待配置'}}</small></summary>
     <div class="paper-ai__settings-body"><PInput v-if="capability?.custom_base_urls" v-model.trim="baseURL" label="API 地址" aria-label="AI API 地址" maxlength="512" placeholder="https://api.example.com/v1" spellcheck="false" autocomplete="off" :disabled="busy" :error="baseURL&&!baseValid?'请输入公开 HTTPS API 基础地址':''" />
     <PSelect v-else :model-value="baseURL" label="AI API 地址" size="sm" :options="capability!.base_urls.map(value=>({value,label:value}))" :disabled="busy" @update:model-value="baseURL=String($event)" />
-    <small>填写 OpenAI 兼容 API 基础地址（如 https://api.example.com/v1），也可粘贴以 /chat/completions 或 /models 结尾的完整地址。仅允许公开 HTTPS 服务；更换地址会清除旧密钥。</small>
+    <small>填写 API 域名、基础地址或完整接口地址即可。获取列表时会在同一 HTTPS 域名内自动检测并修正多余或缺失的接口路径；手动更换地址会清除旧密钥。</small>
     <PInput v-model="key" label="API Key" type="password" autocomplete="off" spellcheck="false" aria-label="AI API Key" maxlength="2048" :disabled="busy" placeholder="使用该 API 服务的密钥" />
     <div v-if="capability?.model_discovery" class="paper-ai__row">
      <PButton type="button" size="sm" variant="secondary" :loading="modelsLoading" :disabled="!canDiscoverModels" @click="discoverModels">获取模型列表</PButton>
     </div>
-    <small v-if="capability?.model_discovery">获取列表由 AToMAN 服务器向模型服务发送 GET /models，只发送 API Key，不发送论文内容。请选择支持聊天补全的模型。</small>
+    <small v-if="capability?.model_discovery">获取列表时会验证 API 地址并回填成功的基础地址。仅向填写的 HTTPS 域名发送 API Key，不发送论文内容，不跟随重定向。请选择支持聊天补全的模型。</small>
     <p v-if="modelsMessage" role="status">{{modelsMessage}}</p>
     <PSelect v-if="modelList.length" :model-value="model" :options="modelList.map(value=>({value,label:value}))" label="可用模型" placeholder="请选择模型" size="sm" :disabled="busy||modelsLoading" @update:model-value="model=String($event)" />
     <PInput v-model.trim="model" label="模型 ID" aria-label="AI 模型" maxlength="128" placeholder="也可手动输入，例如 gpt-4.1-mini" :disabled="busy" />
@@ -153,7 +153,7 @@ import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PCheckbox from '@/components/ui/PCheckbox.vue'
-import {normalizePaperAIBase,paperAIProviderDiagnostic,paperAIModelPattern,validPaperAIBase,validPaperAIKey} from './aiProvider'
+import {normalizePaperAIBase,paperAIModelBaseCandidates,paperAIProviderDiagnostic,paperAIModelPattern,validPaperAIBase,validPaperAIKey} from './aiProvider'
 import PaperAIActivityPanel from './PaperAIActivityPanel.vue'
 import PaperAIDiff from './PaperAIDiff.vue'
 import PaperAIVault from './PaperAIVault.vue'
@@ -267,6 +267,7 @@ const busy=ref(false),contextBusy=ref(false)
 const recommended=shallowRef<ContextCandidate[]>([]),recommendMessage=ref('')
 const modelList=ref<string[]>([]),modelsLoading=ref(false),modelsMessage=ref('')
 let modelsSerial=0,modelsController:AbortController|null=null
+let applyingResolvedBase=false
 const baseValid=computed(()=>!!capability.value&&validPaperAIBase(baseURL.value,capability.value.custom_base_urls===true,capability.value.base_urls))
 const canDiscoverModels=computed(()=>!!capability.value?.enabled&&capability.value.model_discovery===true&&baseValid.value&&validPaperAIKey(key.value.trim())&&!busy.value&&!modelsLoading.value)
 const taskOptions=computed(()=>[{value:'revise',label:'修改源码（可审阅后接受）'},{value:'explain',label:'解释、分析或排查'},...(projectModeAvailable.value?[{value:'project',label:'Agent · 跨文件修改'}]:[])])
@@ -338,22 +339,33 @@ function lockVault(){
 }
 function resetModels(){modelsSerial++;modelsController?.abort();modelsController=null;modelList.value=[];modelsLoading.value=false;modelsMessage.value=''}
 watch(baseURL,(value,previous)=>{
- if(value!==previous){resetModels();key.value='';model.value=value==='https://api.openai.com/v1'?'gpt-4.1-mini':''}
+ if(value!==previous&&!applyingResolvedBase){resetModels();key.value='';model.value=value==='https://api.openai.com/v1'?'gpt-4.1-mini':''}
 },{flush:'sync'})
 watch(key,resetModels,{flush:'sync'})
 async function discoverModels(){
  if(!canDiscoverModels.value||disposed)return
  resetModels()
- const n=++modelsSerial,initial=scope(),entered=baseURL.value,endpoint=normalizePaperAIBase(entered),secret=key.value.trim(),abort=new AbortController()
- modelsController=abort;modelsLoading.value=true;clearConsent()
+ let entered=baseURL.value
+ const n=++modelsSerial,initial=scope(),endpoint=normalizePaperAIBase(entered),secret=key.value.trim(),abort=new AbortController()
+ modelsController=abort;modelsLoading.value=true;modelsMessage.value='正在验证 API 地址并获取模型列表…';clearConsent()
  const alive=()=>!disposed&&n===modelsSerial&&initial===scope()&&entered===baseURL.value&&secret===key.value.trim()
  try{
   const result=await discoverPaperAIModels(props.projectId,{base_url:endpoint,api_key:secret,consent:true},abort.signal)
   if(!alive())return
   if(!Array.isArray(result.models)||result.models.length>512||result.models.some(id=>typeof id!=='string'||!paperAIModelPattern.test(id)||id.includes(secret)))throw Error('Invalid model list')
+  const resolved=result.resolved_base_url??endpoint
+  if(typeof resolved!=='string'||resolved.includes(secret)||!capability.value||!paperAIModelBaseCandidates(entered,capability.value.custom_base_urls===true,capability.value.base_urls).includes(resolved))throw Error('Invalid resolved API address')
+  const corrected=resolved!==entered
+  if(corrected){
+   // A validated same-origin correction is not a user-initiated provider
+   // change. Retain the key and keep this discovery request alive.
+   applyingResolvedBase=true
+   try{entered=resolved;baseURL.value=resolved}finally{applyingResolvedBase=false}
+  }
   modelList.value=[...new Set(result.models)].sort()
   if(modelList.value.length&&!modelList.value.includes(model.value))model.value=''
-  modelsMessage.value=modelList.value.length?'已获取 '+modelList.value.length+' 个模型'+(result.truncated?'（列表已截断）':'')+'，请选择或手动输入。':'服务未返回可用模型，请手动输入模型 ID。'
+  const summary=modelList.value.length?'已获取 '+modelList.value.length+' 个模型'+(result.truncated?'（列表已截断）':'')+'，请选择或手动输入。':'服务未返回可用模型，请手动输入模型 ID。'
+  modelsMessage.value=(corrected?'已自动修正 API 地址：'+resolved+'。':'')+summary
  }catch(cause){
   if(!alive())return
   const code=cause instanceof ApiErrorResponseError?cause.code:''

@@ -266,6 +266,47 @@ describe('custom compatible providers and model discovery',()=>{
    expect(discoverPaperAIModels).toHaveBeenCalledWith('project',{base_url:custom,api_key:key,consent:true},expect.any(AbortSignal))
   }finally{w.unmount()}
  })
+ it('fills the successful base without clearing the API key and uses it for chat',async()=>{
+  const w=create()
+  const entered='provider.example.net/openai'
+  vi.mocked(discoverPaperAIModels).mockResolvedValue({models:['model/chat'],truncated:false,resolved_base_url:custom})
+  try{
+   await flushPromises()
+   await w.get('[aria-label="AI API 地址"]').setValue(entered)
+   await w.get('[aria-label="AI API Key"]').setValue(key)
+   await button(w,'获取模型列表').trigger('click');await flushPromises()
+   expect(discoverPaperAIModels).toHaveBeenCalledWith('project',{base_url:'https://'+entered,api_key:key,consent:true},expect.any(AbortSignal))
+   expect((w.get('[aria-label="AI API 地址"]').element as HTMLInputElement).value).toBe(custom)
+   expect((w.get('[aria-label="AI API Key"]').element as HTMLInputElement).value).toBe(key)
+   expect(w.text()).toContain('已自动修正 API 地址')
+   expect(w.text()).toContain('已获取 1 个模型')
+   expect(button(w,'获取模型列表').attributes('disabled')).toBeUndefined()
+   await w.get('[aria-label="AI 模型"]').setValue('model/chat')
+   await button(w,'使用整个文件').trigger('click')
+   await w.get('[aria-label="AI 修改指令"]').setValue('Review this fixture')
+   await w.get('.paper-ai__consent input').setValue(true)
+   vi.mocked(requestPaperAISuggestion).mockResolvedValue({text:'Suggested source',model:'model/chat'})
+   await button(w,'生成建议').trigger('click');await flushPromises()
+   expect(requestPaperAISuggestion).toHaveBeenCalledWith('project',expect.objectContaining({base_url:custom,model:'model/chat',api_key:key}),expect.any(AbortSignal))
+   await w.get('[aria-label="AI API 地址"]').setValue('https://another.example.net/v1')
+   expect((w.get('[aria-label="AI API Key"]').element as HTMLInputElement).value).toBe('')
+  }finally{w.unmount()}
+ })
+ it('rejects unexpected resolved origins or unrelated same-origin paths',async()=>{
+  for(const resolved of ['https://other.example.net/v1','https://provider.example.net/unrelated/v1']){
+   const w=create()
+   vi.mocked(discoverPaperAIModels).mockResolvedValue({models:['forged-model'],truncated:false,resolved_base_url:resolved})
+   try{
+    await configure(w)
+    await button(w,'获取模型列表').trigger('click');await flushPromises()
+    expect((w.get('[aria-label="AI API 地址"]').element as HTMLInputElement).value).toBe(custom)
+    expect((w.get('[aria-label="AI API Key"]').element as HTMLInputElement).value).toBe(key)
+    expect(w.find('[aria-label="可用模型"]').exists()).toBe(false)
+    expect(w.text()).not.toContain('forged-model')
+    expect(w.text()).not.toContain(resolved)
+   }finally{w.unmount()}
+  }
+ })
  it('rejects private/invalid addresses and clears keys and old models on provider change',async()=>{
   const w=create()
   try{

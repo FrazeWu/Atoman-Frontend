@@ -49,7 +49,7 @@ function endpoint(pid:string,resource:string){return useApiUrl()+'/papers/projec
 export async function getPaperAICapability(pid:string,signal?:AbortSignal){
  return (await apiRequestEnvelope<PaperAICapability>(endpoint(pid,'capability'),{cache:'no-store',signal})).data
 }
-export interface PaperAIModelList {models:string[];truncated:boolean}
+export interface PaperAIModelList {models:string[];truncated:boolean;resolved_base_url?:string}
 export async function discoverPaperAIModels(pid:string,body:{base_url:string;api_key:string;consent:true},signal?:AbortSignal){
  return (await apiRequestEnvelope<PaperAIModelList>(endpoint(pid,'models'),{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify(body),signal})).data
 }

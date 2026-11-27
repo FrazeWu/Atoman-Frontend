@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest'
-import {normalizePaperAIBase,paperAIProviderDiagnostic,validPaperAIBase,validPaperAIKey,paperAIModelPattern} from '@/components/papers/aiProvider'
+import {normalizePaperAIBase,paperAIModelBaseCandidates,paperAIProviderDiagnostic,validPaperAIBase,validPaperAIKey,paperAIModelPattern} from '@/components/papers/aiProvider'
 describe('custom public AI endpoint policy',()=>{
  it('accepts public HTTPS compatible base paths and preserves the allowlist fallback',()=>{
   for(const url of ['https://api.deepseek.com/v1/','https://open.bigmodel.cn/api/paas/v4','https://api.example.net'])expect(validPaperAIBase(url,true,[])).toBe(true)
@@ -33,5 +33,25 @@ describe('provider compatibility diagnostics',()=>{
   ])expect(paperAIProviderDiagnostic(code,'models',502)).toContain(text)
   expect(paperAIProviderDiagnostic('','models',502)).toContain('网关')
   expect(paperAIProviderDiagnostic('papers.ai_provider_timeout','chat',502)).toContain('原稿未修改')
+ })
+})
+
+describe('automatic API base resolution',()=>{
+ it.each([
+  ['api.example.net','https://api.example.net',['https://api.example.net','https://api.example.net/v1']],
+  ['https://api.example.net/v1/v1/chat/completions/models/','https://api.example.net/v1',['https://api.example.net/v1','https://api.example.net']],
+  ['https://api.example.net/openai','https://api.example.net/openai',['https://api.example.net/openai','https://api.example.net/openai/v1']],
+  ['https://api.example.net/openai/v1/extra','https://api.example.net/openai/v1/extra',['https://api.example.net/openai/v1/extra','https://api.example.net/openai/v1','https://api.example.net/openai']],
+  ['https://api.example.net/api/paas/v4','https://api.example.net/api/paas/v4',['https://api.example.net/api/paas/v4']]
+ ] as const)('normalizes %s and bounds the candidates',(raw,base,expected)=>{
+  expect(normalizePaperAIBase(raw)).toBe(base)
+  expect(paperAIModelBaseCandidates(raw,true,[])).toEqual(expected)
+ })
+ it('never guesses a missing provider or downgrades HTTPS',()=>{
+  for(const raw of ['', 'http://api.example.net', '127.0.0.1','https://127.0.0.1/v1','https://api.example.net@other.example.net','https://api.example.net/v1?key=secret','https://api.example.net/v1#token','https://api.example.net/%2e%2e/v1']){
+   expect(validPaperAIBase(raw,true,[]),raw).toBe(false)
+   expect(paperAIModelBaseCandidates(raw,true,[]),raw).toEqual([])
+  }
+  expect(paperAIModelBaseCandidates('https://api.example.net',false,['https://api.example.net'])).toEqual(['https://api.example.net'])
  })
 })

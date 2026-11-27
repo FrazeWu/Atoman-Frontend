@@ -256,6 +256,16 @@ describe('custom compatible providers and model discovery',()=>{
    expect((w.get('[aria-label="AI 模型"]').element as HTMLInputElement).value).toBe('manual-model')
   }finally{w.unmount()}
  })
+ it('accepts a complete endpoint URL without duplicating the API path',async()=>{
+  const w=create()
+  try{
+   await flushPromises()
+   await w.get('[aria-label="AI API 地址"]').setValue(custom+'/chat/completions')
+   await w.get('[aria-label="AI API Key"]').setValue(key)
+   await button(w,'获取模型列表').trigger('click');await flushPromises()
+   expect(discoverPaperAIModels).toHaveBeenCalledWith('project',{base_url:custom,api_key:key,consent:true},expect.any(AbortSignal))
+  }finally{w.unmount()}
+ })
  it('rejects private/invalid addresses and clears keys and old models on provider change',async()=>{
   const w=create()
   try{

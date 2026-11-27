@@ -27,12 +27,12 @@
     <summary><span>模型与 API 设置</span><small>{{baseValid&&key.trim()&&model?model:'待配置'}}</small></summary>
     <div class="paper-ai__settings-body"><PInput v-if="capability?.custom_base_urls" v-model.trim="baseURL" label="API 地址" aria-label="AI API 地址" maxlength="512" placeholder="https://api.example.com/v1" spellcheck="false" autocomplete="off" :disabled="busy" :error="baseURL&&!baseValid?'请输入公开 HTTPS API 基础地址':''" />
     <PSelect v-else :model-value="baseURL" label="AI API 地址" size="sm" :options="capability!.base_urls.map(value=>({value,label:value}))" :disabled="busy" @update:model-value="baseURL=String($event)" />
-    <small>填写 OpenAI 兼容基础地址，不包含 /chat/completions 或 /models；仅允许公开 HTTPS 服务。更换地址会清除旧密钥。</small>
+    <small>填写 OpenAI 兼容 API 基础地址（如 https://api.example.com/v1），也可粘贴以 /chat/completions 或 /models 结尾的完整地址。仅允许公开 HTTPS 服务；更换地址会清除旧密钥。</small>
     <PInput v-model="key" label="API Key" type="password" autocomplete="off" spellcheck="false" aria-label="AI API Key" maxlength="2048" :disabled="busy" placeholder="使用该 API 服务的密钥" />
     <div v-if="capability?.model_discovery" class="paper-ai__row">
      <PButton type="button" size="sm" variant="secondary" :loading="modelsLoading" :disabled="!canDiscoverModels" @click="discoverModels">获取模型列表</PButton>
     </div>
-    <small v-if="capability?.model_discovery">获取列表只向此地址发送 API Key，不发送论文内容。请选择支持聊天补全的模型。</small>
+    <small v-if="capability?.model_discovery">获取列表由 AToMAN 服务器向模型服务发送 GET /models，只发送 API Key，不发送论文内容。请选择支持聊天补全的模型。</small>
     <p v-if="modelsMessage" role="status">{{modelsMessage}}</p>
     <PSelect v-if="modelList.length" :model-value="model" :options="modelList.map(value=>({value,label:value}))" label="可用模型" placeholder="请选择模型" size="sm" :disabled="busy||modelsLoading" @update:model-value="model=String($event)" />
     <PInput v-model.trim="model" label="模型 ID" aria-label="AI 模型" maxlength="128" placeholder="也可手动输入，例如 gpt-4.1-mini" :disabled="busy" />
@@ -153,7 +153,7 @@ import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PCheckbox from '@/components/ui/PCheckbox.vue'
-import {paperAIModelPattern,validPaperAIBase,validPaperAIKey} from './aiProvider'
+import {normalizePaperAIBase,paperAIProviderDiagnostic,paperAIModelPattern,validPaperAIBase,validPaperAIKey} from './aiProvider'
 import PaperAIActivityPanel from './PaperAIActivityPanel.vue'
 import PaperAIDiff from './PaperAIDiff.vue'
 import PaperAIVault from './PaperAIVault.vue'
@@ -344,9 +344,9 @@ watch(key,resetModels,{flush:'sync'})
 async function discoverModels(){
  if(!canDiscoverModels.value||disposed)return
  resetModels()
- const n=++modelsSerial,initial=scope(),endpoint=baseURL.value,secret=key.value.trim(),abort=new AbortController()
+ const n=++modelsSerial,initial=scope(),entered=baseURL.value,endpoint=normalizePaperAIBase(entered),secret=key.value.trim(),abort=new AbortController()
  modelsController=abort;modelsLoading.value=true;clearConsent()
- const alive=()=>!disposed&&n===modelsSerial&&initial===scope()&&endpoint===baseURL.value&&secret===key.value.trim()
+ const alive=()=>!disposed&&n===modelsSerial&&initial===scope()&&entered===baseURL.value&&secret===key.value.trim()
  try{
   const result=await discoverPaperAIModels(props.projectId,{base_url:endpoint,api_key:secret,consent:true},abort.signal)
   if(!alive())return
@@ -357,7 +357,7 @@ async function discoverModels(){
  }catch(cause){
   if(!alive())return
   const code=cause instanceof ApiErrorResponseError?cause.code:''
-  modelsMessage.value=code==='papers.ai_models_unsupported'?'此接口不支持模型列表，请手动输入模型 ID。':code==='papers.ai_provider_auth'?'API Key 被拒绝，请检查密钥及权限。':code==='papers.ai_endpoint_denied'?'API 地址不符合公开 HTTPS 安全限制。':'获取模型失败，请检查接口地址、密钥和网络，也可手动输入模型 ID。'
+  modelsMessage.value=paperAIProviderDiagnostic(code,'models',cause instanceof ApiErrorResponseError?cause.status:undefined)
  }finally{if(alive()){modelsLoading.value=false;modelsController=null}}
 }
 watch(projectModeAvailable,available=>{if(!available&&task.value==='project')task.value='revise'})
@@ -434,12 +434,12 @@ async function generate(){
  controller=abort;busy.value=true;message.value='';suggestion.value=null;approved.value=[]
  const context=extras.value.map(item=>({...item})),base=props.projectRevision,repairJobId=repairActive.value?repair.value?.jobId:undefined
  const currentFile={...props.file,content:captured.baseline}
- const request={base_url:baseURL.value,model:model.value,api_key:key.value.trim(),file_id:captured.fileId,base_revision:captured.revision,source:selectedSource.value,task:mode,instruction:instruction.value,context:context.map(item=>({file_id:item.id,revision:item.revision})),consent:true as const,...(historyAvailable.value&&includeHistory.value&&history.value.length?{history:[...history.value]}:{}),...(mode==='project'?{project_revision:base}:{})}
+ const request={base_url:normalizePaperAIBase(baseURL.value),model:model.value,api_key:key.value.trim(),file_id:captured.fileId,base_revision:captured.revision,source:selectedSource.value,task:mode,instruction:instruction.value,context:context.map(item=>({file_id:item.id,revision:item.revision})),consent:true as const,...(historyAvailable.value&&includeHistory.value&&history.value.length?{history:[...history.value]}:{}),...(mode==='project'?{project_revision:base}:{})}
  clearConsent()
  try{
   const response=await requestPaperAISuggestion(props.projectId,request,abort.signal)
   if(!alive(n,initial))return
-  if(staleTarget(captured)||contextIsStale(context)||(mode==='project'&&base!==props.projectRevision)||request.base_url!==baseURL.value||request.model!==model.value||request.api_key!==key.value.trim()){message.value='源码、附加文件或模型配置已变化，已丢弃旧响应；请重新确认。';return}
+  if(staleTarget(captured)||contextIsStale(context)||(mode==='project'&&base!==props.projectRevision)||request.base_url!==normalizePaperAIBase(baseURL.value)||request.model!==model.value||request.api_key!==key.value.trim()){message.value='源码、附加文件或模型配置已变化，已丢弃旧响应；请重新确认。';return}
   if(typeof response.text!=='string'||!response.text.trim()||paperAIBytes(response.text)>48*1024||response.text.includes(request.api_key))throw new Error('invalid result')
   let changes:ReviewedPaperAIChange[]|undefined
   if(mode==='project'){
@@ -459,7 +459,7 @@ async function generate(){
  }catch(cause){
   if(!alive(n,initial))return
   const code=cause instanceof ApiErrorResponseError?cause.code:''
-  message.value=code==='papers.ai_context_changed'?'服务器文件版本已变化，请刷新项目并重新确认上下文。':code==='papers.ai_provider_auth'?'模型服务拒绝了 API Key，请核对密钥及权限。':code==='papers.ai_provider_rate'?'模型服务限流或额度不足。':code==='papers.ai_endpoint_denied'?'该 API 地址不符合公开 HTTPS 安全限制。':code==='papers.ai_busy'?'AI 请求容量已满，请稍后重试。':code==='papers.ai_invalid_project_response'?'模型给出的文件或片段无法安全匹配，请缩小任务或重新生成。':code==='papers.ai_incomplete_response'?'模型输出不完整，请缩小源码范围或任务。':'生成失败，请检查模型、API Key 和网络，原稿未修改。'
+  message.value=code==='papers.ai_context_changed'?'服务器文件版本已变化，请刷新项目并重新确认上下文。':code==='papers.ai_provider_auth'?'模型服务拒绝了 API Key，请核对密钥及权限。':code==='papers.ai_provider_rate'?'模型服务限流或额度不足。':code==='papers.ai_endpoint_denied'?'该 API 地址不符合公开 HTTPS 安全限制。':code==='papers.ai_busy'?'AI 请求容量已满，请稍后重试。':code==='papers.ai_invalid_project_response'?'模型给出的文件或片段无法安全匹配，请缩小任务或重新生成。':code==='papers.ai_incomplete_response'?'模型输出不完整，请缩小源码范围或任务。':paperAIProviderDiagnostic(code,'chat',cause instanceof ApiErrorResponseError?cause.status:undefined)
  }finally{if(alive(n,initial)){busy.value=false;controller=null;activityRefresh.value++}}
 }
 async function acceptProject(){

@@ -7,15 +7,16 @@
    <PButton v-if="capability?.activity" size="sm" type="button" variant="ghost" @click="jumpAISection('activity')"><History :size="14" aria-hidden="true"/> 记录</PButton>
   </nav>
   <header class="paper-ai__workbench" aria-label="当前 AI 任务">
-   <div class="paper-ai__identity"><span class="paper-ai__avatar" aria-hidden="true">AI</span><div><strong>{{capability?.agent?.id==='papers-agent'?capability.agent.display_name:'Papers Agent'}}</strong><small>AI 建议者 · 拥有者审批</small></div></div>
-   <p>当前任务：{{task==='project'?'跨文件修改':task==='explain'?'解释与分析':'源码修改'}} · {{file.path}} · v{{file.revision}}</p>
+   <div class="paper-ai__identity"><strong>{{capability?.agent?.id==='papers-agent'?capability.agent.display_name:'Papers Agent'}}</strong><small>拥有者审批</small></div>
+   <p class="paper-ai__task-summary" :title="file.path">当前任务：{{task==='project'?'跨文件修改':task==='explain'?'解释与分析':'源码修改'}} · v{{file.revision}}</p>
+   <p role="status" class="paper-ai__task-status">{{taskStatus}}</p>
+   <details class="paper-ai__workflow"><summary>流程 {{taskStep+1}} / {{taskSteps.length}} · 审批说明</summary>
    <div class="paper-ai__steps" aria-label="任务进度">
     <span v-for="(step,index) in taskSteps" :key="step" :aria-current="index===taskStep?'step':undefined" :class="{current:index===taskStep,done:index<taskStep}">{{index+1}}. {{step}}</span>
    </div>
-   <p role="status">{{taskStatus}}</p>
    <small>AI 不作为可登录成员，不能自主提交。跨文件任务的提交者仍是拥有者；实时协作编辑继续使用你的身份。</small>
+   </details>
   </header>
-  <div v-if="capability?.activity" ref="activityPanel" class="paper-ai__activity-anchor"><PaperAIActivityPanel :project-id="projectId" :account-id="accountId" :files="files" :refresh="activityRefresh" :disabled="busy||disabled||repairActive||!!collaborationEpoch||source!==file.content" :rollback="rollbackActivity" :historical-changes="capability.historical_changes===true" :pending-proposal="suggestion?.response.proposal_id" /></div>
   <p v-if="loading" role="status">正在检查 AI 服务…</p>
   <div v-else-if="!capability?.enabled" class="paper-ai__notice">
    <strong>AI 助手尚未开放</strong><p>{{ message||'源码编辑不受影响。' }}</p>
@@ -140,6 +141,7 @@
     </div>
    </section>
   </template>
+  <div v-if="capability?.activity" ref="activityPanel" class="paper-ai__activity-anchor"><PaperAIActivityPanel :project-id="projectId" :account-id="accountId" :files="files" :refresh="activityRefresh" :disabled="busy||disabled||repairActive||!!collaborationEpoch||source!==file.content" :rollback="rollbackActivity" :historical-changes="capability.historical_changes===true" :pending-proposal="suggestion?.response.proposal_id" /></div>
  </section>
 </template>
 
@@ -498,45 +500,50 @@ function accept(){
 
 
 <style scoped>
-.paper-ai{display:grid;gap:12px;min-width:0;font-size:13px;line-height:1.55;container-type:inline-size}
-.paper-ai__workbench,.paper-ai__settings,.paper-ai__composer,.paper-ai__scope,.paper-ai__submit,.paper-ai__result,.paper-ai__notice{border:1px solid var(--a-color-border-soft,#ddd);border-radius:8px;background:var(--a-color-bg,#fff);padding:12px;min-width:0;display:grid;gap:9px}
-.paper-ai__identity{display:flex;align-items:center;gap:9px}
-.paper-ai__identity>div{display:grid;gap:1px}
-.paper-ai__identity strong{font-size:15px;font-weight:650}
-.paper-ai__avatar{display:grid;place-items:center;width:32px;height:32px;border-radius:7px;background:var(--a-color-bg-subtle,#e7edf3);color:var(--a-color-primary,#26784b);font-weight:700;flex:none}
+.paper-ai{--a-control-height-sm:28px;display:grid;gap:6px;min-width:0;font-size:12px;line-height:1.5;container-type:inline-size}
+.paper-ai__workbench,.paper-ai__settings,.paper-ai__composer,.paper-ai__scope,.paper-ai__submit,.paper-ai__result,.paper-ai__notice{border:1px solid var(--a-color-border-soft,#ddd);border-radius:6px;background:var(--a-color-bg,#fff);padding:8px;min-width:0;display:grid;gap:6px}
+.paper-ai__workbench{gap:3px;padding:6px 8px}
+.paper-ai__identity{display:flex;align-items:baseline;justify-content:space-between;gap:6px;min-width:0}
+.paper-ai__identity strong{font-size:12px;font-weight:650}
+.paper-ai__task-summary{font-size:11px}
+.paper-ai__task-status{font-weight:600;color:var(--a-color-text,#20242c)!important}
+.paper-ai__workflow{font-size:11px;color:var(--a-color-text-secondary,#64748b)}
+.paper-ai__workflow[open]>.paper-ai__steps{margin:4px 0}
 .paper-ai__steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
 .paper-ai__steps span{padding:5px 4px;border-bottom:2px solid var(--a-color-border-soft,#ddd);color:var(--a-color-text-secondary,#64748b);font-size:11px;white-space:normal}
 .paper-ai__steps .current{border-color:var(--a-color-primary,#26784b);color:var(--a-color-primary,#26784b);font-weight:650}
 .paper-ai__steps .done{color:inherit}
 .paper-ai p{margin:0;color:var(--a-color-text-secondary,#64748b);overflow-wrap:anywhere}
 .paper-ai__workbench>small{font-size:11px}
-.paper-ai__section-title{font-size:14px;font-weight:650}
-.paper-ai label,.paper-ai__settings-body,.paper-ai__context{display:grid;gap:7px;min-width:0}
+.paper-ai__section-title{font-size:13px;font-weight:650}
+.paper-ai label,.paper-ai__settings-body,.paper-ai__context{display:grid;gap:5px;min-width:0}
 .paper-ai__settings>summary{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .paper-ai__settings>summary small{font-weight:400;max-width:50%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.paper-ai__context{border:1px solid var(--a-color-border-soft,#ddd);border-radius:6px;padding:9px;background:var(--a-color-bg,#fff)}
+.paper-ai__context{border:1px solid var(--a-color-border-soft,#ddd);border-radius:5px;padding:6px;background:var(--a-color-bg,#fff)}
 .paper-ai__context>summary{margin-bottom:3px}
 .paper-ai summary{cursor:pointer;font-weight:600;overflow-wrap:anywhere}
-.paper-ai__row{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
-.paper-ai__row>button{font-size:12px}
+.paper-ai__row{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.paper-ai__row>button{font-size:11px;padding-inline:6px}
 .paper-ai label.paper-ai__check{display:flex;align-items:flex-start;gap:6px;overflow-wrap:anywhere}
 .paper-ai__check input{flex-shrink:0;margin-top:3px}
 .paper-ai__submit{border-color:var(--a-color-border-soft,#ddd)}
 .paper-ai__submit .paper-ai__row>button:first-child{flex:1}
-.paper-ai__consent{padding:9px;background:var(--a-color-bg-soft,#f1f3f5);border-radius:5px}
-.paper-ai pre{font:12px/1.6 monospace;margin:4px 0 0;max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:9px;background:var(--a-color-bg-soft,#f1f3f5);border:1px solid var(--a-color-border-soft,#ddd);border-radius:5px}
+.paper-ai__consent{padding:6px;background:var(--a-color-bg-soft,#f1f3f5);border-radius:5px}
+.paper-ai pre{font:12px/1.6 monospace;margin:4px 0 0;max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;padding:6px;background:var(--a-color-bg-soft,#f1f3f5);border:1px solid var(--a-color-border-soft,#ddd);border-radius:5px}
 .paper-ai__result{border-top:3px solid var(--a-color-primary,#26784b)}
 .paper-ai__result>strong{font-size:15px}
 .paper-ai__turn{display:grid;gap:4px;padding-block:7px;border-top:1px solid var(--a-color-border-soft,#ddd)}
 .paper-ai small{color:var(--a-color-text-secondary,#64748b)}
 .paper-ai :deep(.paper-ai-activity){background:var(--a-color-bg,#fff)}
-.paper-ai :deep(.p-input),.paper-ai :deep(.p-textarea){font-size:13px}
-@container(max-width:350px){.paper-ai__steps{grid-template-columns:repeat(2,minmax(0,1fr))}.paper-ai__workbench,.paper-ai__settings,.paper-ai__composer,.paper-ai__scope,.paper-ai__submit,.paper-ai__result{padding:9px}}
+.paper-ai :deep(.p-input),.paper-ai :deep(.p-textarea){font-size:12px}
+@media(pointer:fine) and (min-width:768px){.paper-ai :deep(.p-input){min-height:32px;padding:4px 7px}.paper-ai :deep(.p-field){gap:4px}.paper-ai :deep(.p-textarea){padding:6px 7px}}
+@media(pointer:coarse){.paper-ai{--a-control-height-sm:32px}}
+@container(max-width:350px){.paper-ai__steps{grid-template-columns:repeat(2,minmax(0,1fr))}.paper-ai__workbench,.paper-ai__settings,.paper-ai__composer,.paper-ai__scope,.paper-ai__submit,.paper-ai__result{padding:7px}}
 @container(min-width:680px){.paper-ai__settings-body{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}.paper-ai__settings-body>p,.paper-ai__settings-body>small,.paper-ai__settings-body>.paper-ai-vault{grid-column:1/-1}.paper-ai__composer{grid-template-columns:repeat(2,minmax(0,1fr))}.paper-ai__composer>.paper-ai__section-title,.paper-ai__composer>.p-field:last-child,.paper-ai__composer>p,.paper-ai__composer>.paper-ai__row{grid-column:1/-1}.paper-ai__steps span{font-size:12px}}
 
-.paper-ai__navigation{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:4px;flex-wrap:wrap;background:var(--a-color-bg,#fff);padding:4px;border:1px solid var(--a-color-border-soft,#ddd);border-radius:7px}
-.paper-ai__navigation button{display:flex;align-items:center;gap:4px;flex:1;min-width:0;font-size:12px;padding-inline:5px;white-space:nowrap}
-.paper-ai__settings,.paper-ai__composer,.paper-ai__result,.paper-ai__activity-anchor{scroll-margin-top:46px}
+.paper-ai__navigation{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:3px;flex-wrap:wrap;background:var(--a-color-bg,#fff);padding:2px;border:1px solid var(--a-color-border-soft,#ddd);border-radius:7px}
+.paper-ai__navigation button{display:flex;align-items:center;gap:3px;flex:1;min-width:0;font-size:11px;padding-inline:4px;white-space:nowrap}
+.paper-ai__settings,.paper-ai__composer,.paper-ai__result,.paper-ai__activity-anchor{scroll-margin-top:38px}
 .paper-ai__review-nav,.paper-ai__review-file-heading{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
 .paper-ai__review-nav strong{flex:1;font-size:12px}
 .paper-ai__review-nav button{font-size:11px}

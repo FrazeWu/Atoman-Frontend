@@ -1,18 +1,19 @@
 <template>
   <div class="papers-latex-editor">
-    <div class="latex-editor-tools">
-      <PButton size="sm" variant="secondary" type="button" title="Ctrl/Cmd + F" @click="find">查找替换</PButton>
-      <PButton size="sm" variant="secondary" v-if="collaborativeText" type="button" title="Ctrl/Cmd + Z" :disabled="readonly||!canUndo" @click="runUndo(false)">撤销</PButton>
-      <PButton size="sm" variant="secondary" v-if="collaborativeText" type="button" title="Ctrl/Cmd + Shift + Z" :disabled="readonly||!canRedo" @click="runUndo(true)">重做</PButton>
-      <PButton size="sm" variant="secondary" type="button" title="Ctrl + Space" :disabled="readonly" @click="complete">命令补全</PButton>
+    <div ref="editorRoot" class="latex-editor-host" aria-label="LaTeX 源码编辑器" />
+    <div class="latex-editor-tools" aria-label="源码编辑工具">
+      <PButton aria-label="查找替换" size="sm" variant="secondary" type="button" title="Ctrl/Cmd + F" @click="find"><Search :size="14" aria-hidden="true"/><span class="latex-editor-tool-label">查找替换</span></PButton>
+      <PButton aria-label="撤销" size="sm" variant="secondary" v-if="collaborativeText" type="button" title="Ctrl/Cmd + Z" :disabled="readonly||!canUndo" @click="runUndo(false)"><Undo2 :size="14" aria-hidden="true"/><span class="latex-editor-tool-label">撤销</span></PButton>
+      <PButton aria-label="重做" size="sm" variant="secondary" v-if="collaborativeText" type="button" title="Ctrl/Cmd + Shift + Z" :disabled="readonly||!canRedo" @click="runUndo(true)"><Redo2 :size="14" aria-hidden="true"/><span class="latex-editor-tool-label">重做</span></PButton>
+      <PButton aria-label="命令补全" size="sm" variant="secondary" type="button" title="Ctrl + Space" :disabled="readonly" @click="complete"><Braces :size="14" aria-hidden="true"/><span class="latex-editor-tool-label">命令补全</span></PButton>
       <span>{{ position }}</span>
     </div>
-    <div ref="editorRoot" class="latex-editor-host" aria-label="LaTeX 源码编辑器" />
   </div>
 </template>
 
 <script setup lang="ts">
 import PButton from '@/components/ui/PButton.vue'
+import { Search, Undo2, Redo2, Braces } from 'lucide-vue-next'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Compartment, EditorState, Prec, StateEffect, StateField } from '@codemirror/state'
 import { EditorView, Decoration, type DecorationSet, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view'
@@ -221,7 +222,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.papers-latex-editor { display:flex;flex-direction:column; min-height: 0; height: 100%; overflow: hidden; background: var(--a-color-bg,#fff);color:var(--a-color-text,#20242c); }
+.papers-latex-editor { display:flex;flex-direction:column; min-height: 0; height: 100%; overflow: hidden; background: var(--a-color-bg,#fff);color:var(--a-color-text,#20242c);container:papers-editor / inline-size; }
 .papers-latex-editor :deep(.cm-editor) { height: 100%; min-height: 0; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 13px; line-height: 1.7; }
 .papers-latex-editor :deep(.cm-scroller) { overflow: auto; }
 .papers-latex-editor :deep(.cm-gutters) { border-right:1px solid var(--a-color-border-soft,#e5e7eb);background:var(--a-color-bg-soft,#f1f3f5);color:var(--a-color-text-secondary,#64748b); }
@@ -231,8 +232,12 @@ onBeforeUnmount(() => {
 .papers-latex-editor :deep(.papers-remote-cursor){position:relative;display:inline-block;width:0;height:1.15em;border-left:2px solid;vertical-align:text-bottom;pointer-events:none;z-index:3}
 .papers-latex-editor :deep(.papers-remote-cursor-label){position:absolute;left:-2px;bottom:100%;font:10px/1.3 sans-serif;color:white;border-radius:3px 3px 3px 0;padding:2px 4px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
 .latex-editor-host{flex:1;min-height:0;overflow:hidden}
-.latex-editor-tools{display:flex;align-items:center;flex-wrap:wrap;gap:5px;padding:5px 8px;border-bottom:1px solid var(--a-color-border-soft,#ddd);font-size:11px}
-.latex-editor-tools span{margin-left:auto;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--a-color-text-secondary,#64748b)}
+.latex-editor-tools{--a-control-height-sm:25px;display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:2px 6px;border-top:1px solid var(--a-color-border-soft,#ddd);font-size:11px;flex-shrink:0;background:var(--a-color-bg,#fff)}
+.latex-editor-tools :deep(.p-button){padding:0 5px;gap:4px;font-size:11px}
+.latex-editor-tools :deep(.p-button svg){flex:none}
+@container papers-editor (max-width:340px){.latex-editor-tool-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.latex-editor-tools :deep(.p-button){min-width:26px;padding-inline:4px}}
+@media(pointer:coarse){.latex-editor-tools{--a-control-height-sm:32px}}
+.latex-editor-tools>span{margin-left:auto;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--a-color-text-secondary,#64748b)}
 .papers-latex-editor :deep(.cm-panel){font-size:12px;overflow-wrap:anywhere}
 .papers-latex-editor :deep(.cm-tooltip-autocomplete){max-width:100%;z-index:30}
 @media(prefers-color-scheme:dark){.papers-latex-editor{--papers-command:#82bfff;--papers-definition:#d4a4fa;--papers-comment:#a6c99b;--papers-bracket:#e2c28c;--papers-operator:#eab0d8}}

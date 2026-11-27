@@ -1,21 +1,21 @@
 <template>
   <main class="papers-workspace" :class="{ 'papers-workspace--compact': compactLayout, 'papers-workspace--rail': desktopRail, 'papers-workspace--focus': focusMode }">
     <header class="papers-workspace__header">
-      <RouterLink to="/papers" title="返回我的论文">‹ 我的论文</RouterLink>
+      <RouterLink to="/papers" class="papers-workspace__back" title="返回我的论文" aria-label="返回我的论文"><ArrowLeft :size="16" aria-hidden="true"/><span>我的论文</span></RouterLink>
       <div class="papers-workspace__project-title"><strong :title="project?.name">{{ project?.name || '论文工作台' }}</strong><span v-if="project" class="papers-workspace__project-meta">v{{project.head_revision}} · {{roleLabel}}</span></div>
       <div class="papers-workspace__layout-tools">
         <PButton size="sm" variant="ghost" type="button" class="papers-workspace__quick-button" aria-label="快速打开文件" title="快速打开文件 (Ctrl/Cmd+P)" :disabled="!canSwitchWorkspaceFile" @click="openQuick"><Search :size="15" aria-hidden="true" /></PButton>
         <PButton v-if="!compactLayout" size="sm" variant="ghost" type="button" class="papers-workspace__focus-button" :aria-label="focusMode?'退出专注模式':'专注模式'" :title="focusMode?'退出专注模式':'专注模式'" :aria-pressed="focusMode" :disabled="!focusMode&&(auxiliaryOpen||collaborationOpen||!project||loading||!!error)" @click="toggleFocus"><Maximize2 v-if="!focusMode" :size="15" aria-hidden="true" /><Minimize2 v-else :size="15" aria-hidden="true" /></PButton>
-        <PButton size="sm" variant="secondary" type="button" title="显示或隐藏文件栏" :aria-pressed="showFiles" @click="toggleFilePane">文件栏</PButton>
-        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'split'&&!sideToolOpen" v-if="!compactLayout" @click="setWorkspaceLayout('split')">分栏</PButton>
-        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'editor'&&!sideToolOpen" @click="setWorkspaceLayout('editor')">源码</PButton>
-        <PButton size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'pdf'&&!sideToolOpen" @click="setWorkspaceLayout('pdf')">预览</PButton>
+        <PButton class="papers-workspace__layout-switch" aria-label="文件栏" size="sm" variant="secondary" type="button" title="显示或隐藏文件栏" :aria-pressed="showFiles" @click="toggleFilePane"><PanelLeft :size="15" aria-hidden="true"/><span class="papers-workspace__action-label">文件栏</span></PButton>
+        <PButton class="papers-workspace__layout-switch" aria-label="分栏" title="同时显示源码与 PDF" size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'split'&&!sideToolOpen" v-if="!compactLayout" @click="setWorkspaceLayout('split')"><Columns2 :size="15" aria-hidden="true"/><span class="papers-workspace__action-label">分栏</span></PButton>
+        <PButton class="papers-workspace__layout-switch" aria-label="源码" title="仅显示源码" size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'editor'&&!sideToolOpen" @click="setWorkspaceLayout('editor')"><FileCode :size="15" aria-hidden="true"/><span class="papers-workspace__action-label">源码</span></PButton>
+        <PButton class="papers-workspace__layout-switch" aria-label="预览" title="仅显示 PDF 预览" size="sm" variant="secondary" type="button" :aria-pressed="layoutMode === 'pdf'&&!sideToolOpen" @click="setWorkspaceLayout('pdf')"><FileOutput :size="15" aria-hidden="true"/><span class="papers-workspace__action-label">预览</span></PButton>
         <PButton v-if="ownerAccess&&(sideToolOpen||layoutMode==='editor')" type="button" size="sm" :disabled="!compileEnabled||compiling||saving||switchingFile||navigating||uploadBusy||snapshotMutating||memberMutating||hasActiveCompile||!project||aiRepairActive||aiApplying||(collaborationOpen&&collaborationRevision===null)" @click="compileAndShowPDF">{{hasActiveCompile?'编译中':'编译'}}</PButton>
       </div>
 
       <span class="papers-workspace__status papers-workspace__save-state" role="status" :title="saveStatus"><span class="papers-workspace__save-dot" :class="{saved:saveStatus==='已保存'}" aria-hidden="true"></span>{{ saveStatus }}</span>
       <div class="papers-workspace__header-actions"><PButton v-if="ownerAccess" type="button" size="sm" :disabled="collaborationOpen||memberMutating||snapshotMutating" @click="toggleTool('members')">分享</PButton>
-      <PButton v-if="ownerAccess" type="button" size="sm" variant="secondary" :disabled="collaborationOpen || exporting || saving" @click="exportProject">{{ exporting ? '正在导出…' : '导出 ZIP' }}</PButton></div>
+      <PButton v-if="ownerAccess" type="button" size="sm" variant="secondary" :disabled="collaborationOpen || exporting || saving" class="papers-workspace__export" :aria-label="exporting?'正在导出…':'导出 ZIP'" title="导出 ZIP" @click="exportProject"><Download :size="15" aria-hidden="true"/><span class="papers-workspace__action-label">{{ exporting ? '正在导出…' : '导出 ZIP' }}</span></PButton></div>
     </header>
         <nav v-if="project&&!loading&&!error&&!collaborationOpen&&!focusMode" class="papers-workspace__toolnav" aria-label="项目工具"><div class="papers-workspace__toolgroup" aria-label="写作工具">
           <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='ai'" @click="toggleTool('ai')" aria-label="AI 助手" title="AI 助手"><Sparkles :size="14" aria-hidden="true" /> AI 助手</PButton>
@@ -37,14 +37,13 @@
     <div v-else ref="workspaceRoot" class="papers-workspace__content" :class="{ 'files-hidden': !showFiles, 'editor-only': layoutMode === 'editor', 'pdf-only': layoutMode === 'pdf', 'ai-expanded': aiPanelOpen&&aiExpanded, 'tool-open': sideToolOpen, 'ai-open': aiPanelOpen, 'ai-collapsed': aiPanelOpen&&aiCollapsed }" :style="{ '--preview-grow': previewWidth, '--editor-grow': 100-previewWidth, '--files-width': filesWidth+'px' }">
       <button v-if="compactLayout && showFiles" type="button" class="papers-workspace__files-backdrop" aria-label="关闭文件栏" @click="showFiles=false" />
       <aside class="papers-workspace__files" :class="{'papers-workspace__files--dropping':draggingFiles}" aria-label="论文文件" @dragenter="onFigureDragOver" @dragover="onFigureDragOver" @dragleave="onFigureDragLeave" @drop="onFigureDrop">
-        <div class="papers-workspace__files-heading"><h2>项目文件 <small>{{ files.length }}</small></h2><PButton size="sm" variant="secondary" type="button" class="papers-workspace__close-files" aria-label="关闭文件面板" @click="showFiles=false"><PanelLeftClose :size="15" aria-hidden="true" /></PButton></div>
+        <div class="papers-workspace__files-heading"><h2>项目文件 <small>{{ files.length }}</small></h2><div v-if="ownerAccess&&!collaborationOpen" class="papers-workspace__file-actions">
+          <PButton size="sm" variant="secondary" type="button" aria-label="新建文本文件" title="新建文本文件" :aria-expanded="fileAction==='create'" @click="fileAction=fileAction==='create'?'':'create';managedFile=null"><Plus :size="14" aria-hidden="true" /><span class="papers-workspace__sr">新建</span></PButton>
+          <PButton size="sm" variant="secondary" type="button" aria-label="上传文件" title="上传文件" :aria-expanded="fileAction==='upload'" @click="fileAction=fileAction==='upload'?'':'upload';managedFile=null"><Upload :size="14" aria-hidden="true" /><span class="papers-workspace__sr">上传</span></PButton>
+        </div><PButton size="sm" variant="secondary" type="button" class="papers-workspace__close-files" aria-label="关闭文件面板" @click="showFiles=false"><PanelLeftClose :size="15" aria-hidden="true" /></PButton></div>
         <div class="papers-workspace__files-toolbar">
           <PInput v-model.trim="fileFilter" aria-label="筛选项目文件" placeholder="搜索文件…" />
           <PButton size="sm" variant="secondary" v-if="fileFilter" type="button" aria-label="清空文件筛选" @click="fileFilter=''">×</PButton>
-        </div>
-        <div v-if="ownerAccess&&!collaborationOpen" class="papers-workspace__file-actions">
-          <PButton size="sm" variant="secondary" type="button" title="新建文本文件" :aria-expanded="fileAction==='create'" @click="fileAction=fileAction==='create'?'':'create';managedFile=null"><Plus :size="14" aria-hidden="true" /> 新建</PButton>
-          <PButton size="sm" variant="secondary" type="button" title="上传文件" :aria-expanded="fileAction==='upload'" @click="fileAction=fileAction==='upload'?'':'upload';managedFile=null"><Upload :size="14" aria-hidden="true" /> 上传</PButton>
         </div>
         <div class="papers-workspace__tree" aria-label="文件列表">
         <p v-if="!visibleTreeRows.length" class="papers-workspace__tree-empty">没有匹配的文件</p>
@@ -95,12 +94,12 @@
         </nav>
         <div class="papers-workspace__editor-header">
           <span :title="activeFile?.path">{{ activeFile?.path || '请选择文件' }}</span>
-          <PButton size="sm" variant="ghost" v-if="!collaborationOpen" type="button" class="papers-workspace__sync" :aria-expanded="outlineOpen" @click="toggleOutline">大纲</PButton>
-          <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" title="定位当前源码行对应的 PDF 内容 (Ctrl/Cmd+Shift+J)" :disabled="!syncReady || activeFile?.kind !== 'text'" @click="jumpToPDF">定位 PDF →</PButton>
-          <PButton v-if="writeAccess&&!collaborationOpen" type="button" size="sm" variant="secondary" :disabled="!activeFile || activeFile.kind !== 'text' || saving" @click="saveNow">保存</PButton>
+          <PButton size="sm" variant="ghost" v-if="!collaborationOpen" type="button" class="papers-workspace__sync papers-workspace__editor-icon" aria-label="大纲" title="项目大纲" :aria-expanded="outlineOpen" @click="toggleOutline"><ListTree :size="15" aria-hidden="true"/><span class="papers-workspace__sr">大纲</span></PButton>
+          <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync papers-workspace__editor-icon" aria-label="定位 PDF" title="定位当前源码行对应的 PDF 内容 (Ctrl/Cmd+Shift+J)" :disabled="!syncReady || activeFile?.kind !== 'text'" @click="jumpToPDF"><ArrowRight :size="15" aria-hidden="true"/><span class="papers-workspace__sr">定位 PDF →</span></PButton>
+          <PButton v-if="writeAccess&&!collaborationOpen" type="button" size="sm" variant="secondary" :disabled="!activeFile || activeFile.kind !== 'text' || saving" class="papers-workspace__editor-icon" aria-label="保存" title="保存源码 (Ctrl/Cmd+S)" @click="saveNow"><Save :size="15" aria-hidden="true"/><span class="papers-workspace__sr">保存</span></PButton>
           <PButton v-if="collaborationOpen&&ownerAccess" type="button" size="sm" variant="secondary" :disabled="!aiSharedState?.ready||snapshotMutating||compiling" @click="toggleTool('ai')">AI 助手</PButton>
           <PButton v-if="collaborationOpen&&ownerAccess" type="button" size="sm" variant="secondary" :disabled="snapshotMutating||compiling" @click="toggleTool('snapshots')">项目快照</PButton>
-          <PButton v-if="!collaborationOpen&&activeFile?.kind==='text'&&accountId" type="button" size="sm" variant="secondary" :disabled="!canStartCollaboration" :title="collaborationGateMessage || undefined" @click="startCollaboration">实时协作</PButton>
+          <PButton v-if="!collaborationOpen&&activeFile?.kind==='text'&&accountId" type="button" size="sm" variant="secondary" :disabled="!canStartCollaboration" :title="collaborationGateMessage || '实时协作'" class="papers-workspace__editor-collab" aria-label="实时协作" @click="startCollaboration"><Users :size="14" aria-hidden="true"/><span>实时协作</span></PButton>
         </div>
         <p v-if="!collaborationOpen&&collaborationScope&&collaborationGateMessage" class="papers-workspace__stale" role="status">{{ collaborationGateMessage }} <PButton size="sm" variant="ghost" v-if="collaborationGate.scope===collaborationScope&&collaborationGate.state==='unavailable'" type="button" class="papers-workspace__sync" :disabled="navigating||switchingFile" @click="checkCollaborationCapability">重新检查</PButton></p>
 
@@ -125,8 +124,8 @@
         <div class="papers-workspace__ai-heading">
           <Sparkles :size="16" aria-hidden="true"/><strong>AI 助手</strong>
           <span class="papers-workspace__ai-subtitle" :title="aiFile.path">{{aiFile.path}}</span>
-          <PButton v-if="!aiCollapsed" size="sm" variant="ghost" type="button" :aria-pressed="aiExpanded" @click="aiExpanded=!aiExpanded">{{aiExpanded?'恢复分栏':'展开工作区'}}</PButton>
-          <PButton size="sm" variant="ghost" type="button" :aria-expanded="!aiCollapsed" @click="toggleAICollapse">{{aiCollapsed?'展开 AI':'收起 AI'}}</PButton>
+          <PButton v-if="!aiCollapsed" size="sm" variant="ghost" type="button" class="papers-workspace__ai-icon" :aria-label="aiExpanded?'恢复分栏':'展开工作区'" :title="aiExpanded?'恢复分栏':'展开工作区'" :aria-pressed="aiExpanded" @click="aiExpanded=!aiExpanded"><Minimize2 v-if="aiExpanded" :size="15" aria-hidden="true"/><Maximize2 v-else :size="15" aria-hidden="true"/><span class="papers-workspace__sr">{{aiExpanded?'恢复分栏':'展开工作区'}}</span></PButton>
+          <PButton size="sm" variant="ghost" type="button" class="papers-workspace__ai-icon" :aria-label="aiCollapsed?'展开 AI':'收起 AI'" :title="aiCollapsed?'展开 AI':'收起 AI'" :aria-expanded="!aiCollapsed" @click="toggleAICollapse"><ChevronDown :size="15" :style="{transform:aiCollapsed?'rotate(180deg)':undefined}" aria-hidden="true"/><span class="papers-workspace__sr">{{aiCollapsed?'展开 AI':'收起 AI'}}</span></PButton>
           <PButton size="sm" variant="ghost" type="button" :disabled="aiApplying" aria-label="关闭 AI" title="关闭并清除当前未保存的 AI 会话" @click="closeTool"><X :size="15" aria-hidden="true"/></PButton>
         </div>
         <div v-show="!aiCollapsed" class="papers-workspace__ai-scroll">
@@ -279,7 +278,7 @@ import PCheckbox from '@/components/ui/PCheckbox.vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
-import { ChevronDown, ChevronRight, Folder, FolderOpen, FileCode2, FileText, Image as ImageIcon, Plus, Upload, PanelLeftClose, Sparkles, Search, BookOpen, History, Layers, GitBranch, ClipboardCheck, FileClock, Users, RefreshCw, X, Maximize2, Minimize2, ArrowLeft } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, Folder, FolderOpen, FileCode2, FileText, Image as ImageIcon, Plus, Upload, PanelLeftClose, Sparkles, Search, BookOpen, History, Layers, GitBranch, ClipboardCheck, FileClock, Users, RefreshCw, X, Maximize2, Minimize2, ArrowLeft, ArrowRight, PanelLeft, Columns2, FileCode, FileOutput, Download, Save, ListTree } from 'lucide-vue-next'
 import {useAuthStore} from '@/stores/auth'
 import PaperSnapshotTools from '@/components/papers/PaperSnapshotTools.vue'
 import PaperDraftTools from '@/components/papers/PaperDraftTools.vue'

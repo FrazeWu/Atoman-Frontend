@@ -187,8 +187,9 @@ function cancelRenders(){
  pending.clear()
 }
 function scaleFor(p:Page){
- const w=Math.max(120,(scroller.value?.clientWidth||480)-28)
- const h=Math.max(140,(scroller.value?.clientHeight||650)-24)
+ // Match the compact scroller's 8px padding; reserve 4px for rounding.
+ const w=Math.max(120,(scroller.value?.clientWidth||480)-20)
+ const h=Math.max(140,(scroller.value?.clientHeight||650)-16)
  const scale=zoom.value==='width'? w/p.naturalWidth:zoom.value==='page'?Math.min(w/p.naturalWidth,h/p.naturalHeight):Number(zoom.value)/100
  return Math.max(.1,Math.min(3,scale||1))
 }
@@ -441,12 +442,12 @@ defineExpose({jump,page,scroller,showPosition,currentPosition})
  .paper-pdf__zoom-group :deep(.p-select-trigger){min-width:0;white-space:nowrap;padding-inline:4px;gap:2px}
 }
 @media(pointer:coarse){.paper-pdf__toolbar{--a-control-height-sm:32px}.paper-pdf__toolbar :deep(.p-button){min-width:30px}}
-.paper-pdf__scroll{min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;padding:12px;box-sizing:border-box;background:var(--a-color-bg-soft,#e4e8ed);scrollbar-gutter:stable}
-.paper-pdf__sheet{position:relative;box-sizing:content-box;margin:0 auto 12px;background:white;box-shadow:0 2px 7px #0002;overflow:hidden;flex-shrink:0}
+.paper-pdf__scroll{min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;padding:8px;box-sizing:border-box;background:var(--a-color-bg-soft,#e4e8ed);scrollbar-gutter:stable}
+.paper-pdf__sheet{position:relative;box-sizing:content-box;margin:0 auto 8px;background:white;box-shadow:0 2px 7px #0002;overflow:hidden;flex-shrink:0}
 .paper-pdf__sheet canvas{display:block;width:100%;height:100%;background:white}
 .paper-pdf__page-loading,.paper-pdf__page-error{position:absolute;top:12px;left:12px;font-size:12px;color:#64748b;background:#fff;padding:5px}
 .paper-pdf__notice,.paper-pdf__footer{padding:6px 10px;font-size:12px;flex-shrink:0;color:var(--a-color-text-secondary,#64748b);border-bottom:1px solid var(--a-color-border-soft,#d8dde3)}
-.paper-pdf__footer{display:flex;justify-content:space-between;border-bottom:0;border-top:1px solid var(--a-color-border-soft,#d8dde3)}
+.paper-pdf__footer{display:flex;justify-content:space-between;padding:3px 7px;border-bottom:0;border-top:1px solid var(--a-color-border-soft,#d8dde3)}
 .paper-pdf__placeholder{padding:32px 8px;text-align:center;color:#475569;font-size:13px}
 .paper-pdf__sync-marker{position:absolute;pointer-events:none;transform:translate(-50%,-50%);width:76px;max-width:30%;height:17px;border:2px solid #278454;border-radius:3px;background:#64be8840;box-shadow:0 0 0 3px #69b48a25}
 .paper-pdf__toolbar button[aria-pressed=true]{background:var(--a-color-bg-subtle,#e7edf3);font-weight:600}

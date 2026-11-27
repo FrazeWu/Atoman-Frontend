@@ -40,7 +40,7 @@ export const relatedLinks: readonly RelatedLink[] = [
 	},
 	{
 		label: "甲骨文",
-		href: "https://oracle.fazong.eu.org/",
+		href: "https://oracle.atoman.org/",
 		action: "oraclegraph",
 	},
 ] as const;

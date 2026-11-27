@@ -443,6 +443,24 @@ async function loadAlbum(apiBase: string, id: string, fetcher: Fetcher) {
 	);
 }
 
+const recommendedTitleMaxCharacters = 60;
+
+function songPageTitle(title: string, artists: string[], albumName: string, trackPosition: string): string {
+	const songIdentity = `《${title}》${artists.length ? ` - ${artists.join("、")}` : ""}`;
+	const albumIdentity = albumName && albumName !== title ? `《${albumName}》` : "";
+	const trackLabel = albumName ? trackPosition : "";
+	const candidates = [
+		[songIdentity, "歌曲", albumIdentity, trackLabel, "Atoman"],
+		[songIdentity, "歌曲", albumIdentity, "Atoman"],
+		[songIdentity, albumIdentity, "Atoman"],
+		[songIdentity, "Atoman"],
+		[`《${title}》`, "Atoman"],
+	].map((parts) => parts.filter(Boolean).join(" | "));
+
+	return candidates.find((candidate) => candidate.length <= recommendedTitleMaxCharacters)
+		?? candidates[candidates.length - 1];
+}
+
 async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 	const detail = record(
 		await getJson(`${apiBase}/music/songs/${encodeURIComponent(id)}`, fetcher),
@@ -499,13 +517,7 @@ async function loadSong(apiBase: string, id: string, fetcher: Fetcher) {
 	});
 	return content(
 		`/music/song/${encodeURIComponent(canonicalId)}`,
-		[
-			`《${title}》${artists.length ? ` - ${artists.join("、")}` : ""}`,
-			"歌曲",
-			albumName && albumName !== title ? `《${albumName}》` : "",
-			albumName ? trackPosition : "",
-			"Atoman",
-		].filter(Boolean).join(" | "),
+		songPageTitle(title, artists, albumName, trackPosition),
 		description,
 		{
 			"@type": "MusicRecording",

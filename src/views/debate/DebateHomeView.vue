@@ -127,7 +127,7 @@
     </div>
 
     <!-- Create Sheet (migrated from PModal) -->
-    <PSheet
+    <PSheet player-presentation="topbar"
       :show="showCreateModal"
       title="新建辩题"
       mode="full"

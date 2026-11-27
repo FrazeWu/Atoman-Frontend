@@ -95,7 +95,7 @@ defineEmits<{
   display: flex;
   flex-direction: row;
   align-items: center;
-  height: 4.5rem;
+  height: var(--a-player-height);
   width: auto !important;
   max-width: none;
   overflow: visible;
@@ -107,8 +107,8 @@ defineEmits<{
 .player-mini-cover {
   position: relative;
   display: block;
-  width: 4.5rem;
-  height: 4.5rem;
+  width: var(--a-player-height);
+  height: var(--a-player-height);
   padding: 0;
   border: 0;
   border-top: 1px solid var(--a-color-border-soft);
@@ -207,7 +207,7 @@ defineEmits<{
   align-items: center;
   justify-content: center;
   width: 28px;
-  height: 4.5rem;
+  height: var(--a-player-height);
   padding: 0;
   border: 0;
   border-top: 1px solid var(--a-color-border-soft);
@@ -272,12 +272,12 @@ defineEmits<{
 
 @media (min-width: 1440px) {
   .player-mini-cover {
-    width: 4.5rem;
-    height: 4.5rem;
+    width: var(--a-player-height);
+    height: var(--a-player-height);
   }
 
   .player-mini-expand {
-    height: 4.5rem;
+    height: var(--a-player-height);
     width: 28px;
   }
 }

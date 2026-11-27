@@ -178,3 +178,32 @@ test.describe("Blog", () => {
 		).toBeVisible();
 	});
 });
+
+
+test("adaptive player never covers the Studio blog posting workbench",async({page,baseURL})=>{
+  test.setTimeout(60000);
+  expect(new URL(baseURL!).hostname).toMatch(/^(localhost|127\.0\.0\.1)$/);
+  await page.setViewportSize({width:1440,height:900});
+  await page.routeWebSocket("**/*",socket=>socket.close());
+  await page.route("**/api/v1/**",route=>route.fulfill({status:200,json:{data:[]}}));
+  await mockBlogAuthor(page);
+  await page.addInitScript(()=>{
+    const song={id:"adaptive-blog-fixture",title:"Blog posting fixture",artist:"Synthetic artist",audio_url:location.origin+"/adaptive-blog.wav",duration:120};
+    localStorage.setItem("playbackState",JSON.stringify({song,queue:[song],currentTime:12,volume:.5}));
+  });
+  await page.route("**/adaptive-blog.wav",route=>route.fulfill({status:404,body:"synthetic paused fixture"}));
+  await page.goto("/studio/blog/new");
+  await expect(page.locator(".editor-shell")).toBeVisible({timeout:30000});
+  await expect(page.locator("html")).toHaveAttribute("data-player-presentation","topbar");
+  await expect.poll(()=>page.locator("html").evaluate(el=>getComputedStyle(el).getPropertyValue("--a-player-reserved-height").trim())).toBe("0px");
+  await expect(page.locator(".player-shell > .player:visible,.player-shell > .player-mini-window:visible")).toHaveCount(0);
+  const publish=page.getByRole("button",{name:"发布",exact:true});
+  await expect(publish).toBeVisible();
+  await page.getByRole("button",{name:"音乐播放控制",exact:true}).click();
+  await expect(page.getByRole("region",{name:"当前音频播放"})).toContainText("Blog posting fixture");
+  await page.getByRole("button",{name:"关闭音乐控制"}).click();
+  const editor=page.locator(".editor-shell .cm-content").first();
+  await editor.click();
+  await page.keyboard.insertText("Synthetic posting layout test");
+  await expect(editor).toContainText("Synthetic posting layout test");
+});

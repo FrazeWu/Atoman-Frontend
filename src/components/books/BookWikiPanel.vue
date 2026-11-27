@@ -5,7 +5,7 @@
         {{ buttonText || `${label}资料与修订历史` }}
       </PButton>
     </slot>
-    <PSheet :show="opened" :title="`${label}资料`" mode="full" teleport-mobile @close="requestClose">
+    <PSheet player-presentation="topbar" :show="opened" :title="`${label}资料`" mode="full" teleport-mobile @close="requestClose">
       <section class="private-books private-books__editor">
         <p class="wiki-notice-tip">登录用户修改后直接公开，无需审核。保存时检查基础修订，冲突不会自动覆盖。</p>
         <p v-if="loading" role="status" class="wiki-status">正在加载资料…</p>

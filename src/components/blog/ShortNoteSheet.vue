@@ -214,7 +214,7 @@ watch(noteId, () => void loadNote(), { immediate: true })
 </script>
 
 <template>
-  <PSheet
+  <PSheet player-presentation="topbar"
     :show="sheets.isActive(layer.key)"
     :title="layer.title || '短笺'"
     mode="full"

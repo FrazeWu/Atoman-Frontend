@@ -115,7 +115,7 @@ async function merge() {
 </script>
 
 <template>
-  <PSheet
+  <PSheet player-presentation="background"
     :show="isOpen"
     :title="sheetTitle"
     mode="full"

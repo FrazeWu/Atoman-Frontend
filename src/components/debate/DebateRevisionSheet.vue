@@ -1,5 +1,5 @@
 <template>
-  <PSheet
+  <PSheet player-presentation="topbar"
     :show="show"
     :title="debateTitle ? `${debateTitle} · 版本` : '辩题版本'"
     mode="partial"

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { defineAsyncComponent } from 'vue'
+import { usePlayerPresentationLease } from '@/composables/music/usePlayerPresentation'
 import { useMusicDrawers } from '@/composables/useMusicDrawers'
 
 const { renderLayers } = useMusicDrawers()
+usePlayerPresentationLease(()=>renderLayers.value.some(layer=>layer.kind==='action'&&['merge_artist','merge_album','link_album'].includes(layer.payload.action))?'background':'topbar',()=>renderLayers.value.some(layer=>['creation','editor','action'].includes(layer.kind)),true)
 const AlbumDrawer = defineAsyncComponent(() => import('./AlbumDrawer.vue'))
 const ArtistDrawer = defineAsyncComponent(() => import('./ArtistDrawer.vue'))
 const MusicCreationFlowDrawer = defineAsyncComponent(() => import('./MusicCreationFlowDrawer.vue'))

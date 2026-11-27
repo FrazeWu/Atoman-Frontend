@@ -1055,7 +1055,7 @@ async function completeCreation() {
 
 <template>
   <PToast v-model="toastVisible" :message="toastMessage" />
-  <PSheet
+  <PSheet player-presentation="topbar"
     :show="isOpen"
     :title="sheetTitle"
     mode="full"

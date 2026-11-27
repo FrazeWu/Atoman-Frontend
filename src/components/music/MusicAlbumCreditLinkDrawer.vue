@@ -171,7 +171,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-	<PSheet
+	<PSheet player-presentation="background"
 		:show="props.layer ? isLayerActive(props.layer.key) : false"
 		title="关联-专辑"
 		mode="full"

@@ -2,7 +2,7 @@
   <div v-if="player.currentSong" class="player-shell">
     <Transition name="player-display" appear>
       <div
-        v-if="playerDisplayMode === 'full'"
+        v-if="effectiveDisplayMode === 'full'"
         class="player"
         data-player-mode="full"
         :class="{ 'is-auto-hidden': !effectivePinned && !playerHovered, 'is-touch-dragging': isTouchDragging }"
@@ -127,7 +127,7 @@
       </div>
 
       <AudioPlayerMini
-        v-else
+        v-else-if="effectiveDisplayMode==='cover'"
         :cover-url="player.currentSong.cover_url"
         :cover-fallback="coverFallback"
         :song-title="player.currentSong.title"
@@ -139,6 +139,9 @@
         @expand="setPlayerDisplayMode('full')"
       />
     </Transition>
+    <Teleport v-if="effectiveDisplayMode==='topbar'||effectiveDisplayMode==='background'" to="#atoman-player-topbar">
+      <AudioPlayerTopbar :mode="effectiveDisplayMode"/>
+    </Teleport>
   </div>
 
   <Transition name="slide-up" appear>
@@ -192,6 +195,7 @@ import { useRoute } from "vue-router";
 import { ChevronRight } from 'lucide-vue-next';
 import { ApiErrorResponseError } from "@/api/client";
 import { usePlayerStore } from "@/stores/player";
+import { usePlayerPresenceStore } from "@/stores/playerPresence";
 import { useAuthStore } from "@/stores/auth";
 import { useAudioPlayerChrome } from "@/composables/useAudioPlayerChrome";
 import { useMusicDrawers } from "@/composables/useMusicDrawers";
@@ -208,6 +212,8 @@ import AudioPlayerTrackInfo from "@/components/music/player/AudioPlayerTrackInfo
 import AudioPlayerControlsHub from "@/components/music/player/AudioPlayerControlsHub.vue";
 import AudioPlayerFeatureStrip from "@/components/music/player/AudioPlayerFeatureStrip.vue";
 import AudioPlayerMini from "@/components/music/AudioPlayerMini.vue";
+import AudioPlayerTopbar from "@/components/music/AudioPlayerTopbar.vue";
+import { usePlayerPresentation } from "@/composables/music/usePlayerPresentation";
 import AudioWaveformProgress from "@/components/music/AudioWaveformProgress.vue";
 import MusicLyricsPanel from "@/components/music/MusicLyricsPanel.vue";
 import AudioPlayerQueue from "@/components/music/AudioPlayerQueue.vue";
@@ -215,12 +221,16 @@ import CommentSideSheet from "@/components/comment/CommentSideSheet.vue";
 import PToast from "@/components/ui/PToast.vue";
 
 const player = usePlayerStore();
+const playerPresence=usePlayerPresenceStore();
+watch(()=>playerPresence.pauseRequest,()=>player.pausePlayback());
 const route = useRoute();
 const lyricsPanelRef = ref<{ requestClose: () => void } | null>(null);
 const { openAlbum, openArtist, openSong, state: musicDrawerState } = useMusicDrawers();
 const authStore = useAuthStore();
 const { requireLogin } = useLoginRedirect();
-const playerDisplayMode = ref<"full" | "cover">("full");
+const presentation=usePlayerPresentation();
+const playerDisplayMode = presentation?.preferredMode ?? ref<"full" | "cover">("full");
+const effectiveDisplayMode = presentation?.mode ?? playerDisplayMode;
 const commentsOpen = ref(false);
 const lyricsMode = ref<'player' | 'annotation'>('player');
 
@@ -245,6 +255,7 @@ watch(
 );
 
 async function setPlayerDisplayMode(mode: "full" | "cover") {
+  if(presentation && (effectiveDisplayMode.value==='topbar'||effectiveDisplayMode.value==='background'))return;
   playerDisplayMode.value = mode;
   if (mode === "full") {
     await nextTick();
@@ -252,6 +263,13 @@ async function setPlayerDisplayMode(mode: "full" | "cover") {
     updateMetaCollapse();
   }
 }
+
+watch(()=>presentation?.closePanels.value,(protectedMode)=>{
+  if(!protectedMode)return;
+  if(player.showLyrics)player.requestLyricsClose();
+  if(player.showQueue)player.showQueue=false;
+  commentsOpen.value=false;
+},{immediate:true});
 
 function closeLyricsPanel() {
   lyricsMode.value = 'player';
@@ -350,7 +368,7 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   });
   if (!shortcut) return;
   e.preventDefault();
-  if (shortcut === 'lyrics') player.toggleLyrics();
+  if (shortcut === 'lyrics') { if(effectiveDisplayMode.value==='full'||effectiveDisplayMode.value==='cover')player.toggleLyrics(); }
   else if (shortcut === 'toggle-play') player.togglePlay();
   else if (shortcut === 'previous') player.playPrevious();
   else if (shortcut === 'next') player.playNext();
@@ -381,7 +399,7 @@ const {
   revealPlayer,
   scheduleAutoHide,
   updateMetaCollapse,
-} = useAudioPlayerChrome(computed(() => player.isPinned), () => player.togglePinned());
+} = useAudioPlayerChrome(computed(() => player.isPinned), () => player.togglePinned(), !presentation);
 
 const artistText = computed(() => {
   if (!player.currentSong) return "未知艺术家";
@@ -585,7 +603,7 @@ watch(
   width: 100%;
   z-index: var(--a-z-player, 720);
   /* Contract requirement: z-index: var(--a-z-player-lyrics); */
-  height: 4.5rem;
+  height: var(--a-player-height);
   border: 0;
   border-top: 1px solid var(--a-color-border-soft);
   border-radius: 0;

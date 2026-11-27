@@ -44,7 +44,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 	papers: [
 		{ path: "/", component: () => import("@/views/papers/PapersHomeView.vue"), meta: { requiresAuth: true } },
 		{ path: "/invite", component: () => import("@/views/papers/PaperInviteView.vue"), meta: { restoreSession: true } },
-		{ path: "/:projectId", component: () => import("@/views/papers/PaperWorkspaceView.vue"), meta: { requiresAuth: true } },
+		{ path: "/:projectId", component: () => import("@/views/papers/PaperWorkspaceView.vue"), meta: { playerPresentation: "topbar", requiresAuth: true } },
 	],
 	blog: [
 		{
@@ -66,7 +66,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				{
 					path: "notes/:id/edit",
 					component: () => import("@/views/blog/ShortNoteComposerView.vue"),
-					meta: { requiresAuth: true },
+					meta: { playerPresentation: "topbar", requiresAuth: true },
 				},
 				{
 					path: "collections",
@@ -175,7 +175,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				{
 					path: "imports",
 					component: () => import("@/views/music/ImportsView.vue"),
-					meta: { requiresAuth: true },
+					meta: { playerPresentation: "topbar", requiresAuth: true },
 				},
 				{
 					path: "more",
@@ -224,11 +224,11 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 			children: [
 				{ path: "", component: booksHomeView, meta: { bookCatalog: true } },
 				{ path: "search", component: booksHomeView, meta: { bookCatalog: true } },
-				{ path: "new", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'create' } }, meta: { bookCatalog: true, requiresAuth: true } },
+				{ path: "new", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'create' } }, meta: { playerPresentation: "topbar", bookCatalog: true, requiresAuth: true } },
 				{ path: "work/:workId", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'work' } }, meta: { bookCatalog: true, restoreSession: true } },
-				{ path: "work/:workId/notes", component: () => import("@/views/books/BookWorkNotesView.vue"), meta: { requiresAuth: true } },
+				{ path: "work/:workId/notes", component: () => import("@/views/books/BookWorkNotesView.vue"), meta: { playerPresentation: "topbar", requiresAuth: true } },
 				{ path: "work/:workId/collections", component: () => import("@/views/books/BookNoteCollectionsView.vue"), meta: { requiresAuth: true } },
-				{ path: "work/:workId/collections/:collectionId", component: () => import("@/views/books/BookNoteCollectionEditorView.vue"), meta: { requiresAuth: true } },
+				{ path: "work/:workId/collections/:collectionId", component: () => import("@/views/books/BookNoteCollectionEditorView.vue"), meta: { playerPresentation: "topbar", requiresAuth: true } },
 				{ path: "note-shares/:shareKey", component: () => import("@/views/books/BookNoteShareView.vue") },
 				{ path: "shared-notes", component: () => import("@/views/books/BookNotePublicIndexView.vue") },
 				{ path: "edition/:editionId", components: { default: booksHomeView, overlay: bookCatalogSheet }, props: { overlay: { view: 'edition' } }, meta: { bookCatalog: true } },
@@ -247,8 +247,8 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 					path: "lists",
 					component: () => import("@/views/books/BookListsView.vue"),
 				},
-				{ path: "lists/new", component: () => import("@/views/books/BookListEditorView.vue"), meta: { requiresAuth: true } },
-				{ path: "lists/:listId/edit", component: () => import("@/views/books/BookListEditorView.vue"), meta: { requiresAuth: true } },
+				{ path: "lists/new", component: () => import("@/views/books/BookListEditorView.vue"), meta: { playerPresentation: "topbar", requiresAuth: true } },
+				{ path: "lists/:listId/edit", component: () => import("@/views/books/BookListEditorView.vue"), meta: { playerPresentation: "topbar", requiresAuth: true } },
 				{ path: "lists/:listId", component: () => import("@/views/books/BookListDetailView.vue") },
 				{
 					path: "notes",
@@ -263,19 +263,19 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 					path: "read/:workId/:assetId/:revisionId",
 					components: { default: booksHomeView, overlay: bookCatalogSheet },
 					props: { overlay: { view: 'reader' } },
-					meta: { bookCatalog: true, restoreSession: true },
+					meta: { playerPresentation: "topbar", bookCatalog: true, restoreSession: true },
 				},
 				{
 					path: "read/:assetId",
 					components: { default: booksHomeView, overlay: bookCatalogSheet },
 					props: { overlay: { view: 'private-reader' } },
-					meta: { bookCatalog: true, requiresAuth: true },
+					meta: { playerPresentation: "topbar", bookCatalog: true, requiresAuth: true },
 				},
 				{
 					path: "public-read/:assetId",
 					components: { default: booksHomeView, overlay: bookCatalogSheet },
 					props: { overlay: { view: 'public-reader' } },
-					meta: { bookCatalog: true },
+					meta: { playerPresentation: "topbar", bookCatalog: true },
 				},
 			],
 		},
@@ -357,7 +357,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				{
 					path: "new",
 					component: () => import("@/views/forum/ForumNewTopicView.vue"),
-					meta: {
+					meta: { playerPresentation: "topbar",
 						requiresAuth: true,
 						featureGate: { module: "forum", feature: "topic.create" },
 					},
@@ -373,7 +373,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 				{
 					path: "topic/:id/edit",
 					component: () => import("@/views/forum/ForumNewTopicView.vue"),
-					meta: { requiresAuth: true },
+					meta: { playerPresentation: "topbar", requiresAuth: true },
 				},
 			],
 		},
@@ -512,7 +512,7 @@ export const moduleFeatureRoutes: Record<ModuleRoomKey, RouteRecordRaw[]> = {
 						default: videoHomeView,
 						overlay: videoDetailRouteSheet,
 					},
-					meta: { routeOverlay: true },
+					meta: { routeOverlay: true, playerPresentation: "background" },
 				},
 			],
 		},

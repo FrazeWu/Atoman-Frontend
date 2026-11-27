@@ -1,5 +1,5 @@
 <template>
-  <PSheet :show="true" title="划线与批注" mode="full" teleport-mobile @close="requestClose">
+  <PSheet player-presentation="topbar" :show="true" title="划线与批注" mode="full" teleport-mobile @close="requestClose">
     <form class="highlight-editor" @submit.prevent="$emit('save', { color, style, note })">
       <p>仅本人可见 · 绑定当前文件版本</p>
       <blockquote>{{ draft.quote }}</blockquote>

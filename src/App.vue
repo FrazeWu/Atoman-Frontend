@@ -39,6 +39,7 @@ import PShortcutHints from '@/components/ui/PShortcutHints.vue'
 import PToastHost from '@/components/ui/PToastHost.vue'
 import PSafeLinkModal from '@/components/ui/PSafeLinkModal.vue'
 import { usePlayerPresenceStore } from '@/stores/playerPresence'
+import { providePlayerPresentation, resolvePlayerRoutePresentation } from '@/composables/music/usePlayerPresentation'
 import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 import { useSiteAccessStore } from '@/stores/siteAccess'
@@ -72,18 +73,21 @@ const hasSidebar = computed(() => route.matched.some((record) => record.meta.has
 const isAuthRoute = computed(() => route.matched.some((record) => record.meta.authLayout))
 const hasActiveTrack = computed(() => playerPresence.hasCurrentTrack)
 const showDeferredShell = ref(false)
+const presentation = providePlayerPresentation(computed(()=>resolvePlayerRoutePresentation(route)),hasActiveTrack)
 
-watch(hasActiveTrack, (active) => {
+watch([hasActiveTrack,presentation.mode], ([active,mode]) => {
   if (typeof document !== 'undefined') {
     if (active) {
       document.documentElement.dataset.playerActive = 'true'
-      document.documentElement.dataset.playerPinned = 'true'
+      document.documentElement.dataset.playerPinned = String(mode==='full'||mode==='cover')
+      document.documentElement.dataset.playerPresentation = mode
     } else {
       delete document.documentElement.dataset.playerActive
       delete document.documentElement.dataset.playerPinned
+      delete document.documentElement.dataset.playerPresentation
     }
   }
-}, { immediate: true })
+}, { immediate: true, flush: "sync" })
 
 const globalShortcuts = computed<KeyboardShortcut[]>(() => [
   { key: 'h', description: '聚焦侧边栏', handler: () => uiStore.focusSidebar() },
@@ -134,6 +138,7 @@ onBeforeUnmount(() => {
   if (typeof document !== 'undefined') {
     delete document.documentElement.dataset.playerActive
     delete document.documentElement.dataset.playerPinned
+    delete document.documentElement.dataset.playerPresentation
   }
 })
 </script>

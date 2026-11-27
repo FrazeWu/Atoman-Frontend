@@ -2,7 +2,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
 
 const META_COLLAPSE_WIDTH = 760
 
-export function useAudioPlayerChrome(isPinned: Readonly<Ref<boolean>>, togglePinnedAction: () => void) {
+export function useAudioPlayerChrome(isPinned: Readonly<Ref<boolean>>, togglePinnedAction: () => void, manageDocument = true) {
   const playerInnerRef = ref<HTMLElement | null>(null)
   const isMetaCollapsed = ref(false)
   const isMobileViewport = ref(false)
@@ -46,9 +46,20 @@ export function useAudioPlayerChrome(isPinned: Readonly<Ref<boolean>>, togglePin
   }
 
   watch(effectivePinned, (pinned) => {
+    if (!manageDocument) return
     document.documentElement.dataset.playerActive = 'true'
     document.documentElement.dataset.playerPinned = String(pinned)
   }, { immediate: true })
+
+  // The full chrome may mount again after a topbar/background transition.
+  watch(playerInnerRef, (element, previous) => {
+    if (previous) resizeObserver?.unobserve?.(previous)
+    if (element) {
+      resizeObserver?.observe(element)
+      updateMetaCollapse()
+    }
+  }, { flush: 'post' })
+
 
   onMounted(() => {
     viewportQuery = window.matchMedia?.('(max-width: 767px)') ?? null
@@ -63,8 +74,10 @@ export function useAudioPlayerChrome(isPinned: Readonly<Ref<boolean>>, togglePin
     clearHideTimer()
     viewportQuery?.removeEventListener('change', syncViewport)
     resizeObserver?.disconnect()
-    delete document.documentElement.dataset.playerActive
-    delete document.documentElement.dataset.playerPinned
+    if (manageDocument) {
+      delete document.documentElement.dataset.playerActive
+      delete document.documentElement.dataset.playerPinned
+    }
   })
 
   return {

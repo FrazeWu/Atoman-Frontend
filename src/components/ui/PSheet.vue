@@ -16,7 +16,7 @@
       v-if="isMobile && show"
       ref="mobilePanelRef"
       class="p-sheet-mobile-page"
-      :class="[panelClass, `is-${side}`, `is-${mode}`]"
+      :class="[panelClass, `is-${side}`, `is-${mode}`, {'p-sheet-mobile-page--above-player':abovePlayer}]"
       :style="[mobileSheetStyle, dragStyle]"
       role="region"
       :aria-label="railTitle"
@@ -208,6 +208,7 @@ import { isStandaloneMobileApp } from '@/utils/appRuntime'
 import { useDialogFocus } from '@/composables/useDialogFocus'
 import { useSheetGesture } from '@/composables/useSheetGesture'
 import { useSheetStore } from '@/stores/sheet'
+import { usePlayerPresentation, usePlayerPresentationLease, type ProtectedPresentation } from '@/composables/music/usePlayerPresentation'
 
 const isTest = typeof process !== 'undefined' && (process.env?.NODE_ENV === 'test' || process.env?.VITEST === 'true')
 
@@ -238,6 +239,7 @@ const props = withDefaults(defineProps<{
   index?: number
   showBackdrop?: boolean
   abovePlayer?: boolean
+  playerPresentation?: ProtectedPresentation
   teleport?: boolean
   // 阅读器等带滚动/变换容器的页面可显式脱离移动端父级定位上下文。
   teleportMobile?: boolean
@@ -288,6 +290,10 @@ const emit = defineEmits<{
   (event: 'content-click', originalEvent: MouseEvent): void
 }>()
 
+const presentation=usePlayerPresentation()
+usePlayerPresentationLease(()=>props.playerPresentation,()=>props.show)
+// Promote the entire active sheet stack together, not just a parent editor.
+const effectiveAbovePlayer=computed(()=>props.abovePlayer||Boolean(presentation?.hasTrack.value&&['topbar','background'].includes(presentation.mode.value)))
 const slots = useSlots()
 const panelRef = ref<HTMLElement | null>(null)
 const mobilePanelRef = ref<HTMLElement | null>(null)
@@ -513,12 +519,12 @@ const layerInset = computed(() => effectiveLayerIndex.value * 32)
 const layerTop = computed(() => `calc(${props.top} + ${effectiveLayerIndex.value * 4}px)`)
 
 const layerZIndex = computed(() => {
-  const base = props.abovePlayer ? '--a-z-player-sheet' : '--a-z-sheet'
+  const base = effectiveAbovePlayer.value ? '--a-z-player-sheet' : '--a-z-sheet'
   return `calc(var(${base}) + ${effectiveLayerIndex.value})`
 })
 
 const backdropZIndex = computed(() => {
-  const base = props.abovePlayer ? '--a-z-player-sheet' : '--a-z-sheet'
+  const base = effectiveAbovePlayer.value ? '--a-z-player-sheet' : '--a-z-sheet'
   return `calc(var(${base}) + ${effectiveLayerIndex.value} - 2)`
 })
 
@@ -579,8 +585,8 @@ const sheetStyle = computed(() => {
 
 const mobileSheetStyle = computed(() => {
   const styles: Record<string, string> = {}
-  if (props.abovePlayer) {
-    styles.zIndex = 'var(--a-z-player-sheet)'
+  if (effectiveAbovePlayer.value) {
+    styles.zIndex = layerZIndex.value
   }
   if (props.mode === 'partial' && props.side === 'right') {
     styles.width = `min(${props.partialWidth || 'var(--a-comment-sheet-width)'}, calc(100vw - 1rem))`

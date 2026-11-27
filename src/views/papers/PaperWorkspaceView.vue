@@ -276,6 +276,7 @@ import PTextarea from '@/components/ui/PTextarea.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PCheckbox from '@/components/ui/PCheckbox.vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { usePlayerPresentationLease } from '@/composables/music/usePlayerPresentation'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
 import { ChevronDown, ChevronRight, Folder, FolderOpen, FileCode2, FileText, Image as ImageIcon, Plus, Upload, PanelLeftClose, Sparkles, Search, BookOpen, History, Layers, GitBranch, ClipboardCheck, FileClock, Users, RefreshCw, X, Maximize2, Minimize2, ArrowLeft, ArrowRight, PanelLeft, Columns2, FileCode, FileOutput, Download, Save, ListTree } from 'lucide-vue-next'
@@ -1200,6 +1201,7 @@ const moreToolsOpen=ref(false)
 const showFiles=ref(!compactLayout.value)
 const layoutMode=ref<'split'|'editor'|'pdf'>(compactLayout.value?'editor':'split')
 const focusMode=ref(false)
+usePlayerPresentationLease(()=>"background",()=>focusMode.value)
 let previousFocusLayout:{mode:'split'|'editor'|'pdf';files:boolean}|null=null
 const desktopRail=computed(()=>!compactLayout.value&&!focusMode.value&&!!project.value&&!loading.value&&!error.value&&!collaborationOpen.value)
 function leaveFocus(){

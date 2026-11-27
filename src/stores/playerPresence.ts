@@ -11,6 +11,7 @@ export const usePlayerPresenceStore = defineStore("playerPresence", () => {
 	const hasCurrentTrack = ref(hasPersistedPlayableSong());
 	const lyricsCloseRequest = ref(0);
 	const expandRequest = ref(0);
+	const pauseRequest = ref(0);
 
 	const setHasCurrentTrack = (value: boolean) => {
 		hasCurrentTrack.value = value;
@@ -24,8 +25,11 @@ export const usePlayerPresenceStore = defineStore("playerPresence", () => {
 		expandRequest.value += 1;
 	};
 
+	const requestPause = () => { pauseRequest.value += 1; };
 	return {
 		hasCurrentTrack,
+		pauseRequest,
+		requestPause,
 		lyricsCloseRequest,
 		expandRequest,
 		setHasCurrentTrack,

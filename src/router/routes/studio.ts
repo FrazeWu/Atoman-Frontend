@@ -19,7 +19,7 @@ export const studioRoutes: RouteRecordRaw[] = [
 	{
 		path: "/studio",
 		component: () => import("@/views/studio/StudioLayout.vue"),
-		meta: { requiresAuth: true, hasSidebar: true },
+		meta: { requiresAuth: true, hasSidebar: true, playerPresentation: "topbar" },
 		children: [
 			{
 				path: "",

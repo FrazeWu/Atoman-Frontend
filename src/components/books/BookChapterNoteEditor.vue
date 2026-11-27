@@ -1,5 +1,5 @@
 <template>
-  <PSheet :show="true" title="独立章节笔记" mode="full" teleport-mobile @close="requestClose">
+  <PSheet player-presentation="topbar" :show="true" title="独立章节笔记" mode="full" teleport-mobile @close="requestClose">
     <form class="chapter-note-editor" @submit.prevent="save">
       <p class="chapter-note-editor__hint">只保存在你的私人笔记库中，不会自动公开。笔记关联当前具体电子书文件。</p>
       <p class="chapter-note-editor__location">{{ locationLabel }}</p>

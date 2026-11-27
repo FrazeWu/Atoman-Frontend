@@ -32,7 +32,7 @@ const coverInput = ref<HTMLInputElement | null>(null)
 </script>
 
 <template>
-  <PSheet
+  <PSheet player-presentation="topbar"
     :show="show"
     :title="name.trim() ? `编辑-${name.trim()}` : '编辑-歌单'"
     mode="full"

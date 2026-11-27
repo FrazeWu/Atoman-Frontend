@@ -238,8 +238,21 @@ test("通过真实专辑创建界面完成 v2 分片导入并显示识别曲目"
 		});
 	});
 
+	await page.addInitScript(() => {
+        const song={id:"adaptive-import-fixture",title:"Posting player fixture",artist:"Synthetic artist",audio_url:location.origin+"/adaptive-import.wav",duration:120};
+        localStorage.setItem("playbackState",JSON.stringify({song,queue:[song],currentTime:12,volume:.5}));
+    });
+    await page.route("**/adaptive-import.wav",route=>route.fulfill({status:404,body:"synthetic fixture; no audio request needed"}));
 	await page.goto("/music/artist/artist-e2e-1");
+    await expect(page.locator('[data-player-mode="full"]')).toBeVisible();
 	await page.getByRole("button", { name: "创建专辑/歌曲" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-player-presentation","topbar");
+    await expect.poll(()=>page.locator("html").evaluate(el=>getComputedStyle(el).getPropertyValue("--a-player-reserved-height").trim())).toBe("0px");
+    await expect(page.locator(".player-shell > .player")).toBeHidden();
+    await page.getByRole("button",{name:"音乐播放控制",exact:true}).click();
+    const playbackPanel=page.getByRole("region",{name:"当前音频播放"});
+    await expect(playbackPanel).toContainText("Posting player fixture");
+    await playbackPanel.getByRole("button",{name:"关闭音乐控制"}).click();
 	const creationDialog = page.getByRole("dialog", { name: /创建-/ });
 	const filesInput = creationDialog.getByTestId("album-import-files-input");
 	await expect(filesInput).toBeAttached();

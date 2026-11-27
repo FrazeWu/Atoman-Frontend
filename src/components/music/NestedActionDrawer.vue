@@ -495,7 +495,7 @@ async function submitEdit() {
 </script>
 
 <template>
-  <PSheet
+  <PSheet player-presentation="topbar"
     :show="isOpen"
     :title="displayTitle"
     mode="full"

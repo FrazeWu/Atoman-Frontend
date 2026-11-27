@@ -74,6 +74,7 @@
       </nav>
 
       <div class="nav-right">
+        <div id="atoman-player-topbar" class="topbar-player-slot"></div>
         <div v-if="!isAuthRoute" class="topbar-search-slot">
           <AppTopbarGlobalSearch />
         </div>
@@ -470,6 +471,8 @@ html.dark .topbar--auth {
   overflow: visible;
 }
 
+.topbar-player-slot:empty { display:none; }
+.topbar-player-slot { flex:none;min-width:0; }
 .topbar-search-slot {
   display: flex;
   align-items: center;

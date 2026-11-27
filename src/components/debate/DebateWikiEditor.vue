@@ -1,5 +1,5 @@
 <template>
-  <PSheet
+  <PSheet player-presentation="topbar"
     :show="show"
     :title="debate.title ? `编辑 ${debate.title}` : '编辑辩题'"
     mode="full"

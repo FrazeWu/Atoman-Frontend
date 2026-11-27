@@ -18,6 +18,7 @@ import VideoRecommendationRow from '@/components/video/VideoRecommendationRow.vu
 import { useInteractions } from '@/composables/useInteractions'
 import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
 import { useAuthStore } from '@/stores/auth'
+import { usePlayerPresenceStore } from '@/stores/playerPresence'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useFeedStore } from '@/stores/feed'
 import { isModeratorRole } from '@/utils/roles'
@@ -47,6 +48,7 @@ type CollectionContext = {
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const playerPresence=usePlayerPresenceStore()
 const { requireLogin } = useLoginRedirect()
 const feedStore = useFeedStore()
 const bookmarks = useVideoBookmarks()
@@ -513,7 +515,10 @@ function handleVideoError() {
   videoError.value = '视频暂时无法播放，请重试'
 }
 
+function pauseCompetingAudio(){const video=videoElement.value;if(video&&!video.paused&&!video.muted&&video.volume>0)playerPresence.requestPause()}
+
 function handleVideoPlay() {
+  pauseCompetingAudio()
   resumePosition.value = null
   isLocalPlaybackActive.value = true
   hasStartedPlayback.value = true
@@ -715,6 +720,7 @@ async function toggleChannelSubscription() {
               @click="toggleLocalPlayback"
               @timeupdate="syncCurrentPlaybackTime"
               @play="handleVideoPlay"
+              @volumechange="pauseCompetingAudio"
               @loadedmetadata="restoreInitialPlaybackPosition"
               @error="handleVideoError"
               @pause="handlePauseOrUnload"

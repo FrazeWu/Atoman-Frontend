@@ -182,7 +182,7 @@
     </template>
 
     <!-- 侧栏抽屉：编辑 / 新建私人笔记 -->
-    <PSheet :show="!!draft" title="私人读书笔记" mode="full" @close="requestClose">
+    <PSheet player-presentation="topbar" :show="!!draft" title="私人读书笔记" mode="full" @close="requestClose">
       <form v-if="draft" class="private-books__note-editor" @submit.prevent="save">
         <label class="private-books__field-group">
           <span class="private-books__field-label">关联图书作品</span>
@@ -245,7 +245,7 @@
     </PSheet>
 
     <!-- 发布为独立博客副本 -->
-    <PSheet :show="!!publishing" title="发布为独立博客" mode="full" @close="publishing = null">
+    <PSheet player-presentation="topbar" :show="!!publishing" title="发布为独立博客" mode="full" @close="publishing = null">
       <div v-if="publishing" class="space-y-4 text-sm p-4">
         <p class="text-[var(--a-color-text-secondary)] leading-relaxed">
           将私人笔记作为一篇公开博客文章发布。发布后正文将复制为博客草稿，此私人笔记仍保留在书库中。
@@ -272,7 +272,7 @@
     </PSheet>
 
     <!-- 删除前明确显示每个受到影响的公开快照及保留选项 -->
-    <PSheet :show="!!deleting" :title="trash ? '回收站笔记' : '删除私人笔记'" mode="partial" @close="deleting = null">
+    <PSheet player-presentation="background" :show="!!deleting" :title="trash ? '回收站笔记' : '删除私人笔记'" mode="partial" @close="deleting = null">
       <div v-if="deleting" class="space-y-4 p-4">
         <p>笔记移入回收站后可在 30 天内恢复；默认会撤销所有包含它的当前公开快照。</p>
         <template v-if="shareImpact?.total">

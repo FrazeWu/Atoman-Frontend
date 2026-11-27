@@ -4,7 +4,7 @@
       <div
         v-if="visible"
         class="p-modal-backdrop"
-        :class="[{ 'p-modal-backdrop--above-player': abovePlayer }, backdropClass]"
+        :class="[{ 'p-modal-backdrop--above-player': abovePlayer || playerPresentation?.hasTrack.value }, backdropClass]"
         @click.self="handleBackdropClick"
         @wheel.self.prevent
       >
@@ -81,6 +81,7 @@
 import { computed, ref, useSlots } from 'vue'
 import { X } from 'lucide-vue-next'
 import { useDialogFocus } from '@/composables/useDialogFocus'
+import { usePlayerPresentation, usePlayerPresentationLease } from '@/composables/music/usePlayerPresentation'
 
 defineOptions({
   inheritAttrs: false,
@@ -132,6 +133,8 @@ const emit = defineEmits<{
 const slots = useSlots()
 const dialogRef = ref<HTMLElement | null>(null)
 const visible = computed(() => props.modelValue ?? props.show ?? true)
+const playerPresentation=usePlayerPresentation()
+usePlayerPresentationLease(()=> "background",()=>visible.value,false,true)
 const hasFooter = computed(() => Boolean(slots.footer))
 const dialogLabel = computed(() => props.ariaLabel || props.title || '对话框')
 const titleId = `modal-title-${useId()}`

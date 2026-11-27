@@ -139,6 +139,14 @@ html[data-player-active="true"] {
 html[data-player-active="true"][data-player-pinned="true"] {
 	--a-player-reserved-height: var(--a-player-height);
 }
+html[data-player-presentation="topbar"],
+html[data-player-presentation="background"] {
+	--a-player-reserved-height: 0px !important;
+}
+/* Suppress a leaving fixed player immediately; never cover a newly opened form. */
+html:is([data-player-presentation="topbar"],[data-player-presentation="background"]) .player-shell > :is(.player,.player-mini-window) {
+	display:none !important;
+}
 
 *,
 *::before,

@@ -28,7 +28,7 @@
     </template>
   </PModal>
 
-  <PSheet
+  <PSheet player-presentation="background"
     v-else
     :show="show"
     :title="title"

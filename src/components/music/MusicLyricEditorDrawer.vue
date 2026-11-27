@@ -8,6 +8,7 @@ import PActionFeedback from '@/components/ui/PActionFeedback.vue'
 import PInput from '@/components/ui/PInput.vue'
 import PSegmentedControl from '@/components/ui/PSegmentedControl.vue'
 import PSheet from '@/components/ui/PSheet.vue'
+import { usePlayerPresentationLease } from '@/composables/music/usePlayerPresentation'
 import {
   createMusicLyricDraftRow,
   formatMusicLyricTime,
@@ -109,6 +110,7 @@ watch(selectedRowId, () => {
   scrollSelectedRowIntoView()
 })
 const draftFormat = ref<MusicLyricsFormat>('plain')
+usePlayerPresentationLease(()=>"background",()=>props.show)
 const draftEditSummary = ref('')
 const editTarget = ref<MusicLyricsEditTarget>('original')
 const draftLanguage = ref('')
@@ -507,6 +509,7 @@ function handleSave() {
   <component
     :is="presentation === 'page' ? 'section' : PSheet"
     :show="show"
+    :player-presentation="presentation==='page'?undefined:'background'"
     :title="songTitle.trim() ? `歌词-${songTitle.trim()}` : '歌词-歌曲'"
     :aria-label="songTitle.trim() ? `歌词-${songTitle.trim()}` : '歌词-歌曲'"
     :layer-index="layerIndex"

@@ -542,6 +542,10 @@ export const usePlayerStore = defineStore("player", () => {
 		updateMediaSessionPlaybackState("paused");
 	};
 
+	const pausePlayback = () => {
+		if (audio && (isPlaying.value || isLoading.value || !audio.paused)) pauseCurrentAudio(audio);
+	};
+
 	const ensureAudio = () => {
 		if (audio) return audio;
 
@@ -1470,6 +1474,7 @@ export const usePlayerStore = defineStore("player", () => {
 		moveQueueItem,
 		playAlbum,
 		togglePlay,
+		pausePlayback,
 		playNext,
 		playPrevious,
 		toggleShuffle,

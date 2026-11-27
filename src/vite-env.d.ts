@@ -19,6 +19,7 @@ declare global {
 declare module 'vue-router' {
   interface RouteMeta {
     authLayout?: boolean;
+    playerPresentation?: import("@/composables/music/usePlayerPresentation").ProtectedPresentation;
     hasSidebar?: boolean;
     requiresAuth?: boolean;
     // 公共互动页恢复 Cookie 会话，但不强制登录。

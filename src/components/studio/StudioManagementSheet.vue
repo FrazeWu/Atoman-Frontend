@@ -1,5 +1,5 @@
 <template>
-  <PSheet
+  <PSheet player-presentation="topbar"
     :show="true"
     :title="title"
     mode="partial"

@@ -55,10 +55,12 @@ Scientific workflows require transparent evaluation.
 A synthetic method description.`),make('results','sections/results.tex',String.raw`\section{Results}
 Synthetic results.`),make('references','references.bib','@article{example2026,title={Research fixture}}')]
 const job={id:'layout-job',project_id:pid,source_revision:5,status:'succeeded',compiler:'pdflatex',attempts:1,max_attempts:2,cancel_requested:false,pdf_available:true,created_at:now}
-async function fixture(page:Page,baseURL:string){
+async function fixture(page:Page,baseURL:string,activeCompile=false){
  const origin=new URL(baseURL).origin
  expect(new URL(origin).hostname).toMatch(/^(localhost|127\.0\.0\.1)$/)
  let requests=0
+ const running={...job,id:"layout-running",status:"running",pdf_available:false}
+ let current=running
  await page.routeWebSocket('**/*',socket=>socket.close())
  await page.route('**/*',async route=>{
   const url=new URL(route.request().url())
@@ -79,7 +81,11 @@ async function fixture(page:Page,baseURL:string){
   if(path===prefix+'/ai/capability')return ok({enabled:true,base_urls:['https://api.openai.com/v1'],custom_base_urls:true,model_discovery:true,max_source_bytes:49152,max_context_bytes:98304,max_extra_files:4,project_edits:true,max_history_turns:6,max_history_bytes:16384})
   if(path===prefix+'/files/main/collaboration')return ok({enabled:false})
   if(path===prefix+'/compile-capability')return ok({enabled:true,pdf_available:true,compilers:['pdflatex','xelatex']})
-  if(path===prefix+'/compiles')return ok([job])
+  if(path===prefix+'/compiles')return ok(activeCompile?[current,job]:[job])
+  if(path===prefix+'/compiles/layout-running'){
+   if(route.request().method()==='DELETE')current={...running,status:'cancelled',cancel_requested:true}
+   return ok(current)
+  }
   if(path===prefix+'/compiles/layout-job/pdf'){requests++;return route.fulfill({headers,contentType:'application/pdf',body:fixturePDF()})}
   return ok({items:[],total:0})
  })
@@ -296,4 +302,46 @@ test('activity rail, quick open, tabs and focus mode retain editor, bottom AI an
  await ai.getByRole('button',{name:'关闭 AI'}).click()
  await expect(ai).toBeHidden()
  await expect(pdf).toBeVisible()
+})
+
+test('compact PDF controls keep the reading area visible while compiling',async({page,baseURL},info)=>{
+ test.setTimeout(90000)
+ await page.setViewportSize({width:1366,height:900})
+ await fixture(page,baseURL!,true)
+ await page.goto('/papers/'+pid)
+ const pdf=page.getByRole('complementary',{name:'编译预览'})
+ const heading=pdf.locator('.papers-workspace__preview-heading')
+ const toolbar=pdf.locator('.paper-pdf__toolbar')
+ await expect(pdf.locator('.paper-pdf__sheet[data-page="1"]')).toHaveAttribute('data-rendered','true',{timeout:30000})
+ await expect(heading).toContainText('编译中')
+ await expect(heading).toContainText('预览为上次成功版本')
+ for(const width of [1600,1366,1200,1024,390]){
+  await page.setViewportSize({width,height:900})
+  if(width===390){
+   await expect(page.locator('.papers-workspace')).toHaveClass(/papers-workspace--compact/)
+   await page.getByRole('button',{name:'预览',exact:true}).click()
+   await expect.poll(async()=>(await pdf.boundingBox())?.width??0).toBeGreaterThan(350)
+  }else{
+   await expect(page.locator('.papers-workspace')).not.toHaveClass(/papers-workspace--compact/)
+   await expect(pdf).toBeVisible()
+  }
+  const bounds=await pdf.boundingBox()
+  const h=await heading.boundingBox(),t=await toolbar.boundingBox()
+  expect(h).not.toBeNull();expect(t).not.toBeNull()
+  console.log('compact PDF metrics',JSON.stringify({viewport:width,panel:bounds!.width,heading:h!.height,toolbar:t!.height}))
+  // The shared mobile select deliberately retains a 44px tap target.
+  expect(h!.height+t!.height).toBeLessThanOrEqual(width===390?130:100)
+  if(bounds!.width>=350)expect(t!.height).toBeLessThanOrEqual(width===390?52:40)
+  await expect(pdf.getByRole('button',{name:'下载 PDF',exact:true})).toBeVisible()
+  await expect(pdf.getByRole('button',{name:'取消任务',exact:true})).toBeVisible()
+  for(const el of await toolbar.getByRole('button').all()){
+   const r=await el.boundingBox()
+   if(r){expect(r.x).toBeGreaterThanOrEqual(bounds!.x-1);expect(r.x+r.width).toBeLessThanOrEqual(bounds!.x+bounds!.width+1)}
+  }
+  await noPageOverflow(page)
+  if(process.env.PAPERS_LAYOUT_SCREENSHOTS)await pdf.screenshot({path:info.outputPath('compact-pdf-'+width+'.png')})
+ }
+ await pdf.getByRole('button',{name:'取消任务',exact:true}).click()
+ await expect(pdf.getByRole('button',{name:'取消任务',exact:true})).toHaveCount(0)
+ await expect(pdf.locator('.paper-pdf__sheet[data-page="1"]')).toHaveAttribute('data-rendered','true')
 })

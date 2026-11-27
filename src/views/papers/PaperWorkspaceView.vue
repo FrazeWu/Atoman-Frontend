@@ -205,13 +205,13 @@
         <div class="papers-workspace__preview-heading">
           <div class="papers-workspace__preview-left">
             <strong>PDF 预览</strong>
-            <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" title="跳到预览对应源码（也可双击 PDF）" :disabled="!syncReady" @click="jumpToCode">← 源码</PButton>
+            <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync papers-workspace__preview-icon" aria-label="跳到源码" title="跳到预览对应源码（也可双击 PDF）" :disabled="!syncReady" @click="jumpToCode"><ArrowLeft :size="15" aria-hidden="true" /><span class="papers-workspace__sr">源码</span></PButton>
           </div>
           <div class="papers-workspace__compile-status" role="status" aria-live="polite">
             <template v-if="compileEnabled && compileJob">
-              <span class="papers-workspace__compile-label" :class="'status-'+compileJob.status"><strong>{{ compileStateLabel }}</strong> · {{ compilerLabel(compileJob.compiler) }} · 版本 {{ compileJob.source_revision }}</span>
+              <span class="papers-workspace__compile-label" :class="'status-'+compileJob.status" :title="compileStateLabel+' · '+compilerLabel(compileJob.compiler)+' · 版本 '+compileJob.source_revision"><strong>{{ compileStateLabel }}</strong> · {{ compilerLabel(compileJob.compiler) }} · 版本 {{ compileJob.source_revision }}</span>
               <span v-if="previewStale" class="papers-workspace__stale" title="当前 PDF 是上一次编译成功的版本">预览为上次成功版本</span>
-              <PButton v-if="canCancelCompile" type="button" size="sm" variant="secondary" :disabled="canceling" @click="cancelCompile">{{ canceling ? '取消中…' : '取消任务' }}</PButton>
+              <PButton v-if="canCancelCompile" type="button" size="sm" variant="ghost" class="papers-workspace__cancel-compile" :aria-label="canceling?'取消中…':'取消任务'" :title="canceling?'取消中…':'取消任务'" :disabled="canceling" @click="cancelCompile"><X :size="13" aria-hidden="true" /><span class="papers-workspace__sr">{{ canceling ? '取消中…' : '取消任务' }}</span></PButton>
               <span v-else-if="compileJob.cancel_requested && hasActiveCompile">取消中…</span>
               <PButton size="sm" variant="ghost" v-if="compileJob.failure_code" type="button" class="papers-workspace__sync" :aria-expanded="showDiagnostics" @click="showDiagnostics=!showDiagnostics">错误详情{{ diagnostics.length ? ' ('+diagnostics.length+')' : '' }}</PButton>
             </template>
@@ -279,7 +279,7 @@ import PCheckbox from '@/components/ui/PCheckbox.vue'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { ApiErrorResponseError } from '@/api/client'
-import { ChevronDown, ChevronRight, Folder, FolderOpen, FileCode2, FileText, Image as ImageIcon, Plus, Upload, PanelLeftClose, Sparkles, Search, BookOpen, History, Layers, GitBranch, ClipboardCheck, FileClock, Users, RefreshCw, X, Maximize2, Minimize2 } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, Folder, FolderOpen, FileCode2, FileText, Image as ImageIcon, Plus, Upload, PanelLeftClose, Sparkles, Search, BookOpen, History, Layers, GitBranch, ClipboardCheck, FileClock, Users, RefreshCw, X, Maximize2, Minimize2, ArrowLeft } from 'lucide-vue-next'
 import {useAuthStore} from '@/stores/auth'
 import PaperSnapshotTools from '@/components/papers/PaperSnapshotTools.vue'
 import PaperDraftTools from '@/components/papers/PaperDraftTools.vue'

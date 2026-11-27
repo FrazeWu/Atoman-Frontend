@@ -307,6 +307,39 @@ describe('custom compatible providers and model discovery',()=>{
    }finally{w.unmount()}
   }
  })
+ it('starts with two connection fields, picks a listed chat model and remembers the validated config',async()=>{
+  const w=create()
+  vi.mocked(discoverPaperAIModels).mockResolvedValue({models:['text-embedding-3-small','gpt-4o-mini'],truncated:false,resolved_base_url:custom})
+  try{
+   await configure(w)
+   expect((w.get('[aria-label="AI 模型"]').element as HTMLInputElement).closest<HTMLElement>('.p-field')?.style.display).toBe('none')
+   expect(w.find('[aria-label="可用模型"]').exists()).toBe(false)
+   await button(w,'获取模型列表').trigger('click');await flushPromises()
+   expect((w.get('[aria-label="AI 模型"]').element as HTMLInputElement).value).toBe('gpt-4o-mini')
+   expect(w.get('[aria-label="可用模型"]').isVisible()).toBe(true)
+   expect((w.get('[aria-label="AI 模型"]').element as HTMLInputElement).closest<HTMLElement>('.p-field')?.style.display).toBe('none')
+   expect(w.emitted('connection')?.at(-1)?.[0]).toEqual({accountId:'owner',projectId:'project',baseURL:custom,key,model:'gpt-4o-mini',models:['gpt-4o-mini','text-embedding-3-small']})
+   expect(requestPaperAISuggestion).not.toHaveBeenCalled()
+   await button(w,'清除配置').trigger('click')
+   expect((w.get('[aria-label="AI API Key"]').element as HTMLInputElement).value).toBe('')
+   expect(w.emitted('connection')?.at(-1)?.[0]).toBeNull()
+  }finally{w.unmount()}
+ })
+ it('restores only a matching in-memory project connection, without repeating discovery',async()=>{
+  const connection={accountId:'owner',projectId:'project',baseURL:custom,key,model:'provider/chat',models:['provider/chat']}
+  const w=create()
+  try{
+   await w.setProps({savedConnection:connection})
+   await flushPromises()
+   expect((w.get('[aria-label="AI API Key"]').element as HTMLInputElement).value).toBe(key)
+   expect((w.get('[aria-label="AI 模型"]').element as HTMLInputElement).value).toBe('provider/chat')
+   expect(discoverPaperAIModels).not.toHaveBeenCalled()
+   await w.setProps({accountId:'other-owner'})
+   await flushPromises()
+   expect((w.get('[aria-label="AI API Key"]').element as HTMLInputElement).value).toBe('')
+   expect(w.find('[aria-label="可用模型"]').exists()).toBe(false)
+  }finally{w.unmount()}
+ })
  it('rejects private/invalid addresses and clears keys and old models on provider change',async()=>{
   const w=create()
   try{

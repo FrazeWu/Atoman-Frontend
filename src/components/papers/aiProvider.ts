@@ -78,3 +78,28 @@ export function paperAIProviderDiagnostic(code:string,operation:'models'|'chat',
  const fallback=status===401?'AToMAN 登录会话失效，请重新登录。':status===404?'当前项目无法访问该接口，请检查项目权限或服务器版本。':status===502||status===503||status===504?'AToMAN 网关或模型服务暂时不可用。':'模型服务请求失败，请检查接口地址、密钥和网络。'
  return (messages[code]||fallback)+(operation==='models'?' 也可手动输入模型 ID。':' 原稿未修改。')
 }
+
+
+// This is deliberately an in-memory project connection, not a persisted profile.
+export interface PaperAIConnection {
+ accountId:string
+ projectId:string
+ baseURL:string
+ key:string
+ model:string
+ models:string[]
+}
+
+const nonChatModel=/(?:embed(?:ding)?|rerank|image|whisper|(?:^|[-_/])tts(?:$|[-_/])|audio|speech|moderation|dall-e|(?:^|[-_/])(?:video|realtime)(?:$|[-_/]))/i
+export function recommendedPaperAIModel(models:readonly string[],current=''){
+ if(current&&models.includes(current))return current
+ const candidates=models.filter(id=>!nonChatModel.test(id))
+ const preferred=['gpt-4.1-mini','gpt-4o-mini','gpt-5-mini','deepseek-chat','qwen-plus','glm-4-flash','gemini-2.5-flash']
+ for(const preferredID of preferred){
+  const model=candidates.find(id=>id.toLowerCase()===preferredID||id.toLowerCase().endsWith('/'+preferredID))
+  if(model)return model
+ }
+ // A suggested model is not proof that the account supports chat.
+ const likely=candidates.find(id=>/(?:^|\/)(?:gpt-[345]|claude-|deepseek-(?:chat|reasoner)|qwen[0-9.-]*(?:-instruct|-plus|-turbo)|gemini-[0-9]|glm-[45]|(?:llama|mistral|mixtral)[-_])|(?:[-_/])(?:chat|instruct)(?:$|[-_/])/i.test(id))
+ return likely||(candidates.length===1?candidates[0]:'')||''
+}

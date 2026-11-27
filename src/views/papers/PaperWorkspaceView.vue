@@ -126,10 +126,10 @@
           <span class="papers-workspace__ai-subtitle" :title="aiFile.path">{{aiFile.path}}</span>
           <PButton v-if="!aiCollapsed" size="sm" variant="ghost" type="button" class="papers-workspace__ai-icon" :aria-label="aiExpanded?'恢复分栏':'展开工作区'" :title="aiExpanded?'恢复分栏':'展开工作区'" :aria-pressed="aiExpanded" @click="aiExpanded=!aiExpanded"><Minimize2 v-if="aiExpanded" :size="15" aria-hidden="true"/><Maximize2 v-else :size="15" aria-hidden="true"/><span class="papers-workspace__sr">{{aiExpanded?'恢复分栏':'展开工作区'}}</span></PButton>
           <PButton size="sm" variant="ghost" type="button" class="papers-workspace__ai-icon" :aria-label="aiCollapsed?'展开 AI':'收起 AI'" :title="aiCollapsed?'展开 AI':'收起 AI'" :aria-expanded="!aiCollapsed" @click="toggleAICollapse"><ChevronDown :size="15" :style="{transform:aiCollapsed?'rotate(180deg)':undefined}" aria-hidden="true"/><span class="papers-workspace__sr">{{aiCollapsed?'展开 AI':'收起 AI'}}</span></PButton>
-          <PButton size="sm" variant="ghost" type="button" :disabled="aiApplying" aria-label="关闭 AI" title="关闭并清除当前未保存的 AI 会话" @click="closeTool"><X :size="15" aria-hidden="true"/></PButton>
+          <PButton size="sm" variant="ghost" type="button" :disabled="aiApplying" aria-label="关闭 AI" title="关闭 AI 并清除未保存的对话；本项目已连接的模型配置保留" @click="closeTool"><X :size="15" aria-hidden="true"/></PButton>
         </div>
         <div v-show="!aiCollapsed" class="papers-workspace__ai-scroll">
-          <PaperAITools :key="projectId+':'+accountId+':'+aiFile.id+':'+(collaborationOpen?aiSharedState?.epoch:'ordinary')" :project-id="projectId" :account-id="accountId" :file="aiFile" :source="collaborationOpen?(aiSharedState?.source||''):draft" :files="files" :collaboration-epoch="collaborationOpen?aiSharedState?.epoch:undefined" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||compiling||hasActiveCompile||(collaborationOpen&&!aiSharedState?.ready)" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :project-revision="project?.head_revision" :apply-project="applyAIProject" :rollback-activity="rollbackAIActivity" :compile-enabled="compileEnabled" :compile-job="compileJob" :compiler="selectedCompiler" :compile-repair="compileForAI" @repair-active="setAIRepairActive" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
+          <PaperAITools :key="projectId+':'+accountId+':'+aiFile.id+':'+(collaborationOpen?aiSharedState?.epoch:'ordinary')" :project-id="projectId" :account-id="accountId" :saved-connection="aiConnection" @connection="rememberAIConnection" :file="aiFile" :source="collaborationOpen?(aiSharedState?.source||''):draft" :files="files" :collaboration-epoch="collaborationOpen?aiSharedState?.epoch:undefined" :disabled="saving||navigating||switchingFile||uploadBusy||addingFile||snapshotMutating||compiling||hasActiveCompile||(collaborationOpen&&!aiSharedState?.ready)" :capture-selection="captureAISelection" :apply-edit="applyAIEdit" :project-revision="project?.head_revision" :apply-project="applyAIProject" :rollback-activity="rollbackAIActivity" :compile-enabled="compileEnabled" :compile-job="compileJob" :compiler="selectedCompiler" :compile-repair="compileForAI" @repair-active="setAIRepairActive" :diagnostics="diagnostics.map(item=>(item.file?item.file+(item.line?':'+item.line:'')+' ':'')+item.message).join('\n')" />
         </div>
       </aside>
       </div>
@@ -286,6 +286,7 @@ import PaperDraftTools from '@/components/papers/PaperDraftTools.vue'
 import PaperMemberTools from '@/components/papers/PaperMemberTools.vue'
 import PaperShareLinks from '@/components/papers/PaperShareLinks.vue'
 import PaperAITools from '@/components/papers/PaperAITools.vue'
+import type {PaperAIConnection} from '@/components/papers/aiProvider'
 import type {PaperAIEdit,PaperAISharedState} from '@/components/papers/aiSuggestion'
 import {validRepairApplyFence,type RepairApplyFence} from '@/components/papers/aiRepair'
 import type {PaperAIActivity} from '@/api/papersAI'
@@ -344,6 +345,12 @@ const aiRepairActive=ref(false)
 function setAIRepairActive(active:boolean){aiRepairActive.value=active;if(active)clearAuto();else scheduleAuto()}
 const project = ref<PaperProject | null>(null)
 const ownerAccess=computed(()=>!!project.value&&(project.value.access_role===undefined||project.value.access_role==='owner'))
+const aiConnection=shallowRef<PaperAIConnection|null>(null)
+watch([accountId,projectId,ownerAccess],()=>{aiConnection.value=null},{flush:'sync'})
+function rememberAIConnection(value:PaperAIConnection|null){
+ if(!value){aiConnection.value=null;return}
+ if(ownerAccess.value&&value.accountId===accountId.value&&value.projectId===projectId.value)aiConnection.value=value
+}
 const writeAccess=computed(()=>ownerAccess.value||project.value?.access_role==='editor')
 const roleLabel=computed(()=>ownerAccess.value?'所有者':writeAccess.value?'编辑者':'阅读者')
 const confirmPaper=(message:string)=>ask(message,()=>[

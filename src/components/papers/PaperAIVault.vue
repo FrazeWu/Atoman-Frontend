@@ -1,7 +1,7 @@
 <template>
  <details class="paper-ai-vault">
-  <summary>本机加密配置与会话</summary>
-  <p>可保存多个 API 配置及每个项目最近一次会话。数据使用你的保险库口令加密，仅保存在此浏览器，不上传到服务器。关闭或切换文件后需重新解锁；遗失口令无法恢复。</p>
+  <summary>高级 · 加密保存与会话</summary>
+  <p>可选：需要跨刷新保存 API 配置或对话时使用。数据仅在此浏览器加密保存，不上传服务器；遗失口令无法恢复。</p>
   <template v-if="!vault">
    <PInput v-model="password" type="password" autocomplete="new-password" label="保险库口令" aria-label="保险库口令" maxlength="128" :disabled="working||disabled" placeholder="至少 12 个字符" />
    <PButton type="button" size="sm" variant="secondary" :disabled="working||disabled||password.length<12||!available" @click="unlock">{{exists?'解锁保险库':'创建加密保险库'}}</PButton>

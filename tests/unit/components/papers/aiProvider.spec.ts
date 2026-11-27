@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest'
-import {normalizePaperAIBase,paperAIModelBaseCandidates,paperAIProviderDiagnostic,validPaperAIBase,validPaperAIKey,paperAIModelPattern} from '@/components/papers/aiProvider'
+import {normalizePaperAIBase,paperAIModelBaseCandidates,paperAIProviderDiagnostic,recommendedPaperAIModel,validPaperAIBase,validPaperAIKey,paperAIModelPattern} from '@/components/papers/aiProvider'
 describe('custom public AI endpoint policy',()=>{
  it('accepts public HTTPS compatible base paths and preserves the allowlist fallback',()=>{
   for(const url of ['https://api.deepseek.com/v1/','https://open.bigmodel.cn/api/paas/v4','https://api.example.net'])expect(validPaperAIBase(url,true,[])).toBe(true)
@@ -53,5 +53,17 @@ describe('automatic API base resolution',()=>{
    expect(paperAIModelBaseCandidates(raw,true,[]),raw).toEqual([])
   }
   expect(paperAIModelBaseCandidates('https://api.example.net',false,['https://api.example.net'])).toEqual(['https://api.example.net'])
+ })
+})
+
+
+describe('default chat model selection',()=>{
+ it('prefers a listed lightweight chat model and preserves a deliberate selection',()=>{
+  expect(recommendedPaperAIModel(['text-embedding-3-small','gpt-image-1','gpt-4o','gpt-4.1-mini'])).toBe('gpt-4.1-mini')
+  expect(recommendedPaperAIModel(['provider/deepseek-chat','gpt-4.1-mini'],'provider/deepseek-chat')).toBe('provider/deepseek-chat')
+  expect(recommendedPaperAIModel(['deepseek-reasoner','deepseek-chat'])).toBe('deepseek-chat')
+  expect(recommendedPaperAIModel(['provider/chat'])).toBe('provider/chat')
+  expect(recommendedPaperAIModel(['text-embedding-3-small','whisper-1'])).toBe('')
+  expect(recommendedPaperAIModel(['unknown-a','unknown-b'])).toBe('')
  })
 })

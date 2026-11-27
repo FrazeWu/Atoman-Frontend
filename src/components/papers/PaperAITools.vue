@@ -23,21 +23,24 @@
    <PButton size="sm" variant="secondary" type="button" @click="loadCapability">重新检查</PButton>
   </div>
   <template v-else>
-   <details ref="settingsPanel" class="paper-ai__settings" open>
-    <summary><span>模型与 API 设置</span><small>{{baseValid&&key.trim()&&model?model:'待配置'}}</small></summary>
-    <div class="paper-ai__settings-body"><PInput v-if="capability?.custom_base_urls" v-model.trim="baseURL" label="API 地址" aria-label="AI API 地址" maxlength="512" placeholder="https://api.example.com/v1" spellcheck="false" autocomplete="off" :disabled="busy" :error="baseURL&&!baseValid?'请输入公开 HTTPS API 基础地址':''" />
-    <PSelect v-else :model-value="baseURL" label="AI API 地址" size="sm" :options="capability!.base_urls.map(value=>({value,label:value}))" :disabled="busy" @update:model-value="baseURL=String($event)" />
-    <small>填写 API 域名、基础地址或完整接口地址即可。获取列表时会在同一 HTTPS 域名内自动检测并修正多余或缺失的接口路径；手动更换地址会清除旧密钥。</small>
-    <PInput v-model="key" label="API Key" type="password" autocomplete="off" spellcheck="false" aria-label="AI API Key" maxlength="2048" :disabled="busy" placeholder="使用该 API 服务的密钥" />
-    <div v-if="capability?.model_discovery" class="paper-ai__row">
-     <PButton type="button" size="sm" variant="secondary" :loading="modelsLoading" :disabled="!canDiscoverModels" @click="discoverModels">获取模型列表</PButton>
-    </div>
-    <small v-if="capability?.model_discovery">获取列表时会验证 API 地址并回填成功的基础地址。仅向填写的 HTTPS 域名发送 API Key，不发送论文内容，不跟随重定向。请选择支持聊天补全的模型。</small>
-    <p v-if="modelsMessage" role="status">{{modelsMessage}}</p>
-    <PSelect v-if="modelList.length" :model-value="model" :options="modelList.map(value=>({value,label:value}))" label="可用模型" placeholder="请选择模型" size="sm" :disabled="busy||modelsLoading" @update:model-value="model=String($event)" />
-    <PInput v-model.trim="model" label="模型 ID" aria-label="AI 模型" maxlength="128" placeholder="也可手动输入，例如 gpt-4.1-mini" :disabled="busy" />
-    <p>默认密钥只保留在当前面板。可主动使用下方本机加密保险库保存配置，模型调用由你的 API 账户计费；仅向你明确确认的服务发送源码。</p>
-    <PaperAIVault :account-id="accountId" :project-id="projectId" :file-id="file.id" :revision="file.revision" v-bind="{baseURL}" :model="model" :api-key="key" :task="task" :instruction="instruction" :history="history" :disabled="busy||commitBusy||repairActive||disabled" @profile="restoreProfile" @restore="restoreCheckpoint" @lock="lockVault" />
+   <details ref="settingsPanel" class="paper-ai__settings" :open="settingsOpen" @toggle="settingsOpen=($event.target as HTMLDetailsElement).open">
+    <summary><span>连接 AI 模型</span><small :title="connectionSummary">{{connectionSummary}}</small></summary>
+    <div class="paper-ai__settings-body">
+     <PInput v-if="capability?.custom_base_urls" v-model.trim="baseURL" label="API 地址" aria-label="AI API 地址" maxlength="512" placeholder="输入服务商域名或完整 API 地址" spellcheck="false" autocomplete="off" :disabled="busy" :error="baseURL&&!baseValid?'请输入公开 HTTPS API 地址':''" />
+     <PSelect v-else :model-value="baseURL" label="AI API 地址" size="sm" :options="capability!.base_urls.map(value=>({value,label:value}))" :disabled="busy" @update:model-value="baseURL=String($event)" />
+     <PInput v-model="key" label="API Key" type="password" autocomplete="off" spellcheck="false" aria-label="AI API Key" maxlength="2048" :disabled="busy" placeholder="粘贴你的 API Key" />
+     <div v-if="capability?.model_discovery" class="paper-ai__connect-actions">
+      <PButton type="button" size="sm" :variant="connectionVerified?'secondary':'primary'" :loading="modelsLoading" :disabled="!canDiscoverModels" @click="discoverModels">获取模型列表</PButton>
+      <PButton v-if="connectionVerified" type="button" size="sm" variant="ghost" :disabled="busy" @click="clearConnection">清除配置</PButton>
+      <PButton v-else-if="!manualModel" type="button" size="sm" variant="ghost" :disabled="busy||modelsLoading" @click="manualModel=true">手动指定模型</PButton>
+     </div>
+     <p v-if="modelsMessage" class="paper-ai__connection-message" role="status">{{modelsMessage}}</p>
+     <PInput v-if="modelList.length>25&&!manualModel" v-model.trim="modelFilter" aria-label="搜索可用模型" placeholder="搜索模型…" maxlength="128" :disabled="busy||modelsLoading" />
+     <PSelect v-if="modelList.length" v-show="!manualModel" :model-value="model" :options="modelOptions" label="可用模型" placeholder="请选择模型" size="sm" :disabled="busy||modelsLoading" @update:model-value="selectModel" />
+     <PInput v-show="manualModel||!capability?.model_discovery" v-model.trim="model" label="模型 ID" aria-label="AI 模型" maxlength="128" placeholder="输入服务商提供的模型 ID" :disabled="busy||modelsLoading" />
+     <PButton v-if="manualModel&&modelList.length" type="button" size="sm" variant="ghost" :disabled="busy||modelsLoading" @click="manualModel=false">从模型列表选择</PButton>
+     <small class="paper-ai__connection-hint">{{connectionVerified?'本项目内已记住配置，刷新或离开项目后清除。':'填写地址和密钥后获取模型即可，系统自动修正接口路径。'}} 模型列表请求仅发送密钥，不发送论文内容。</small>
+     <PaperAIVault :account-id="accountId" :project-id="projectId" :file-id="file.id" :revision="file.revision" v-bind="{baseURL}" :model="model" :api-key="key" :task="task" :instruction="instruction" :history="history" :disabled="busy||commitBusy||repairActive||disabled" @profile="restoreProfile" @restore="restoreCheckpoint" @lock="lockVault" />
     </div>
    </details>
    <section v-if="repairAvailable||repair" class="paper-ai__context" aria-label="Agent 编译修复">
@@ -96,12 +99,12 @@
      <strong>你 · 第 {{index+1}} 轮</strong><pre>{{turn.instruction}}</pre>
      <strong>AI 建议（不表示已应用）</strong><pre>{{turn.reply}}</pre>
     </div>
-    <small>最多 {{capability!.max_history_turns}} 轮、{{capability!.max_history_bytes}} 字节；默认关闭面板、切换文件或模型配置后清除；可在保险库中加密保存会话。</small>
+    <small>最多 {{capability!.max_history_turns}} 轮、{{capability!.max_history_bytes}} 字节；关闭面板、切换文件或模型后清除对话；模型连接可在当前项目复用。</small>
     <PButton type="button" size="sm" variant="secondary" :disabled="busy" @click="clearHistory">开始新对话</PButton>
    </details>
    </section>
    <section class="paper-ai__submit" aria-label="确认并生成">
-   <PCheckbox v-model="consent" class="paper-ai__check paper-ai__consent" :disabled="busy">我确认将上方预览的源码、附加文件和指令以及勾选的对话历史发送到所选模型服务，允许该服务处理这些内容。</PCheckbox>
+   <PCheckbox v-model="consent" class="paper-ai__check paper-ai__consent" :disabled="busy">确认将选定源码、附件、指令及勾选的对话历史发送给所选模型服务（按 API 账户计费）。</PCheckbox>
    <p>{{ contextBytes.toLocaleString() }} / {{ capability!.max_context_bytes.toLocaleString() }} 字节 · 每次最多生成 4096 tokens</p>
    <div class="paper-ai__row">
     <PButton size="sm" type="button" :disabled="!canGenerate" @click="generate">{{ busy?'生成中…':'生成建议' }}</PButton>
@@ -153,7 +156,7 @@ import PInput from '@/components/ui/PInput.vue'
 import PSelect from '@/components/ui/PSelect.vue'
 import PTextarea from '@/components/ui/PTextarea.vue'
 import PCheckbox from '@/components/ui/PCheckbox.vue'
-import {normalizePaperAIBase,paperAIModelBaseCandidates,paperAIProviderDiagnostic,paperAIModelPattern,validPaperAIBase,validPaperAIKey} from './aiProvider'
+import {normalizePaperAIBase,paperAIModelBaseCandidates,paperAIProviderDiagnostic,paperAIModelPattern,recommendedPaperAIModel,validPaperAIBase,validPaperAIKey,type PaperAIConnection} from './aiProvider'
 import PaperAIActivityPanel from './PaperAIActivityPanel.vue'
 import PaperAIDiff from './PaperAIDiff.vue'
 import PaperAIVault from './PaperAIVault.vue'
@@ -169,8 +172,8 @@ import {MAX_REPAIR_ROUNDS,matchesRepairJob,repairOutcome,validRepairApplyFence,t
 
 type Captured=PaperAISourceRange&{fileId:string;revision:number;collaborationEpoch?:string}
 type Suggestion={target:Captured;task:PaperAITask;response:PaperAISuggestion;changes?:ReviewedPaperAIChange[];context?:PaperFile[];repairJobId?:string}
-const props=defineProps<{projectId:string;accountId:string;file:PaperFile;source:string;files:PaperFile[];disabled:boolean;captureSelection:()=>PaperAISourceRange|null;applyEdit:(edit:PaperAIEdit)=>boolean;diagnostics?:string;collaborationEpoch?:string;projectRevision?:number;applyProject?:(revision:number,replacements:PaperTextReplacement[],repairFence?:RepairApplyFence,proposalId?:string)=>Promise<boolean>;rollbackActivity?:(event:PaperAIActivity)=>Promise<boolean>;compileEnabled?:boolean;compileJob?:PaperCompileJob|null;compiler?:PaperCompiler;compileRepair?:(revision:number,compiler:PaperCompiler)=>Promise<PaperCompileJob|null>}>()
-const emit=defineEmits<{'repair-active':[active:boolean]}>()
+const props=defineProps<{projectId:string;accountId:string;savedConnection?:PaperAIConnection|null;file:PaperFile;source:string;files:PaperFile[];disabled:boolean;captureSelection:()=>PaperAISourceRange|null;applyEdit:(edit:PaperAIEdit)=>boolean;diagnostics?:string;collaborationEpoch?:string;projectRevision?:number;applyProject?:(revision:number,replacements:PaperTextReplacement[],repairFence?:RepairApplyFence,proposalId?:string)=>Promise<boolean>;rollbackActivity?:(event:PaperAIActivity)=>Promise<boolean>;compileEnabled?:boolean;compileJob?:PaperCompileJob|null;compiler?:PaperCompiler;compileRepair?:(revision:number,compiler:PaperCompiler)=>Promise<PaperCompileJob|null>}>()
+const emit=defineEmits<{'repair-active':[active:boolean];connection:[value:PaperAIConnection|null]}>()
 type RepairState={phase:'submitting'|'compiling'|'review'|'applying'|'passed'|'stopped';revision:number;compiler:PaperCompiler;rounds:number;jobId:string;message:string;files:string[]}
 const repair=shallowRef<RepairState|null>(null)
 const commitBusy=ref(false)
@@ -250,11 +253,12 @@ const baseURL=ref(''),model=ref('gpt-4.1-mini'),key=ref(''),instruction=ref(''),
 const target=shallowRef<Captured|null>(null),extras=shallowRef<PaperFile[]>([])
 const suggestion=shallowRef<Suggestion|null>(null)
 const resultPanel=ref<HTMLElement|null>(null),settingsPanel=ref<HTMLDetailsElement|null>(null),taskPanel=ref<HTMLElement|null>(null),activityPanel=ref<HTMLElement|null>(null)
+const settingsOpen=ref(true)
 const reviewIndex=ref(0)
 function moveReview(delta:number){reviewIndex.value=Math.max(0,Math.min((suggestion.value?.changes?.length||1)-1,reviewIndex.value+delta))}
 function jumpAISection(section:'settings'|'task'|'review'|'activity'){
  const target=section==='settings'?settingsPanel.value:section==='task'?taskPanel.value:section==='review'?resultPanel.value:activityPanel.value
- if(section==='settings'&&settingsPanel.value)settingsPanel.value.open=true
+ if(section==='settings'){settingsOpen.value=true;if(settingsPanel.value)settingsPanel.value.open=true}
  if(section==='activity'){const details=activityPanel.value?.querySelector('details');if(details)details.open=true}
  target?.scrollIntoView?.({block:'start',behavior:'auto'})
 }
@@ -267,7 +271,43 @@ const busy=ref(false),contextBusy=ref(false)
 const recommended=shallowRef<ContextCandidate[]>([]),recommendMessage=ref('')
 const modelList=ref<string[]>([]),modelsLoading=ref(false),modelsMessage=ref('')
 let modelsSerial=0,modelsController:AbortController|null=null
-let applyingResolvedBase=false
+let applyingResolvedBase=false,restoringConnection=false,resettingConfig=false
+const connectionVerified=ref(false),manualModel=ref(false),modelFilter=ref('')
+const connectionSummary=computed(()=>modelsLoading.value?'正在连接…':connectionVerified.value?(model.value?'已配置 · '+model.value:'已获取模型 · 请选择'):baseValid.value&&validPaperAIKey(key.value.trim())&&paperAIModelPattern.test(model.value)?'已手动配置 · '+model.value:'待连接')
+const modelOptions=computed(()=>{
+ const filter=modelFilter.value.toLowerCase()
+ const entries=modelList.value.filter(id=>!filter||id.toLowerCase().includes(filter)||id===model.value).map(value=>({value,label:value}))
+ return [...entries,{value:'__manual__',label:'手动输入模型 ID…'}]
+})
+function selectModel(value:string|number){
+ if(value==='__manual__'){manualModel.value=true;return}
+ manualModel.value=false;model.value=String(value)
+}
+function forgetConnection(){
+ connectionVerified.value=false
+ if(!disposed&&!resettingConfig&&!restoringConnection)emit('connection',null)
+}
+function rememberConnection(){
+ if(!connectionVerified.value||disposed||resettingConfig||restoringConnection||!baseValid.value||!validPaperAIKey(key.value.trim())||baseURL.value.includes(key.value.trim())||model.value.includes(key.value.trim())||(model.value&&!paperAIModelPattern.test(model.value)))return
+ emit('connection',{accountId:props.accountId,projectId:props.projectId,baseURL:normalizePaperAIBase(baseURL.value),key:key.value.trim(),model:model.value,models:[...modelList.value]})
+}
+function clearConnection(){
+ if(busy.value)return
+ forgetConnection();key.value='';model.value='';manualModel.value=false;modelFilter.value='';resetModels()
+ modelsMessage.value='已清除当前项目的 API 配置。'
+}
+function restoreConnection(value:PaperAIConnection|null|undefined,cap:PaperAICapability){
+ if(!value||value.accountId!==props.accountId||value.projectId!==props.projectId||!validPaperAIBase(value.baseURL,cap.custom_base_urls===true,cap.base_urls)||!validPaperAIKey(value.key)||value.baseURL.includes(value.key)||value.models.length>512||value.models.some(id=>!paperAIModelPattern.test(id)||id.includes(value.key))||value.model&&(!paperAIModelPattern.test(value.model)||value.model.includes(value.key)))return false
+ restoringConnection=true
+ try{
+  baseURL.value=value.baseURL;key.value=value.key;model.value=value.model;modelList.value=[...value.models]
+  manualModel.value=!value.models.length||!!value.model&&!modelList.value.includes(value.model)
+  connectionVerified.value=true
+  modelsMessage.value='已恢复本项目的模型配置，无需重新连接。'
+ }finally{restoringConnection=false}
+ return true
+}
+watch(model,()=>rememberConnection(),{flush:'sync'})
 const baseValid=computed(()=>!!capability.value&&validPaperAIBase(baseURL.value,capability.value.custom_base_urls===true,capability.value.base_urls))
 const canDiscoverModels=computed(()=>!!capability.value?.enabled&&capability.value.model_discovery===true&&baseValid.value&&validPaperAIKey(key.value.trim())&&!busy.value&&!modelsLoading.value)
 const taskOptions=computed(()=>[{value:'revise',label:'修改源码（可审阅后接受）'},{value:'explain',label:'解释、分析或排查'},...(projectModeAvailable.value?[{value:'project',label:'Agent · 跨文件修改'}]:[])])
@@ -313,19 +353,22 @@ function alive(n:number,initial:string){return !disposed&&n===serial&&initial===
 function clearConsent(){consent.value=false}
 watch([baseURL,model,key,instruction,task,target,extras,()=>props.source,()=>props.file.revision,()=>props.disabled,()=>props.projectRevision,extraStale,includeHistory,history],clearConsent,{flush:'sync'})
 function stop(){serial++;controller?.abort();controller=null;busy.value=false;loading.value=false;clearConsent()}
-function reset(){recommended.value=[];recommendMessage.value='';resetModels();repairSerial++;repair.value=null;commitBusy.value=false;stop();contextSerial++;contextBusy.value=false;capability.value=null;key.value='';target.value=null;extras.value=[];suggestion.value=null;history.value=[];approved.value=[];task.value='revise';includeHistory.value=true;message.value=''}
+function reset(){
+ resettingConfig=true
+ try{recommended.value=[];recommendMessage.value='';resetModels();repairSerial++;repair.value=null;commitBusy.value=false;stop();contextSerial++;contextBusy.value=false;capability.value=null;key.value='';connectionVerified.value=false;manualModel.value=false;modelFilter.value='';target.value=null;extras.value=[];suggestion.value=null;history.value=[];approved.value=[];task.value='revise';includeHistory.value=true;message.value=''}finally{resettingConfig=false}
+}
 watch([baseURL,model,key],()=>{history.value=[];suggestion.value=null;approved.value=[]},{flush:'sync'})
 function restoreProfile(profile:AIProfile){
  if(busy.value||commitBusy.value||repairActive.value||props.disabled||!capability.value)return
  if(!validPaperAIBase(profile.baseURL,capability.value.custom_base_urls===true,capability.value.base_urls)||!paperAIModelPattern.test(profile.model)||!validPaperAIKey(profile.key)){message.value='保存的配置不符合当前服务限制。';return}
- baseURL.value=profile.baseURL;model.value=profile.model;key.value=profile.key
+ baseURL.value=profile.baseURL;model.value=profile.model;key.value=profile.key;manualModel.value=true
  clearConsent();message.value='已载入加密配置；尚未向模型服务发送请求。'
 }
 function restoreCheckpoint(session:AISessionCheckpoint,profile:AIProfile|undefined){
  if(busy.value||commitBusy.value||repairActive.value||props.disabled||!capability.value||session.projectId!==props.projectId)return
  if(!validPaperAIBase(session.baseURL,capability.value.custom_base_urls===true,capability.value.base_urls)||!paperAIModelPattern.test(session.model)){message.value='会话对应的服务已不可用。';return}
  if(profile)restoreProfile(profile)
- else{baseURL.value=session.baseURL;model.value=session.model;key.value=''}
+ else{baseURL.value=session.baseURL;model.value=session.model;key.value='';manualModel.value=true}
  instruction.value=session.instruction;task.value=session.task==='project'&&!projectModeAvailable.value?'revise':session.task
  const restored:PaperAIHistoryTurn[]=[]
  if(historyAvailable.value)for(const turn of session.history)restored.push(turn)
@@ -335,16 +378,16 @@ function restoreCheckpoint(session:AISessionCheckpoint,profile:AIProfile|undefin
 }
 function lockVault(){
  if(busy.value||commitBusy.value||repairActive.value)return
- key.value='';history.value=[];suggestion.value=null;approved.value=[];clearConsent()
+ forgetConnection();key.value='';history.value=[];suggestion.value=null;approved.value=[];clearConsent()
 }
 function resetModels(){modelsSerial++;modelsController?.abort();modelsController=null;modelList.value=[];modelsLoading.value=false;modelsMessage.value=''}
 watch(baseURL,(value,previous)=>{
- if(value!==previous&&!applyingResolvedBase){resetModels();key.value='';model.value=value==='https://api.openai.com/v1'?'gpt-4.1-mini':''}
+ if(value!==previous&&!applyingResolvedBase&&!restoringConnection){forgetConnection();resetModels();key.value='';model.value=value==='https://api.openai.com/v1'&&!capability.value?.model_discovery?'gpt-4.1-mini':'';manualModel.value=false;modelFilter.value=''}
 },{flush:'sync'})
-watch(key,resetModels,{flush:'sync'})
+watch(key,()=>{if(!restoringConnection){forgetConnection();resetModels();modelFilter.value='';if(!resettingConfig&&model.value)manualModel.value=true}},{flush:'sync'})
 async function discoverModels(){
  if(!canDiscoverModels.value||disposed)return
- resetModels()
+ forgetConnection();resetModels();modelFilter.value=''
  let entered=baseURL.value
  const n=++modelsSerial,initial=scope(),endpoint=normalizePaperAIBase(entered),secret=key.value.trim(),abort=new AbortController()
  modelsController=abort;modelsLoading.value=true;modelsMessage.value='正在验证 API 地址并获取模型列表…';clearConsent()
@@ -363,12 +406,15 @@ async function discoverModels(){
    try{entered=resolved;baseURL.value=resolved}finally{applyingResolvedBase=false}
   }
   modelList.value=[...new Set(result.models)].sort()
-  if(modelList.value.length&&!modelList.value.includes(model.value))model.value=''
+  model.value=recommendedPaperAIModel(modelList.value,model.value)
+  manualModel.value=!modelList.value.length
+  connectionVerified.value=true;rememberConnection()
   const summary=modelList.value.length?'已获取 '+modelList.value.length+' 个模型'+(result.truncated?'（列表已截断）':'')+'，请选择或手动输入。':'服务未返回可用模型，请手动输入模型 ID。'
-  modelsMessage.value=(corrected?'已自动修正 API 地址：'+resolved+'。':'')+summary
+  modelsMessage.value=(corrected?'已自动修正 API 地址：'+resolved+'。':'')+summary+(model.value?' 已选择推荐模型，可以更换；聊天可用性以实际调用为准。':'')
  }catch(cause){
   if(!alive())return
   const code=cause instanceof ApiErrorResponseError?cause.code:''
+  manualModel.value=true
   modelsMessage.value=paperAIProviderDiagnostic(code,'models',cause instanceof ApiErrorResponseError?cause.status:undefined)
  }finally{if(alive()){modelsLoading.value=false;modelsController=null}}
 }
@@ -391,7 +437,13 @@ async function loadCapability(){
   if(!alive(n,initial))return
   if(!Array.isArray(value.base_urls)||!value.base_urls.length||value.max_source_bytes<=0||value.max_context_bytes<=0||value.max_extra_files<0)throw new Error('invalid capability')
   capability.value=value
-  baseURL.value=value.base_urls[0]||''
+  if(value.enabled&&restoreConnection(props.savedConnection,value)){
+   settingsOpen.value=!model.value
+  }else{
+   settingsOpen.value=true
+   restoringConnection=true
+   try{baseURL.value=value.base_urls[0]||'';model.value=value.model_discovery?'':'gpt-4.1-mini';key.value='';manualModel.value=!value.model_discovery}finally{restoringConnection=false}
+  }
   if(value.enabled)capture(!!props.captureSelection())
  }catch{if(alive(n,initial)){capability.value=null;message.value='暂时无法获取 AI 服务能力，请稍后重试。'}}
  finally{if(alive(n,initial)){loading.value=false;controller=null}}
@@ -462,6 +514,7 @@ async function generate(){
    if(!changes)throw new Error('Invalid project plan')
   }
   if(repairJobId&&(!repair.value||repair.value.phase!=='review'||repair.value.jobId!==repairJobId||!repairJobCurrent(repair.value)))return
+  if(capability.value?.model_discovery&&!connectionVerified.value){connectionVerified.value=true;rememberConnection()}
   suggestion.value={target:captured,task:mode,response,changes,context,repairJobId}
   if(historyAvailable.value&&capability.value){
    const reply=mode==='project'?JSON.stringify({summary:response.text,edits:response.edits||[]}):response.text
@@ -530,7 +583,12 @@ function accept(){
 .paper-ai__section-title{font-size:13px;font-weight:650}
 .paper-ai label,.paper-ai__settings-body,.paper-ai__context{display:grid;gap:5px;min-width:0}
 .paper-ai__settings>summary{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.paper-ai__settings>summary small{font-weight:400;max-width:50%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.paper-ai__settings>summary small{font-weight:400;max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.paper-ai__connect-actions{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.paper-ai__connect-actions>button:first-child{flex:1}
+.paper-ai__connection-message{font-size:11px;line-height:1.5}
+.paper-ai__connection-hint{font-size:11px}
+.paper-ai__settings-body>.paper-ai-vault{padding:5px 6px}
 .paper-ai__context{border:1px solid var(--a-color-border-soft,#ddd);border-radius:5px;padding:6px;background:var(--a-color-bg,#fff)}
 .paper-ai__context>summary{margin-bottom:3px}
 .paper-ai summary{cursor:pointer;font-weight:600;overflow-wrap:anywhere}

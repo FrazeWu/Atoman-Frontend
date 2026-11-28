@@ -48,7 +48,7 @@ describe("useMarkdownRenderer sanitize", () => {
     expect(html).not.toContain("footnotes");
   });
 
-  it("drops arbitrary frames and remote media while keeping a trusted player", () => {
+  it("drops arbitrary frames and remote media while preserving a safe video link", () => {
     const { renderMarkdown } = useMarkdownRenderer();
 
     const html = renderMarkdown([
@@ -71,7 +71,9 @@ describe("useMarkdownRenderer sanitize", () => {
     expect(html).not.toContain("evil.example");
     expect(html).not.toContain("camera");
     expect(html).not.toContain("microphone");
-    expect(html).toContain("https://www.youtube.com/embed/dQw4w9WgXcQ");
+    expect(html).not.toContain("<iframe");
+    expect(html).not.toContain("https://www.youtube.com/embed/dQw4w9WgXcQ");
+    expect(html).toContain('href="/videos/watch/33333333-3333-3333-3333-333333333333"');
   });
 
   it("keeps structured Markdown when the enhanced runtime is ready", async () => {

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, expect, it, vi } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
 import LatexEditor from '@/components/papers/LatexEditor.vue'
 import * as Y from 'yjs'
 import {markRaw,nextTick} from 'vue'
@@ -128,6 +128,62 @@ describe('Local-only collaborative undo',()=>{
    authorized=true
    expect(editor.runUndo(false)).toBe(true)
    expect(text.toString()).toBe('recovered initial')
+  }finally{wrapper.unmount();doc.destroy()}
+ })
+})
+
+
+describe('Realtime source diagnostics',()=>{
+ it('marks live problems, jumps to the range and clears compile diagnostics immediately on a source edit',async()=>{
+  const source='before }\nsecond line'
+  const wrapper=mount(LatexEditor,{props:{modelValue:source,filePath:'main.tex',compileDiagnostics:[{tool:'latex',file:'main.tex',line:2,message:'Undefined control sequence.'}]}})
+  try{
+   expect(wrapper.findAll('.cm-lintRange-error').length).toBeGreaterThanOrEqual(2)
+   await wrapper.get('button[aria-label="源码检查"]').trigger('click')
+   expect(wrapper.get('.latex-lint-panel').text()).toContain('Undefined control sequence.')
+   expect(wrapper.get('.latex-lint-panel').text()).toContain('右花括号')
+   await wrapper.findAll('.latex-lint-panel__row')[0]!.trigger('click')
+   expect(wrapper.text()).toContain('行 1')
+   await wrapper.setProps({modelValue:'Fixed source',compileDiagnostics:[]})
+   expect(wrapper.find('.cm-lintRange-error').exists()).toBe(false)
+   await vi.waitFor(()=>expect(wrapper.get('.latex-lint-panel').text()).toContain('未发现当前检查范围内的问题'),{timeout:1500})
+   expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+  }finally{wrapper.unmount()}
+ })
+ it('keeps cross-file checks explicit and discards old results after manifest changes',async()=>{
+  const row={id:'chapter',path:'chapter.tex',kind:'text' as const,revision:1,sha256:''}
+  let finish!:(result:{labels:string[];citations:string[];truncated:boolean})=>void
+  const check=vi.fn().mockImplementationOnce(()=>new Promise(r=>{finish=r})).mockResolvedValueOnce({labels:['known'],citations:[],truncated:false})
+  const wrapper=mount(LatexEditor,{props:{modelValue:String.raw`\ref{known} \ref{absent}`,filePath:'main.tex',completionFiles:[row],checkProjectReferences:check}})
+  try{
+   await wrapper.get('button[aria-label="源码检查"]').trigger('click')
+   expect(check).not.toHaveBeenCalled()
+   await wrapper.findAll('button').find(b=>b.text()==='检查项目引用')!.trigger('click')
+   expect(check).toHaveBeenCalledTimes(1)
+   await wrapper.setProps({completionFiles:[{...row,revision:2}]})
+   finish({labels:[],citations:[],truncated:false});await flushPromises()
+   expect(wrapper.get('.latex-lint-panel').text()).not.toContain('项目静态索引中未找到')
+   await wrapper.findAll('button').find(b=>b.text()==='检查项目引用')!.trigger('click');await flushPromises()
+   expect(check).toHaveBeenCalledTimes(2)
+   expect(wrapper.get('.latex-lint-panel').text()).toContain('项目静态索引中未找到标签 absent')
+   expect(wrapper.get('.latex-lint-panel').text()).not.toContain('未找到标签 known')
+   await wrapper.setProps({completionFiles:[{...row,revision:3}]})
+   expect(wrapper.find('.cm-lintRange-warning').exists()).toBe(false)
+  }finally{wrapper.unmount()}
+ })
+ it('updates local markers for authoritative collaboration changes without ordinary saves',async()=>{
+  const doc=new Y.Doc(),text=markRaw(doc.getText('source'))
+  text.insert(0,'}')
+  const wrapper=mount(LatexEditor,{props:{modelValue:'stale',filePath:'main.tex',collaborativeText:text,readonly:true}})
+  try{
+   expect(wrapper.find('.cm-lintRange-error').exists()).toBe(true)
+   text.delete(0,1);text.insert(0,'clean')
+   await nextTick()
+   expect(wrapper.find('.cm-lintRange-error').exists()).toBe(false)
+   await wrapper.get('button[aria-label="源码检查"]').trigger('click')
+   await vi.waitFor(()=>expect(wrapper.get('.latex-lint-panel').text()).toContain('未发现当前检查范围内的问题'),{timeout:1500})
+   expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+   expect(text.toString()).toBe('clean')
   }finally{wrapper.unmount();doc.destroy()}
  })
 })

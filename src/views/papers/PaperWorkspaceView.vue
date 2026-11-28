@@ -109,7 +109,7 @@
 
 
         <PaperCollaborationPanel v-if="collaborationOpen&&activeFile?.kind==='text'&&collaborationAccount===accountId" :key="projectId+':'+activeFile.id+':'+accountId" ref="collaborationRef" :project-id="projectId" :file="activeFile" :role="ownerAccess?'owner':writeAccess?'editor':'viewer'" :account-id="accountId" :citations="citationKeys" :completion-files="files" :project-symbols="getCompletionSymbols" :operation-busy="snapshotMutating||compiling" @confirmed="onCollaborationConfirmed" @ai-state="onCollaborationAIState" @exit="exitCollaboration" @unavailable="onCollaborationUnavailable" />
-        <LatexEditor v-else-if="!collaborationOpen&&activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef"  :model-value="draft" @update:model-value="updateDraft" :citations="citationKeys" :file-path="activeFile.path" :completion-files="files" :project-symbols="getCompletionSymbols" :readonly="!writeAccess || switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
+        <LatexEditor v-else-if="!collaborationOpen&&activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef"  :model-value="draft" @update:model-value="updateDraft" :citations="citationKeys" :file-path="activeFile.path" :completion-files="files" :project-symbols="getCompletionSymbols" :check-project-references="writeAccess&&(activeFile.project_head_revision??0)<=(project?.head_revision??0)?checkProjectReferences:undefined" :compile-diagnostics="currentFileCompileDiagnostics" :readonly="!writeAccess || switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
         <PaperAssetPreview v-else-if="activeFile?.kind === 'binary'" :key="activeFile.id+':'+activeFile.revision" :file="activeFile" />
         <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
         <p v-if="draftWarning" class="papers-workspace__error" role="alert">{{ draftWarning }} <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" @click="toggleTool('drafts')">草稿管理</PButton></p>
@@ -319,7 +319,8 @@ import PaperReferenceImport from '@/components/papers/PaperReferenceImport.vue'
 import PaperGitHubTools from '@/components/papers/PaperGitHubTools.vue'
 import {planBibtexAppend,existingBibtexKeys} from '@/components/papers/referenceImport'
 import {readProjectText,projectFileFence} from '@/components/papers/projectRead'
-import {ProjectLatexIndex,type LatexSymbol} from '@/components/papers/latexSymbols'
+import {ProjectLatexIndex,isLatexSymbolFile,type LatexSymbol} from '@/components/papers/latexSymbols'
+import {buildReferenceCatalog,type ReferenceCatalog} from '@/components/papers/latexDiagnostics'
 import { decodeSourceMap, sourceToPDF, pdfToSource, type PaperSourceMap } from '@/components/papers/sourceMap'
 import {
   createPaperFile, managePaperFiles, getPaperFile, getPaperProject, listPaperFiles, savePaperFile, getPaperProjectZIP, downloadPaperZIP,
@@ -511,6 +512,17 @@ function getCompletionSymbols(refresh:boolean):readonly LatexSymbol[]|Promise<re
   if(file.project_head_revision!==undefined&&file.project_head_revision!==head)throw Error('Project changed')
   return file
  },valid).then(symbols=>valid()?symbols:[])
+}
+async function checkProjectReferences():Promise<ReferenceCatalog>{
+ const pid=projectId.value,owner=accountId.value,active=activeFile.value?.id,head=project.value?.head_revision
+ if(disposed||!owner||!head||!active||!writeAccess.value||collaborationOpen.value||navigating.value||switchingFile.value||project.value?.id!==pid)throw Error('Project unavailable')
+ const manifest=files.value,fence=projectFileFence(manifest),generation=loadSerial
+ const valid=()=>!disposed&&!navigating.value&&!switchingFile.value&&!collaborationOpen.value&&loadSerial===generation&&owner===accountId.value&&pid===projectId.value&&project.value?.id===pid&&head===project.value?.head_revision&&active===activeFile.value?.id&&writeAccess.value&&fence===projectFileFence(files.value)
+ const targets=manifest.filter(file=>file.id!==active&&(isLatexSymbolFile(file)||file.kind==='text'&&/\.bib$/i.test(file.path)))
+ const rows=await readProjectText(targets,head,id=>getPaperFile(pid,id),valid)
+ const latest=await getPaperProject(pid)
+ if(!valid()||latest.id!==pid||latest.head_revision!==head||latest.access_role==='viewer')throw Error('Project changed')
+ return buildReferenceCatalog(rows)
 }
 watch([accountId,projectId],()=>completionIndex.clear(),{flush:'sync'})
 const tabIds=ref<string[]>([]),recentFileIds=ref<string[]>([])
@@ -1044,7 +1056,8 @@ async function copyCompileReport(){
  try{await navigator.clipboard.writeText(compileReport(job));if(valid())diagnosticCopyMessage.value='已复制编译诊断。'}catch{if(valid())diagnosticCopyMessage.value='剪贴板不可用，请手动复制。'}
 }
 const diagnostics=computed(()=>(compileJob.value?.diagnostics||[]).slice(0,12))
-const diagnosticStale=computed(()=>collaborationOpen.value||compileJob.value?.source_revision!==project.value?.head_revision || (activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content))
+const diagnosticStale=computed(()=>collaborationOpen.value||compileJob.value?.source_revision!==project.value?.head_revision || (activeFile.value?.kind==='text'&&(draft.value!==activeFile.value.content||(activeFile.value.project_head_revision??0)>(compileJob.value?.source_revision??0))))
+const currentFileCompileDiagnostics=computed(()=>!diagnosticStale.value&&ownerAccess.value&&compileJob.value?.status==='failed'&&activeFile.value?.kind==='text'?diagnostics.value.filter(row=>row.file===activeFile.value?.path&&row.line):[])
 watch(()=>[compileJob.value?.id,compileJob.value?.status],()=>{showDiagnostics.value=compileJob.value?.status==='failed';diagnosticCopyMessage.value=''})
 async function jumpDiagnostic(item:PaperCompileDiagnostic){
  if(aiApplying.value||aiRepairActive.value||!item.file||!item.line||diagnosticStale.value)return

@@ -15,7 +15,7 @@ const environmentPattern=/^[A-Za-z@][A-Za-z0-9@*_-]*$/
 
 // Mask comments and literal text while preserving offsets and line breaks.
 // This is a bounded static scanner, not a TeX interpreter.
-export function latexCode(source:string):string{
+export function latexCode(source:string,preserveLiteralBoundaries=false):string{
  const parts:string[]=[]
  const token=/\\(?:[A-Za-z@]+\*?|[^\r\n])|%/g
  let cursor=0
@@ -29,14 +29,23 @@ export function latexCode(source:string):string{
   }else if(word==='\\verb'||word==='\\verb*'){
    const delimiter=source[end]
    if(!delimiter||/\s/.test(delimiter))continue
-   const close=source.indexOf(delimiter,end+1),newline=source.indexOf('\n',end+1)
-   end=close>=0&&(newline<0||close<newline)?close+1:newline<0?source.length:newline
+   const newline=source.indexOf('\n',end+1)
+   const limit=newline<0?source.length:newline
+   const offset=source.slice(end+1,limit).indexOf(delimiter)
+   end=offset>=0?end+1+offset+1:limit
   }else if(word==='\\begin'){
    const begin=/^\s*\{([^{}\r\n]+)\}/.exec(source.slice(end,end+100))
    if(!begin||!literalEnvironment.test(begin[1]!))continue
    const marker='\\end{'+begin[1]+'}'
-   const close=source.indexOf(marker,end+begin[0].length)
+   const bodyStart=end+begin[0].length
+   const close=source.indexOf(marker,bodyStart)
    end=close<0?source.length:close+marker.length
+   if(preserveLiteralBoundaries){
+    parts.push(source.slice(cursor,bodyStart),source.slice(bodyStart,close<0?source.length:close).replace(/[^\r\n]/g,' '))
+    if(close>=0)parts.push(source.slice(close,end))
+    cursor=end;token.lastIndex=end
+    continue
+   }
   }else continue
   parts.push(source.slice(cursor,start),source.slice(start,end).replace(/[^\r\n]/g,' '))
   cursor=end

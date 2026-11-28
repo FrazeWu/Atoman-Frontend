@@ -69,4 +69,48 @@ test('contextual completion uses project symbols and paths without loading the p
  await replaceAndComplete(String.raw`\citep[see]{sm`,'smith2026',String.raw`\citep[see]{smith2026`)
  expect(reads.get('method')).toBe(1)
  expect(reads.get('image')||0).toBe(0)
+
+ // Lint uses the live document, does not automatically read project files,
+ // and never blocks saving a syntactically incomplete draft.
+ const invalid=String.raw`\begin{align}
+ \end{equation}
+ \label{local}
+ \label{local}
+ \ref{sec:method}
+ \ref{missing-label}
+ \cite{smith2026,missing-citation}
+ \input{sections/missing}
+ }`
+ await editor.click()
+ await page.keyboard.press('ControlOrMeta+a')
+ await page.keyboard.insertText(invalid)
+ await expect(editor).toContainText('missing-citation')
+ await expect(page.locator('.cm-lintRange-error').first()).toBeVisible()
+ await page.getByRole('button',{name:'源码检查',exact:true}).click()
+ const panel=page.getByRole('region',{name:'源码检查结果'})
+ await expect(panel).toContainText('环境结束标记不匹配')
+ await expect(panel).toContainText('当前文件重复定义标签 local')
+ await expect(panel).toContainText('项目文件列表中未找到 sections/missing')
+ await expect(panel).not.toContainText('项目静态索引中未找到')
+ expect(reads.get('method')).toBe(1)
+ await expect(page.locator('.papers-workspace__save-state')).toContainText('已保存',{timeout:15000})
+ await panel.getByRole('button',{name:'检查项目引用',exact:true}).click()
+ await expect(panel).toContainText('项目静态引用已检查')
+ await expect(panel).toContainText('项目静态索引中未找到标签 missing-label')
+ await expect(panel).toContainText('项目静态索引中未找到文献键 missing-citation')
+ await expect(panel).not.toContainText('未找到标签 sec:method')
+ await expect(panel).not.toContainText('未找到文献键 smith2026')
+ expect(reads.get('method')).toBe(2)
+ expect(reads.get('image')||0).toBe(0)
+ const problem=panel.locator('.latex-lint-panel__row').filter({hasText:'未找到标签 missing-label'})
+ await problem.click()
+ await expect(page.locator('.latex-editor-tools > span')).toContainText('行 6')
+ await editor.click()
+ await page.keyboard.press('ControlOrMeta+a')
+ await page.keyboard.insertText(String.raw`\ref{sec:method} \cite{smith2026}`)
+ await expect(panel).toContainText('未发现当前检查范围内的问题')
+ await expect(page.locator('.cm-lintRange-error,.cm-lintRange-warning')).toHaveCount(0)
+ await page.setViewportSize({width:390,height:844})
+ await expect(panel).toBeVisible()
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true)
 })

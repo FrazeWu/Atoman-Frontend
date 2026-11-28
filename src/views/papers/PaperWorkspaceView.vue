@@ -26,6 +26,7 @@
           <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="activeFile?.kind!=='text'" :aria-pressed="toolMode==='history'" @click="toggleTool('history')" aria-label="版本历史" title="版本历史"><History :size="14" aria-hidden="true" /> 版本历史</PButton>
           <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='snapshots'" @click="toggleTool('snapshots')" aria-label="项目快照" title="项目快照"><Layers :size="14" aria-hidden="true" /> 项目快照</PButton>
           <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='git'" @click="toggleTool('git')" aria-label="GitHub" title="GitHub"><GitBranch :size="14" aria-hidden="true" /> GitHub</PButton>
+          <PButton size="sm" variant="secondary" v-if="ownerAccess&&compileEnabled" type="button" :aria-pressed="toolMode==='compileHistory'" @click="toggleTool('compileHistory')" aria-label="编译记录" title="编译记录"><History :size="14" aria-hidden="true" /> 编译记录</PButton>
           <PButton size="sm" variant="secondary" v-if="ownerAccess" type="button" :aria-pressed="toolMode==='submission'" @click="toggleTool('submission')" aria-label="投稿检查" title="投稿检查"><ClipboardCheck :size="14" aria-hidden="true" /> 投稿检查</PButton>
           <PButton size="sm" variant="secondary" type="button" :disabled="snapshotMutating" :aria-pressed="toolMode==='drafts'" @click="toggleTool('drafts')" :aria-label="'草稿恢复'+(draftRows.length?' ('+draftRows.length+')':'')" title="草稿恢复"><FileClock :size="14" aria-hidden="true" /> 草稿恢复{{ draftRows.length?' ('+draftRows.length+')':'' }}</PButton>
         </div><div v-show="!compactLayout||moreToolsOpen" class="papers-workspace__toolgroup papers-workspace__secondary-tools" aria-label="项目管理">
@@ -136,9 +137,9 @@
       <div v-if="layoutMode === 'split'&&!compactLayout" class="papers-workspace__divider" role="separator" aria-label="调整编辑器和预览宽度" aria-orientation="vertical" tabindex="0" :aria-valuenow="Math.round(previewWidth)" title="拖动调整宽度，双击恢复默认" @dblclick="resetPanelWidths" @pointerdown="beginResize" @pointermove="resizeMove" @pointerup="endResize" @pointercancel="endResize" @keydown.left.prevent="resizePreview(previewWidth+3)" @keydown.right.prevent="resizePreview(previewWidth-3)" />
 
       <aside v-if="projectToolOpen||outlineOpen&&!collaborationOpen" class="papers-workspace__preview papers-workspace__tools-panel" aria-label="项目工具工作区">
-        <section v-if="projectToolOpen" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':toolMode==='submission'?'投稿检查':toolMode==='git'?'GitHub':'文件历史'">
+        <section v-if="projectToolOpen" class="papers-workspace__toolpanel" :aria-label="toolMode==='search'?'项目搜索':toolMode==='references'?'参考文献':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':toolMode==='submission'?'投稿检查':toolMode==='git'?'GitHub':toolMode==='compileHistory'?'编译记录':'文件历史'">
           <div class="papers-workspace__tool-heading">
-            <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':toolMode==='submission'?'投稿前检查':toolMode==='git'?'GitHub 分支发布':'当前文件版本历史' }}</strong>
+            <strong>{{ toolMode==='search'?'全项目搜索与替换':toolMode==='references'?'参考文献库':toolMode==='figures'?'插图管理':toolMode==='snapshots'?'项目快照':toolMode==='drafts'?'草稿恢复':toolMode==='members'?'项目成员':toolMode==='submission'?'投稿前检查':toolMode==='git'?'GitHub 分支发布':toolMode==='compileHistory'?'编译记录':'当前文件版本历史' }}</strong>
             <PButton size="sm" variant="ghost" v-if="['search','references','history','snapshots','drafts','members'].includes(toolMode)" type="button" class="papers-workspace__sync"  :disabled="toolBusy||snapshotMutating||memberMutating" @click="refreshTool">刷新</PButton>
             <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" :disabled="snapshotMutating||memberMutating" @click="closeTool">关闭</PButton>
           </div>
@@ -169,6 +170,7 @@
           <PaperFigureTools :key="projectId" :project-id="projectId" :files="files" :disabled="uploadBusy||switchingFile||navigating" :can-insert="activeFile?.kind==='text'&&/\.tex$/i.test(activeFile.path)" @upload="uploadFigureFiles" @insert="insertFigure" />
           </template>
           <PaperGitHubTools v-else-if="toolMode==='git'&&ownerAccess" :key="projectId+':'+accountId" mode="export" :project-id="projectId" :account-id="accountId" :revision="project?.head_revision||0" :files="files" :disabled="saving||navigating||switchingFile||uploadBusy||snapshotMutating||compiling||hasActiveCompile||(activeFile?.kind==='text'&&draft!==activeFile.content)" />
+          <PaperCompileHistory v-else-if="toolMode==='compileHistory'&&ownerAccess&&compileEnabled" :key="projectId+':'+accountId" :project-id="projectId" :account-id="accountId" :revision="project?.head_revision||0" :current-job="compileJob" :preview-job-id="previewJob?.id" />
           <PaperSubmissionTools v-else-if="toolMode==='submission'&&ownerAccess" :key="projectId+':'+accountId" :project-id="projectId" :account-id="accountId" :revision="project?.head_revision||0" :files="files" :disabled="saving||navigating||switchingFile||uploadBusy||snapshotMutating||compiling||hasActiveCompile||(activeFile?.kind==='text'&&draft!==activeFile.content)" :compile-job="compileJob" :pdf="previewStale?null:submissionPDF" />
           <PaperSnapshotTools v-else-if="toolMode==='snapshots'" :key="projectId" :project-id="projectId" :account-id="accountId" :rows="snapshots" :detail="snapshotDetail" :busy="toolBusy||snapshotMutating" :disabled="uploadBusy||switchingFile||navigating||saving||hasActiveCompile||compiling||(collaborationOpen&&collaborationRevision===null)" :restore-disabled="collaborationOpen" :message="snapshotMessage" @create="createSnapshot" @preview="previewSnapshot" @remove="deleteSnapshot" @restore="restoreSnapshot" />
           <PaperDraftTools v-else-if="toolMode==='drafts'" :key="projectId+':'+accountId" :available="draftAvailable" :enabled="draftEnabled" :rows="draftRows" :files="files" :disabled="uploadBusy||switchingFile||navigating||saving" :can-recover="canRecoverDraft" :message="draftMessage" @toggle="toggleDraftProtection" @recover="recoverDraft" @remove="discardDraft" />
@@ -231,15 +233,19 @@
         <section v-if="showDiagnostics && compileJob?.failure_code" class="papers-workspace__diagnostics" aria-label="编译错误详情">
           <div class="papers-workspace__diagnostics-header">
             <strong>{{ failureMessage(compileJob.failure_code) }}</strong>
-            <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" @click="showDiagnostics=false">收起</PButton>
+            <div class="papers-workspace__diagnostic-actions"><PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" @click="copyCompileReport">复制诊断</PButton>
+            <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" @click="showDiagnostics=false">收起</PButton></div>
           </div>
+          <p>{{compileFailureHint(compileJob.failure_code)}}</p>
           <p v-if="diagnostics.length && diagnosticStale" class="papers-workspace__stale">源码已发生变化。以下行号对应编译版本 {{ compileJob.source_revision }}，重新编译后可准确定位。</p>
           <div v-for="(item,index) in diagnostics" :key="index" class="papers-workspace__diagnostic">
             <PButton size="sm" variant="ghost" v-if="item.file && item.line" type="button" class="papers-workspace__diagnostic-location" :disabled="diagnosticStale" @click="jumpDiagnostic(item)">{{ item.file }}:{{ item.line }}</PButton>
             <span v-else>{{ item.tool==='bibtex' ? 'BibTeX' : 'LaTeX' }}</span>
             <code>{{ item.message }}</code>
+            <p v-if="compileDiagnosticHint(item)" class="papers-workspace__diagnostic-hint">建议：{{compileDiagnosticHint(item)}}</p>
           </div>
           <p v-if="!diagnostics.length">本次任务没有可用的源码错误详情。旧版编译结果需要重新编译，系统环境错误不会提供宿主机日志。</p>
+          <p v-if="diagnosticCopyMessage" role="status">{{diagnosticCopyMessage}}</p>
           <small>错误代码：{{ compileJob.failure_code }} · 源码版本 {{ compileJob.source_revision }}</small>
         </section>
         <p v-if="!ownerAccess&&sharedPreviewError" class="papers-workspace__error" role="alert">{{ sharedPreviewError }}</p>
@@ -306,6 +312,8 @@ import {paperFileTree,preparePaperUploads} from '@/components/papers/fileTools'
 import {searchProject,planProjectReplacement,bibtexReferences,changedLineRange,type ProjectMatch,type PaperReference} from '@/components/papers/projectTools'
 import {latexHeadings,recommendedTexCompiler,type LatexHeading} from '@/components/papers/latexLanguage'
 import PaperPDFPreview from '@/components/papers/PaperPDFPreview.vue'
+import PaperCompileHistory from '@/components/papers/PaperCompileHistory.vue'
+import {compileDiagnosticHint,compileFailureHint,compileReport,compileFailureLabel as failureMessage,compileEngineLabel as compilerLabel,compileStatusLabel} from '@/components/papers/compileDiagnostics'
 import PaperSubmissionTools from '@/components/papers/PaperSubmissionTools.vue'
 import PaperReferenceImport from '@/components/papers/PaperReferenceImport.vue'
 import PaperGitHubTools from '@/components/papers/PaperGitHubTools.vue'
@@ -550,7 +558,7 @@ async function closeWorkspaceTab(file:PaperFile){
 function updateDraft(value:string){if(writeAccess.value&&!collaborationOpen.value)draft.value=value}
 const refreshMessage=ref('')
 
-type ToolMode='search'|'references'|'history'|'figures'|'snapshots'|'drafts'|'members'|'ai'|'submission'|'git'
+type ToolMode='search'|'references'|'history'|'figures'|'snapshots'|'drafts'|'members'|'ai'|'submission'|'git'|'compileHistory'
 const toolMode=ref<ToolMode|''>(''),toolBusy=ref(false),toolError=ref('')
 const aiFile=computed<PaperFile|null>(()=>{
  const file=activeFile.value
@@ -682,7 +690,7 @@ function onDraftStorage(event:StorageEvent){
 let toolSerial=0,bibSerial=0
 function formatVersionDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?value:date.toLocaleString()}
 function closeTool(){if(aiApplying.value)return;toolSerial++;toolMode.value='';toolBusy.value=false;toolError.value='';selectedVersion.value=null;snapshotDetail.value=null;if(compactLayout.value&&!outlineOpen.value&&layoutMode.value==='split')layoutMode.value='editor'}
-function toggleTool(mode:ToolMode){if(aiApplying.value)return;if((collaborationOpen.value&&mode!=='snapshots'&&(mode!=='ai'||!aiSharedState.value?.ready))||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures','ai','submission','git'].includes(mode)))return;if(toolMode.value===mode){
+function toggleTool(mode:ToolMode){if(aiApplying.value||mode==='compileHistory'&&!compileEnabled.value)return;if((collaborationOpen.value&&mode!=='snapshots'&&(mode!=='ai'||!aiSharedState.value?.ready))||snapshotMutating.value||memberMutating.value||(!ownerAccess.value&&['history','snapshots','figures','ai','submission','git','compileHistory'].includes(mode)))return;if(toolMode.value===mode){
  if(mode==='ai'&&(aiCollapsed.value||layoutMode.value==='pdf')){aiCollapsed.value=false;layoutMode.value=compactLayout.value?'editor':'split';return}
  closeTool();return
  }leaveFocus();closeTool();toolMode.value=mode;outlineOpen.value=false;layoutMode.value=mode==='ai'&&compactLayout.value?'editor':'split';if(compactLayout.value){showFiles.value=false;moreToolsOpen.value=false}refreshTool()}
@@ -1005,7 +1013,6 @@ const selectedCompiler=ref<PaperCompiler>('pdflatex')
 const recommendedCompiler=ref<PaperCompiler|undefined>(undefined)
 const recommendedUnavailable=computed(()=>!!recommendedCompiler.value&&(!compileEnabled.value||!compilerOptions.value.includes(recommendedCompiler.value)))
 let compilerChangedByUser=false
-function compilerLabel(engine?:PaperCompiler){return engine==='xelatex'?'XeLaTeX':engine==='lualatex'?'LuaLaTeX':'pdfLaTeX'}
 function compilerChanged(){compilerChangedByUser=true;autoDirty=true;scheduleAuto()}
 
 const pdfEnabled = ref(false)
@@ -1029,28 +1036,16 @@ async function loadSharedPreview(){
  }finally{if(n===sharedPreviewSerial)sharedPreviewBusy.value=false}
 }
 function resetSharedPreview(){sharedPreviewSerial++;sharedPreviewBusy.value=false;sharedPreviewError.value=''}
-const showDiagnostics=ref(false)
+const showDiagnostics=ref(false),diagnosticCopyMessage=ref('')
+async function copyCompileReport(){
+ const job=compileJob.value,owner=accountId.value,pid=projectId.value
+ if(!job||!ownerAccess.value||disposed)return
+ const valid=()=>!disposed&&owner===accountId.value&&pid===projectId.value&&compileJob.value?.id===job.id
+ try{await navigator.clipboard.writeText(compileReport(job));if(valid())diagnosticCopyMessage.value='已复制编译诊断。'}catch{if(valid())diagnosticCopyMessage.value='剪贴板不可用，请手动复制。'}
+}
 const diagnostics=computed(()=>(compileJob.value?.diagnostics||[]).slice(0,12))
 const diagnosticStale=computed(()=>collaborationOpen.value||compileJob.value?.source_revision!==project.value?.head_revision || (activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content))
-watch(()=>[compileJob.value?.id,compileJob.value?.status],()=>{showDiagnostics.value=compileJob.value?.status==='failed'})
-function failureMessage(code:string){
- const labels:Record<string,string>={
-  compile_failed:'LaTeX 源码编译错误',
-  runtime_failed:'编译运行失败',
-  isolation_failed:'编译环境初始化失败',
-  artifact_missing:'未生成有效 PDF',
-  timed_out:'编译超时',
-  resource_exhausted_pids:'编译进程超过限制',
-  resource_exhausted_memory:'编译内存超过限制',
-  resource_exhausted_ambiguous:'编译资源超过限制',
-  verified_pdf_not_persisted:'PDF 保存失败',
-  cleanup_failed:'编译环境回收异常',
-  owner_canceled:'任务已取消',
-  cancel_requested:'任务已取消',
-  access_revoked:'项目访问权限已撤销'
- }
- return labels[code]||'编译未成功'
-}
+watch(()=>[compileJob.value?.id,compileJob.value?.status],()=>{showDiagnostics.value=compileJob.value?.status==='failed';diagnosticCopyMessage.value=''})
 async function jumpDiagnostic(item:PaperCompileDiagnostic){
  if(aiApplying.value||aiRepairActive.value||!item.file||!item.line||diagnosticStale.value)return
  const target=files.value.find(f=>f.path===item.file&&f.kind==='text')
@@ -1283,13 +1278,7 @@ watch(compileJob,job=>{if(job?.status==='succeeded'&&job.pdf_available)previewJo
 const compileError = ref('')
 const compiling = ref(false)
 const canceling = ref(false)
-const compileStateLabel = computed(() => {
-  const labels: Record<string, string> = {
-    queued: '排队中', running: '编译中', recovering: '恢复中',
-    succeeded: '已完成', failed: '编译失败', canceled: '已取消', blocked: '已阻断',
-  }
-  return labels[compileJob.value?.status ?? ''] ?? '未知'
-})
+const compileStateLabel = computed(()=>compileStatusLabel(compileJob.value?.status))
 const hasActiveCompile = computed(() => !!compileJob.value &&
   ['queued', 'running', 'recovering'].includes(compileJob.value.status))
 watch([hasActiveCompile,compiling,switchingFile,navigating,addingFile,saveError],()=>scheduleAuto())

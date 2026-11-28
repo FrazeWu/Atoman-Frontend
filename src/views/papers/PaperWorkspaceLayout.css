@@ -246,3 +246,6 @@
  .papers-workspace--compact .papers-workspace__layout-switch[aria-label="源码"] .papers-workspace__action-label,
  .papers-workspace--compact .papers-workspace__layout-switch[aria-label="预览"] .papers-workspace__action-label{position:static;width:auto;height:auto;overflow:visible;clip-path:none}
 }
+
+.papers-workspace__diagnostic-actions {display:flex;align-items:center;gap:3px;flex-shrink:0}
+.papers-workspace__diagnostic-hint {font-size:11px;line-height:1.5}

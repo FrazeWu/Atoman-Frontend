@@ -55,7 +55,7 @@ Scientific workflows require transparent evaluation.
 A synthetic method description.`),make('results','sections/results.tex',String.raw`\section{Results}
 Synthetic results.`),make('references','references.bib','@article{example2026,title={Research fixture}}')]
 const job={id:'layout-job',project_id:pid,source_revision:5,status:'succeeded',compiler:'pdflatex',attempts:1,max_attempts:2,cancel_requested:false,pdf_available:true,created_at:now}
-async function fixture(page:Page,baseURL:string,activeCompile=false){
+async function fixture(page:Page,baseURL:string,activeCompile=false,failedCompile=false){
  const origin=new URL(baseURL).origin
  expect(new URL(origin).hostname).toMatch(/^(localhost|127\.0\.0\.1)$/)
  let requests=0
@@ -81,7 +81,7 @@ async function fixture(page:Page,baseURL:string,activeCompile=false){
   if(path===prefix+'/ai/capability')return ok({enabled:true,base_urls:['https://api.openai.com/v1'],custom_base_urls:true,model_discovery:true,max_source_bytes:49152,max_context_bytes:98304,max_extra_files:4,project_edits:true,max_history_turns:6,max_history_bytes:16384})
   if(path===prefix+'/files/main/collaboration')return ok({enabled:false})
   if(path===prefix+'/compile-capability')return ok({enabled:true,pdf_available:true,compilers:['pdflatex','xelatex']})
-  if(path===prefix+'/compiles')return ok(activeCompile?[current,job]:[job])
+  if(path===prefix+'/compiles')return ok(activeCompile?[current,job]:failedCompile?[{...job,id:'failed-fixture',status:'failed',pdf_available:false,source_revision:5,failure_code:'compile_failed',created_at:'2026-11-27T00:00:00Z',started_at:now,finished_at:'2026-11-26T00:01:12Z',diagnostics:[{tool:'latex',file:'main.tex',line:4,message:'Undefined control sequence.'}]},job,{...job,id:'older-failed',status:'failed',source_revision:4,pdf_available:false,failure_code:'compile_failed',created_at:'2026-11-25T00:00:00Z',diagnostics:[{tool:'bibtex',message:"I couldn't open database file."}]}]:[job])
   if(path===prefix+'/compiles/layout-running'){
    if(route.request().method()==='DELETE')current={...running,status:'cancelled',cancel_requested:true}
    return ok(current)
@@ -503,4 +503,36 @@ test('adaptive player keeps the same native audio playing across Papers, focus, 
  await mode('topbar','0px')
  await page.getByRole('link',{name:'返回我的论文',exact:true}).click()
  await mode('cover','68px')
+})
+
+
+test('compile history reviews failed and successful tasks without switching PDF or modifying source',async({page,baseURL})=>{
+ await page.setViewportSize({width:1440,height:900})
+ await fixture(page,baseURL!,false,true)
+ await page.goto('/papers/'+pid)
+ const editor=page.locator('.cm-content')
+ await expect(editor).toContainText('Scientific workflows',{timeout:30000})
+ await expect(page.locator('.papers-workspace__diagnostics')).toContainText('优先修复第一条源码错误')
+ await expect(page.locator('.papers-workspace__diagnostics')).toContainText('检查命令拼写')
+ const original=await editor.textContent()
+ await page.getByRole('button',{name:'编译记录',exact:true}).click()
+ const panel=page.getByRole('region',{name:'编译记录',exact:true})
+ await expect(panel.getByRole('button',{name:'全部 (3)',exact:true})).toBeVisible()
+ await expect(panel).toContainText('当前任务')
+ await expect(panel).toContainText('正在预览')
+ await panel.getByRole('button',{name:'失败 (2)',exact:true}).click()
+ const older=panel.locator('.compile-history__job').filter({hasText:'v4'})
+ await older.click()
+ await expect(panel.getByRole('region',{name:'所选编译记录'})).toContainText('历史源码版本')
+ await expect(panel.getByRole('region',{name:'所选编译记录'})).toContainText("I couldn't open database file.")
+ await panel.getByRole('button',{name:'成功 (1)',exact:true}).click()
+ await expect(panel.getByRole('region',{name:'所选编译记录'})).toContainText('已完成')
+ await panel.getByRole('button',{name:'关闭',exact:true}).click()
+ await expect(page.locator('.papers-workspace__compile-status')).toContainText('编译失败')
+ await expect(editor).toHaveText(original!)
+ await page.setViewportSize({width:390,height:844})
+ await page.getByRole('button',{name:'更多',exact:false}).click()
+ await page.getByRole('button',{name:'编译记录',exact:true}).click()
+ await expect(page.getByRole('region',{name:'编译记录',exact:true})).toBeVisible()
+ await noPageOverflow(page)
 })

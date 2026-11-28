@@ -302,6 +302,26 @@ describe('Papers save and transition regression',()=>{
    expect(toolbar.find('.papers-workspace__compile-status').text()).toContain('取消任务')
   }finally{wrapper.unmount()}
  })
+ it('reviews compilation history without replacing the live preview or source',async()=>{
+  vi.mocked(getPaperCompileCapability).mockResolvedValue({enabled:true,pdf_available:true})
+  vi.mocked(listPaperCompileJobs).mockResolvedValue([
+   {id:'failed',project_id:'two',source_revision:1,status:'failed',failure_code:'compile_failed',attempts:1,max_attempts:2,cancel_requested:false,created_at:'2026-11-28T02:00:00Z',diagnostics:[{tool:'latex',file:'main.tex',line:1,message:'Undefined control sequence.'}]},
+   {id:'prior',project_id:'two',source_revision:1,status:'succeeded',pdf_available:true,attempts:1,max_attempts:2,cancel_requested:false,created_at:'2026-11-28T01:00:00Z'}
+  ] as never)
+  const {wrapper}=await open()
+  try{
+   expect(wrapper.get('[data-test="paper-pdf-preview"]').text()).toBe('two:prior:1')
+   await wrapper.get('button[aria-label="编译记录"]').trigger('click');await flushPromises()
+   expect(wrapper.get('[aria-label="编译记录"]').exists()).toBe(true)
+   expect(wrapper.text()).toContain('检查命令拼写')
+   await wrapper.findAll('button').find(b=>b.text()==='成功 (1)')!.trigger('click')
+   expect(wrapper.get('[aria-label="所选编译记录"]').text()).toContain('已完成')
+   expect(wrapper.get('[data-test="paper-pdf-preview"]').text()).toBe('two:prior:1')
+   expect(wrapper.get('[data-test="editor"]').text()).toBe('Current source')
+   expect(submitPaperCompile).not.toHaveBeenCalled()
+   expect(savePaperFile).not.toHaveBeenCalled()
+  }finally{wrapper.unmount()}
+ })
  it('navigates a diagnostic to its exact file and line and disables stale locations',async()=>{
   vi.mocked(getPaperCompileCapability).mockResolvedValue({enabled:true,pdf_available:true})
   vi.mocked(listPaperCompileJobs).mockResolvedValue([{

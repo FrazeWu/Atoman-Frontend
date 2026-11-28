@@ -54,6 +54,7 @@ export function bibtexReferences(files: readonly PaperFile[]): PaperReference[] 
     const text = file.content
     const start = /^[ \t]*@([A-Za-z]+)\s*([{(])/gm
     let m: RegExpExecArray | null
+    let line=1, lineOffset=0
     while ((m = start.exec(text)) && results.length < 2000) {
       const opener = m[2]!, closer = opener === '{' ? '}' : ')'
       const bodyStart = start.lastIndex
@@ -79,7 +80,10 @@ export function bibtexReferences(files: readonly PaperFile[]): PaperReference[] 
       if (!keyMatch || /[\\%]/.test(keyMatch[1]!)) continue
       const title = /(?:^|,)\s*title\s*=\s*(?:\{([^\n]{0,400})|"([^"\n]{0,400})")/i.exec(body)
       const caption = (title?.[1] || title?.[2] || '').split(/\},\s*\w+\s*=/)[0]!.replace(/[{}]+$/g,'').trim().slice(0, 200)
-      results.push({ key: keyMatch[1]!, title: caption, fileId: file.id, path: file.path, line: text.slice(0, m.index).split('\n').length })
+      // Count each prefix segment once instead of splitting the entire
+      // prefix for every reference in a large bibliography.
+      for(;lineOffset<m.index;lineOffset++)if(text.charCodeAt(lineOffset)===10)line++
+      results.push({ key: keyMatch[1]!, title: caption, fileId: file.id, path: file.path, line })
     }
   }
   return results

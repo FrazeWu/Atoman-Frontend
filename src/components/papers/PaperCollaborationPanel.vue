@@ -37,7 +37,7 @@
    </span>
   </div>
   <details v-if="view?.text" class="papers-collab__help"><summary>协作说明</summary><p class="papers-collab__hint">仅同步当前文件。普通保存与项目结构修改暂停；所有者可编译及快照已确认版本。断线默认暂停编辑；可开启本机草稿保护和离线编辑。撤销只影响本地操作。</p></details>
-  <LatexEditor v-if="view?.text" ref="editorRef" :key="view.epoch" :model-value="view.source" :collaborative-text="view.text" :citations="citations" :readonly="!editable" :can-edit-collaboration="canEditNow" :remote-peers="remotePeers" @presence-selection="selectionChanged" />
+  <LatexEditor v-if="view?.text" ref="editorRef" :key="view.epoch" :model-value="view.source" :collaborative-text="view.text" :citations="citations" :file-path="file.path" :completion-files="completionFiles" :project-symbols="projectSymbols" :readonly="!editable" :can-edit-collaboration="canEditNow" :remote-peers="remotePeers" @presence-selection="selectionChanged" />
   <div v-else class="papers-collab__empty">
    <p v-if="view?.status==='stopped'||message">连接未建立。普通编辑模式仍可使用。</p>
    <p v-else>正在验证项目权限并读取服务端文档…</p>
@@ -61,12 +61,13 @@ import {useAuthStore} from '@/stores/auth'
 import PConfirm from '@/components/ui/PConfirm.vue'
 import {usePaperConfirmation} from '@/components/papers/usePaperConfirmation'
 import LatexEditor from './LatexEditor.vue'
+import type {LatexFile,LatexSymbol} from './latexSymbols'
 import {sharedAIEditMatches,type PaperAISharedState,type PaperAIEdit} from './aiSuggestion'
 import {DurablePaperCollaboration,type CollaborationView} from './durableCollaboration'
 import {peerColor,type LocalSelection} from './paperPresence'
 import {collabDraftKey,collaborationDraftEnabled,setCollaborationDraftEnabled,listCollaborationDrafts,writeCollaborationDraft,sameCollaborationDraft,removeCollaborationDraft,type PaperCollaborationDraft} from './collaborationDrafts'
 
-const props=defineProps<{projectId:string;file:PaperFile;role:PaperProjectRole;accountId:string;citations?:readonly string[];operationBusy?:boolean}>()
+const props=defineProps<{projectId:string;file:PaperFile;role:PaperProjectRole;accountId:string;citations?:readonly string[];completionFiles?:readonly LatexFile[];projectSymbols?:(refresh:boolean)=>readonly LatexSymbol[]|Promise<readonly LatexSymbol[]>;operationBusy?:boolean}>()
 const emit=defineEmits<{exit:[];confirmed:[revision:number|null];unavailable:[reason:string];'ai-state':[state:PaperAISharedState|null]}>()
 const auth=useAuthStore()
 const view=shallowRef<CollaborationView|null>(null)

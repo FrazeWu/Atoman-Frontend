@@ -107,8 +107,8 @@
         <p v-if="refreshMessage" class="papers-workspace__stale" role="status">{{ refreshMessage }}</p>
 
 
-        <PaperCollaborationPanel v-if="collaborationOpen&&activeFile?.kind==='text'&&collaborationAccount===accountId" :key="projectId+':'+activeFile.id+':'+accountId" ref="collaborationRef" :project-id="projectId" :file="activeFile" :role="ownerAccess?'owner':writeAccess?'editor':'viewer'" :account-id="accountId" :citations="citationKeys" :operation-busy="snapshotMutating||compiling" @confirmed="onCollaborationConfirmed" @ai-state="onCollaborationAIState" @exit="exitCollaboration" @unavailable="onCollaborationUnavailable" />
-        <LatexEditor v-else-if="!collaborationOpen&&activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef"  :model-value="draft" @update:model-value="updateDraft" :citations="citationKeys" :readonly="!writeAccess || switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
+        <PaperCollaborationPanel v-if="collaborationOpen&&activeFile?.kind==='text'&&collaborationAccount===accountId" :key="projectId+':'+activeFile.id+':'+accountId" ref="collaborationRef" :project-id="projectId" :file="activeFile" :role="ownerAccess?'owner':writeAccess?'editor':'viewer'" :account-id="accountId" :citations="citationKeys" :completion-files="files" :project-symbols="getCompletionSymbols" :operation-busy="snapshotMutating||compiling" @confirmed="onCollaborationConfirmed" @ai-state="onCollaborationAIState" @exit="exitCollaboration" @unavailable="onCollaborationUnavailable" />
+        <LatexEditor v-else-if="!collaborationOpen&&activeFile?.kind === 'text'" :key="activeFile.id" ref="editorRef"  :model-value="draft" @update:model-value="updateDraft" :citations="citationKeys" :file-path="activeFile.path" :completion-files="files" :project-symbols="getCompletionSymbols" :readonly="!writeAccess || switchingFile || navigating || addingFile" @show-pdf="jumpToPDF" />
         <PaperAssetPreview v-else-if="activeFile?.kind === 'binary'" :key="activeFile.id+':'+activeFile.revision" :file="activeFile" />
         <p v-else class="papers-workspace__message">在左侧选择一个文件开始编辑。</p>
         <p v-if="draftWarning" class="papers-workspace__error" role="alert">{{ draftWarning }} <PButton size="sm" variant="ghost" type="button" class="papers-workspace__sync" @click="toggleTool('drafts')">草稿管理</PButton></p>
@@ -311,6 +311,7 @@ import PaperReferenceImport from '@/components/papers/PaperReferenceImport.vue'
 import PaperGitHubTools from '@/components/papers/PaperGitHubTools.vue'
 import {planBibtexAppend,existingBibtexKeys} from '@/components/papers/referenceImport'
 import {readProjectText,projectFileFence} from '@/components/papers/projectRead'
+import {ProjectLatexIndex,type LatexSymbol} from '@/components/papers/latexSymbols'
 import { decodeSourceMap, sourceToPDF, pdfToSource, type PaperSourceMap } from '@/components/papers/sourceMap'
 import {
   createPaperFile, managePaperFiles, getPaperFile, getPaperProject, listPaperFiles, savePaperFile, getPaperProjectZIP, downloadPaperZIP,
@@ -489,6 +490,21 @@ const collaborationRef=ref<InstanceType<typeof PaperCollaborationPanel>|null>(nu
 const collaborationAccount=ref('')
 const activeFile = ref<PaperFile | null>(null)
 const draft = ref('')
+const completionIndex=new ProjectLatexIndex()
+function getCompletionSymbols(refresh:boolean):readonly LatexSymbol[]|Promise<readonly LatexSymbol[]>{
+ const pid=projectId.value,owner=accountId.value,active=activeFile.value?.id,head=project.value?.head_revision
+ if(disposed||!owner||!head||project.value?.id!==pid||!writeAccess.value||navigating.value)return []
+ const manifest=files.value
+ if(!refresh)return completionIndex.available(manifest,active)
+ const fence=projectFileFence(manifest),generation=loadSerial
+ const valid=()=>!disposed&&!navigating.value&&loadSerial===generation&&owner===accountId.value&&pid===projectId.value&&project.value?.id===pid&&head===project.value?.head_revision&&active===activeFile.value?.id&&writeAccess.value&&fence===projectFileFence(files.value)
+ return completionIndex.ensure(manifest,active,async id=>{
+  const file=await getPaperFile(pid,id)
+  if(file.project_head_revision!==undefined&&file.project_head_revision!==head)throw Error('Project changed')
+  return file
+ },valid).then(symbols=>valid()?symbols:[])
+}
+watch([accountId,projectId],()=>completionIndex.clear(),{flush:'sync'})
 const tabIds=ref<string[]>([]),recentFileIds=ref<string[]>([])
 const quickOpen=ref(false)
 const openTabs=computed(()=>tabIds.value.map(id=>files.value.find(file=>file.id===id)).filter((file):file is PaperFile=>!!file))
@@ -800,6 +816,7 @@ async function readToolFiles(targets:PaperFile[],pid:string,valid:()=>boolean){
    if(!expected||file.id!==expected.id||file.kind!=='text'||file.revision!==expected.revision)throw new Error('项目已有变化，请刷新页面后重试。')
    bytes+=encoder.encode(file.content).byteLength
    if(bytes>4*1024*1024)throw new Error('源码超过项目工具读取容量限制。')
+   completionIndex.remember(file)
    output.push(file)
   }
  }
@@ -951,16 +968,18 @@ const outlineRows=computed(()=>{
  return [...rest,...local].sort((x,y)=>(x.fileId===main?-1:0)-(y.fileId===main?-1:0)||x.path.localeCompare(y.path)||x.line-y.line).slice(0,600)
 })
 async function loadOutline(){
- const serial=++outlineSerial,pid=projectId.value
+ const serial=++outlineSerial,pid=projectId.value,owner=accountId.value,generation=loadSerial
  outlineLoading.value=true
  const collected:OutlineRow[]=[]
  try{
   const targets=files.value.filter(f=>f.kind==='text'&&/\.tex$/i.test(f.path))
   for(let i=0;i<targets.length;i+=4){
    const group=await Promise.allSettled(targets.slice(i,i+4).map(f=>getPaperFile(pid,f.id)))
-   if(disposed||serial!==outlineSerial||pid!==projectId.value)return
+   if(disposed||serial!==outlineSerial||pid!==projectId.value||owner!==accountId.value||generation!==loadSerial)return
    for(const result of group)if(result.status==='fulfilled'){
     const f=result.value
+    if(!files.value.some(row=>row.id===f.id&&row.path===f.path&&row.revision===f.revision&&row.kind===f.kind&&row.sha256===f.sha256))continue
+    completionIndex.remember(f)
     for(const h of latexHeadings(f.content)){if(collected.length>=600)break;collected.push({...h,fileId:f.id,path:f.path,revision:f.revision})}
    }
   }
@@ -1289,6 +1308,7 @@ let historySerial=0
 let pendingSubmission:{projectId:string;revision:number;compiler:PaperCompiler;key:string}|null=null
 
 async function loadProject() {
+  completionIndex.clear()
   const serial = ++loadSerial
   const requestedProjectId = projectId.value
   const ownerAtStart=accountId.value
@@ -1470,6 +1490,9 @@ async function selectFile(file:PaperFile){
       refreshMessage.value=''
     }
     files.value=files.value.map(item=>item.id===content.id?{...item,...content,content:''}:item)
+    // Index the saved file when leaving it, not on every autosave or
+    // initial load. The open editor uses its live CodeMirror document.
+    if(activeFile.value)completionIndex.remember(activeFile.value)
     activeFile.value=content;draft.value=content.kind==='text'?content.content:'';revealFile(content.path)
     saveStatus.value=content.kind==='binary'?'资源文件':'已保存'
     saveError.value=''
@@ -1804,6 +1827,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   disposed = true
+  completionIndex.clear()
   resetSharedPreview()
   memberSerial++;uploadSerial++;draggingFiles.value=false
   closeTool();bibSerial++;clearSaveRetry()

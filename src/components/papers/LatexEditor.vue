@@ -5,7 +5,7 @@
       <PButton aria-label="查找替换" size="sm" variant="secondary" type="button" title="Ctrl/Cmd + F" @click="find"><Search :size="14" aria-hidden="true"/><span class="latex-editor-tool-label">查找替换</span></PButton>
       <PButton aria-label="撤销" size="sm" variant="secondary" v-if="collaborativeText" type="button" title="Ctrl/Cmd + Z" :disabled="readonly||!canUndo" @click="runUndo(false)"><Undo2 :size="14" aria-hidden="true"/><span class="latex-editor-tool-label">撤销</span></PButton>
       <PButton aria-label="重做" size="sm" variant="secondary" v-if="collaborativeText" type="button" title="Ctrl/Cmd + Shift + Z" :disabled="readonly||!canRedo" @click="runUndo(true)"><Redo2 :size="14" aria-hidden="true"/><span class="latex-editor-tool-label">重做</span></PButton>
-      <PButton aria-label="命令补全" size="sm" variant="secondary" type="button" title="Ctrl + Space" :disabled="readonly" @click="complete"><Braces :size="14" aria-hidden="true"/><span class="latex-editor-tool-label">命令补全</span></PButton>
+      <PButton aria-label="命令补全" size="sm" variant="secondary" type="button" title="Ctrl + Space · LaTeX 命令、引用与项目文件补全" :disabled="readonly" @click="complete"><Braces :size="14" aria-hidden="true"/><span class="latex-editor-tool-label">命令补全</span></PButton>
       <span>{{ position }}</span>
     </div>
   </div>
@@ -19,14 +19,15 @@ import { Compartment, EditorState, Prec, StateEffect, StateField } from '@codemi
 import { EditorView, Decoration, type DecorationSet, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import {openSearchPanel} from '@codemirror/search'
-import {startCompletion} from '@codemirror/autocomplete'
+import {startCompletion,closeCompletion} from '@codemirror/autocomplete'
 import {latexExtensionsFor} from './latexLanguage'
+import type {LatexFile,LatexSymbol} from './latexSymbols'
 import {paperAIReplacement,type PaperAIEdit,type PaperAISourceRange} from './aiSuggestion'
 import {UndoManager,type Text as YText} from 'yjs'
 import {yCollab,ySyncFacet,ySyncAnnotation} from 'y-codemirror.next'
 import {remoteCursorDecorations,type CollaborationPeer,type LocalSelection} from './paperPresence'
 
-const props = defineProps<{ modelValue: string; readonly?: boolean; citations?: readonly string[]; collaborativeText?: YText; remotePeers?: readonly CollaborationPeer[]; canEditCollaboration?:()=>boolean }>()
+const props = defineProps<{ modelValue: string; readonly?: boolean; citations?: readonly string[]; filePath?:string; completionFiles?:readonly LatexFile[]; projectSymbols?:(refresh:boolean)=>readonly LatexSymbol[]|Promise<readonly LatexSymbol[]>; collaborativeText?: YText; remotePeers?: readonly CollaborationPeer[]; canEditCollaboration?:()=>boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string]; 'show-pdf': []; 'cursor-line': [line:number]; 'presence-selection':[selection:LocalSelection|null] }>()
 const editorRoot = ref<HTMLElement | null>(null)
 let editor: EditorView | null = null
@@ -116,7 +117,7 @@ onMounted(() => {
           }})
         ]:[history()]),
         keymap.of([{key:'Mod-Shift-j',run:()=>{emit('show-pdf');return true}}, ...defaultKeymap, ...(props.collaborativeText?[]:historyKeymap), indentWithTab]),
-        ...latexExtensionsFor(()=>props.citations||[]),
+        ...latexExtensionsFor({citations:()=>props.citations||[],files:()=>props.completionFiles||[],path:()=>props.filePath||'',projectSymbols:refresh=>props.projectSymbols?.(refresh)||[]}),
         EditorView.lineWrapping,
         readonlyCompartment.of([EditorState.readOnly.of(Boolean(props.readonly)),EditorView.editable.of(!props.readonly)]),
         EditorView.updateListener.of((update) => {
@@ -145,9 +146,13 @@ onMounted(() => {
 watch([()=>props.remotePeers,()=>props.modelValue],updateRemoteCursors,{flush:'post'})
 
 watch(()=>props.readonly,value=>{
+  if(value&&editor)closeCompletion(editor)
   editor?.dispatch({effects:readonlyCompartment.reconfigure([EditorState.readOnly.of(Boolean(value)),EditorView.editable.of(!value)])})
 })
 
+watch(()=>props.completionFiles?.filter(f=>f.path!==props.filePath).map(f=>[f.id,f.path,f.kind,f.revision,f.sha256].join(':')).join('|'),()=>{
+ if(editor)closeCompletion(editor)
+})
 watch(() => props.modelValue, (next) => {
   if (props.collaborativeText || !editor || editor.state.doc.toString() === next) return
   applyingExternalValue = true

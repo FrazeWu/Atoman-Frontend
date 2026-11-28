@@ -8,6 +8,7 @@ import type { Collection, Video } from '@/types'
 import { parseVideoTimeParam } from '@/composables/useVideoDeepLink'
 import { clearVideoProgress, getVideoProgress, saveVideoProgress } from '@/composables/useVideoProgress'
 import PVideoPlayerShell from '@/components/shared/PVideoPlayerShell.vue'
+import PExternalVideoPlayer from '@/components/shared/PExternalVideoPlayer.vue'
 import CommentSideSheet from '@/components/comment/CommentSideSheet.vue'
 import PBookmarkButton from '@/components/ui/PBookmarkButton.vue'
 import PLink from '@/components/ui/PLink.vue'
@@ -18,7 +19,7 @@ import VideoRecommendationRow from '@/components/video/VideoRecommendationRow.vu
 import { useInteractions } from '@/composables/useInteractions'
 import { useVideoBookmarks } from '@/composables/useVideoBookmarks'
 import { useAuthStore } from '@/stores/auth'
-import { usePlayerPresenceStore } from '@/stores/playerPresence'
+import { useNativeVideoPlaybackFocus } from '@/composables/useNativeVideoPlaybackFocus'
 import { useLoginRedirect } from '@/composables/useLoginRedirect'
 import { useFeedStore } from '@/stores/feed'
 import { isModeratorRole } from '@/utils/roles'
@@ -48,7 +49,7 @@ type CollectionContext = {
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const playerPresence=usePlayerPresenceStore()
+const videoFocus=useNativeVideoPlaybackFocus()
 const { requireLogin } = useLoginRedirect()
 const feedStore = useFeedStore()
 const bookmarks = useVideoBookmarks()
@@ -515,10 +516,8 @@ function handleVideoError() {
   videoError.value = '视频暂时无法播放，请重试'
 }
 
-function pauseCompetingAudio(){const video=videoElement.value;if(video&&!video.paused&&!video.muted&&video.volume>0)playerPresence.requestPause()}
-
-function handleVideoPlay() {
-  pauseCompetingAudio()
+function handleVideoPlay(event: Event) {
+  videoFocus.sync(event)
   resumePosition.value = null
   isLocalPlaybackActive.value = true
   hasStartedPlayback.value = true
@@ -702,13 +701,7 @@ async function toggleChannelSubscription() {
         @toggle-theater="toggleTheaterMode"
       >
         <template #player>
-          <iframe
-            v-if="embedSrc"
-            :src="embedSrc"
-            class="vd-embed"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen
-          />
+          <PExternalVideoPlayer v-if="embedSrc" :src="embedSrc" :title="video.title" :poster="posterUrl" class="vd-embed" />
           <template v-else-if="video.storage_type === 'local' && nativeVideoUrl">
             <video
               ref="videoElement"
@@ -720,11 +713,12 @@ async function toggleChannelSubscription() {
               @click="toggleLocalPlayback"
               @timeupdate="syncCurrentPlaybackTime"
               @play="handleVideoPlay"
-              @volumechange="pauseCompetingAudio"
+              @volumechange="videoFocus.sync"
+              @emptied="videoFocus.stop"
               @loadedmetadata="restoreInitialPlaybackPosition"
-              @error="handleVideoError"
-              @pause="handlePauseOrUnload"
-              @ended="handleVideoEnded"
+              @error="videoFocus.stop($event);handleVideoError()"
+              @pause="videoFocus.stop($event);handlePauseOrUnload()"
+              @ended="videoFocus.stop($event);handleVideoEnded()"
             >
               <track v-if="subtitleUrl" kind="subtitles" :src="subtitleUrl" srclang="zh" label="中文" />
             </video>

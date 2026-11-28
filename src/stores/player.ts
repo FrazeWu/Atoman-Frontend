@@ -22,6 +22,7 @@ import {
 } from "@/composables/usePodcastPlaybackAdapter";
 import { useAuthStore } from "@/stores/auth";
 import { usePlayerPresenceStore } from "@/stores/playerPresence";
+import {claimMusicPlayback,registerMusicPause} from "@/utils/mediaPlaybackFocus";
 import { registerSessionReset } from "@/stores/sessionReset";
 import { useAudioPlayerSync } from "@/composables/useAudioPlayerSync";
 import {
@@ -546,6 +547,8 @@ export const usePlayerStore = defineStore("player", () => {
 		if (audio && (isPlaying.value || isLoading.value || !audio.paused)) pauseCurrentAudio(audio);
 	};
 
+	const releaseMusicFocus = registerMusicPause(pausePlayback);
+	onScopeDispose(releaseMusicFocus);
 	const ensureAudio = () => {
 		if (audio) return audio;
 
@@ -730,6 +733,7 @@ export const usePlayerStore = defineStore("player", () => {
 		player: HTMLAudioElement,
 		generation = ++playGeneration,
 	) => {
+		claimMusicPlayback();
 		isLoading.value = true;
 		playRequested = true;
 		playbackError.value = "";
@@ -1356,6 +1360,7 @@ export const usePlayerStore = defineStore("player", () => {
 		if (!currentSong.value) return;
 		clearPlaybackLoadingTimeout();
 		if (!automatic) resetAudioRecovery();
+		const generation = ++playGeneration;
 		const player = ensureAudio();
 		const resumePosition = currentTime.value;
 		playbackError.value = "";
@@ -1367,6 +1372,10 @@ export const usePlayerStore = defineStore("player", () => {
 			// Online iOS retries must call play() synchronously inside the tap.
 			// Awaiting IndexedDB to fetch a cached Blob loses that gesture.
 			const blobUrl = await getCachedMediaObjectURL(currentSong.value.audio_url);
+			if (generation !== playGeneration || player !== audio) {
+				if (blobUrl) URL.revokeObjectURL(blobUrl);
+				return;
+			}
 			if (blobUrl) {
 				releaseCachedAudioObjectUrl();
 				cachedAudioObjectUrl = blobUrl;
@@ -1389,7 +1398,7 @@ export const usePlayerStore = defineStore("player", () => {
 				once: true,
 			});
 		}
-		attemptPlay(player);
+		attemptPlay(player, generation);
 	};
 	reloadCurrentAudioFn = reloadCurrentAudio;
 

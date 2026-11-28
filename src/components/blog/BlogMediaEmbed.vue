@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import {useNativeVideoPlaybackFocus} from '@/composables/useNativeVideoPlaybackFocus'
 import PVideoPlayerShell from '@/components/shared/PVideoPlayerShell.vue'
+import PExternalVideoPlayer from '@/components/shared/PExternalVideoPlayer.vue'
 import VideoPlayerControls from '@/components/video/VideoPlayerControls.vue'
 import type { EmbedData } from '@/composables/useMarkdownRenderer'
 
@@ -10,6 +12,7 @@ const props = defineProps<{
 
 const videoElement = ref<HTMLVideoElement | null>(null)
 const theaterMode = ref(false)
+const videoFocus=useNativeVideoPlaybackFocus()
 
 function toggleVideoPlayback() {
   const video = videoElement.value
@@ -32,15 +35,7 @@ function toggleVideoPlayback() {
       @toggle-theater="theaterMode = !theaterMode"
     >
       <template #player>
-        <iframe
-          v-if="props.embed.iframeSrc"
-          :src="props.embed.iframeSrc"
-          class="blog-media-embed__frame"
-          :title="props.embed.title"
-          loading="lazy"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen
-        />
+        <PExternalVideoPlayer v-if="props.embed.iframeSrc" :src="props.embed.iframeSrc" :title="props.embed.title" :poster="props.embed.posterUrl" class="blog-media-embed__frame" />
         <video
           v-else-if="props.embed.videoSrc"
           ref="videoElement"
@@ -50,6 +45,7 @@ function toggleVideoPlayback() {
           playsinline
           preload="metadata"
           @click="toggleVideoPlayback"
+          @play="videoFocus.sync" @volumechange="videoFocus.sync" @pause="videoFocus.stop" @ended="videoFocus.stop" @error="videoFocus.stop" @emptied="videoFocus.stop"
         />
         <div v-else class="blog-media-embed__empty">视频暂不可播放</div>
       </template>

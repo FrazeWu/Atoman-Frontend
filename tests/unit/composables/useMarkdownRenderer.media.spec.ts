@@ -99,6 +99,16 @@ describe("useMarkdownRenderer media embeds", () => {
 		expect(document.querySelector("video")?.getAttribute("src")).toBe("/media/demo.mp4");
 	});
 
+	it("uses a detail link for external videos in HTML-only readers", () => {
+		const { renderMarkdown } = useMarkdownRenderer();
+		const html=renderMarkdown(`:::video{id="${videoId}"}\n:::`,{
+			interactiveMedia:true,mountVideoEmbeds:false,
+			videoEmbeds:{[videoId]:{id:videoId,title:"External video",kind:"video",iframeSrc:"https://www.youtube.com/embed/abcdefghijk",href:`/videos/watch/${videoId}`,video:{} as never}}
+		});
+		expect(html).not.toContain("<iframe");
+		expect(html).not.toContain("data-atoman-video-embed");
+		expect(html).toContain('href="/videos/watch/'+videoId+'"');
+	});
 	it("renders interactive media hooks for Vue components", () => {
 		const { renderMarkdown } = useMarkdownRenderer();
 		const html = renderMarkdown(`:::music{id="${songId}"}\n:::`, {

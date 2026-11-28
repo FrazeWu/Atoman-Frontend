@@ -13,14 +13,7 @@
       class="media-attachment-card__video-player"
       @click.stop
     >
-      <iframe
-        v-if="iframeUrl"
-        :src="iframeUrl"
-        class="media-attachment-card__frame"
-        :title="attachment.title"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen
-      />
+      <PExternalVideoPlayer v-if="iframeUrl" :src="iframeUrl" :title="attachment.title" class="media-attachment-card__frame" />
       <video
         v-else-if="videoUrl"
         :src="videoUrl"
@@ -28,6 +21,7 @@
         controls
         autoplay
         playsinline
+        @play="videoFocus.sync" @volumechange="videoFocus.sync" @pause="videoFocus.stop" @ended="videoFocus.stop" @error="videoFocus.stop" @emptied="videoFocus.stop"
       />
       <div v-else-if="loadingVideo" class="media-attachment-card__video-loading">
         <span>加载视频中...</span>
@@ -171,6 +165,8 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import PExternalVideoPlayer from '@/components/shared/PExternalVideoPlayer.vue'
+import {useNativeVideoPlaybackFocus} from '@/composables/useNativeVideoPlaybackFocus'
 import { RouterLink, useRouter } from 'vue-router'
 import { Disc, ExternalLink, Music, Pause, Play, Video as VideoIcon } from 'lucide-vue-next'
 import { getMusicAlbum } from '@/api/musicV1'
@@ -188,6 +184,7 @@ const props = defineProps<{
 const router = useRouter()
 const authStore = useAuthStore()
 const player = usePlayerStore()
+const videoFocus=useNativeVideoPlaybackFocus()
 
 const isInlineVideoOpen = ref(false)
 const videoUrl = ref<string | null>(null)

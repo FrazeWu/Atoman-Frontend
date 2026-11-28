@@ -1,5 +1,6 @@
 import { createPinia, getActivePinia, setActivePinia } from "pinia";
 import { clearSessionStores } from "@/stores/sessionReset";
+import {claimVideoPlayback} from "@/utils/mediaPlaybackFocus";
 import { nextTick } from "vue";
 import { flushPromises } from "@vue/test-utils";
 import { beforeEach, describe, it, expect, vi } from "vitest";
@@ -99,6 +100,23 @@ describe("player store", () => {
 		// localStorage.clear()
 	});
 
+	it("pauses global audio for a video and closes that video on explicit music resume", async () => {
+		const player = usePlayerStore();
+		player.playSong({id:"focus-song",title:"Focus",audio_url:"focus.mp3"} as Song);
+		await flushPromises();
+		expect(player.isPlaying).toBe(true);
+		const stop=vi.fn();
+		const release=claimVideoPlayback(stop);
+		try{
+			expect(audioInstances[0].pause).toHaveBeenCalled();
+			expect(player.isPlaying).toBe(false);
+			expect(player.currentSong?.id).toBe("focus-song");
+			player.togglePlay();
+			expect(stop).toHaveBeenCalledTimes(1);
+			await flushPromises();
+			expect(player.isPlaying).toBe(true);
+		}finally{release()}
+	});
 	it("plays summary songs immediately and hydrates lyrics and waveform in the current song and queue", async () => {
 		let resolveDetail!: (detail: unknown) => void;
 		mocks.getMusicSongDetail.mockReturnValue(new Promise(resolve => { resolveDetail = resolve; }));

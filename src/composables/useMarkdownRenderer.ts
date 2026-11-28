@@ -31,6 +31,7 @@ type RenderMarkdownOptions = {
   references?: ResolvedReference[];
   referenceField?: string;
   interactiveMedia?: boolean;
+  mountVideoEmbeds?: boolean;
 };
 
 type MarkdownRuntimeState = "idle" | "loading" | "ready";
@@ -253,7 +254,7 @@ function renderEmbedCard(
       ? `<div data-atoman-video-embed="${escapeHtml(embed.id)}"></div>`
       : "";
     const player = interactivePlayer || (embed.iframeSrc
-      ? `<iframe class="atoman-post-embed__player" src="${escapeHtml(embed.iframeSrc)}" title="${title}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`
+      ? `<a class="atoman-post-embed__player atoman-post-embed__player--empty" href="${href}" data-atoman-embed="video">打开视频播放</a>`
       : embed.videoSrc
         ? `<video class="atoman-post-embed__player" controls preload="metadata" playsinline src="${escapeHtml(embed.videoSrc)}"${embed.posterUrl ? ` poster="${escapeHtml(embed.posterUrl)}"` : ""}></video>`
         : embed.posterUrl
@@ -350,7 +351,7 @@ function preprocessDirectives(
     /:::video\{id="([0-9a-fA-F-]{36})"\}\s*:::/g,
     options?.videoEmbeds,
     (id) => `/videos/watch/${id}`,
-    Boolean(options?.interactiveMedia),
+    Boolean(options?.interactiveMedia && options?.mountVideoEmbeds !== false),
   );
 
   return next;

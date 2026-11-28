@@ -49,7 +49,7 @@ test('contextual completion uses project symbols and paths without loading the p
 
  async function replaceAndComplete(source:string,option:string,expected:string){
   await editor.click()
-  await page.keyboard.press('Control+a')
+  await page.keyboard.press('ControlOrMeta+a')
   await page.keyboard.insertText(source)
   await page.keyboard.press('Control+Space')
   const candidate=page.locator('.cm-tooltip-autocomplete [role="option"]').filter({has:page.locator('.cm-completionLabel',{hasText:option})})

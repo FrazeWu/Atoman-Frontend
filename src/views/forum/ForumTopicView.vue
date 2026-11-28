@@ -320,6 +320,7 @@ const renderedTopicContent = computed(() => {
     musicEmbeds: musicEmbeds.value,
     videoEmbeds: videoEmbeds.value,
     interactiveMedia: true,
+    mountVideoEmbeds: false,
   })
 })
 

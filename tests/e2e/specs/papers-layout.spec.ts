@@ -100,7 +100,8 @@ test('desktop panels use independent space, preserve the loaded PDF, and remembe
  await page.setViewportSize({width:1440,height:900})
  const pdfRequests=await fixture(page,baseURL!)
  await page.goto('/papers')
- await expect(page.getByRole('link',{name:/Reliable AI for Scientific Research/})).toBeVisible()
+ // The first navigation can include a cold Vite transform; wait for the actual project link.
+ await expect(page.getByRole('link',{name:/Reliable AI for Scientific Research/})).toBeVisible({timeout:30000})
  await expect(page.getByRole('region',{name:'我的论文项目'})).toBeVisible()
  await noPageOverflow(page)
  if(process.env.PAPERS_LAYOUT_SCREENSHOTS)await page.screenshot({path:info.outputPath('desktop-home.png')})

@@ -24,7 +24,7 @@
     <div ref="scroller" class="paper-pdf__scroll" tabindex="0" @scroll.passive="onScroll">
       <div v-if="!pageCount" class="paper-pdf__placeholder">{{ loading ? '正在加载编译结果' : '暂无可预览的 PDF' }}</div>
       <div v-for="item in pages" :key="displayedJob + ':' + item.number" :ref="el => registerPage(item.number, el as HTMLElement | null)" class="paper-pdf__sheet" :data-page="item.number" :data-rendered="item.ready ? 'true' : 'false'" @dblclick="onPDFDoubleClick($event,item)" :style="{width: item.width + 'px',height:item.height + 'px'}">
-        <canvas :ref="el => registerCanvas(item.number, el as HTMLCanvasElement | null)" :aria-label="'PDF 第 ' + item.number + ' 页'" />
+        <canvas width="1" height="1" :ref="el => registerCanvas(item.number, el as HTMLCanvasElement | null)" :aria-label="'PDF 第 ' + item.number + ' 页'" />
         <div v-if="textMode" class="textLayer paper-pdf__text-layer" aria-label="PDF 可选择文字"></div>
         <div v-if="item.error" class="paper-pdf__page-error">第 {{ item.number }} 页暂时无法渲染 <PButton size="sm" variant="secondary" type="button" @click="retryPage(item.number)">重试</PButton></div>
         <span v-else-if="!item.ready && !item.hasPixels" class="paper-pdf__page-loading">第 {{ item.number }} 页</span>
@@ -44,6 +44,7 @@ import { computed, nextTick, onMounted, onBeforeUnmount, ref, shallowRef, watch 
 import type { PDFDocumentProxy, PDFDocumentLoadingTask, RenderTask, TextLayer } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { getPaperCompilePDF } from '@/api/papers'
 import { loadPdfEngine } from '@/utils/bookReaderEngines'
+import { firstPageAfter, pdfPageWindow } from './pdfPageWindow'
 
 const props=defineProps<{projectId:string;jobId:string;revision:number;assetBlob?:Blob;assetName?:string}>()
 const emit=defineEmits<{ 'pdf-position':[value:{jobId:string;page:number;x:number;y:number}]; 'displayed-job':[jobId:string] ; 'page-count':[meta:{jobId:string;revision:number;pages:number}] }>()
@@ -57,9 +58,11 @@ const textDone=new Set<number>()
 let textBusy=false
 function clearText(){
  textEpoch++
- for(const t of textTasks.values())t.cancel()
+ for(const n of new Set([...textTasks.keys(),...textDone])){
+  textTasks.get(n)?.cancel()
+  elements.get(n)?.querySelector('.paper-pdf__text-layer')?.replaceChildren()
+ }
  textTasks.clear();textDone.clear()
- for(const el of elements.values())el.querySelector('.paper-pdf__text-layer')?.replaceChildren()
 }
 function toggleTextMode(){
  textMode.value=!textMode.value;clearText()
@@ -156,6 +159,7 @@ const rendering=new Map<number,RenderTask>()
 let busy=false
 const pending=new Set<number>()
 let wantedPages=new Set<number>()
+const pixelPages=new Set<number>()
 const MAX_RENDER_PAGES=12
 const MAX_CACHED_PIXELS=24_000_000
 
@@ -165,12 +169,8 @@ function anchor(){
  const box=scroller.value
  if(!box||box.clientWidth===0||box.clientHeight===0)return {page:page.value,offset:0}
  const top=box.getBoundingClientRect().top+8
- let chosen=elements.get(page.value)
- let chosenNumber=page.value
- for(const [n,el] of elements){
-  const r=el.getBoundingClientRect()
-  if(r.bottom>top){chosen=el;chosenNumber=n;break}
- }
+ const chosenNumber=firstPageAfter(pageCount.value,top,n=>elements.get(n)?.getBoundingClientRect())??page.value
+ const chosen=elements.get(chosenNumber)
  if(!chosen)return {page:page.value,offset:0}
  const y=top-chosen.getBoundingClientRect().top
  return {page:chosenNumber,offset:Math.max(0,Math.min(1,y/Math.max(1,chosen.clientHeight)))}
@@ -212,22 +212,13 @@ function visiblePages(){
  const box=scroller.value
  if(!box||box.clientWidth===0||box.clientHeight===0)return []
  const r=box.getBoundingClientRect()
- const list:number[]=[]
- let nearest=page.value, distance=Infinity
- for(const [n,el] of elements){
-  const q=el.getBoundingClientRect()
-  if(q.bottom>=r.top-r.height*.65&&q.top<=r.bottom+r.height*.65)list.push(n)
-  if(q.bottom>r.top&&q.top<r.bottom){
-   const d=Math.abs((q.top+q.bottom)/2-(r.top+r.bottom)/2)
-   if(d<distance){distance=d;nearest=n}
-  }
- }
- if(distance!==Infinity){
-  page.value=preferredPage&&list.includes(preferredPage)?preferredPage:nearest
+ const window=pdfPageWindow(pageCount.value,n=>elements.get(n)?.getBoundingClientRect(),r.top,r.bottom,page.value,preferredPage,MAX_RENDER_PAGES)
+ if(window.pages.length){
+  page.value=window.page
   if(!editingPageInput.value)pageInput.value=String(page.value)
  }
  preferredPage=0
- return list.sort((a,b)=>Math.abs(a-page.value)-Math.abs(b-page.value)).slice(0,MAX_RENDER_PAGES)
+ return window.pages
 }
 function schedule(){
  if(disposed||scheduled)return
@@ -236,15 +227,17 @@ function schedule(){
   const wanted=new Set(visiblePages());wantedPages=wanted
   for(const [n,t] of rendering)if(!wanted.has(n))t.cancel()
   for(const n of pending)if(!wanted.has(n))pending.delete(n)
-  for(const p of pages.value){
-   if(!wanted.has(p.number)&&p.hasPixels){
-    const c=canvases.get(p.number);if(c){c.width=1;c.height=1}
-    p.ready=false;p.hasPixels=false
-   }
-   if(!wanted.has(p.number)){
-    textTasks.get(p.number)?.cancel();textTasks.delete(p.number);textDone.delete(p.number)
-    elements.get(p.number)?.querySelector('.paper-pdf__text-layer')?.replaceChildren()
-   }
+  for(const n of pixelPages){
+   if(wanted.has(n))continue
+   const p=pages.value[n-1],c=canvases.get(n)
+   if(c){c.width=1;c.height=1}
+   if(p){p.ready=false;p.hasPixels=false}
+   pixelPages.delete(n)
+  }
+  for(const n of new Set([...textTasks.keys(),...textDone])){
+   if(wanted.has(n))continue
+   textTasks.get(n)?.cancel();textTasks.delete(n);textDone.delete(n)
+   elements.get(n)?.querySelector('.paper-pdf__text-layer')?.replaceChildren()
   }
   for(const n of wanted){const p=pages.value[n-1];if(p&&!p.ready&&!p.error&&!rendering.has(n))pending.add(n)}
   void pump();if(textMode.value)void renderVisibleText()
@@ -264,7 +257,7 @@ async function pump(){
     const target=await current.getPage(n)
     if(disposed||serial!==renderSerial||current!==doc||canvases.get(n)!==c||!wantedPages.has(n))continue
     const natural=target.getViewport({scale:1})
-    if(!(natural.width>0&&natural.height>0))throw new Error('invalid page')
+    if(!(Number.isFinite(natural.width)&&Number.isFinite(natural.height)&&natural.width>0&&natural.height>0))throw new Error('invalid page')
     const newDimensions=Math.abs(natural.width-p.naturalWidth)>.5||Math.abs(natural.height-p.naturalHeight)>.5
     if(newDimensions){
      p.naturalWidth=natural.width;p.naturalHeight=natural.height
@@ -289,7 +282,7 @@ async function pump(){
      const output=c.getContext('2d',{alpha:false})
      if(!output)throw new Error('canvas unavailable')
      c.width=staging.width;c.height=staging.height;output.drawImage(staging,0,0)
-     p.ready=true;p.hasPixels=true
+     p.ready=true;p.hasPixels=true;pixelPages.add(n)
     }finally{staging.width=1;staging.height=1}
    }catch(e){
     if(!disposed&&serial===renderSerial&&current===doc&&(e as Error)?.name!=='RenderingCancelledException')p.error=true
@@ -320,13 +313,14 @@ async function load(){
   const first=await incoming.getPage(1)
   if(disposed||serial!==loadSerial){await next.destroy();return}
   const natural=first.getViewport({scale:1})
-  if(!(natural.width>0&&natural.height>0))throw new Error('invalid viewport')
+  if(!(Number.isFinite(natural.width)&&Number.isFinite(natural.height)&&natural.width>0&&natural.height>0))throw new Error('invalid viewport')
   const old=task
   const a=anchor()
   cancelRenders()
   await Promise.allSettled([...rendering.values()].map(t=>t.promise))
   if(disposed||serial!==loadSerial){await next.destroy();return}
   doc=incoming;task=next;pendingTask=undefined
+  pixelPages.clear();wantedPages=new Set()
   if(old&&old!==task)void old.destroy().catch(()=>{})
   if(markerTimer)clearTimeout(markerTimer)
   markerTimer=undefined;marker.value=null

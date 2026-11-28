@@ -21,6 +21,10 @@ function fixturePDF(): Buffer {
     '<< /Type /Outlines /First 9 0 R /Last 9 0 R /Count 1 >>',
     '<< /Title (Results page) /Parent 8 0 R /Dest [4 0 R /Fit] >>',
   ]
+  return encodePDF(objects)
+}
+
+function encodePDF(objects: string[]): Buffer {
   let pdf = '%PDF-1.4\n'
   const offsets = [0]
   for (let i = 0; i < objects.length; i++) {
@@ -32,6 +36,19 @@ function fixturePDF(): Buffer {
   pdf += offsets.slice(1).map(value => `${String(value).padStart(10, '0')} 00000 n \n`).join('')
   pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`
   return Buffer.from(pdf)
+}
+
+// A long but small synthetic PDF: all pages share a stream and font.
+function longFixturePDF(count: number): Buffer {
+  const body='BT /F1 16 Tf 36 200 Td (Long manuscript fixture) Tj ET\n'
+  const kids=Array.from({length:count},(_,i)=>(i+5)+' 0 R').join(' ')
+  return encodePDF([
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids ['+kids+'] /Count '+count+' >>',
+    '<< /Length '+Buffer.byteLength(body)+' >>\nstream\n'+body+'endstream',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    ...Array.from({length:count},()=> '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 320 600] /Resources << /Font << /F1 4 0 R >> >> /Contents 3 0 R >>'),
+  ])
 }
 
 test.describe('Papers isolated browser acceptance', () => {
@@ -213,7 +230,7 @@ test('read-only collaborator can render the latest shared PDF and refresh after 
  test.setTimeout(60000)
  const origin=new URL(baseURL!).origin
  expect(new URL(origin).hostname).toMatch(/^(localhost|127\.0\.0\.1)$/)
- const pdf=fixturePDF(),pid='shared-preview-project',prefix='/papers/projects/'+pid
+ const pageTotal=300,pdf=longFixturePDF(pageTotal),pid='shared-preview-project',prefix='/papers/projects/'+pid
  const now='2026-11-26T00:00:00Z'
  const project={id:pid,name:'Shared PDF acceptance',main_file_id:'main',head_revision:2,access_role:'viewer',created_at:now,updated_at:now}
  const file={id:'main',path:'main.tex',kind:'text',content:'Shared manuscript',sha256:'',revision:1,created_at:now,updated_at:now}
@@ -252,6 +269,38 @@ test('read-only collaborator can render the latest shared PDF and refresh after 
  expect(pdfReads).toBe(1)
  expect(historyReads).toBe(0)
  expect(mapReads).toBe(0)
+ const sheets=page.locator('.paper-pdf__sheet')
+ await expect(sheets).toHaveCount(pageTotal)
+ const firstCanvas=sheets.first().locator('canvas')
+ const lastCanvas=sheets.last().locator('canvas')
+ expect(await lastCanvas.evaluate(el=>(el as HTMLCanvasElement).width)).toBe(1)
+ // Count layout reads made by our page-window lookup on a distant scroll.
+ // This is deterministic structural evidence, not a timing threshold.
+ const rectReads=await page.locator('.paper-pdf__scroll').evaluate(async box=>{
+  const original=Element.prototype.getBoundingClientRect
+  let reads=0
+  Element.prototype.getBoundingClientRect=function(){
+   if(this.classList.contains('paper-pdf__sheet'))reads++
+   return original.call(this)
+  }
+  try{
+   box.scrollTop=box.scrollHeight
+   box.dispatchEvent(new Event('scroll'))
+   await new Promise<void>(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(()=>r()))))
+   return reads
+  }finally{Element.prototype.getBoundingClientRect=original}
+ })
+ expect(rectReads).toBeLessThan(80)
+ console.log('300-page PDF scroll geometry reads',rectReads)
+ await expect(sheets.last()).toHaveAttribute('data-rendered','true',{timeout:30000})
+ await expect.poll(()=>firstCanvas.evaluate(el=>(el as HTMLCanvasElement).width)).toBe(1)
+ const rendered=await sheets.locator('canvas').evaluateAll(nodes=>nodes.filter(el=>(el as HTMLCanvasElement).width>1).length)
+ expect(rendered).toBeLessThanOrEqual(12)
+ const pageInput=page.getByRole('textbox',{name:'页码'})
+ await pageInput.fill('1')
+ await pageInput.press('Enter')
+ await expect(sheets.first()).toHaveAttribute('data-rendered','true',{timeout:30000})
+ expect(pdfReads).toBe(1)
  allowed=false
  await page.getByRole('button',{name:'刷新预览'}).click()
  await expect(page.locator('.paper-pdf canvas')).toHaveCount(0)

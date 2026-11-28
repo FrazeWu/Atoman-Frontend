@@ -838,3 +838,110 @@ describe('Papers realtime collaboration gate',()=>{
   }finally{w.unmount()}
  })
 })
+
+describe('Papers opt-in auto compilation scheduling',()=>{
+ const completed=(revision:number)=>({id:'job-'+revision,project_id:'two',source_revision:revision,status:'succeeded',compiler:'pdflatex',attempts:1,max_attempts:2,cancel_requested:false,pdf_available:false,created_at:'2026-11-28T00:00:00Z'})
+ async function open(history:ReturnType<typeof completed>[]=[]){
+  vi.mocked(getPaperProject).mockImplementation(async()=>({...two}) as never)
+  vi.mocked(listPaperFiles).mockResolvedValue([f2] as never)
+  vi.mocked(getPaperFile).mockResolvedValue({...f2} as never)
+  vi.mocked(getPaperCompileCapability).mockResolvedValue({enabled:true,pdf_available:false})
+  vi.mocked(listPaperCompileJobs).mockResolvedValue(history as never)
+  vi.mocked(submitPaperCompile).mockReset().mockImplementation(async(_pid,revision)=>completed(revision) as never)
+  vi.mocked(savePaperFile).mockReset().mockImplementation(async(_pid,_id,content,base)=>({...f2,content,revision:base+1,project_head_revision:base+1}) as never)
+  const router=createRouter({history:createMemoryHistory(),routes:[{path:'/papers/:projectId',component:PaperWorkspaceView},{path:'/papers',component:{template:'<div>Project list</div>'}}]})
+  await router.push('/papers/two');await router.isReady()
+  const wrapper=mount(defineComponent({render:()=>h(RouterView)}),{global:{plugins:[router]}})
+  await flushPromises()
+  vi.useFakeTimers({toFake:['Date','setTimeout','clearTimeout']})
+  vi.setSystemTime(new Date('2026-11-28T12:00:00Z'))
+  const tick=async(ms:number)=>{await vi.advanceTimersByTimeAsync(ms);await flushPromises()}
+  const edit=async(content:string)=>{wrapper.findComponent(LatexEditor).vm.$emit('update:modelValue',content);await nextTick()}
+  const toggle=async()=>{
+   const checkbox=wrapper.getComponent('.papers-workspace__auto')
+   expect(checkbox.props('disabled')).toBe(false)
+   checkbox.vm.$emit('update:modelValue',true)
+   await nextTick()
+   expect(checkbox.props('modelValue')).toBe(true)
+  }
+  return {wrapper,router,tick,edit,toggle,cleanup:()=>{wrapper.unmount();vi.useRealTimers()}}
+ }
+ it('skips an already attempted revision, then coalesces edits into the latest saved version',async()=>{
+  const f=await open([completed(1)])
+  try{
+   await f.toggle();await f.tick(60000)
+   expect(submitPaperCompile).not.toHaveBeenCalled()
+   await f.edit('First edit');await f.tick(8000)
+   await f.edit('Newest edit');await f.tick(14999)
+   expect(submitPaperCompile).not.toHaveBeenCalled()
+   await f.tick(1)
+   expect(submitPaperCompile).toHaveBeenCalledTimes(1)
+   expect(vi.mocked(submitPaperCompile).mock.calls[0]?.slice(0,2)).toEqual(['two',3])
+   await f.tick(120000)
+   expect(submitPaperCompile).toHaveBeenCalledTimes(1)
+  }finally{f.cleanup()}
+ })
+ it('retries an ambiguous submission with the same idempotency key',async()=>{
+  const f=await open()
+  try{
+   vi.mocked(submitPaperCompile).mockRejectedValueOnce(new Error('connection lost'))
+   await f.toggle();await f.tick(15000)
+   expect(submitPaperCompile).toHaveBeenCalledTimes(1)
+   await f.tick(59999);expect(submitPaperCompile).toHaveBeenCalledTimes(1)
+   await f.tick(1)
+   expect(submitPaperCompile).toHaveBeenCalledTimes(2)
+   expect(vi.mocked(submitPaperCompile).mock.calls[1]).toEqual(vi.mocked(submitPaperCompile).mock.calls[0])
+   await f.tick(180000);expect(submitPaperCompile).toHaveBeenCalledTimes(2)
+  }finally{f.cleanup()}
+ })
+ it('retains edits made while a previous revision is being submitted',async()=>{
+  const f=await open()
+  try{
+   let resolve!:(value:never)=>void
+   vi.mocked(submitPaperCompile).mockImplementationOnce(()=>new Promise(r=>{resolve=r}))
+   await f.toggle();await f.tick(15000)
+   expect(submitPaperCompile).toHaveBeenCalledTimes(1)
+   await f.edit('Edit during submission');await f.tick(1000)
+   resolve(completed(1) as never);await flushPromises()
+   await f.tick(58999);expect(submitPaperCompile).toHaveBeenCalledTimes(1)
+   await f.tick(1);expect(submitPaperCompile).toHaveBeenCalledTimes(2)
+   expect(vi.mocked(submitPaperCompile).mock.calls[1]?.slice(0,2)).toEqual(['two',2])
+   expect(vi.mocked(submitPaperCompile).mock.calls[1]?.[2]).not.toBe(vi.mocked(submitPaperCompile).mock.calls[0]?.[2])
+  }finally{f.cleanup()}
+ })
+ it('retains pending compilation through a transient save failure',async()=>{
+  const f=await open([completed(1)])
+  try{
+   vi.mocked(savePaperFile).mockRejectedValueOnce(new Error('temporary network failure'))
+   await f.toggle();await f.edit('Unsaved then recovered')
+   await f.tick(800);expect(submitPaperCompile).not.toHaveBeenCalled()
+   await f.tick(2000);expect(savePaperFile).toHaveBeenCalledTimes(2)
+   await f.tick(12199);expect(submitPaperCompile).not.toHaveBeenCalled()
+   await f.tick(1);expect(submitPaperCompile).toHaveBeenCalledTimes(1)
+   expect(vi.mocked(submitPaperCompile).mock.calls[0]?.slice(0,2)).toEqual(['two',2])
+  }finally{f.cleanup()}
+ })
+ it.each([
+  {status:429,code:'papers.compile_quota_exceeded',message:'已达到编译频率或存储限制'},
+  {status:409,code:'papers.revision_conflict',message:'项目版本已在其他窗口发生变化'},
+ ])('does not retry permanent submission error $code without new input',async({status,code,message})=>{
+  const f=await open()
+  try{
+   vi.mocked(submitPaperCompile).mockRejectedValueOnce(new ApiErrorResponseError(status,code,'permanent fixture error'))
+   await f.toggle();await f.tick(15000)
+   expect(submitPaperCompile).toHaveBeenCalledTimes(1)
+   await f.tick(600000);expect(submitPaperCompile).toHaveBeenCalledTimes(1)
+   expect(f.wrapper.text()).toContain(message)
+  }finally{f.cleanup()}
+ })
+ it('pauses while offline and submits once connectivity returns',async()=>{
+  const f=await open()
+  const online=vi.spyOn(navigator,'onLine','get').mockReturnValue(false)
+  try{
+   await f.toggle();await f.tick(180000)
+   expect(submitPaperCompile).not.toHaveBeenCalled()
+   online.mockReturnValue(true);window.dispatchEvent(new Event('online'));await f.tick(0)
+   expect(submitPaperCompile).toHaveBeenCalledTimes(1)
+  }finally{online.mockRestore();f.cleanup()}
+ })
+})

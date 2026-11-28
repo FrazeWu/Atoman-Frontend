@@ -278,6 +278,70 @@ describe('Same-epoch reconnect',()=>{
    expect(g.sockets).toHaveLength(1)
   }finally{g.cleanup()}
  })
+ it('retains all edits across many recovered disconnects without exhausting a lifetime budget',()=>{
+  const f=reconnectFixture()
+  let sequence=1
+  try{
+   for(let cycle=0;cycle<12;cycle++){
+    const previous=f.sockets.at(-1)!
+    // Ten batches, with overlapping local and remote changes.
+    for(let batch=0;batch<10;batch++){
+     f.session.view.text!.insert(f.session.view.text!.length,' local-'+cycle+'-'+batch)
+     vi.advanceTimersByTime(200)
+     const message=JSON.parse(previous.sent.at(-1)!)
+     f.source.insert(0,'remote-'+cycle+'-'+batch+' ')
+     Y.applyUpdate(f.server,decode(message.update))
+     previous.push(f.frame(++sequence,message.request_id))
+     expect(f.session.view.source).toBe(f.source.toString())
+     expect(f.session.view.pending).toBe(false)
+    }
+    f.session.view.text!.insert(f.session.view.text!.length,' reconnect-'+cycle)
+    vi.advanceTimersByTime(200)
+    const lost=previous.sent.at(-1)!,message=JSON.parse(lost)
+    Y.applyUpdate(f.server,decode(message.update));sequence++
+    previous.disconnect()
+    expect(f.session.view.status).toBe('reconnecting')
+    vi.advanceTimersByTime(750)
+    const recovered=f.sockets.at(-1)!
+    expect(recovered).not.toBe(previous)
+    recovered.push(f.frame(sequence))
+    vi.advanceTimersByTime(200)
+    expect(recovered.sent[0]).toBe(lost)
+    recovered.push(f.frame(sequence,message.request_id))
+    expect(f.session.view.status).toBe('ready')
+    expect(f.session.view.source).toBe(f.source.toString())
+    expect(f.session.view.pending).toBe(false)
+   }
+   expect(f.sockets).toHaveLength(13)
+   expect(f.session.captureDraft()).toBeNull()
+  }finally{f.cleanup()}
+ })
+ it('restores the budget after stable idle connections but bounds rapid handshake flapping',()=>{
+  const stable=reconnectFixture()
+  try{
+   for(let i=0;i<8;i++){
+    vi.advanceTimersByTime(30000)
+    stable.sockets.at(-1)!.disconnect()
+    vi.advanceTimersByTime(750)
+    stable.sockets.at(-1)!.push(stable.frame(1))
+    expect(stable.session.view.status).toBe('ready')
+   }
+   expect(stable.sockets).toHaveLength(9)
+  }finally{stable.cleanup()}
+  const flaky=reconnectFixture()
+  try{
+   for(let i=0;i<5;i++){
+    flaky.sockets.at(-1)!.disconnect()
+    vi.advanceTimersByTime(Math.min(750*2**i,6000))
+    flaky.sockets.at(-1)!.push(flaky.frame(1))
+    expect(flaky.session.view.status).toBe('ready')
+   }
+   flaky.sockets.at(-1)!.disconnect()
+   vi.advanceTimersByTime(60000)
+   expect(flaky.session.view.status).toBe('stopped')
+   expect(flaky.sockets).toHaveLength(6)
+  }finally{flaky.cleanup()}
+ })
  it('resets connection-scoped presence after reconnect, including a restarted gateway sequence',()=>{
   const f=reconnectFixture()
   try{

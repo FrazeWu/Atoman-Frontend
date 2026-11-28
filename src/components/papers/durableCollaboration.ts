@@ -30,6 +30,7 @@ const MAX_VECTOR=64*1024
 const MAX_TEXT=1024*1024
 const MAX_FRAME=6*1024*1024
 const MAX_RECONNECTS=5
+const STABLE_CONNECTION_MS=30_000
 const retryableCloseCodes=new Set([1001,1005,1006,1012,1013])
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const remoteOrigin=Symbol('papers-server-committed')
@@ -125,6 +126,7 @@ export class DurablePaperCollaboration {
  private sentSelection:string|undefined='null'
  private reconnectTimer:ReturnType<typeof setTimeout>|null=null
  private reconnectAttempts=0
+ private checkpointAt:number|null=null
  private awaitingCheckpoint=true
  private destroyed=false
  private unconfirmed=false
@@ -196,6 +198,10 @@ export class DurablePaperCollaboration {
  }
  private transportLost(message:string){
   if(this.destroyed||this.state.status==='stopped')return
+  // Bound consecutive failures, not the total interruptions during a long
+  // editing session. A brief handshake alone must not reset the budget.
+  if(!this.awaitingCheckpoint&&this.checkpointAt!==null&&Date.now()-this.checkpointAt>=STABLE_CONNECTION_MS)this.reconnectAttempts=0
+  this.checkpointAt=null
   if(!this.options.reconnect||!this.state.epoch||this.reconnectAttempts>=MAX_RECONNECTS){
    this.stop(message+' 未确认源码已保留，请复制后处理。')
    return
@@ -366,9 +372,13 @@ export class DurablePaperCollaboration {
    this.state.role=frame.role
    this.state.text=this.text
    this.awaitingCheckpoint=false
+   if(handshake)this.checkpointAt=Date.now()
    if(handshake||frame.request_id!==undefined){
     this.clearDeadline()
     if(frame.request_id!==undefined){
+     // Durable progress proves recovery, even if the connection has not
+     // been open for the full stability interval.
+     this.reconnectAttempts=0
      if(this.timer!==null)clearTimeout(this.timer)
      this.timer=null
      this.inFlight=null

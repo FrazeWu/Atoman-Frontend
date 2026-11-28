@@ -858,3 +858,56 @@ describe('Papers realtime collaboration gate',()=>{
   }finally{w.unmount()}
  })
 })
+
+
+describe('Version-aware automatic compilation',()=>{
+ async function open(current:unknown[]=[]){
+  vi.mocked(getPaperProject).mockImplementation(async()=>({...two}) as never)
+  vi.mocked(listPaperFiles).mockResolvedValue([f2] as never)
+  vi.mocked(getPaperFile).mockImplementation(async()=>({...f2}) as never)
+  vi.mocked(getPaperCompileCapability).mockResolvedValue({enabled:true,pdf_available:true,automatic_compile:true})
+  vi.mocked(listPaperCompileJobs).mockResolvedValue(current as never)
+  const router=createRouter({history:createMemoryHistory(),routes:[{path:'/papers/:projectId',component:PaperWorkspaceView},{path:'/papers',component:{template:'<div/>'}}]})
+  await router.push('/papers/two');await router.isReady()
+  const wrapper=mount(defineComponent({render:()=>h(RouterView)}),{global:{plugins:[router]}})
+  await flushPromises()
+  return {wrapper,router}
+ }
+ const job={id:'old',project_id:'two',source_revision:1,compiler:'pdflatex',status:'succeeded',pdf_available:true,attempts:1,max_attempts:2,cancel_requested:false,created_at:''}
+ it('does not submit a current preview when auto is enabled, but permits a new manual compile',async()=>{
+  const {wrapper}=await open([job])
+  vi.useFakeTimers()
+  try{
+   await wrapper.get('.papers-workspace__auto input').setValue(true)
+   await vi.advanceTimersByTimeAsync(16000)
+   expect(submitPaperCompile).not.toHaveBeenCalled()
+   vi.mocked(submitPaperCompile).mockResolvedValue({...job,id:'manual'} as never)
+   await wrapper.findAll('button').find(b=>b.text()==='编译')!.trigger('click')
+   await vi.advanceTimersByTimeAsync(0)
+   expect(submitPaperCompile).toHaveBeenCalledTimes(1)
+   expect(vi.mocked(submitPaperCompile).mock.calls[0]).toHaveLength(3)
+  }finally{wrapper.unmount();vi.useRealTimers()}
+ })
+ it('coalesces edits into a single saved revision and does not retry an unchanged failed result',async()=>{
+  const {wrapper}=await open([job])
+  vi.useFakeTimers()
+  try{
+   vi.mocked(savePaperFile).mockResolvedValueOnce({...f2,content:'First edit',revision:2,project_head_revision:2} as never)
+     .mockResolvedValueOnce({...f2,content:'Latest edit',revision:3,project_head_revision:3} as never)
+   vi.mocked(submitPaperCompile).mockResolvedValue({...job,id:'auto',source_revision:3,status:'failed',pdf_available:false} as never)
+   await wrapper.get('.papers-workspace__auto input').setValue(true)
+   wrapper.findComponent(LatexEditor).vm.$emit('update:modelValue','First edit')
+   await nextTick()
+   await vi.advanceTimersByTimeAsync(1000)
+   wrapper.findComponent(LatexEditor).vm.$emit('update:modelValue','Latest edit')
+   await nextTick()
+   await vi.advanceTimersByTimeAsync(5000)
+   expect(submitPaperCompile).not.toHaveBeenCalled()
+   await vi.advanceTimersByTimeAsync(20000)
+   expect(submitPaperCompile).toHaveBeenCalledTimes(1)
+   expect(submitPaperCompile).toHaveBeenCalledWith('two',3,expect.any(String),'pdflatex',true)
+   await vi.advanceTimersByTimeAsync(120000)
+   expect(submitPaperCompile).toHaveBeenCalledTimes(1)
+  }finally{wrapper.unmount();vi.useRealTimers()}
+ })
+})

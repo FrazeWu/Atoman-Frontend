@@ -79,6 +79,7 @@ export interface PaperCompileCapability {
   enabled: boolean
   pdf_available: boolean
   compilers?: PaperCompiler[]
+  automatic_compile?: boolean
 }
 
 export type PaperCompileStatus =
@@ -119,11 +120,12 @@ export const getPaperCompileCapability = (projectId: string) =>
 export const listPaperCompileJobs = (projectId: string) =>
   papersRequest<PaperCompileJob[]>(compilePrefix(projectId))
 
-export const submitPaperCompile = (projectId: string, baseRevision: number, idempotencyKey: string, compiler: PaperCompiler = 'pdflatex') =>
+export const submitPaperCompile = (projectId: string, baseRevision: number, idempotencyKey: string, compiler: PaperCompiler = 'pdflatex', automatic = false) =>
   papersRequest<PaperCompileJob>(compilePrefix(projectId), 'POST', {
     base_revision: baseRevision,
     idempotency_key: idempotencyKey,
     compiler,
+    ...(automatic?{automatic:true}:{}),
   })
 
 export const getPaperCompileJob = (projectId: string, jobId: string) =>

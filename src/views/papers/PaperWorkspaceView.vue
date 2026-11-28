@@ -222,7 +222,7 @@
           <div class="papers-workspace__preview-right">
             <PButton v-if="!ownerAccess" type="button" size="sm" variant="secondary" :disabled="sharedPreviewBusy" @click="loadSharedPreview">{{ sharedPreviewBusy?'刷新中…':'刷新预览' }}</PButton>
             <div class="papers-workspace__compiler" title="选择此任务的 TeX 编译器"><span>编译器</span><PSelect :model-value="selectedCompiler" placeholder="TeX 编译器" size="sm" :options="compilerOptions.map(value=>({value,label:compilerLabel(value)}))"  :disabled="!compileEnabled||compiling||hasActiveCompile||saving||uploadBusy||navigating||aiRepairActive||aiApplying" @update:model-value="selectedCompiler=$event as PaperCompiler;compilerChanged()" /></div>
-            <PCheckbox v-model="autoCompile" class="papers-workspace__auto" :disabled="collaborationOpen||!compileEnabled||recommendedUnavailable||aiRepairActive||aiApplying">自动编译</PCheckbox>
+            <PCheckbox v-model="autoCompile" class="papers-workspace__auto" :title="autoStatus" :disabled="collaborationOpen||!compileEnabled||recommendedUnavailable||aiRepairActive||aiApplying">自动编译</PCheckbox>
             <PButton type="button" size="sm" :disabled="(collaborationOpen&&collaborationRevision===null) || !compileEnabled || compiling || saving || switchingFile || navigating || uploadBusy || snapshotMutating || !project || hasActiveCompile || aiRepairActive || aiApplying" @click="compileNow">{{ compiling ? '提交中...' : hasActiveCompile ? '编译中' : '编译' }}</PButton>
           </div>
         </div>
@@ -321,6 +321,7 @@ import {planBibtexAppend,existingBibtexKeys} from '@/components/papers/reference
 import {readProjectText,projectFileFence} from '@/components/papers/projectRead'
 import {ProjectLatexIndex,isLatexSymbolFile,type LatexSymbol} from '@/components/papers/latexSymbols'
 import {buildReferenceCatalog,type ReferenceCatalog} from '@/components/papers/latexDiagnostics'
+import {automaticCompileDelay,compileInputIdentity,needsAutomaticCompile} from '@/components/papers/autoCompile'
 import { decodeSourceMap, sourceToPDF, pdfToSource, type PaperSourceMap } from '@/components/papers/sourceMap'
 import {
   createPaperFile, managePaperFiles, getPaperFile, getPaperProject, listPaperFiles, savePaperFile, getPaperProjectZIP, downloadPaperZIP,
@@ -424,7 +425,7 @@ async function mutateFiles(change:{action:'upload'|'rename'|'delete'|'set_main';
   }
   if(change.path)revealFile(change.path)
   if(change.uploads)for(const u of change.uploads)revealFile(u.path)
-  managedFile.value=null;autoDirty=true
+  managedFile.value=null
   if(outlineOpen.value)void loadOutline()
  }catch(cause){if(!disposed&&pid===projectId.value)fileError.value=managementError(cause)}
  finally{if(pid===projectId.value){addingFile.value=false;scheduleAuto()}}
@@ -807,7 +808,7 @@ async function restoreSnapshot(row:PaperSnapshotDetail){
   // The transaction has committed. Clear the old editor immediately so no
   // stale local content can be written against the new server revisions.
   fileSerial++;searchBase.value=0;searchSources.value=[];outlineCache.value=[];managedFile.value=null
-  pendingSubmission=null;clearAuto();autoDirty=false;autoCompile.value=false
+  pendingSubmission=null;clearAuto();autoCompile.value=false
   project.value=result.project;files.value=result.files;activeFile.value=null;draft.value=''
   saveStatus.value='已恢复项目';saveError.value='';recommendedCompiler.value=undefined
   snapshotMessage.value='项目已恢复，回滚前状态已自动保存为快照。'
@@ -903,7 +904,7 @@ async function appendReferences(targetId:string,raw:string):Promise<boolean>{
    if(!updated)throw Error('Active file missing')
    project.value={...result.project,access_role:'owner'};files.value=result.files
    const content=updated.id===saved.id?plan.content:prior.content
-   activeFile.value={...updated,content};draft.value=content;saveStatus.value='已保存';autoDirty=true
+   activeFile.value={...updated,content};draft.value=content;saveStatus.value='已保存'
    await refreshBib()
    return true
   }finally{if(pid===projectId.value&&owner===accountId.value){addingFile.value=false;scheduleAuto()}}
@@ -936,7 +937,7 @@ async function replaceProject(){
    const change=replacements.find(f=>f.file_id===prior.id)
    if(updated){const content=change?.content??prior.content;activeFile.value={...updated,content};draft.value=content;saveStatus.value='已保存'}
   }
-  autoDirty=true
+
   if(outlineOpen.value)void loadOutline()
  }catch(cause){if(!disposed&&pid===projectId.value){toolError.value=managementError(cause);searchBase.value=0}}
  finally{if(pid===projectId.value){addingFile.value=false;scheduleAuto();if(searchBase.value&&toolMode.value==='search')void loadSearchSources()}}
@@ -1025,7 +1026,7 @@ const selectedCompiler=ref<PaperCompiler>('pdflatex')
 const recommendedCompiler=ref<PaperCompiler|undefined>(undefined)
 const recommendedUnavailable=computed(()=>!!recommendedCompiler.value&&(!compileEnabled.value||!compilerOptions.value.includes(recommendedCompiler.value)))
 let compilerChangedByUser=false
-function compilerChanged(){compilerChangedByUser=true;autoDirty=true;scheduleAuto()}
+function compilerChanged(){compilerChangedByUser=true;scheduleAuto()}
 
 const pdfEnabled = ref(false)
 const compileJob = ref<PaperCompileJob | null>(null)
@@ -1102,7 +1103,7 @@ async function applyAIProject(base:number,replacements:PaperTextReplacement[],re
    activeFile.value={...updated,content};draft.value=content
    saveStatus.value='已保存';saveError.value=''
   }
-  autoDirty=true
+
   return true
  }catch{return false}
  finally{if(pid===projectId.value&&owner===accountId.value){aiApplying.value=false;addingFile.value=false;scheduleAuto()}}
@@ -1132,7 +1133,7 @@ async function rollbackAIActivity(event:PaperAIActivity):Promise<boolean>{
   const content=original?.content??prior.content
   activeFile.value={...updated,content};draft.value=content
   saveStatus.value='已回滚为新版本';saveError.value=''
-  autoDirty=true
+
   return true
  }catch{return false}
  finally{if(pid===projectId.value&&owner===accountId.value){aiApplying.value=false;addingFile.value=false;scheduleAuto()}}
@@ -1262,11 +1263,12 @@ async function compileAndShowPDF(){setWorkspaceLayout(compactLayout.value?'pdf':
 function revealSource(){if(compactLayout.value)setWorkspaceLayout('editor')}
 async function insertReference(key:string){if(!writeAccess.value)return;if(compactLayout.value){revealSource();await nextTick()}editorRef.value?.insertCitation(key)}
 function onViewportChange(){const small=isCompactViewport();if(small===compactLayout.value){if(!small){resizeFiles(filesWidth.value);resizePreview(previewWidth.value)}return;}if(small)leaveFocus();compactLayout.value=small;showFiles.value=!small;moreToolsOpen.value=false;if(small&&!sideToolOpen.value&&layoutMode.value==='split')layoutMode.value='editor';if(!small&&auxiliaryOpen.value&&layoutMode.value!=='pdf')layoutMode.value='split';aiExpanded.value=false}
-const autoCompile=ref(false)
+const autoCompile=ref(false),serverAutoCompile=ref(false),autoAttempted=ref(''),autoWaiting=ref(false)
 let dragging=false
 let autoTimer:ReturnType<typeof setTimeout>|null=null
-let lastAutoCompile=0
-let autoDirty=false
+let lastAutoCompile:number|null=null
+let lastAutoChange=Date.now()
+let autoDue:number|null=null
 function beginResize(e:PointerEvent){dragging=true;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);resizeMove(e)}
 function resizeMove(e:PointerEvent){
  if(!dragging||!workspaceRoot.value)return
@@ -1275,17 +1277,33 @@ function resizeMove(e:PointerEvent){
  resizePreview((r.right-e.clientX)/Math.max(1,r.width-filesWidth)*100)
 }
 function endResize(){dragging=false}
-function clearAuto(){if(autoTimer)clearTimeout(autoTimer);autoTimer=null}
-function scheduleAuto(){
- clearAuto()
- if(collaborationOpen.value)return
- if(aiRepairActive.value||!autoCompile.value||!autoDirty||!compileEnabled.value||recommendedUnavailable.value||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||uploadBusy.value||saveError.value||disposed)return
- autoTimer=setTimeout(()=>{
-  if(aiRepairActive.value||!autoCompile.value||!autoDirty||recommendedUnavailable.value||hasActiveCompile.value||compiling.value||switchingFile.value||navigating.value||uploadBusy.value||saveError.value||disposed||document.visibilityState==='hidden')return
-  autoDirty=false;lastAutoCompile=Date.now();void compileNow()
- },Math.max(15000,60000-(Date.now()-lastAutoCompile)))
+const needsAuto=computed(()=>needsAutomaticCompile({
+ dirty:activeFile.value?.kind==='text'&&draft.value!==activeFile.value.content,
+ projectId:projectId.value,revision:project.value?.head_revision,compiler:selectedCompiler.value,
+ current:compileJob.value,preview:previewJob.value,attempted:autoAttempted.value
+}))
+const autoStatus=computed(()=>!autoCompile.value?'自动编译：停止输入后合并修改，至少间隔 60 秒；手动编译始终可用。':!needsAuto.value?'当前版本已编译或已尝试；如失败可手动重试。':autoWaiting.value?'已合并修改，等待自动编译。':'等待保存、当前编译任务或网络恢复。')
+function clearAuto(){if(autoTimer)clearTimeout(autoTimer);autoTimer=null;autoDue=null;autoWaiting.value=false}
+function canAutoStart(){
+ return !disposed&&autoCompile.value&&needsAuto.value&&compileEnabled.value&&ownerAccess.value&&!collaborationOpen.value&&!recommendedUnavailable.value&&!aiRepairActive.value&&!aiApplying.value&&!hasActiveCompile.value&&!compiling.value&&!switchingFile.value&&!navigating.value&&!uploadBusy.value&&!snapshotMutating.value&&!memberMutating.value&&!saving.value&&!saveError.value&&!loading.value&&navigator.onLine!==false&&document.visibilityState!=='hidden'
 }
-watch(autoCompile,enabled=>{if(enabled){autoDirty=previewStale.value||!previewJob.value;scheduleAuto()}else clearAuto()})
+function scheduleAuto(){
+ if(!canAutoStart()){clearAuto();return}
+ const now=Date.now(),delay=automaticCompileDelay(now,lastAutoChange,lastAutoCompile),due=now+delay
+ // Status polling and save completion must not postpone an existing deadline.
+ if(autoTimer!==null&&autoDue===due)return
+ clearAuto();autoDue=due;autoWaiting.value=true
+ autoTimer=setTimeout(()=>{
+  autoTimer=null;autoDue=null;autoWaiting.value=false
+  if(canAutoStart())void submitCompile(undefined,true)
+ },delay)
+}
+function resetAutoScope(){
+ clearAuto();autoCompile.value=false;serverAutoCompile.value=false;autoAttempted.value='';lastAutoCompile=null;lastAutoChange=Date.now()
+}
+watch(autoCompile,enabled=>{if(enabled){lastAutoChange=Date.now();scheduleAuto()}else clearAuto()})
+watch([draft,()=>project.value?.head_revision,selectedCompiler],()=>{lastAutoChange=Date.now();scheduleAuto()})
+watch([needsAuto,compileEnabled,ownerAccess,collaborationOpen,recommendedUnavailable,aiRepairActive,aiApplying,loading,saving,snapshotMutating,memberMutating,uploadBusy],scheduleAuto)
 watch(compileJob,job=>{if(job?.status==='succeeded'&&job.pdf_available)previewJob.value=job})
 
 const compileError = ref('')
@@ -1307,7 +1325,7 @@ let fileSerial = 0
 let disposed = false
 let pollSerial=0
 let historySerial=0
-let pendingSubmission:{projectId:string;revision:number;compiler:PaperCompiler;key:string}|null=null
+let pendingSubmission:{projectId:string;revision:number;compiler:PaperCompiler;key:string;automatic?:boolean}|null=null
 
 async function loadProject() {
   completionIndex.clear()
@@ -1336,6 +1354,7 @@ async function loadProject() {
     initializeLocalDrafts(ownerAtStart)
     compileEnabled.value = ownerAccess.value && capability?.enabled === true
     pdfEnabled.value = compileEnabled.value && capability?.pdf_available === true
+    serverAutoCompile.value=compileEnabled.value&&capability?.automatic_compile===true
     compilerOptions.value=['pdflatex']
     if(compileEnabled.value&&capability.compilers?.includes('xelatex'))compilerOptions.value.push('xelatex')
     if(compileEnabled.value&&capability.compilers?.includes('lualatex'))compilerOptions.value.push('lualatex')
@@ -1393,7 +1412,7 @@ function scheduleSave() {
 
 watch(draft,()=>syncLocalDraft(),{flush:'sync'})
 watch(draft, (content) => {
-  if (!collaborationOpen.value && writeAccess.value && activeFile.value?.kind === 'text' && content !== activeFile.value.content) { scheduleSave();autoDirty=true;scheduleAuto() }
+  if (!collaborationOpen.value && writeAccess.value && activeFile.value?.kind === 'text' && content !== activeFile.value.content) { scheduleSave();scheduleAuto() }
 })
 
 // All consumers share one drain promise. In particular a debounce callback
@@ -1524,7 +1543,7 @@ async function addFile(){
       else refreshMessage.value='文件已创建，但其他窗口也更新了项目。正在核对项目文件清单。'
     }
     newFilePath.value=''
-    autoDirty=true
+
     await selectFile(created)
   }catch(cause){
     if(!disposed&&pid===projectId.value)fileError.value=cause instanceof ApiErrorResponseError&&cause.code==='papers.file_exists'?'文件名与现有文件或文件夹冲突。':'无法创建文件，请检查路径、格式或项目容量。'
@@ -1566,13 +1585,13 @@ async function compileForAI(revision:number,compiler:PaperCompiler):Promise<Pape
  if(!aiRepairActive.value||toolMode.value!=='ai'||collaborationOpen.value||project.value?.head_revision!==revision||selectedCompiler.value!==compiler||draft.value!==activeFile.value?.content||saving.value||savePromise||saveError.value||!activeFile.value)return null
  return await submitCompile({revision,compiler})??null
 }
-async function submitCompile(expected?:{revision:number;compiler:PaperCompiler}):Promise<PaperCompileJob|undefined> {
+async function submitCompile(expected?:{revision:number;compiler:PaperCompiler},automatic=false):Promise<PaperCompileJob|undefined> {
   if (!compileEnabled.value || !ownerAccess.value || compiling.value || snapshotMutating.value || hasActiveCompile.value || !project.value || switchingFile.value || navigating.value || uploadBusy.value || disposed) return
   const collaborating=collaborationOpen.value
   if(collaborating&&currentCollaborationRevision()===null)return
   const requestedProjectId = projectId.value,owner=accountId.value
   compileError.value = ''
-  clearAuto();autoDirty=false;lastAutoCompile=Date.now()
+  clearAuto()
   compiling.value = true
   historySerial++
   try {
@@ -1583,11 +1602,17 @@ async function submitCompile(expected?:{revision:number;compiler:PaperCompiler})
     }
     const revision=collaborating?currentCollaborationRevision():project.value?.head_revision
     if(disposed||requestedProjectId!==projectId.value||owner!==accountId.value||collaborating!==collaborationOpen.value||!revision)return
-    if(expected&&(!aiRepairActive.value||toolMode.value!=='ai'||revision!==expected.revision||selectedCompiler.value!==expected.compiler||draft.value!==activeFile.value?.content||collaborationOpen.value))return
-    if(!pendingSubmission||pendingSubmission.projectId!==requestedProjectId||pendingSubmission.revision!==revision||pendingSubmission.compiler!==selectedCompiler.value){
-      pendingSubmission={projectId:requestedProjectId,revision,compiler:selectedCompiler.value,key:globalThis.crypto?.randomUUID?.()??('compile-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2))}
+    if(automatic){
+      if(!autoCompile.value||collaborating||aiRepairActive.value||aiApplying.value||document.visibilityState==='hidden'||navigator.onLine===false||!needsAuto.value)return
+      autoAttempted.value=compileInputIdentity(revision,selectedCompiler.value)
     }
-    const job=await (pendingSubmission.compiler==='pdflatex'?submitPaperCompile(requestedProjectId,revision,pendingSubmission.key):submitPaperCompile(requestedProjectId,revision,pendingSubmission.key,pendingSubmission.compiler))
+    lastAutoCompile=Date.now()
+    const useServerAuto=automatic&&serverAutoCompile.value
+    if(expected&&(!aiRepairActive.value||toolMode.value!=='ai'||revision!==expected.revision||selectedCompiler.value!==expected.compiler||draft.value!==activeFile.value?.content||collaborationOpen.value))return
+    if(!pendingSubmission||pendingSubmission.projectId!==requestedProjectId||pendingSubmission.revision!==revision||pendingSubmission.compiler!==selectedCompiler.value||Boolean(pendingSubmission.automatic)!==useServerAuto){
+      pendingSubmission={projectId:requestedProjectId,revision,compiler:selectedCompiler.value,automatic:useServerAuto,key:globalThis.crypto?.randomUUID?.()??('compile-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2))}
+    }
+    const job=await (useServerAuto?submitPaperCompile(requestedProjectId,revision,pendingSubmission.key,pendingSubmission.compiler,true):pendingSubmission.compiler==='pdflatex'?submitPaperCompile(requestedProjectId,revision,pendingSubmission.key):submitPaperCompile(requestedProjectId,revision,pendingSubmission.key,pendingSubmission.compiler))
     if(disposed||requestedProjectId!==projectId.value||owner!==accountId.value)return
     pendingSubmission=null
     compileJob.value = job
@@ -1624,7 +1649,7 @@ async function cancelCompile() {
 }
 
 function onCompileVisibilityChange() {
-  if (document.visibilityState === 'visible') { void refreshCompileStatus();scheduleAuto() }
+  if (document.visibilityState === 'visible') { void refreshCompileStatus();scheduleAuto() }else clearAuto()
 }
 
 async function exportProject() {
@@ -1726,7 +1751,7 @@ watch(accountId,(next,previous)=>{
  collaborationOpen.value=false;collaborationAccount.value='';collaborationRevision.value=null;aiSharedState.value=null
  loadSerial++;fileSerial++;pollSerial++;historySerial++;mapSerial++
  pendingSubmission=null;compiling.value=false;canceling.value=false;snapshotMutating.value=false;addingFile.value=false;aiApplying.value=false;aiRepairActive.value=false;savePromise=null;saving.value=false;clearSaveRetry();retryableSave=false;if(saveTimer){clearTimeout(saveTimer);saveTimer=null}
- clearAuto();stopCompilePoll();mapAbort?.abort()
+ resetAutoScope();stopCompilePoll();mapAbort?.abort()
  activeFile.value=null;draft.value='';files.value=[];project.value=null
  previewJob.value=null;compileJob.value=null;sourceMap.value=null
  compileEnabled.value=false;pdfEnabled.value=false
@@ -1794,7 +1819,7 @@ watch(projectId, () => {
   compileJob.value = null
   previewJob.value = null
   displayedPDFJob.value='';sourceMap.value=null;mapJob.value='';mapAbort?.abort();mapSerial++;syncMessage.value=''
-  clearAuto();autoDirty=false
+  resetAutoScope()
   compileEnabled.value = false
   selectedCompiler.value='pdflatex';compilerOptions.value=['pdflatex'];compilerChangedByUser=false;recommendedCompiler.value=undefined
   pdfEnabled.value = false
@@ -1823,6 +1848,8 @@ onMounted(() => {
   void loadProject()
   window.addEventListener('beforeunload', beforeUnload)
   window.addEventListener('online', reconnectSave)
+  window.addEventListener('online',scheduleAuto)
+  window.addEventListener('offline',clearAuto)
   window.addEventListener('storage',onDraftStorage)
   document.addEventListener('visibilitychange', onCompileVisibilityChange)
 })
@@ -1840,6 +1867,8 @@ onBeforeUnmount(() => {
   mapAbort?.abort();mapSerial++
   window.removeEventListener('beforeunload', beforeUnload)
   window.removeEventListener('online', reconnectSave)
+  window.removeEventListener('online',scheduleAuto)
+  window.removeEventListener('offline',clearAuto)
   window.removeEventListener('storage',onDraftStorage)
   window.removeEventListener('keydown',onShortcut)
   window.removeEventListener('resize',onViewportChange)
